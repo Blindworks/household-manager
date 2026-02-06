@@ -18,7 +18,12 @@ export const routes: Routes = [
   {
     path: 'meter-readings',
     loadComponent: () => import('./pages/meter-readings/meter-readings.component').then(m => m.MeterReadingsComponent),
-    title: 'Zählerstände - Household Manager'
+    title: 'Zaehlerstaende - Household Manager'
+  },
+  {
+    path: 'consumption',
+    loadComponent: () => import('./pages/consumption-charts/consumption-charts.component').then(m => m.ConsumptionChartsComponent),
+    title: 'Verbrauch - Household Manager'
   },
   {
     path: 'utility-prices',
