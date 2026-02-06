@@ -150,6 +150,18 @@ export class ConsumptionChartsComponent implements OnInit {
     return series.maxValue - (line / 4) * range;
   }
 
+  getXTicks(points: ChartPoint[]): number[] {
+    const count = points.length;
+    if (count <= 1) {
+      return count === 1 ? [0] : [];
+    }
+    if (count <= 4) {
+      return Array.from({ length: count }, (_, i) => i);
+    }
+    const middle = Math.floor((count - 1) / 2);
+    return [0, middle, count - 1];
+  }
+
   private loadAllSeries(): void {
     this.isLoading = true;
     this.errorMessage = null;
