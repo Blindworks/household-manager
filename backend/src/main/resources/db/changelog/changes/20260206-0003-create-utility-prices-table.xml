@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260206-0003" author="household-manager">
+        <comment>Create utility_prices table for tracking electricity and water prices with validity periods</comment>
+
+        <createTable tableName="utility_prices">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="meter_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="price" type="DECIMAL(10,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_to" type="DATE"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Create index for efficient queries on meter type and validity period -->
+        <createIndex indexName="idx_utility_prices_meter_type_dates" tableName="utility_prices">
+            <column name="meter_type"/>
+            <column name="valid_from"/>
+            <column name="valid_to"/>
+        </createIndex>
+
+        <createIndex indexName="idx_utility_prices_valid_from" tableName="utility_prices">
+            <column name="valid_from" descending="true"/>
+        </createIndex>
+
+        <!-- Add check constraint for meter_type values (only ELECTRICITY and WATER) -->
+        <sql>
+            ALTER TABLE utility_prices
+            ADD CONSTRAINT chk_utility_price_meter_type
+            CHECK (meter_type IN ('ELECTRICITY', 'WATER'))
+        </sql>
+
+        <!-- Add check constraint for positive price -->
+        <sql>
+            ALTER TABLE utility_prices
+            ADD CONSTRAINT chk_utility_price_positive
+            CHECK (price &gt; 0)
+        </sql>
+
+        <!-- Add check constraint for valid_from before valid_to -->
+        <sql>
+            ALTER TABLE utility_prices
+            ADD CONSTRAINT chk_utility_price_valid_dates
+            CHECK (valid_to IS NULL OR valid_from &lt; valid_to)
+        </sql>
+
+        <rollback>
+            <dropTable tableName="utility_prices"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

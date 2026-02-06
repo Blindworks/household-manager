@@ -11,4 +11,7 @@
     <!-- Meter Readings Feature -->
     <include file="db/changelog/changes/20260206-0002-create-meter-readings-table.xml"/>
 
+    <!-- Utility Prices Feature -->
+    <include file="db/changelog/changes/20260206-0003-create-utility-prices-table.xml"/>
+
 </databaseChangeLog>

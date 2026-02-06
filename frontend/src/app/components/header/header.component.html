@@ -27,6 +27,13 @@
               Zählerstände
             </a>
           </li>
+          <li class="header__nav-item">
+            <a routerLink="/utility-prices"
+               routerLinkActive="header__nav-link--active"
+               class="header__nav-link">
+              Preise
+            </a>
+          </li>
         </ul>
       </nav>
 
@@ -63,6 +70,14 @@
                (click)="closeMobileMenu()"
                class="header__nav-link">
               Zählerstände
+            </a>
+          </li>
+          <li class="header__nav-item">
+            <a routerLink="/utility-prices"
+               routerLinkActive="header__nav-link--active"
+               (click)="closeMobileMenu()"
+               class="header__nav-link">
+              Preise
             </a>
           </li>
         </ul>
