@@ -1,0 +1,207 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IconComponent } from '../../shared/components/icon/icon.component';
+import { MeterReadingService } from '../../services/meter-reading.service';
+import { MeterReading, MeterType } from '../../models/meter-reading.model';
+import { MeterTypeUtils } from '../../utils/meter-type.utils';
+
+interface ChartPoint {
+  readonly date: Date;
+  readonly value: number;
+  readonly label: string;
+}
+
+interface ChartSeries {
+  readonly points: ChartPoint[];
+  readonly unit: string;
+  readonly maxValue: number;
+  readonly minValue: number;
+}
+
+@Component({
+  selector: 'app-consumption-charts',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  templateUrl: './consumption-charts.component.html',
+  styleUrl: './consumption-charts.component.scss'
+})
+export class ConsumptionChartsComponent implements OnInit {
+  private readonly meterReadingService = inject(MeterReadingService);
+
+  readonly chartWidth = 700;
+  readonly chartHeight = 260;
+  readonly chartPadding = 28;
+
+  readonly MeterTypeUtils = MeterTypeUtils;
+  readonly meterTypes = MeterTypeUtils.getAllTypes();
+  selectedType: MeterType = MeterType.ELECTRICITY;
+
+  isLoading = true;
+  errorMessage: string | null = null;
+
+  private readonly seriesByType = new Map<MeterType, ChartSeries>();
+
+  ngOnInit(): void {
+    this.loadAllSeries();
+  }
+
+  selectType(type: MeterType): void {
+    this.selectedType = type;
+  }
+
+  getSelectedSeries(): ChartSeries | null {
+    return this.seriesByType.get(this.selectedType) ?? null;
+  }
+
+  get selectedSeries(): ChartSeries | null {
+    return this.getSelectedSeries();
+  }
+
+  getSelectedLabel(): string {
+    return MeterTypeUtils.getLabel(this.selectedType);
+  }
+
+  getSelectedUnit(): string {
+    return MeterTypeUtils.getUnit(this.selectedType);
+  }
+
+  getColor(): string {
+    return MeterTypeUtils.getColor(this.selectedType);
+  }
+
+  getIconName(): string {
+    return MeterTypeUtils.getIconName(this.selectedType);
+  }
+
+  formatNumber(value: number): string {
+    return value.toLocaleString('de-DE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    });
+  }
+
+  formatDate(date: Date): string {
+    return date.toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+  }
+
+  getPolyline(points: ChartPoint[]): string {
+    if (points.length === 0) {
+      return '';
+    }
+    const width = this.chartWidth - this.chartPadding * 2;
+    const height = this.chartHeight - this.chartPadding * 2;
+    const minValue = Math.min(...points.map(p => p.value));
+    const maxValue = Math.max(...points.map(p => p.value));
+    const range = maxValue - minValue || 1;
+
+    return points.map((point, index) => {
+      const x = points.length === 1
+        ? this.chartWidth / 2
+        : this.chartPadding + (index / (points.length - 1)) * width;
+      const y = this.chartPadding + (1 - (point.value - minValue) / range) * height;
+      return `${x},${y}`;
+    }).join(' ');
+  }
+
+  getAreaPath(points: ChartPoint[]): string {
+    if (points.length === 0) {
+      return '';
+    }
+    const polyline = this.getPolyline(points);
+    const first = polyline.split(' ')[0];
+    const last = polyline.split(' ').at(-1);
+    if (!first || !last) {
+      return '';
+    }
+    const lastX = last.split(',')[0];
+    const firstX = first.split(',')[0];
+    const baseline = this.chartHeight - this.chartPadding;
+    return `M${first} L${polyline.replace(/ /g, ' L')} L${lastX},${baseline} L${firstX},${baseline} Z`;
+  }
+
+  getPointX(index: number, total: number): number {
+    const width = this.chartWidth - this.chartPadding * 2;
+    if (total <= 1) {
+      return this.chartWidth / 2;
+    }
+    return this.chartPadding + (index / (total - 1)) * width;
+  }
+
+  getPointY(value: number, minValue: number, maxValue: number): number {
+    const height = this.chartHeight - this.chartPadding * 2;
+    const range = maxValue - minValue || 1;
+    return this.chartPadding + (1 - (value - minValue) / range) * height;
+  }
+
+  getGridLines(): number[] {
+    return [0, 1, 2, 3, 4];
+  }
+
+  getGridY(line: number): number {
+    const height = this.chartHeight - this.chartPadding * 2;
+    return this.chartPadding + (line / 4) * height;
+  }
+
+  getGridValue(line: number, series: ChartSeries): number {
+    const range = series.maxValue - series.minValue || 1;
+    return series.maxValue - (line / 4) * range;
+  }
+
+  private loadAllSeries(): void {
+    this.isLoading = true;
+    this.errorMessage = null;
+
+    const requests = this.meterTypes.map(type =>
+      this.meterReadingService.getReadingsByType(type)
+    );
+
+    let completed = 0;
+    requests.forEach((request, index) => {
+      const type = this.meterTypes[index];
+      request.subscribe({
+        next: readings => {
+          this.seriesByType.set(type, this.buildSeries(readings, type));
+          completed += 1;
+          if (completed === requests.length) {
+            this.isLoading = false;
+          }
+        },
+        error: (error: Error) => {
+          console.error('Error loading readings:', error);
+          this.errorMessage = 'Fehler beim Laden der Verbrauchsdaten. Bitte erneut versuchen.';
+          this.isLoading = false;
+        }
+      });
+    });
+  }
+
+  private buildSeries(readings: MeterReading[], type: MeterType): ChartSeries {
+    const sorted = [...readings].sort((a, b) => a.readingDate.getTime() - b.readingDate.getTime());
+    const points: ChartPoint[] = [];
+
+    for (let i = 1; i < sorted.length; i += 1) {
+      const prev = sorted[i - 1];
+      const current = sorted[i];
+      const consumption = Math.max(0, current.readingValue - prev.readingValue);
+      points.push({
+        date: current.readingDate,
+        value: consumption,
+        label: `KW ${current.readingWeek ?? '-'}`
+      });
+    }
+
+    const values = points.map(point => point.value);
+    const maxValue = values.length > 0 ? Math.max(...values) : 0;
+    const minValue = values.length > 0 ? Math.min(...values) : 0;
+
+    return {
+      points,
+      unit: MeterTypeUtils.getUnit(type),
+      maxValue,
+      minValue
+    };
+  }
+}

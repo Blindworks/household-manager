@@ -1,0 +1,128 @@
+<div class="consumption-charts">
+  <div class="container">
+    <header class="consumption-charts__header">
+      <div>
+        <p class="consumption-charts__eyebrow">Verbrauchsverlauf</p>
+        <h1 class="consumption-charts__title">Verbraeuche als Graph</h1>
+        <p class="consumption-charts__subtitle">
+          Anzeige des Verbrauchs pro Ablesung. KW-Vergleich folgt spaeter.
+        </p>
+      </div>
+      <div class="consumption-charts__legend">
+        <app-icon [name]="getIconName()" class="consumption-charts__icon"></app-icon>
+        <span>{{ getSelectedLabel() }}</span>
+      </div>
+    </header>
+
+    <section class="consumption-charts__controls">
+      <div class="consumption-charts__tabs" role="tablist">
+        @for (type of meterTypes; track type) {
+          <button
+            type="button"
+            class="consumption-charts__tab"
+            [class.consumption-charts__tab--active]="selectedType === type"
+            (click)="selectType(type)">
+            {{ MeterTypeUtils.getLabel(type) }}
+          </button>
+        }
+      </div>
+      <div class="consumption-charts__view-toggle">
+        <button type="button" class="consumption-charts__view consumption-charts__view--active">
+          Verbrauch
+        </button>
+        <button type="button" class="consumption-charts__view" disabled>
+          KW-Vergleich (demnaechst)
+        </button>
+      </div>
+    </section>
+
+    @if (isLoading) {
+      <div class="consumption-charts__state">Laedt Diagramm...</div>
+    } @else if (errorMessage) {
+      <div class="consumption-charts__state consumption-charts__state--error">{{ errorMessage }}</div>
+    } @else {
+      @if (selectedSeries?.points?.length) {
+        <div class="consumption-charts__card">
+          <div class="consumption-charts__chart-header">
+            <div>
+              <p class="consumption-charts__chart-title">
+                Verbrauchsverlauf: {{ getSelectedLabel() }}
+              </p>
+              <p class="consumption-charts__chart-subtitle">
+                Einheit: {{ getSelectedUnit() }} pro Intervall
+              </p>
+            </div>
+            <div class="consumption-charts__chart-meta">
+              <span>Ablesungen: {{ selectedSeries?.points?.length }}</span>
+            </div>
+          </div>
+
+          <div class="consumption-charts__chart">
+            <svg
+              [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
+              role="img"
+              aria-label="Verbrauchsverlauf"
+              class="consumption-charts__svg">
+              @for (line of getGridLines(); track line) {
+                <line
+                  [attr.x1]="chartPadding"
+                  [attr.x2]="chartWidth - chartPadding"
+                  [attr.y1]="getGridY(line)"
+                  [attr.y2]="getGridY(line)"
+                  class="consumption-charts__grid" />
+              }
+
+              <path
+                [attr.d]="getAreaPath(getSelectedSeries()?.points || [])"
+                class="consumption-charts__area"
+                [attr.fill]="getColor()" />
+
+              <polyline
+                [attr.points]="getPolyline(selectedSeries?.points || [])"
+                class="consumption-charts__line"
+                [attr.stroke]="getColor()" />
+
+              @if (selectedSeries) {
+                @for (point of selectedSeries.points; track point.date) {
+                  <circle
+                    [attr.cx]="getPointX($index, selectedSeries.points.length)"
+                    [attr.cy]="getPointY(point.value, selectedSeries.minValue, selectedSeries.maxValue)"
+                    r="4"
+                    class="consumption-charts__dot"
+                    [attr.fill]="getColor()" />
+                }
+              }
+            </svg>
+
+            <div class="consumption-charts__axis">
+              @if (selectedSeries) {
+                @for (line of getGridLines(); track line) {
+                  <span class="consumption-charts__axis-label">
+                    {{ formatNumber(getGridValue(line, selectedSeries)) }} {{ selectedSeries.unit }}
+                  </span>
+                }
+              }
+            </div>
+          </div>
+
+          <div class="consumption-charts__labels">
+            @if (selectedSeries) {
+              @for (point of selectedSeries.points; track point.date) {
+                <div class="consumption-charts__label">
+                  <span>{{ formatDate(point.date) }}</span>
+                  <span class="consumption-charts__label-value">
+                    {{ formatNumber(point.value) }} {{ selectedSeries.unit }}
+                  </span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="consumption-charts__state">
+          Noch nicht genug Ablesungen fuer einen Verlauf.
+        </div>
+      }
+    }
+  </div>
+</div>
