@@ -48,6 +48,12 @@ public class MeterReading {
     private BigDecimal readingValue;
 
     /**
+     * Calendar week (KW) of the reading date.
+     */
+    @Column(name = "reading_week")
+    private Integer readingWeek;
+
+    /**
      * Date and time when the meter reading was taken
      */
     @Column(name = "reading_date", nullable = false)

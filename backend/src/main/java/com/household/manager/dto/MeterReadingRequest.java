@@ -44,6 +44,12 @@ public class MeterReadingRequest {
     private BigDecimal readingValue;
 
     /**
+     * Calendar week (KW) of the reading date.
+     * Optional; if not provided it can be derived from readingDate.
+     */
+    private Integer readingWeek;
+
+    /**
      * Date and time when the meter reading was taken.
      * <p>
      * Format: ISO 8601 (yyyy-MM-dd'T'HH:mm:ss)

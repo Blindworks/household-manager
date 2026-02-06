@@ -45,6 +45,11 @@ public class MeterReadingResponse {
     private BigDecimal readingValue;
 
     /**
+     * Calendar week (KW) of the reading date.
+     */
+    private Integer readingWeek;
+
+    /**
      * Date and time when the meter reading was taken
      */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

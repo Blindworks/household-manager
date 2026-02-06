@@ -16,6 +16,9 @@
     <div class="meter-readings__content">
       <!-- Left Column: Form -->
       <aside class="meter-readings__form-section">
+        <app-meter-reading-import
+          (importCompleted)="onReadingCreated()"
+        ></app-meter-reading-import>
         <app-meter-reading-form
           (readingCreated)="onReadingCreated()"
         ></app-meter-reading-form>

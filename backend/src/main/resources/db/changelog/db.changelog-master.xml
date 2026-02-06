@@ -10,6 +10,7 @@
 
     <!-- Meter Readings Feature -->
     <include file="db/changelog/changes/20260206-0002-create-meter-readings-table.xml"/>
+    <include file="db/changelog/changes/20260206-0004-add-reading-week-to-meter-readings.xml"/>
 
     <!-- Utility Prices Feature -->
     <include file="db/changelog/changes/20260206-0003-create-utility-prices-table.xml"/>

@@ -72,6 +72,18 @@ export class MeterReadingService {
   }
 
   /**
+   * Importiert ZÃ¤hlerstÃ¤nde aus einer CSV-Datei
+   */
+  importCsv(file: File): Observable<{ createdCount: number }> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    return this.http.post<{ createdCount: number }>(`${this.baseUrl}/import`, formData).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Erstellt eine neue Ablesung
    */
   createReading(request: MeterReadingRequest): Observable<MeterReading> {

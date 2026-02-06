@@ -20,6 +20,9 @@ export interface MeterReading {
   /** Abgelesener Zählerstand */
   readingValue: number;
 
+  /** Kalenderwoche der Ablesung */
+  readingWeek?: number;
+
   /** Datum der Ablesung */
   readingDate: Date;
 
@@ -48,6 +51,9 @@ export interface MeterReadingRequest {
 
   /** Abgelesener Zählerstand */
   readingValue: number;
+
+  /** Kalenderwoche der Ablesung (optional) */
+  readingWeek?: number;
 
   /** Datum der Ablesung im ISO-Format (YYYY-MM-DD) */
   readingDate: string;
