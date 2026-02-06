@@ -98,11 +98,25 @@
   }
 
   &__reading,
-  &__consumption,
-  &__cost {
+  &__consumption {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+  }
+
+  &__line {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+  }
+
+  &__line--consumption {
+    justify-content: space-between;
+  }
+
+  &__value--cost {
+    font-size: var(--font-size-xl);
   }
 
   &__label {
