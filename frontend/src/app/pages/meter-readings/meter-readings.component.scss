@@ -30,6 +30,12 @@
     top: var(--spacing-xl);
   }
 
+  &__card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
+
   &__history-section {
     background: var(--color-white);
     border-radius: var(--radius-lg);
