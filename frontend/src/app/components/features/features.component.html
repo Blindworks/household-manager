@@ -1,0 +1,41 @@
+<section class="features">
+  <div class="container">
+    <div class="features__header">
+      <h2 class="features__title">Funktionen im Überblick</h2>
+      <p class="features__subtitle">
+        Entdecken Sie die leistungsstarken Features des Household Managers
+      </p>
+    </div>
+
+    <div class="features__grid">
+      @for (feature of features; track feature.title) {
+        <div class="features__card"
+             [class.features__card--unavailable]="!feature.available"
+             [attr.data-color]="feature.color">
+          <div class="features__card-header">
+            <div class="features__icon-wrapper" [attr.data-color]="feature.color">
+              <svg class="features__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="feature.icon" />
+              </svg>
+            </div>
+            @if (!feature.available) {
+              <span class="features__badge">Demnächst</span>
+            }
+          </div>
+
+          <h3 class="features__card-title">{{ feature.title }}</h3>
+          <p class="features__card-description">{{ feature.description }}</p>
+
+          @if (feature.available) {
+            <button class="features__btn">
+              Mehr erfahren
+              <svg class="features__btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>

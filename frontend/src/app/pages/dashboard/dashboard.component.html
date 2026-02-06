@@ -1,0 +1,76 @@
+<div class="dashboard">
+  <div class="container">
+    <!-- Dashboard Header -->
+    <header class="dashboard__header">
+      <h1 class="dashboard__title">Haushaltsverwaltung</h1>
+      <p class="dashboard__subtitle">Übersicht Ihrer Zählerstände und Verbrauchsdaten</p>
+    </header>
+
+    <!-- Quick Actions -->
+    <section class="dashboard__actions">
+      <a routerLink="/meter-readings" class="btn btn--primary">
+        <span class="btn__icon">📊</span>
+        Neue Ablesung erfassen
+      </a>
+      <a routerLink="/meter-readings" class="btn btn--secondary">
+        <span class="btn__icon">📈</span>
+        Verbrauchshistorie
+      </a>
+    </section>
+
+    <!-- Meter Cards Grid -->
+    <section class="dashboard__meters">
+      <div class="meter-card" *ngFor="let meter of meterData">
+        <div class="meter-card__header">
+          <div class="meter-card__icon" [style.background-color]="meter.color + '20'">
+            <span [style.color]="meter.color">{{ meter.icon }}</span>
+          </div>
+          <h3 class="meter-card__title">{{ meter.type }}</h3>
+        </div>
+
+        <div class="meter-card__body">
+          <div class="meter-card__reading">
+            <span class="meter-card__label">Aktueller Zählerstand</span>
+            <span class="meter-card__value">
+              {{ meter.lastReading | number:'1.1-1':'de-DE' }}
+              <span class="meter-card__unit">{{ meter.unit }}</span>
+            </span>
+          </div>
+
+          <div class="meter-card__consumption">
+            <span class="meter-card__label">Verbrauch ({{ meter.consumptionPeriod }})</span>
+            <div class="meter-card__consumption-value">
+              <span class="meter-card__value">
+                {{ meter.consumption | number:'1.1-1':'de-DE' }}
+                <span class="meter-card__unit">{{ meter.unit }}</span>
+              </span>
+              <span [class]="'meter-card__trend ' + getTrendClass(meter.trend)">
+                {{ getTrendIcon(meter.trend) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="meter-card__footer">
+          <a routerLink="/meter-readings" class="meter-card__link">
+            Details anzeigen →
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Info Box -->
+    <section class="dashboard__info">
+      <div class="info-box">
+        <div class="info-box__icon">ℹ️</div>
+        <div class="info-box__content">
+          <h4 class="info-box__title">Regelmäßige Ablesungen empfohlen</h4>
+          <p class="info-box__text">
+            Erfassen Sie Ihre Zählerstände regelmäßig, um Ihren Verbrauch optimal zu überwachen
+            und unerwartete Nachzahlungen zu vermeiden.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

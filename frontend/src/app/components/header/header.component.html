@@ -1,0 +1,78 @@
+<header class="header">
+  <div class="container">
+    <div class="header__wrapper">
+      <!-- Logo and Brand -->
+      <div class="header__brand">
+        <a routerLink="/" class="header__logo">
+          <svg class="header__logo-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span class="header__title">Household Manager</span>
+        </a>
+      </div>
+
+      <!-- Desktop Navigation -->
+      <nav class="header__nav header__nav--desktop">
+        <ul class="header__nav-list">
+          <li class="header__nav-item">
+            <a routerLink="/"
+               routerLinkActive="header__nav-link--active"
+               [routerLinkActiveOptions]="{exact: true}"
+               class="header__nav-link">
+              Home
+            </a>
+          </li>
+          <li class="header__nav-item">
+            <a routerLink="/meter-readings"
+               routerLinkActive="header__nav-link--active"
+               class="header__nav-link">
+              Zählerstände
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Mobile Menu Toggle -->
+      <button
+        class="header__mobile-toggle"
+        (click)="toggleMobileMenu()"
+        [attr.aria-expanded]="isMobileMenuOpen()"
+        aria-label="Toggle navigation menu">
+        @if (!isMobileMenuOpen()) {
+          <svg class="header__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        } @else {
+          <svg class="header__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        }
+      </button>
+    </div>
+
+    <!-- Mobile Navigation Menu -->
+    @if (isMobileMenuOpen()) {
+      <nav class="header__nav header__nav--mobile">
+        <ul class="header__nav-list">
+          <li class="header__nav-item">
+            <a routerLink="/"
+               routerLinkActive="header__nav-link--active"
+               [routerLinkActiveOptions]="{exact: true}"
+               (click)="closeMobileMenu()"
+               class="header__nav-link">
+              Home
+            </a>
+          </li>
+          <li class="header__nav-item">
+            <a routerLink="/meter-readings"
+               routerLinkActive="header__nav-link--active"
+               (click)="closeMobileMenu()"
+               class="header__nav-link">
+              Zählerstände
+            </a>
+          </li>
+        </ul>
+      </nav>
+    }
+  </div>
+</header>
