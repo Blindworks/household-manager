@@ -30,7 +30,7 @@ export class UtilityPriceService {
    * Lädt Preise für einen bestimmten Zählertyp
    */
   getPricesByMeterType(meterType: MeterType): Observable<UtilityPrice[]> {
-    return this.http.get<UtilityPrice[]>(`${this.baseUrl}/meter-type/${meterType}`).pipe(
+    return this.http.get<UtilityPrice[]>(`${this.baseUrl}/${meterType}`).pipe(
       map(prices => this.convertDates(prices)),
       catchError(this.handleError)
     );
@@ -40,7 +40,7 @@ export class UtilityPriceService {
    * Lädt den aktuell gültigen Preis für einen Zählertyp
    */
   getCurrentPrice(meterType: MeterType): Observable<UtilityPrice | null> {
-    return this.http.get<UtilityPrice>(`${this.baseUrl}/meter-type/${meterType}/current`).pipe(
+    return this.http.get<UtilityPrice>(`${this.baseUrl}/${meterType}/current`).pipe(
       map(price => price ? this.convertDate(price) : null),
       catchError(error => {
         // 404 ist OK - bedeutet kein aktueller Preis vorhanden
