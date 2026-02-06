@@ -105,44 +105,41 @@
             [class.reading-card--gas]="reading.meterType === MeterType.GAS"
             [class.reading-card--water]="reading.meterType === MeterType.WATER"
           >
-            <!-- Card Header -->
-            <div class="reading-card__header">
-              <div class="reading-card__type">
-                <app-icon
-                  [name]="meterTypeUtils.getIconName(reading.meterType)"
-                  [size]="20"
-                  class="reading-card__icon"
-                ></app-icon>
-                <span class="reading-card__type-label">
-                  {{ meterTypeUtils.getLabel(reading.meterType) }}
-                </span>
+            <div class="reading-card__row">
+              <div class="reading-card__left">
+                <div class="reading-card__type">
+                  <app-icon
+                    [name]="meterTypeUtils.getIconName(reading.meterType)"
+                    [size]="18"
+                    class="reading-card__icon"
+                  ></app-icon>
+                  <span class="reading-card__type-label">
+                    {{ meterTypeUtils.getLabel(reading.meterType) }}
+                  </span>
+                </div>
+
+                <div class="reading-card__value">
+                  <span class="reading-card__number">{{ reading.readingValue | number:'1.2-2' }}</span>
+                  <span class="reading-card__unit">{{ meterTypeUtils.getUnit(reading.meterType) }}</span>
+
+                  <span class="reading-card__consumption" *ngIf="reading.consumption !== null && reading.consumption !== undefined">
+                    <app-icon name="trending-up" [size]="14"></app-icon>
+                    <span>+{{ reading.consumption | number:'1.2-2' }} {{ meterTypeUtils.getUnit(reading.meterType) }}</span>
+                    <span class="reading-card__days" *ngIf="reading.daysSinceLastReading">
+                      ({{ reading.daysSinceLastReading }} Tag{{ reading.daysSinceLastReading !== 1 ? 'e' : '' }})
+                    </span>
+                  </span>
+                </div>
+
+                <div class="reading-card__notes-inline" *ngIf="reading.notes">
+                  <app-icon name="message-circle" [size]="14"></app-icon>
+                  <span class="reading-card__notes">{{ reading.notes }}</span>
+                </div>
               </div>
+
               <span class="reading-card__date">
                 {{ reading.readingDate | date:'dd.MM.yyyy HH:mm' }}
               </span>
-            </div>
-
-            <!-- Card Body -->
-            <div class="reading-card__body">
-              <div class="reading-card__value">
-                <span class="reading-card__number">{{ reading.readingValue | number:'1.2-2' }}</span>
-                <span class="reading-card__unit">{{ meterTypeUtils.getUnit(reading.meterType) }}</span>
-              </div>
-
-              <!-- Consumption Badge -->
-              <div class="reading-card__consumption" *ngIf="reading.consumption">
-                <app-icon name="trending-up" [size]="14"></app-icon>
-                <span>+{{ reading.consumption | number:'1.2-2' }} {{ meterTypeUtils.getUnit(reading.meterType) }}</span>
-                <span class="reading-card__days" *ngIf="reading.daysSinceLastReading">
-                  ({{ reading.daysSinceLastReading }} Tag{{ reading.daysSinceLastReading !== 1 ? 'e' : '' }})
-                </span>
-              </div>
-            </div>
-
-            <!-- Card Footer (Notes) -->
-            <div class="reading-card__footer" *ngIf="reading.notes">
-              <app-icon name="message-circle" [size]="14"></app-icon>
-              <span class="reading-card__notes">{{ reading.notes }}</span>
             </div>
           </div>
         </div>
