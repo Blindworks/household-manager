@@ -1,0 +1,118 @@
+.meter-readings {
+  min-height: calc(100vh - 4rem);
+  padding: var(--spacing-xl) 0;
+  background: var(--color-light-gray);
+
+  &__header {
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  &__title {
+    font-size: var(--font-size-4xl);
+    color: var(--color-dark);
+    margin: var(--spacing-md) 0;
+  }
+
+  &__subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--color-gray);
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--color-primary-dark);
+    gap: var(--spacing-sm);
+  }
+}
+
+.placeholder {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-2xl);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+
+  &__icon {
+    font-size: 5rem;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  &__title {
+    font-size: var(--font-size-3xl);
+    color: var(--color-dark);
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__text {
+    font-size: var(--font-size-lg);
+    color: var(--color-gray);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  &__features {
+    text-align: left;
+    max-width: 400px;
+    margin: 0 auto var(--spacing-xl) auto;
+    list-style: none;
+    padding: 0;
+
+    li {
+      position: relative;
+      padding-left: var(--spacing-lg);
+      margin-bottom: var(--spacing-sm);
+      color: var(--color-dark);
+      font-size: var(--font-size-base);
+
+      &::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        color: var(--color-success);
+        font-weight: bold;
+        font-size: var(--font-size-lg);
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .meter-readings {
+    padding: var(--spacing-lg) 0;
+
+    &__title {
+      font-size: var(--font-size-3xl);
+    }
+
+    &__subtitle {
+      font-size: var(--font-size-base);
+    }
+  }
+
+  .placeholder {
+    padding: var(--spacing-xl);
+
+    &__icon {
+      font-size: 4rem;
+    }
+
+    &__title {
+      font-size: var(--font-size-2xl);
+    }
+
+    &__features {
+      max-width: 100%;
+    }
+  }
+}
