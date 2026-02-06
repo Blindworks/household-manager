@@ -1,9 +1,19 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
+import {
+  GridComponent,
+  TooltipComponent
+} from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { MeterReading, MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
+
+echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 interface ChartPoint {
   readonly date: Date;
@@ -26,7 +36,8 @@ interface XTick {
 @Component({
   selector: 'app-consumption-charts',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, NgxEchartsDirective],
+  providers: [provideEchartsCore({ echarts })],
   templateUrl: './consumption-charts.component.html',
   styleUrl: './consumption-charts.component.scss'
 })
@@ -42,8 +53,17 @@ export class ConsumptionChartsComponent implements OnInit {
   selectedType: MeterType = MeterType.ELECTRICITY;
   selectedYear: number | 'ALL' = 'ALL';
   selectedMonth: number | 'ALL' = 'ALL';
+  compareMode = false;
+  compareYearA: number | 'ALL' = 'ALL';
+  compareMonthA: number | 'ALL' = 'ALL';
+  compareYearB: number | 'ALL' = 'ALL';
+  compareMonthB: number | 'ALL' = 'ALL';
   availableYears: number[] = [];
   availableMonths: number[] = [];
+
+  singleChartOptions: Record<string, unknown> | null = null;
+  compareChartOptionsA: Record<string, unknown> | null = null;
+  compareChartOptionsB: Record<string, unknown> | null = null;
 
   isLoading = true;
   errorMessage: string | null = null;
@@ -59,25 +79,11 @@ export class ConsumptionChartsComponent implements OnInit {
   selectType(type: MeterType): void {
     this.selectedType = type;
     this.updateAvailableYears();
+    this.refreshCharts();
   }
 
   getSelectedSeries(): ChartSeries | null {
-    const baseSeries = this.seriesByType.get(this.selectedType);
-    if (!baseSeries) {
-      return null;
-    }
-    const rawPoints = this.rawPointsByType.get(this.selectedType) ?? baseSeries.points;
-    const filteredPoints = this.filterByYearAndMonth(rawPoints, this.selectedYear, this.selectedMonth);
-    const points = this.filterOutliers(filteredPoints);
-    const values = points.map(point => point.value);
-    const maxValue = values.length > 0 ? Math.max(...values) : 0;
-    const minValue = values.length > 0 ? Math.min(...values) : 0;
-    return {
-      points,
-      unit: baseSeries.unit,
-      maxValue,
-      minValue
-    };
+    return this.getSeriesFor(this.selectedYear, this.selectedMonth);
   }
 
   get selectedSeries(): ChartSeries | null {
@@ -95,6 +101,7 @@ export class ConsumptionChartsComponent implements OnInit {
     this.selectedYear = Number.isNaN(parsed) ? 'ALL' : parsed;
     this.selectedMonth = 'ALL';
     this.updateAvailableMonths();
+    this.refreshCharts();
   }
 
   setMonth(month: string): void {
@@ -104,6 +111,74 @@ export class ConsumptionChartsComponent implements OnInit {
     }
     const parsed = Number(month);
     this.selectedMonth = Number.isNaN(parsed) ? 'ALL' : parsed;
+    this.refreshCharts();
+  }
+
+  setCompareMode(enabled: boolean): void {
+    this.compareMode = enabled;
+    if (enabled) {
+      this.compareYearA = this.selectedYear;
+      this.compareMonthA = this.selectedMonth;
+      this.compareYearB = this.availableYears[0] ?? 'ALL';
+      this.compareMonthB = 'ALL';
+    }
+    this.refreshCharts();
+  }
+
+  setCompareYearA(year: string): void {
+    this.compareYearA = this.parseYear(year);
+    this.compareMonthA = 'ALL';
+    this.refreshCharts();
+  }
+
+  setCompareYearB(year: string): void {
+    this.compareYearB = this.parseYear(year);
+    this.compareMonthB = 'ALL';
+    this.refreshCharts();
+  }
+
+  setCompareMonthA(month: string): void {
+    this.compareMonthA = this.parseMonth(month);
+    this.refreshCharts();
+  }
+
+  setCompareMonthB(month: string): void {
+    this.compareMonthB = this.parseMonth(month);
+    this.refreshCharts();
+  }
+
+  getCompareSeriesA(): ChartSeries | null {
+    return this.getSeriesFor(this.compareYearA, this.compareMonthA);
+  }
+
+  getCompareSeriesB(): ChartSeries | null {
+    return this.getSeriesFor(this.compareYearB, this.compareMonthB);
+  }
+
+  get compareSeriesA(): ChartSeries | null {
+    return this.getCompareSeriesA();
+  }
+
+  get compareSeriesB(): ChartSeries | null {
+    return this.getCompareSeriesB();
+  }
+
+  get compareSeriesAValue(): ChartSeries {
+    return this.getCompareSeriesA() ?? {
+      points: [],
+      unit: this.getSelectedUnit(),
+      maxValue: 0,
+      minValue: 0
+    };
+  }
+
+  get compareSeriesBValue(): ChartSeries {
+    return this.getCompareSeriesB() ?? {
+      points: [],
+      unit: this.getSelectedUnit(),
+      maxValue: 0,
+      minValue: 0
+    };
   }
 
   getSelectedLabel(): string {
@@ -238,6 +313,24 @@ export class ConsumptionChartsComponent implements OnInit {
     return labels[month - 1] ?? '';
   }
 
+  getTickLabels(points: ChartPoint[], useMonths: boolean): { left: number; label: string }[] {
+    const total = points.length;
+    if (total === 0) {
+      return [];
+    }
+    const ticks = useMonths
+      ? this.getMonthTicks(points).map(tick => ({ index: tick.index, label: tick.label }))
+      : this.getXTicks(points).map(index => ({
+        index,
+        label: this.formatDate(points[index].date)
+      }));
+
+    return ticks.map(tick => ({
+      left: total <= 1 ? 50 : (tick.index / (total - 1)) * 100,
+      label: tick.label
+    }));
+  }
+
   private loadAllSeries(): void {
     this.isLoading = true;
     this.errorMessage = null;
@@ -262,6 +355,7 @@ export class ConsumptionChartsComponent implements OnInit {
           if (completed === requests.length) {
             this.isLoading = false;
             this.updateAvailableYears();
+            this.refreshCharts();
           }
         },
         error: (error: Error) => {
@@ -321,18 +415,139 @@ export class ConsumptionChartsComponent implements OnInit {
       this.availableMonths = [];
       return;
     }
-    const points = this.rawPointsByType.get(this.selectedType) ?? [];
-    const months = Array.from(
-      new Set(
-        points
-          .filter(point => point.date.getFullYear() === this.selectedYear)
-          .map(point => point.date.getMonth() + 1)
-      )
-    ).sort((a, b) => a - b);
+    const months = this.getAvailableMonthsFor(this.selectedYear);
     this.availableMonths = months;
     if (this.selectedMonth !== 'ALL' && !months.includes(this.selectedMonth)) {
       this.selectedMonth = 'ALL';
     }
+  }
+
+  private refreshCharts(): void {
+    const singleSeries = this.getSelectedSeries();
+    this.singleChartOptions = singleSeries
+      ? this.buildChartOptions(
+          singleSeries,
+          this.selectedYear !== 'ALL' && this.selectedMonth === 'ALL'
+        )
+      : null;
+
+    if (this.compareMode) {
+      const seriesA = this.getCompareSeriesA();
+      const seriesB = this.getCompareSeriesB();
+      this.compareChartOptionsA = seriesA
+        ? this.buildChartOptions(
+            seriesA,
+            this.compareYearA !== 'ALL' && this.compareMonthA === 'ALL'
+          )
+        : null;
+      this.compareChartOptionsB = seriesB
+        ? this.buildChartOptions(
+            seriesB,
+            this.compareYearB !== 'ALL' && this.compareMonthB === 'ALL'
+          )
+        : null;
+    } else {
+      this.compareChartOptionsA = null;
+      this.compareChartOptionsB = null;
+    }
+  }
+
+  private buildChartOptions(series: ChartSeries, useMonthTicks: boolean): Record<string, unknown> {
+    const labels = series.points.map(point => this.formatDate(point.date));
+    const monthLabels = series.points.map(point => this.formatMonth(point.date.getMonth() + 1));
+    let lastMonthLabel = '';
+
+    return {
+      grid: {
+        left: 56,
+        right: 24,
+        top: 24,
+        bottom: 36,
+        containLabel: false
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'line' }
+      },
+      xAxis: {
+        type: 'category',
+        data: labels,
+        axisLine: {
+          lineStyle: { color: 'rgba(51, 65, 85, 0.7)' }
+        },
+        axisTick: {
+          alignWithLabel: true,
+          length: 6,
+          lineStyle: { color: 'rgba(51, 65, 85, 0.75)' }
+        },
+        axisLabel: {
+          color: '#94a3b8',
+          fontSize: 11,
+          fontWeight: 400,
+          formatter: (value: string, index: number) => {
+            if (!useMonthTicks) {
+              return value;
+            }
+            const label = monthLabels[index] ?? '';
+            if (label === lastMonthLabel) {
+              return '';
+            }
+            lastMonthLabel = label;
+            return label;
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: {
+          lineStyle: { color: '#e2e8f0', type: 'dashed' }
+        },
+        axisLabel: {
+          color: '#94a3b8',
+          fontSize: 11,
+          fontWeight: 400,
+          formatter: (value: number) => `${this.formatNumber(value)} ${series.unit}`
+        }
+      },
+      series: [
+        {
+          type: 'line',
+          data: series.points.map(point => point.value),
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 9,
+          lineStyle: {
+            width: 3.5,
+            color: this.getColor()
+          },
+          itemStyle: {
+            color: this.getColor(),
+            borderColor: '#ffffff',
+            borderWidth: 2
+          },
+          areaStyle: {
+            color: this.getColor(),
+            opacity: 0.18
+          }
+        }
+      ]
+    };
+  }
+
+  getAvailableMonthsFor(year: number | 'ALL'): number[] {
+    if (year === 'ALL') {
+      return [];
+    }
+    const points = this.rawPointsByType.get(this.selectedType) ?? [];
+    return Array.from(
+      new Set(
+        points
+          .filter(point => point.date.getFullYear() === year)
+          .map(point => point.date.getMonth() + 1)
+      )
+    ).sort((a, b) => a - b);
   }
 
   private filterByYearAndMonth(
@@ -348,6 +563,44 @@ export class ConsumptionChartsComponent implements OnInit {
       return yearFiltered;
     }
     return yearFiltered.filter(point => point.date.getMonth() + 1 === month);
+  }
+
+  private getSeriesFor(
+    year: number | 'ALL',
+    month: number | 'ALL'
+  ): ChartSeries | null {
+    const baseSeries = this.seriesByType.get(this.selectedType);
+    if (!baseSeries) {
+      return null;
+    }
+    const rawPoints = this.rawPointsByType.get(this.selectedType) ?? baseSeries.points;
+    const filteredPoints = this.filterByYearAndMonth(rawPoints, year, month);
+    const points = this.filterOutliers(filteredPoints);
+    const values = points.map(point => point.value);
+    const maxValue = values.length > 0 ? Math.max(...values) : 0;
+    const minValue = values.length > 0 ? Math.min(...values) : 0;
+    return {
+      points,
+      unit: baseSeries.unit,
+      maxValue,
+      minValue
+    };
+  }
+
+  private parseYear(value: string): number | 'ALL' {
+    if (value === 'ALL') {
+      return 'ALL';
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 'ALL' : parsed;
+  }
+
+  private parseMonth(value: string): number | 'ALL' {
+    if (value === 'ALL') {
+      return 'ALL';
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 'ALL' : parsed;
   }
 
   private filterOutliers(points: ChartPoint[]): ChartPoint[] {
