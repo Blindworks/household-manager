@@ -9,11 +9,11 @@
     <!-- Quick Actions -->
     <section class="dashboard__actions">
       <a routerLink="/meter-readings" class="btn btn--primary">
-        <span class="btn__icon">📊</span>
+        <app-icon name="bar-chart-3" class="btn__icon"></app-icon>
         Neue Ablesung erfassen
       </a>
       <a routerLink="/meter-readings" class="btn btn--secondary">
-        <span class="btn__icon">📈</span>
+        <app-icon name="line-chart" class="btn__icon"></app-icon>
         Verbrauchshistorie
       </a>
     </section>
@@ -26,7 +26,7 @@
 
     <!-- Error Message -->
     <div class="alert alert--error" *ngIf="errorMessage && !isLoading">
-      <span class="alert__icon">⚠</span>
+      <app-icon name="alert-triangle" class="alert__icon"></app-icon>
       <span class="alert__message">{{ errorMessage }}</span>
     </div>
 
@@ -35,7 +35,7 @@
       <div class="meter-card" *ngFor="let meter of meterData">
         <div class="meter-card__header">
           <div class="meter-card__icon" [style.background-color]="meter.color + '20'">
-            <span [style.color]="meter.color">{{ meter.icon }}</span>
+            <app-icon [name]="meter.iconName" [style.color]="meter.color"></app-icon>
           </div>
           <h3 class="meter-card__title">{{ meter.type }}</h3>
         </div>
@@ -57,7 +57,7 @@
                 <span class="meter-card__unit">{{ meter.unit }}</span>
               </span>
               <span [class]="'meter-card__trend ' + getTrendClass(meter.trend)">
-                {{ getTrendIcon(meter.trend) }}
+                <app-icon [name]="getTrendIconName(meter.trend)" [size]="16"></app-icon>
               </span>
             </div>
           </div>
@@ -74,7 +74,9 @@
     <!-- Info Box -->
     <section class="dashboard__info">
       <div class="info-box">
-        <div class="info-box__icon">ℹ️</div>
+        <div class="info-box__icon">
+          <app-icon name="info" [size]="24"></app-icon>
+        </div>
         <div class="info-box__content">
           <h4 class="info-box__title">Regelmäßige Ablesungen empfohlen</h4>
           <p class="info-box__text">

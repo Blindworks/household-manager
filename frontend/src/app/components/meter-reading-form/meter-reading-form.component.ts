@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { MeterType, MeterReadingRequest } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
@@ -11,7 +12,7 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 @Component({
   selector: 'app-meter-reading-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent],
   templateUrl: './meter-reading-form.component.html',
   styleUrl: './meter-reading-form.component.scss'
 })
@@ -125,7 +126,7 @@ export class MeterReadingFormComponent implements OnInit {
     const request: MeterReadingRequest = {
       meterType: formValue.meterType,
       readingValue: parseFloat(formValue.readingValue),
-      readingDate: formValue.readingDate,
+      readingDate: this.formatDateTimeForBackend(formValue.readingDate),
       notes: formValue.notes || undefined
     };
 
@@ -137,6 +138,21 @@ export class MeterReadingFormComponent implements OnInit {
         this.handleError(error);
       }
     });
+  }
+
+  /**
+   * Formatiert das Datum für das Backend im ISO-Format mit Zeitkomponente
+   */
+  private formatDateTimeForBackend(dateString: string): string {
+    // Nimmt das Datum aus dem Date-Input (YYYY-MM-DD) und fügt die aktuelle Uhrzeit hinzu
+    const date = new Date(dateString);
+    const now = new Date();
+
+    // Setze die aktuelle Uhrzeit
+    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
+    // Formatiere als ISO-String und schneide die Millisekunden ab
+    return date.toISOString().slice(0, 19);
   }
 
   /**

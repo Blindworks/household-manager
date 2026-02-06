@@ -61,6 +61,7 @@ ng lint
 - Keep HTML templates in separate `.html` files (not inline)
 - Use SCSS for all styling
 - Follow Angular style guide for component structure
+- Use icons exclusively from [Lucide](https://lucide.dev/) with `lucide-angular` package
 
 ## Backend (Spring Boot)
 
