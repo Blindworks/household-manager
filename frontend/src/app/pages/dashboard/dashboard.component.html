@@ -18,8 +18,20 @@
       </a>
     </section>
 
+    <!-- Loading State -->
+    <div class="dashboard__loading" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>Lade Zählerdaten...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div class="alert alert--error" *ngIf="errorMessage && !isLoading">
+      <span class="alert__icon">⚠</span>
+      <span class="alert__message">{{ errorMessage }}</span>
+    </div>
+
     <!-- Meter Cards Grid -->
-    <section class="dashboard__meters">
+    <section class="dashboard__meters" *ngIf="!isLoading">
       <div class="meter-card" *ngFor="let meter of meterData">
         <div class="meter-card__header">
           <div class="meter-card__icon" [style.background-color]="meter.color + '20'">

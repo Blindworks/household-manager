@@ -1,0 +1,126 @@
+<div class="meter-reading-form">
+  <h3 class="form-title">Neuen Zählerstand erfassen</h3>
+
+  <!-- Success Message -->
+  <div class="alert alert--success" *ngIf="successMessage">
+    <span class="alert__icon">✓</span>
+    <span class="alert__message">{{ successMessage }}</span>
+  </div>
+
+  <!-- Error Message -->
+  <div class="alert alert--error" *ngIf="errorMessage">
+    <span class="alert__icon">⚠</span>
+    <span class="alert__message">{{ errorMessage }}</span>
+  </div>
+
+  <form [formGroup]="readingForm" (ngSubmit)="onSubmit()" class="form">
+    <!-- Zählertyp -->
+    <div class="form-group">
+      <label for="meterType" class="form-label">
+        Zählertyp <span class="required">*</span>
+      </label>
+      <select
+        id="meterType"
+        formControlName="meterType"
+        class="form-control"
+        [class.form-control--error]="isFieldInvalid('meterType')"
+      >
+        <option value="" disabled>Bitte wählen...</option>
+        <option *ngFor="let type of meterTypes" [value]="type">
+          {{ meterTypeUtils.getIcon(type) }} {{ meterTypeUtils.getLabel(type) }}
+        </option>
+      </select>
+      <div class="form-error" *ngIf="isFieldInvalid('meterType')">
+        {{ getFieldError('meterType') }}
+      </div>
+    </div>
+
+    <!-- Zählerstand -->
+    <div class="form-group">
+      <label for="readingValue" class="form-label">
+        Zählerstand <span class="required">*</span>
+        <span class="form-hint" *ngIf="readingForm.get('meterType')?.value">
+          (in {{ meterTypeUtils.getUnit(readingForm.get('meterType')?.value) }})
+        </span>
+      </label>
+      <input
+        type="number"
+        id="readingValue"
+        formControlName="readingValue"
+        class="form-control"
+        [class.form-control--error]="isFieldInvalid('readingValue')"
+        placeholder="z.B. 12345.50"
+        step="0.01"
+        min="0"
+      />
+      <div class="form-error" *ngIf="isFieldInvalid('readingValue')">
+        {{ getFieldError('readingValue') }}
+      </div>
+    </div>
+
+    <!-- Ablesedatum -->
+    <div class="form-group">
+      <label for="readingDate" class="form-label">
+        Ablesedatum <span class="required">*</span>
+      </label>
+      <input
+        type="date"
+        id="readingDate"
+        formControlName="readingDate"
+        class="form-control"
+        [class.form-control--error]="isFieldInvalid('readingDate')"
+        [max]="today"
+      />
+      <div class="form-error" *ngIf="isFieldInvalid('readingDate')">
+        {{ getFieldError('readingDate') }}
+      </div>
+      <div class="form-hint">Das Datum darf nicht in der Zukunft liegen</div>
+    </div>
+
+    <!-- Notizen -->
+    <div class="form-group">
+      <label for="notes" class="form-label">
+        Notizen <span class="optional">(optional)</span>
+      </label>
+      <textarea
+        id="notes"
+        formControlName="notes"
+        class="form-control form-control--textarea"
+        [class.form-control--error]="isFieldInvalid('notes')"
+        placeholder="z.B. Schätzwert, Zählerwechsel, etc."
+        rows="3"
+        maxlength="500"
+      ></textarea>
+      <div class="form-error" *ngIf="isFieldInvalid('notes')">
+        {{ getFieldError('notes') }}
+      </div>
+      <div class="form-hint">
+        {{ readingForm.get('notes')?.value?.length || 0 }} / 500 Zeichen
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="form-actions">
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [disabled]="isSubmitting"
+      >
+        <span *ngIf="!isSubmitting">Zählerstand speichern</span>
+        <span *ngIf="isSubmitting" class="btn__loading">
+          <span class="spinner"></span>
+          Wird gespeichert...
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn--secondary"
+        (click)="resetForm()"
+        [disabled]="isSubmitting"
+      >
+        Zurücksetzen
+      </button>
+    </div>
+  </form>
+</div>
