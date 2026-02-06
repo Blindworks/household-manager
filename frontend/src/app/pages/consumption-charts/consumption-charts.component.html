@@ -48,11 +48,19 @@
           </label>
         }
         <div class="consumption-charts__view-toggle">
-          <button type="button" class="consumption-charts__view consumption-charts__view--active">
-            Verbrauch
+          <button
+            type="button"
+            class="consumption-charts__view"
+            [class.consumption-charts__view--active]="!compareMode"
+            (click)="setCompareMode(false)">
+            Einzelansicht
           </button>
-          <button type="button" class="consumption-charts__view" disabled>
-            KW-Vergleich (demnaechst)
+          <button
+            type="button"
+            class="consumption-charts__view"
+            [class.consumption-charts__view--active]="compareMode"
+            (click)="setCompareMode(true)">
+            Vergleich
           </button>
         </div>
       </div>
@@ -63,7 +71,7 @@
     } @else if (errorMessage) {
       <div class="consumption-charts__state consumption-charts__state--error">{{ errorMessage }}</div>
     } @else {
-      @if (selectedSeries?.points?.length) {
+      @if (!compareMode && selectedSeries?.points?.length) {
         <div class="consumption-charts__card">
           <div class="consumption-charts__chart-header">
             <div>
@@ -80,94 +88,113 @@
           </div>
 
           <div class="consumption-charts__chart">
-            <svg
-              [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
-              role="img"
-              aria-label="Verbrauchsverlauf"
-              class="consumption-charts__svg">
-              <line
-                [attr.x1]="chartPadding"
-                [attr.x2]="chartWidth - chartPadding"
-                [attr.y1]="chartHeight - chartPadding"
-                [attr.y2]="chartHeight - chartPadding"
-                class="consumption-charts__axis-line" />
+            <div
+              echarts
+              class="consumption-charts__echart"
+              [options]="singleChartOptions"></div>
+          </div>
 
-              @for (line of getGridLines(); track line) {
-                <line
-                  [attr.x1]="chartPadding"
-                  [attr.x2]="chartWidth - chartPadding"
-                  [attr.y1]="getGridY(line)"
-                  [attr.y2]="getGridY(line)"
-                  class="consumption-charts__grid" />
-              }
-
-              <path
-                [attr.d]="getAreaPath(getSelectedSeries()?.points || [])"
-                class="consumption-charts__area"
-                [attr.fill]="getColor()" />
-
-              <polyline
-                [attr.points]="getPolyline(selectedSeries?.points || [])"
-                class="consumption-charts__line"
-                [attr.stroke]="getColor()" />
-
-              @if (selectedSeries) {
-                @if (selectedYear !== 'ALL' && selectedMonth === 'ALL') {
-                  @for (tick of getMonthTicks(selectedSeries.points); track tick.index) {
-                    <line
-                      [attr.x1]="getPointX(tick.index, selectedSeries.points.length)"
-                      [attr.x2]="getPointX(tick.index, selectedSeries.points.length)"
-                      [attr.y1]="chartHeight - chartPadding"
-                      [attr.y2]="chartHeight - chartPadding + 8"
-                      class="consumption-charts__x-tick" />
-                    <text
-                      [attr.x]="getPointX(tick.index, selectedSeries.points.length)"
-                      [attr.y]="chartHeight - chartPadding + 22"
-                      text-anchor="middle"
-                      class="consumption-charts__x-label">
-                      {{ tick.label }}
-                    </text>
-                  }
-                } @else {
-                  @for (tick of getXTicks(selectedSeries.points); track tick) {
-                    <line
-                      [attr.x1]="getPointX(tick, selectedSeries.points.length)"
-                      [attr.x2]="getPointX(tick, selectedSeries.points.length)"
-                      [attr.y1]="chartHeight - chartPadding"
-                      [attr.y2]="chartHeight - chartPadding + 8"
-                      class="consumption-charts__x-tick" />
-                    <text
-                      [attr.x]="getPointX(tick, selectedSeries.points.length)"
-                      [attr.y]="chartHeight - chartPadding + 22"
-                      text-anchor="middle"
-                      class="consumption-charts__x-label">
-                      {{ formatDate(selectedSeries.points[tick].date) }}
-                    </text>
-                  }
+        </div>
+      } @else if (compareMode) {
+        <div class="consumption-charts__compare">
+          <div class="consumption-charts__compare-controls">
+            <div class="consumption-charts__compare-block">
+              <span class="consumption-charts__compare-title">Vergleich A</span>
+              <div class="consumption-charts__compare-selects">
+                <label class="consumption-charts__select">
+                  <span>Jahr</span>
+                  <select (change)="setCompareYearA($any($event.target).value)">
+                    <option value="ALL" [selected]="compareYearA === 'ALL'">Alle Jahre</option>
+                    @for (year of availableYears; track year) {
+                      <option [value]="year" [selected]="compareYearA === year">{{ year }}</option>
+                    }
+                  </select>
+                </label>
+                @if (compareYearA !== 'ALL') {
+                  <label class="consumption-charts__select">
+                    <span>Monat</span>
+                    <select (change)="setCompareMonthA($any($event.target).value)">
+                      <option value="ALL" [selected]="compareMonthA === 'ALL'">Alle Monate</option>
+                      @for (month of getAvailableMonthsFor(compareYearA); track month) {
+                        <option [value]="month" [selected]="compareMonthA === month">{{ month }}</option>
+                      }
+                    </select>
+                  </label>
                 }
-
-                @for (point of selectedSeries.points; track point.date) {
-                  <circle
-                    [attr.cx]="getPointX($index, selectedSeries.points.length)"
-                    [attr.cy]="getPointY(point.value, selectedSeries.minValue, selectedSeries.maxValue)"
-                    r="4"
-                    class="consumption-charts__dot"
-                    [attr.fill]="getColor()" />
+              </div>
+            </div>
+            <div class="consumption-charts__compare-block">
+              <span class="consumption-charts__compare-title">Vergleich B</span>
+              <div class="consumption-charts__compare-selects">
+                <label class="consumption-charts__select">
+                  <span>Jahr</span>
+                  <select (change)="setCompareYearB($any($event.target).value)">
+                    <option value="ALL" [selected]="compareYearB === 'ALL'">Alle Jahre</option>
+                    @for (year of availableYears; track year) {
+                      <option [value]="year" [selected]="compareYearB === year">{{ year }}</option>
+                    }
+                  </select>
+                </label>
+                @if (compareYearB !== 'ALL') {
+                  <label class="consumption-charts__select">
+                    <span>Monat</span>
+                    <select (change)="setCompareMonthB($any($event.target).value)">
+                      <option value="ALL" [selected]="compareMonthB === 'ALL'">Alle Monate</option>
+                      @for (month of getAvailableMonthsFor(compareYearB); track month) {
+                        <option [value]="month" [selected]="compareMonthB === month">{{ month }}</option>
+                      }
+                    </select>
+                  </label>
                 }
-              }
-            </svg>
-
-            <div class="consumption-charts__axis">
-              @if (selectedSeries) {
-                @for (line of getGridLines(); track line) {
-                  <span class="consumption-charts__axis-label">
-                    {{ formatNumber(getGridValue(line, selectedSeries)) }} {{ selectedSeries.unit }}
-                  </span>
-                }
-              }
+              </div>
             </div>
           </div>
 
+          <div class="consumption-charts__card">
+            <div class="consumption-charts__chart-header">
+              <div>
+                <p class="consumption-charts__chart-title">Vergleich A</p>
+                <p class="consumption-charts__chart-subtitle">
+                  Einheit: {{ getSelectedUnit() }} pro Intervall
+                </p>
+              </div>
+            </div>
+            @if (compareSeriesAValue.points.length) {
+              <div class="consumption-charts__chart">
+                <div
+                  echarts
+                  class="consumption-charts__echart"
+                  [options]="compareChartOptionsA"></div>
+              </div>
+            } @else {
+              <div class="consumption-charts__state">
+                Keine Daten fuer Vergleich A.
+              </div>
+            }
+          </div>
+
+          <div class="consumption-charts__card">
+            <div class="consumption-charts__chart-header">
+              <div>
+                <p class="consumption-charts__chart-title">Vergleich B</p>
+                <p class="consumption-charts__chart-subtitle">
+                  Einheit: {{ getSelectedUnit() }} pro Intervall
+                </p>
+              </div>
+            </div>
+            @if (compareSeriesBValue.points.length) {
+              <div class="consumption-charts__chart">
+                <div
+                  echarts
+                  class="consumption-charts__echart"
+                  [options]="compareChartOptionsB"></div>
+              </div>
+            } @else {
+              <div class="consumption-charts__state">
+                Keine Daten fuer Vergleich B.
+              </div>
+            }
+          </div>
         </div>
       } @else {
         <div class="consumption-charts__state">

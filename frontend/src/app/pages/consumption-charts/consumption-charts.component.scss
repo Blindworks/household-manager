@@ -115,6 +115,41 @@
     background: #ffffff;
   }
 
+  &__compare {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  &__compare-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  &__compare-block {
+    flex: 1 1 280px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  }
+
+  &__compare-title {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #6b7280;
+    margin-bottom: 10px;
+  }
+
+  &__compare-selects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
   &__view {
     border: 1px dashed #cbd5df;
     background: #f9fafb;
@@ -180,11 +215,11 @@
 
   &__chart {
     position: relative;
-    padding: 16px;
+    padding: 16px 16px 28px;
     border-radius: 18px;
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.7) 100%);
     border: 1px solid rgba(226, 232, 240, 0.8);
-    overflow: hidden;
+    overflow: visible;
   }
 
   &__chart::before {
@@ -197,59 +232,14 @@
     pointer-events: none;
   }
 
-  &__svg {
+  &__echart {
     width: 100%;
     height: 280px;
-    display: block;
   }
 
-  &__grid {
-    stroke: #e2e8f0;
-    stroke-dasharray: 4 6;
-  }
-
-  &__axis-line {
-    stroke: rgba(148, 163, 184, 0.6);
-    stroke-width: 1.2;
-  }
-
-  &__x-tick {
-    stroke: rgba(148, 163, 184, 0.7);
-    stroke-width: 1.2;
-  }
-
-  &__x-label {
-    font-size: 11px;
-    fill: #94a3b8;
-  }
-
-  &__line {
-    fill: none;
-    stroke-width: 3.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.15));
-  }
-
-  &__area {
-    opacity: 0.18;
-  }
-
-  &__dot {
-    stroke: #ffffff;
-    stroke-width: 2;
-    filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.2));
-  }
 
   &__axis {
-    position: absolute;
-    top: 22px;
-    left: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 38px;
-    font-size: 11px;
-    color: #94a3b8;
+    display: none;
   }
 
 }
