@@ -26,13 +26,35 @@
           </button>
         }
       </div>
-      <div class="consumption-charts__view-toggle">
-        <button type="button" class="consumption-charts__view consumption-charts__view--active">
-          Verbrauch
-        </button>
-        <button type="button" class="consumption-charts__view" disabled>
-          KW-Vergleich (demnaechst)
-        </button>
+      <div class="consumption-charts__controls-right">
+        <label class="consumption-charts__select">
+          <span>Jahr</span>
+          <select (change)="setYear($any($event.target).value)">
+            <option value="ALL" [selected]="selectedYear === 'ALL'">Alle Jahre</option>
+            @for (year of availableYears; track year) {
+              <option [value]="year" [selected]="selectedYear === year">{{ year }}</option>
+            }
+          </select>
+        </label>
+        @if (selectedYear !== 'ALL') {
+          <label class="consumption-charts__select">
+            <span>Monat</span>
+            <select (change)="setMonth($any($event.target).value)">
+              <option value="ALL" [selected]="selectedMonth === 'ALL'">Alle Monate</option>
+              @for (month of availableMonths; track month) {
+                <option [value]="month" [selected]="selectedMonth === month">{{ month }}</option>
+              }
+            </select>
+          </label>
+        }
+        <div class="consumption-charts__view-toggle">
+          <button type="button" class="consumption-charts__view consumption-charts__view--active">
+            Verbrauch
+          </button>
+          <button type="button" class="consumption-charts__view" disabled>
+            KW-Vergleich (demnaechst)
+          </button>
+        </div>
       </div>
     </section>
 
@@ -90,20 +112,38 @@
                 [attr.stroke]="getColor()" />
 
               @if (selectedSeries) {
-                @for (tick of getXTicks(selectedSeries.points); track tick) {
-                  <line
-                    [attr.x1]="getPointX(tick, selectedSeries.points.length)"
-                    [attr.x2]="getPointX(tick, selectedSeries.points.length)"
-                    [attr.y1]="chartHeight - chartPadding"
-                    [attr.y2]="chartHeight - chartPadding + 8"
-                    class="consumption-charts__x-tick" />
-                  <text
-                    [attr.x]="getPointX(tick, selectedSeries.points.length)"
-                    [attr.y]="chartHeight - chartPadding + 22"
-                    text-anchor="middle"
-                    class="consumption-charts__x-label">
-                    {{ formatDate(selectedSeries.points[tick].date) }}
-                  </text>
+                @if (selectedYear !== 'ALL' && selectedMonth === 'ALL') {
+                  @for (tick of getMonthTicks(selectedSeries.points); track tick.index) {
+                    <line
+                      [attr.x1]="getPointX(tick.index, selectedSeries.points.length)"
+                      [attr.x2]="getPointX(tick.index, selectedSeries.points.length)"
+                      [attr.y1]="chartHeight - chartPadding"
+                      [attr.y2]="chartHeight - chartPadding + 8"
+                      class="consumption-charts__x-tick" />
+                    <text
+                      [attr.x]="getPointX(tick.index, selectedSeries.points.length)"
+                      [attr.y]="chartHeight - chartPadding + 22"
+                      text-anchor="middle"
+                      class="consumption-charts__x-label">
+                      {{ tick.label }}
+                    </text>
+                  }
+                } @else {
+                  @for (tick of getXTicks(selectedSeries.points); track tick) {
+                    <line
+                      [attr.x1]="getPointX(tick, selectedSeries.points.length)"
+                      [attr.x2]="getPointX(tick, selectedSeries.points.length)"
+                      [attr.y1]="chartHeight - chartPadding"
+                      [attr.y2]="chartHeight - chartPadding + 8"
+                      class="consumption-charts__x-tick" />
+                    <text
+                      [attr.x]="getPointX(tick, selectedSeries.points.length)"
+                      [attr.y]="chartHeight - chartPadding + 22"
+                      text-anchor="middle"
+                      class="consumption-charts__x-label">
+                      {{ formatDate(selectedSeries.points[tick].date) }}
+                    </text>
+                  }
                 }
 
                 @for (point of selectedSeries.points; track point.date) {

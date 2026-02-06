@@ -87,6 +87,34 @@
     align-items: center;
   }
 
+  &__controls-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #6b7280;
+  }
+
+  &__select select {
+    appearance: none;
+    border: 1px solid #e2e6ea;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #1f2933;
+    background: #ffffff;
+  }
+
   &__view {
     border: 1px dashed #cbd5df;
     background: #f9fafb;
