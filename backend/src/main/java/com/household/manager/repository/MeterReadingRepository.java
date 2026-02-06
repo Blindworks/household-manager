@@ -65,4 +65,13 @@ public interface MeterReadingRepository extends JpaRepository<MeterReading, Long
      * @return list containing up to two most recent readings (newest first)
      */
     List<MeterReading> findTop2ByMeterTypeOrderByReadingDateDesc(MeterType meterType);
+
+    /**
+     * Check if a reading exists for a given meter type and reading date.
+     *
+     * @param meterType the type of meter
+     * @param readingDate the reading date and time
+     * @return true if a reading exists, false otherwise
+     */
+    boolean existsByMeterTypeAndReadingDate(MeterType meterType, LocalDateTime readingDate);
 }

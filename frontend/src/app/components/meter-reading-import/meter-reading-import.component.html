@@ -1,0 +1,19 @@
+<section class="import-card">
+  <div class="import-header">
+    <app-icon name="upload-cloud" class="import-icon"></app-icon>
+    <div>
+      <h3>CSV-Import</h3>
+      <p>Importiere Zählerstände (Strom, Gas, Wasser) aus einer CSV-Datei.</p>
+    </div>
+  </div>
+
+  <div class="import-actions">
+    <input type="file" accept=".csv" (change)="onFileSelected($event)" />
+    <button class="btn-primary" (click)="upload()" [disabled]="!selectedFile || isUploading">
+      {{ isUploading ? 'Import läuft…' : 'Import starten' }}
+    </button>
+  </div>
+
+  <p class="status success" *ngIf="successMessage">{{ successMessage }}</p>
+  <p class="status error" *ngIf="errorMessage">{{ errorMessage }}</p>
+</section>

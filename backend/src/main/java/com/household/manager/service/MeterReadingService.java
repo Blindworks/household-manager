@@ -52,6 +52,7 @@ public class MeterReadingService {
         MeterReading meterReading = MeterReading.builder()
                 .meterType(request.getMeterType())
                 .readingValue(request.getReadingValue())
+                .readingWeek(resolveReadingWeek(request))
                 .readingDate(request.getReadingDate())
                 .notes(request.getNotes())
                 .build();
@@ -172,6 +173,7 @@ public class MeterReadingService {
                 .id(reading.getId())
                 .meterType(reading.getMeterType())
                 .readingValue(reading.getReadingValue())
+                .readingWeek(reading.getReadingWeek())
                 .readingDate(reading.getReadingDate())
                 .notes(reading.getNotes())
                 .createdAt(reading.getCreatedAt())
@@ -233,5 +235,16 @@ public class MeterReadingService {
                 .daysBetweenReadings((int) daysBetween)
                 .averageDailyConsumption(averageDailyConsumption)
                 .build();
+    }
+
+    private Integer resolveReadingWeek(MeterReadingRequest request) {
+        if (request.getReadingWeek() != null) {
+            return request.getReadingWeek();
+        }
+        if (request.getReadingDate() == null) {
+            return null;
+        }
+        return request.getReadingDate()
+                .get(java.time.temporal.WeekFields.of(java.util.Locale.GERMANY).weekOfWeekBasedYear());
     }
 }

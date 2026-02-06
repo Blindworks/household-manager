@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingFormComponent } from '../../components/meter-reading-form/meter-reading-form.component';
+import { MeterReadingImportComponent } from '../../components/meter-reading-import/meter-reading-import.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { MeterReading, MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
@@ -14,7 +15,7 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 @Component({
   selector: 'app-meter-readings',
   standalone: true,
-  imports: [CommonModule, RouterLink, IconComponent, MeterReadingFormComponent],
+  imports: [CommonModule, RouterLink, IconComponent, MeterReadingFormComponent, MeterReadingImportComponent],
   templateUrl: './meter-readings.component.html',
   styleUrl: './meter-readings.component.scss'
 })

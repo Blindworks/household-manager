@@ -1,0 +1,54 @@
+.import-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e7e7e7;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.04);
+}
+
+.import-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.import-icon {
+  font-size: 28px;
+  color: #1f6feb;
+}
+
+.import-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: #1f6feb;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 12px;
+  font-size: 0.95rem;
+}
+
+.status.success {
+  color: #1a7f37;
+}
+
+.status.error {
+  color: #c62828;
+}

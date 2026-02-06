@@ -1,8 +1,10 @@
 package com.household.manager.controller;
 
 import com.household.manager.dto.ConsumptionResponse;
+import com.household.manager.dto.MeterReadingImportResponse;
 import com.household.manager.dto.MeterReadingRequest;
 import com.household.manager.dto.MeterReadingResponse;
+import com.household.manager.importer.MeterReadingCsvImporter;
 import com.household.manager.model.entity.MeterType;
 import com.household.manager.service.MeterReadingService;
 import jakarta.validation.Valid;
@@ -10,9 +12,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 /**
  * REST Controller for meter reading operations.
@@ -30,6 +35,7 @@ import java.util.List;
 public class MeterReadingController {
 
     private final MeterReadingService meterReadingService;
+    private final MeterReadingCsvImporter meterReadingCsvImporter;
 
     /**
      * Create a new meter reading.
@@ -113,6 +119,34 @@ public class MeterReadingController {
         log.info("Received request to calculate consumption for type: {}", type);
         ConsumptionResponse consumption = meterReadingService.calculateConsumption(type);
         return ResponseEntity.ok(consumption);
+    }
+
+    /**
+     * Import meter readings from CSV upload.
+     * <p>
+     * POST /api/v1/meter-readings/import
+     *
+     * @param file CSV file upload
+     * @return import result with created count
+     */
+    @PostMapping("/import")
+    public ResponseEntity<MeterReadingImportResponse> importMeterReadings(
+            @RequestParam("file") MultipartFile file) {
+        log.info("Received CSV import request: {}", file.getOriginalFilename());
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(MeterReadingImportResponse.builder().createdCount(0).build());
+        }
+
+        try (var reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+            int created = meterReadingCsvImporter.importFromReader(reader);
+            return ResponseEntity.ok(MeterReadingImportResponse.builder().createdCount(created).build());
+        } catch (Exception ex) {
+            log.error("CSV import failed", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(MeterReadingImportResponse.builder().createdCount(0).build());
+        }
     }
 
     /**
