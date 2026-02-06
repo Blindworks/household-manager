@@ -18,6 +18,11 @@ interface ChartSeries {
   readonly minValue: number;
 }
 
+interface XTick {
+  readonly index: number;
+  readonly label: string;
+}
+
 @Component({
   selector: 'app-consumption-charts',
   standalone: true,
@@ -35,11 +40,17 @@ export class ConsumptionChartsComponent implements OnInit {
   readonly MeterTypeUtils = MeterTypeUtils;
   readonly meterTypes = MeterTypeUtils.getAllTypes();
   selectedType: MeterType = MeterType.ELECTRICITY;
+  selectedYear: number | 'ALL' = 'ALL';
+  selectedMonth: number | 'ALL' = 'ALL';
+  availableYears: number[] = [];
+  availableMonths: number[] = [];
 
   isLoading = true;
   errorMessage: string | null = null;
 
   private readonly seriesByType = new Map<MeterType, ChartSeries>();
+  private readonly rawPointsByType = new Map<MeterType, ChartPoint[]>();
+  private readonly readingYearsByType = new Map<MeterType, number[]>();
 
   ngOnInit(): void {
     this.loadAllSeries();
@@ -47,14 +58,52 @@ export class ConsumptionChartsComponent implements OnInit {
 
   selectType(type: MeterType): void {
     this.selectedType = type;
+    this.updateAvailableYears();
   }
 
   getSelectedSeries(): ChartSeries | null {
-    return this.seriesByType.get(this.selectedType) ?? null;
+    const baseSeries = this.seriesByType.get(this.selectedType);
+    if (!baseSeries) {
+      return null;
+    }
+    const rawPoints = this.rawPointsByType.get(this.selectedType) ?? baseSeries.points;
+    const filteredPoints = this.filterByYearAndMonth(rawPoints, this.selectedYear, this.selectedMonth);
+    const points = this.filterOutliers(filteredPoints);
+    const values = points.map(point => point.value);
+    const maxValue = values.length > 0 ? Math.max(...values) : 0;
+    const minValue = values.length > 0 ? Math.min(...values) : 0;
+    return {
+      points,
+      unit: baseSeries.unit,
+      maxValue,
+      minValue
+    };
   }
 
   get selectedSeries(): ChartSeries | null {
     return this.getSelectedSeries();
+  }
+
+  setYear(year: string): void {
+    if (year === 'ALL') {
+      this.selectedYear = 'ALL';
+      this.selectedMonth = 'ALL';
+      this.availableMonths = [];
+      return;
+    }
+    const parsed = Number(year);
+    this.selectedYear = Number.isNaN(parsed) ? 'ALL' : parsed;
+    this.selectedMonth = 'ALL';
+    this.updateAvailableMonths();
+  }
+
+  setMonth(month: string): void {
+    if (month === 'ALL') {
+      this.selectedMonth = 'ALL';
+      return;
+    }
+    const parsed = Number(month);
+    this.selectedMonth = Number.isNaN(parsed) ? 'ALL' : parsed;
   }
 
   getSelectedLabel(): string {
@@ -162,6 +211,33 @@ export class ConsumptionChartsComponent implements OnInit {
     return [0, middle, count - 1];
   }
 
+  getMonthTicks(points: ChartPoint[]): XTick[] {
+    if (points.length === 0) {
+      return [];
+    }
+    const monthToIndex = new Map<number, number>();
+    points.forEach((point, index) => {
+      const month = point.date.getMonth() + 1;
+      if (!monthToIndex.has(month)) {
+        monthToIndex.set(month, index);
+      }
+    });
+    return Array.from(monthToIndex.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([month, index]) => ({
+        index,
+        label: this.formatMonth(month)
+      }));
+  }
+
+  private formatMonth(month: number): string {
+    const labels = [
+      'Jan', 'Feb', 'Maerz', 'Apr', 'Mai', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'
+    ];
+    return labels[month - 1] ?? '';
+  }
+
   private loadAllSeries(): void {
     this.isLoading = true;
     this.errorMessage = null;
@@ -175,10 +251,17 @@ export class ConsumptionChartsComponent implements OnInit {
       const type = this.meterTypes[index];
       request.subscribe({
         next: readings => {
-          this.seriesByType.set(type, this.buildSeries(readings, type));
+          const series = this.buildSeries(readings, type);
+          this.seriesByType.set(type, series);
+          this.rawPointsByType.set(type, series.points);
+          this.readingYearsByType.set(
+            type,
+            Array.from(new Set(readings.map(reading => reading.readingDate.getFullYear())))
+          );
           completed += 1;
           if (completed === requests.length) {
             this.isLoading = false;
+            this.updateAvailableYears();
           }
         },
         error: (error: Error) => {
@@ -217,6 +300,54 @@ export class ConsumptionChartsComponent implements OnInit {
       maxValue,
       minValue
     };
+  }
+
+  private updateAvailableYears(): void {
+    const years = (this.readingYearsByType.get(this.selectedType) ?? [])
+      .sort((a, b) => b - a);
+    this.availableYears = years;
+    if (this.selectedYear !== 'ALL' && !years.includes(this.selectedYear)) {
+      this.selectedYear = 'ALL';
+    }
+    if (this.selectedYear !== 'ALL') {
+      this.updateAvailableMonths();
+    } else {
+      this.availableMonths = [];
+    }
+  }
+
+  private updateAvailableMonths(): void {
+    if (this.selectedYear === 'ALL') {
+      this.availableMonths = [];
+      return;
+    }
+    const points = this.rawPointsByType.get(this.selectedType) ?? [];
+    const months = Array.from(
+      new Set(
+        points
+          .filter(point => point.date.getFullYear() === this.selectedYear)
+          .map(point => point.date.getMonth() + 1)
+      )
+    ).sort((a, b) => a - b);
+    this.availableMonths = months;
+    if (this.selectedMonth !== 'ALL' && !months.includes(this.selectedMonth)) {
+      this.selectedMonth = 'ALL';
+    }
+  }
+
+  private filterByYearAndMonth(
+    points: ChartPoint[],
+    year: number | 'ALL',
+    month: number | 'ALL'
+  ): ChartPoint[] {
+    if (year === 'ALL') {
+      return points;
+    }
+    const yearFiltered = points.filter(point => point.date.getFullYear() === year);
+    if (month === 'ALL') {
+      return yearFiltered;
+    }
+    return yearFiltered.filter(point => point.date.getMonth() + 1 === month);
   }
 
   private filterOutliers(points: ChartPoint[]): ChartPoint[] {
