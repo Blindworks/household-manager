@@ -8,15 +8,11 @@
 
         <div class="hero__actions">
           <a routerLink="/meter-readings" class="btn btn--primary hero__btn">
-            <svg class="hero__btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
+            <app-icon name="bar-chart-3" class="hero__btn-icon"></app-icon>
             Zählerstände erfassen
           </a>
           <button class="btn btn--secondary hero__btn">
-            <svg class="hero__btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <app-icon name="info" class="hero__btn-icon"></app-icon>
             Mehr erfahren
           </button>
         </div>
@@ -24,9 +20,7 @@
 
       <div class="hero__image">
         <div class="hero__image-card">
-          <svg class="hero__illustration" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
+          <app-icon name="bar-chart-3" class="hero__illustration" [size]="120"></app-icon>
           <div class="hero__stats">
             <div class="hero__stat-item">
               <span class="hero__stat-value">0</span>

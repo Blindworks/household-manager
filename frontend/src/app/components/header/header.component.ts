@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 /**
  * Header component for the Household Manager application.
@@ -9,7 +10,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })

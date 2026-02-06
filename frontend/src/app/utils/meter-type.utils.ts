@@ -21,19 +21,26 @@ export class MeterTypeUtils {
   }
 
   /**
-   * Gibt das Icon-Emoji für einen Zählertyp zurück
+   * Gibt den Lucide Icon-Namen für einen Zählertyp zurück
    */
-  static getIcon(type: MeterType): string {
+  static getIconName(type: MeterType): string {
     switch (type) {
       case MeterType.ELECTRICITY:
-        return '⚡';
+        return 'zap';
       case MeterType.GAS:
-        return '🔥';
+        return 'flame';
       case MeterType.WATER:
-        return '💧';
+        return 'droplet';
       default:
-        return '📊';
+        return 'gauge';
     }
+  }
+
+  /**
+   * Alias für getIconName() - gibt den Icon-Namen zurück
+   */
+  static getIcon(type: MeterType): string {
+    return this.getIconName(type);
   }
 
   /**

@@ -14,9 +14,7 @@
              [attr.data-color]="feature.color">
           <div class="features__card-header">
             <div class="features__icon-wrapper" [attr.data-color]="feature.color">
-              <svg class="features__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="feature.icon" />
-              </svg>
+              <app-icon [name]="feature.iconName" class="features__icon"></app-icon>
             </div>
             @if (!feature.available) {
               <span class="features__badge">Demnächst</span>
@@ -29,9 +27,7 @@
           @if (feature.available) {
             <button class="features__btn">
               Mehr erfahren
-              <svg class="features__btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <app-icon name="arrow-right" class="features__btn-icon"></app-icon>
             </button>
           }
         </div>

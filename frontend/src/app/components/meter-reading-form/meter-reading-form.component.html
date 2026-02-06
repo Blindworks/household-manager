@@ -3,13 +3,13 @@
 
   <!-- Success Message -->
   <div class="alert alert--success" *ngIf="successMessage">
-    <span class="alert__icon">✓</span>
+    <app-icon name="check-circle" class="alert__icon"></app-icon>
     <span class="alert__message">{{ successMessage }}</span>
   </div>
 
   <!-- Error Message -->
   <div class="alert alert--error" *ngIf="errorMessage">
-    <span class="alert__icon">⚠</span>
+    <app-icon name="alert-triangle" class="alert__icon"></app-icon>
     <span class="alert__message">{{ errorMessage }}</span>
   </div>
 
@@ -17,6 +17,7 @@
     <!-- Zählertyp -->
     <div class="form-group">
       <label for="meterType" class="form-label">
+        <app-icon name="gauge" [size]="16" class="form-label__icon"></app-icon>
         Zählertyp <span class="required">*</span>
       </label>
       <select
@@ -27,7 +28,7 @@
       >
         <option value="" disabled>Bitte wählen...</option>
         <option *ngFor="let type of meterTypes" [value]="type">
-          {{ meterTypeUtils.getIcon(type) }} {{ meterTypeUtils.getLabel(type) }}
+          {{ meterTypeUtils.getLabel(type) }}
         </option>
       </select>
       <div class="form-error" *ngIf="isFieldInvalid('meterType')">

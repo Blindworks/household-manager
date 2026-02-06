@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
@@ -13,7 +14,7 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, IconComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
@@ -61,7 +62,7 @@ export class DashboardComponent implements OnInit {
           return {
             type: MeterTypeUtils.getLabel(type),
             meterType: type,
-            icon: MeterTypeUtils.getIcon(type),
+            iconName: MeterTypeUtils.getIconName(type),
             color: MeterTypeUtils.getColor(type),
             lastReading: latest?.readingValue || 0,
             unit: MeterTypeUtils.getUnit(type),
@@ -93,7 +94,7 @@ export class DashboardComponent implements OnInit {
     return MeterTypeUtils.getAllTypes().map(type => ({
       type: MeterTypeUtils.getLabel(type),
       meterType: type,
-      icon: MeterTypeUtils.getIcon(type),
+      iconName: MeterTypeUtils.getIconName(type),
       color: MeterTypeUtils.getColor(type),
       lastReading: 0,
       unit: MeterTypeUtils.getUnit(type),
@@ -116,18 +117,18 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Gets the trend icon based on consumption trend
+   * Gets the Lucide icon name for trend
    */
-  getTrendIcon(trend: string): string {
+  getTrendIconName(trend: string): string {
     switch (trend) {
       case 'up':
-        return '↗️';
+        return 'trending-up';
       case 'down':
-        return '↘️';
+        return 'trending-down';
       case 'stable':
-        return '→';
+        return 'minus';
       default:
-        return '→';
+        return 'minus';
     }
   }
 
@@ -155,7 +156,7 @@ export class DashboardComponent implements OnInit {
 interface MeterCardData {
   readonly type: string;
   readonly meterType: MeterType;
-  readonly icon: string;
+  readonly iconName: string;
   readonly color: string;
   readonly lastReading: number;
   readonly unit: string;

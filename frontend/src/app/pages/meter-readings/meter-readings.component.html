@@ -3,31 +3,145 @@
     <!-- Page Header -->
     <header class="meter-readings__header">
       <a routerLink="/" class="back-link">
-        ← Zurück zum Dashboard
+        <app-icon name="arrow-left" [size]="16"></app-icon>
+        Zurück zum Dashboard
       </a>
       <h1 class="meter-readings__title">Zählerstände</h1>
       <p class="meter-readings__subtitle">
-        Verwalten Sie Ihre Strom-, Gas- und Wasserzählerstände
+        Erfassen und verwalten Sie Ihre Strom-, Gas- und Wasserzählerstände
       </p>
     </header>
 
-    <!-- Placeholder Content -->
-    <section class="placeholder">
-      <div class="placeholder__icon">🚧</div>
-      <h2 class="placeholder__title">In Entwicklung</h2>
-      <p class="placeholder__text">
-        Diese Seite ist noch in Entwicklung. Hier werden Sie zukünftig:
-      </p>
-      <ul class="placeholder__features">
-        <li>Neue Zählerstände erfassen</li>
-        <li>Verbrauchshistorie einsehen</li>
-        <li>Grafische Auswertungen anzeigen</li>
-        <li>Daten exportieren</li>
-        <li>Automatische Verbrauchsberechnungen erhalten</li>
-      </ul>
-      <a routerLink="/" class="btn btn--primary">
-        Zurück zum Dashboard
-      </a>
-    </section>
+    <!-- Main Content Grid -->
+    <div class="meter-readings__content">
+      <!-- Left Column: Form -->
+      <aside class="meter-readings__form-section">
+        <app-meter-reading-form
+          (readingCreated)="onReadingCreated()"
+        ></app-meter-reading-form>
+      </aside>
+
+      <!-- Right Column: History -->
+      <section class="meter-readings__history-section">
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+          <button
+            class="filter-tab"
+            [class.filter-tab--active]="selectedFilter === 'ALL'"
+            (click)="filterByType('ALL')"
+          >
+            <app-icon name="list" [size]="16"></app-icon>
+            Alle
+          </button>
+          <button
+            class="filter-tab"
+            [class.filter-tab--active]="selectedFilter === MeterType.ELECTRICITY"
+            (click)="filterByType(MeterType.ELECTRICITY)"
+          >
+            <app-icon name="zap" [size]="16"></app-icon>
+            Strom
+          </button>
+          <button
+            class="filter-tab"
+            [class.filter-tab--active]="selectedFilter === MeterType.GAS"
+            (click)="filterByType(MeterType.GAS)"
+          >
+            <app-icon name="flame" [size]="16"></app-icon>
+            Gas
+          </button>
+          <button
+            class="filter-tab"
+            [class.filter-tab--active]="selectedFilter === MeterType.WATER"
+            (click)="filterByType(MeterType.WATER)"
+          >
+            <app-icon name="droplet" [size]="16"></app-icon>
+            Wasser
+          </button>
+        </div>
+
+        <!-- History Header -->
+        <div class="history-header">
+          <h2 class="history-title">Verlauf</h2>
+          <span class="history-count" *ngIf="!isLoading">
+            {{ filteredReadings.length }} Ablesung{{ filteredReadings.length !== 1 ? 'en' : '' }}
+          </span>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" *ngIf="isLoading">
+          <div class="spinner"></div>
+          <p>Lade Ablesungen...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-state" *ngIf="errorMessage && !isLoading">
+          <app-icon name="alert-triangle" [size]="48" class="error-state__icon"></app-icon>
+          <p class="error-state__message">{{ errorMessage }}</p>
+          <button class="btn btn--secondary" (click)="loadReadings()">
+            Erneut versuchen
+          </button>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!isLoading && !errorMessage && filteredReadings.length === 0">
+          <app-icon name="inbox" [size]="48" class="empty-state__icon"></app-icon>
+          <h3 class="empty-state__title">Keine Ablesungen vorhanden</h3>
+          <p class="empty-state__text">
+            Erfassen Sie Ihre erste Ablesung mit dem Formular links.
+          </p>
+        </div>
+
+        <!-- Readings List -->
+        <div class="readings-list" *ngIf="!isLoading && !errorMessage && filteredReadings.length > 0">
+          <div
+            class="reading-card"
+            *ngFor="let reading of filteredReadings"
+            [class.reading-card--electricity]="reading.meterType === MeterType.ELECTRICITY"
+            [class.reading-card--gas]="reading.meterType === MeterType.GAS"
+            [class.reading-card--water]="reading.meterType === MeterType.WATER"
+          >
+            <!-- Card Header -->
+            <div class="reading-card__header">
+              <div class="reading-card__type">
+                <app-icon
+                  [name]="meterTypeUtils.getIconName(reading.meterType)"
+                  [size]="20"
+                  class="reading-card__icon"
+                ></app-icon>
+                <span class="reading-card__type-label">
+                  {{ meterTypeUtils.getLabel(reading.meterType) }}
+                </span>
+              </div>
+              <span class="reading-card__date">
+                {{ reading.readingDate | date:'dd.MM.yyyy HH:mm' }}
+              </span>
+            </div>
+
+            <!-- Card Body -->
+            <div class="reading-card__body">
+              <div class="reading-card__value">
+                <span class="reading-card__number">{{ reading.readingValue | number:'1.2-2' }}</span>
+                <span class="reading-card__unit">{{ meterTypeUtils.getUnit(reading.meterType) }}</span>
+              </div>
+
+              <!-- Consumption Badge -->
+              <div class="reading-card__consumption" *ngIf="reading.consumption">
+                <app-icon name="trending-up" [size]="14"></app-icon>
+                <span>+{{ reading.consumption | number:'1.2-2' }} {{ meterTypeUtils.getUnit(reading.meterType) }}</span>
+                <span class="reading-card__days" *ngIf="reading.daysSinceLastReading">
+                  ({{ reading.daysSinceLastReading }} Tag{{ reading.daysSinceLastReading !== 1 ? 'e' : '' }})
+                </span>
+              </div>
+            </div>
+
+            <!-- Card Footer (Notes) -->
+            <div class="reading-card__footer" *ngIf="reading.notes">
+              <app-icon name="message-circle" [size]="14"></app-icon>
+              <span class="reading-card__notes">{{ reading.notes }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </div>

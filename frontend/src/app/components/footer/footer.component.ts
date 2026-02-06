@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 /**
  * Footer component for the Household Manager application.
@@ -8,7 +9,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   templateUrl: './footer.component.html',
   styleUrl: './footer.component.scss'
 })
