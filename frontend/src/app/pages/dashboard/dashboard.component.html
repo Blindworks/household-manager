@@ -50,23 +50,19 @@
           </div>
 
           <div class="meter-card__consumption">
-            <span class="meter-card__label">Verbrauch ({{ meter.consumptionPeriod }})</span>
-            <div class="meter-card__consumption-value">
+            <span class="meter-card__label">Verbrauch &amp; Kosten ({{ meter.consumptionPeriod }})</span>
+            <div class="meter-card__line meter-card__line--consumption">
               <span class="meter-card__value">
                 {{ meter.consumption | number:'1.1-1':'de-DE' }}
                 <span class="meter-card__unit">{{ meter.unit }}</span>
+              </span>
+              <span class="meter-card__value meter-card__value--cost">
+                {{ formatCurrency(meter.costLast7Days) }}
               </span>
               <span [class]="'meter-card__trend ' + getTrendClass(meter.trend)">
                 <app-icon [name]="getTrendIconName(meter.trend)" [size]="16"></app-icon>
               </span>
             </div>
-          </div>
-
-          <div class="meter-card__cost">
-            <span class="meter-card__label">Kosten (letzte 7 Tage)</span>
-            <span class="meter-card__value">
-              {{ formatCurrency(meter.costLast7Days) }}
-            </span>
           </div>
         </div>
 
