@@ -14,5 +14,6 @@
 
     <!-- Utility Prices Feature -->
     <include file="db/changelog/changes/20260206-0003-create-utility-prices-table.xml"/>
+    <include file="db/changelog/changes/20260206-0005-update-utility-price-meter-type-check.xml"/>
 
 </databaseChangeLog>

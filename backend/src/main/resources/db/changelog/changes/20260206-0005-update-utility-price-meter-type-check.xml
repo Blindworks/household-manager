@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260206-0005" author="household-manager">
+        <comment>Update utility_prices meter_type check constraint to ELECTRICITY and GAS</comment>
+
+        <sql dbms="mariadb,mysql">
+            ALTER TABLE utility_prices
+            DROP CONSTRAINT chk_utility_price_meter_type
+        </sql>
+
+        <sql>
+            ALTER TABLE utility_prices
+            ADD CONSTRAINT chk_utility_price_meter_type
+            CHECK (meter_type IN ('ELECTRICITY', 'GAS'))
+        </sql>
+
+        <rollback>
+            <sql dbms="mariadb,mysql">
+                ALTER TABLE utility_prices
+                DROP CONSTRAINT chk_utility_price_meter_type
+            </sql>
+            <sql dbms="mariadb,mysql">
+                ALTER TABLE utility_prices
+                ADD CONSTRAINT chk_utility_price_meter_type
+                CHECK (meter_type IN ('ELECTRICITY', 'WATER'))
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

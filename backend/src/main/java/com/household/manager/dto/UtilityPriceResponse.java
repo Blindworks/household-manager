@@ -30,7 +30,7 @@ public class UtilityPriceResponse {
     private Long id;
 
     /**
-     * Type of meter (ELECTRICITY or WATER only)
+     * Type of meter (ELECTRICITY or GAS only)
      */
     private MeterType meterType;
 
@@ -39,7 +39,7 @@ public class UtilityPriceResponse {
      * <p>
      * Units depend on meter type:
      * - ELECTRICITY: price per kWh
-     * - WATER: price per m³
+     * - GAS: price per m³
      */
     private BigDecimal price;
 

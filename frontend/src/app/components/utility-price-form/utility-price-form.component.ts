@@ -31,7 +31,7 @@ export class UtilityPriceFormComponent implements OnInit {
   priceForm!: FormGroup;
 
   /** Verfügbare Zählertypen */
-  meterTypes = MeterTypeUtils.getAllTypes();
+  meterTypes: MeterType[] = [MeterType.ELECTRICITY, MeterType.GAS];
 
   /** MeterTypeUtils für Template-Zugriff */
   meterTypeUtils = MeterTypeUtils;
@@ -58,7 +58,7 @@ export class UtilityPriceFormComponent implements OnInit {
   private initializeForm(): void {
     this.priceForm = this.fb.group({
       meterType: [this.preselectedType || '', Validators.required],
-      pricePerUnit: [
+      price: [
         '',
         [Validators.required, Validators.min(0.0001), Validators.pattern(/^\d+(\.\d{1,4})?$/)]
       ],
@@ -141,7 +141,7 @@ export class UtilityPriceFormComponent implements OnInit {
     const formValue = this.priceForm.value;
     const request: UtilityPriceRequest = {
       meterType: formValue.meterType,
-      pricePerUnit: parseFloat(formValue.pricePerUnit),
+      price: parseFloat(formValue.price),
       validFrom: formValue.validFrom,
       validTo: formValue.validTo || undefined
     };

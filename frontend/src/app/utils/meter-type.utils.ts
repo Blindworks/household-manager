@@ -67,7 +67,7 @@ export class MeterTypeUtils {
       case MeterType.ELECTRICITY:
         return 'kWh';
       case MeterType.GAS:
-        return 'm³';
+        return 'kWh';
       case MeterType.WATER:
         return 'm³';
       default:
