@@ -11,7 +11,7 @@ export interface UtilityPrice {
   meterType: MeterType;
 
   /** Preis pro Einheit in EUR */
-  pricePerUnit: number;
+  price: number;
 
   /** Gültig ab Datum */
   validFrom: Date;
@@ -34,7 +34,7 @@ export interface UtilityPriceRequest {
   meterType: MeterType;
 
   /** Preis pro Einheit in EUR */
-  pricePerUnit: number;
+  price: number;
 
   /** Gültig ab Datum im ISO-Format (YYYY-MM-DD) */
   validFrom: string;

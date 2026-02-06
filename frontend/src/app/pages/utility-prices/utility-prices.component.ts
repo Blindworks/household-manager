@@ -40,7 +40,7 @@ export class UtilityPricesComponent implements OnInit {
   meterTypeUtils = MeterTypeUtils;
 
   /** Alle Meter Types für die Gruppierung */
-  readonly meterTypes = [MeterType.ELECTRICITY, MeterType.WATER];
+  readonly meterTypes = [MeterType.ELECTRICITY, MeterType.GAS];
 
   ngOnInit(): void {
     this.loadPrices();
@@ -135,7 +135,7 @@ export class UtilityPricesComponent implements OnInit {
     }
 
     const meterTypeLabel = this.meterTypeUtils.getLabel(price.meterType);
-    const priceFormatted = this.formatPrice(price.pricePerUnit);
+    const priceFormatted = this.formatPrice(price.price);
     const confirmMessage = `Möchten Sie den Preis ${priceFormatted} für ${meterTypeLabel} wirklich löschen?`;
 
     if (!confirm(confirmMessage)) {

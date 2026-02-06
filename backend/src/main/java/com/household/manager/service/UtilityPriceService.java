@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * Service for managing utility prices.
  * <p>
  * Handles business logic for creating, retrieving, and managing
- * utility prices for electricity and water with validity periods.
+ * utility prices for electricity and gas with validity periods.
  */
 @Service
 @RequiredArgsConstructor
@@ -32,7 +32,7 @@ public class UtilityPriceService {
      * Create a new utility price.
      * <p>
      * Validates that:
-     * - Only ELECTRICITY or WATER meter types are allowed
+     * - Only ELECTRICITY or GAS meter types are allowed
      * - validFrom is before validTo (if validTo is provided)
      * - No overlapping validity periods exist for the same meter type
      *
@@ -137,16 +137,16 @@ public class UtilityPriceService {
     }
 
     /**
-     * Validate that only ELECTRICITY or WATER meter types are used.
+     * Validate that only ELECTRICITY or GAS meter types are used.
      *
      * @param meterType the meter type to validate
-     * @throws IllegalArgumentException if meter type is not ELECTRICITY or WATER
+     * @throws IllegalArgumentException if meter type is not ELECTRICITY or GAS
      */
     private void validateMeterType(MeterType meterType) {
-        if (meterType != MeterType.ELECTRICITY && meterType != MeterType.WATER) {
+        if (meterType != MeterType.ELECTRICITY && meterType != MeterType.GAS) {
             log.warn("Invalid meter type for utility price: {}", meterType);
             throw new IllegalArgumentException(
-                    "Utility prices are only supported for ELECTRICITY and WATER meter types. " +
+                    "Utility prices are only supported for ELECTRICITY and GAS meter types. " +
                     "Provided: " + meterType);
         }
     }

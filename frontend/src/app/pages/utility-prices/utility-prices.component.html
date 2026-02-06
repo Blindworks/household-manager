@@ -8,7 +8,7 @@
           Versorgerpreise
         </h1>
         <p class="page-header__subtitle">
-          Erfassen und verwalten Sie hier Ihre Strom- und Wasserpreise zur Kostenberechnung
+          Erfassen und verwalten Sie hier Ihre Strom- und Gaspreise zur Kostenberechnung
         </p>
       </div>
     </header>
@@ -96,7 +96,7 @@
                       </span>
                     </td>
                     <td class="price-cell">
-                      {{ formatPrice(price.pricePerUnit) }}
+                      {{ formatPrice(price.price) }}
                       <span class="price-unit">/ {{ meterTypeUtils.getUnit(meterType) }}</span>
                     </td>
                     <td>{{ formatDate(price.validFrom) }}</td>
