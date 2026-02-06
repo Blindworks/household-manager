@@ -61,6 +61,13 @@
               </span>
             </div>
           </div>
+
+          <div class="meter-card__cost">
+            <span class="meter-card__label">Kosten (letzte 7 Tage)</span>
+            <span class="meter-card__value">
+              {{ formatCurrency(meter.costLast7Days) }}
+            </span>
+          </div>
         </div>
 
         <div class="meter-card__footer">

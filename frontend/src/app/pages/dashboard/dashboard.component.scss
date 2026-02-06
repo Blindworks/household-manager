@@ -98,7 +98,8 @@
   }
 
   &__reading,
-  &__consumption {
+  &__consumption,
+  &__cost {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
