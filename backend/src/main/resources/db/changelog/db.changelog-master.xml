@@ -8,4 +8,7 @@
     <!-- Initial database setup -->
     <include file="db/changelog/changes/20260206-0001-initial-schema.xml"/>
 
+    <!-- Meter Readings Feature -->
+    <include file="db/changelog/changes/20260206-0002-create-meter-readings-table.xml"/>
+
 </databaseChangeLog>

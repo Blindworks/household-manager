@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260206-0002" author="household-manager">
+        <comment>Create meter_readings table for tracking utility consumption (electricity, gas, water)</comment>
+
+        <createTable tableName="meter_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="meter_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reading_value" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reading_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Create indexes for efficient queries -->
+        <createIndex indexName="idx_meter_readings_meter_type" tableName="meter_readings">
+            <column name="meter_type"/>
+        </createIndex>
+
+        <createIndex indexName="idx_meter_readings_reading_date" tableName="meter_readings">
+            <column name="reading_date"/>
+        </createIndex>
+
+        <createIndex indexName="idx_meter_readings_type_date" tableName="meter_readings">
+            <column name="meter_type"/>
+            <column name="reading_date" descending="true"/>
+        </createIndex>
+
+        <!-- Add check constraint for meter_type values -->
+        <sql>
+            ALTER TABLE meter_readings
+            ADD CONSTRAINT chk_meter_type
+            CHECK (meter_type IN ('ELECTRICITY', 'GAS', 'WATER'))
+        </sql>
+
+        <!-- Add check constraint for positive reading values -->
+        <sql>
+            ALTER TABLE meter_readings
+            ADD CONSTRAINT chk_reading_value_positive
+            CHECK (reading_value >= 0)
+        </sql>
+
+        <rollback>
+            <dropTable tableName="meter_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
