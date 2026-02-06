@@ -154,7 +154,19 @@
     position: relative;
     padding: 16px;
     border-radius: 18px;
-    background: #f8fafc;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.7) 100%);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    overflow: hidden;
+  }
+
+  &__chart::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(226, 232, 240, 0.6), transparent 45%),
+      radial-gradient(circle at 80% 10%, rgba(199, 210, 254, 0.4), transparent 50%);
+    opacity: 0.7;
+    pointer-events: none;
   }
 
   &__svg {
@@ -168,18 +180,37 @@
     stroke-dasharray: 4 6;
   }
 
+  &__axis-line {
+    stroke: rgba(148, 163, 184, 0.6);
+    stroke-width: 1.2;
+  }
+
+  &__x-tick {
+    stroke: rgba(148, 163, 184, 0.7);
+    stroke-width: 1.2;
+  }
+
+  &__x-label {
+    font-size: 11px;
+    fill: #94a3b8;
+  }
+
   &__line {
     fill: none;
-    stroke-width: 3;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.15));
   }
 
   &__area {
-    opacity: 0.15;
+    opacity: 0.18;
   }
 
   &__dot {
     stroke: #ffffff;
     stroke-width: 2;
+    filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.2));
   }
 
   &__axis {
@@ -193,29 +224,6 @@
     color: #94a3b8;
   }
 
-  &__labels {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-  }
-
-  &__label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-size: 12px;
-    color: #475569;
-  }
-
-  &__label-value {
-    font-weight: 700;
-    color: #1f2933;
-  }
 }
 
 @media (max-width: 900px) {

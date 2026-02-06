@@ -63,6 +63,13 @@
               role="img"
               aria-label="Verbrauchsverlauf"
               class="consumption-charts__svg">
+              <line
+                [attr.x1]="chartPadding"
+                [attr.x2]="chartWidth - chartPadding"
+                [attr.y1]="chartHeight - chartPadding"
+                [attr.y2]="chartHeight - chartPadding"
+                class="consumption-charts__axis-line" />
+
               @for (line of getGridLines(); track line) {
                 <line
                   [attr.x1]="chartPadding"
@@ -83,6 +90,22 @@
                 [attr.stroke]="getColor()" />
 
               @if (selectedSeries) {
+                @for (tick of getXTicks(selectedSeries.points); track tick) {
+                  <line
+                    [attr.x1]="getPointX(tick, selectedSeries.points.length)"
+                    [attr.x2]="getPointX(tick, selectedSeries.points.length)"
+                    [attr.y1]="chartHeight - chartPadding"
+                    [attr.y2]="chartHeight - chartPadding + 8"
+                    class="consumption-charts__x-tick" />
+                  <text
+                    [attr.x]="getPointX(tick, selectedSeries.points.length)"
+                    [attr.y]="chartHeight - chartPadding + 22"
+                    text-anchor="middle"
+                    class="consumption-charts__x-label">
+                    {{ formatDate(selectedSeries.points[tick].date) }}
+                  </text>
+                }
+
                 @for (point of selectedSeries.points; track point.date) {
                   <circle
                     [attr.cx]="getPointX($index, selectedSeries.points.length)"
@@ -105,18 +128,6 @@
             </div>
           </div>
 
-          <div class="consumption-charts__labels">
-            @if (selectedSeries) {
-              @for (point of selectedSeries.points; track point.date) {
-                <div class="consumption-charts__label">
-                  <span>{{ formatDate(point.date) }}</span>
-                  <span class="consumption-charts__label-value">
-                    {{ formatNumber(point.value) }} {{ selectedSeries.unit }}
-                  </span>
-                </div>
-              }
-            }
-          </div>
         </div>
       } @else {
         <div class="consumption-charts__state">
