@@ -180,18 +180,20 @@ export class ConsumptionChartsComponent implements OnInit {
 
   private buildSeries(readings: MeterReading[], type: MeterType): ChartSeries {
     const sorted = [...readings].sort((a, b) => a.readingDate.getTime() - b.readingDate.getTime());
-    const points: ChartPoint[] = [];
+    const rawPoints: ChartPoint[] = [];
 
     for (let i = 1; i < sorted.length; i += 1) {
       const prev = sorted[i - 1];
       const current = sorted[i];
       const consumption = Math.max(0, current.readingValue - prev.readingValue);
-      points.push({
+      rawPoints.push({
         date: current.readingDate,
         value: consumption,
         label: `KW ${current.readingWeek ?? '-'}`
       });
     }
+
+    const points = this.filterOutliers(rawPoints);
 
     const values = points.map(point => point.value);
     const maxValue = values.length > 0 ? Math.max(...values) : 0;
@@ -203,5 +205,30 @@ export class ConsumptionChartsComponent implements OnInit {
       maxValue,
       minValue
     };
+  }
+
+  private filterOutliers(points: ChartPoint[]): ChartPoint[] {
+    if (points.length < 3) {
+      return points;
+    }
+
+    const nonZeroValues = points.map(point => point.value).filter(value => value > 0);
+    const mean = nonZeroValues.length
+      ? nonZeroValues.reduce((sum, value) => sum + value, 0) / nonZeroValues.length
+      : 0;
+
+    return points.filter((point, index) => {
+      const nextValue = index < points.length - 1 ? points[index + 1].value : null;
+      if (nextValue !== 0) {
+        return true;
+      }
+      if (point.value <= 0) {
+        return true;
+      }
+      if (mean === 0) {
+        return false;
+      }
+      return point.value <= mean * 5;
+    });
   }
 }
