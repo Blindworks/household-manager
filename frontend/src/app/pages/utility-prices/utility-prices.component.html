@@ -97,7 +97,7 @@
                     </td>
                     <td class="price-cell">
                       {{ formatPrice(price.price) }}
-                      <span class="price-unit">/ {{ meterTypeUtils.getUnit(meterType) }}</span>
+                      <span class="price-unit">/ {{ meterTypeUtils.getPriceUnit(meterType) }}</span>
                     </td>
                     <td>{{ formatDate(price.validFrom) }}</td>
                     <td>{{ formatDate(price.validTo) }}</td>

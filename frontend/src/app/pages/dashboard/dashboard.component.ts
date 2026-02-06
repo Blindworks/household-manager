@@ -4,7 +4,9 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
-import { MeterType } from '../../models/meter-reading.model';
+import { UtilityPriceService } from '../../services/utility-price.service';
+import { UtilityPrice } from '../../models/utility-price.model';
+import { MeterType, ConsumptionResponse } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
 
 /**
@@ -20,6 +22,10 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 })
 export class DashboardComponent implements OnInit {
   private readonly meterReadingService = inject(MeterReadingService);
+  private readonly utilityPriceService = inject(UtilityPriceService);
+
+  private static readonly GAS_ZUSTANDSZAHL = 0.95;
+  private static readonly GAS_BRENNWERT = 11.5;
 
   /** Meter reading data for display */
   meterData: MeterCardData[] = [];
@@ -48,7 +54,8 @@ export class DashboardComponent implements OnInit {
       forkJoin({
         type: [type],
         latestReading: this.meterReadingService.getLatestReading(type),
-        consumption: this.meterReadingService.getConsumptionStats(type)
+        consumption: this.meterReadingService.getConsumptionStats(type),
+        currentPrice: this.loadCurrentPrice(type)
       })
     );
 
@@ -58,6 +65,14 @@ export class DashboardComponent implements OnInit {
           const type = result.type;
           const latest = result.latestReading;
           const consumption = result.consumption;
+          const currentPrice = result.currentPrice;
+          const consumptionLast7Days = this.calculateConsumptionLast7Days(consumption);
+          const pricePerUnit = currentPrice?.price ?? null;
+          const costLast7Days = this.calculateCostLast7Days(
+            type,
+            consumptionLast7Days,
+            pricePerUnit
+          );
 
           return {
             type: MeterTypeUtils.getLabel(type),
@@ -66,10 +81,9 @@ export class DashboardComponent implements OnInit {
             color: MeterTypeUtils.getColor(type),
             lastReading: latest?.readingValue || 0,
             unit: MeterTypeUtils.getUnit(type),
-            consumption: consumption?.consumption || 0,
-            consumptionPeriod: consumption
-              ? `${consumption.daysBetweenReadings} Tage`
-              : 'Keine Daten',
+            consumption: consumptionLast7Days,
+            consumptionPeriod: consumption ? 'Letzte 7 Tage' : 'Keine Daten',
+            costLast7Days,
             trend: this.calculateTrend(consumption?.consumption || 0),
             hasData: !!latest
           };
@@ -100,6 +114,7 @@ export class DashboardComponent implements OnInit {
       unit: MeterTypeUtils.getUnit(type),
       consumption: 0,
       consumptionPeriod: 'Keine Daten',
+      costLast7Days: null,
       trend: 'stable' as const,
       hasData: false
     }));
@@ -148,6 +163,54 @@ export class DashboardComponent implements OnInit {
       maximumFractionDigits: 2
     });
   }
+
+  /**
+   * Formats a currency value with 2 decimals
+   */
+  formatCurrency(value: number | null): string {
+    if (value === null || Number.isNaN(value)) {
+      return '—';
+    }
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+
+  private loadCurrentPrice(type: MeterType) {
+    if (type !== MeterType.ELECTRICITY && type !== MeterType.GAS) {
+      return [null as UtilityPrice | null];
+    }
+    return this.utilityPriceService.getCurrentPrice(type);
+  }
+
+  private calculateConsumptionLast7Days(consumption: ConsumptionResponse | null): number {
+    if (!consumption || consumption.averageDailyConsumption == null) {
+      return 0;
+    }
+    return Number(consumption.averageDailyConsumption) * 7;
+  }
+
+  private calculateCostLast7Days(
+    type: MeterType,
+    consumptionLast7Days: number,
+    pricePerUnit: number | null
+  ): number | null {
+    if (pricePerUnit == null) {
+      return null;
+    }
+    if (consumptionLast7Days <= 0) {
+      return 0;
+    }
+
+    const consumptionForPricing = type === MeterType.GAS
+      ? consumptionLast7Days * DashboardComponent.GAS_ZUSTANDSZAHL * DashboardComponent.GAS_BRENNWERT
+      : consumptionLast7Days;
+
+    return consumptionForPricing * pricePerUnit;
+  }
 }
 
 /**
@@ -162,6 +225,7 @@ interface MeterCardData {
   readonly unit: string;
   readonly consumption: number;
   readonly consumptionPeriod: string;
+  readonly costLast7Days: number | null;
   readonly trend: 'up' | 'down' | 'stable';
   readonly hasData: boolean;
 }

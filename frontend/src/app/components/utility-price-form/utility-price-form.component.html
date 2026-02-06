@@ -42,7 +42,7 @@
         <app-icon name="euro" [size]="16" class="form-label__icon"></app-icon>
         Preis pro Einheit <span class="required">*</span>
         <span class="form-hint" *ngIf="priceForm.get('meterType')?.value">
-          (in EUR / {{ meterTypeUtils.getUnit(priceForm.get('meterType')?.value) }})
+          (in EUR / {{ meterTypeUtils.getPriceUnit(priceForm.get('meterType')?.value) }})
         </span>
       </label>
       <input

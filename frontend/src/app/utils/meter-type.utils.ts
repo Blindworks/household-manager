@@ -67,6 +67,22 @@ export class MeterTypeUtils {
       case MeterType.ELECTRICITY:
         return 'kWh';
       case MeterType.GAS:
+        return 'm³';
+      case MeterType.WATER:
+        return 'm³';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Gibt die Einheit fÃ¼r Preisangaben zurÃ¼ck
+   */
+  static getPriceUnit(type: MeterType): string {
+    switch (type) {
+      case MeterType.ELECTRICITY:
+        return 'kWh';
+      case MeterType.GAS:
         return 'kWh';
       case MeterType.WATER:
         return 'm³';
