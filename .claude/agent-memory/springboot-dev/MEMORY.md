@@ -29,9 +29,9 @@ com.household.manager/
 - **Error Responses**: Standardized via `ErrorResponse` DTO with validation details
 
 ### Configuration
-- **Main Config**: `application.yml`
+- **Main Config**: `application.properties` (NOT yml - project uses .properties format)
 - **Profiles**: `dev`, `prod`, `test`
-- **Local Override**: `application-local.yml` (gitignored)
+- **Local Override**: `application-local.properties` (gitignored)
 
 ### Database Migration
 - **Tool**: Liquibase
@@ -47,7 +47,22 @@ com.household.manager/
 ### Testing
 - Profile: `test` (separate database: household_manager_test)
 - Integration tests use `@SpringBootTest` + `@AutoConfigureMockMvc`
-- Test config: `application-test.yml` with `drop-first: true` for clean state
+- Test config: `application-test.properties` with separate test database
+
+## Implemented Features
+
+### Meter Readings
+- Entity: `MeterReading` (ELECTRICITY, GAS, WATER)
+- Repository: Query methods for latest readings, consumption calculation
+- Service: Validation, consumption calculation between readings
+- Controller: CRUD operations, consumption endpoints
+
+### Utility Prices
+- Entity: `UtilityPrice` (ELECTRICITY, WATER only - no GAS support)
+- Repository: Query methods for current prices, overlap detection
+- Service: Validation for overlapping periods, meter type restrictions
+- Controller: CRUD operations, current price lookup
+- **Important**: Overlap detection uses custom JPQL queries to prevent duplicate validity periods
 
 ## Best Practices Applied
 1. Constructor injection preferred over field injection

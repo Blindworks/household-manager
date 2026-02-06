@@ -1,0 +1,123 @@
+<div class="utility-prices-page">
+  <div class="container">
+    <!-- Page Header -->
+    <header class="page-header">
+      <div class="page-header__content">
+        <h1 class="page-header__title">
+          <app-icon name="euro" [size]="32"></app-icon>
+          Versorgerpreise
+        </h1>
+        <p class="page-header__subtitle">
+          Erfassen und verwalten Sie hier Ihre Strom- und Wasserpreise zur Kostenberechnung
+        </p>
+      </div>
+    </header>
+
+    <!-- Success Message -->
+    <div class="alert alert--success" *ngIf="successMessage">
+      <app-icon name="check-circle" class="alert__icon"></app-icon>
+      <span class="alert__message">{{ successMessage }}</span>
+    </div>
+
+    <!-- Error Message -->
+    <div class="alert alert--error" *ngIf="errorMessage">
+      <app-icon name="alert-triangle" class="alert__icon"></app-icon>
+      <span class="alert__message">{{ errorMessage }}</span>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-grid">
+      <!-- Form Section -->
+      <section class="form-section">
+        <app-utility-price-form (priceCreated)="onPriceCreated()"></app-utility-price-form>
+      </section>
+
+      <!-- Price History Section -->
+      <section class="price-history-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <app-icon name="history" [size]="24"></app-icon>
+            Preisverlauf
+          </h2>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" *ngIf="isLoading">
+          <div class="spinner-large"></div>
+          <p>Preise werden geladen...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!isLoading && prices.length === 0">
+          <app-icon name="inbox" [size]="64" class="empty-state__icon"></app-icon>
+          <h3 class="empty-state__title">Keine Preise vorhanden</h3>
+          <p class="empty-state__text">
+            Erfassen Sie Ihren ersten Preis über das Formular links
+          </p>
+        </div>
+
+        <!-- Price Tables by Meter Type -->
+        <div class="price-tables" *ngIf="!isLoading && prices.length > 0">
+          <div *ngFor="let meterType of getMeterTypeKeys()" class="price-table-wrapper">
+            <h3 class="meter-type-title">
+              <app-icon [name]="meterTypeUtils.getIcon(meterType)" [size]="20"></app-icon>
+              {{ meterTypeUtils.getLabel(meterType) }}
+            </h3>
+
+            <!-- No Prices for this Type -->
+            <div class="no-prices-notice" *ngIf="getPricesForType(meterType).length === 0">
+              <p>Noch keine Preise für {{ meterTypeUtils.getLabel(meterType) }} erfasst</p>
+            </div>
+
+            <!-- Price Table -->
+            <div class="price-table-container" *ngIf="getPricesForType(meterType).length > 0">
+              <table class="price-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Preis</th>
+                    <th>Gültig ab</th>
+                    <th>Gültig bis</th>
+                    <th>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let price of getPricesForType(meterType)"
+                    [class.price-row--current]="isCurrentPrice(price)"
+                  >
+                    <td>
+                      <span class="status-badge" [class.status-badge--active]="isCurrentPrice(price)">
+                        <app-icon
+                          [name]="isCurrentPrice(price) ? 'check-circle' : 'clock'"
+                          [size]="16"
+                        ></app-icon>
+                        {{ isCurrentPrice(price) ? 'Aktuell' : 'Historisch' }}
+                      </span>
+                    </td>
+                    <td class="price-cell">
+                      {{ formatPrice(price.pricePerUnit) }}
+                      <span class="price-unit">/ {{ meterTypeUtils.getUnit(meterType) }}</span>
+                    </td>
+                    <td>{{ formatDate(price.validFrom) }}</td>
+                    <td>{{ formatDate(price.validTo) }}</td>
+                    <td>
+                      <button
+                        class="btn-icon btn-icon--danger"
+                        (click)="deletePrice(price)"
+                        [disabled]="isLoading"
+                        title="Preis löschen"
+                      >
+                        <app-icon name="trash-2" [size]="18"></app-icon>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
