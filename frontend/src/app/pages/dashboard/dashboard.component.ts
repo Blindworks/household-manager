@@ -6,7 +6,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { UtilityPriceService } from '../../services/utility-price.service';
 import { UtilityPrice } from '../../models/utility-price.model';
-import { MeterType, ConsumptionResponse } from '../../models/meter-reading.model';
+import { MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
 
 /**
@@ -54,7 +54,7 @@ export class DashboardComponent implements OnInit {
       forkJoin({
         type: [type],
         latestReading: this.meterReadingService.getLatestReading(type),
-        consumption: this.meterReadingService.getConsumptionStats(type),
+        readings: this.meterReadingService.getReadingsByType(type),
         currentPrice: this.loadCurrentPrice(type)
       })
     );
@@ -64,9 +64,19 @@ export class DashboardComponent implements OnInit {
         this.meterData = results.map(result => {
           const type = result.type;
           const latest = result.latestReading;
-          const consumption = result.consumption;
+          const readings = result.readings ?? [];
           const currentPrice = result.currentPrice;
-          const consumptionLast7Days = this.calculateConsumptionLast7Days(consumption);
+          const currentWeekConsumption = this.calculateWeeklyConsumption(readings, 0);
+          const previousWeekConsumption = this.calculateWeeklyConsumption(readings, 1);
+          const consumptionLast7Days = currentWeekConsumption ?? 0;
+          const consumptionChange = this.calculateWeeklyChange(
+            currentWeekConsumption,
+            previousWeekConsumption
+          );
+          const consumptionChangePercent = this.calculateWeeklyChangePercent(
+            currentWeekConsumption,
+            previousWeekConsumption
+          );
           const pricePerUnit = currentPrice?.price ?? null;
           const costLast7Days = this.calculateCostLast7Days(
             type,
@@ -82,9 +92,12 @@ export class DashboardComponent implements OnInit {
             lastReading: latest?.readingValue || 0,
             unit: MeterTypeUtils.getUnit(type),
             consumption: consumptionLast7Days,
-            consumptionPeriod: consumption ? 'Letzte 7 Tage' : 'Keine Daten',
+            consumptionPeriod: currentWeekConsumption != null ? 'Letzte 7 Tage' : 'Keine Daten',
             costLast7Days,
-            trend: this.calculateTrend(consumption?.consumption || 0),
+            trend: this.calculateTrend(consumptionChange),
+            previousWeekConsumption,
+            consumptionChange,
+            consumptionChangePercent,
             hasData: !!latest
           };
         });
@@ -116,6 +129,9 @@ export class DashboardComponent implements OnInit {
       consumptionPeriod: 'Keine Daten',
       costLast7Days: null,
       trend: 'stable' as const,
+      previousWeekConsumption: null,
+      consumptionChange: null,
+      consumptionChangePercent: null,
       hasData: false
     }));
   }
@@ -124,11 +140,14 @@ export class DashboardComponent implements OnInit {
    * Calculates trend based on consumption value
    * TODO: Enhance with historical comparison
    */
-  private calculateTrend(consumption: number): 'up' | 'down' | 'stable' {
-    if (consumption > 0) {
-      return 'up'; // Has consumption
+  private calculateTrend(consumptionChange: number | null): 'up' | 'down' | 'stable' {
+    if (consumptionChange == null || Number.isNaN(consumptionChange)) {
+      return 'stable';
     }
-    return 'stable'; // No data or zero consumption
+    if (Math.abs(consumptionChange) < 0.01) {
+      return 'stable';
+    }
+    return consumptionChange > 0 ? 'up' : 'down';
   }
 
   /**
@@ -164,6 +183,30 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  formatSigned(value: number | null, fractionDigits = 1): string {
+    if (value == null || Number.isNaN(value)) {
+      return 'â€”';
+    }
+    const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+    const absValue = Math.abs(value);
+    return `${sign}${absValue.toLocaleString('de-DE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: fractionDigits
+    })}`;
+  }
+
+  formatSignedPercent(value: number | null, fractionDigits = 1): string {
+    if (value == null || Number.isNaN(value)) {
+      return 'â€”';
+    }
+    const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+    const absValue = Math.abs(value);
+    return `${sign}${absValue.toLocaleString('de-DE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: fractionDigits
+    })}%`;
+  }
+
   /**
    * Formats a currency value with 2 decimals
    */
@@ -186,11 +229,50 @@ export class DashboardComponent implements OnInit {
     return this.utilityPriceService.getCurrentPrice(type);
   }
 
-  private calculateConsumptionLast7Days(consumption: ConsumptionResponse | null): number {
-    if (!consumption || consumption.averageDailyConsumption == null) {
-      return 0;
+  private calculateWeeklyConsumption(readings: { readingValue: number; readingDate: Date }[], offset: number): number | null {
+    if (!readings || readings.length <= offset + 1) {
+      return null;
     }
-    return Number(consumption.averageDailyConsumption) * 7;
+    const current = readings[offset];
+    const previous = readings[offset + 1];
+    if (!current?.readingDate || !previous?.readingDate) {
+      return null;
+    }
+    const daysBetween = this.calculateDaysBetween(previous.readingDate, current.readingDate);
+    if (daysBetween <= 0) {
+      return null;
+    }
+    const consumption = current.readingValue - previous.readingValue;
+    const averageDaily = consumption / daysBetween;
+    return averageDaily * 7;
+  }
+
+  private calculateWeeklyChange(
+    currentWeekConsumption: number | null,
+    previousWeekConsumption: number | null
+  ): number | null {
+    if (currentWeekConsumption == null || previousWeekConsumption == null) {
+      return null;
+    }
+    return currentWeekConsumption - previousWeekConsumption;
+  }
+
+  private calculateWeeklyChangePercent(
+    currentWeekConsumption: number | null,
+    previousWeekConsumption: number | null
+  ): number | null {
+    if (currentWeekConsumption == null || previousWeekConsumption == null) {
+      return null;
+    }
+    if (previousWeekConsumption === 0) {
+      return null;
+    }
+    return ((currentWeekConsumption - previousWeekConsumption) / previousWeekConsumption) * 100;
+  }
+
+  private calculateDaysBetween(start: Date, end: Date): number {
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.floor((end.getTime() - start.getTime()) / msPerDay);
   }
 
   private calculateCostLast7Days(
@@ -227,5 +309,8 @@ interface MeterCardData {
   readonly consumptionPeriod: string;
   readonly costLast7Days: number | null;
   readonly trend: 'up' | 'down' | 'stable';
+  readonly previousWeekConsumption: number | null;
+  readonly consumptionChange: number | null;
+  readonly consumptionChangePercent: number | null;
   readonly hasData: boolean;
 }

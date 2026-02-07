@@ -59,18 +59,20 @@
               <span class="meter-card__value meter-card__value--cost">
                 {{ formatCurrency(meter.costLast7Days) }}
               </span>
-              <span [class]="'meter-card__trend ' + getTrendClass(meter.trend)">
-                <app-icon [name]="getTrendIconName(meter.trend)" [size]="16"></app-icon>
+              <span class="meter-card__trend-group" *ngIf="meter.consumptionChange !== null">
+                <span [class]="'meter-card__trend ' + getTrendClass(meter.trend)">
+                  <app-icon [name]="getTrendIconName(meter.trend)" [size]="16"></app-icon>
+                </span>
+                <span class="meter-card__trend-value meter-card__trend-value--stacked">
+                  {{ formatSigned(meter.consumptionChange) }}
+                  <span class="meter-card__unit">{{ meter.unit }}</span>
+                </span>
               </span>
             </div>
           </div>
+
         </div>
 
-        <div class="meter-card__footer">
-          <a routerLink="/meter-readings" class="meter-card__link">
-            Details anzeigen →
-          </a>
-        </div>
       </div>
     </section>
 
