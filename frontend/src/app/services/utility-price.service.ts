@@ -14,7 +14,7 @@ import { MeterType } from '../models/meter-reading.model';
 })
 export class UtilityPriceService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8080/api/v1/utility-prices';
+  private readonly baseUrl = '/api/v1/utility-prices';
 
   /**
    * Lädt alle Preise

@@ -18,7 +18,7 @@ import {
 })
 export class MeterReadingService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8080/api/v1/meter-readings';
+  private readonly baseUrl = '/api/v1/meter-readings';
 
   /**
    * Lädt alle Ablesungen
