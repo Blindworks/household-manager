@@ -1,0 +1,10 @@
+target
+.idea
+.classpath
+.project
+.settings
+*.iml
+*.log
+*.md
+README.md
+src/test

@@ -1,0 +1,13 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: host.docker.internal
+      DB_PORT: 3306
+      DB_NAME: household_manager
+      DB_USERNAME: household_manager
+      DB_PASSWORD: household_manager
+    ports:
+      - "8080:8080"
