@@ -4,7 +4,7 @@ services:
       context: ./backend
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: host.docker.internal
+      DB_HOST: mariadb
       DB_PORT: 3306
       DB_NAME: household_manager
       DB_USERNAME: household_manager
