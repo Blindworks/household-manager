@@ -11,6 +11,9 @@ services:
       DB_PASSWORD: household_manager
     ports:
       - "8080:8080"
+    networks:
+      - mariadb_default
+      - app_net
 
   frontend:
     build:
@@ -19,3 +22,12 @@ services:
       - "4200:80"
     depends_on:
       - backend
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    driver: bridge
+
+  mariadb_default:
+    external: true
