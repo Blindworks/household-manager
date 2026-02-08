@@ -31,7 +31,6 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("/v1/meter-readings")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:4200"})
 public class MeterReadingController {
 
     private final MeterReadingService meterReadingService;

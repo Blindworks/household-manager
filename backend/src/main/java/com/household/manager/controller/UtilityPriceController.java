@@ -25,7 +25,6 @@ import java.util.List;
 @RequestMapping("/v1/utility-prices")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:4200"})
 public class UtilityPriceController {
 
     private final UtilityPriceService utilityPriceService;
