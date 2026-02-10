@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -85,6 +86,15 @@ public class TasmotaElectricityPollingService {
 
     public void triggerOnce() {
         taskScheduler.schedule(this::safePoll, Instant.now());
+    }
+
+    /**
+     * Weekly snapshot every Friday at 09:00 (Europe/Berlin).
+     */
+    @Scheduled(cron = "0 0 9 ? * FRI", zone = "Europe/Berlin")
+    public void weeklySnapshot() {
+        loadSettingsFromDb();
+        safePoll();
     }
 
     private void reschedule() {

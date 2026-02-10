@@ -71,6 +71,56 @@
   color: var(--color-success);
 }
 
+.live {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.live__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.live__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray);
+}
+
+.live__status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-gray);
+}
+
+.live__status-dot--on {
+  background: var(--color-success);
+}
+
+.live__value {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-dark);
+}
+
+.live__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--color-gray);
+  font-size: var(--font-size-sm);
+}
+
+.live__error {
+  color: var(--color-error);
+}
+
 .form {
   display: grid;
   gap: 1rem;
