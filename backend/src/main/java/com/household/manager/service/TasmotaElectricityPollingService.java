@@ -6,10 +6,10 @@ import com.household.manager.dto.TasmotaElectricityPollingStatusResponse;
 import com.household.manager.dto.TasmotaElectricityPollingUpdateRequest;
 import com.household.manager.dto.TasmotaStatusResponse;
 import com.household.manager.model.entity.TasmotaElectricityReading;
+import com.household.manager.model.entity.TasmotaPollingSettings;
 import com.household.manager.repository.TasmotaElectricityReadingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -36,14 +36,10 @@ public class TasmotaElectricityPollingService {
     private final ObjectMapper objectMapper;
     private final TasmotaElectricityReadingRepository repository;
     private final TaskScheduler taskScheduler;
+    private final TasmotaPollingSettingsService settingsService;
 
-    @Value("${tasmota.electricity.url}")
     private String tasmotaUrl;
-
-    @Value("${tasmota.electricity.polling.interval-ms:60000}")
     private long intervalMs;
-
-    @Value("${tasmota.electricity.polling.enabled:true}")
     private boolean enabled;
 
     private final Object scheduleLock = new Object();
@@ -54,6 +50,7 @@ public class TasmotaElectricityPollingService {
 
     @jakarta.annotation.PostConstruct
     public void initializeScheduler() {
+        loadSettingsFromDb();
         reschedule();
     }
 
@@ -68,6 +65,7 @@ public class TasmotaElectricityPollingService {
     }
 
     public TasmotaElectricityPollingStatusResponse getStatus() {
+        loadSettingsFromDb();
         return TasmotaElectricityPollingStatusResponse.builder()
                 .enabled(enabled)
                 .intervalMs(intervalMs)
@@ -79,15 +77,8 @@ public class TasmotaElectricityPollingService {
     }
 
     public TasmotaElectricityPollingStatusResponse updateConfig(TasmotaElectricityPollingUpdateRequest request) {
-        if (request.getEnabled() != null) {
-            enabled = request.getEnabled();
-        }
-        if (request.getIntervalMs() != null) {
-            intervalMs = request.getIntervalMs();
-        }
-        if (request.getUrl() != null && !request.getUrl().isBlank()) {
-            tasmotaUrl = request.getUrl().trim();
-        }
+        TasmotaPollingSettings settings = settingsService.updateElectricitySettings(request);
+        applySettings(settings);
         reschedule();
         return getStatus();
     }
@@ -259,5 +250,16 @@ public class TasmotaElectricityPollingService {
             log.warn("Failed to normalize Tasmota URL, using raw URL: {}", rawUrl);
             return rawUrl;
         }
+    }
+
+    private void loadSettingsFromDb() {
+        TasmotaPollingSettings settings = settingsService.getOrCreateElectricitySettings();
+        applySettings(settings);
+    }
+
+    private void applySettings(TasmotaPollingSettings settings) {
+        enabled = settings.isEnabled();
+        intervalMs = settings.getIntervalMs();
+        tasmotaUrl = settings.getUrl();
     }
 }
