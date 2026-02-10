@@ -8,6 +8,14 @@
     margin-bottom: var(--spacing-2xl);
   }
 
+  &__logo {
+    width: 300px;
+    height: 300px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto var(--spacing-md);
+  }
+
   &__title {
     font-size: var(--font-size-4xl);
     color: var(--color-dark);
@@ -57,8 +65,8 @@
 }
 
 .live-card {
-  background: linear-gradient(135deg, #f4f8ff 0%, #ffffff 100%);
-  border: 1px solid rgba(31, 78, 121, 0.18);
+  background: linear-gradient(135deg, #4fa3e329 0%, #ffffff 100%);
+  border: 1px solid #0d6ebd3d;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   padding: var(--spacing-lg);
@@ -100,13 +108,13 @@
   }
 
   &__status-dot--on {
-    background: #10b981;
+    background: var(--color-accent);
   }
 
   &__value {
     font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 800;
-    color: #0f4c81;
+    color: var(--color-primary-dark);
     line-height: 1.1;
     margin-bottom: var(--spacing-sm);
   }
@@ -305,6 +313,11 @@
 
     &__title {
       font-size: var(--font-size-3xl);
+    }
+
+    &__logo {
+      width: 64px;
+      height: 64px;
     }
 
     &__subtitle {

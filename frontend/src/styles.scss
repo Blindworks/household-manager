@@ -10,13 +10,19 @@
 /* CSS Variables for consistent theming */
 :root {
   /* Primary Colors */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1e40af;
-  --color-primary-light: #3b82f6;
+  --color-primary: #0d6ebd;
+  --color-primary-dark: #0a58a3;
+  --color-primary-light: #4fa3e3;
 
   /* Secondary Colors */
-  --color-secondary: #10b981;
-  --color-secondary-dark: #059669;
+  --color-secondary: #3fae2a;
+  --color-secondary-dark: #2e8b1f;
+  --color-secondary-light: #7bcf6a;
+
+  /* Accent Colors */
+  --color-accent: #3fae2a;
+  --color-accent-dark: #2e8b1f;
+  --color-accent-light: #7bcf6a;
 
   /* Neutral Colors */
   --color-dark: #1f2937;
@@ -25,10 +31,12 @@
   --color-white: #ffffff;
 
   /* Semantic Colors */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
+  --color-success: #3fae2a;
+  --color-warning: #f28c28;
+  --color-warning-dark: #d9731c;
+  --color-warning-light: #f7b267;
   --color-error: #ef4444;
-  --color-info: #3b82f6;
+  --color-info: #4fa3e3;
 
   /* Spacing */
   --spacing-xs: 0.5rem;
