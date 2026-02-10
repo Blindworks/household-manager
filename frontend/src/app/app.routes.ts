@@ -31,6 +31,11 @@ export const routes: Routes = [
     title: 'Versorgerpreise - Household Manager'
   },
   {
+    path: 'admin',
+    loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
+    title: 'Admin - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'

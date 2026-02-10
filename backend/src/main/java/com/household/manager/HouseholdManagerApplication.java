@@ -5,6 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main entry point for the Household Manager Backend application.
@@ -12,6 +13,7 @@ import org.springframework.core.env.Environment;
  */
 @Slf4j
 @SpringBootApplication
+@EnableScheduling
 public class HouseholdManagerApplication {
 
     public static void main(String[] args) {
