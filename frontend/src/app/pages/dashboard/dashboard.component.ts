@@ -1,10 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
+import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { UtilityPriceService } from '../../services/utility-price.service';
+import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 import { UtilityPrice } from '../../models/utility-price.model';
 import { MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
@@ -20,9 +22,12 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly meterReadingService = inject(MeterReadingService);
   private readonly utilityPriceService = inject(UtilityPriceService);
+  private readonly liveService = inject(TasmotaLiveService);
+  private liveSubscription?: Subscription;
+  private statusSubscription?: Subscription;
 
   private static readonly GAS_ZUSTANDSZAHL = 0.95;
   private static readonly GAS_BRENNWERT = 11.5;
@@ -35,9 +40,21 @@ export class DashboardComponent implements OnInit {
 
   /** Error message */
   errorMessage: string | null = null;
+  liveReading: TasmotaLiveReading | null = null;
+  liveError: string | null = null;
+  liveStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+  lastLiveUpdate: Date | null = null;
+  isReconnecting = false;
 
   ngOnInit(): void {
     this.loadMeterData();
+    this.startLiveStream();
+  }
+
+  ngOnDestroy(): void {
+    this.liveSubscription?.unsubscribe();
+    this.statusSubscription?.unsubscribe();
+    this.liveService.disconnect();
   }
 
   /**
@@ -222,6 +239,41 @@ export class DashboardComponent implements OnInit {
     }).format(value);
   }
 
+  formatDateTime(value: string | null): string {
+    if (!value) {
+      return '-';
+    }
+    return new Date(value).toLocaleString('de-DE');
+  }
+
+  formatPower(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(value)) {
+      return '-';
+    }
+    return `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} W`;
+  }
+
+  formatLiveStatus(): string {
+    switch (this.liveStatus) {
+      case 'connected':
+        return 'Verbunden';
+      case 'connecting':
+        return 'Verbinde...';
+      case 'error':
+        return 'Fehler';
+      default:
+        return 'Getrennt';
+    }
+  }
+
+  reconnectLive(): void {
+    this.isReconnecting = true;
+    this.liveService.reconnect();
+    setTimeout(() => {
+      this.isReconnecting = false;
+    }, 600);
+  }
+
   private loadCurrentPrice(type: MeterType) {
     if (type !== MeterType.ELECTRICITY && type !== MeterType.GAS) {
       return [null as UtilityPrice | null];
@@ -292,6 +344,28 @@ export class DashboardComponent implements OnInit {
       : consumptionLast7Days;
 
     return consumptionForPricing * pricePerUnit;
+  }
+
+  private startLiveStream(): void {
+    this.liveSubscription?.unsubscribe();
+    this.statusSubscription?.unsubscribe();
+    this.liveError = null;
+    this.liveSubscription = this.liveService.getLiveStream().subscribe({
+      next: (reading) => {
+        this.liveReading = reading;
+        this.lastLiveUpdate = new Date();
+        this.liveError = null;
+      },
+      error: () => {
+        this.liveError = 'Live-Stream nicht verfuegbar.';
+      }
+    });
+
+    this.statusSubscription = this.liveService.getStatusStream().subscribe({
+      next: (status) => {
+        this.liveStatus = status;
+      }
+    });
   }
 }
 

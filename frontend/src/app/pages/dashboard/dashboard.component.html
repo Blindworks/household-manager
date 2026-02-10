@@ -1,12 +1,10 @@
 <div class="dashboard">
   <div class="container">
-    <!-- Dashboard Header -->
     <header class="dashboard__header">
       <h1 class="dashboard__title">Haushaltsverwaltung</h1>
-      <p class="dashboard__subtitle">Übersicht Ihrer Zählerstände und Verbrauchsdaten</p>
+      <p class="dashboard__subtitle">Uebersicht Ihrer Zaehlerstaende und Verbrauchsdaten</p>
     </header>
 
-    <!-- Quick Actions -->
     <section class="dashboard__actions">
       <a routerLink="/meter-readings" class="btn btn--primary">
         <app-icon name="bar-chart-3" class="btn__icon"></app-icon>
@@ -18,19 +16,38 @@
       </a>
     </section>
 
-    <!-- Loading State -->
+    <section class="dashboard__live">
+      <div class="live-card">
+        <div class="live-card__header">
+          <div class="live-card__title-wrap">
+            <h2 class="live-card__title">Live-Momentanverbrauch</h2>
+            <div class="live-card__status">
+              <span class="live-card__status-dot" [class.live-card__status-dot--on]="liveStatus === 'connected'"></span>
+              <span>{{ formatLiveStatus() }}</span>
+            </div>
+          </div>
+          <button class="btn btn--secondary" type="button" (click)="reconnectLive()" [disabled]="isReconnecting">
+            Neu verbinden
+          </button>
+        </div>
+        <div class="live-card__value">{{ formatPower(liveReading?.momentaneWirkleistung) }}</div>
+        <div class="live-card__meta">
+          <span>Letztes Update: {{ formatDateTime(lastLiveUpdate ? lastLiveUpdate.toISOString() : null) }}</span>
+          <span class="live-card__error" *ngIf="liveError">{{ liveError }}</span>
+        </div>
+      </div>
+    </section>
+
     <div class="dashboard__loading" *ngIf="isLoading">
       <div class="spinner"></div>
-      <p>Lade Zählerdaten...</p>
+      <p>Lade Zaehlerdaten...</p>
     </div>
 
-    <!-- Error Message -->
     <div class="alert alert--error" *ngIf="errorMessage && !isLoading">
       <app-icon name="alert-triangle" class="alert__icon"></app-icon>
       <span class="alert__message">{{ errorMessage }}</span>
     </div>
 
-    <!-- Meter Cards Grid -->
     <section class="dashboard__meters" *ngIf="!isLoading">
       <div class="meter-card" *ngFor="let meter of meterData">
         <div class="meter-card__header">
@@ -42,7 +59,7 @@
 
         <div class="meter-card__body">
           <div class="meter-card__reading">
-            <span class="meter-card__label">Aktueller Zählerstand</span>
+            <span class="meter-card__label">Aktueller Zaehlerstand</span>
             <span class="meter-card__value">
               {{ meter.lastReading | number:'1.1-1':'de-DE' }}
               <span class="meter-card__unit">{{ meter.unit }}</span>
@@ -70,22 +87,19 @@
               </span>
             </div>
           </div>
-
         </div>
-
       </div>
     </section>
 
-    <!-- Info Box -->
     <section class="dashboard__info">
       <div class="info-box">
         <div class="info-box__icon">
           <app-icon name="info" [size]="24"></app-icon>
         </div>
         <div class="info-box__content">
-          <h4 class="info-box__title">Regelmäßige Ablesungen empfohlen</h4>
+          <h4 class="info-box__title">Regelmaessige Ablesungen empfohlen</h4>
           <p class="info-box__text">
-            Erfassen Sie Ihre Zählerstände regelmäßig, um Ihren Verbrauch optimal zu überwachen
+            Erfassen Sie Ihre Zaehlerstaende regelmaessig, um Ihren Verbrauch optimal zu ueberwachen
             und unerwartete Nachzahlungen zu vermeiden.
           </p>
         </div>
