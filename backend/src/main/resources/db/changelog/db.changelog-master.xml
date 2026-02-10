@@ -16,4 +16,7 @@
     <include file="db/changelog/changes/20260206-0003-create-utility-prices-table.xml"/>
     <include file="db/changelog/changes/20260206-0005-update-utility-price-meter-type-check.xml"/>
 
+    <!-- Tasmota Readings Feature -->
+    <include file="db/changelog/changes/20260210-0006-create-tasmota-electricity-readings-table.xml"/>
+
 </databaseChangeLog>
