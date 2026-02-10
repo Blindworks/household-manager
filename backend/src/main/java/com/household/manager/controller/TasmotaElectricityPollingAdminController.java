@@ -1,16 +1,12 @@
 package com.household.manager.controller;
 
 import com.household.manager.dto.TasmotaElectricityPollingStatusResponse;
-import com.household.manager.dto.TasmotaElectricityPollingUpdateRequest;
 import com.household.manager.service.TasmotaElectricityPollingService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,13 +25,6 @@ public class TasmotaElectricityPollingAdminController {
     @GetMapping
     public ResponseEntity<TasmotaElectricityPollingStatusResponse> getStatus() {
         return ResponseEntity.ok(pollingService.getStatus());
-    }
-
-    @PutMapping
-    public ResponseEntity<TasmotaElectricityPollingStatusResponse> update(
-            @Valid @RequestBody TasmotaElectricityPollingUpdateRequest request) {
-        log.info("Updating Tasmota electricity polling config");
-        return ResponseEntity.ok(pollingService.updateConfig(request));
     }
 
     @PostMapping("/trigger")

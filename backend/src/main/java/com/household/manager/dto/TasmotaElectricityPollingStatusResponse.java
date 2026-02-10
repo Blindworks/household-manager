@@ -17,17 +17,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class TasmotaElectricityPollingStatusResponse {
 
-    private boolean enabled;
-
-    private long intervalMs;
-
     private String url;
+
+    private String schedule;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime lastPollTime;
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime lastSuccessTime;
 
     private String lastError;
 }

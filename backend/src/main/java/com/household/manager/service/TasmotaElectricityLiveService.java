@@ -33,10 +33,9 @@ public class TasmotaElectricityLiveService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final TaskScheduler taskScheduler;
-    private final TasmotaPollingSettingsService settingsService;
 
     @Value("${tasmota.electricity.url}")
-    private String defaultUrl;
+    private String tasmotaUrl;
 
     @Value("${tasmota.electricity.live.interval-ms:1000}")
     private long intervalMs;
@@ -44,8 +43,6 @@ public class TasmotaElectricityLiveService {
     private final Set<SseEmitter> emitters = ConcurrentHashMap.newKeySet();
     private final Object scheduleLock = new Object();
     private ScheduledFuture<?> scheduledFuture;
-    private volatile String tasmotaUrl;
-    private volatile long lastSettingsRefreshMs;
 
     public SseEmitter subscribe() {
         SseEmitter emitter = new SseEmitter(0L);
@@ -94,7 +91,6 @@ public class TasmotaElectricityLiveService {
         }
 
         try {
-            refreshSettingsIfNeeded();
             String requestUrl = normalizeTasmotaUrl(tasmotaUrl);
             String json = restTemplate.getForObject(requestUrl, String.class);
             if (json == null || json.isBlank()) {
@@ -188,15 +184,6 @@ public class TasmotaElectricityLiveService {
         } catch (Exception ex) {
             log.warn("Failed to normalize Tasmota URL, using raw URL: {}", rawUrl);
             return rawUrl;
-        }
-    }
-
-    private void refreshSettingsIfNeeded() {
-        long now = System.currentTimeMillis();
-        if (tasmotaUrl == null || now - lastSettingsRefreshMs > 30000) {
-            String url = settingsService.getOrCreateElectricitySettings().getUrl();
-            tasmotaUrl = (url == null || url.isBlank()) ? defaultUrl : url;
-            lastSettingsRefreshMs = now;
         }
     }
 }

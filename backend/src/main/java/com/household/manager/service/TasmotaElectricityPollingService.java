@@ -3,26 +3,23 @@ package com.household.manager.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.household.manager.dto.TasmotaElectricityPollingStatusResponse;
-import com.household.manager.dto.TasmotaElectricityPollingUpdateRequest;
 import com.household.manager.dto.TasmotaStatusResponse;
 import com.household.manager.model.entity.TasmotaElectricityReading;
-import com.household.manager.model.entity.TasmotaPollingSettings;
 import com.household.manager.repository.TasmotaElectricityReadingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.scheduling.TaskScheduler;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.concurrent.ScheduledFuture;
 import java.util.Optional;
 
 /**
@@ -33,55 +30,26 @@ import java.util.Optional;
 @Slf4j
 public class TasmotaElectricityPollingService {
 
+    private static final String WEEKLY_SCHEDULE = "Jeden Freitag um 09:00 (Europe/Berlin)";
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final TasmotaElectricityReadingRepository repository;
     private final TaskScheduler taskScheduler;
-    private final TasmotaPollingSettingsService settingsService;
 
+    @Value("${tasmota.electricity.url}")
     private String tasmotaUrl;
-    private long intervalMs;
-    private boolean enabled;
 
-    private final Object scheduleLock = new Object();
-    private ScheduledFuture<?> scheduledFuture;
     private volatile LocalDateTime lastPollTime;
-    private volatile LocalDateTime lastSuccessTime;
     private volatile String lastError;
 
-    @jakarta.annotation.PostConstruct
-    public void initializeScheduler() {
-        loadSettingsFromDb();
-        reschedule();
-    }
-
-    @jakarta.annotation.PreDestroy
-    public void shutdownScheduler() {
-        synchronized (scheduleLock) {
-            if (scheduledFuture != null) {
-                scheduledFuture.cancel(false);
-                scheduledFuture = null;
-            }
-        }
-    }
-
     public TasmotaElectricityPollingStatusResponse getStatus() {
-        loadSettingsFromDb();
         return TasmotaElectricityPollingStatusResponse.builder()
-                .enabled(enabled)
-                .intervalMs(intervalMs)
                 .url(tasmotaUrl)
+                .schedule(WEEKLY_SCHEDULE)
                 .lastPollTime(lastPollTime)
-                .lastSuccessTime(lastSuccessTime)
                 .lastError(lastError)
                 .build();
-    }
-
-    public TasmotaElectricityPollingStatusResponse updateConfig(TasmotaElectricityPollingUpdateRequest request) {
-        TasmotaPollingSettings settings = settingsService.updateElectricitySettings(request);
-        applySettings(settings);
-        reschedule();
-        return getStatus();
     }
 
     public void triggerOnce() {
@@ -93,24 +61,7 @@ public class TasmotaElectricityPollingService {
      */
     @Scheduled(cron = "0 0 9 ? * FRI", zone = "Europe/Berlin")
     public void weeklySnapshot() {
-        loadSettingsFromDb();
         safePoll();
-    }
-
-    private void reschedule() {
-        synchronized (scheduleLock) {
-            if (scheduledFuture != null) {
-                scheduledFuture.cancel(false);
-                scheduledFuture = null;
-            }
-            if (!enabled) {
-                log.info("Tasmota electricity polling disabled");
-                return;
-            }
-            long delay = Math.max(1000, intervalMs);
-            scheduledFuture = taskScheduler.scheduleWithFixedDelay(this::safePoll, Duration.ofMillis(delay));
-            log.info("Tasmota electricity polling scheduled every {} ms", delay);
-        }
     }
 
     private void safePoll() {
@@ -167,7 +118,6 @@ public class TasmotaElectricityPollingService {
 
             repository.save(reading);
             log.info("Saved Tasmota electricity reading at {}", readingTime);
-            lastSuccessTime = LocalDateTime.now();
             lastError = null;
         } catch (Exception ex) {
             log.error("Failed to poll Tasmota electricity meter", ex);
@@ -224,7 +174,6 @@ public class TasmotaElectricityPollingService {
 
             repository.save(reading);
             log.info("Saved Tasmota electricity reading at {}", readingTime);
-            lastSuccessTime = LocalDateTime.now();
             lastError = null;
             return true;
         } catch (Exception ex) {
@@ -260,16 +209,5 @@ public class TasmotaElectricityPollingService {
             log.warn("Failed to normalize Tasmota URL, using raw URL: {}", rawUrl);
             return rawUrl;
         }
-    }
-
-    private void loadSettingsFromDb() {
-        TasmotaPollingSettings settings = settingsService.getOrCreateElectricitySettings();
-        applySettings(settings);
-    }
-
-    private void applySettings(TasmotaPollingSettings settings) {
-        enabled = settings.isEnabled();
-        intervalMs = settings.getIntervalMs();
-        tasmotaUrl = settings.getUrl();
     }
 }

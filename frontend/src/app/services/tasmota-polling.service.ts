@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { TasmotaPollingStatus, TasmotaPollingUpdateRequest } from '../models/tasmota-polling.model';
+import { TasmotaPollingStatus } from '../models/tasmota-polling.model';
 
 /**
  * Service for controlling the Tasmota electricity polling.
@@ -16,12 +16,6 @@ export class TasmotaPollingService {
 
   getStatus(): Observable<TasmotaPollingStatus> {
     return this.http.get<TasmotaPollingStatus>(this.baseUrl).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  updateConfig(request: TasmotaPollingUpdateRequest): Observable<TasmotaPollingStatus> {
-    return this.http.put<TasmotaPollingStatus>(this.baseUrl, request).pipe(
       catchError(this.handleError)
     );
   }

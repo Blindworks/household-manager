@@ -14,20 +14,12 @@
     <h2>Status</h2>
     <div class="status" *ngIf="status; else loadingState">
       <div class="status__item">
-        <span>Aktiv</span>
-        <strong [class.status__value--on]="status.enabled">{{ status.enabled ? 'Ja' : 'Nein' }}</strong>
-      </div>
-      <div class="status__item">
-        <span>Intervall</span>
-        <strong>{{ status.intervalMs }} ms</strong>
+        <span>Zeitplan</span>
+        <strong>{{ status.schedule }}</strong>
       </div>
       <div class="status__item">
         <span>Letzter Poll</span>
         <strong>{{ formatDate(status.lastPollTime) }}</strong>
-      </div>
-      <div class="status__item">
-        <span>Letzter Erfolg</span>
-        <strong>{{ formatDate(status.lastSuccessTime) }}</strong>
       </div>
       <div class="status__item status__item--full">
         <span>URL</span>
@@ -35,11 +27,11 @@
       </div>
       <div class="status__item status__item--full">
         <span>Letzter Fehler</span>
-        <strong>{{ status.lastError || '—' }}</strong>
+        <strong>{{ status.lastError || '-' }}</strong>
       </div>
     </div>
     <ng-template #loadingState>
-      <p class="muted" *ngIf="isLoading">Lade Status…</p>
+      <p class="muted" *ngIf="isLoading">Lade Status...</p>
     </ng-template>
   </section>
 
@@ -66,36 +58,13 @@
   </section>
 
   <section class="admin__card">
-    <h2>Konfiguration</h2>
-    <form class="form" (ngSubmit)="save()">
-      <label class="form__row">
-        <span>Polling aktiv</span>
-        <input type="checkbox" [(ngModel)]="form.enabled" name="enabled" />
-      </label>
-
-      <label class="form__row">
-        <span>Intervall (ms)</span>
-        <input
-          type="number"
-          min="1000"
-          step="1000"
-          [(ngModel)]="form.intervalMs"
-          name="intervalMs"
-        />
-      </label>
-
-      <label class="form__row form__row--stack">
-        <span>Tasmota URL</span>
-        <input type="text" [(ngModel)]="form.url" name="url" placeholder="http://..." />
-      </label>
-
-      <div class="form__actions">
-        <button class="btn" type="submit" [disabled]="isSaving">Speichern</button>
-        <button class="btn btn--secondary" type="button" (click)="trigger()" [disabled]="isTriggering">
-          Polling jetzt auslösen
-        </button>
-      </div>
-    </form>
+    <h2>Aktionen</h2>
+    <p class="muted">Das Polling laeuft automatisch jeden Freitag um 09:00 (Europe/Berlin).</p>
+    <div class="form__actions">
+      <button class="btn btn--secondary" type="button" (click)="trigger()" [disabled]="isTriggering">
+        Polling jetzt ausloesen
+      </button>
+    </div>
 
     <p class="message message--success" *ngIf="successMessage">{{ successMessage }}</p>
     <p class="message message--error" *ngIf="errorMessage">{{ errorMessage }}</p>
