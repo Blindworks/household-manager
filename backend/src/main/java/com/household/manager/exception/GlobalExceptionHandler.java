@@ -1,5 +1,6 @@
 package com.household.manager.exception;
 
+import com.household.manager.kasa.exception.KasaCommunicationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -96,6 +97,29 @@ public class GlobalExceptionHandler {
 
         log.warn("Illegal argument: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Handle device communication exceptions (e.g., local smart plug access).
+     *
+     * @param ex      The communication exception
+     * @param request The web request
+     * @return Error response with 502 status
+     */
+    @ExceptionHandler(KasaCommunicationException.class)
+    public ResponseEntity<ErrorResponse> handleKasaCommunicationException(
+            KasaCommunicationException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Kasa communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 
     /**

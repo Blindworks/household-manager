@@ -121,6 +121,70 @@
   color: var(--color-error);
 }
 
+.kasa-control {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+
+  label {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+    font-weight: 600;
+  }
+
+  input[type='text'] {
+    width: min(360px, 100%);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-light-gray);
+    font-size: var(--font-size-base);
+  }
+}
+
+.kasa-devices {
+  margin-top: 1.25rem;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: var(--font-size-lg);
+  }
+}
+
+.kasa-devices__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.kasa-device {
+  text-align: left;
+  border: 1px solid var(--color-light-gray);
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.2rem;
+  cursor: pointer;
+  color: var(--color-dark);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+
+  span {
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+  }
+
+  &:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.kasa-device--active {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
 .form {
   display: grid;
   gap: 1rem;

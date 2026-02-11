@@ -1,10 +1,13 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { TasmotaPollingService } from '../../services/tasmota-polling.service';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { TasmotaPollingStatus } from '../../models/tasmota-polling.model';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
+import { KasaService } from '../../services/kasa.service';
+import { KasaDiscoveryDevice, KasaStatus } from '../../models/kasa.model';
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -12,13 +15,14 @@ import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })
 export class AdminComponent implements OnInit, OnDestroy {
   private readonly pollingService = inject(TasmotaPollingService);
   private readonly liveService = inject(TasmotaLiveService);
+  private readonly kasaService = inject(KasaService);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -32,6 +36,14 @@ export class AdminComponent implements OnInit, OnDestroy {
   liveStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
   lastLiveUpdate: Date | null = null;
   isReconnecting = false;
+  kasaDevices: KasaDiscoveryDevice[] = [];
+  selectedKasaIp = '';
+  kasaStatus: KasaStatus | null = null;
+  isDiscoveringKasa = false;
+  isLoadingKasaStatus = false;
+  isKasaActionRunning = false;
+  kasaErrorMessage: string | null = null;
+  kasaSuccessMessage: string | null = null;
 
   ngOnInit(): void {
     this.loadStatus();
@@ -134,5 +146,95 @@ export class AdminComponent implements OnInit, OnDestroy {
       default:
         return 'Getrennt';
     }
+  }
+
+  discoverKasa(): void {
+    this.isDiscoveringKasa = true;
+    this.kasaErrorMessage = null;
+    this.kasaSuccessMessage = null;
+
+    this.kasaService.discover().subscribe({
+      next: (devices) => {
+        this.kasaDevices = devices;
+        if (devices.length > 0) {
+          this.selectedKasaIp = devices[0].ip;
+          this.loadKasaStatus();
+          this.kasaSuccessMessage = `${devices.length} Kasa-Geraet(e) gefunden.`;
+        } else {
+          this.kasaStatus = null;
+          this.kasaSuccessMessage = 'Keine Kasa-Geraete gefunden.';
+        }
+        this.isDiscoveringKasa = false;
+      },
+      error: (error: Error) => {
+        console.error('Error discovering Kasa devices:', error);
+        this.kasaErrorMessage = error.message;
+        this.isDiscoveringKasa = false;
+      }
+    });
+  }
+
+  loadKasaStatus(): void {
+    if (!this.selectedKasaIp.trim()) {
+      this.kasaErrorMessage = 'Bitte zuerst eine IP auswaehlen oder eingeben.';
+      return;
+    }
+
+    this.isLoadingKasaStatus = true;
+    this.kasaErrorMessage = null;
+    this.kasaSuccessMessage = null;
+
+    this.kasaService.getStatus(this.selectedKasaIp.trim()).subscribe({
+      next: (status) => {
+        this.kasaStatus = status;
+        this.isLoadingKasaStatus = false;
+      },
+      error: (error: Error) => {
+        console.error('Error loading Kasa status:', error);
+        this.kasaErrorMessage = error.message;
+        this.isLoadingKasaStatus = false;
+      }
+    });
+  }
+
+  setSelectedKasaIp(ip: string): void {
+    this.selectedKasaIp = ip;
+    this.loadKasaStatus();
+  }
+
+  turnKasaOn(): void {
+    this.runKasaAction('on');
+  }
+
+  turnKasaOff(): void {
+    this.runKasaAction('off');
+  }
+
+  private runKasaAction(action: 'on' | 'off'): void {
+    if (!this.selectedKasaIp.trim()) {
+      this.kasaErrorMessage = 'Bitte zuerst eine IP auswaehlen oder eingeben.';
+      return;
+    }
+
+    this.isKasaActionRunning = true;
+    this.kasaErrorMessage = null;
+    this.kasaSuccessMessage = null;
+
+    const request = action === 'on'
+      ? this.kasaService.turnOn(this.selectedKasaIp.trim())
+      : this.kasaService.turnOff(this.selectedKasaIp.trim());
+
+    request.subscribe({
+      next: () => {
+        this.kasaSuccessMessage = action === 'on' ? 'Steckdose eingeschaltet.' : 'Steckdose ausgeschaltet.';
+        this.isKasaActionRunning = false;
+        this.loadKasaStatus();
+      },
+      error: (error: Error) => {
+        console.error(`Error switching Kasa ${action}:`, error);
+        this.kasaErrorMessage = error.message;
+        this.isKasaActionRunning = false;
+      }
+    });
   }
 }

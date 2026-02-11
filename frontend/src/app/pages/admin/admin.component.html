@@ -58,6 +58,75 @@
   </section>
 
   <section class="admin__card">
+    <h2>Kasa Smart Plug Admin Board</h2>
+    <p class="muted">Lokale Steuerung und Discovery fuer HS100/HS103/HS110 im Netzwerk.</p>
+
+    <div class="form__actions">
+      <button class="btn btn--secondary" type="button" (click)="discoverKasa()" [disabled]="isDiscoveringKasa">
+        {{ isDiscoveringKasa ? 'Suche...' : 'Geraete entdecken' }}
+      </button>
+      <button class="btn btn--ghost" type="button" (click)="loadKasaStatus()" [disabled]="isLoadingKasaStatus">
+        Status laden
+      </button>
+    </div>
+
+    <div class="kasa-control">
+      <label for="kasa-ip">IP-Adresse</label>
+      <input
+        id="kasa-ip"
+        type="text"
+        [(ngModel)]="selectedKasaIp"
+        placeholder="z. B. 192.168.1.50"
+      />
+    </div>
+
+    <div class="form__actions">
+      <button class="btn" type="button" (click)="turnKasaOn()" [disabled]="isKasaActionRunning">
+        Einschalten
+      </button>
+      <button class="btn btn--secondary" type="button" (click)="turnKasaOff()" [disabled]="isKasaActionRunning">
+        Ausschalten
+      </button>
+    </div>
+
+    <div class="status" *ngIf="kasaStatus">
+      <div class="status__item">
+        <span>Alias</span>
+        <strong>{{ kasaStatus.alias || '-' }}</strong>
+      </div>
+      <div class="status__item">
+        <span>Device ID</span>
+        <strong>{{ kasaStatus.deviceId || '-' }}</strong>
+      </div>
+      <div class="status__item">
+        <span>Relay</span>
+        <strong [class.status__value--on]="kasaStatus.relayState">{{ kasaStatus.relayState ? 'An' : 'Aus' }}</strong>
+      </div>
+    </div>
+
+    <div class="kasa-devices" *ngIf="kasaDevices.length > 0">
+      <h3>Gefundene Geraete</h3>
+      <div class="kasa-devices__list">
+        <button
+          class="kasa-device"
+          type="button"
+          *ngFor="let device of kasaDevices"
+          [class.kasa-device--active]="selectedKasaIp === device.ip"
+          (click)="setSelectedKasaIp(device.ip)"
+        >
+          <strong>{{ device.alias || device.model || 'Unbekanntes Geraet' }}</strong>
+          <span>{{ device.ip }}</span>
+          <span>{{ device.model || '-' }}</span>
+          <span>{{ device.relayState ? 'An' : 'Aus' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <p class="message message--success" *ngIf="kasaSuccessMessage">{{ kasaSuccessMessage }}</p>
+    <p class="message message--error" *ngIf="kasaErrorMessage">{{ kasaErrorMessage }}</p>
+  </section>
+
+  <section class="admin__card">
     <h2>Aktionen</h2>
     <p class="muted">Das Polling laeuft automatisch jeden Freitag um 09:00 (Europe/Berlin).</p>
     <div class="form__actions">
