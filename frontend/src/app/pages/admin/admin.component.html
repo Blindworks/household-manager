@@ -127,6 +127,32 @@
   </section>
 
   <section class="admin__card">
+    <h2>Tapo Discovery</h2>
+    <p class="muted">Lokale mDNS-Discovery fuer TP-Link Tapo Geraete im Netzwerk.</p>
+
+    <div class="form__actions">
+      <button class="btn btn--secondary" type="button" (click)="discoverTapo()" [disabled]="isDiscoveringTapo">
+        {{ isDiscoveringTapo ? 'Suche...' : 'Tapo Geraete entdecken' }}
+      </button>
+    </div>
+
+    <div class="tapo-devices" *ngIf="tapoDevices.length > 0">
+      <h3>Gefundene Geraete</h3>
+      <div class="tapo-devices__list">
+        <article class="tapo-device" *ngFor="let device of tapoDevices">
+          <strong>{{ device.serviceName || 'Unbekannter Service' }}</strong>
+          <span>IP: {{ device.ip }}</span>
+          <span>Hostname: {{ device.hostname || '-' }}</span>
+          <span>Port: {{ device.port }}</span>
+        </article>
+      </div>
+    </div>
+
+    <p class="message message--success" *ngIf="tapoSuccessMessage">{{ tapoSuccessMessage }}</p>
+    <p class="message message--error" *ngIf="tapoErrorMessage">{{ tapoErrorMessage }}</p>
+  </section>
+
+  <section class="admin__card">
     <h2>Aktionen</h2>
     <p class="muted">Das Polling laeuft automatisch jeden Freitag um 09:00 (Europe/Berlin).</p>
     <div class="form__actions">

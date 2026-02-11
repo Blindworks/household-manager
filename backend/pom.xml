@@ -85,6 +85,13 @@
             <version>1.10.0</version>
         </dependency>
 
+        <!-- mDNS Discovery for local TP-Link Tapo devices -->
+        <dependency>
+            <groupId>org.jmdns</groupId>
+            <artifactId>jmdns</artifactId>
+            <version>3.5.8</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

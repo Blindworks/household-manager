@@ -8,6 +8,8 @@ import { TasmotaPollingStatus } from '../../models/tasmota-polling.model';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 import { KasaService } from '../../services/kasa.service';
 import { KasaDiscoveryDevice, KasaStatus } from '../../models/kasa.model';
+import { TapoService } from '../../services/tapo.service';
+import { TapoDiscoveryDevice } from '../../models/tapo.model';
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -23,6 +25,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly pollingService = inject(TasmotaPollingService);
   private readonly liveService = inject(TasmotaLiveService);
   private readonly kasaService = inject(KasaService);
+  private readonly tapoService = inject(TapoService);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -44,6 +47,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   isKasaActionRunning = false;
   kasaErrorMessage: string | null = null;
   kasaSuccessMessage: string | null = null;
+  tapoDevices: TapoDiscoveryDevice[] = [];
+  isDiscoveringTapo = false;
+  tapoErrorMessage: string | null = null;
+  tapoSuccessMessage: string | null = null;
 
   ngOnInit(): void {
     this.loadStatus();
@@ -234,6 +241,27 @@ export class AdminComponent implements OnInit, OnDestroy {
         console.error(`Error switching Kasa ${action}:`, error);
         this.kasaErrorMessage = error.message;
         this.isKasaActionRunning = false;
+      }
+    });
+  }
+
+  discoverTapo(): void {
+    this.isDiscoveringTapo = true;
+    this.tapoErrorMessage = null;
+    this.tapoSuccessMessage = null;
+
+    this.tapoService.discover().subscribe({
+      next: (devices) => {
+        this.tapoDevices = devices;
+        this.tapoSuccessMessage = devices.length > 0
+          ? `${devices.length} Tapo-Geraet(e) gefunden.`
+          : 'Keine Tapo-Geraete gefunden.';
+        this.isDiscoveringTapo = false;
+      },
+      error: (error: Error) => {
+        console.error('Error discovering Tapo devices:', error);
+        this.tapoErrorMessage = error.message;
+        this.isDiscoveringTapo = false;
       }
     });
   }
