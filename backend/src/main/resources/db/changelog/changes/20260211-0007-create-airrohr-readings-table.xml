@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260211-0007" author="household-manager">
+        <comment>Create airrohr_readings table for fine dust data</comment>
+
+        <createTable tableName="airrohr_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="reading_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="software_version" type="VARCHAR(64)"/>
+            <column name="age_seconds" type="BIGINT"/>
+            <column name="sds_p1" type="DECIMAL(10,2)"/>
+            <column name="sds_p2" type="DECIMAL(10,2)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_airrohr_readings_time" tableName="airrohr_readings">
+            <column name="reading_time"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="airrohr_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

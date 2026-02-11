@@ -30,6 +30,19 @@ public class AirrohrService {
             throw new IllegalStateException("Airrohr returned an empty response.");
         }
 
+        ParsedAirrohrData parsedData = parseResponse(json);
+        LocalDateTime now = LocalDateTime.now();
+
+        return AirrohrReadingResponse.builder()
+                .readingTime(now)
+                .softwareVersion(parsedData.softwareVersion())
+                .ageSeconds(parsedData.ageSeconds())
+                .sdsP1(parsedData.sdsP1())
+                .sdsP2(parsedData.sdsP2())
+                .build();
+    }
+
+    private ParsedAirrohrData parseResponse(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
             String softwareVersion = root.path("software_version").asText(null);
@@ -58,13 +71,7 @@ public class AirrohrService {
                 throw new IllegalStateException("Airrohr response does not contain SDS_P1 or SDS_P2.");
             }
 
-            return AirrohrReadingResponse.builder()
-                    .readingTime(LocalDateTime.now())
-                    .softwareVersion(softwareVersion)
-                    .ageSeconds(ageSeconds)
-                    .sdsP1(sdsP1)
-                    .sdsP2(sdsP2)
-                    .build();
+            return new ParsedAirrohrData(softwareVersion, ageSeconds, sdsP1, sdsP2);
         } catch (IllegalStateException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -84,5 +91,13 @@ public class AirrohrService {
             return null;
         }
         return Long.valueOf(value);
+    }
+
+    private record ParsedAirrohrData(
+            String softwareVersion,
+            Long ageSeconds,
+            BigDecimal sdsP1,
+            BigDecimal sdsP2
+    ) {
     }
 }

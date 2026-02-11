@@ -18,5 +18,6 @@
 
     <!-- Tasmota Readings Feature -->
     <include file="db/changelog/changes/20260210-0006-create-tasmota-electricity-readings-table.xml"/>
+    <include file="db/changelog/changes/20260211-0007-create-airrohr-readings-table.xml"/>
 
 </databaseChangeLog>
