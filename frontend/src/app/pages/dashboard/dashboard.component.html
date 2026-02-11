@@ -35,6 +35,31 @@
           <span class="live-card__error" *ngIf="liveError">{{ liveError }}</span>
         </div>
       </div>
+      <div class="live-card live-card--air">
+        <div class="live-card__header">
+          <div class="live-card__title-wrap">
+            <h2 class="live-card__title">Airrohr Feinstaub</h2>
+            <div class="live-card__status">
+              <span class="live-card__status-dot" [class.live-card__status-dot--on]="!airrohrError"></span>
+              <span>{{ airrohrError ? 'Fehler' : 'Aktiv' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="live-card__grid">
+          <div class="live-card__metric">
+            <span class="live-card__label">SDS_P1</span>
+            <span class="live-card__value live-card__value--small">{{ formatDust(airrohrReading?.sdsP1) }}</span>
+          </div>
+          <div class="live-card__metric">
+            <span class="live-card__label">SDS_P2</span>
+            <span class="live-card__value live-card__value--small">{{ formatDust(airrohrReading?.sdsP2) }}</span>
+          </div>
+        </div>
+        <div class="live-card__meta">
+          <span>Letztes Update: {{ formatDateTime(lastAirrohrUpdate ? lastAirrohrUpdate.toISOString() : null) }}</span>
+          <span class="live-card__error" *ngIf="airrohrError">{{ airrohrError }}</span>
+        </div>
+      </div>
     </section>
 
     <div class="dashboard__loading" *ngIf="isLoading">

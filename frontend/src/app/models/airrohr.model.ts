@@ -1,0 +1,7 @@
+export interface AirrohrReading {
+  readingTime: string;
+  softwareVersion?: string | null;
+  ageSeconds?: number | null;
+  sdsP1?: number | null;
+  sdsP2?: number | null;
+}

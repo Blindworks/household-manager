@@ -48,6 +48,9 @@
   }
 
   &__live {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--spacing-md);
     margin-bottom: var(--spacing-xl);
   }
 
@@ -117,6 +120,33 @@
     color: var(--color-primary-dark);
     line-height: 1.1;
     margin-bottom: var(--spacing-sm);
+  }
+
+  &__value--small {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__metric {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(13, 110, 189, 0.15);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+  }
+
+  &__label {
+    display: block;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-gray);
+    margin-bottom: 4px;
   }
 
   &__meta {

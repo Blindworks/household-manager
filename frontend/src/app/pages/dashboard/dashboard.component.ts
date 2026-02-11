@@ -1,12 +1,14 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription, forkJoin } from 'rxjs';
+import { Subscription, forkJoin, interval, startWith, switchMap } from 'rxjs';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
+import { AirrohrService } from '../../services/airrohr.service';
 import { UtilityPriceService } from '../../services/utility-price.service';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
+import { AirrohrReading } from '../../models/airrohr.model';
 import { UtilityPrice } from '../../models/utility-price.model';
 import { MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
@@ -26,8 +28,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly meterReadingService = inject(MeterReadingService);
   private readonly utilityPriceService = inject(UtilityPriceService);
   private readonly liveService = inject(TasmotaLiveService);
+  private readonly airrohrService = inject(AirrohrService);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
+  private airrohrSubscription?: Subscription;
 
   private static readonly GAS_ZUSTANDSZAHL = 0.95;
   private static readonly GAS_BRENNWERT = 11.5;
@@ -45,15 +49,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   liveStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
   lastLiveUpdate: Date | null = null;
   isReconnecting = false;
+  airrohrReading: AirrohrReading | null = null;
+  airrohrError: string | null = null;
+  lastAirrohrUpdate: Date | null = null;
 
   ngOnInit(): void {
     this.loadMeterData();
     this.startLiveStream();
+    this.startAirrohrPolling();
   }
 
   ngOnDestroy(): void {
     this.liveSubscription?.unsubscribe();
     this.statusSubscription?.unsubscribe();
+    this.airrohrSubscription?.unsubscribe();
     this.liveService.disconnect();
   }
 
@@ -253,6 +262,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return `${value.toLocaleString('de-DE', { maximumFractionDigits: 1 })} W`;
   }
 
+  formatDust(value: number | null | undefined): string {
+    if (value == null || Number.isNaN(value)) {
+      return '-';
+    }
+    return `${value.toLocaleString('de-DE', { maximumFractionDigits: 2 })} ug/m3`;
+  }
+
   formatLiveStatus(): string {
     switch (this.liveStatus) {
       case 'connected':
@@ -364,6 +380,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription = this.liveService.getStatusStream().subscribe({
       next: (status) => {
         this.liveStatus = status;
+      }
+    });
+  }
+
+  private startAirrohrPolling(): void {
+    this.airrohrSubscription?.unsubscribe();
+    this.airrohrError = null;
+    this.airrohrSubscription = interval(15000).pipe(
+      startWith(0),
+      switchMap(() => this.airrohrService.getCurrentReading())
+    ).subscribe({
+      next: (reading) => {
+        this.airrohrReading = reading;
+        this.lastAirrohrUpdate = new Date();
+        this.airrohrError = null;
+      },
+      error: () => {
+        this.airrohrError = 'Airrohr-Daten nicht verfuegbar.';
       }
     });
   }
