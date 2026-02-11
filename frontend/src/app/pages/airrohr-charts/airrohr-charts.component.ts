@@ -284,7 +284,7 @@ export class AirrohrChartsComponent implements OnInit {
       },
       series: [
         {
-          name: 'SDS_P1',
+          name: 'Feinstaub PM10',
           type: 'line',
           data: series.points.map(point => point.sdsP1),
           smooth: true,
@@ -300,7 +300,7 @@ export class AirrohrChartsComponent implements OnInit {
           }
         },
         {
-          name: 'SDS_P2',
+          name: 'Feinstaub PM2.5',
           type: 'line',
           data: series.points.map(point => point.sdsP2),
           smooth: true,

@@ -46,12 +46,12 @@
           </div>
         </div>
         <div class="live-card__grid">
-          <div class="live-card__metric">
-            <span class="live-card__label">SDS_P1</span>
+          <div class="live-card__metric" [ngClass]="getPm10LevelClass(airrohrReading?.sdsP1)">
+            <span class="live-card__label">Feinstaub PM10</span>
             <span class="live-card__value live-card__value--small">{{ formatDust(airrohrReading?.sdsP1) }}</span>
           </div>
-          <div class="live-card__metric">
-            <span class="live-card__label">SDS_P2</span>
+          <div class="live-card__metric" [ngClass]="getPm25LevelClass(airrohrReading?.sdsP2)">
+            <span class="live-card__label">Feinstaub PM2.5</span>
             <span class="live-card__value live-card__value--small">{{ formatDust(airrohrReading?.sdsP2) }}</span>
           </div>
         </div>

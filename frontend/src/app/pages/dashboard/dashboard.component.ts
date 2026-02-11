@@ -269,6 +269,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return `${value.toLocaleString('de-DE', { maximumFractionDigits: 2 })} ug/m3`;
   }
 
+  getPm10LevelClass(value: number | null | undefined): string {
+    return this.getDustLevelClass(value, 20, 40);
+  }
+
+  getPm25LevelClass(value: number | null | undefined): string {
+    return this.getDustLevelClass(value, 12, 25);
+  }
+
   formatLiveStatus(): string {
     switch (this.liveStatus) {
       case 'connected':
@@ -400,6 +408,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.airrohrError = 'Airrohr-Daten nicht verfuegbar.';
       }
     });
+  }
+
+  private getDustLevelClass(
+    value: number | null | undefined,
+    orangeThreshold: number,
+    redThreshold: number
+  ): string {
+    if (value == null || Number.isNaN(value)) {
+      return 'live-card__metric--neutral';
+    }
+    if (value <= orangeThreshold) {
+      return 'live-card__metric--good';
+    }
+    if (value <= redThreshold) {
+      return 'live-card__metric--warn';
+    }
+    return 'live-card__metric--bad';
   }
 }
 
