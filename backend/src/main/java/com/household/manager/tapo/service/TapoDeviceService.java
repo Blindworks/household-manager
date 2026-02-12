@@ -13,8 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.nio.ByteBuffer;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -31,6 +35,17 @@ public class TapoDeviceService {
     private final TapoProperties tapoProperties;
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<String, KlapSession> sessionCache = new ConcurrentHashMap<>();
+
+    // Generate terminal UUID once per service instance
+    private final String terminalUuid = generateTerminalUuid();
+
+    private static String generateTerminalUuid() {
+        UUID uuid = UUID.randomUUID();
+        ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
+        bb.putLong(uuid.getMostSignificantBits());
+        bb.putLong(uuid.getLeastSignificantBits());
+        return Base64.getEncoder().encodeToString(bb.array());
+    }
 
     public void connect(String deviceIp) {
         sessionCache.put(deviceIp, createSession(deviceIp));
@@ -58,8 +73,16 @@ public class TapoDeviceService {
 
     public TapoDeviceInfoDto getDeviceInfo(String deviceIp) {
         return withReconnect(deviceIp, session -> {
-            // Don't include params field at all if not needed
-            Map<String, Object> response = send(session, Map.of("method", "get_device_info"));
+            // Use multipleRequest format like python-kasa
+            Map<String, Object> request = Map.of(
+                    "method", "multipleRequest",
+                    "request_time_milis", System.currentTimeMillis(),
+                    "terminal_uuid", terminalUuid,
+                    "params", Map.of(
+                            "requests", List.of(Map.of("method", "get_device_info"))
+                    )
+            );
+            Map<String, Object> response = send(session, request);
             return parseDeviceInfo(response);
         });
     }
@@ -161,6 +184,20 @@ public class TapoDeviceService {
                 log.warn("No 'result' field in device info response, using root object");
                 result = response;
             }
+
+            // Handle multipleRequest response format
+            if (result instanceof Map) {
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                Object responses = resultMap.get("responses");
+                if (responses instanceof List) {
+                    List<Map<String, Object>> responsesList = (List<Map<String, Object>>) responses;
+                    if (!responsesList.isEmpty()) {
+                        Map<String, Object> firstResponse = responsesList.get(0);
+                        result = firstResponse.get("result");
+                    }
+                }
+            }
+
             return objectMapper.convertValue(result, TapoDeviceInfoDto.class);
         } catch (Exception ex) {
             log.error("Failed to parse device info response: {}", response, ex);

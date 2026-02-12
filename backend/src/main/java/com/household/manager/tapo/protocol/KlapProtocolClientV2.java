@@ -60,11 +60,17 @@ public class KlapProtocolClientV2 {
 
             // Step 4: Derive encryption keys with prefixes
             byte[] key = deriveKey(localSeed, hs1.remoteSeed, authHash);
-            byte[] iv = deriveIv(localSeed, hs1.remoteSeed, authHash);
+            byte[] ivSeed = deriveIvSeed(localSeed, hs1.remoteSeed, authHash);
             byte[] signatureKey = deriveSignatureKey(localSeed, hs1.remoteSeed, authHash);
 
-            log.info("KLAP handshake successful for {}", deviceIp);
-            return new KlapSession(deviceIp, hs1.cookie, key, iv, signatureKey, 0);
+            // Extract base IV (first 12 bytes) and initial sequence (last 4 bytes, signed big-endian)
+            byte[] baseIv = Arrays.copyOfRange(ivSeed, 0, 12);
+            int initialSeq = ByteBuffer.wrap(Arrays.copyOfRange(ivSeed, 28, 32))
+                    .order(java.nio.ByteOrder.BIG_ENDIAN)
+                    .getInt();
+
+            log.info("KLAP handshake successful for {}, initial seq: {}", deviceIp, initialSeq);
+            return new KlapSession(deviceIp, hs1.cookie, key, baseIv, signatureKey, initialSeq);
 
         } catch (Exception ex) {
             log.error("KLAP handshake failed for {}", deviceIp, ex);
@@ -268,11 +274,11 @@ public class KlapProtocolClientV2 {
         return Arrays.copyOfRange(hash, 0, 16);
     }
 
-    private byte[] deriveIv(byte[] localSeed, byte[] remoteSeed, byte[] authHash) {
-        // iv_seed = SHA256("iv" + local_seed + remote_seed + auth_hash)[:12]
+    private byte[] deriveIvSeed(byte[] localSeed, byte[] remoteSeed, byte[] authHash) {
+        // iv_seed = SHA256("iv" + local_seed + remote_seed + auth_hash)
+        // First 12 bytes = base IV, Last 4 bytes = initial sequence (signed big-endian)
         byte[] prefix = "iv".getBytes(StandardCharsets.UTF_8);
-        byte[] hash = sha256(concat(prefix, localSeed, remoteSeed, authHash));
-        return Arrays.copyOfRange(hash, 0, 12);
+        return sha256(concat(prefix, localSeed, remoteSeed, authHash));
     }
 
     private byte[] deriveSignatureKey(byte[] localSeed, byte[] remoteSeed, byte[] authHash) {
