@@ -10,6 +10,8 @@ import { KasaService } from '../../services/kasa.service';
 import { KasaDiscoveryDevice, KasaStatus } from '../../models/kasa.model';
 import { TapoService } from '../../services/tapo.service';
 import { TapoDeviceInfo, TapoDiscoveryDevice, TapoEnergyUsage } from '../../models/tapo.model';
+import { MerossService } from '../../services/meross.service';
+import { MerossCloudDevice } from '../../models/meross.model';
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -26,6 +28,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly liveService = inject(TasmotaLiveService);
   private readonly kasaService = inject(KasaService);
   private readonly tapoService = inject(TapoService);
+  private readonly merossService = inject(MerossService);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -56,6 +59,12 @@ export class AdminComponent implements OnInit, OnDestroy {
   isTapoActionRunning = false;
   tapoErrorMessage: string | null = null;
   tapoSuccessMessage: string | null = null;
+  merossDevices: MerossCloudDevice[] = [];
+  selectedMerossDeviceId = '';
+  isMerossLoginRunning = false;
+  isLoadingMerossDevices = false;
+  merossErrorMessage: string | null = null;
+  merossSuccessMessage: string | null = null;
 
   ngOnInit(): void {
     this.loadStatus();
@@ -400,6 +409,69 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     const type = (device.deviceType ?? '').toUpperCase();
     return !type.includes('CAMERA') && !type.includes('HUB') && !type.includes('SENSOR');
+  }
+
+  loginMerossCloud(): void {
+    this.isMerossLoginRunning = true;
+    this.merossErrorMessage = null;
+    this.merossSuccessMessage = null;
+
+    this.merossService.loginWithConfig().subscribe({
+      next: () => {
+        this.merossSuccessMessage = 'Meross Cloud Login erfolgreich.';
+        this.isMerossLoginRunning = false;
+      },
+      error: (error: Error) => {
+        console.error('Error logging in to Meross cloud:', error);
+        this.merossErrorMessage = error.message;
+        this.isMerossLoginRunning = false;
+      }
+    });
+  }
+
+  loadMerossDevices(): void {
+    if (this.isLoadingMerossDevices) {
+      return;
+    }
+
+    this.isLoadingMerossDevices = true;
+    this.merossErrorMessage = null;
+    this.merossSuccessMessage = 'Lade Meross-Geraete...';
+
+    this.merossService.getDevices().subscribe({
+      next: (response) => {
+        this.merossDevices = response.devices ?? [];
+        if (this.merossDevices.length > 0) {
+          this.selectedMerossDeviceId = this.merossDevices[0].uuid;
+          this.merossSuccessMessage = `${this.merossDevices.length} Meross-Geraet(e) gefunden.`;
+        } else {
+          this.selectedMerossDeviceId = '';
+          this.merossSuccessMessage = 'Keine Meross-Geraete gefunden.';
+        }
+      },
+      error: (error: Error) => {
+        console.error('Error loading Meross devices:', error);
+        this.merossErrorMessage = error.message;
+      }
+    }).add(() => {
+      this.isLoadingMerossDevices = false;
+    });
+  }
+
+  setSelectedMerossDeviceId(deviceId: string): void {
+    this.selectedMerossDeviceId = deviceId;
+  }
+
+  getSelectedMerossDevice(): MerossCloudDevice | null {
+    return this.merossDevices.find((device) => device.uuid === this.selectedMerossDeviceId) ?? null;
+  }
+
+  isMerossDeviceOnline(device: MerossCloudDevice | null): boolean {
+    if (!device) {
+      return false;
+    }
+    const value = (device.onlineStatus ?? '').toString().toLowerCase();
+    return value === '1' || value === 'online' || value === 'true';
   }
 
 }

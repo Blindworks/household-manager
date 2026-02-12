@@ -1,6 +1,8 @@
 package com.household.manager.exception;
 
 import com.household.manager.kasa.exception.KasaCommunicationException;
+import com.household.manager.meross.exception.MerossAuthException;
+import com.household.manager.meross.exception.MerossException;
 import com.household.manager.tapo.exception.TapoAuthException;
 import com.household.manager.tapo.exception.TapoConnectionException;
 import com.household.manager.tapo.exception.TapoCommunicationException;
@@ -103,6 +105,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errorResponse);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(
+            IllegalStateException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Illegal state: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
     /**
      * Handle device communication exceptions (e.g., local smart plug access).
      *
@@ -123,6 +141,38 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Kasa communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    @ExceptionHandler(MerossAuthException.class)
+    public ResponseEntity<ErrorResponse> handleMerossAuthException(
+            MerossAuthException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Unauthorized")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Meross auth error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(MerossException.class)
+    public ResponseEntity<ErrorResponse> handleMerossException(
+            MerossException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Meross communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 
