@@ -1,23 +1,20 @@
 package com.household.manager.tapo.service;
 
 import com.household.manager.tapo.config.TapoProperties;
+import com.household.manager.tapo.exception.TapoException;
 import com.household.manager.tapo.model.TapoDevice;
+import com.household.manager.tapo.protocol.KlapProtocolClientV2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -25,25 +22,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TapoDiscoveryService {
 
-    private static final int TAPO_DISCOVERY_PORT = 20002;
-    private static final int RECEIVE_BUFFER_SIZE = 4096;
-    private static final int SCAN_THREAD_COUNT = 50;
-    private static final int SCAN_CONNECT_TIMEOUT_MS = 500;
-    private static final Pattern MODEL_PATTERN = Pattern.compile("\"model\"\\s*:\\s*\"([^\"]+)\"");
+    private static final int SCAN_CONNECT_TIMEOUT_MS = 300;
+    private static final int SCAN_THREAD_POOL_SIZE = 100;
+    private static final int SCAN_TIMEOUT_MINUTES = 2;
     private static final List<String> EXCLUDED_INTERFACE_KEYWORDS = List.of(
             "virtual",
             "vethernet",
@@ -53,28 +44,27 @@ public class TapoDiscoveryService {
     );
 
     private final TapoProperties tapoProperties;
-    private final RestTemplate restTemplate;
+
+    @Qualifier("klapProtocolClientV2")
+    private final KlapProtocolClientV2 klapProtocolClient;
 
     public List<TapoDevice> discoverDevices() {
         Map<String, TapoDevice> discovered = new LinkedHashMap<>();
         addConfiguredDevices(discovered);
 
+        log.info("Starting Tapo device discovery via subnet scan (Tapo devices don't support mDNS)...");
         List<DiscoveryInterface> interfaces = resolveDiscoveryInterfaces();
-        int udpFound = discoverViaUdpBroadcast(discovered, interfaces);
-        int subnetCandidates = 0;
-        int deduplicatedNew = 0;
 
-        if (udpFound == 0) {
-            ScanStats stats = discoverViaSubnetScan(discovered, interfaces);
-            subnetCandidates = stats.candidates();
-            deduplicatedNew = stats.newDevices();
-            log.info("Tapo subnet scan finished, found {} additional device(s)", deduplicatedNew);
+        if (interfaces.isEmpty()) {
+            log.warn("No network interfaces found for Tapo discovery");
+            return new ArrayList<>(discovered.values());
         }
 
+        int scanFound = discoverViaSubnetScan(discovered, interfaces);
+        log.info("Tapo subnet scan finished, found {} new device(s)", scanFound);
+
         List<TapoDevice> result = new ArrayList<>(discovered.values());
-        log.info("Tapo discovery finished, found {} device(s) total", result.size());
-        log.info("Tapo discovery summary: udpFound={}, subnetCandidates={}, deduplicatedNew={}, total={}",
-                udpFound, subnetCandidates, deduplicatedNew, result.size());
+        log.info("Tapo discovery completed, total devices: {}", result.size());
         return result;
     }
 
@@ -89,62 +79,17 @@ public class TapoDiscoveryService {
         }
     }
 
-    private int discoverViaUdpBroadcast(Map<String, TapoDevice> discovered, List<DiscoveryInterface> interfaces) {
-        byte[] requestPayload = "{\"method\":\"get_device_info\"}".getBytes(StandardCharsets.UTF_8);
+
+    private int discoverViaSubnetScan(Map<String, TapoDevice> discovered, List<DiscoveryInterface> interfaces) {
         int discoveredBefore = discovered.size();
+        ConcurrentHashMap<String, TapoDevice> scanned = new ConcurrentHashMap<>();
 
-        try (DatagramSocket socket = new DatagramSocket()) {
-            socket.setBroadcast(true);
-            for (DiscoveryInterface discoveryInterface : interfaces) {
-                DatagramPacket request = new DatagramPacket(
-                        requestPayload,
-                        requestPayload.length,
-                        discoveryInterface.broadcast(),
-                        TAPO_DISCOVERY_PORT
-                );
-                socket.send(request);
-                log.info("Sent Tapo discovery broadcast on {}:{} via {} ({})",
-                        discoveryInterface.broadcast().getHostAddress(),
-                        TAPO_DISCOVERY_PORT,
-                        discoveryInterface.name(),
-                        discoveryInterface.ipv4().getHostAddress());
-            }
+        int totalHosts = interfaces.size() * 254;
+        CountDownLatch latch = new CountDownLatch(totalHosts);
+        ExecutorService executor = Executors.newFixedThreadPool(SCAN_THREAD_POOL_SIZE);
 
-            long deadline = System.currentTimeMillis() + tapoProperties.getDiscoveryTimeoutMs();
-            while (System.currentTimeMillis() < deadline) {
-                int remainingMs = (int) Math.max(1, deadline - System.currentTimeMillis());
-                socket.setSoTimeout(remainingMs);
-
-                byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
-                DatagramPacket response = new DatagramPacket(buffer, buffer.length);
-                try {
-                    socket.receive(response);
-                } catch (SocketTimeoutException ex) {
-                    break;
-                }
-
-                String ip = response.getAddress().getHostAddress();
-                String payload = new String(response.getData(), 0, response.getLength(), StandardCharsets.UTF_8);
-                discovered.putIfAbsent(ip, new TapoDevice(ip, detectDeviceType(payload)));
-                log.info("Discovered Tapo device candidate {} via UDP broadcast", ip);
-            }
-        } catch (IOException ex) {
-            log.warn("Tapo UDP discovery failed: {}", ex.getMessage());
-        }
-
-        int udpFound = discovered.size() - discoveredBefore;
-        log.info("Tapo UDP discovery finished, found {} device(s)", udpFound);
-        return udpFound;
-    }
-
-    private ScanStats discoverViaSubnetScan(Map<String, TapoDevice> discovered, List<DiscoveryInterface> interfaces) {
-        log.info("No devices found via UDP broadcast, starting subnet scan fallback");
-        int discoveredBefore = discovered.size();
-        AtomicInteger candidates = new AtomicInteger(0);
-
-        ConcurrentMap<String, TapoDevice> scanned = new ConcurrentHashMap<>();
-        ExecutorService executor = Executors.newFixedThreadPool(SCAN_THREAD_COUNT);
-        CountDownLatch latch = new CountDownLatch(interfaces.size() * 254);
+        log.info("Scanning {} IP addresses across {} interface(s) using {} threads...",
+                totalHosts, interfaces.size(), SCAN_THREAD_POOL_SIZE);
 
         for (DiscoveryInterface discoveryInterface : interfaces) {
             byte[] address = discoveryInterface.ipv4().getAddress();
@@ -152,18 +97,21 @@ public class TapoDiscoveryService {
             int second = Byte.toUnsignedInt(address[1]);
             int third = Byte.toUnsignedInt(address[2]);
 
+            log.info("Scanning subnet {}.{}.{}.0/24", first, second, third);
+
             for (int host = 1; host <= 254; host++) {
                 String targetIp = first + "." + second + "." + third + "." + host;
                 executor.submit(() -> {
                     try {
-                        if (!isPort80Open(targetIp)) {
-                            return;
+                        if (isPort80Open(targetIp)) {
+                            log.debug("Port 80 open on {}, testing Tapo handshake...", targetIp);
+                            if (isLikelyTapoByHandshake(targetIp)) {
+                                scanned.putIfAbsent(targetIp, new TapoDevice(targetIp, "UNKNOWN"));
+                                log.info("✓ Discovered Tapo device: {}", targetIp);
+                            }
                         }
-                        if (isLikelyTapoByHandshake(targetIp)) {
-                            candidates.incrementAndGet();
-                            scanned.putIfAbsent(targetIp, new TapoDevice(targetIp, "UNKNOWN"));
-                            log.info("Discovered Tapo device candidate {} via subnet scan", targetIp);
-                        }
+                    } catch (Exception ex) {
+                        log.debug("Error scanning {}: {}", targetIp, ex.getMessage());
                     } finally {
                         latch.countDown();
                     }
@@ -173,18 +121,21 @@ public class TapoDiscoveryService {
 
         executor.shutdown();
         try {
-            boolean completed = latch.await(2, TimeUnit.MINUTES);
+            boolean completed = latch.await(SCAN_TIMEOUT_MINUTES, TimeUnit.MINUTES);
             if (!completed) {
-                log.warn("Subnet scan did not finish within timeout");
+                log.warn("Subnet scan did not finish within {} minutes timeout", SCAN_TIMEOUT_MINUTES);
+                executor.shutdownNow();
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("Subnet scan interrupted");
+            executor.shutdownNow();
         }
 
         scanned.forEach(discovered::putIfAbsent);
-        int newDevices = discovered.size() - discoveredBefore;
-        return new ScanStats(candidates.get(), newDevices);
+        log.info("Subnet scan complete. Scanned {} hosts, found {} Tapo devices",
+                totalHosts, scanned.size());
+        return discovered.size() - discoveredBefore;
     }
 
     private boolean isPort80Open(String ip) {
@@ -200,45 +151,15 @@ public class TapoDiscoveryService {
 
     private boolean isLikelyTapoByHandshake(String ip) {
         try {
-            Map<String, Object> request = Map.of(
-                    "method", "handshake",
-                    "params", Map.of("key", "invalid-key")
-            );
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.postForObject("http://" + ip + "/app", request, Map.class);
-            if (response == null) {
-                return false;
-            }
-
-            Object errorCode = response.get("error_code");
-            Object result = response.get("result");
-            return errorCode != null || result != null;
-        } catch (Exception ex) {
+            klapProtocolClient.handshake(ip, tapoProperties.getEmail(), tapoProperties.getPassword());
+            log.debug("KLAP handshake successful for {}", ip);
+            return true;
+        } catch (TapoException ex) {
+            log.debug("KLAP handshake failed for {}: {}", ip, ex.getMessage());
             return false;
         }
     }
 
-    private String detectDeviceType(String responsePayload) {
-        Matcher matcher = MODEL_PATTERN.matcher(responsePayload);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-
-        String lower = responsePayload.toLowerCase(Locale.ROOT);
-        if (lower.contains("p110")) {
-            return "P110";
-        }
-        if (lower.contains("p100")) {
-            return "P100";
-        }
-        if (lower.contains("l510")) {
-            return "L510";
-        }
-        if (lower.contains("l530")) {
-            return "L530";
-        }
-        return "UNKNOWN";
-    }
 
     private List<DiscoveryInterface> resolveDiscoveryInterfaces() {
         List<DiscoveryInterface> physical = new ArrayList<>();
@@ -294,16 +215,12 @@ public class TapoDiscoveryService {
         }
 
         List<DiscoveryInterface> result = new ArrayList<>();
-        for (InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses()) {
-            InetAddress address = interfaceAddress.getAddress();
-            InetAddress broadcast = interfaceAddress.getBroadcast();
-            if (address == null || broadcast == null) {
-                continue;
+        Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+        while (addresses.hasMoreElements()) {
+            InetAddress address = addresses.nextElement();
+            if (address != null && address.getAddress().length == 4) {
+                result.add(new DiscoveryInterface(networkInterface.getName(), address));
             }
-            if (address.getAddress().length != 4 || broadcast.getAddress().length != 4) {
-                continue;
-            }
-            result.add(new DiscoveryInterface(networkInterface.getName(), address, broadcast));
         }
         return result;
     }
@@ -323,9 +240,6 @@ public class TapoDiscoveryService {
         return true;
     }
 
-    private record DiscoveryInterface(String name, InetAddress ipv4, InetAddress broadcast) {
-    }
-
-    private record ScanStats(int candidates, int newDevices) {
+    private record DiscoveryInterface(String name, InetAddress ipv4) {
     }
 }

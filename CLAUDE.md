@@ -6,12 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Household-Manager is a full-stack application for managing household utilities and inventory. The application is split into a separate frontend and backend with the following structure:
 
-- **Frontend**: Angular 21 (standalone mode) with SCSS
-- **Backend**: Spring Boot with MySQL/MariaDB database
+- **Frontend**: Angular 19 (standalone mode) with SCSS
+- **Backend**: Spring Boot 3.4.1 with Java 21 and MySQL/MariaDB database
 
-### Current Features (Phase 1)
-- Utility meter readings tracking (Strom/Electricity, Gas, Wasser/Water)
-- Consumption monitoring and history
+### Current Features
+- **Utility Meter Readings**: Track electricity, gas, and water consumption with automatic consumption calculations
+- **Utility Price Management**: Track and manage utility pricing over time
+- **Smart Device Integration**:
+  - TP-Link Kasa smart plugs (HS100)
+  - TP-Link Tapo devices with local control
+  - Tasmota electricity monitoring devices (live and historical data with automated polling)
+- **Air Quality Monitoring**: Airrohr sensor integration with live data and automated polling
+- **Data Visualization**: ECharts-based consumption and air quality charts
+- **CSV Import**: Bulk import of historical meter readings
+- **Docker Deployment**: Docker Compose setup for containerized deployment
 
 ### Planned Features
 - **Phase 2**: Product inventory management system with barcode scanning for household items
@@ -21,19 +29,41 @@ Household-Manager is a full-stack application for managing household utilities a
 
 ```
 household-manager/
-├── frontend/          # Angular 21 application
-│   └── ...           # Standalone components with separate HTML/TS files
-└── backend/          # Spring Boot application
-    └── ...           # Java/Kotlin with Lombok and Liquibase
+├── frontend/                      # Angular 19 application
+│   ├── src/app/
+│   │   ├── components/           # Reusable UI components
+│   │   ├── pages/                # Page-level components (routes)
+│   │   ├── services/             # API services and business logic
+│   │   ├── models/               # TypeScript interfaces and types
+│   │   └── shared/               # Shared utilities and components
+│   └── proxy.conf.json           # API proxy configuration
+├── backend/                       # Spring Boot application
+│   ├── src/main/java/com/household/manager/
+│   │   ├── controller/           # REST API controllers
+│   │   ├── service/              # Business logic services
+│   │   ├── repository/           # JPA repositories
+│   │   ├── model/entity/         # JPA entities
+│   │   ├── dto/                  # Data Transfer Objects
+│   │   ├── config/               # Spring configuration classes
+│   │   ├── exception/            # Custom exceptions and handlers
+│   │   ├── kasa/                 # Kasa device integration
+│   │   ├── tapo/                 # Tapo device integration
+│   │   └── importer/             # CSV import functionality
+│   └── src/main/resources/
+│       ├── application.properties  # Application configuration
+│       └── db/changelog/           # Liquibase migration files
+├── scripts/                       # Helper scripts (test data, etc.)
+└── docker-compose.yml            # Docker deployment configuration
 ```
 
-## Frontend (Angular 21)
+## Frontend (Angular 19)
 
 ### Technology Stack
-- Angular 21 in standalone mode (no NgModules)
+- Angular 19 in standalone mode (no NgModules)
 - TypeScript with separate HTML template files
 - SCSS for styling
-- Component-based architecture
+- ECharts (via ngx-echarts) for data visualization
+- Component-based architecture with pages and shared components
 
 ### Development Commands
 
@@ -43,8 +73,10 @@ cd frontend
 # Install dependencies
 npm install
 
-# Start development server
-ng serve
+# Start development server (with proxy to backend)
+npm start
+# OR
+ng serve --proxy-config proxy.conf.json
 
 # Build for production
 ng build --configuration production
@@ -52,51 +84,51 @@ ng build --configuration production
 # Run tests
 ng test
 
-# Run linting
+# Run linting (if configured)
 ng lint
 ```
+
+**Note**: The dev server uses `proxy.conf.json` to proxy API requests to `http://localhost:8080`.
 
 ### Frontend Conventions
 - Use standalone components exclusively
 - Keep HTML templates in separate `.html` files (not inline)
 - Use SCSS for all styling
 - Follow Angular style guide for component structure
-- Use icons exclusively from [Lucide](https://lucide.dev/) with `lucide-angular` package
+- Organize components into `components/`, `pages/`, and `shared/` directories
+- Use ECharts for data visualization via `ngx-echarts`
 
 ## Backend (Spring Boot)
 
 ### Technology Stack
-- Spring Boot (latest version)
+- Spring Boot 3.4.1
+- Java 21
 - MySQL/MariaDB database
 - Lombok for boilerplate reduction
 - Liquibase for database migrations
-- Maven or Gradle for dependency management
+- Maven for dependency management
+- JmDNS for local device discovery
+- Apache Commons CSV for CSV import functionality
 
 ### Development Commands
 
 ```bash
 cd backend
 
-# Build the application (Maven)
+# Build the application
 mvn clean install
-
-# Build the application (Gradle)
-./gradlew build
 
 # Run the application
 mvn spring-boot:run
-# OR
-./gradlew bootRun
 
 # Run tests
 mvn test
-# OR
-./gradlew test
 
 # Run specific test
 mvn test -Dtest=YourTestClass
-# OR
-./gradlew test --tests YourTestClass
+
+# Run with specific profile
+mvn spring-boot:run -Dspring-boot.run.profiles=prod
 ```
 
 ### Database Setup
@@ -117,24 +149,54 @@ The application uses Liquibase for database migrations. Migration files are loca
 
 ## Database Schema
 
-### Current Entities (Phase 1)
+### Current Entities
 - **Meter Readings**: Tracks utility consumption (electricity, gas, water)
-  - Meter type (Strom, Gas, Wasser)
-  - Reading value
-  - Reading date
-  - Calculation of consumption between readings
+  - Meter type (ELECTRICITY, GAS, WATER)
+  - Reading value, reading date, reading week
+  - Consumption calculated between consecutive readings
+  - Notes field for additional context
+- **Utility Prices**: Tracks utility pricing over time
+  - Meter type, price per unit, valid from/to dates
+  - Price history for cost calculations
+- **Tasmota Electricity Readings**: Historical readings from Tasmota devices
+  - Device identification, consumption metrics
+  - Timestamps for time-series analysis
+- **Airrohr Readings**: Air quality sensor data
+  - PM2.5, PM10, temperature, humidity measurements
+  - Sensor identification and timestamps
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items
 - **Product Stock**: Current quantities
 - **Barcode**: Product identification for scanning
 
+## Docker Deployment
+
+The project includes a `docker-compose.yml` for containerized deployment:
+
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Stop all services
+docker-compose down
+```
+
+**Configuration**:
+- Backend runs on port 8080
+- Frontend runs on port 4200 (served via nginx)
+- Connects to external MariaDB network (`mariadb_default`)
+- Environment variables configured in docker-compose.yml
+
 ## Development Workflow
 
 1. **Frontend Development**: Work in `frontend/` directory with Angular CLI
 2. **Backend Development**: Work in `backend/` directory with Spring Boot
-3. **API Communication**: Frontend calls backend REST API (typically running on `http://localhost:8080`)
-4. **Database Changes**: Create Liquibase changelog files for any schema modifications
+3. **API Communication**:
+   - In development: Frontend uses proxy (`proxy.conf.json`) to forward API requests to `http://localhost:8080`
+   - In production: Backend runs on port 8080, CORS configured for frontend origin
+4. **Database Changes**: Create Liquibase changelog files in `src/main/resources/db/changelog/changes/` for any schema modifications
+5. **Smart Device Features**: Ensure local network access for Kasa/Tapo/Tasmota/Airrohr device integrations
 
 ## Testing
 
@@ -147,8 +209,40 @@ The application uses Liquibase for database migrations. Migration files are loca
 - **Standalone Angular**: Modern Angular without NgModules for better tree-shaking and simpler architecture
 - **Separate HTML/TS**: Better separation of concerns and easier template editing
 - **Liquibase**: Version-controlled database migrations for consistent schema across environments
-- **Lombok**: Reduced boilerplate in Java/Kotlin entities and DTOs
-- **Barcode Integration**: Future feature for quick product entry into inventory system
+- **Lombok**: Reduced boilerplate in Java entities and DTOs
+- **Local Device Control**: Direct communication with smart devices (Kasa/Tapo/Tasmota) without cloud dependencies
+- **JmDNS Discovery**: Automatic discovery of local network devices
+- **ECharts**: Professional charting library for consumption and sensor data visualization
+- **Scheduled Polling**: Automated data collection from Tasmota and Airrohr devices using Spring's `@Scheduled`
+- **CSV Import**: Support for bulk historical data import
+- **Docker Compose**: Containerized deployment with external MariaDB network
+
+## Smart Device Integrations
+
+### TP-Link Kasa (HS100)
+- Local TCP communication with proprietary encryption
+- Device discovery via UDP broadcast
+- Turn devices on/off and get status
+- Implementation in `backend/src/main/java/com/household/manager/kasa/`
+
+### TP-Link Tapo
+- Local HTTPS communication with session-based authentication
+- AES encryption for device commands
+- Device discovery via mDNS
+- Implementation in `backend/src/main/java/com/household/manager/tapo/`
+
+### Tasmota Electricity Monitoring
+- HTTP REST API for energy consumption data
+- Live readings and historical data
+- Automated polling service with configurable intervals
+- Stores readings in database for historical analysis
+- Implementation in `backend/src/main/java/com/household/manager/service/TasmotaElectricity*`
+
+### Airrohr Air Quality Sensor
+- HTTP JSON API for PM2.5, PM10, temperature, humidity
+- Automated polling service
+- Historical data storage and visualization
+- Implementation in `backend/src/main/java/com/household/manager/service/Airrohr*`
 
 ## Code Quality Standards
 
@@ -169,6 +263,9 @@ This project follows **Clean Code** principles across both frontend and backend:
 - Write focused methods that do one thing well
 - Use Optional for nullable return types
 - Proper exception handling with custom exceptions where appropriate
+- Use `@Slf4j` for logging instead of manual logger instantiation
+- For scheduled tasks, use `@Scheduled` annotation with proper configuration
+- Smart device integrations should handle connection failures gracefully
 
 ### Frontend (Angular/TypeScript)
 - Components should be focused on presentation, delegate logic to services

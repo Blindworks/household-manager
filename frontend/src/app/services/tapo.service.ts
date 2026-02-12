@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { TapoDiscoveryDevice } from '../models/tapo.model';
+import { TapoDeviceInfo, TapoDiscoveryDevice, TapoEnergyUsage } from '../models/tapo.model';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +12,31 @@ export class TapoService {
   private readonly baseUrl = '/api/tapo';
 
   discover(): Observable<TapoDiscoveryDevice[]> {
-    return this.http.get<TapoDiscoveryDevice[]>(`${this.baseUrl}/discover`).pipe(
+    return this.http.get<TapoDiscoveryDevice[]>(`${this.baseUrl}/devices`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getDeviceInfo(ip: string): Observable<TapoDeviceInfo> {
+    return this.http.get<TapoDeviceInfo>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/info`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getEnergyUsage(ip: string): Observable<TapoEnergyUsage> {
+    return this.http.get<TapoEnergyUsage>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/energy`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  turnOn(ip: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/on`, null).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  turnOff(ip: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/off`, null).pipe(
       catchError(this.handleError)
     );
   }

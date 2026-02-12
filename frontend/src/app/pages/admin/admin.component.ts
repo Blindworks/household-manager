@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Subscription, catchError, forkJoin, of } from 'rxjs';
 import { TasmotaPollingService } from '../../services/tasmota-polling.service';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { TasmotaPollingStatus } from '../../models/tasmota-polling.model';
@@ -9,7 +9,7 @@ import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 import { KasaService } from '../../services/kasa.service';
 import { KasaDiscoveryDevice, KasaStatus } from '../../models/kasa.model';
 import { TapoService } from '../../services/tapo.service';
-import { TapoDiscoveryDevice } from '../../models/tapo.model';
+import { TapoDeviceInfo, TapoDiscoveryDevice, TapoEnergyUsage } from '../../models/tapo.model';
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -48,7 +48,12 @@ export class AdminComponent implements OnInit, OnDestroy {
   kasaErrorMessage: string | null = null;
   kasaSuccessMessage: string | null = null;
   tapoDevices: TapoDiscoveryDevice[] = [];
+  tapoInfoByIp: Partial<Record<string, TapoDeviceInfo>> = {};
+  tapoEnergyByIp: Partial<Record<string, TapoEnergyUsage>> = {};
+  selectedTapoIp = '';
   isDiscoveringTapo = false;
+  isLoadingTapoDetails = false;
+  isTapoActionRunning = false;
   tapoErrorMessage: string | null = null;
   tapoSuccessMessage: string | null = null;
 
@@ -157,26 +162,53 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   discoverKasa(): void {
     this.isDiscoveringKasa = true;
+    this.isDiscoveringTapo = true;
     this.kasaErrorMessage = null;
     this.kasaSuccessMessage = null;
+    this.tapoErrorMessage = null;
+    this.tapoSuccessMessage = null;
 
-    this.kasaService.discover().subscribe({
-      next: (devices) => {
-        this.kasaDevices = devices;
-        if (devices.length > 0) {
-          this.selectedKasaIp = devices[0].ip;
+    forkJoin({
+      kasa: this.kasaService.discover().pipe(
+        catchError((error: Error) => {
+          console.error('Error discovering Kasa devices:', error);
+          this.kasaErrorMessage = error.message;
+          return of([] as KasaDiscoveryDevice[]);
+        })
+      ),
+      tapo: this.tapoService.discover().pipe(
+        catchError((error: Error) => {
+          console.error('Error discovering Tapo devices:', error);
+          this.tapoErrorMessage = error.message;
+          return of([] as TapoDiscoveryDevice[]);
+        })
+      )
+    }).subscribe({
+      next: ({ kasa, tapo }) => {
+        this.kasaDevices = kasa;
+        if (kasa.length > 0) {
+          this.selectedKasaIp = kasa[0].ip;
           this.loadKasaStatus();
-          this.kasaSuccessMessage = `${devices.length} Kasa-Geraet(e) gefunden.`;
-        } else {
+          this.kasaSuccessMessage = `${kasa.length} Kasa-Geraet(e) gefunden.`;
+        } else if (!this.kasaErrorMessage) {
           this.kasaStatus = null;
           this.kasaSuccessMessage = 'Keine Kasa-Geraete gefunden.';
         }
+
+        this.tapoDevices = tapo;
+        this.loadTapoDetails(tapo);
+        if (tapo.length > 0) {
+          this.tapoSuccessMessage = `${tapo.length} Tapo-Geraet(e) gefunden.`;
+        } else if (!this.tapoErrorMessage) {
+          this.tapoSuccessMessage = 'Keine Tapo-Geraete gefunden.';
+        }
+
         this.isDiscoveringKasa = false;
+        this.isDiscoveringTapo = false;
       },
-      error: (error: Error) => {
-        console.error('Error discovering Kasa devices:', error);
-        this.kasaErrorMessage = error.message;
+      error: () => {
         this.isDiscoveringKasa = false;
+        this.isDiscoveringTapo = false;
       }
     });
   }
@@ -253,6 +285,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.tapoService.discover().subscribe({
       next: (devices) => {
         this.tapoDevices = devices;
+        this.loadTapoDetails(devices);
         this.tapoSuccessMessage = devices.length > 0
           ? `${devices.length} Tapo-Geraet(e) gefunden.`
           : 'Keine Tapo-Geraete gefunden.';
@@ -265,4 +298,123 @@ export class AdminComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  private loadTapoDetails(devices: TapoDiscoveryDevice[]): void {
+    this.tapoInfoByIp = {};
+    this.tapoEnergyByIp = {};
+    if (devices.length === 0) {
+      this.isLoadingTapoDetails = false;
+      return;
+    }
+
+    this.isLoadingTapoDetails = true;
+    const requests = devices.flatMap((device) => [
+      this.tapoService.getDeviceInfo(device.ip).pipe(
+        catchError((error: Error) => {
+          console.error(`Error loading Tapo details for ${device.ip}:`, error);
+          return of(null as TapoDeviceInfo | null);
+        })
+      ),
+      this.tapoService.getEnergyUsage(device.ip).pipe(
+        catchError(() => of(null as TapoEnergyUsage | null))
+      )
+    ]);
+
+    forkJoin(requests).subscribe({
+      next: (responses) => {
+        devices.forEach((device, index) => {
+          const ip = device.ip;
+          const infoResponse = responses[index * 2] as TapoDeviceInfo | null;
+          const energyResponse = responses[index * 2 + 1] as TapoEnergyUsage | null;
+
+          if (infoResponse) {
+            this.tapoInfoByIp[ip] = infoResponse;
+          }
+          if (energyResponse) {
+            this.tapoEnergyByIp[ip] = energyResponse;
+          }
+        });
+        this.isLoadingTapoDetails = false;
+      },
+      error: () => {
+        this.isLoadingTapoDetails = false;
+      }
+    });
+  }
+
+  setSelectedTapoIp(ip: string): void {
+    this.selectedTapoIp = ip;
+    this.loadSingleTapoDetails(ip);
+  }
+
+  loadSingleTapoDetails(ip: string): void {
+    if (!ip.trim()) {
+      return;
+    }
+
+    this.isTapoActionRunning = true;
+    this.tapoErrorMessage = null;
+
+    forkJoin({
+      info: this.tapoService.getDeviceInfo(ip).pipe(
+        catchError((error: Error) => {
+          console.error(`Error loading Tapo details for ${ip}:`, error);
+          return of(null as TapoDeviceInfo | null);
+        })
+      ),
+      energy: this.tapoService.getEnergyUsage(ip).pipe(
+        catchError(() => of(null as TapoEnergyUsage | null))
+      )
+    }).subscribe({
+      next: ({ info, energy }) => {
+        if (info) {
+          this.tapoInfoByIp[ip] = info;
+        }
+        if (energy) {
+          this.tapoEnergyByIp[ip] = energy;
+        }
+        this.isTapoActionRunning = false;
+      },
+      error: () => {
+        this.isTapoActionRunning = false;
+      }
+    });
+  }
+
+  turnTapoOn(): void {
+    this.runTapoAction('on');
+  }
+
+  turnTapoOff(): void {
+    this.runTapoAction('off');
+  }
+
+  private runTapoAction(action: 'on' | 'off'): void {
+    if (!this.selectedTapoIp.trim()) {
+      this.tapoErrorMessage = 'Bitte zuerst eine IP auswaehlen oder eingeben.';
+      return;
+    }
+
+    this.isTapoActionRunning = true;
+    this.tapoErrorMessage = null;
+    this.tapoSuccessMessage = null;
+
+    const request = action === 'on'
+      ? this.tapoService.turnOn(this.selectedTapoIp.trim())
+      : this.tapoService.turnOff(this.selectedTapoIp.trim());
+
+    request.subscribe({
+      next: () => {
+        this.tapoSuccessMessage = action === 'on' ? 'Geraet eingeschaltet.' : 'Geraet ausgeschaltet.';
+        this.isTapoActionRunning = false;
+        this.loadSingleTapoDetails(this.selectedTapoIp.trim());
+      },
+      error: (error: Error) => {
+        console.error(`Error switching Tapo ${action}:`, error);
+        this.tapoErrorMessage = error.message;
+        this.isTapoActionRunning = false;
+      }
+    });
+  }
+
 }

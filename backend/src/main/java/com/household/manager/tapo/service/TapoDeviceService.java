@@ -1,34 +1,44 @@
 package com.household.manager.tapo.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.tapo.config.TapoProperties;
+import com.household.manager.tapo.dto.TapoDeviceInfoDto;
+import com.household.manager.tapo.dto.TapoEnergyUsageDto;
 import com.household.manager.tapo.exception.TapoConnectionException;
 import com.household.manager.tapo.exception.TapoException;
-import com.household.manager.tapo.protocol.TapoProtocolClient;
-import com.household.manager.tapo.protocol.TapoSession;
+import com.household.manager.tapo.protocol.KlapProtocolClientV2;
+import com.household.manager.tapo.protocol.KlapSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Service for controlling Tapo devices using KLAP protocol.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TapoDeviceService {
 
-    private final TapoProtocolClient tapoProtocolClient;
+    @Qualifier("klapProtocolClientV2")
+    private final KlapProtocolClientV2 klapProtocolClient;
     private final TapoProperties tapoProperties;
-    private final ConcurrentMap<String, CachedSession> sessionCache = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper;
+    private final ConcurrentMap<String, KlapSession> sessionCache = new ConcurrentHashMap<>();
 
     public void connect(String deviceIp) {
         sessionCache.put(deviceIp, createSession(deviceIp));
     }
 
     public void turnOn(String deviceIp) {
-        withReconnect(deviceIp, cached -> {
-            send(cached, Map.of(
+        withReconnect(deviceIp, session -> {
+            send(session, Map.of(
                     "method", "set_device_info",
                     "params", Map.of("device_on", true)
             ));
@@ -37,8 +47,8 @@ public class TapoDeviceService {
     }
 
     public void turnOff(String deviceIp) {
-        withReconnect(deviceIp, cached -> {
-            send(cached, Map.of(
+        withReconnect(deviceIp, session -> {
+            send(session, Map.of(
                     "method", "set_device_info",
                     "params", Map.of("device_on", false)
             ));
@@ -46,12 +56,19 @@ public class TapoDeviceService {
         });
     }
 
-    public Map<String, Object> getDeviceInfo(String deviceIp) {
-        return withReconnect(deviceIp, cached -> send(cached, Map.of("method", "get_device_info")));
+    public TapoDeviceInfoDto getDeviceInfo(String deviceIp) {
+        return withReconnect(deviceIp, session -> {
+            // Don't include params field at all if not needed
+            Map<String, Object> response = send(session, Map.of("method", "get_device_info"));
+            return parseDeviceInfo(response);
+        });
     }
 
-    public Map<String, Object> getEnergyUsage(String deviceIp) {
-        return withReconnect(deviceIp, cached -> send(cached, Map.of("method", "get_energy_usage")));
+    public TapoEnergyUsageDto getEnergyUsage(String deviceIp) {
+        return withReconnect(deviceIp, session -> {
+            Map<String, Object> response = send(session, Map.of("method", "get_energy_usage"));
+            return parseEnergyUsage(response);
+        });
     }
 
     public void setBrightness(String deviceIp, int brightness) {
@@ -59,8 +76,8 @@ public class TapoDeviceService {
             throw new IllegalArgumentException("brightness must be between 1 and 100");
         }
 
-        withReconnect(deviceIp, cached -> {
-            send(cached, Map.of(
+        withReconnect(deviceIp, session -> {
+            send(session, Map.of(
                     "method", "set_device_info",
                     "params", Map.of("brightness", brightness)
             ));
@@ -73,8 +90,8 @@ public class TapoDeviceService {
             throw new IllegalArgumentException("colorTemp must be between 2500 and 6500");
         }
 
-        withReconnect(deviceIp, cached -> {
-            send(cached, Map.of(
+        withReconnect(deviceIp, session -> {
+            send(session, Map.of(
                     "method", "set_device_info",
                     "params", Map.of("color_temp", colorTemp)
             ));
@@ -93,8 +110,8 @@ public class TapoDeviceService {
             throw new IllegalArgumentException("brightness must be between 1 and 100");
         }
 
-        withReconnect(deviceIp, cached -> {
-            send(cached, Map.of(
+        withReconnect(deviceIp, session -> {
+            send(session, Map.of(
                     "method", "set_device_info",
                     "params", Map.of(
                             "hue", hue,
@@ -106,44 +123,67 @@ public class TapoDeviceService {
         });
     }
 
-    private Map<String, Object> send(CachedSession cached, Map<String, Object> payload) {
-        return tapoProtocolClient.sendRequest(cached.session(), cached.token(), payload);
+    private Map<String, Object> send(KlapSession session, Map<String, Object> request) {
+        return klapProtocolClient.sendRequest(session, request);
     }
 
-    private CachedSession getOrCreateSession(String deviceIp) {
+    private KlapSession getOrCreateSession(String deviceIp) {
         return sessionCache.computeIfAbsent(deviceIp, this::createSession);
     }
 
-    private CachedSession createSession(String deviceIp) {
+    private KlapSession createSession(String deviceIp) {
         String email = tapoProperties.getEmail();
         String password = tapoProperties.getPassword();
         if (email == null || email.isBlank() || password == null || password.isBlank()) {
             throw new TapoConnectionException("Tapo credentials are not configured (tapo.email / tapo.password)");
         }
 
-        log.info("Opening Tapo session for {}", deviceIp);
-        TapoSession session = tapoProtocolClient.handshake(deviceIp);
-        String token = tapoProtocolClient.login(session, email, password);
-        return new CachedSession(session, token);
+        log.info("Opening KLAP session for device {}", deviceIp);
+        return klapProtocolClient.handshake(deviceIp, email, password);
     }
 
     private <T> T withReconnect(String deviceIp, TapoOperation<T> operation) {
-        CachedSession cached = getOrCreateSession(deviceIp);
+        KlapSession session = getOrCreateSession(deviceIp);
         try {
-            return operation.execute(cached);
+            return operation.execute(session);
         } catch (TapoException ex) {
             log.warn("Tapo request failed for {}, reconnecting once: {}", deviceIp, ex.getMessage());
-            CachedSession refreshed = createSession(deviceIp);
+            KlapSession refreshed = createSession(deviceIp);
             sessionCache.put(deviceIp, refreshed);
             return operation.execute(refreshed);
         }
     }
 
-    private record CachedSession(TapoSession session, String token) {
+    private TapoDeviceInfoDto parseDeviceInfo(Map<String, Object> response) {
+        try {
+            Object result = response.get("result");
+            if (result == null) {
+                log.warn("No 'result' field in device info response, using root object");
+                result = response;
+            }
+            return objectMapper.convertValue(result, TapoDeviceInfoDto.class);
+        } catch (Exception ex) {
+            log.error("Failed to parse device info response: {}", response, ex);
+            throw new TapoException("Failed to parse device info", ex);
+        }
+    }
+
+    private TapoEnergyUsageDto parseEnergyUsage(Map<String, Object> response) {
+        try {
+            Object result = response.get("result");
+            if (result == null) {
+                log.warn("No 'result' field in energy usage response, using root object");
+                result = response;
+            }
+            return objectMapper.convertValue(result, TapoEnergyUsageDto.class);
+        } catch (Exception ex) {
+            log.error("Failed to parse energy usage response: {}", response, ex);
+            throw new TapoException("Failed to parse energy usage", ex);
+        }
     }
 
     @FunctionalInterface
     private interface TapoOperation<T> {
-        T execute(CachedSession cachedSession);
+        T execute(KlapSession session);
     }
 }

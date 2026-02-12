@@ -1,5 +1,7 @@
 package com.household.manager.tapo.controller;
 
+import com.household.manager.tapo.dto.TapoDeviceInfoDto;
+import com.household.manager.tapo.dto.TapoEnergyUsageDto;
 import com.household.manager.tapo.model.TapoDevice;
 import com.household.manager.tapo.service.TapoDiscoveryService;
 import com.household.manager.tapo.service.TapoDeviceService;
@@ -13,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/tapo")
@@ -29,7 +30,7 @@ public class TapoController {
     }
 
     @GetMapping("/devices/{ip:.+}/info")
-    public ResponseEntity<Map<String, Object>> getDeviceInfo(@PathVariable String ip) {
+    public ResponseEntity<TapoDeviceInfoDto> getDeviceInfo(@PathVariable String ip) {
         return ResponseEntity.ok(tapoDeviceService.getDeviceInfo(ip));
     }
 
@@ -64,7 +65,7 @@ public class TapoController {
     }
 
     @GetMapping("/devices/{ip:.+}/energy")
-    public ResponseEntity<Map<String, Object>> getEnergy(@PathVariable String ip) {
+    public ResponseEntity<TapoEnergyUsageDto> getEnergy(@PathVariable String ip) {
         return ResponseEntity.ok(tapoDeviceService.getEnergyUsage(ip));
     }
 
