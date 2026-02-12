@@ -48,9 +48,9 @@ export class AdminComponent implements OnInit, OnDestroy {
   kasaErrorMessage: string | null = null;
   kasaSuccessMessage: string | null = null;
   tapoDevices: TapoDiscoveryDevice[] = [];
-  tapoInfoByIp: Partial<Record<string, TapoDeviceInfo>> = {};
-  tapoEnergyByIp: Partial<Record<string, TapoEnergyUsage>> = {};
-  selectedTapoIp = '';
+  tapoInfoById: Partial<Record<string, TapoDeviceInfo>> = {};
+  tapoEnergyById: Partial<Record<string, TapoEnergyUsage>> = {};
+  selectedTapoDeviceId = '';
   isDiscoveringTapo = false;
   isLoadingTapoDetails = false;
   isTapoActionRunning = false;
@@ -196,8 +196,8 @@ export class AdminComponent implements OnInit, OnDestroy {
         }
 
         this.tapoDevices = tapo;
-        this.loadTapoDetails(tapo);
         if (tapo.length > 0) {
+          this.selectedTapoDeviceId = tapo[0].deviceId;
           this.tapoSuccessMessage = `${tapo.length} Tapo-Geraet(e) gefunden.`;
         } else if (!this.tapoErrorMessage) {
           this.tapoSuccessMessage = 'Keine Tapo-Geraete gefunden.';
@@ -285,7 +285,9 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.tapoService.discover().subscribe({
       next: (devices) => {
         this.tapoDevices = devices;
-        this.loadTapoDetails(devices);
+        if (devices.length > 0) {
+          this.selectedTapoDeviceId = devices[0].deviceId;
+        }
         this.tapoSuccessMessage = devices.length > 0
           ? `${devices.length} Tapo-Geraet(e) gefunden.`
           : 'Keine Tapo-Geraete gefunden.';
@@ -299,56 +301,13 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadTapoDetails(devices: TapoDiscoveryDevice[]): void {
-    this.tapoInfoByIp = {};
-    this.tapoEnergyByIp = {};
-    if (devices.length === 0) {
-      this.isLoadingTapoDetails = false;
-      return;
-    }
-
-    this.isLoadingTapoDetails = true;
-    const requests = devices.flatMap((device) => [
-      this.tapoService.getDeviceInfo(device.ip).pipe(
-        catchError((error: Error) => {
-          console.error(`Error loading Tapo details for ${device.ip}:`, error);
-          return of(null as TapoDeviceInfo | null);
-        })
-      ),
-      this.tapoService.getEnergyUsage(device.ip).pipe(
-        catchError(() => of(null as TapoEnergyUsage | null))
-      )
-    ]);
-
-    forkJoin(requests).subscribe({
-      next: (responses) => {
-        devices.forEach((device, index) => {
-          const ip = device.ip;
-          const infoResponse = responses[index * 2] as TapoDeviceInfo | null;
-          const energyResponse = responses[index * 2 + 1] as TapoEnergyUsage | null;
-
-          if (infoResponse) {
-            this.tapoInfoByIp[ip] = infoResponse;
-          }
-          if (energyResponse) {
-            this.tapoEnergyByIp[ip] = energyResponse;
-          }
-        });
-        this.isLoadingTapoDetails = false;
-      },
-      error: () => {
-        this.isLoadingTapoDetails = false;
-      }
-    });
+  setSelectedTapoDeviceId(deviceId: string): void {
+    this.selectedTapoDeviceId = deviceId;
+    // Don't automatically load details - user can click "Status laden" if needed
   }
 
-  setSelectedTapoIp(ip: string): void {
-    this.selectedTapoIp = ip;
-    this.loadSingleTapoDetails(ip);
-  }
-
-  loadSingleTapoDetails(ip: string): void {
-    if (!ip.trim()) {
+  loadSingleTapoDetails(deviceId: string): void {
+    if (!deviceId.trim()) {
       return;
     }
 
@@ -356,22 +315,29 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.tapoErrorMessage = null;
 
     forkJoin({
-      info: this.tapoService.getDeviceInfo(ip).pipe(
+      info: this.tapoService.getDeviceInfo(deviceId).pipe(
         catchError((error: Error) => {
-          console.error(`Error loading Tapo details for ${ip}:`, error);
+          console.error(`Error loading Tapo details for ${deviceId}:`, error);
+          // Check if it's an unsupported device error
+          if (error.message.includes('does not support this operation') ||
+              error.message.includes('Module not support')) {
+            this.tapoErrorMessage = 'Dieses Geraet (Kamera/Hub) unterstuetzt die Steuerung nicht.';
+          } else {
+            this.tapoErrorMessage = error.message;
+          }
           return of(null as TapoDeviceInfo | null);
         })
       ),
-      energy: this.tapoService.getEnergyUsage(ip).pipe(
+      energy: this.tapoService.getEnergyUsage(deviceId).pipe(
         catchError(() => of(null as TapoEnergyUsage | null))
       )
     }).subscribe({
       next: ({ info, energy }) => {
         if (info) {
-          this.tapoInfoByIp[ip] = info;
+          this.tapoInfoById[deviceId] = info;
         }
         if (energy) {
-          this.tapoEnergyByIp[ip] = energy;
+          this.tapoEnergyById[deviceId] = energy;
         }
         this.isTapoActionRunning = false;
       },
@@ -390,8 +356,14 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   private runTapoAction(action: 'on' | 'off'): void {
-    if (!this.selectedTapoIp.trim()) {
-      this.tapoErrorMessage = 'Bitte zuerst eine IP auswaehlen oder eingeben.';
+    if (!this.selectedTapoDeviceId.trim()) {
+      this.tapoErrorMessage = 'Bitte zuerst ein Geraet auswaehlen.';
+      return;
+    }
+
+    const selectedDevice = this.getSelectedTapoDevice();
+    if (!this.isTapoPowerControlSupported(selectedDevice)) {
+      this.tapoErrorMessage = 'Dieses Geraet (z. B. Kamera/Hub/Sensor) kann nicht ein- oder ausgeschaltet werden.';
       return;
     }
 
@@ -400,14 +372,14 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.tapoSuccessMessage = null;
 
     const request = action === 'on'
-      ? this.tapoService.turnOn(this.selectedTapoIp.trim())
-      : this.tapoService.turnOff(this.selectedTapoIp.trim());
+      ? this.tapoService.turnOn(this.selectedTapoDeviceId.trim())
+      : this.tapoService.turnOff(this.selectedTapoDeviceId.trim());
 
     request.subscribe({
       next: () => {
         this.tapoSuccessMessage = action === 'on' ? 'Geraet eingeschaltet.' : 'Geraet ausgeschaltet.';
         this.isTapoActionRunning = false;
-        this.loadSingleTapoDetails(this.selectedTapoIp.trim());
+        this.loadSingleTapoDetails(this.selectedTapoDeviceId.trim());
       },
       error: (error: Error) => {
         console.error(`Error switching Tapo ${action}:`, error);
@@ -415,6 +387,19 @@ export class AdminComponent implements OnInit, OnDestroy {
         this.isTapoActionRunning = false;
       }
     });
+  }
+
+  getSelectedTapoDevice(): TapoDiscoveryDevice | null {
+    return this.tapoDevices.find(device => device.deviceId === this.selectedTapoDeviceId) ?? null;
+  }
+
+  isTapoPowerControlSupported(device: TapoDiscoveryDevice | null): boolean {
+    if (!device) {
+      return false;
+    }
+
+    const type = (device.deviceType ?? '').toUpperCase();
+    return !type.includes('CAMERA') && !type.includes('HUB') && !type.includes('SENSOR');
   }
 
 }

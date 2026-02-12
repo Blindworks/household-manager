@@ -1,7 +1,9 @@
 package com.household.manager.tapo.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Base64;
 import java.nio.charset.StandardCharsets;
@@ -9,7 +11,8 @@ import java.nio.charset.StandardCharsets;
 /**
  * DTO for Tapo device information.
  */
-@Data
+@Getter
+@Setter
 public class TapoDeviceInfoDto {
 
     @JsonProperty("device_id")
@@ -31,6 +34,7 @@ public class TapoDeviceInfoDto {
     private String mac;
 
     @JsonProperty("nickname")
+    @JsonIgnore
     private String nicknameEncoded;
 
     @JsonProperty("device_on")
@@ -49,6 +53,7 @@ public class TapoDeviceInfoDto {
     private String ip;
 
     @JsonProperty("ssid")
+    @JsonIgnore
     private String ssidEncoded;
 
     @JsonProperty("overheated")

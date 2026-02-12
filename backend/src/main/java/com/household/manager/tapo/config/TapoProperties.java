@@ -3,17 +3,14 @@ package com.household.manager.tapo.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Component
 @ConfigurationProperties(prefix = "tapo")
 public class TapoProperties {
 
     private String email;
     private String password;
-    private int discoveryTimeoutMs = 3000;
-    private List<String> devices = new ArrayList<>();
+    private String cloudApiUrl = "https://wap.tplinkcloud.com";
+    private long cloudTokenExpiryMs = 86400000; // 24 hours
 
     public String getEmail() {
         return email;
@@ -31,19 +28,19 @@ public class TapoProperties {
         this.password = password;
     }
 
-    public int getDiscoveryTimeoutMs() {
-        return discoveryTimeoutMs;
+    public String getCloudApiUrl() {
+        return cloudApiUrl;
     }
 
-    public void setDiscoveryTimeoutMs(int discoveryTimeoutMs) {
-        this.discoveryTimeoutMs = discoveryTimeoutMs;
+    public void setCloudApiUrl(String cloudApiUrl) {
+        this.cloudApiUrl = cloudApiUrl;
     }
 
-    public List<String> getDevices() {
-        return devices;
+    public long getCloudTokenExpiryMs() {
+        return cloudTokenExpiryMs;
     }
 
-    public void setDevices(List<String> devices) {
-        this.devices = devices != null ? devices : new ArrayList<>();
+    public void setCloudTokenExpiryMs(long cloudTokenExpiryMs) {
+        this.cloudTokenExpiryMs = cloudTokenExpiryMs;
     }
 }

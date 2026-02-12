@@ -17,26 +17,26 @@ export class TapoService {
     );
   }
 
-  getDeviceInfo(ip: string): Observable<TapoDeviceInfo> {
-    return this.http.get<TapoDeviceInfo>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/info`).pipe(
+  getDeviceInfo(deviceId: string): Observable<TapoDeviceInfo> {
+    return this.http.get<TapoDeviceInfo>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/info`).pipe(
       catchError(this.handleError)
     );
   }
 
-  getEnergyUsage(ip: string): Observable<TapoEnergyUsage> {
-    return this.http.get<TapoEnergyUsage>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/energy`).pipe(
+  getEnergyUsage(deviceId: string): Observable<TapoEnergyUsage> {
+    return this.http.get<TapoEnergyUsage>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/energy`).pipe(
       catchError(this.handleError)
     );
   }
 
-  turnOn(ip: string): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/on`, null).pipe(
+  turnOn(deviceId: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/on`, null).pipe(
       catchError(this.handleError)
     );
   }
 
-  turnOff(ip: string): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(ip)}/off`, null).pipe(
+  turnOff(deviceId: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/off`, null).pipe(
       catchError(this.handleError)
     );
   }
@@ -54,7 +54,7 @@ export class TapoService {
           errorMessage = 'Tapo-Endpunkt nicht gefunden.';
           break;
         case 502:
-          errorMessage = 'Keine lokale Tapo-Discovery moeglich.';
+          errorMessage = 'Tapo Cloud nicht erreichbar.';
           break;
         case 500:
           errorMessage = 'Interner Serverfehler.';

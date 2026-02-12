@@ -210,7 +210,7 @@ docker-compose down
 - **Separate HTML/TS**: Better separation of concerns and easier template editing
 - **Liquibase**: Version-controlled database migrations for consistent schema across environments
 - **Lombok**: Reduced boilerplate in Java entities and DTOs
-- **Local Device Control**: Direct communication with smart devices (Kasa/Tapo/Tasmota) without cloud dependencies
+- **Cloud-Based Device Control**: TP-Link Cloud API for Tapo devices with automatic token management; local control for Kasa and Tasmota
 - **JmDNS Discovery**: Automatic discovery of local network devices
 - **ECharts**: Professional charting library for consumption and sensor data visualization
 - **Scheduled Polling**: Automated data collection from Tasmota and Airrohr devices using Spring's `@Scheduled`
@@ -226,9 +226,10 @@ docker-compose down
 - Implementation in `backend/src/main/java/com/household/manager/kasa/`
 
 ### TP-Link Tapo
-- Local HTTPS communication with session-based authentication
-- AES encryption for device commands
-- Device discovery via mDNS
+- Remote control via TP-Link Cloud API with token-based authentication
+- Device discovery via cloud API (lists all devices registered in Tapo account)
+- Automatic token management with 24-hour caching
+- Full device control: on/off, brightness, color, color temperature, energy usage
 - Implementation in `backend/src/main/java/com/household/manager/tapo/`
 
 ### Tasmota Electricity Monitoring

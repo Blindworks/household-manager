@@ -1,9 +1,11 @@
 export interface TapoDiscoveryDevice {
-  ip: string;
+  deviceId: string;
+  deviceName?: string | null;
   deviceType?: string | null;
-  hostname?: string | null;
-  port?: number | null;
-  serviceName?: string | null;
+  model?: string | null;
+  ip?: string | null;
+  online?: boolean;
+  fwVer?: string | null;
 }
 
 export interface TapoDeviceInfo {

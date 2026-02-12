@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/tapo")
@@ -29,44 +30,44 @@ public class TapoController {
         return ResponseEntity.ok(tapoDiscoveryService.discoverDevices());
     }
 
-    @GetMapping("/devices/{ip:.+}/info")
-    public ResponseEntity<TapoDeviceInfoDto> getDeviceInfo(@PathVariable String ip) {
-        return ResponseEntity.ok(tapoDeviceService.getDeviceInfo(ip));
+    @GetMapping("/devices/{deviceId:.+}/info")
+    public ResponseEntity<TapoDeviceInfoDto> getDeviceInfo(@PathVariable String deviceId) {
+        return ResponseEntity.ok(tapoDeviceService.getDeviceInfo(deviceId));
     }
 
-    @PostMapping("/devices/{ip:.+}/on")
-    public ResponseEntity<Void> turnOn(@PathVariable String ip) {
-        tapoDeviceService.turnOn(ip);
+    @PostMapping("/devices/{deviceId:.+}/on")
+    public ResponseEntity<Void> turnOn(@PathVariable String deviceId) {
+        tapoDeviceService.turnOn(deviceId);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/devices/{ip:.+}/off")
-    public ResponseEntity<Void> turnOff(@PathVariable String ip) {
-        tapoDeviceService.turnOff(ip);
+    @PostMapping("/devices/{deviceId:.+}/off")
+    public ResponseEntity<Void> turnOff(@PathVariable String deviceId) {
+        tapoDeviceService.turnOff(deviceId);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/devices/{ip:.+}/brightness")
-    public ResponseEntity<Void> setBrightness(@PathVariable String ip, @RequestBody BrightnessRequest request) {
-        tapoDeviceService.setBrightness(ip, request.brightness());
+    @PostMapping("/devices/{deviceId:.+}/brightness")
+    public ResponseEntity<Void> setBrightness(@PathVariable String deviceId, @RequestBody BrightnessRequest request) {
+        tapoDeviceService.setBrightness(deviceId, request.brightness());
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/devices/{ip:.+}/color")
-    public ResponseEntity<Void> setColor(@PathVariable String ip, @RequestBody ColorRequest request) {
-        tapoDeviceService.setColor(ip, request.hue(), request.saturation(), request.brightness());
+    @PostMapping("/devices/{deviceId:.+}/color")
+    public ResponseEntity<Void> setColor(@PathVariable String deviceId, @RequestBody ColorRequest request) {
+        tapoDeviceService.setColor(deviceId, request.hue(), request.saturation(), request.brightness());
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/devices/{ip:.+}/color-temp")
-    public ResponseEntity<Void> setColorTemp(@PathVariable String ip, @RequestBody ColorTempRequest request) {
-        tapoDeviceService.setColorTemp(ip, request.colorTemp());
+    @PostMapping("/devices/{deviceId:.+}/color-temp")
+    public ResponseEntity<Void> setColorTemp(@PathVariable String deviceId, @RequestBody ColorTempRequest request) {
+        tapoDeviceService.setColorTemp(deviceId, request.colorTemp());
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/devices/{ip:.+}/energy")
-    public ResponseEntity<TapoEnergyUsageDto> getEnergy(@PathVariable String ip) {
-        return ResponseEntity.ok(tapoDeviceService.getEnergyUsage(ip));
+    @GetMapping("/devices/{deviceId:.+}/energy")
+    public ResponseEntity<TapoEnergyUsageDto> getEnergy(@PathVariable String deviceId) {
+        return ResponseEntity.ok(tapoDeviceService.getEnergyUsage(deviceId));
     }
 
     public record BrightnessRequest(int brightness) {

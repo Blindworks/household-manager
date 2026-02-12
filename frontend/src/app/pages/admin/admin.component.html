@@ -134,101 +134,94 @@
       <button class="btn btn--secondary" type="button" (click)="discoverTapo()" [disabled]="isDiscoveringTapo">
         {{ isDiscoveringTapo ? 'Suche...' : 'Tapo Geraete entdecken' }}
       </button>
-      <button class="btn btn--ghost" type="button" (click)="loadSingleTapoDetails(selectedTapoIp)" [disabled]="isTapoActionRunning || !selectedTapoIp">
+      <button class="btn btn--ghost" type="button" (click)="loadSingleTapoDetails(selectedTapoDeviceId)" [disabled]="isTapoActionRunning || !selectedTapoDeviceId">
         Status laden
       </button>
     </div>
 
-    <div class="kasa-control">
-      <label for="tapo-ip">IP-Adresse</label>
-      <input
-        id="tapo-ip"
-        type="text"
-        [(ngModel)]="selectedTapoIp"
-        placeholder="z. B. 192.168.1.60"
-      />
-    </div>
-
     <div class="form__actions">
-      <button class="btn" type="button" (click)="turnTapoOn()" [disabled]="isTapoActionRunning || !selectedTapoIp">
+      <button class="btn" type="button" (click)="turnTapoOn()" [disabled]="isTapoActionRunning || !selectedTapoDeviceId || !isTapoPowerControlSupported(getSelectedTapoDevice())">
         Einschalten
       </button>
-      <button class="btn btn--secondary" type="button" (click)="turnTapoOff()" [disabled]="isTapoActionRunning || !selectedTapoIp">
+      <button class="btn btn--secondary" type="button" (click)="turnTapoOff()" [disabled]="isTapoActionRunning || !selectedTapoDeviceId || !isTapoPowerControlSupported(getSelectedTapoDevice())">
         Ausschalten
       </button>
     </div>
 
-    <div class="status" *ngIf="selectedTapoIp && tapoInfoByIp[selectedTapoIp]">
+    <p class="muted" *ngIf="selectedTapoDeviceId && !isTapoPowerControlSupported(getSelectedTapoDevice())">
+      Das ausgewaehlte Geraet unterstuetzt keine Schaltfunktion (z. B. Kamera/Hub/Sensor).
+    </p>
+
+    <div class="status" *ngIf="selectedTapoDeviceId && tapoInfoById[selectedTapoDeviceId]">
       <div class="status__item status__item--full">
         <span>Name</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.nickname || '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.nickname || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Model</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.model || '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.model || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Status</span>
-        <strong [class.status__value--on]="tapoInfoByIp[selectedTapoIp]?.deviceOn">
-          {{ tapoInfoByIp[selectedTapoIp]?.deviceOn === true ? 'An' : (tapoInfoByIp[selectedTapoIp]?.deviceOn === false ? 'Aus' : '-') }}
+        <strong [class.status__value--on]="tapoInfoById[selectedTapoDeviceId]?.deviceOn">
+          {{ tapoInfoById[selectedTapoDeviceId]?.deviceOn === true ? 'An' : (tapoInfoById[selectedTapoDeviceId]?.deviceOn === false ? 'Aus' : '-') }}
         </strong>
       </div>
-      <div class="status__item" *ngIf="tapoEnergyByIp[selectedTapoIp]?.currentPower != null">
+      <div class="status__item" *ngIf="tapoEnergyById[selectedTapoDeviceId]?.currentPower != null">
         <span>Aktuelle Leistung</span>
-        <strong>{{ tapoEnergyByIp[selectedTapoIp]?.currentPower }} W</strong>
+        <strong>{{ tapoEnergyById[selectedTapoDeviceId]?.currentPower }} W</strong>
       </div>
-      <div class="status__item" *ngIf="tapoEnergyByIp[selectedTapoIp]?.todayEnergy != null">
+      <div class="status__item" *ngIf="tapoEnergyById[selectedTapoDeviceId]?.todayEnergy != null">
         <span>Heute</span>
-        <strong>{{ tapoEnergyByIp[selectedTapoIp]?.todayEnergy }} Wh</strong>
+        <strong>{{ tapoEnergyById[selectedTapoDeviceId]?.todayEnergy }} Wh</strong>
       </div>
-      <div class="status__item" *ngIf="tapoEnergyByIp[selectedTapoIp]?.monthEnergy != null">
+      <div class="status__item" *ngIf="tapoEnergyById[selectedTapoDeviceId]?.monthEnergy != null">
         <span>Diesen Monat</span>
-        <strong>{{ tapoEnergyByIp[selectedTapoIp]?.monthEnergy }} Wh</strong>
+        <strong>{{ tapoEnergyById[selectedTapoDeviceId]?.monthEnergy }} Wh</strong>
       </div>
       <div class="status__item">
         <span>Device ID</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.deviceId || '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.deviceId || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>MAC</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.mac || '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.mac || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Signal</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.signalLevel ?? '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.signalLevel ?? '-' }}</strong>
       </div>
       <div class="status__item">
         <span>RSSI</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.rssi ?? '-' }} dBm</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.rssi ?? '-' }} dBm</strong>
       </div>
       <div class="status__item">
         <span>Firmware</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.fwVer || '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.fwVer || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Hardware</span>
-        <strong>{{ tapoInfoByIp[selectedTapoIp]?.hwVer || '-' }}</strong>
+        <strong>{{ tapoInfoById[selectedTapoDeviceId]?.hwVer || '-' }}</strong>
       </div>
     </div>
 
     <div class="tapo-devices" *ngIf="tapoDevices.length > 0">
       <h3>Gefundene Geraete</h3>
-      <p class="muted" *ngIf="isLoadingTapoDetails">Lade Geraetedetails...</p>
       <div class="kasa-devices__list">
         <button
           class="kasa-device"
           type="button"
           *ngFor="let device of tapoDevices"
-          [class.kasa-device--active]="selectedTapoIp === device.ip"
-          (click)="setSelectedTapoIp(device.ip)"
+          [class.kasa-device--active]="selectedTapoDeviceId === device.deviceId"
+          (click)="setSelectedTapoDeviceId(device.deviceId)"
         >
-          <strong>{{ tapoInfoByIp[device.ip]?.nickname || tapoInfoByIp[device.ip]?.model || device.deviceType || 'Unbekanntes Geraet' }}</strong>
-          <span>{{ device.ip }}</span>
-          <span>{{ tapoInfoByIp[device.ip]?.model || '-' }}</span>
-          <span>{{ tapoInfoByIp[device.ip]?.deviceOn === true ? 'An' : (tapoInfoByIp[device.ip]?.deviceOn === false ? 'Aus' : '-') }}</span>
-          <span *ngIf="tapoEnergyByIp[device.ip]?.currentPower != null">
-            {{ tapoEnergyByIp[device.ip]?.currentPower }} W
+          <strong>{{ device.deviceName || device.model || device.deviceType || 'Unbekanntes Geraet' }}</strong>
+          <span>{{ device.model || '-' }}</span>
+          <span>{{ device.deviceType || '-' }}</span>
+          <span [class.badge--success]="device.online" [class.badge--error]="!device.online">
+            {{ device.online ? 'Online' : 'Offline' }}
           </span>
+          <span *ngIf="device.ip">{{ device.ip }}</span>
         </button>
       </div>
     </div>
