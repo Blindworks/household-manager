@@ -232,43 +232,48 @@
 
   <section class="admin__card">
     <h2>Meross Cloud Device Control</h2>
-    <p class="muted">Cloud Login ueber Backend-Konfiguration und Laden deiner Meross-Geraete.</p>
+    <p class="muted">Cloud-Steuerung fuer Meross-Steckdosen ueber meross-java.</p>
 
     <div class="form__actions">
-      <button class="btn btn--secondary" type="button" (click)="loginMerossCloud()" [disabled]="isMerossLoginRunning">
-        {{ isMerossLoginRunning ? 'Login...' : 'Cloud Login testen' }}
+      <button class="btn btn--secondary" type="button" (click)="discoverMeross()" [disabled]="isDiscoveringMeross">
+        {{ isDiscoveringMeross ? 'Suche...' : 'Meross-Steckdosen laden' }}
       </button>
-      <button class="btn btn--ghost" type="button" (click)="loadMerossDevices()" [disabled]="isLoadingMerossDevices">
-        {{ isLoadingMerossDevices ? 'Lade...' : 'Geraete laden' }}
+      <button class="btn btn--ghost" type="button" (click)="loadMerossStatus()" [disabled]="isLoadingMerossStatus || !selectedMerossDeviceId">
+        Status laden
       </button>
     </div>
 
-    <div class="status" *ngIf="getSelectedMerossDevice() as selectedMeross">
+    <div class="form__actions">
+      <button class="btn" type="button" (click)="turnMerossOn()" [disabled]="isMerossActionRunning || !selectedMerossDeviceId">
+        Einschalten
+      </button>
+      <button class="btn btn--secondary" type="button" (click)="turnMerossOff()" [disabled]="isMerossActionRunning || !selectedMerossDeviceId">
+        Ausschalten
+      </button>
+    </div>
+
+    <div class="status" *ngIf="merossStatus">
       <div class="status__item status__item--full">
         <span>Name</span>
-        <strong>{{ selectedMeross.devName || '-' }}</strong>
+        <strong>{{ merossStatus.name || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Device ID</span>
-        <strong>{{ selectedMeross.uuid || '-' }}</strong>
+        <strong>{{ merossStatus.deviceId || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Typ</span>
-        <strong>{{ selectedMeross.deviceType || '-' }}</strong>
+        <strong>{{ merossStatus.deviceType || '-' }}</strong>
       </div>
       <div class="status__item">
         <span>Status</span>
-        <strong [class.status__value--on]="isMerossDeviceOnline(selectedMeross)">
-          {{ isMerossDeviceOnline(selectedMeross) ? 'Online' : 'Offline' }}
+        <strong [class.status__value--on]="merossStatus.on">
+          {{ merossStatus.on ? 'An' : 'Aus' }}
         </strong>
       </div>
       <div class="status__item">
-        <span>Domain</span>
-        <strong>{{ selectedMeross.domain || '-' }}</strong>
-      </div>
-      <div class="status__item">
-        <span>Reserved Domain</span>
-        <strong>{{ selectedMeross.reservedDomain || '-' }}</strong>
+        <span>Online</span>
+        <strong>{{ merossStatus.onlineStatus || '-' }}</strong>
       </div>
     </div>
 
@@ -279,13 +284,14 @@
           class="kasa-device"
           type="button"
           *ngFor="let device of merossDevices"
-          [class.kasa-device--active]="selectedMerossDeviceId === device.uuid"
-          (click)="setSelectedMerossDeviceId(device.uuid)"
+          [class.kasa-device--active]="selectedMerossDeviceId === device.deviceId"
+          (click)="setSelectedMerossDeviceId(device.deviceId)"
         >
-          <strong>{{ device.devName || device.deviceType || 'Unbekanntes Geraet' }}</strong>
-          <span>{{ device.uuid || '-' }}</span>
+          <strong>{{ device.name || device.deviceType || 'Unbekanntes Geraet' }}</strong>
+          <span>{{ device.deviceId || '-' }}</span>
           <span>{{ device.deviceType || '-' }}</span>
-          <span>{{ isMerossDeviceOnline(device) ? 'Online' : 'Offline' }}</span>
+          <span [class.status__value--on]="device.on">{{ device.on ? 'An' : 'Aus' }}</span>
+          <span>{{ device.onlineStatus || '-' }}</span>
         </button>
       </div>
     </div>

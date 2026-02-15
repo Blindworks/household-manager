@@ -38,6 +38,7 @@ public class MerossCloudAuthService {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(12);
     private static final String LOGIN_API_PATH = "/v1/Auth/signIn";
     private static final String DEVICE_LIST_API_PATH = "/v1/Device/devList";
+    private static final String DEVICE_CONTROL_API_PATH = "/v1/Device/control";
 
     private static final String AUTHORIZATION_BASIC = "Basic d2VpYmluZzppb3R4XzAwMDAwMDAw";
     private static final String SIGN_SECRET = "23x17ahWarFH6w29";
@@ -132,6 +133,72 @@ public class MerossCloudAuthService {
         } catch (Exception ex) {
             log.warn("Meross device list failed [{}]", requestId, ex);
             throw new MerossException("Meross device list failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    public void controlDevice(String deviceUuid, boolean turnOn) {
+        String requestId = UUID.randomUUID().toString().substring(0, 8);
+        log.info("Meross controlDevice start [{}] (uuid={}, turnOn={})", requestId, deviceUuid, turnOn);
+
+        CloudSession session = loginInternal(configuredRequest());
+        try {
+            String nonce = randomNonce();
+            long timestamp = Instant.now().toEpochMilli();
+
+            // Build control payload
+            ObjectNode toggleNode = objectMapper.createObjectNode()
+                    .put("channel", 0)
+                    .put("onoff", turnOn ? 1 : 0);
+
+            ObjectNode payloadNode = objectMapper.createObjectNode();
+            payloadNode.put("uuid", deviceUuid);
+            payloadNode.putObject("header")
+                    .put("messageId", UUID.randomUUID().toString())
+                    .put("method", "SET")
+                    .put("namespace", "Appliance.Control.ToggleX")
+                    .put("from", "/appliance/" + deviceUuid + "/publish")
+                    .put("timestamp", timestamp / 1000)
+                    .put("sign", "");
+            payloadNode.putObject("payload")
+                    .putArray("togglex")
+                    .add(toggleNode);
+
+            String payloadJson = objectMapper.writeValueAsString(payloadNode);
+            String paramsBase64 = Base64.getEncoder().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
+            String sign = md5Hex(SIGN_SECRET + timestamp + nonce + paramsBase64);
+
+            ObjectNode requestBody = objectMapper.createObjectNode()
+                    .put("timestamp", timestamp)
+                    .put("nonce", nonce)
+                    .put("params", paramsBase64)
+                    .put("sign", sign);
+
+            JsonNode responseNode = sendRequest(
+                    session.host() + DEVICE_CONTROL_API_PATH,
+                    requestBody,
+                    "Basic " + session.token(),
+                    requestId,
+                    "control"
+            );
+
+            int apiStatus = responseNode.path("apiStatus").asInt(-1);
+            int sysStatus = responseNode.path("sysStatus").asInt(-1);
+            String message = readMessage(responseNode);
+
+            if (apiStatus != 0) {
+                log.warn("Meross controlDevice failed [{}] (apiStatus={}, sysStatus={}, message={})",
+                        requestId, apiStatus, sysStatus, message);
+                throw new MerossException("Meross device control failed (apiStatus=" + apiStatus
+                        + ", sysStatus=" + sysStatus + "): " + message);
+            }
+
+            log.info("Meross controlDevice success [{}]", requestId);
+        } catch (MerossException ex) {
+            log.warn("Meross controlDevice error [{}]: {}", requestId, ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            log.warn("Meross device control failed [{}]", requestId, ex);
+            throw new MerossException("Meross device control failed: " + ex.getMessage(), ex);
         }
     }
 

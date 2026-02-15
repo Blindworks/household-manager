@@ -1,3 +1,11 @@
+export interface MerossPlugResponse {
+  deviceId: string;
+  name: string;
+  deviceType: string;
+  on: boolean;
+  onlineStatus: string;
+}
+
 export interface MerossCloudLoginResponse {
   apiStatus: number;
   sysStatus: number;

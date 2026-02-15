@@ -2,23 +2,47 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { MerossCloudDevicesResponse, MerossCloudLoginResponse } from '../models/meross.model';
+import { MerossCloudDevicesResponse, MerossCloudLoginResponse, MerossPlugResponse } from '../models/meross.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MerossService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/meross/cloud';
+  private readonly baseUrl = '/api/meross';
 
-  loginWithConfig(): Observable<MerossCloudLoginResponse> {
-    return this.http.post<MerossCloudLoginResponse>(`${this.baseUrl}/login/config`, {}).pipe(
+  discoverPlugs(): Observable<MerossPlugResponse[]> {
+    return this.http.get<MerossPlugResponse[]>(`${this.baseUrl}/devices`).pipe(
       catchError(this.handleError)
     );
   }
 
-  getDevices(): Observable<MerossCloudDevicesResponse> {
-    return this.http.get<MerossCloudDevicesResponse>(`${this.baseUrl}/devices`).pipe(
+  getStatus(deviceId: string): Observable<MerossPlugResponse> {
+    return this.http.get<MerossPlugResponse>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/status`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  turnOn(deviceId: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/on`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  turnOff(deviceId: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/devices/${encodeURIComponent(deviceId)}/off`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  loginWithConfig(): Observable<MerossCloudLoginResponse> {
+    return this.http.post<MerossCloudLoginResponse>(`${this.baseUrl}/cloud/login/config`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getCloudDevices(): Observable<MerossCloudDevicesResponse> {
+    return this.http.get<MerossCloudDevicesResponse>(`${this.baseUrl}/cloud/devices`).pipe(
       catchError(this.handleError)
     );
   }
@@ -37,6 +61,9 @@ export class MerossService {
           break;
         case 401:
           errorMessage = 'Meross Login fehlgeschlagen. Zugangsdaten pruefen.';
+          break;
+        case 404:
+          errorMessage = 'Meross-Geraet oder Endpunkt nicht gefunden.';
           break;
         case 502:
           errorMessage = 'Meross Cloud nicht erreichbar.';
