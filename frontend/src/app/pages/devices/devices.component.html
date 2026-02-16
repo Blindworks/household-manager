@@ -1,30 +1,95 @@
-<div class="devices">
-  <p class="message message--error" *ngIf="errorMessage">
-    {{ errorMessage }}
-    <button class="message__close" (click)="dismissError()">&times;</button>
-  </p>
+<div class="dashboard">
+  <header class="dashboard__header">
+    <h1 class="dashboard__title">Smart Home</h1>
+    <p class="dashboard__subtitle">Verwalte deine Geräte</p>
+    <button class="refresh-btn" (click)="refreshAllDevices()" *ngIf="!isLoading && devices.length > 0">
+      <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Status aktualisieren
+    </button>
+  </header>
 
-  <div *ngIf="isLoading" class="devices__loading">
-    <p>Lade Geraete...</p>
+  <div class="message message--error" *ngIf="errorMessage">
+    {{ errorMessage }}
+    <button class="message__close" (click)="dismissError()" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div *ngIf="isLoading" class="dashboard__loading">
+    <div class="spinner"></div>
+    <p>Lade Geräte...</p>
   </div>
 
   <ng-container *ngIf="!isLoading">
-    <div *ngIf="devices.length === 0" class="devices__empty">
-      <p>Noch keine Geraete vorhanden.</p>
-      <p class="devices__empty-note">Bitte im Admin-Bereich nach Geraeten suchen und konfigurieren.</p>
+    <div *ngIf="devices.length === 0" class="dashboard__empty">
+      <div class="empty-state">
+        <div class="empty-state__icon">⚠️</div>
+        <h2 class="empty-state__title">Keine Geräte vorhanden</h2>
+        <p class="empty-state__text">Bitte im Admin-Bereich nach Geräten suchen und konfigurieren.</p>
+      </div>
     </div>
 
-    <section class="devices__group" *ngFor="let group of groupedDevices">
-      <div class="devices__group-header">
-        <h2>{{ group.label }}</h2>
+    <section class="device-section" *ngFor="let group of groupedDevices">
+      <div class="device-section__header">
+        <h2 class="device-section__title">{{ group.label }}</h2>
+        <span class="device-section__count">{{ group.devices.length }}</span>
       </div>
 
-      <div class="devices__grid">
-        <article class="device-card" *ngFor="let device of group.devices; trackBy: trackByDeviceId">
-          <h3 class="device-card__name">{{ device.deviceName }}</h3>
-          <p class="device-card__status" [ngClass]="getStatusClass(device)">
-            {{ getStatusText(device) }}
-          </p>
+      <div class="device-grid">
+        <article
+          class="device-card"
+          *ngFor="let device of group.devices; trackBy: trackByDeviceId"
+          [class.device-card--on]="device.isPoweredOn && device.isOnline"
+          [class.device-card--offline]="!device.isOnline"
+          [class.device-card--toggling]="isDeviceToggling(device.id)">
+
+          <div class="device-card__header">
+            <div class="device-card__info">
+              <h3 class="device-card__name">{{ device.deviceName }}</h3>
+              <div class="device-card__meta">
+                <span class="device-card__status" [ngClass]="getStatusClass(device)">
+                  <span class="status-dot"></span>
+                  {{ getStatusText(device) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="device-card__icon">
+              <svg *ngIf="device.isPoweredOn && device.isOnline" class="icon icon--power" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M13 2L3 14h8l-2 8 10-12h-8l2-8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <svg *ngIf="!device.isPoweredOn && device.isOnline" class="icon icon--standby" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <svg *ngIf="!device.isOnline" class="icon icon--offline" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <line x1="15" y1="9" x2="9" y2="15" stroke-width="2" stroke-linecap="round"/>
+                <line x1="9" y1="9" x2="15" y2="15" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="device-card__footer">
+            <button
+              class="toggle-switch"
+              [class.toggle-switch--on]="device.isPoweredOn"
+              [class.toggle-switch--disabled]="!device.isOnline"
+              [disabled]="!device.isOnline || isDeviceToggling(device.id)"
+              (click)="toggleDevice(device)"
+              [attr.aria-label]="device.isPoweredOn ? 'Ausschalten' : 'Einschalten'">
+
+              <span class="toggle-switch__track">
+                <span class="toggle-switch__thumb">
+                  <span class="spinner spinner--small" *ngIf="isDeviceToggling(device.id)"></span>
+                </span>
+              </span>
+
+              <span class="toggle-switch__label">
+                {{ device.isPoweredOn ? 'AN' : 'AUS' }}
+              </span>
+            </button>
+          </div>
         </article>
       </div>
     </section>

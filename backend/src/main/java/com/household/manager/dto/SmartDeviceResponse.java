@@ -57,11 +57,13 @@ public class SmartDeviceResponse {
     /**
      * Current online/offline status of the device
      */
+    @com.fasterxml.jackson.annotation.JsonProperty("isOnline")
     private boolean isOnline;
 
     /**
      * Current powered on/off state of the device
      */
+    @com.fasterxml.jackson.annotation.JsonProperty("isPoweredOn")
     private boolean isPoweredOn;
 
     /**
