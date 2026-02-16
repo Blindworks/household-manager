@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260215-0008-create-smart-devices-table" author="household-manager">
+        <createTable tableName="smart_devices">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_device_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="model" type="VARCHAR(100)"/>
+            <column name="ip_address" type="VARCHAR(45)"/>
+            <column name="is_online" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_powered_on" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="capabilities" type="VARCHAR(500)"/>
+            <column name="metadata" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="smart_devices"
+                columnNames="device_type, external_device_id"
+                constraintName="uk_smart_devices_type_external_id"/>
+
+        <createIndex tableName="smart_devices" indexName="idx_smart_devices_type">
+            <column name="device_type"/>
+        </createIndex>
+
+        <createIndex tableName="smart_devices" indexName="idx_smart_devices_online">
+            <column name="is_online"/>
+        </createIndex>
+
+        <sql>
+            ALTER TABLE smart_devices
+            ADD CONSTRAINT chk_device_type
+            CHECK (device_type IN ('KASA', 'TAPO', 'MEROSS'))
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
