@@ -4,7 +4,7 @@ import { SmartDeviceService } from '../../services/smart-device.service';
 import { SmartDevice } from '../../models/smart-device.model';
 
 /**
- * Devices page for managing smart home devices across all platforms.
+ * User-facing smart device overview page.
  */
 @Component({
   selector: 'app-devices',
@@ -15,14 +15,11 @@ import { SmartDevice } from '../../models/smart-device.model';
 })
 export class DevicesComponent implements OnInit {
   private readonly smartDeviceService = inject(SmartDeviceService);
+  private readonly typeOrder: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
 
   devices: SmartDevice[] = [];
   isLoading = true;
-  isScanningKasa = false;
-  isScanningTapo = false;
-  isScanningMeross = false;
   errorMessage: string | null = null;
-  successMessage: string | null = null;
 
   ngOnInit(): void {
     this.loadDevices();
@@ -44,132 +41,48 @@ export class DevicesComponent implements OnInit {
     });
   }
 
-  scanKasa(): void {
-    this.isScanningKasa = true;
-    this.errorMessage = null;
-    this.successMessage = null;
-    this.smartDeviceService.scanDevices('KASA').subscribe({
-      next: (devices) => {
-        this.successMessage = `${devices.length} Kasa-Geraete gescannt und gespeichert`;
-        this.loadDevices();
-        this.isScanningKasa = false;
-      },
-      error: (error: Error) => {
-        console.error('Error scanning Kasa devices:', error);
-        this.errorMessage = error.message;
-        this.isScanningKasa = false;
-      }
-    });
+  get groupedDevices(): Array<{ type: SmartDevice['deviceType']; label: string; devices: SmartDevice[] }> {
+    return this.typeOrder
+      .map(type => ({
+        type,
+        label: this.getTypeLabel(type),
+        devices: this.devices.filter(device => device.deviceType === type)
+      }))
+      .filter(group => group.devices.length > 0);
   }
 
-  scanTapo(): void {
-    this.isScanningTapo = true;
-    this.errorMessage = null;
-    this.successMessage = null;
-    this.smartDeviceService.scanDevices('TAPO').subscribe({
-      next: (devices) => {
-        this.successMessage = `${devices.length} Tapo-Geraete gescannt und gespeichert`;
-        this.loadDevices();
-        this.isScanningTapo = false;
-      },
-      error: (error: Error) => {
-        console.error('Error scanning Tapo devices:', error);
-        this.errorMessage = error.message;
-        this.isScanningTapo = false;
-      }
-    });
-  }
-
-  scanMeross(): void {
-    this.isScanningMeross = true;
-    this.errorMessage = null;
-    this.successMessage = null;
-    this.smartDeviceService.scanDevices('MEROSS').subscribe({
-      next: (devices) => {
-        this.successMessage = `${devices.length} Meross-Geraete gescannt und gespeichert`;
-        this.loadDevices();
-        this.isScanningMeross = false;
-      },
-      error: (error: Error) => {
-        console.error('Error scanning Meross devices:', error);
-        this.errorMessage = error.message;
-        this.isScanningMeross = false;
-      }
-    });
-  }
-
-  toggleDevice(device: SmartDevice): void {
-    const action = device.isPoweredOn
-      ? this.smartDeviceService.turnOff(device.id)
-      : this.smartDeviceService.turnOn(device.id);
-
-    action.subscribe({
-      next: () => {
-        device.isPoweredOn = !device.isPoweredOn;
-        this.successMessage = `${device.deviceName} ${device.isPoweredOn ? 'eingeschaltet' : 'ausgeschaltet'}`;
-      },
-      error: (error: Error) => {
-        console.error('Error toggling device:', error);
-        this.errorMessage = error.message;
-      }
-    });
-  }
-
-  refreshDevice(device: SmartDevice): void {
-    this.smartDeviceService.refreshDeviceState(device.id).subscribe({
-      next: (updated) => {
-        const index = this.devices.findIndex(d => d.id === device.id);
-        if (index !== -1) {
-          this.devices[index] = updated;
-        }
-        this.successMessage = `${device.deviceName} aktualisiert`;
-      },
-      error: (error: Error) => {
-        console.error('Error refreshing device:', error);
-        this.errorMessage = error.message;
-      }
-    });
-  }
-
-  refreshAll(): void {
-    this.loadDevices();
-    this.successMessage = 'Alle Geraete aktualisiert';
-  }
-
-  deleteDevice(device: SmartDevice): void {
-    if (!confirm(`Geraet "${device.deviceName}" wirklich loeschen?`)) {
-      return;
+  getTypeLabel(type: SmartDevice['deviceType']): string {
+    switch (type) {
+      case 'KASA':
+        return 'Kasa';
+      case 'TAPO':
+        return 'Tapo';
+      case 'MEROSS':
+        return 'Meross';
+      default:
+        return type;
     }
-
-    this.smartDeviceService.deleteDevice(device.id).subscribe({
-      next: () => {
-        this.devices = this.devices.filter(d => d.id !== device.id);
-        this.successMessage = `${device.deviceName} geloescht`;
-      },
-      error: (error: Error) => {
-        console.error('Error deleting device:', error);
-        this.errorMessage = error.message;
-      }
-    });
   }
 
-  get kasaDevices(): SmartDevice[] {
-    return this.devices.filter(d => d.deviceType === 'KASA');
+  getStatusText(device: SmartDevice): string {
+    if (!device.isOnline) {
+      return 'Offline';
+    }
+    return device.isPoweredOn ? 'Online - An' : 'Online - Aus';
   }
 
-  get tapoDevices(): SmartDevice[] {
-    return this.devices.filter(d => d.deviceType === 'TAPO');
+  getStatusClass(device: SmartDevice): string {
+    if (!device.isOnline) {
+      return 'device-card__status--offline';
+    }
+    return device.isPoweredOn ? 'device-card__status--on' : 'device-card__status--standby';
   }
 
-  get merossDevices(): SmartDevice[] {
-    return this.devices.filter(d => d.deviceType === 'MEROSS');
+  trackByDeviceId(_: number, device: SmartDevice): number {
+    return device.id;
   }
 
   dismissError(): void {
     this.errorMessage = null;
-  }
-
-  dismissSuccess(): void {
-    this.successMessage = null;
   }
 }

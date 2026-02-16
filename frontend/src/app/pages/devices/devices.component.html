@@ -1,163 +1,32 @@
 <div class="devices">
-  <header class="devices__header">
-    <div>
-      <p class="devices__eyebrow">Smart Home</p>
-      <h1>Geraete</h1>
-      <p class="devices__subtitle">Verwalten Sie alle Smart-Geraete</p>
-    </div>
-    <button class="btn btn--ghost" (click)="refreshAll()" [disabled]="isLoading">
-      Alle aktualisieren
-    </button>
-  </header>
-
-  <p class="message message--success" *ngIf="successMessage">
-    {{ successMessage }}
-    <button class="message__close" (click)="dismissSuccess()">&times;</button>
-  </p>
   <p class="message message--error" *ngIf="errorMessage">
     {{ errorMessage }}
     <button class="message__close" (click)="dismissError()">&times;</button>
   </p>
 
-  <section class="devices__scan">
-    <h2>Geraete scannen</h2>
-    <div class="scan__actions">
-      <button class="btn btn--secondary" (click)="scanKasa()" [disabled]="isScanningKasa">
-        {{ isScanningKasa ? 'Scanne Kasa...' : 'Kasa scannen' }}
-      </button>
-      <button class="btn btn--secondary" (click)="scanTapo()" [disabled]="isScanningTapo">
-        {{ isScanningTapo ? 'Scanne Tapo...' : 'Tapo scannen' }}
-      </button>
-      <button class="btn btn--secondary" (click)="scanMeross()" [disabled]="isScanningMeross">
-        {{ isScanningMeross ? 'Scanne Meross...' : 'Meross scannen' }}
-      </button>
-    </div>
-  </section>
-
   <div *ngIf="isLoading" class="devices__loading">
     <p>Lade Geraete...</p>
   </div>
 
-  <div *ngIf="!isLoading && devices.length === 0" class="devices__empty">
-    <p>Keine Geraete gefunden. Scannen Sie nach Geraeten, um zu beginnen.</p>
-  </div>
-
-  <!-- Kasa Devices -->
-  <section class="devices__group" *ngIf="kasaDevices.length > 0">
-    <h2>Kasa Geraete ({{ kasaDevices.length }})</h2>
-    <div class="devices__grid">
-      <div class="device-card" *ngFor="let device of kasaDevices">
-        <div class="device-card__header">
-          <h3>{{ device.deviceName }}</h3>
-          <span class="badge" [class.badge--success]="device.isOnline" [class.badge--error]="!device.isOnline">
-            {{ device.isOnline ? 'Online' : 'Offline' }}
-          </span>
-        </div>
-        <div class="device-card__details">
-          <p class="device-card__model">{{ device.model || 'Kasa Geraet' }}</p>
-          <p class="device-card__ip" *ngIf="device.ipAddress">{{ device.ipAddress }}</p>
-        </div>
-        <div class="device-card__controls">
-          <label class="toggle">
-            <input
-              type="checkbox"
-              [checked]="device.isPoweredOn"
-              [disabled]="!device.isOnline"
-              (change)="toggleDevice(device)"
-            />
-            <span class="toggle__slider"></span>
-            <span class="toggle__label">{{ device.isPoweredOn ? 'An' : 'Aus' }}</span>
-          </label>
-        </div>
-        <div class="device-card__actions">
-          <button class="btn btn--ghost btn--small" (click)="refreshDevice(device)">
-            Aktualisieren
-          </button>
-          <button class="btn btn--ghost btn--small btn--danger" (click)="deleteDevice(device)">
-            Loeschen
-          </button>
-        </div>
-      </div>
+  <ng-container *ngIf="!isLoading">
+    <div *ngIf="devices.length === 0" class="devices__empty">
+      <p>Noch keine Geraete vorhanden.</p>
+      <p class="devices__empty-note">Bitte im Admin-Bereich nach Geraeten suchen und konfigurieren.</p>
     </div>
-  </section>
 
-  <!-- Tapo Devices -->
-  <section class="devices__group" *ngIf="tapoDevices.length > 0">
-    <h2>Tapo Geraete ({{ tapoDevices.length }})</h2>
-    <div class="devices__grid">
-      <div class="device-card" *ngFor="let device of tapoDevices">
-        <div class="device-card__header">
-          <h3>{{ device.deviceName }}</h3>
-          <span class="badge" [class.badge--success]="device.isOnline" [class.badge--error]="!device.isOnline">
-            {{ device.isOnline ? 'Online' : 'Offline' }}
-          </span>
-        </div>
-        <div class="device-card__details">
-          <p class="device-card__model">{{ device.model || 'Tapo Geraet' }}</p>
-          <p class="device-card__ip" *ngIf="device.ipAddress">{{ device.ipAddress }}</p>
-          <div class="device-card__capabilities" *ngIf="device.capabilities.length > 0">
-            <span class="capability" *ngFor="let cap of device.capabilities">{{ cap }}</span>
-          </div>
-        </div>
-        <div class="device-card__controls">
-          <label class="toggle">
-            <input
-              type="checkbox"
-              [checked]="device.isPoweredOn"
-              [disabled]="!device.isOnline"
-              (change)="toggleDevice(device)"
-            />
-            <span class="toggle__slider"></span>
-            <span class="toggle__label">{{ device.isPoweredOn ? 'An' : 'Aus' }}</span>
-          </label>
-        </div>
-        <div class="device-card__actions">
-          <button class="btn btn--ghost btn--small" (click)="refreshDevice(device)">
-            Aktualisieren
-          </button>
-          <button class="btn btn--ghost btn--small btn--danger" (click)="deleteDevice(device)">
-            Loeschen
-          </button>
-        </div>
+    <section class="devices__group" *ngFor="let group of groupedDevices">
+      <div class="devices__group-header">
+        <h2>{{ group.label }}</h2>
       </div>
-    </div>
-  </section>
 
-  <!-- Meross Devices -->
-  <section class="devices__group" *ngIf="merossDevices.length > 0">
-    <h2>Meross Geraete ({{ merossDevices.length }})</h2>
-    <div class="devices__grid">
-      <div class="device-card" *ngFor="let device of merossDevices">
-        <div class="device-card__header">
-          <h3>{{ device.deviceName }}</h3>
-          <span class="badge" [class.badge--success]="device.isOnline" [class.badge--error]="!device.isOnline">
-            {{ device.isOnline ? 'Online' : 'Offline' }}
-          </span>
-        </div>
-        <div class="device-card__details">
-          <p class="device-card__model">{{ device.metadata?.['deviceType'] || 'Meross Geraet' }}</p>
-        </div>
-        <div class="device-card__controls">
-          <label class="toggle">
-            <input
-              type="checkbox"
-              [checked]="device.isPoweredOn"
-              [disabled]="!device.isOnline"
-              (change)="toggleDevice(device)"
-            />
-            <span class="toggle__slider"></span>
-            <span class="toggle__label">{{ device.isPoweredOn ? 'An' : 'Aus' }}</span>
-          </label>
-        </div>
-        <div class="device-card__actions">
-          <button class="btn btn--ghost btn--small" (click)="refreshDevice(device)">
-            Aktualisieren
-          </button>
-          <button class="btn btn--ghost btn--small btn--danger" (click)="deleteDevice(device)">
-            Loeschen
-          </button>
-        </div>
+      <div class="devices__grid">
+        <article class="device-card" *ngFor="let device of group.devices; trackBy: trackByDeviceId">
+          <h3 class="device-card__name">{{ device.deviceName }}</h3>
+          <p class="device-card__status" [ngClass]="getStatusClass(device)">
+            {{ getStatusText(device) }}
+          </p>
+        </article>
       </div>
-    </div>
-  </section>
+    </section>
+  </ng-container>
 </div>
