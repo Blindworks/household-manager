@@ -21,7 +21,7 @@ import java.util.List;
  * Kasa, Tapo, and Meross device ecosystems.
  */
 @RestController
-@RequestMapping("/api/devices")
+@RequestMapping("/devices")
 @RequiredArgsConstructor
 @Slf4j
 public class SmartDeviceController {

@@ -53,6 +53,13 @@
             </a>
           </li>
           <li class="header__nav-item">
+            <a routerLink="/devices"
+               routerLinkActive="header__nav-link--active"
+               class="header__nav-link">
+              Geraete
+            </a>
+          </li>
+          <li class="header__nav-item">
             <a routerLink="/admin"
                routerLinkActive="header__nav-link--active"
                class="header__nav-link">
@@ -119,6 +126,14 @@
                (click)="closeMobileMenu()"
                class="header__nav-link">
               Preise
+            </a>
+          </li>
+          <li class="header__nav-item">
+            <a routerLink="/devices"
+               routerLinkActive="header__nav-link--active"
+               (click)="closeMobileMenu()"
+               class="header__nav-link">
+              Geraete
             </a>
           </li>
           <li class="header__nav-item">

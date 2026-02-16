@@ -36,6 +36,11 @@ export const routes: Routes = [
     title: 'Versorgerpreise - Household Manager'
   },
   {
+    path: 'devices',
+    loadComponent: () => import('./pages/devices/devices.component').then(m => m.DevicesComponent),
+    title: 'Geraete - Household Manager'
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
     title: 'Admin - Household Manager'
