@@ -55,11 +55,16 @@ public class MerossCloudAuthService {
             "ap", "https://iotx-ap.meross.com"
     );
 
+    private static final Duration SESSION_TTL = Duration.ofHours(23);
+
     private final ObjectMapper objectMapper;
     private final MerossProperties merossProperties;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(REQUEST_TIMEOUT)
             .build();
+
+    private volatile CloudSession cachedSession;
+    private volatile Instant sessionExpiresAt;
 
     public MerossCloudLoginResponse login(MerossCloudLoginRequest request) {
         return loginInternal(request).response();
@@ -127,6 +132,10 @@ public class MerossCloudAuthService {
 
             log.info("Meross listDevices success [{}] (devices={})", requestId, devices.size());
             return new MerossCloudDevicesResponse(apiStatus, sysStatus, message, devices);
+        } catch (MerossAuthException ex) {
+            log.warn("Meross listDevices auth error [{}]: {}", requestId, ex.getMessage());
+            invalidateSession();
+            throw ex;
         } catch (MerossException ex) {
             log.warn("Meross listDevices error [{}]: {}", requestId, ex.getMessage());
             throw ex;
@@ -188,11 +197,18 @@ public class MerossCloudAuthService {
             if (apiStatus != 0) {
                 log.warn("Meross controlDevice failed [{}] (apiStatus={}, sysStatus={}, message={})",
                         requestId, apiStatus, sysStatus, message);
+                if (apiStatus == 1301) {
+                    invalidateSession();
+                }
                 throw new MerossException("Meross device control failed (apiStatus=" + apiStatus
                         + ", sysStatus=" + sysStatus + "): " + message);
             }
 
             log.info("Meross controlDevice success [{}]", requestId);
+        } catch (MerossAuthException ex) {
+            log.warn("Meross controlDevice auth error [{}]: {}", requestId, ex.getMessage());
+            invalidateSession();
+            throw ex;
         } catch (MerossException ex) {
             log.warn("Meross controlDevice error [{}]: {}", requestId, ex.getMessage());
             throw ex;
@@ -202,7 +218,18 @@ public class MerossCloudAuthService {
         }
     }
 
+    public void invalidateSession() {
+        cachedSession = null;
+        sessionExpiresAt = null;
+        log.debug("Meross session cache invalidated");
+    }
+
     private CloudSession loginInternal(MerossCloudLoginRequest request) {
+        if (cachedSession != null && sessionExpiresAt != null && Instant.now().isBefore(sessionExpiresAt)) {
+            log.debug("Meross login cache hit (expires={})", sessionExpiresAt);
+            return cachedSession;
+        }
+
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         log.info("Meross login start [{}] (region={}, countryCode={}, email={})",
                 requestId, request.region(), request.countryCode(), request.email());
@@ -266,7 +293,11 @@ public class MerossCloudAuthService {
                     mfaLockExpire
             );
             log.info("Meross login success [{}] (userId={}, domain={})", requestId, userId, domain);
-            return new CloudSession(REGION_TO_HOST.get(region), response, key, token);
+            CloudSession session = new CloudSession(REGION_TO_HOST.get(region), response, key, token);
+            cachedSession = session;
+            sessionExpiresAt = Instant.now().plus(SESSION_TTL);
+            log.debug("Meross session cached (expiresAt={})", sessionExpiresAt);
+            return session;
         } catch (MerossException ex) {
             log.warn("Meross login error [{}]: {}", requestId, ex.getMessage());
             throw ex;
@@ -295,6 +326,9 @@ public class MerossCloudAuthService {
         HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
         log.info("Meross HTTP response [{}] op={} status={}", requestId, operation, response.statusCode());
         log.debug("Meross HTTP response body [{}] op={} body={}", requestId, operation, response.body());
+        if (response.statusCode() == 401) {
+            throw new MerossAuthException("Meross HTTP 401 Unauthorized");
+        }
         if (response.statusCode() >= 400) {
             throw new MerossException("Meross HTTP error: " + response.statusCode());
         }
