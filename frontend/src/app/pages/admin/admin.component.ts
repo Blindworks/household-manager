@@ -67,6 +67,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   isMerossActionRunning = false;
   merossErrorMessage: string | null = null;
   merossSuccessMessage: string | null = null;
+  activeTab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' = 'airrohr-config';
 
   ngOnInit(): void {
     this.loadStatus();
@@ -474,6 +475,10 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   turnMerossOff(): void {
     this.runMerossAction('off');
+  }
+
+  setActiveTab(tab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs'): void {
+    this.activeTab = tab;
   }
 
   private runMerossAction(action: 'on' | 'off'): void {
