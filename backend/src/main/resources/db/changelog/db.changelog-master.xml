@@ -20,4 +20,8 @@
     <include file="db/changelog/changes/20260210-0006-create-tasmota-electricity-readings-table.xml"/>
     <include file="db/changelog/changes/20260211-0007-create-airrohr-readings-table.xml"/>
 
+    <!-- Smart Devices Feature -->
+    <include file="db/changelog/changes/20260215-0008-create-smart-devices-table.xml"/>
+    <include file="db/changelog/changes/20260217-0009-add-capabilities-to-smart-devices.xml"/>
+
 </databaseChangeLog>

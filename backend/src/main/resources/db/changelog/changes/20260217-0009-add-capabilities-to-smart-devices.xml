@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260217-0009a-add-device-name-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="device_name"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="device_name" type="VARCHAR(255)" defaultValue="unknown">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009b-add-model-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="model"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="model" type="VARCHAR(100)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009c-add-ip-address-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="ip_address"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="ip_address" type="VARCHAR(45)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009d-add-is-online-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="is_online"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="is_online" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009e-add-is-powered-on-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="is_powered_on"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="is_powered_on" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009f-add-capabilities-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="capabilities"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="capabilities" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009g-add-metadata-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="metadata"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="metadata" type="TEXT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009h-add-created-at-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="created_at"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260217-0009i-add-updated-at-to-smart-devices" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="smart_devices" columnName="updated_at"/></not>
+        </preConditions>
+        <addColumn tableName="smart_devices">
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

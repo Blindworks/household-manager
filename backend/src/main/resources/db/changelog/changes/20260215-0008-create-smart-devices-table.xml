@@ -6,6 +6,11 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="20260215-0008-create-smart-devices-table" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="smart_devices"/>
+            </not>
+        </preConditions>
         <createTable tableName="smart_devices">
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
