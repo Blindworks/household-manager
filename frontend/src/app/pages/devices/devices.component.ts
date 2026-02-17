@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { catchError, forkJoin, of } from 'rxjs';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { SmartDevice } from '../../models/smart-device.model';
 
@@ -16,14 +17,16 @@ import { SmartDevice } from '../../models/smart-device.model';
 export class DevicesComponent implements OnInit {
   private readonly smartDeviceService = inject(SmartDeviceService);
   private readonly typeOrder: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
+  private readonly scanTypes: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
 
   devices: SmartDevice[] = [];
   isLoading = true;
+  isScanning = false;
   errorMessage: string | null = null;
   togglingDevices = new Set<number>();
 
   ngOnInit(): void {
-    this.loadDevices();
+    this.scanAllDeviceTypes();
   }
 
   private updateDeviceInList(updatedDevice: SmartDevice): void {
@@ -60,6 +63,32 @@ export class DevicesComponent implements OnInit {
         console.error('Error loading devices:', error);
         this.errorMessage = error.message;
         this.isLoading = false;
+      }
+    });
+  }
+
+  scanAllDeviceTypes(): void {
+    this.isScanning = true;
+    this.errorMessage = null;
+
+    const scanRequests = this.scanTypes.map(type =>
+      this.smartDeviceService.scanDevices(type).pipe(
+        catchError((error: Error) => {
+          console.warn(`Scan failed for ${type}:`, error.message);
+          return of([] as SmartDevice[]);
+        })
+      )
+    );
+
+    forkJoin(scanRequests).subscribe({
+      next: () => {
+        this.isScanning = false;
+        this.loadDevices();
+      },
+      error: (error: Error) => {
+        console.error('Error scanning devices:', error);
+        this.isScanning = false;
+        this.loadDevices();
       }
     });
   }
