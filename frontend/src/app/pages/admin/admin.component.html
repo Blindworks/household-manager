@@ -3,13 +3,13 @@
     <div>
       <p class="admin__eyebrow">Systemsteuerung</p>
       <h1>Admin</h1>
-      <p class="admin__subtitle">Verwaltung von Airrohr, Stromverbrauch und Smart Plugs</p>
+      <p class="admin__subtitle">Verwaltung von Airrohr, Stromverbrauch, Smart Plugs und Versorgerpreisen</p>
     </div>
     <button
       class="btn btn--ghost"
       (click)="loadStatus()"
       [disabled]="isLoading"
-      *ngIf="activeTab !== 'smart-plugs'"
+      *ngIf="activeTab === 'airrohr-config'"
     >
       Status aktualisieren
     </button>
@@ -39,6 +39,14 @@
       (click)="setActiveTab('smart-plugs')"
     >
       Smart Plugs
+    </button>
+    <button
+      type="button"
+      class="admin__tab"
+      [class.admin__tab--active]="activeTab === 'versorgerpreise'"
+      (click)="setActiveTab('versorgerpreise')"
+    >
+      Versorgerpreise
     </button>
   </nav>
 
@@ -349,5 +357,9 @@
       <p class="message message--success" *ngIf="merossSuccessMessage">{{ merossSuccessMessage }}</p>
       <p class="message message--error" *ngIf="merossErrorMessage">{{ merossErrorMessage }}</p>
     </section>
+  </section>
+
+  <section class="admin__tab-content" *ngIf="activeTab === 'versorgerpreise'">
+    <app-utility-prices></app-utility-prices>
   </section>
 </div>

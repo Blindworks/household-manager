@@ -15,6 +15,15 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
   styleUrl: './header.component.scss'
 })
 export class HeaderComponent {
+  readonly navLinks = [
+    { path: '/', label: 'Home', exact: true },
+    { path: '/meter-readings', label: 'Zaehlerstaende' },
+    { path: '/consumption', label: 'Verbrauch' },
+    { path: '/air-quality', label: 'Luftqualitaet' },
+    { path: '/devices', label: 'Geraete' },
+    { path: '/admin', label: 'Admin' }
+  ];
+
   /** Signal to track mobile menu open/closed state */
   isMobileMenuOpen = signal<boolean>(false);
 

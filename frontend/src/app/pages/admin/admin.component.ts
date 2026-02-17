@@ -12,6 +12,7 @@ import { TapoService } from '../../services/tapo.service';
 import { TapoDeviceInfo, TapoDiscoveryDevice, TapoEnergyUsage } from '../../models/tapo.model';
 import { MerossService } from '../../services/meross.service';
 import { MerossPlugResponse } from '../../models/meross.model';
+import { UtilityPricesComponent } from '../utility-prices/utility-prices.component';
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -19,7 +20,7 @@ import { MerossPlugResponse } from '../../models/meross.model';
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UtilityPricesComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })
@@ -67,7 +68,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   isMerossActionRunning = false;
   merossErrorMessage: string | null = null;
   merossSuccessMessage: string | null = null;
-  activeTab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' = 'airrohr-config';
+  activeTab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'versorgerpreise' = 'airrohr-config';
 
   ngOnInit(): void {
     this.loadStatus();
@@ -477,7 +478,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.runMerossAction('off');
   }
 
-  setActiveTab(tab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs'): void {
+  setActiveTab(tab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'versorgerpreise'): void {
     this.activeTab = tab;
   }
 

@@ -1,7 +1,6 @@
 <header class="header">
   <div class="container">
     <div class="header__wrapper">
-      <!-- Logo and Brand -->
       <div class="header__brand">
         <a routerLink="/" class="header__logo">
           <img
@@ -13,63 +12,6 @@
         </a>
       </div>
 
-      <!-- Desktop Navigation -->
-      <nav class="header__nav header__nav--desktop">
-        <ul class="header__nav-list">
-          <li class="header__nav-item">
-            <a routerLink="/"
-               routerLinkActive="header__nav-link--active"
-               [routerLinkActiveOptions]="{exact: true}"
-               class="header__nav-link">
-              Home
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/meter-readings"
-               routerLinkActive="header__nav-link--active"
-               class="header__nav-link">
-              Zaehlerstaende
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/consumption"
-               routerLinkActive="header__nav-link--active"
-               class="header__nav-link">
-              Verbrauch
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/air-quality"
-               routerLinkActive="header__nav-link--active"
-               class="header__nav-link">
-              Luftqualitaet
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/utility-prices"
-               routerLinkActive="header__nav-link--active"
-               class="header__nav-link">
-              Preise
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/devices"
-               routerLinkActive="header__nav-link--active"
-               class="header__nav-link">
-              Geraete
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/admin"
-               routerLinkActive="header__nav-link--active"
-               class="header__nav-link">
-              Admin
-            </a>
-          </li>
-        </ul>
-      </nav>
-
-      <!-- Mobile Menu Toggle -->
       <button
         class="header__mobile-toggle"
         (click)="toggleMobileMenu()"
@@ -83,69 +25,39 @@
       </button>
     </div>
 
-    <!-- Mobile Navigation Menu -->
     @if (isMobileMenuOpen()) {
       <nav class="header__nav header__nav--mobile">
         <ul class="header__nav-list">
-          <li class="header__nav-item">
-            <a routerLink="/"
-               routerLinkActive="header__nav-link--active"
-               [routerLinkActiveOptions]="{exact: true}"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Home
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/meter-readings"
-               routerLinkActive="header__nav-link--active"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Zaehlerstaende
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/consumption"
-               routerLinkActive="header__nav-link--active"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Verbrauch
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/air-quality"
-               routerLinkActive="header__nav-link--active"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Luftqualitaet
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/utility-prices"
-               routerLinkActive="header__nav-link--active"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Preise
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/devices"
-               routerLinkActive="header__nav-link--active"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Geraete
-            </a>
-          </li>
-          <li class="header__nav-item">
-            <a routerLink="/admin"
-               routerLinkActive="header__nav-link--active"
-               (click)="closeMobileMenu()"
-               class="header__nav-link">
-              Admin
-            </a>
-          </li>
+          @for (link of navLinks; track link.path) {
+            <li class="header__nav-item">
+              <a [routerLink]="link.path"
+                 routerLinkActive="header__nav-link--active"
+                 [routerLinkActiveOptions]="{ exact: !!link.exact }"
+                 (click)="closeMobileMenu()"
+                 class="header__nav-link">
+                {{ link.label }}
+              </a>
+            </li>
+          }
         </ul>
       </nav>
     }
   </div>
 </header>
+
+<aside class="header-sidebar">
+  <nav class="header-sidebar__nav" aria-label="Hauptnavigation">
+    <ul class="header-sidebar__list">
+      @for (link of navLinks; track link.path) {
+        <li class="header-sidebar__item">
+          <a [routerLink]="link.path"
+             routerLinkActive="header-sidebar__link--active"
+             [routerLinkActiveOptions]="{ exact: !!link.exact }"
+             class="header-sidebar__link">
+            {{ link.label }}
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+</aside>
