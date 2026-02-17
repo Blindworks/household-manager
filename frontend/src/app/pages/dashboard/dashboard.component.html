@@ -4,17 +4,6 @@
       <img src="/assets/Household_manager_logo.png" alt="Household Manager Logo" class="dashboard__logo">
     </header>
 
-    <section class="dashboard__actions">
-      <a routerLink="/meter-readings" class="btn btn--primary">
-        <app-icon name="bar-chart-3" class="btn__icon"></app-icon>
-        Neue Ablesung erfassen
-      </a>
-      <a routerLink="/meter-readings" class="btn btn--secondary">
-        <app-icon name="line-chart" class="btn__icon"></app-icon>
-        Verbrauchshistorie
-      </a>
-    </section>
-
     <section class="dashboard__live">
       <div class="live-card">
         <div class="live-card__header">
@@ -25,11 +14,13 @@
               <span>{{ formatLiveStatus() }}</span>
             </div>
           </div>
-          <button class="btn btn--secondary" type="button" (click)="reconnectLive()" [disabled]="isReconnecting">
-            Neu verbinden
-          </button>
         </div>
-        <div class="live-card__value">{{ formatPower(liveReading?.momentaneWirkleistung) }}</div>
+        <div class="live-card__grid live-card__grid--single">
+          <div class="live-card__metric live-card__metric--neutral">
+            <span class="live-card__label">Aktuelle Leistung</span>
+            <span class="live-card__value live-card__value--small">{{ formatPower(liveReading?.momentaneWirkleistung) }}</span>
+          </div>
+        </div>
         <div class="live-card__meta">
           <span>Letztes Update: {{ formatDateTime(lastLiveUpdate ? lastLiveUpdate.toISOString() : null) }}</span>
           <span class="live-card__error" *ngIf="liveError">{{ liveError }}</span>

@@ -133,6 +133,10 @@
     margin-bottom: var(--spacing-sm);
   }
 
+  &__grid--single {
+    grid-template-columns: 1fr;
+  }
+
   &__metric {
     background: rgba(255, 255, 255, 0.6);
     border: 1px solid rgba(13, 110, 189, 0.15);
