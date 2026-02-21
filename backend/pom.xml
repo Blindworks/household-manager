@@ -92,18 +92,30 @@
             <version>3.5.8</version>
         </dependency>
 
-        <!-- Meross Cloud/MQTT device control -->
+        <!-- Meross Cloud/MQTT device control
         <dependency>
             <groupId>com.scout24.ha</groupId>
             <artifactId>meross-java</artifactId>
             <version>0.1.0-SNAPSHOT</version>
-        </dependency>
+        </dependency>-->
 
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Meross-java dependencies -->
+        <dependency>
+            <groupId>com.hivemq</groupId>
+            <artifactId>hivemq-mqtt-client</artifactId>
+            <version>RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>25.0-jre</version>
         </dependency>
     </dependencies>
 

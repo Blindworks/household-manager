@@ -1,0 +1,1 @@
+This lib is a copy from https://github.com/atzbert/meross-java
