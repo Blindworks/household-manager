@@ -20,7 +20,6 @@ Household Manager is a full-stack application for monitoring and managing househ
 
 ## Repository Structure
 
-/
 ├── backend/                # Spring Boot API  
 ├── frontend/               # Angular web UI  
 ├── agents/                 # Automatic sensor agents  
