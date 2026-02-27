@@ -74,6 +74,17 @@ public interface MeterReadingRepository extends JpaRepository<MeterReading, Long
     List<MeterReading> findAllByOrderByReadingDateDesc();
 
     /**
+     * Find all meter readings within a date range across all meter types, ordered by date descending.
+     *
+     * @param start the start of the date range (inclusive)
+     * @param end   the end of the date range (inclusive)
+     * @return list of readings within the date range, sorted by date (newest first)
+     */
+    List<MeterReading> findAllByReadingDateBetweenOrderByReadingDateDesc(
+            LocalDateTime start, LocalDateTime end
+    );
+
+    /**
      * Check if a reading exists for a given meter type and reading date.
      *
      * @param meterType the type of meter

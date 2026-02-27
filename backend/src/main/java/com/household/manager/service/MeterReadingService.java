@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Year;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
@@ -89,28 +90,33 @@ public class MeterReadingService {
     }
 
     /**
-     * Get all meter readings across all meter types.
+     * Get all meter readings across all meter types for the current calendar year.
      *
-     * @return list of all meter readings with consumption data
+     * @return list of meter readings from the current year, newest first
      */
     @Transactional(readOnly = true)
     public List<MeterReadingResponse> getAllMeterReadings() {
-        log.debug("Retrieving all meter readings");
-        return meterReadingRepository.findAllByOrderByReadingDateDesc().stream()
+        log.debug("Retrieving all meter readings for current year");
+        LocalDateTime[] range = currentYearRange();
+        return meterReadingRepository
+                .findAllByReadingDateBetweenOrderByReadingDateDesc(range[0], range[1]).stream()
                 .map(this::convertToResponseWithConsumption)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get all meter readings for a specific meter type.
+     * Get all meter readings for a specific meter type in the current calendar year.
      *
      * @param meterType the type of meter to retrieve readings for
-     * @return list of meter readings for the specified type
+     * @return list of meter readings for the specified type, newest first
      */
     @Transactional(readOnly = true)
     public List<MeterReadingResponse> getMeterReadingsByType(MeterType meterType) {
         log.debug("Retrieving meter readings for type: {}", meterType);
-        return meterReadingRepository.findByMeterTypeOrderByReadingDateDesc(meterType).stream()
+        LocalDateTime[] range = currentYearRange();
+        return meterReadingRepository
+                .findByMeterTypeAndReadingDateBetween(meterType, range[0], range[1]).stream()
+                .sorted((a, b) -> b.getReadingDate().compareTo(a.getReadingDate()))
                 .map(this::convertToResponseWithConsumption)
                 .collect(Collectors.toList());
     }
@@ -328,6 +334,14 @@ public class MeterReadingService {
                 .daysBetweenReadings((int) daysBetween)
                 .averageDailyConsumption(averageDailyConsumption)
                 .build();
+    }
+
+    private LocalDateTime[] currentYearRange() {
+        int year = Year.now().getValue();
+        return new LocalDateTime[]{
+                LocalDateTime.of(year, 1, 1, 0, 0, 0),
+                LocalDateTime.of(year, 12, 31, 23, 59, 59)
+        };
     }
 
     private Integer resolveReadingWeek(MeterReadingRequest request) {
