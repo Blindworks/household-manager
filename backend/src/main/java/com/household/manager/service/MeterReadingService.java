@@ -96,7 +96,7 @@ public class MeterReadingService {
     @Transactional(readOnly = true)
     public List<MeterReadingResponse> getAllMeterReadings() {
         log.debug("Retrieving all meter readings");
-        return meterReadingRepository.findAll().stream()
+        return meterReadingRepository.findAllByOrderByReadingDateDesc().stream()
                 .map(this::convertToResponseWithConsumption)
                 .collect(Collectors.toList());
     }
