@@ -40,6 +40,22 @@ export interface MeterReading {
 
   /** Zeitpunkt der letzten Aktualisierung */
   updatedAt?: Date;
+
+  /** Ob diese Ablesung ein automatisch erstellter Schätzwert ist */
+  estimated?: boolean;
+}
+
+/**
+ * Response für das Erstellen einer neuen Ablesung.
+ * Enthält die gespeicherte Ablesung sowie ggf. automatisch erstellte Schätzwerte
+ * für verpasste Freitags-Ablesungen.
+ */
+export interface MeterReadingCreateResponse {
+  /** Die tatsächlich gespeicherte Ablesung des Nutzers */
+  reading: MeterReading;
+
+  /** Automatisch erstellte Schätzwerte für verpasste Freitage */
+  autoCreatedReadings: MeterReading[];
 }
 
 /**

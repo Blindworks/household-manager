@@ -66,6 +66,15 @@ public class MeterReading {
     private String notes;
 
     /**
+     * Whether this reading was auto-generated as an estimate for a missed Friday.
+     * <p>
+     * When a reading covers more than one week, intermediate estimated readings
+     * are created via linear interpolation for the missed Fridays.
+     */
+    @Column(name = "is_estimated", nullable = false)
+    private boolean estimated = false;
+
+    /**
      * Timestamp when this record was created in the database
      */
     @Column(name = "created_at", nullable = false, updatable = false)

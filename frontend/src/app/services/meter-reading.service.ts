@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import {
   MeterReading,
+  MeterReadingCreateResponse,
   MeterReadingRequest,
   MeterType,
   ConsumptionResponse
@@ -84,11 +85,16 @@ export class MeterReadingService {
   }
 
   /**
-   * Erstellt eine neue Ablesung
+   * Erstellt eine neue Ablesung.
+   * Gibt neben der gespeicherten Ablesung auch automatisch erstellte Schätzwerte
+   * für ggf. verpasste Freitage zurück.
    */
-  createReading(request: MeterReadingRequest): Observable<MeterReading> {
-    return this.http.post<MeterReading>(this.baseUrl, request).pipe(
-      map(reading => this.convertDate(reading)),
+  createReading(request: MeterReadingRequest): Observable<MeterReadingCreateResponse> {
+    return this.http.post<MeterReadingCreateResponse>(this.baseUrl, request).pipe(
+      map(response => ({
+        reading: this.convertDate(response.reading),
+        autoCreatedReadings: this.convertDates(response.autoCreatedReadings ?? [])
+      })),
       catchError(this.handleError)
     );
   }

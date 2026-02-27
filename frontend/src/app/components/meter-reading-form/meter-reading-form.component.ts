@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
-import { MeterType, MeterReadingRequest } from '../../models/meter-reading.model';
+import { MeterType, MeterReadingRequest, MeterReading } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
 
 /**
@@ -43,6 +43,9 @@ export class MeterReadingFormComponent implements OnInit {
 
   /** Error-Message */
   errorMessage: string | null = null;
+
+  /** Automatisch erstellte Schätzwerte für verpasste Freitage */
+  autoCreatedReadings: MeterReading[] = [];
 
   /** Heutiges Datum für max-Validierung */
   readonly today = new Date().toISOString().split('T')[0];
@@ -121,6 +124,7 @@ export class MeterReadingFormComponent implements OnInit {
     this.isSubmitting = true;
     this.successMessage = null;
     this.errorMessage = null;
+    this.autoCreatedReadings = [];
 
     const formValue = this.readingForm.value;
     const request: MeterReadingRequest = {
@@ -131,8 +135,8 @@ export class MeterReadingFormComponent implements OnInit {
     };
 
     this.meterReadingService.createReading(request).subscribe({
-      next: () => {
-        this.handleSuccess();
+      next: (response) => {
+        this.handleSuccess(response.autoCreatedReadings);
       },
       error: (error: Error) => {
         this.handleError(error);
@@ -158,8 +162,11 @@ export class MeterReadingFormComponent implements OnInit {
   /**
    * Behandelt erfolgreiche Formular-Absendung
    */
-  private handleSuccess(): void {
-    this.successMessage = 'Zählerstand erfolgreich erfasst!';
+  private handleSuccess(autoCreated: MeterReading[]): void {
+    this.autoCreatedReadings = autoCreated;
+    this.successMessage = autoCreated.length > 0
+      ? `Zählerstand erfolgreich erfasst! ${autoCreated.length} Schätzwert${autoCreated.length !== 1 ? 'e' : ''} für verpasste Freitage wurden automatisch erstellt.`
+      : 'Zählerstand erfolgreich erfasst!';
     this.isSubmitting = false;
     this.readingForm.reset({
       meterType: this.preselectedType || '',
@@ -167,10 +174,10 @@ export class MeterReadingFormComponent implements OnInit {
     });
     this.readingCreated.emit();
 
-    // Success-Message nach 3 Sekunden ausblenden
     setTimeout(() => {
       this.successMessage = null;
-    }, 3000);
+      this.autoCreatedReadings = [];
+    }, autoCreated.length > 0 ? 8000 : 3000);
   }
 
   /**
@@ -196,5 +203,6 @@ export class MeterReadingFormComponent implements OnInit {
     });
     this.successMessage = null;
     this.errorMessage = null;
+    this.autoCreatedReadings = [];
   }
 }

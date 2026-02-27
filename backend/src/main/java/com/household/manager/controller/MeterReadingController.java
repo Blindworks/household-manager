@@ -1,6 +1,7 @@
 package com.household.manager.controller;
 
 import com.household.manager.dto.ConsumptionResponse;
+import com.household.manager.dto.MeterReadingCreateResponse;
 import com.household.manager.dto.MeterReadingImportResponse;
 import com.household.manager.dto.MeterReadingRequest;
 import com.household.manager.dto.MeterReadingResponse;
@@ -45,10 +46,10 @@ public class MeterReadingController {
      * @return created meter reading with HTTP 201 status
      */
     @PostMapping
-    public ResponseEntity<MeterReadingResponse> createMeterReading(
+    public ResponseEntity<MeterReadingCreateResponse> createMeterReading(
             @Valid @RequestBody MeterReadingRequest request) {
         log.info("Received request to create meter reading for type: {}", request.getMeterType());
-        MeterReadingResponse response = meterReadingService.createMeterReading(request);
+        MeterReadingCreateResponse response = meterReadingService.createMeterReading(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

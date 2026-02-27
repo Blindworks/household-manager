@@ -24,4 +24,7 @@
     <include file="db/changelog/changes/20260215-0008-create-smart-devices-table.xml"/>
     <include file="db/changelog/changes/20260217-0009-add-capabilities-to-smart-devices.xml"/>
 
+    <!-- Missed Friday Detection Feature -->
+    <include file="db/changelog/changes/20260227-0010-add-is-estimated-to-meter-readings.xml"/>
+
 </databaseChangeLog>

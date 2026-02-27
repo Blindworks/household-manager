@@ -7,6 +7,22 @@
     <span class="alert__message">{{ successMessage }}</span>
   </div>
 
+  <!-- Auto-created estimated readings info -->
+  <div class="alert alert--info" *ngIf="autoCreatedReadings.length > 0">
+    <app-icon name="info" class="alert__icon"></app-icon>
+    <div class="alert__message">
+      <strong>Schätzwerte für verpasste Freitage erstellt:</strong>
+      <ul class="estimated-list">
+        <li *ngFor="let r of autoCreatedReadings">
+          KW {{ r.readingWeek }} –
+          {{ r.readingDate | date:'dd.MM.yyyy' }} –
+          {{ r.readingValue | number:'1.2-2' }} {{ meterTypeUtils.getUnit(r.meterType) }}
+        </li>
+      </ul>
+      <small>Die Verbräuche wurden gleichmäßig auf die fehlenden Wochen verteilt.</small>
+    </div>
+  </div>
+
   <!-- Error Message -->
   <div class="alert alert--error" *ngIf="errorMessage">
     <app-icon name="alert-triangle" class="alert__icon"></app-icon>

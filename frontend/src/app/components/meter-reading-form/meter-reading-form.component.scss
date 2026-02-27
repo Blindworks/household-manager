@@ -43,6 +43,23 @@
     color: #991b1b;
     border: 1px solid #fecaca;
   }
+
+  &--info {
+    background-color: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    align-items: flex-start;
+  }
+}
+
+.estimated-list {
+  margin: 0.5rem 0 0.25rem 1rem;
+  padding: 0;
+  font-size: 0.875rem;
+
+  li {
+    margin-bottom: 0.25rem;
+  }
 }
 
 /* Form Styles */

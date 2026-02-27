@@ -116,6 +116,10 @@
                   <span class="reading-card__type-label">
                     {{ meterTypeUtils.getLabel(reading.meterType) }}
                   </span>
+                  <span class="reading-card__estimated-badge" *ngIf="reading.estimated"
+                        title="Automatisch erstellter Schätzwert für verpassten Freitag">
+                    Schätzwert
+                  </span>
                 </div>
 
                 <div class="reading-card__value">

@@ -219,6 +219,19 @@
     font-size: var(--font-size-sm);
   }
 
+  &__estimated-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
   &__date {
     font-size: var(--font-size-xs);
     color: var(--color-gray);

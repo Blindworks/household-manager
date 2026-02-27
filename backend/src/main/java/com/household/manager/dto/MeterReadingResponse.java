@@ -87,4 +87,9 @@ public class MeterReadingResponse {
      * Useful for calculating average daily consumption.
      */
     private Integer daysSinceLastReading;
+
+    /**
+     * Whether this reading was auto-generated as an estimate for a missed Friday.
+     */
+    private boolean estimated;
 }
