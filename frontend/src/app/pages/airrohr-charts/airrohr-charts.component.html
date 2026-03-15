@@ -36,6 +36,17 @@
             </select>
           </label>
         }
+        @if (selectedMonth !== 'ALL') {
+          <label class="airrohr-charts__select">
+            <span>Tag</span>
+            <select (change)="setDay($any($event.target).value)">
+              <option value="ALL" [selected]="selectedDay === 'ALL'">Alle Tage</option>
+              @for (day of getAvailableDaysFor(selectedYear, selectedMonth); track day) {
+                <option [value]="day" [selected]="selectedDay === day">{{ day }}</option>
+              }
+            </select>
+          </label>
+        }
         <div class="airrohr-charts__view-toggle">
           <button
             type="button"
@@ -103,6 +114,17 @@
                   </select>
                 </label>
               }
+              @if (compareMonthA !== 'ALL') {
+                <label class="airrohr-charts__select">
+                  <span>Tag</span>
+                  <select (change)="setCompareDayA($any($event.target).value)">
+                    <option value="ALL" [selected]="compareDayA === 'ALL'">Alle Tage</option>
+                    @for (day of getAvailableDaysFor(compareYearA, compareMonthA); track day) {
+                      <option [value]="day" [selected]="compareDayA === day">{{ day }}</option>
+                    }
+                  </select>
+                </label>
+              }
             </div>
           </div>
           <div class="airrohr-charts__compare-block">
@@ -124,6 +146,17 @@
                     <option value="ALL" [selected]="compareMonthB === 'ALL'">Alle Monate</option>
                     @for (month of getAvailableMonthsFor(compareYearB); track month) {
                       <option [value]="month" [selected]="compareMonthB === month">{{ month }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              @if (compareMonthB !== 'ALL') {
+                <label class="airrohr-charts__select">
+                  <span>Tag</span>
+                  <select (change)="setCompareDayB($any($event.target).value)">
+                    <option value="ALL" [selected]="compareDayB === 'ALL'">Alle Tage</option>
+                    @for (day of getAvailableDaysFor(compareYearB, compareMonthB); track day) {
+                      <option [value]="day" [selected]="compareDayB === day">{{ day }}</option>
                     }
                   </select>
                 </label>
