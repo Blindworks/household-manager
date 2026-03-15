@@ -264,10 +264,14 @@ export class AirrohrChartsComponent implements OnInit {
 
   private refreshCharts(): void {
     const isDayView = this.selectedYear !== 'ALL' && this.selectedMonth !== 'ALL' && this.selectedDay !== 'ALL';
+    const isMonthView = this.selectedYear !== 'ALL' && this.selectedMonth !== 'ALL' && this.selectedDay === 'ALL';
     const singleSeries = this.getSeriesFor(this.selectedYear, this.selectedMonth, this.selectedDay);
     const useMonthTicks = this.selectedYear !== 'ALL' && this.selectedMonth === 'ALL';
+    const monthContext = isMonthView
+      ? { year: this.selectedYear as number, month: this.selectedMonth as number }
+      : undefined;
     this.singleChartOptions = singleSeries.points.length
-      ? this.buildChartOptions(singleSeries, useMonthTicks, isDayView)
+      ? this.buildChartOptions(singleSeries, useMonthTicks, isDayView, monthContext)
       : null;
 
     if (this.compareMode) {
@@ -275,11 +279,15 @@ export class AirrohrChartsComponent implements OnInit {
       const seriesB = this.getSeriesFor(this.compareYearB, this.compareMonthB, this.compareDayB);
       const isDayViewA = this.compareYearA !== 'ALL' && this.compareMonthA !== 'ALL' && this.compareDayA !== 'ALL';
       const isDayViewB = this.compareYearB !== 'ALL' && this.compareMonthB !== 'ALL' && this.compareDayB !== 'ALL';
+      const isMonthViewA = this.compareYearA !== 'ALL' && this.compareMonthA !== 'ALL' && this.compareDayA === 'ALL';
+      const isMonthViewB = this.compareYearB !== 'ALL' && this.compareMonthB !== 'ALL' && this.compareDayB === 'ALL';
+      const monthContextA = isMonthViewA ? { year: this.compareYearA as number, month: this.compareMonthA as number } : undefined;
+      const monthContextB = isMonthViewB ? { year: this.compareYearB as number, month: this.compareMonthB as number } : undefined;
       this.compareChartOptionsA = seriesA.points.length
-        ? this.buildChartOptions(seriesA, this.compareYearA !== 'ALL' && this.compareMonthA === 'ALL', isDayViewA)
+        ? this.buildChartOptions(seriesA, this.compareYearA !== 'ALL' && this.compareMonthA === 'ALL', isDayViewA, monthContextA)
         : null;
       this.compareChartOptionsB = seriesB.points.length
-        ? this.buildChartOptions(seriesB, this.compareYearB !== 'ALL' && this.compareMonthB === 'ALL', isDayViewB)
+        ? this.buildChartOptions(seriesB, this.compareYearB !== 'ALL' && this.compareMonthB === 'ALL', isDayViewB, monthContextB)
         : null;
     } else {
       this.compareChartOptionsA = null;
@@ -287,7 +295,73 @@ export class AirrohrChartsComponent implements OnInit {
     }
   }
 
-  private buildChartOptions(series: AirrohrChartSeries, useMonthTicks: boolean, isDayView = false): Record<string, unknown> {
+  private buildChartOptions(
+    series: AirrohrChartSeries,
+    useMonthTicks: boolean,
+    isDayView = false,
+    monthContext?: { year: number; month: number }
+  ): Record<string, unknown> {
+    if (monthContext) {
+      const { year, month } = monthContext;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dailyData = this.aggregateByDay(series.points, year, month);
+      const dayLabels = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = String(i + 1).padStart(2, '0');
+        const m = String(month).padStart(2, '0');
+        return `${d}.${m}`;
+      });
+
+      return {
+        grid: { left: 56, right: 24, top: 24, bottom: 36, containLabel: false },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'line' },
+          formatter: (params: { axisValue: string; seriesName: string; value: number | null }[]) => {
+            const day = params[0]?.axisValue ?? '';
+            const lines = params
+              .filter(p => p.value != null)
+              .map(p => `${p.seriesName}: ${this.formatNumber(p.value as number)} ug/m3`);
+            return lines.length ? `${day}<br/>${lines.join('<br/>')}` : '';
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: dayLabels,
+          axisLine: { lineStyle: { color: 'rgba(51, 65, 85, 0.7)' } },
+          axisTick: { alignWithLabel: true, length: 6, lineStyle: { color: 'rgba(51, 65, 85, 0.75)' } },
+          axisLabel: { color: '#94a3b8', fontSize: 11, fontWeight: 400 }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } },
+          axisLabel: {
+            color: '#94a3b8', fontSize: 11, fontWeight: 400,
+            formatter: (value: number) => `${this.formatNumber(value)} ug/m3`
+          }
+        },
+        series: [
+          {
+            name: 'Feinstaub PM10',
+            type: 'line',
+            data: dailyData.map(d => d.sdsP1),
+            smooth: true, symbol: 'circle', symbolSize: 7, connectNulls: false,
+            lineStyle: { width: 2.5, color: '#0ea5e9' },
+            itemStyle: { color: '#0ea5e9' }
+          },
+          {
+            name: 'Feinstaub PM2.5',
+            type: 'line',
+            data: dailyData.map(d => d.sdsP2),
+            smooth: true, symbol: 'circle', symbolSize: 7, connectNulls: false,
+            lineStyle: { width: 2.5, color: '#14b8a6' },
+            itemStyle: { color: '#14b8a6' }
+          }
+        ]
+      };
+    }
+
     if (isDayView) {
       const hourlyData = this.aggregateByHour(series.points);
       const hourLabels = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -472,6 +546,24 @@ export class AirrohrChartsComponent implements OnInit {
         }
       ]
     };
+  }
+
+  private aggregateByDay(
+    points: AirrohrChartPoint[],
+    year: number,
+    month: number
+  ): { sdsP1: number | null; sdsP2: number | null }[] {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const days = Array.from({ length: daysInMonth }, () => ({ sdsP1: [] as number[], sdsP2: [] as number[] }));
+    for (const point of points) {
+      const d = point.date.getDate() - 1;
+      if (point.sdsP1 != null) days[d].sdsP1.push(point.sdsP1);
+      if (point.sdsP2 != null) days[d].sdsP2.push(point.sdsP2);
+    }
+    return days.map(d => ({
+      sdsP1: d.sdsP1.length ? d.sdsP1.reduce((a, b) => a + b, 0) / d.sdsP1.length : null,
+      sdsP2: d.sdsP2.length ? d.sdsP2.reduce((a, b) => a + b, 0) / d.sdsP2.length : null
+    }));
   }
 
   private aggregateByHour(points: AirrohrChartPoint[]): { sdsP1: number | null; sdsP2: number | null }[] {
