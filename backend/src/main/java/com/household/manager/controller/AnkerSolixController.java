@@ -97,6 +97,15 @@ public class AnkerSolixController {
         return ResponseEntity.ok(ankerSolixService.getRawSystemInfo());
     }
 
+    /** Returns the raw ENERGY_ANALYSIS response to discover real field names. */
+    @GetMapping("/debug/energy")
+    public ResponseEntity<JsonNode> debugEnergy(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LocalDate queryDate = date != null ? date : LocalDate.now();
+        return ResponseEntity.ok(ankerSolixService.getRawEnergyDay(queryDate));
+    }
+
     // -------------------------------------------------------------------------
     // Inner request DTO
     // -------------------------------------------------------------------------

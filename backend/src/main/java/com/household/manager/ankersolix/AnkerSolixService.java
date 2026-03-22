@@ -200,9 +200,19 @@ public class AnkerSolixService {
             JsonNode data = client.request(AnkerApiEndpoints.ENERGY_ANALYSIS, payload).path("data");
             log.debug("ENERGY_ANALYSIS data: {}", data);
 
-            double pvEnergyKwh         = parseKwh(data.path("solar_total"));
-            double batteryChargeKwh    = parseKwh(data.path("solar_to_battery_total"));
-            double batteryDischargeKwh = parseKwh(data.path("battery_discharging_total"));
+            // PV production: sum all 20-minute interval values from the power array (unit: Wh)
+            double pvEnergyWh = 0.0;
+            JsonNode powerArray = data.path("power");
+            if (powerArray.isArray()) {
+                for (JsonNode entry : powerArray) {
+                    pvEnergyWh += parseKwh(entry.path("value"));
+                }
+            }
+            double pvEnergyKwh = pvEnergyWh / 1000.0;
+
+            // Battery charge/discharge totals are provided directly in kWh
+            double batteryChargeKwh    = parseKwh(data.path("charge_total"));
+            double batteryDischargeKwh = parseKwh(data.path("discharge_total"));
 
             return AnkerSolixEnergyDayDto.builder()
                     .date(date)
@@ -226,6 +236,26 @@ public class AnkerSolixService {
             return Double.parseDouble(text);
         } catch (NumberFormatException e) {
             return 0.0;
+        }
+    }
+
+    /**
+     * Returns the raw ENERGY_ANALYSIS response for a given date – used to discover real field names.
+     */
+    public JsonNode getRawEnergyDay(LocalDate date) {
+        try {
+            String dateStr = date.toString();
+            ObjectNode payload = mapper.createObjectNode();
+            payload.put("site_id", getSiteId());
+            payload.put("device_sn", "");
+            payload.put("device_type", "solarbank");
+            payload.put("type", "day");
+            payload.put("start_time", dateStr);
+            payload.put("end_time", dateStr);
+            return client.request(AnkerApiEndpoints.ENERGY_ANALYSIS, payload);
+        } catch (Exception ex) {
+            log.error("Failed to fetch raw energy day data: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch raw Anker Solix energy day data", ex);
         }
     }
 
