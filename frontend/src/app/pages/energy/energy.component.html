@@ -53,8 +53,21 @@
 
       <div class="live-card live-card--home">
         <span class="live-card__label">Hausverbrauch</span>
-        <span class="live-card__value">–</span>
-        <span class="live-card__hint">Noch nicht berechenbar</span>
+        <span class="live-card__value">
+          @if (hausverbrauchW !== null) {
+            {{ hausverbrauchW | number:'1.0-0' }}
+            <span class="live-card__unit">W</span>
+          } @else {
+            –
+          }
+        </span>
+        <span class="live-card__hint">
+          @if (hausverbrauchW !== null) {
+            Akkuentladung + Netzbezug
+          } @else {
+            Noch nicht berechenbar
+          }
+        </span>
       </div>
 
       <div class="live-card live-card--grid">

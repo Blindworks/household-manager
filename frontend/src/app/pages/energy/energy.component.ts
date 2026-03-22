@@ -102,6 +102,15 @@ export class EnergyComponent implements OnInit, OnDestroy {
     return (this.tasmotaReading?.momentaneWirkleistung ?? 0) >= 0;
   }
 
+  get hausverbrauchW(): number | null {
+    if (this.liveData === null || this.tasmotaReading === null) {
+      return null;
+    }
+    const batteryDischarge = Math.max(0, -(this.liveData.batteryPowerW));
+    const gridConsumption = Math.max(0, this.tasmotaReading.momentaneWirkleistung);
+    return batteryDischarge + gridConsumption;
+  }
+
   formatConnectionStatus(status: string): string {
     switch (status) {
       case 'connected': return 'Verbunden';
