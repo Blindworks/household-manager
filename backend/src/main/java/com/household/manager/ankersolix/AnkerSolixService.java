@@ -129,7 +129,7 @@ public class AnkerSolixService {
             payload.put("site_id", getSiteId());
 
             JsonNode data = client.request(AnkerApiEndpoints.GET_SCENE_INFO, payload).path("data");
-            log.debug("GET_SCENE_INFO data: {}", data);
+            log.info("GET_SCENE_INFO data: {}", data);
 
             JsonNode sbInfo   = data.path("solarbank_info");
             JsonNode gridInfo = data.path("grid_info");

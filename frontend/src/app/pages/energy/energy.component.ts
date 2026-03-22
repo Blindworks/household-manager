@@ -9,6 +9,8 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import { CanvasRenderer } from 'echarts/renderers';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
+import { TasmotaLiveService } from '../../services/tasmota-live.service';
+import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -26,8 +28,10 @@ echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasR
 })
 export class EnergyComponent implements OnInit, OnDestroy {
   private readonly ankerSolixService = inject(AnkerSolixService);
+  private readonly tasmotaLiveService = inject(TasmotaLiveService);
 
   liveData: AnkerSolixLive | null = null;
+  tasmotaReading: TasmotaLiveReading | null = null;
   deviceParams: AnkerSolixDeviceParams | null = null;
   energyData: AnkerSolixEnergyDay | null = null;
   chartOptions: Record<string, unknown> | null = null;
@@ -41,16 +45,20 @@ export class EnergyComponent implements OnInit, OnDestroy {
   powerSetError = '';
 
   private liveSubscription: Subscription | null = null;
+  private tasmotaSubscription: Subscription | null = null;
 
   ngOnInit(): void {
     this.startLiveStream();
+    this.startTasmotaStream();
     this.loadDeviceParams();
     this.loadEnergy();
   }
 
   ngOnDestroy(): void {
     this.liveSubscription?.unsubscribe();
+    this.tasmotaSubscription?.unsubscribe();
     this.ankerSolixService.disconnectLive();
+    this.tasmotaLiveService.disconnect();
   }
 
   loadEnergy(): void {
@@ -91,7 +99,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
   }
 
   get gridIsImporting(): boolean {
-    return (this.liveData?.gridPowerW ?? 0) >= 0;
+    return (this.tasmotaReading?.momentaneWirkleistung ?? 0) >= 0;
   }
 
   formatConnectionStatus(status: string): string {
@@ -107,6 +115,13 @@ export class EnergyComponent implements OnInit, OnDestroy {
     this.liveSubscription = this.ankerSolixService.getLiveStream().subscribe({
       next: (data) => { this.liveData = data; },
       error: (err) => { console.error('SSE-Fehler:', err); }
+    });
+  }
+
+  private startTasmotaStream(): void {
+    this.tasmotaSubscription = this.tasmotaLiveService.getLiveStream().subscribe({
+      next: (reading) => { this.tasmotaReading = reading; },
+      error: (err) => { console.error('Tasmota SSE-Fehler:', err); }
     });
   }
 
