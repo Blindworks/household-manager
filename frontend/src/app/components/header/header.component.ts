@@ -19,6 +19,7 @@ export class HeaderComponent {
     { path: '/', label: 'Home', exact: true },
     { path: '/meter-readings', label: 'Zaehlerstaende' },
     { path: '/consumption', label: 'Verbrauch' },
+    { path: '/energy', label: 'Energie' },
     { path: '/air-quality', label: 'Luftqualitaet' },
     { path: '/devices', label: 'Geraete' },
     { path: '/admin', label: 'Admin' }

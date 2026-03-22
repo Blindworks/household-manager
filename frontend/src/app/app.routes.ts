@@ -26,6 +26,11 @@ export const routes: Routes = [
     title: 'Verbrauch - Household Manager'
   },
   {
+    path: 'energy',
+    loadComponent: () => import('./pages/energy/energy.component').then(m => m.EnergyComponent),
+    title: 'Energie - Household Manager'
+  },
+  {
     path: 'air-quality',
     loadComponent: () => import('./pages/airrohr-charts/airrohr-charts.component').then(m => m.AirrohrChartsComponent),
     title: 'Luftqualitaet - Household Manager'
