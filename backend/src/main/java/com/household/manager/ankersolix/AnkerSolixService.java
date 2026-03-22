@@ -129,7 +129,6 @@ public class AnkerSolixService {
             payload.put("site_id", getSiteId());
 
             JsonNode data = client.request(AnkerApiEndpoints.GET_SCENE_INFO, payload).path("data");
-            log.info("GET_SCENE_INFO data: {}", data);
 
             JsonNode sbInfo   = data.path("solarbank_info");
             JsonNode gridInfo = data.path("grid_info");
@@ -285,7 +284,7 @@ public class AnkerSolixService {
     public void setOutputPower(int watts) {
         try {
             solarbankController.setOutputPower(getSiteId(), watts);
-            log.info("Output power set to {} W", watts);
+            log.debug("Output power set to {} W", watts);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {

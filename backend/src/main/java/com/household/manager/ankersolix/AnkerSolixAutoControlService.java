@@ -46,7 +46,7 @@ public class AnkerSolixAutoControlService {
             int targetOutputW = (int) Math.round(tasmotaPowerW - pvPowerW);
             int clampedOutputW = clamp(targetOutputW, minLoad, maxLoad);
 
-            log.info(
+            log.debug(
                     "Auto-control: tasmota={}W  pv={}W  battery={}%  "
                     + "target={}W  clamped={}W  (min={}, max={})",
                     (int) tasmotaPowerW, (int) pvPowerW, batteryPct,
