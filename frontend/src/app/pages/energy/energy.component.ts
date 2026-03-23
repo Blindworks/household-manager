@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
@@ -14,10 +14,6 @@ import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
-/**
- * Energy page component for Anker Solix solar station monitoring.
- * Displays live power data, battery state, device output control and daily energy history.
- */
 @Component({
   selector: 'app-energy',
   standalone: true,
@@ -35,6 +31,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
   deviceParams: AnkerSolixDeviceParams | null = null;
   energyData: AnkerSolixEnergyDay | null = null;
   chartOptions: Record<string, unknown> | null = null;
+  weeklyChartOptions: Record<string, unknown> | null = null;
 
   outputWatts = 0;
   selectedDate = new Date().toISOString().substring(0, 10);
@@ -52,6 +49,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
     this.startTasmotaStream();
     this.loadDeviceParams();
     this.loadEnergy();
+    this.loadWeekData();
   }
 
   ngOnDestroy(): void {
@@ -68,6 +66,25 @@ export class EnergyComponent implements OnInit, OnDestroy {
         this.updateChart(data);
       },
       error: (err) => console.error('Fehler beim Laden der Energiedaten:', err)
+    });
+  }
+
+  loadWeekData(): void {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysFromMonday = (dayOfWeek + 6) % 7;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - daysFromMonday);
+
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d.toISOString().substring(0, 10);
+    });
+
+    forkJoin(dates.map(d => this.ankerSolixService.getEnergyDay(d))).subscribe({
+      next: (results) => this.updateWeeklyChart(results, dates),
+      error: (err) => console.error('Fehler beim Laden der Wochendaten:', err)
     });
   }
 
@@ -140,6 +157,44 @@ export class EnergyComponent implements OnInit, OnDestroy {
       },
       error: (err) => console.error('Fehler beim Laden der Geräteparameter:', err)
     });
+  }
+
+  private updateWeeklyChart(data: AnkerSolixEnergyDay[], dates: string[]): void {
+    const dayLabels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    const todayStr = new Date().toISOString().substring(0, 10);
+
+    this.weeklyChartOptions = {
+      grid: { left: 64, right: 16, top: 24, bottom: 36, containLabel: false },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: { name: string; value: number }) => `${params.name}: ${params.value} kWh`
+      },
+      xAxis: {
+        type: 'category',
+        data: dayLabels,
+        axisLine: { lineStyle: { color: 'rgba(51,65,85,0.4)' } },
+        axisLabel: { color: '#94a3b8', fontSize: 12 }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } },
+        axisLabel: { color: '#94a3b8', fontSize: 11, formatter: (v: number) => `${v}` }
+      },
+      series: [{
+        name: 'PV kWh',
+        type: 'bar',
+        data: data.map((d, i) => ({
+          value: d.pvEnergyKwh,
+          itemStyle: {
+            color: dates[i] === todayStr ? '#0d631b' : '#10b981',
+            borderRadius: [4, 4, 0, 0]
+          }
+        })),
+        barMaxWidth: 48
+      }]
+    };
   }
 
   private updateChart(data: AnkerSolixEnergyDay): void {
