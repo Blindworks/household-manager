@@ -14,9 +14,6 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
-import com.household.manager.tapo.model.TapoDevice;
-import com.household.manager.tapo.service.TapoDeviceService;
-import com.household.manager.tapo.service.TapoDiscoveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,8 +35,6 @@ public class SmartDeviceService {
     private final SmartDeviceRepository smartDeviceRepository;
     private final KasaService kasaService;
     private final KasaDiscoveryService kasaDiscoveryService;
-    private final TapoDeviceService tapoDeviceService;
-    private final TapoDiscoveryService tapoDiscoveryService;
     private final MerossDeviceService merossDeviceService;
     private final ObjectMapper objectMapper;
 
@@ -86,7 +81,8 @@ public class SmartDeviceService {
 
         List<SmartDevice> persistedDevices = switch (deviceType) {
             case KASA -> scanKasaDevices();
-            case TAPO -> scanTapoDevices();
+            //FIXME
+            case TAPO -> null; /*scanTapoDevices()*/
             case MEROSS -> scanMerossDevices();
         };
 
@@ -154,7 +150,7 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> refreshKasaDeviceState(device);
-                case TAPO -> refreshTapoDeviceState(device);
+                //case TAPO -> refreshTapoDeviceState(device);
                 case MEROSS -> refreshMerossDeviceState(device);
             }
 
@@ -183,7 +179,7 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOn(device.getExternalDeviceId());
-                case TAPO -> tapoDeviceService.turnOn(device.getExternalDeviceId());
+                //case TAPO -> tapoDeviceService.turnOn(device.getExternalDeviceId());
                 case MEROSS -> merossDeviceService.turnOn(device.getExternalDeviceId());
             }
 
@@ -212,7 +208,7 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOff(device.getExternalDeviceId());
-                case TAPO -> tapoDeviceService.turnOff(device.getExternalDeviceId());
+                //case TAPO -> tapoDeviceService.turnOff(device.getExternalDeviceId());
                 case MEROSS -> merossDeviceService.turnOff(device.getExternalDeviceId());
             }
 
@@ -277,78 +273,6 @@ public class SmartDeviceService {
             log.warn("Kasa device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
             device.setOnline(false);
         }
-    }
-
-    // ==================== Tapo Device Methods ====================
-
-    private List<SmartDevice> scanTapoDevices() {
-        List<TapoDevice> discovered = tapoDiscoveryService.discoverDevices();
-        log.info("Discovered {} Tapo devices", discovered.size());
-
-        return discovered.stream()
-                .map(this::upsertTapoDevice)
-                .collect(Collectors.toList());
-    }
-
-    private SmartDevice upsertTapoDevice(TapoDevice dto) {
-        String externalId = dto.getDeviceId();
-        Optional<SmartDevice> existing = smartDeviceRepository
-                .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, externalId);
-
-        SmartDevice device;
-        if (existing.isPresent()) {
-            device = existing.get();
-            log.debug("Updating existing Tapo device: {}", dto.getDeviceName());
-        } else {
-            device = new SmartDevice();
-            device.setDeviceType(DeviceType.TAPO);
-            device.setExternalDeviceId(externalId);
-            log.debug("Creating new Tapo device: {}", dto.getDeviceName());
-        }
-
-        device.setDeviceName(dto.getDeviceName() != null ? dto.getDeviceName() : "Tapo Device");
-        device.setModel(dto.getModel());
-        device.setIpAddress(dto.getIp());
-        device.setOnline(dto.isOnline());
-
-        // Determine capabilities based on device type
-        String capabilities = determineTapoCapabilities(dto.getDeviceType());
-        device.setCapabilities(capabilities);
-
-        // Store additional metadata
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("deviceType", dto.getDeviceType());
-        metadata.put("fwVer", dto.getFwVer());
-        device.setMetadata(serializeMetadata(metadata));
-
-        return smartDeviceRepository.save(device);
-    }
-
-    private void refreshTapoDeviceState(SmartDevice device) {
-        try {
-            var info = tapoDeviceService.getDeviceInfo(device.getExternalDeviceId());
-            device.setOnline(true);
-            device.setPoweredOn(info.getDeviceOn() != null ? info.getDeviceOn() : false);
-            if (info.getNickname() != null) {
-                device.setDeviceName(info.getNickname());
-            }
-        } catch (Exception ex) {
-            log.warn("Tapo device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
-            device.setOnline(false);
-        }
-    }
-
-    private String determineTapoCapabilities(String deviceType) {
-        if (deviceType == null) {
-            return "SWITCH";
-        }
-        // Add capabilities based on device type
-        // This can be extended based on actual Tapo device types
-        return switch (deviceType.toUpperCase()) {
-            case "SMART.TAPOPLUG", "SMART.PLUG" -> "SWITCH,ENERGY_MONITOR";
-            case "SMART.TAPOBULB", "SMART.BULB" -> "SWITCH,DIMMER,COLOR";
-            default -> "SWITCH";
-        };
     }
 
     // ==================== Meross Device Methods ====================
