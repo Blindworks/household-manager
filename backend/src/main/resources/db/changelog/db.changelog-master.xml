@@ -27,4 +27,7 @@
     <!-- Missed Friday Detection Feature -->
     <include file="db/changelog/changes/20260227-0010-add-is-estimated-to-meter-readings.xml"/>
 
+    <!-- Shelly Balcony Power Plant Feature -->
+    <include file="db/changelog/changes/20260323-0011-add-shelly-readings-table.xml"/>
+
 </databaseChangeLog>

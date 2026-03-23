@@ -11,6 +11,8 @@ import { AnkerSolixService } from '../../services/ankersolix.service';
 import { AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
+import { ShellyService } from '../../services/shelly.service';
+import { ShellyStatus } from '../../models/shelly.model';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -25,6 +27,7 @@ echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasR
 export class EnergyComponent implements OnInit, OnDestroy {
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly tasmotaLiveService = inject(TasmotaLiveService);
+  private readonly shellyService = inject(ShellyService);
 
   liveData: AnkerSolixLive | null = null;
   tasmotaReading: TasmotaLiveReading | null = null;
@@ -32,6 +35,8 @@ export class EnergyComponent implements OnInit, OnDestroy {
   energyData: AnkerSolixEnergyDay | null = null;
   chartOptions: Record<string, unknown> | null = null;
   weeklyChartOptions: Record<string, unknown> | null = null;
+
+  shellyDevices: ShellyStatus[] = [];
 
   outputWatts = 0;
   selectedDate = new Date().toISOString().substring(0, 10);
@@ -43,6 +48,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
 
   private liveSubscription: Subscription | null = null;
   private tasmotaSubscription: Subscription | null = null;
+  private shellyRefreshInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
     this.startLiveStream();
@@ -50,6 +56,8 @@ export class EnergyComponent implements OnInit, OnDestroy {
     this.loadDeviceParams();
     this.loadEnergy();
     this.loadWeekData();
+    this.loadShellyStatus();
+    this.shellyRefreshInterval = setInterval(() => this.loadShellyStatus(), 30000);
   }
 
   ngOnDestroy(): void {
@@ -57,6 +65,9 @@ export class EnergyComponent implements OnInit, OnDestroy {
     this.tasmotaSubscription?.unsubscribe();
     this.ankerSolixService.disconnectLive();
     this.tasmotaLiveService.disconnect();
+    if (this.shellyRefreshInterval !== null) {
+      clearInterval(this.shellyRefreshInterval);
+    }
   }
 
   loadEnergy(): void {
@@ -117,6 +128,30 @@ export class EnergyComponent implements OnInit, OnDestroy {
 
   get gridIsImporting(): boolean {
     return (this.tasmotaReading?.momentaneWirkleistung ?? 0) >= 0;
+  }
+
+  get shellyTotalPower(): number {
+    return this.shellyDevices
+      .filter(d => d.reachable)
+      .reduce((sum, d) => sum + (d.power ?? 0), 0);
+  }
+
+  loadShellyStatus(): void {
+    this.shellyService.getAllDevicesStatus().subscribe({
+      next: (devices) => { this.shellyDevices = devices; },
+      error: (err) => console.error('Fehler beim Laden der Shelly-Daten:', err)
+    });
+  }
+
+  toggleShelly(device: ShellyStatus): void {
+    const action = device.output
+      ? this.shellyService.turnOff(device.deviceName)
+      : this.shellyService.turnOn(device.deviceName);
+
+    action.subscribe({
+      next: () => this.loadShellyStatus(),
+      error: (err) => console.error('Fehler beim Schalten von', device.deviceName, err)
+    });
   }
 
   get hausverbrauchW(): number | null {

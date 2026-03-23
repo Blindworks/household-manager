@@ -733,3 +733,187 @@
     &__btn { width: 100%; justify-content: center; }
   }
 }
+
+// Balkonkraftwerke (Shelly)
+.shelly-section {
+  margin-bottom: var(--spacing-xl);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-xl);
+    color: var(--color-dark);
+    margin: 0;
+
+    .material-symbols-outlined {
+      font-size: 1.4rem;
+      color: #b45309;
+    }
+  }
+
+  &__total {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+
+    strong {
+      color: #b45309;
+      font-size: var(--font-size-base);
+    }
+  }
+
+  &__loading {
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+    font-style: italic;
+    margin: 0;
+  }
+}
+
+.shelly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.shelly-card {
+  background: var(--color-white);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-left: 4px solid #f59e0b;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-lg);
+  background: linear-gradient(135deg, rgba(245,158,11,0.05) 0%, var(--color-white) 100%);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+  }
+
+  &--offline {
+    border-left-color: #9ca3af;
+    background: linear-gradient(135deg, rgba(156,163,175,0.05) 0%, var(--color-white) 100%);
+    opacity: 0.75;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__name {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--color-dark);
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+  }
+
+  &__toggle {
+    padding: 4px 16px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+
+    &--on {
+      background: rgba(16, 185, 129, 0.15);
+      color: #047857;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+
+      &:hover { background: rgba(16, 185, 129, 0.25); }
+    }
+
+    &--off {
+      background: rgba(156, 163, 175, 0.15);
+      color: #6b7280;
+      border: 1px solid rgba(156, 163, 175, 0.3);
+
+      &:hover { background: rgba(156, 163, 175, 0.25); }
+    }
+  }
+
+  &__offline-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  &__metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-sm);
+  }
+
+  &__metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+
+    &--power {
+      .shelly-card__metric-value { color: #b45309; font-size: 1.3rem; }
+      .shelly-card__metric-unit { color: #b45309; }
+    }
+  }
+
+  &__metric-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--color-dark);
+    line-height: 1.1;
+  }
+
+  &__metric-unit {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-gray);
+  }
+
+  &__metric-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-gray);
+  }
+
+  &__offline-msg {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+    font-style: italic;
+    margin: 0;
+    text-align: center;
+    padding: var(--spacing-sm) 0;
+  }
+
+  @media (max-width: 400px) {
+    &__metrics {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}

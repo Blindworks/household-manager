@@ -86,6 +86,77 @@
 
     </section>
 
+    <!-- Balkonkraftwerke (Shelly Plus 1PM) -->
+    <section class="shelly-section">
+      <div class="shelly-section__header">
+        <div>
+          <h2 class="shelly-section__title">
+            <span class="material-symbols-outlined">solar_power</span>
+            Balkonkraftwerke
+          </h2>
+        </div>
+        <span class="shelly-section__total">
+          Gesamt: <strong>{{ shellyTotalPower | number:'1.0-0' }} W</strong>
+        </span>
+      </div>
+
+      <div class="shelly-grid">
+        @for (device of shellyDevices; track device.deviceName) {
+          <div class="shelly-card" [class.shelly-card--offline]="!device.reachable">
+
+            <div class="shelly-card__header">
+              <span class="shelly-card__name">{{ device.deviceName }}</span>
+              <div class="shelly-card__controls">
+                @if (device.reachable) {
+                  <button class="shelly-card__toggle"
+                          [class.shelly-card__toggle--on]="device.output"
+                          [class.shelly-card__toggle--off]="!device.output"
+                          (click)="toggleShelly(device)"
+                          [attr.aria-label]="device.output ? 'Ausschalten' : 'Einschalten'">
+                    {{ device.output ? 'An' : 'Aus' }}
+                  </button>
+                } @else {
+                  <span class="shelly-card__offline-badge">Offline</span>
+                }
+              </div>
+            </div>
+
+            @if (device.reachable) {
+              <div class="shelly-card__metrics">
+                <div class="shelly-card__metric shelly-card__metric--power">
+                  <span class="shelly-card__metric-value">{{ device.power | number:'1.0-1' }}</span>
+                  <span class="shelly-card__metric-unit">W</span>
+                  <span class="shelly-card__metric-label">Leistung</span>
+                </div>
+                <div class="shelly-card__metric">
+                  <span class="shelly-card__metric-value">{{ device.voltage | number:'1.0-1' }}</span>
+                  <span class="shelly-card__metric-unit">V</span>
+                  <span class="shelly-card__metric-label">Spannung</span>
+                </div>
+                <div class="shelly-card__metric">
+                  <span class="shelly-card__metric-value">{{ device.current | number:'1.2-2' }}</span>
+                  <span class="shelly-card__metric-unit">A</span>
+                  <span class="shelly-card__metric-label">Strom</span>
+                </div>
+                <div class="shelly-card__metric">
+                  <span class="shelly-card__metric-value">{{ (device.totalEnergy ?? 0) / 1000 | number:'1.2-2' }}</span>
+                  <span class="shelly-card__metric-unit">kWh</span>
+                  <span class="shelly-card__metric-label">Gesamt</span>
+                </div>
+              </div>
+            } @else {
+              <p class="shelly-card__offline-msg">Gerät nicht erreichbar</p>
+            }
+
+          </div>
+        }
+
+        @if (shellyDevices.length === 0) {
+          <p class="shelly-section__loading">Shelly-Geräte werden geladen...</p>
+        }
+      </div>
+    </section>
+
     <!-- Energie-Fluss-Diagramm -->
     <section class="flow-section">
       <div class="flow-section__card">

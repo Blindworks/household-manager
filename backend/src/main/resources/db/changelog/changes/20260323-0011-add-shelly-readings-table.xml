@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260323-0011" author="household-manager">
+        <comment>Create shelly_readings table for Shelly Plus 1PM balcony power plant data</comment>
+
+        <createTable tableName="shelly_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="power" type="DOUBLE PRECISION"/>
+            <column name="voltage" type="DOUBLE PRECISION"/>
+            <column name="current_a" type="DOUBLE PRECISION"/>
+            <column name="total_energy" type="DOUBLE PRECISION"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_shelly_readings_device_timestamp" tableName="shelly_readings">
+            <column name="device_name"/>
+            <column name="timestamp"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="shelly_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
