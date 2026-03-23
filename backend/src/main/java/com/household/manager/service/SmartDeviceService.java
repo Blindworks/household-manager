@@ -14,6 +14,9 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.tapo.TapoCloudDevice;
+import com.household.manager.tapo.TapoDeviceService;
+import com.household.manager.tapo.TapoDeviceState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ public class SmartDeviceService {
     private final KasaService kasaService;
     private final KasaDiscoveryService kasaDiscoveryService;
     private final MerossDeviceService merossDeviceService;
+    private final TapoDeviceService tapoDeviceService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -81,8 +85,7 @@ public class SmartDeviceService {
 
         List<SmartDevice> persistedDevices = switch (deviceType) {
             case KASA -> scanKasaDevices();
-            //FIXME
-            case TAPO -> null; /*scanTapoDevices()*/
+            case TAPO -> scanTapoDevices();
             case MEROSS -> scanMerossDevices();
         };
 
@@ -150,13 +153,15 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> refreshKasaDeviceState(device);
-                //case TAPO -> refreshTapoDeviceState(device);
+                case TAPO -> refreshTapoDeviceState(device);
                 case MEROSS -> refreshMerossDeviceState(device);
             }
 
             SmartDevice updated = smartDeviceRepository.save(device);
             log.info("Successfully refreshed device state for: {}", device.getDeviceName());
             return toResponse(updated);
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Failed to refresh device state for ID {}: {}", id, ex.getMessage());
             throw new RuntimeException("Failed to refresh device state: " + ex.getMessage(), ex);
@@ -179,13 +184,15 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOn(device.getExternalDeviceId());
-                //case TAPO -> tapoDeviceService.turnOn(device.getExternalDeviceId());
+                case TAPO -> tapoDeviceService.turnOn(device.getExternalDeviceId());
                 case MEROSS -> merossDeviceService.turnOn(device.getExternalDeviceId());
             }
 
             device.setPoweredOn(true);
             smartDeviceRepository.save(device);
             log.info("Successfully turned on device: {}", device.getDeviceName());
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Failed to turn on device ID {}: {}", id, ex.getMessage());
             throw new RuntimeException("Failed to turn on device: " + ex.getMessage(), ex);
@@ -208,13 +215,15 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOff(device.getExternalDeviceId());
-                //case TAPO -> tapoDeviceService.turnOff(device.getExternalDeviceId());
+                case TAPO -> tapoDeviceService.turnOff(device.getExternalDeviceId());
                 case MEROSS -> merossDeviceService.turnOff(device.getExternalDeviceId());
             }
 
             device.setPoweredOn(false);
             smartDeviceRepository.save(device);
             log.info("Successfully turned off device: {}", device.getDeviceName());
+        } catch (RuntimeException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Failed to turn off device ID {}: {}", id, ex.getMessage());
             throw new RuntimeException("Failed to turn off device: " + ex.getMessage(), ex);
@@ -271,6 +280,80 @@ public class SmartDeviceService {
             device.setDeviceName(status.alias() != null ? status.alias() : device.getDeviceName());
         } catch (Exception ex) {
             log.warn("Kasa device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
+            device.setOnline(false);
+        }
+    }
+
+    // ==================== Tapo Device Methods ====================
+
+    private List<SmartDevice> scanTapoDevices() {
+        List<TapoCloudDevice> discovered = tapoDeviceService.discoverDevices();
+        log.info("Discovered {} Tapo devices", discovered.size());
+
+        return discovered.stream()
+                .map(this::upsertTapoDevice)
+                .collect(Collectors.toList());
+    }
+
+    private SmartDevice upsertTapoDevice(TapoCloudDevice dto) {
+        String externalId = dto.deviceId();
+        Optional<SmartDevice> existing = smartDeviceRepository
+                .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, externalId);
+
+        SmartDevice device;
+        if (existing.isPresent()) {
+            device = existing.get();
+            log.debug("Updating existing Tapo device: {}", dto.deviceId());
+        } else {
+            device = new SmartDevice();
+            device.setDeviceType(DeviceType.TAPO);
+            device.setExternalDeviceId(externalId);
+            log.debug("Creating new Tapo device: {}", dto.deviceId());
+        }
+
+        String decodedAlias = tapoDeviceService.decodeAlias(dto.alias());
+        device.setDeviceName(
+                Optional.ofNullable(decodedAlias)
+                        .filter(name -> !name.isBlank())
+                        .orElseGet(() -> Optional.ofNullable(dto.deviceName()).filter(name -> !name.isBlank()).orElse("Tapo Device"))
+        );
+        device.setModel(dto.model());
+        device.setIpAddress(null);
+        device.setOnline(!"0".equals(dto.status()));
+        device.setPoweredOn(false);
+        device.setCapabilities("SWITCH");
+        device.setMetadata(serializeMetadata(tapoDeviceService.buildMetadata(dto)));
+
+        try {
+            TapoDeviceState state = tapoDeviceService.getStatus(externalId);
+            device.setOnline(state.online());
+            device.setPoweredOn(state.poweredOn());
+            if (state.nickname() != null && !state.nickname().isBlank()) {
+                device.setDeviceName(state.nickname());
+            }
+            if (state.model() != null && !state.model().isBlank()) {
+                device.setModel(state.model());
+            }
+        } catch (Exception ex) {
+            log.debug("Skipping live Tapo state during scan for {}: {}", externalId, ex.getMessage());
+        }
+
+        return smartDeviceRepository.save(device);
+    }
+
+    private void refreshTapoDeviceState(SmartDevice device) {
+        try {
+            TapoDeviceState status = tapoDeviceService.getStatus(device.getExternalDeviceId());
+            device.setOnline(status.online());
+            device.setPoweredOn(status.poweredOn());
+            if (status.nickname() != null && !status.nickname().isBlank()) {
+                device.setDeviceName(status.nickname());
+            }
+            if (status.model() != null && !status.model().isBlank()) {
+                device.setModel(status.model());
+            }
+        } catch (Exception ex) {
+            log.warn("Tapo device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
             device.setOnline(false);
         }
     }
