@@ -3,6 +3,8 @@ package com.household.manager.exception;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.exception.MerossAuthException;
 import com.household.manager.meross.exception.MerossException;
+import com.household.manager.shelly.ShellyException;
+import com.household.manager.tapo.TapoException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -169,6 +171,38 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Meross communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    @ExceptionHandler(ShellyException.class)
+    public ResponseEntity<ErrorResponse> handleShellyException(
+            ShellyException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Shelly communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    @ExceptionHandler(TapoException.class)
+    public ResponseEntity<ErrorResponse> handleTapoException(
+            TapoException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Tapo communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 
