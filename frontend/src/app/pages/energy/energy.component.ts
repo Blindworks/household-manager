@@ -12,6 +12,7 @@ import { AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 import { ShellyService } from '../../services/shelly.service';
+import { ShellyLiveService } from '../../services/shelly-live.service';
 import { ShellyStatus } from '../../models/shelly.model';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -28,6 +29,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly tasmotaLiveService = inject(TasmotaLiveService);
   private readonly shellyService = inject(ShellyService);
+  private readonly shellyLiveService = inject(ShellyLiveService);
 
   liveData: AnkerSolixLive | null = null;
   tasmotaReading: TasmotaLiveReading | null = null;
@@ -48,26 +50,24 @@ export class EnergyComponent implements OnInit, OnDestroy {
 
   private liveSubscription: Subscription | null = null;
   private tasmotaSubscription: Subscription | null = null;
-  private shellyRefreshInterval: ReturnType<typeof setInterval> | null = null;
+  private shellySubscription: Subscription | null = null;
 
   ngOnInit(): void {
     this.startLiveStream();
     this.startTasmotaStream();
+    this.startShellyStream();
     this.loadDeviceParams();
     this.loadEnergy();
     this.loadWeekData();
-    this.loadShellyStatus();
-    this.shellyRefreshInterval = setInterval(() => this.loadShellyStatus(), 30000);
   }
 
   ngOnDestroy(): void {
     this.liveSubscription?.unsubscribe();
     this.tasmotaSubscription?.unsubscribe();
+    this.shellySubscription?.unsubscribe();
     this.ankerSolixService.disconnectLive();
     this.tasmotaLiveService.disconnect();
-    if (this.shellyRefreshInterval !== null) {
-      clearInterval(this.shellyRefreshInterval);
-    }
+    this.shellyLiveService.disconnect();
   }
 
   loadEnergy(): void {
@@ -136,11 +136,17 @@ export class EnergyComponent implements OnInit, OnDestroy {
       .reduce((sum, d) => sum + (d.power ?? 0), 0);
   }
 
-  loadShellyStatus(): void {
-    this.shellyService.getAllDevicesStatus().subscribe({
-      next: (devices) => { this.shellyDevices = devices; },
-      error: (err) => console.error('Fehler beim Laden der Shelly-Daten:', err)
-    });
+  get bkwAltPower(): number {
+    return this.shellyDevices.find(d => d.deviceName === 'Balkonkraftwerk-Alt')?.power ?? 0;
+  }
+
+  get bkwNeuPower(): number {
+    return this.shellyDevices.find(d => d.deviceName === 'Balkonkraftwerk-Neu')?.power ?? 0;
+  }
+
+  get batteryToHousePower(): number {
+    const batteryPower = this.liveData?.batteryPowerW ?? 0;
+    return batteryPower < 0 ? Math.abs(batteryPower) : 0;
   }
 
   toggleShelly(device: ShellyStatus): void {
@@ -149,16 +155,15 @@ export class EnergyComponent implements OnInit, OnDestroy {
       : this.shellyService.turnOn(device.deviceName);
 
     action.subscribe({
-      next: () => this.loadShellyStatus(),
       error: (err) => console.error('Fehler beim Schalten von', device.deviceName, err)
     });
   }
 
   get hausverbrauchW(): number | null {
-    if (this.liveData === null || this.tasmotaReading === null) {
+    if (this.tasmotaReading === null || this.shellyDevices.length === 0) {
       return null;
     }
-    return this.liveData.pvPowerW - this.liveData.batteryPowerW + this.tasmotaReading.momentaneWirkleistung;
+    return this.bkwAltPower + this.bkwNeuPower + this.tasmotaReading.momentaneWirkleistung;
   }
 
   formatConnectionStatus(status: string): string {
@@ -181,6 +186,13 @@ export class EnergyComponent implements OnInit, OnDestroy {
     this.tasmotaSubscription = this.tasmotaLiveService.getLiveStream().subscribe({
       next: (reading) => { this.tasmotaReading = reading; },
       error: (err) => { console.error('Tasmota SSE-Fehler:', err); }
+    });
+  }
+
+  private startShellyStream(): void {
+    this.shellySubscription = this.shellyLiveService.getLiveStream().subscribe({
+      next: (devices) => { this.shellyDevices = devices; },
+      error: (err) => { console.error('Shelly SSE-Fehler:', err); }
     });
   }
 

@@ -163,20 +163,28 @@
 
         <div class="flow-diagram">
 
-          <!-- PV (grid-area: pv) -->
-          <div class="flow-node flow-node--solar">
+          <div class="flow-node flow-node--solar flow-node--solar-alt">
             <div class="flow-node__circle">
               <span class="material-symbols-outlined">solar_power</span>
             </div>
-            <span class="flow-node__name">Balkonkraftwerk</span>
-            <span class="flow-node__watts">{{ (liveData?.pvPowerW ?? 0) | number:'1.0-0' }} W</span>
+            <span class="flow-node__name">Balkonkraftwerk-Alt</span>
+            <span class="flow-node__watts">{{ bkwAltPower | number:'1.0-0' }} W</span>
           </div>
 
-          <!-- Vertikaler Connector PV → Batterie (grid-area: conn) -->
-          <div class="flow-connector flow-connector--vertical"
-               [class.flow-connector--pv-active]="batteryIsCharging && (liveData?.pvPowerW ?? 0) > 0"></div>
+          <div class="flow-node flow-node--solar flow-node--solar-direct">
+            <div class="flow-node__circle">
+              <span class="material-symbols-outlined">solar_power</span>
+            </div>
+            <span class="flow-node__name">Balkonkraftwerk-Neu</span>
+            <span class="flow-node__watts">{{ bkwNeuPower | number:'1.0-0' }} W</span>
+          </div>
 
-          <!-- Batterie (grid-area: bat) -->
+          <div class="flow-connector flow-connector--vertical"
+               [class.flow-connector--pv-active]="batteryIsCharging && bkwAltPower > 0"></div>
+
+          <div class="flow-connector flow-connector--vertical"
+               [class.flow-connector--solar-direct]="bkwNeuPower > 0"></div>
+
           <div class="flow-node flow-node--battery">
             <div class="flow-node__circle">
               <span class="material-symbols-outlined">
@@ -187,24 +195,20 @@
             <span class="flow-node__watts">{{ (liveData?.batteryPercent ?? 0) }}% / {{ (liveData?.batteryPowerW ?? 0) | number:'1.0-0' }} W</span>
           </div>
 
-          <!-- Connector Batterie → Haus (grid-area: cbh) -->
           <div class="flow-connector flow-connector--horizontal"
                [class.flow-connector--charging]="batteryIsCharging"
                [class.flow-connector--discharging]="!batteryIsCharging && !batteryIsIdle"></div>
 
-          <!-- Hausverbrauch (grid-area: haus) -->
           <div class="flow-node flow-node--house">
             <span class="material-symbols-outlined flow-node__house-icon">home</span>
             <span class="flow-node__house-watts">{{ (hausverbrauchW ?? 0) | number:'1.0-0' }} W</span>
             <span class="flow-node__house-label">Hausverbrauch</span>
           </div>
 
-          <!-- Connector Haus → Netz (grid-area: chg) -->
           <div class="flow-connector flow-connector--horizontal"
                [class.flow-connector--import]="gridIsImporting"
                [class.flow-connector--export]="!gridIsImporting"></div>
 
-          <!-- Stromnetz (grid-area: grid) -->
           <div class="flow-node flow-node--grid">
             <div class="flow-node__circle">
               <span class="material-symbols-outlined">cell_tower</span>

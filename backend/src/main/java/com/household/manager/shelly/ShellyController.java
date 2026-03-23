@@ -5,8 +5,11 @@ import com.household.manager.repository.ShellyReadingRepository;
 import com.household.manager.shelly.dto.ShellyReadingResponse;
 import com.household.manager.shelly.dto.ShellyStatusDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,11 +20,19 @@ import java.util.List;
 public class ShellyController {
 
     private final ShellyService shellyService;
+    private final ShellyLiveService shellyLiveService;
     private final ShellyReadingRepository shellyReadingRepository;
+
+    @GetMapping(value = "/live", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamLive() {
+        return shellyLiveService.subscribe();
+    }
 
     @GetMapping
     public ResponseEntity<List<ShellyStatusDto>> getAllDevicesStatus() {
-        return ResponseEntity.ok(shellyService.getAllDevicesStatus());
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(shellyService.getAllDevicesStatus());
     }
 
     @GetMapping("/{deviceName}/readings")

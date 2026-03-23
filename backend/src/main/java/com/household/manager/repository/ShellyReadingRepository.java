@@ -14,4 +14,8 @@ public interface ShellyReadingRepository extends JpaRepository<ShellyReading, Lo
 
     List<ShellyReading> findByDeviceNameAndTimestampBetweenOrderByTimestampAsc(
             String deviceName, LocalDateTime from, LocalDateTime to);
+
+    List<ShellyReading> findByTimestampBefore(LocalDateTime cutoff);
+
+    void deleteAllByIdIn(List<Long> ids);
 }
