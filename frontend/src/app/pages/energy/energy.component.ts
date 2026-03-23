@@ -144,11 +144,6 @@ export class EnergyComponent implements OnInit, OnDestroy {
     return this.shellyDevices.find(d => d.deviceName === 'Balkonkraftwerk-Neu')?.power ?? 0;
   }
 
-  get batteryToHousePower(): number {
-    const batteryPower = this.liveData?.batteryPowerW ?? 0;
-    return batteryPower < 0 ? Math.abs(batteryPower) : 0;
-  }
-
   toggleShelly(device: ShellyStatus): void {
     const action = device.output
       ? this.shellyService.turnOff(device.deviceName)

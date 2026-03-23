@@ -167,23 +167,23 @@
             <div class="flow-node__circle">
               <span class="material-symbols-outlined">solar_power</span>
             </div>
-            <span class="flow-node__name">Balkonkraftwerk-Alt</span>
-            <span class="flow-node__watts">{{ bkwAltPower | number:'1.0-0' }} W</span>
+            <span class="flow-node__name">Balkonkraftwerk-Neu</span>
+            <span class="flow-node__watts">{{ bkwNeuPower | number:'1.0-0' }} W</span>
           </div>
 
           <div class="flow-node flow-node--solar flow-node--solar-direct">
             <div class="flow-node__circle">
               <span class="material-symbols-outlined">solar_power</span>
             </div>
-            <span class="flow-node__name">Balkonkraftwerk-Neu</span>
-            <span class="flow-node__watts">{{ bkwNeuPower | number:'1.0-0' }} W</span>
+            <span class="flow-node__name">Balkonkraftwerk-Alt</span>
+            <span class="flow-node__watts">{{ bkwAltPower | number:'1.0-0' }} W</span>
           </div>
 
           <div class="flow-connector flow-connector--vertical"
-               [class.flow-connector--pv-active]="batteryIsCharging && bkwAltPower > 0"></div>
+               [class.flow-connector--pv-active]="batteryIsCharging && bkwNeuPower > 0"></div>
 
           <div class="flow-connector flow-connector--vertical"
-               [class.flow-connector--solar-direct]="bkwNeuPower > 0"></div>
+               [class.flow-connector--solar-direct]="bkwAltPower > 0"></div>
 
           <div class="flow-node flow-node--battery">
             <div class="flow-node__circle">

@@ -917,3 +917,123 @@
     }
   }
 }
+
+// Flow overview override: two balcony plants, one via battery and one direct to house
+.flow-diagram {
+  grid-template-areas:
+    "pvAlt .    pvDirect .    ."
+    "connA .    connB    .    ."
+    "bat   cbh  haus     chg  grid";
+  grid-template-columns: minmax(150px, 1fr) 96px minmax(170px, 1.15fr) 96px minmax(120px, 1fr);
+  grid-template-rows: auto 32px auto;
+  column-gap: var(--spacing-lg);
+
+  > *:nth-child(1) { grid-area: pvAlt; }
+  > *:nth-child(2) { grid-area: pvDirect; }
+  > *:nth-child(3) { grid-area: connA; }
+  > *:nth-child(4) { grid-area: connB; }
+  > *:nth-child(5) { grid-area: bat; }
+  > *:nth-child(6) { grid-area: cbh; }
+  > *:nth-child(7) { grid-area: haus; }
+  > *:nth-child(8) { grid-area: chg; }
+  > *:nth-child(9) { grid-area: grid; }
+}
+
+.flow-node--solar-direct {
+  .flow-node__circle {
+    background: rgba(249, 115, 22, 0.08);
+    border-color: #f97316;
+  }
+
+  .flow-node__watts {
+    color: #ea580c;
+  }
+}
+
+.flow-connector--vertical.flow-connector--solar-direct {
+  background: repeating-linear-gradient(
+    to bottom,
+    #3b82f6 0px, #3b82f6 6px,
+    transparent 6px, transparent 12px
+  );
+  animation: flowDown 0.8s linear infinite;
+}
+
+@media (max-width: 900px) {
+  .flow-diagram {
+    grid-template-areas:
+      "pvAlt pvDirect"
+      "connA connB"
+      "bat haus"
+      "cbh chg"
+      ". grid";
+    grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr);
+    grid-template-rows: auto 32px auto 32px auto;
+    row-gap: var(--spacing-sm);
+  }
+}
+
+@media (max-width: 600px) {
+  .flow-section__card {
+    padding: var(--spacing-lg) var(--spacing-sm);
+  }
+
+  .flow-diagram {
+    grid-template-areas:
+      "pvAlt"
+      "connA"
+      "bat"
+      "cbh"
+      "haus"
+      "pvDirect"
+      "connB"
+      "chg"
+      "grid";
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(9, auto);
+    row-gap: var(--spacing-sm);
+  }
+
+  .flow-node {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .flow-connector--horizontal {
+    width: 2px;
+    height: 32px;
+    background: repeating-linear-gradient(
+      to bottom,
+      #cbd5e1 0px, #cbd5e1 6px,
+      transparent 6px, transparent 12px
+    );
+  }
+
+  .flow-connector--horizontal.flow-connector--charging,
+  .flow-connector--horizontal.flow-connector--export {
+    background: repeating-linear-gradient(
+      to bottom,
+      #10b981 0px, #10b981 6px,
+      transparent 6px, transparent 12px
+    );
+    animation: flowDown 0.8s linear infinite;
+  }
+
+  .flow-connector--horizontal.flow-connector--discharging {
+    background: repeating-linear-gradient(
+      to bottom,
+      #3b82f6 0px, #3b82f6 6px,
+      transparent 6px, transparent 12px
+    );
+    animation: flowDown 0.8s linear infinite;
+  }
+
+  .flow-connector--horizontal.flow-connector--import {
+    background: repeating-linear-gradient(
+      to bottom,
+      #ef4444 0px, #ef4444 6px,
+      transparent 6px, transparent 12px
+    );
+    animation: flowDown 0.8s linear infinite;
+  }
+}
