@@ -227,25 +227,28 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     padding: var(--spacing-xl) var(--spacing-lg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
   }
 }
 
-.flow-top {
-  display: flex;
-  justify-content: center;
-}
-
-.flow-middle {
-  display: flex;
+.flow-diagram {
+  display: grid;
+  grid-template-areas:
+    "pv   .    .    .    ."
+    "conn .    .    .    ."
+    "bat  cbh  haus chg  grid";
+  grid-template-columns: minmax(110px, 1fr) 60px minmax(140px, 1fr) 60px minmax(110px, 1fr);
+  grid-template-rows: auto 32px auto;
   align-items: center;
-  justify-content: center;
-  gap: 0;
-  width: 100%;
-  max-width: 640px;
+  justify-items: center;
+
+  // Grid-Area-Zuweisung via nth-child (Reihenfolge im DOM)
+  > *:nth-child(1) { grid-area: pv;   } // PV-Knoten
+  > *:nth-child(2) { grid-area: conn; } // Vertikaler Connector
+  > *:nth-child(3) { grid-area: bat;  } // Batterie-Knoten
+  > *:nth-child(4) { grid-area: cbh;  } // Connector Bat→Haus
+  > *:nth-child(5) { grid-area: haus; } // Haus-Knoten
+  > *:nth-child(6) { grid-area: chg;  } // Connector Haus→Grid
+  > *:nth-child(7) { grid-area: grid; } // Grid-Knoten
 }
 
 // Knoten (gemeinsam)
@@ -347,31 +350,36 @@
 
 // Verbindungslinien
 .flow-connector {
-  flex-shrink: 0;
-
   &--vertical {
     width: 2px;
     height: 32px;
+    // Standard: grau (inaktiv)
     background: repeating-linear-gradient(
       to bottom,
-      #10b981 0px, #10b981 6px,
+      #cbd5e1 0px, #cbd5e1 6px,
       transparent 6px, transparent 12px
     );
 
-    &.flow-connector--solar {
+    // Aktiv: amber (PV lädt Akku)
+    &.flow-connector--pv-active {
       background: repeating-linear-gradient(
         to bottom,
         #f59e0b 0px, #f59e0b 6px,
         transparent 6px, transparent 12px
       );
-      animation: flowDown 1s linear infinite;
+      animation: flowDown 0.8s linear infinite;
     }
   }
 
   &--horizontal {
-    flex: 1;
-    max-width: 80px;
+    width: 100%;
     height: 2px;
+    // Standard: grau (idle)
+    background: repeating-linear-gradient(
+      to right,
+      #cbd5e1 0px, #cbd5e1 6px,
+      transparent 6px, transparent 12px
+    );
 
     // Batterie → Haus: grün (laden) oder blau (entladen)
     &.flow-connector--charging {
