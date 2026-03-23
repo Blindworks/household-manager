@@ -106,9 +106,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
     if (this.liveData === null || this.tasmotaReading === null) {
       return null;
     }
-    const batteryDischarge = Math.max(0, -(this.liveData.batteryPowerW));
-    const gridConsumption = Math.max(0, this.tasmotaReading.momentaneWirkleistung);
-    return batteryDischarge + gridConsumption;
+    return this.liveData.pvPowerW - this.liveData.batteryPowerW + this.tasmotaReading.momentaneWirkleistung;
   }
 
   formatConnectionStatus(status: string): string {
