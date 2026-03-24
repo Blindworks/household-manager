@@ -138,10 +138,13 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
             if (handshakeResponse.statusCode() == 403) {
                 throw new TapoException("Tapo AES verweigert den Zugriff (403). Pruefe 'Third-Party Compatibility' in der Tapo-App.");
             }
+            if (handshakeResponse.statusCode() < 200 || handshakeResponse.statusCode() >= 300) {
+                throw new TapoException("Tapo AES-Handshake fehlgeschlagen mit HTTP " + handshakeResponse.statusCode());
+            }
 
-            sessionCookie = TapoSessionCookie.extract(handshakeResponse.headers());
             JsonNode handshakeJson = objectMapper.readTree(handshakeResponse.body());
             validateResponse(handshakeJson, "Tapo AES-Handshake");
+            sessionCookie = TapoSessionCookie.extract(handshakeResponse.headers());
 
             String handshakeKey = handshakeJson.path("result").path("key").asText(null);
             if (handshakeKey == null || handshakeKey.isBlank()) {

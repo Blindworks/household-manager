@@ -10,6 +10,7 @@ import java.time.Duration;
 public class TapoDeviceFactory {
 
     private final HttpClient httpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(5))
             .build();
     private final ObjectMapper objectMapper;
