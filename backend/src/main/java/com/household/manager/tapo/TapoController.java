@@ -24,7 +24,7 @@ public class TapoController {
     @GetMapping("/devices")
     public ResponseEntity<List<TapoDiscoveryDeviceResponse>> getDevices() {
         log.info("GET /api/tapo/devices - Abrufen aller Tapo-Geraete");
-        List<TapoCloudDevice> devices = tapoDeviceService.discoverDevices();
+        List<TapoCloudDevice> devices = tapoDeviceService.discoverCloudDevices();
         List<TapoDiscoveryDeviceResponse> response = devices.stream()
                 .map(this::toDiscoveryResponse)
                 .toList();
