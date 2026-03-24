@@ -211,6 +211,26 @@ public class AnkerSolixController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Manually enables or disables battery power cutoff (Batterie-Abschaltung).
+     * When enabled, sets output to 0 W. When disabled, restores to minimum load.
+     */
+    @PostMapping("/battery-cutoff")
+    public ResponseEntity<Void> setBatteryCutoff(@RequestBody BatteryCutoffRequest request) {
+        log.info("Manual battery-cutoff request: enabled={}", request.isEnabled());
+        if (autoControlService != null) {
+            autoControlService.setBatteryCutoffManual(request.isEnabled());
+        } else {
+            if (request.isEnabled()) {
+                ankerSolixService.setOutputPower(0);
+            } else {
+                AnkerSolixDeviceParamDto params = ankerSolixService.getDeviceParams();
+                ankerSolixService.setOutputPower(params.getMinLoadW());
+            }
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     // -------------------------------------------------------------------------
     // Inner request DTOs
     // -------------------------------------------------------------------------
@@ -222,6 +242,11 @@ public class AnkerSolixController {
 
     @Data
     public static class ForceDischargeRequest {
+        private boolean enabled;
+    }
+
+    @Data
+    public static class BatteryCutoffRequest {
         private boolean enabled;
     }
 }

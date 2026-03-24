@@ -107,6 +107,82 @@
       </section>
     }
 
+    <!-- Direkte Steuerung -->
+    @if (status && status.enabled) {
+      <section class="direct-control-section">
+        <div class="direct-control-section__card">
+          <h2 class="direct-control-section__title">Direkte Steuerung</h2>
+          <p class="direct-control-section__description">
+            Direkte Befehle an die Anker Solix senden, unabhaengig von der automatischen Regelung.
+          </p>
+
+          <div class="direct-control-section__actions">
+            <!-- Batterie-Entladung erzwingen -->
+            <div class="direct-control-section__action">
+              <div class="direct-control-section__action-info">
+                <span class="direct-control-section__action-label">Batterie-Entladung erzwingen</span>
+                <span class="direct-control-section__action-hint">
+                  Setzt die Entladung direkt am Geraet (preset_discharge)
+                </span>
+              </div>
+              <div class="direct-control-section__action-controls">
+                <span class="status-section__badge"
+                      [class.status-section__badge--active]="status.forceDischargeActive"
+                      [class.status-section__badge--inactive]="!status.forceDischargeActive">
+                  {{ status.forceDischargeActive ? 'Aktiv' : 'Inaktiv' }}
+                </span>
+                <button
+                  class="btn direct-control-section__btn"
+                  [class.direct-control-section__btn--active]="status.forceDischargeActive"
+                  [disabled]="isDirectActionLoading"
+                  (click)="directToggleForceDischarge()"
+                  type="button">
+                  @if (isDirectActionLoading) {
+                    <span class="settings-section__spinner"></span>
+                  }
+                  {{ status.forceDischargeActive ? 'Deaktivieren' : 'Aktivieren' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Batterie abschalten -->
+            <div class="direct-control-section__action">
+              <div class="direct-control-section__action-info">
+                <span class="direct-control-section__action-label">Batterie abschalten</span>
+                <span class="direct-control-section__action-hint">
+                  Setzt die Ausgangsleistung auf 0 W (Batterie komplett aus)
+                </span>
+              </div>
+              <div class="direct-control-section__action-controls">
+                <span class="status-section__badge"
+                      [class.status-section__badge--active]="status.batteryPowerCutoffActive"
+                      [class.status-section__badge--inactive]="!status.batteryPowerCutoffActive">
+                  {{ status.batteryPowerCutoffActive ? 'Aktiv' : 'Inaktiv' }}
+                </span>
+                <button
+                  class="btn direct-control-section__btn"
+                  [class.direct-control-section__btn--active]="status.batteryPowerCutoffActive"
+                  [disabled]="isDirectActionLoading"
+                  (click)="directToggleBatteryCutoff()"
+                  type="button">
+                  @if (isDirectActionLoading) {
+                    <span class="settings-section__spinner"></span>
+                  }
+                  {{ status.batteryPowerCutoffActive ? 'Einschalten' : 'Abschalten' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          @if (directActionError) {
+            <p class="settings-section__feedback settings-section__feedback--error">
+              {{ directActionError }}
+            </p>
+          }
+        </div>
+      </section>
+    }
+
     <!-- Einstellungen-Karte -->
     @if (settings) {
       <section class="settings-section">
