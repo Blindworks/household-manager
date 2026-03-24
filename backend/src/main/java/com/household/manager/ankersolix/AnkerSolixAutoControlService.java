@@ -6,6 +6,8 @@ import com.household.manager.ankersolix.dto.AnkerSolixAutoControlSettingsDto;
 import com.household.manager.ankersolix.dto.AnkerSolixAutoControlStatusDto;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import com.household.manager.ankersolix.dto.AnkerSolixLiveDto;
+import com.household.manager.model.entity.SolixAutoControlReading;
+import com.household.manager.repository.SolixAutoControlReadingRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -40,6 +42,7 @@ public class AnkerSolixAutoControlService {
     private static final long BASE_POLL_INTERVAL_MS = 5000;
 
     private final AnkerSolixService ankerSolixService;
+    private final SolixAutoControlReadingRepository autoControlReadingRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String tasmotaUrl;
@@ -61,6 +64,7 @@ public class AnkerSolixAutoControlService {
 
     public AnkerSolixAutoControlService(
             AnkerSolixService ankerSolixService,
+            SolixAutoControlReadingRepository autoControlReadingRepository,
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             @Value("${tasmota.electricity.url}") String tasmotaUrl,
@@ -70,6 +74,7 @@ public class AnkerSolixAutoControlService {
             @Value("${ankersolix.auto-control.force-discharge.enabled:false}") boolean forceDischargeEnabled,
             @Value("${ankersolix.auto-control.force-discharge.min-battery-percent:10}") int forceDischargeMinBatteryPercent) {
         this.ankerSolixService = ankerSolixService;
+        this.autoControlReadingRepository = autoControlReadingRepository;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.tasmotaUrl = tasmotaUrl;
@@ -132,6 +137,7 @@ public class AnkerSolixAutoControlService {
                         "delta=%dW < threshold=%dW (grid=%.0fW, current=%dW)",
                         delta, thresholdW, gridPowerW, currentOutputW);
                 log.debug("Auto-control: skipped – {}", lastSkipReason);
+                saveReading((int) gridPowerW, currentOutputW, targetOutputW, clampedOutputW, minLoad, maxLoad, false);
                 return;
             }
 
@@ -142,6 +148,7 @@ public class AnkerSolixAutoControlService {
             lastSetOutputW = clampedOutputW;
             lastAdjustmentTime = LocalDateTime.now();
             lastSkipReason = null;
+            saveReading((int) gridPowerW, currentOutputW, targetOutputW, clampedOutputW, minLoad, maxLoad, true);
 
         } catch (Exception ex) {
             log.warn("Auto-control cycle failed: {}", ex.getMessage(), ex);
@@ -255,6 +262,25 @@ public class AnkerSolixAutoControlService {
         ankerSolixService.setForceDischarge(enabled);
         forceDischargeActive = enabled;
         log.info("Force-discharge manually set to {}", enabled);
+    }
+
+    private void saveReading(int gridPowerW, int currentOutputW, int targetOutputW,
+                             int clampedOutputW, int minLoadW, int maxLoadW, boolean applied) {
+        try {
+            SolixAutoControlReading reading = SolixAutoControlReading.builder()
+                    .timestamp(LocalDateTime.now())
+                    .gridPowerW(gridPowerW)
+                    .currentOutputW(currentOutputW)
+                    .targetOutputW(targetOutputW)
+                    .clampedOutputW(clampedOutputW)
+                    .minLoadW(minLoadW)
+                    .maxLoadW(maxLoadW)
+                    .applied(applied)
+                    .build();
+            autoControlReadingRepository.save(reading);
+        } catch (Exception ex) {
+            log.warn("Failed to persist auto-control reading: {}", ex.getMessage());
+        }
     }
 
     /**

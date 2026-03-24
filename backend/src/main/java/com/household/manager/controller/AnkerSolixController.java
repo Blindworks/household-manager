@@ -8,6 +8,9 @@ import com.household.manager.ankersolix.dto.AnkerSolixAutoControlSettingsDto;
 import com.household.manager.ankersolix.dto.AnkerSolixAutoControlStatusDto;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import com.household.manager.ankersolix.dto.AnkerSolixEnergyDayDto;
+import com.household.manager.ankersolix.dto.SolixAutoControlReadingResponse;
+import com.household.manager.model.entity.SolixAutoControlReading;
+import com.household.manager.repository.SolixAutoControlReadingRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * REST controller for Anker Solix solar system integration.
@@ -34,6 +39,7 @@ public class AnkerSolixController {
 
     private final AnkerSolixService ankerSolixService;
     private final AnkerSolixLiveStreamService ankerSolixLiveStreamService;
+    private final SolixAutoControlReadingRepository autoControlReadingRepository;
 
     @Autowired(required = false)
     private AnkerSolixAutoControlService autoControlService;
@@ -120,6 +126,33 @@ public class AnkerSolixController {
         }
         autoControlService.updateSettings(settings);
         return ResponseEntity.ok(autoControlService.getSettings());
+    }
+
+    /**
+     * Returns historical auto-control readings for charting.
+     * Defaults to the last 24 hours if no parameters are given.
+     */
+    @GetMapping("/auto-control/readings")
+    public ResponseEntity<List<SolixAutoControlReadingResponse>> getAutoControlReadings(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+
+        LocalDateTime end = to != null ? to : LocalDateTime.now();
+        LocalDateTime start = from != null ? from : end.minusHours(24);
+
+        List<SolixAutoControlReadingResponse> readings = autoControlReadingRepository
+                .findByTimestampBetweenOrderByTimestampAsc(start, end)
+                .stream()
+                .map(this::toReadingResponse)
+                .toList();
+        return ResponseEntity.ok(readings);
+    }
+
+    private SolixAutoControlReadingResponse toReadingResponse(SolixAutoControlReading r) {
+        return new SolixAutoControlReadingResponse(
+                r.getId(), r.getTimestamp(), r.getGridPowerW(), r.getCurrentOutputW(),
+                r.getTargetOutputW(), r.getClampedOutputW(), r.getMinLoadW(), r.getMaxLoadW(),
+                r.isApplied());
     }
 
     /**
