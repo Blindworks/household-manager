@@ -7,4 +7,8 @@ public interface TapoLocalDeviceConnection {
     JsonNode getDeviceInfo();
 
     void setDevicePowered(boolean poweredOn);
+
+    JsonNode getEnergyUsage();
+
+    JsonNode getCurrentPower();
 }

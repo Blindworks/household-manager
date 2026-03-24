@@ -35,8 +35,19 @@ public class TapoController {
     @GetMapping("/devices/{deviceId}/info")
     public ResponseEntity<TapoDeviceInfoResponse> getDeviceInfo(@PathVariable String deviceId) {
         log.info("GET /api/tapo/devices/{}/info - Geraeteinfo abrufen", deviceId);
-        JsonNode info = tapoCloudService.getDeviceInfo(deviceId);
-        return ResponseEntity.ok(toDeviceInfoResponse(info));
+        TapoDeviceState state = tapoDeviceService.getStatus(deviceId);
+        // For detailed info, try cloud passthrough (local getDeviceInfo returns the same fields)
+        try {
+            JsonNode info = tapoCloudService.getDeviceInfo(deviceId);
+            return ResponseEntity.ok(toDeviceInfoResponse(info));
+        } catch (Exception ex) {
+            log.debug("Cloud-Info fuer {} fehlgeschlagen, verwende reduzierten Status: {}", deviceId, ex.getMessage());
+            return ResponseEntity.ok(TapoDeviceInfoResponse.builder()
+                    .nickname(state.nickname())
+                    .model(state.model())
+                    .deviceOn(state.poweredOn())
+                    .build());
+        }
     }
 
     @GetMapping("/devices/{deviceId}/energy")

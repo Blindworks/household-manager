@@ -15,11 +15,15 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 
 public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
+
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final int SESSION_TTL_SECONDS = 300;
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -59,13 +63,33 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
         executeAuthenticatedRequest(request);
     }
 
+    @Override
+    public JsonNode getEnergyUsage() {
+        return executeAuthenticatedRequest(objectMapper.createObjectNode().put("method", "get_energy_usage"));
+    }
+
+    @Override
+    public JsonNode getCurrentPower() {
+        return executeAuthenticatedRequest(objectMapper.createObjectNode().put("method", "get_current_power"));
+    }
+
     private JsonNode executeAuthenticatedRequest(JsonNode requestData) {
+        return executeAuthenticatedRequestInternal(requestData, true);
+    }
+
+    private JsonNode executeAuthenticatedRequestInternal(JsonNode requestData, boolean retryOnAuthError) {
         ensureAuthenticated();
 
         ObjectNode passthrough = objectMapper.createObjectNode().put("method", "securePassthrough");
         passthrough.set("params", objectMapper.createObjectNode().put("request", encrypt(requestData.toString())));
 
         JsonNode response = postJson(appUrl + "?token=" + token, passthrough.toString(), sessionCookie);
+
+        int errorCode = response.path("error_code").asInt(0);
+        if ((errorCode == -1301 || errorCode == 9999) && retryOnAuthError) {
+            invalidateSession();
+            return executeAuthenticatedRequestInternal(requestData, false);
+        }
         validateResponse(response, "Tapo AES securePassthrough");
 
         String encryptedResponse = response.path("result").path("response").asText(null);
@@ -75,6 +99,13 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
 
         try {
             JsonNode parsed = objectMapper.readTree(decrypt(encryptedResponse));
+
+            int innerError = parsed.path("error_code").asInt(0);
+            if (innerError == -1301 && retryOnAuthError) {
+                invalidateSession();
+                return executeAuthenticatedRequestInternal(requestData, false);
+            }
+
             validateResponse(parsed, "Tapo AES-Geraet");
             return parsed.path("result");
         } catch (IOException ex) {
@@ -82,8 +113,16 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
         }
     }
 
+    private synchronized void invalidateSession() {
+        token = null;
+        authenticatedAt = null;
+        sessionCookie = null;
+        aesKey = null;
+        aesIv = null;
+    }
+
     private synchronized void ensureAuthenticated() {
-        if (token != null && authenticatedAt != null && Instant.now().isBefore(authenticatedAt.plusSeconds(300))) {
+        if (token != null && authenticatedAt != null && Instant.now().isBefore(authenticatedAt.plusSeconds(SESSION_TTL_SECONDS))) {
             return;
         }
 
@@ -96,6 +135,10 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
             handshake.set("params", objectMapper.createObjectNode().put("key", publicKeyPem(keyPair)));
 
             HttpResponse<String> handshakeResponse = postJsonRaw(appUrl, handshake.toString(), null);
+            if (handshakeResponse.statusCode() == 403) {
+                throw new TapoException("Tapo AES verweigert den Zugriff (403). Pruefe 'Third-Party Compatibility' in der Tapo-App.");
+            }
+
             sessionCookie = TapoSessionCookie.extract(handshakeResponse.headers());
             JsonNode handshakeJson = objectMapper.readTree(handshakeResponse.body());
             validateResponse(handshakeJson, "Tapo AES-Handshake");
@@ -107,7 +150,7 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
 
             byte[] decryptedKey = decryptRsa(Base64.getDecoder().decode(handshakeKey), keyPair.getPrivate());
             if (decryptedKey.length != 32) {
-                throw new TapoException("Tapo AES-Handshake lieferte ungueltiges Schluesselmaterial.");
+                throw new TapoException("Tapo AES-Handshake lieferte ungueltiges Schluesselmaterial (Laenge: " + decryptedKey.length + ").");
             }
 
             aesKey = Arrays.copyOfRange(decryptedKey, 0, 16);
@@ -130,7 +173,7 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
             }
             authenticatedAt = Instant.now();
         } catch (GeneralSecurityException | IOException ex) {
-            throw new TapoException("Tapo AES-Authentifizierung fehlgeschlagen.", ex);
+            throw new TapoException("Tapo AES-Authentifizierung fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
 
@@ -162,6 +205,7 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Content-Type", "application/json")
+                    .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofString(payload));
             if (cookie != null) {
                 builder.header("Cookie", cookie);
@@ -171,7 +215,7 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
             if (ex instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new TapoException("Tapo AES-HTTP-Aufruf fehlgeschlagen.", ex);
+            throw new TapoException("Tapo AES-HTTP-Aufruf fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
 
