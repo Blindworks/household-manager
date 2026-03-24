@@ -187,7 +187,11 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOn(device.getExternalDeviceId());
-                case TAPO -> tapoDeviceService.turnOn(device.getExternalDeviceId(), device.getIpAddress(), extractAuthProtocol(device));
+                case TAPO -> {
+                    String tapoIp = device.getIpAddress();
+                    TapoAuthProtocol tapoProto = extractAuthProtocol(device);
+                    tapoDeviceService.turnOn(device.getExternalDeviceId(), tapoIp, tapoProto);
+                }
                 case MEROSS -> merossDeviceService.turnOn(device.getExternalDeviceId());
             }
 
@@ -218,7 +222,11 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOff(device.getExternalDeviceId());
-                case TAPO -> tapoDeviceService.turnOff(device.getExternalDeviceId(), device.getIpAddress(), extractAuthProtocol(device));
+                case TAPO -> {
+                    String tapoIp = device.getIpAddress();
+                    TapoAuthProtocol tapoProto = extractAuthProtocol(device);
+                    tapoDeviceService.turnOff(device.getExternalDeviceId(), tapoIp, tapoProto);
+                }
                 case MEROSS -> merossDeviceService.turnOff(device.getExternalDeviceId());
             }
 
@@ -371,6 +379,23 @@ public class SmartDeviceService {
         try {
             String ip = device.getIpAddress();
             TapoAuthProtocol protocol = extractAuthProtocol(device);
+
+            // If no IP stored, try to resolve via local discovery and persist it
+            if (ip == null || ip.isBlank()) {
+                TapoDiscoveryDevice localDevice = tapoDeviceService.resolveLocalDevice(device.getExternalDeviceId());
+                if (localDevice != null) {
+                    ip = localDevice.ipAddress();
+                    protocol = localDevice.authProtocol();
+                    device.setIpAddress(ip);
+                    Map<String, Object> metadata = deserializeMetadata(device.getMetadata());
+                    metadata = new HashMap<>(metadata);
+                    metadata.put("authProtocol", protocol.name());
+                    device.setMetadata(serializeMetadata(metadata));
+                    log.info("Tapo device {} locally discovered at {} ({}), saving IP",
+                            device.getDeviceName(), ip, protocol);
+                }
+            }
+
             TapoDeviceState status = tapoDeviceService.getStatus(device.getExternalDeviceId(), ip, protocol);
             device.setOnline(status.online());
             device.setPoweredOn(status.poweredOn());

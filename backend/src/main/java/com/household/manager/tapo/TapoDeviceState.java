@@ -9,6 +9,13 @@ public record TapoDeviceState(
         boolean online
 ) {
 
+    public static TapoDeviceState fromLocal(JsonNode deviceInfo, TapoCloudService tapoCloudService) {
+        String nickname = tapoCloudService.decodeAlias(firstText(deviceInfo, "nickname", "alias"));
+        String model = firstText(deviceInfo, "model", "device_model");
+        boolean poweredOn = deviceInfo.path("device_on").asBoolean(false);
+        return new TapoDeviceState(nickname, model, poweredOn, true);
+    }
+
     public static TapoDeviceState from(
             JsonNode deviceInfo,
             TapoCloudDevice cloudDevice,
