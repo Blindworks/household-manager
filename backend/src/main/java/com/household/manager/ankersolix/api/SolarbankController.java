@@ -16,6 +16,72 @@ public class SolarbankController {
     }
 
     /**
+     * Liest die rohen Device-Parameter für einen beliebigen param_type.
+     * Nützlich um unbekannte Felder zu entdecken (z.B. für Force-Discharge).
+     *
+     * @param siteId    Die Site-ID
+     * @param paramType Der param_type (z.B. "4" für Schedule)
+     * @return Die rohe API-Antwort als JsonNode
+     */
+    public JsonNode getRawDeviceParams(String siteId, String paramType) throws Exception {
+        ObjectNode payload = mapper.createObjectNode();
+        payload.put("site_id", siteId);
+        payload.put("param_type", paramType);
+        return client.request(AnkerApiEndpoints.GET_DEVICE_PARM, payload);
+    }
+
+    /**
+     * Prüft ob die erzwungene Batterie-Entladung aktiv ist.
+     * Liest den "preset_discharge" Wert aus der param_data (param_type=4).
+     * Der genaue Feldname muss ggf. nach API-Discovery angepasst werden.
+     *
+     * @param siteId Die Site-ID
+     * @return true wenn Force-Discharge aktiv, false sonst
+     */
+    public boolean isForceDischargeEnabled(String siteId) throws Exception {
+        ObjectNode getPayload = mapper.createObjectNode();
+        getPayload.put("site_id", siteId);
+        getPayload.put("param_type", "4");
+        JsonNode getResponse = client.request(AnkerApiEndpoints.GET_DEVICE_PARM, getPayload);
+
+        String paramDataStr = getResponse.path("data").path("param_data").asText();
+        JsonNode paramData = mapper.readTree(paramDataStr);
+
+        // TODO: Das genaue Feld muss nach API-Discovery angepasst werden.
+        // Mögliche Kandidaten: "preset_discharge", "mode_type", "turn_on" in ranges
+        return paramData.path("preset_discharge").asInt(0) == 1;
+    }
+
+    /**
+     * Aktiviert oder deaktiviert die erzwungene Batterie-Entladung.
+     * Setzt das "preset_discharge" Feld in der param_data.
+     * Der genaue Feldname muss ggf. nach API-Discovery angepasst werden.
+     *
+     * @param siteId  Die Site-ID
+     * @param enabled true zum Aktivieren, false zum Deaktivieren
+     */
+    public void setForceDischarge(String siteId, boolean enabled) throws Exception {
+        ObjectNode getPayload = mapper.createObjectNode();
+        getPayload.put("site_id", siteId);
+        getPayload.put("param_type", "4");
+        JsonNode getResponse = client.request(AnkerApiEndpoints.GET_DEVICE_PARM, getPayload);
+
+        String paramDataStr = getResponse.path("data").path("param_data").asText();
+        ObjectNode paramData = (ObjectNode) mapper.readTree(paramDataStr);
+
+        // TODO: Das genaue Feld muss nach API-Discovery angepasst werden.
+        paramData.put("preset_discharge", enabled ? 1 : 0);
+
+        ObjectNode setPayload = mapper.createObjectNode();
+        setPayload.put("site_id", siteId);
+        setPayload.put("param_type", "4");
+        setPayload.put("cmd", 17);
+        setPayload.put("param_data", mapper.writeValueAsString(paramData));
+
+        client.request(AnkerApiEndpoints.SET_DEVICE_PARM, setPayload);
+    }
+
+    /**
      * Setzt die Ausgangsleistung für ALLE Zeitfenster im Schedule.
      *
      * @param siteId Die Site-ID (aus GET_SITE_LIST)

@@ -55,7 +55,9 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
     const payload: AnkerSolixAutoControlSettings = {
       enabled: this.settings.enabled,
       thresholdW: this.settings.thresholdW,
-      intervalMs: this.intervalSeconds * 1000
+      intervalMs: this.intervalSeconds * 1000,
+      forceDischargeEnabled: this.settings.forceDischargeEnabled,
+      forceDischargeMinBatteryPercent: this.settings.forceDischargeMinBatteryPercent
     };
 
     this.ankerSolixService.updateAutoControlSettings(payload).subscribe({
@@ -80,6 +82,14 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
       return;
     }
     this.settings = { ...this.settings, enabled: !this.settings.enabled };
+    this.saveSettings();
+  }
+
+  toggleForceDischarge(): void {
+    if (!this.settings) {
+      return;
+    }
+    this.settings = { ...this.settings, forceDischargeEnabled: !this.settings.forceDischargeEnabled };
     this.saveSettings();
   }
 

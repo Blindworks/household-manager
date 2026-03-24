@@ -71,6 +71,22 @@
                   </span>
                 </div>
               }
+              @if (status.forceDischargeActive !== null) {
+                <div class="status-section__stat">
+                  <span class="status-section__stat-label">Batterie-Entladung</span>
+                  <span class="status-section__badge"
+                        [class.status-section__badge--active]="status.forceDischargeActive"
+                        [class.status-section__badge--inactive]="!status.forceDischargeActive">
+                    {{ status.forceDischargeActive ? 'Aktiv' : 'Inaktiv' }}
+                  </span>
+                </div>
+              }
+              @if (status.lastBatteryPercent !== null) {
+                <div class="status-section__stat">
+                  <span class="status-section__stat-label">Akkustand</span>
+                  <span class="status-section__stat-value">{{ status.lastBatteryPercent }} %</span>
+                </div>
+              }
             </div>
           } @else {
             <p class="status-section__description">
@@ -142,6 +158,43 @@
                   max="600"
                   step="1">
                 <span class="settings-section__unit">Sekunden</span>
+              </div>
+            </div>
+
+            <!-- Batterie-Entladung erzwingen -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label">Batterie-Entladung erzwingen</label>
+                <span class="settings-section__hint">Erzwingt die Batterieentladung wenn Netzbezug vorhanden und Akku ueber dem Schwellwert</span>
+              </div>
+              <button
+                class="settings-section__toggle"
+                [class.settings-section__toggle--active]="settings.forceDischargeEnabled"
+                (click)="toggleForceDischarge()"
+                [disabled]="isSaving"
+                type="button"
+                [attr.aria-pressed]="settings.forceDischargeEnabled"
+                aria-label="Batterie-Entladung erzwingen umschalten">
+                <span class="settings-section__toggle-knob"></span>
+              </button>
+            </div>
+
+            <!-- Mindest-Akkustand -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="min-battery-input">Mindest-Akkustand</label>
+                <span class="settings-section__hint">Unter diesem Wert wird die erzwungene Entladung deaktiviert</span>
+              </div>
+              <div class="settings-section__input-group">
+                <input
+                  id="min-battery-input"
+                  class="settings-section__number"
+                  type="number"
+                  [(ngModel)]="settings.forceDischargeMinBatteryPercent"
+                  min="5"
+                  max="50"
+                  step="1">
+                <span class="settings-section__unit">%</span>
               </div>
             </div>
 

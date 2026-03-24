@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.ankersolix.dto.AnkerSolixAutoControlSettingsDto;
 import com.household.manager.ankersolix.dto.AnkerSolixAutoControlStatusDto;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
+import com.household.manager.ankersolix.dto.AnkerSolixLiveDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -47,6 +48,11 @@ public class AnkerSolixAutoControlService {
     private volatile int thresholdW;
     private volatile long intervalMs;
 
+    private volatile boolean forceDischargeEnabled;
+    private volatile int forceDischargeMinBatteryPercent;
+    private volatile boolean forceDischargeActive = false;
+    private volatile int lastBatteryPercent = -1;
+
     private volatile int lastSetOutputW = -1;
     private volatile LocalDateTime lastAdjustmentTime;
     private volatile double lastGridPowerW;
@@ -60,7 +66,9 @@ public class AnkerSolixAutoControlService {
             @Value("${tasmota.electricity.url}") String tasmotaUrl,
             @Value("${ankersolix.auto-control.enabled:false}") boolean enabled,
             @Value("${ankersolix.auto-control.threshold-w:10}") int thresholdW,
-            @Value("${ankersolix.auto-control.interval-ms:30000}") long intervalMs) {
+            @Value("${ankersolix.auto-control.interval-ms:30000}") long intervalMs,
+            @Value("${ankersolix.auto-control.force-discharge.enabled:false}") boolean forceDischargeEnabled,
+            @Value("${ankersolix.auto-control.force-discharge.min-battery-percent:10}") int forceDischargeMinBatteryPercent) {
         this.ankerSolixService = ankerSolixService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -68,6 +76,8 @@ public class AnkerSolixAutoControlService {
         this.enabled = enabled;
         this.thresholdW = thresholdW;
         this.intervalMs = intervalMs;
+        this.forceDischargeEnabled = forceDischargeEnabled;
+        this.forceDischargeMinBatteryPercent = forceDischargeMinBatteryPercent;
     }
 
     /**
@@ -136,6 +146,47 @@ public class AnkerSolixAutoControlService {
         } catch (Exception ex) {
             log.warn("Auto-control cycle failed: {}", ex.getMessage(), ex);
         }
+
+        evaluateForceDischarge();
+    }
+
+    /**
+     * Evaluates whether force-discharge (Entladung nur durch Batterie) should be
+     * enabled or disabled based on current grid power and battery SOC.
+     *
+     * <p>Logic:
+     * <ul>
+     *   <li>Enable when: grid import &gt; 0 AND battery &gt; threshold AND not yet active</li>
+     *   <li>Disable when: battery &lt;= threshold AND currently active</li>
+     *   <li>Once enabled, stays active until battery drops below threshold (hysteresis)</li>
+     * </ul>
+     *
+     * <p>Runs in its own try-catch to not affect the output power regulation.
+     */
+    private void evaluateForceDischarge() {
+        if (!forceDischargeEnabled) {
+            return;
+        }
+
+        try {
+            AnkerSolixLiveDto liveData = ankerSolixService.getLiveData();
+            int batteryPercent = liveData.getBatteryPercent();
+            lastBatteryPercent = batteryPercent;
+
+            if (batteryPercent <= forceDischargeMinBatteryPercent && forceDischargeActive) {
+                log.info("Force-discharge: disabling – battery {}% <= threshold {}%",
+                        batteryPercent, forceDischargeMinBatteryPercent);
+                ankerSolixService.setForceDischarge(false);
+                forceDischargeActive = false;
+            } else if (lastGridPowerW > 0 && batteryPercent > forceDischargeMinBatteryPercent && !forceDischargeActive) {
+                log.info("Force-discharge: enabling – grid={}W, battery={}% > threshold {}%",
+                        (int) lastGridPowerW, batteryPercent, forceDischargeMinBatteryPercent);
+                ankerSolixService.setForceDischarge(true);
+                forceDischargeActive = true;
+            }
+        } catch (Exception ex) {
+            log.warn("Force-discharge evaluation failed: {}", ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -150,6 +201,8 @@ public class AnkerSolixAutoControlService {
                 .lastGridPowerW(lastAdjustmentTime != null || lastSkipReason != null ? lastGridPowerW : null)
                 .lastAdjustmentTime(lastAdjustmentTime)
                 .lastSkipReason(lastSkipReason)
+                .forceDischargeActive(forceDischargeEnabled ? forceDischargeActive : null)
+                .lastBatteryPercent(lastBatteryPercent >= 0 ? lastBatteryPercent : null)
                 .build();
     }
 
@@ -161,6 +214,8 @@ public class AnkerSolixAutoControlService {
                 .enabled(enabled)
                 .thresholdW(thresholdW)
                 .intervalMs(intervalMs)
+                .forceDischargeEnabled(forceDischargeEnabled)
+                .forceDischargeMinBatteryPercent(forceDischargeMinBatteryPercent)
                 .build();
     }
 
@@ -168,11 +223,38 @@ public class AnkerSolixAutoControlService {
      * Updates the auto-control settings at runtime.
      */
     public void updateSettings(AnkerSolixAutoControlSettingsDto settings) {
+        boolean wasForceDischargeEnabled = this.forceDischargeEnabled;
+
         this.enabled = settings.isEnabled();
         this.thresholdW = settings.getThresholdW();
         this.intervalMs = settings.getIntervalMs();
-        log.info("Auto-control settings updated: enabled={}, thresholdW={}, intervalMs={}",
-                enabled, thresholdW, intervalMs);
+        this.forceDischargeEnabled = settings.isForceDischargeEnabled();
+        this.forceDischargeMinBatteryPercent = settings.getForceDischargeMinBatteryPercent();
+
+        // Deactivate force-discharge on the device if the feature was just disabled
+        if (wasForceDischargeEnabled && !forceDischargeEnabled && forceDischargeActive) {
+            try {
+                ankerSolixService.setForceDischarge(false);
+                forceDischargeActive = false;
+                log.info("Force-discharge deactivated on device (feature disabled via settings)");
+            } catch (Exception ex) {
+                log.warn("Failed to deactivate force-discharge on device: {}", ex.getMessage(), ex);
+            }
+        }
+
+        log.info("Auto-control settings updated: enabled={}, thresholdW={}, intervalMs={}, " +
+                        "forceDischarge={}, minBattery={}%",
+                enabled, thresholdW, intervalMs, forceDischargeEnabled, forceDischargeMinBatteryPercent);
+    }
+
+    /**
+     * Manually enables or disables force-discharge.
+     * Can be used independently of the auto-control loop.
+     */
+    public void setForceDischargeManual(boolean enabled) {
+        ankerSolixService.setForceDischarge(enabled);
+        forceDischargeActive = enabled;
+        log.info("Force-discharge manually set to {}", enabled);
     }
 
     /**
