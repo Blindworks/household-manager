@@ -42,11 +42,17 @@ public class TapoDeviceService {
         this.tapoDeviceFactory = tapoDeviceFactory;
         this.tapoProperties = tapoProperties;
 
-        for (TapoProperties.TapoDeviceConfig config : tapoProperties.getDevices()) {
+        log.info("Tapo-Konfiguration: email={}, {} statische Geraete konfiguriert",
+                tapoProperties.getEmail() != null ? tapoProperties.getEmail() : "NICHT GESETZT",
+                tapoProperties.getDevices().size());
+        for (int i = 0; i < tapoProperties.getDevices().size(); i++) {
+            TapoProperties.TapoDeviceConfig config = tapoProperties.getDevices().get(i);
+            log.info("  Tapo-Geraet[{}]: name={}, ip={}, deviceId={}", i,
+                    config.getName(), config.getIp(), config.getDeviceId());
             if (config.getDeviceId() != null && !config.getDeviceId().isBlank()
                     && config.getIp() != null && !config.getIp().isBlank()) {
                 deviceIpCache.put(config.getDeviceId(), config.getIp());
-                log.info("Statische Tapo-IP registriert: {} -> {}", config.getDeviceId(), config.getIp());
+                log.info("  -> Statische Tapo-IP registriert: {} -> {}", config.getDeviceId(), config.getIp());
             }
         }
     }
@@ -281,13 +287,29 @@ public class TapoDeviceService {
     private String resolveIpAddress(String deviceId) {
         String cached = deviceIpCache.get(deviceId);
         if (cached != null) {
+            log.debug("IP fuer {} aus Cache: {}", deviceId, cached);
             return cached;
         }
         for (TapoProperties.TapoDeviceConfig config : tapoProperties.getDevices()) {
             if (deviceId.equals(config.getDeviceId()) && config.getIp() != null && !config.getIp().isBlank()) {
                 deviceIpCache.put(deviceId, config.getIp());
+                log.info("IP fuer {} aus statischer Konfiguration: {}", deviceId, config.getIp());
                 return config.getIp();
             }
+        }
+
+        // Auto-discover: try local UDP broadcast to find the device
+        log.info("Keine IP fuer {} bekannt, starte automatische lokale Suche...", deviceId);
+        try {
+            List<TapoDiscoveryDevice> localDevices = discoverLocalDevices();
+            String discovered = deviceIpCache.get(deviceId);
+            if (discovered != null) {
+                log.info("IP fuer {} per Auto-Discovery gefunden: {}", deviceId, discovered);
+                return discovered;
+            }
+            log.info("Auto-Discovery fand {} Geraete, aber keines mit ID {}", localDevices.size(), deviceId);
+        } catch (Exception ex) {
+            log.debug("Auto-Discovery fehlgeschlagen: {}", ex.getMessage());
         }
         return null;
     }
