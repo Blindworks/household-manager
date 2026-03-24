@@ -12,8 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * High-level Tapo device service.
  * <p>
- * Uses V2 Cloud API (with HMAC-SHA1 signing) as the primary control method.
- * Local control (KLAP/AES) is used when an IP address is known.
+ * Control priority:
+ * 1. tapo-rest sidecar (local LAN via Rust tapo crate) — most reliable
+ * 2. Local KLAP/AES connections (Java implementation)
+ * 3. V2 Cloud API (fallback)
  */
 @Service
 @Slf4j
@@ -23,17 +25,20 @@ public class TapoDeviceService {
     private final TapoDiscoveryService tapoDiscoveryService;
     private final TapoDeviceFactory tapoDeviceFactory;
     private final TapoProperties tapoProperties;
+    private final TapoRestClient tapoRestClient;
 
     private final Map<String, TapoLocalDeviceConnection> localConnectionCache = new ConcurrentHashMap<>();
 
     public TapoDeviceService(TapoCloudService tapoCloudService,
                              TapoDiscoveryService tapoDiscoveryService,
                              TapoDeviceFactory tapoDeviceFactory,
-                             TapoProperties tapoProperties) {
+                             TapoProperties tapoProperties,
+                             TapoRestClient tapoRestClient) {
         this.tapoCloudService = tapoCloudService;
         this.tapoDiscoveryService = tapoDiscoveryService;
         this.tapoDeviceFactory = tapoDeviceFactory;
         this.tapoProperties = tapoProperties;
+        this.tapoRestClient = tapoRestClient;
     }
 
     public List<TapoCloudDevice> discoverCloudDevices() {
@@ -50,12 +55,44 @@ public class TapoDeviceService {
         return devices;
     }
 
+    /**
+     * Get the list of devices configured in the tapo-rest sidecar.
+     */
+    public List<TapoRestClient.TapoRestDevice> discoverTapoRestDevices() {
+        if (!tapoRestClient.isAvailable()) {
+            return List.of();
+        }
+        try {
+            return tapoRestClient.getDevices();
+        } catch (Exception ex) {
+            log.warn("tapo-rest Geraeteabfrage fehlgeschlagen: {}", ex.getMessage());
+            return List.of();
+        }
+    }
+
     public TapoDeviceState getStatus(String deviceId) {
-        return getStatus(deviceId, null, null);
+        return getStatus(deviceId, null, null, null);
     }
 
     public TapoDeviceState getStatus(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        // Try local control first if IP is known
+        return getStatus(deviceId, ipAddress, protocol, null);
+    }
+
+    public TapoDeviceState getStatus(String deviceId, String ipAddress, TapoAuthProtocol protocol, String tapoRestName) {
+        // 1. Try tapo-rest sidecar first (most reliable)
+        if (tapoRestName != null && tapoRestClient.isAvailable()) {
+            try {
+                JsonNode info = tapoRestClient.getDeviceInfo(tapoRestName);
+                if (info != null) {
+                    log.debug("Tapo-Geraet {} Status via tapo-rest ('{}') abgerufen", deviceId, tapoRestName);
+                    return TapoDeviceState.fromLocal(info, tapoCloudService);
+                }
+            } catch (Exception ex) {
+                log.debug("tapo-rest Status fuer '{}' fehlgeschlagen: {}", tapoRestName, ex.getMessage());
+            }
+        }
+
+        // 2. Try local KLAP/AES if IP is known
         if (ipAddress != null && !ipAddress.isBlank()) {
             try {
                 TapoLocalDeviceConnection connection = getOrCreateLocalConnection(deviceId, ipAddress, protocol);
@@ -69,37 +106,71 @@ public class TapoDeviceService {
             }
         }
 
-        // V2 Cloud API (like the Tapo app)
+        // 3. V2 Cloud API (fallback)
         TapoCloudDevice cloudDevice = tapoCloudService.findDeviceById(deviceId);
         JsonNode deviceInfo = tapoCloudService.getDeviceInfo(deviceId);
         return TapoDeviceState.from(deviceInfo, cloudDevice, tapoCloudService);
     }
 
     public void turnOn(String deviceId) {
-        turnOn(deviceId, null, null);
+        turnOn(deviceId, null, null, null);
     }
 
     public void turnOn(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
+        turnOn(deviceId, ipAddress, protocol, null);
+    }
+
+    public void turnOn(String deviceId, String ipAddress, TapoAuthProtocol protocol, String tapoRestName) {
+        // 1. Try tapo-rest first
+        if (tapoRestName != null && tryTapoRest(tapoRestName, true)) {
+            return;
+        }
+        // 2. Try local KLAP/AES
         if (setDevicePoweredLocalFirst(deviceId, ipAddress, protocol, true)) {
             return;
         }
+        // 3. Cloud fallback
         tapoCloudService.setDevicePowered(deviceId, true);
         log.info("Tapo device switched on via V2 Cloud (deviceId={})", deviceId);
     }
 
     public void turnOff(String deviceId) {
-        turnOff(deviceId, null, null);
+        turnOff(deviceId, null, null, null);
     }
 
     public void turnOff(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
+        turnOff(deviceId, ipAddress, protocol, null);
+    }
+
+    public void turnOff(String deviceId, String ipAddress, TapoAuthProtocol protocol, String tapoRestName) {
+        // 1. Try tapo-rest first
+        if (tapoRestName != null && tryTapoRest(tapoRestName, false)) {
+            return;
+        }
+        // 2. Try local KLAP/AES
         if (setDevicePoweredLocalFirst(deviceId, ipAddress, protocol, false)) {
             return;
         }
+        // 3. Cloud fallback
         tapoCloudService.setDevicePowered(deviceId, false);
         log.info("Tapo device switched off via V2 Cloud (deviceId={})", deviceId);
     }
 
     public JsonNode getEnergyUsage(String deviceId) {
+        return getEnergyUsage(deviceId, null);
+    }
+
+    public JsonNode getEnergyUsage(String deviceId, String tapoRestName) {
+        if (tapoRestName != null && tapoRestClient.isAvailable()) {
+            try {
+                JsonNode energy = tapoRestClient.getEnergyUsage(tapoRestName);
+                if (energy != null) {
+                    return energy;
+                }
+            } catch (Exception ex) {
+                log.debug("tapo-rest Energieverbrauch fuer '{}' fehlgeschlagen: {}", tapoRestName, ex.getMessage());
+            }
+        }
         return tapoCloudService.getEnergyUsage(deviceId);
     }
 
@@ -123,6 +194,24 @@ public class TapoDeviceService {
 
     public void clearLocalConnection(String deviceId) {
         localConnectionCache.remove(deviceId);
+    }
+
+    private boolean tryTapoRest(String tapoRestName, boolean poweredOn) {
+        if (!tapoRestClient.isAvailable()) {
+            return false;
+        }
+        try {
+            if (poweredOn) {
+                tapoRestClient.turnOn(tapoRestName);
+            } else {
+                tapoRestClient.turnOff(tapoRestName);
+            }
+            return true;
+        } catch (Exception ex) {
+            log.debug("tapo-rest Steuerung fuer '{}' fehlgeschlagen: {}, versuche naechste Methode",
+                    tapoRestName, ex.getMessage());
+            return false;
+        }
     }
 
     private TapoLocalDeviceConnection getOrCreateLocalConnection(String deviceId, String ipAddress, TapoAuthProtocol protocol) {

@@ -10,6 +10,8 @@ services:
       DB_USERNAME: household_manager
       DB_PASSWORD: ${DB_PASSWORD}
       CORS_ALLOWED_ORIGINS: http://192.168.1.100:4200
+      TAPO_REST_URL: http://host.docker.internal:7090
+      TAPO_REST_PASSWORD: ${TAPO_REST_PASSWORD:-change-me}
     ports:
       - "8080:8080"
     networks:
@@ -25,6 +27,15 @@ services:
       - backend
     networks:
       - app_net
+
+  tapo-rest:
+    image: ghcr.io/clementnerma/tapo-rest:latest
+    volumes:
+      - ./tapo-rest-config.json:/config.json:ro
+    command: ["--config", "/config.json", "--port", "7090"]
+    # host network required for LAN access to Tapo devices
+    network_mode: host
+    restart: unless-stopped
 
 networks:
   app_net:

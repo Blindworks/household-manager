@@ -190,7 +190,8 @@ public class SmartDeviceService {
                 case TAPO -> {
                     String tapoIp = device.getIpAddress();
                     TapoAuthProtocol tapoProto = extractAuthProtocol(device);
-                    tapoDeviceService.turnOn(device.getExternalDeviceId(), tapoIp, tapoProto);
+                    String restName = extractTapoRestName(device);
+                    tapoDeviceService.turnOn(device.getExternalDeviceId(), tapoIp, tapoProto, restName);
                 }
                 case MEROSS -> merossDeviceService.turnOn(device.getExternalDeviceId());
             }
@@ -225,7 +226,8 @@ public class SmartDeviceService {
                 case TAPO -> {
                     String tapoIp = device.getIpAddress();
                     TapoAuthProtocol tapoProto = extractAuthProtocol(device);
-                    tapoDeviceService.turnOff(device.getExternalDeviceId(), tapoIp, tapoProto);
+                    String restName = extractTapoRestName(device);
+                    tapoDeviceService.turnOff(device.getExternalDeviceId(), tapoIp, tapoProto, restName);
                 }
                 case MEROSS -> merossDeviceService.turnOff(device.getExternalDeviceId());
             }
@@ -303,9 +305,33 @@ public class SmartDeviceService {
 
         Map<String, TapoDiscoveryDevice> localDeviceMap = discoverLocalTapoDevices();
 
+        // Build a lookup of tapo-rest device names for matching
+        Map<String, String> tapoRestNamesByAlias = buildTapoRestNameLookup();
+
         return discovered.stream()
-                .map(cloudDevice -> upsertTapoDevice(cloudDevice, localDeviceMap.get(cloudDevice.deviceId())))
+                .map(cloudDevice -> upsertTapoDevice(cloudDevice,
+                        localDeviceMap.get(cloudDevice.deviceId()),
+                        tapoRestNamesByAlias))
                 .collect(Collectors.toList());
+    }
+
+    private Map<String, String> buildTapoRestNameLookup() {
+        try {
+            var tapoRestDevices = tapoDeviceService.discoverTapoRestDevices();
+            if (tapoRestDevices.isEmpty()) {
+                return Collections.emptyMap();
+            }
+            log.info("Found {} devices in tapo-rest sidecar", tapoRestDevices.size());
+            Map<String, String> lookup = new HashMap<>();
+            for (var device : tapoRestDevices) {
+                // Store name mapped to lowercase name for case-insensitive matching
+                lookup.put(device.name().toLowerCase(), device.name());
+            }
+            return lookup;
+        } catch (Exception ex) {
+            log.debug("tapo-rest device lookup skipped: {}", ex.getMessage());
+            return Collections.emptyMap();
+        }
     }
 
     private Map<String, TapoDiscoveryDevice> discoverLocalTapoDevices() {
@@ -321,7 +347,8 @@ public class SmartDeviceService {
         }
     }
 
-    private SmartDevice upsertTapoDevice(TapoCloudDevice dto, TapoDiscoveryDevice localDevice) {
+    private SmartDevice upsertTapoDevice(TapoCloudDevice dto, TapoDiscoveryDevice localDevice,
+                                          Map<String, String> tapoRestNamesByAlias) {
         String externalId = dto.deviceId();
         Optional<SmartDevice> existing = smartDeviceRepository
                 .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, externalId);
@@ -354,12 +381,19 @@ public class SmartDeviceService {
             metadata.put("authProtocol", localDevice.authProtocol().name());
             log.debug("Tapo device {} found locally at {}", externalId, localDevice.ipAddress());
         }
+
+        // Match to tapo-rest device by name (case-insensitive)
+        String tapoRestName = matchTapoRestName(device.getDeviceName(), tapoRestNamesByAlias);
+        if (tapoRestName != null) {
+            metadata.put("tapoRestName", tapoRestName);
+            log.info("Tapo device '{}' matched to tapo-rest device '{}'", device.getDeviceName(), tapoRestName);
+        }
         device.setMetadata(serializeMetadata(metadata));
 
         String ip = device.getIpAddress();
         TapoAuthProtocol protocol = extractAuthProtocol(device);
         try {
-            TapoDeviceState state = tapoDeviceService.getStatus(externalId, ip, protocol);
+            TapoDeviceState state = tapoDeviceService.getStatus(externalId, ip, protocol, tapoRestName);
             device.setOnline(state.online());
             device.setPoweredOn(state.poweredOn());
             if (state.nickname() != null && !state.nickname().isBlank()) {
@@ -379,7 +413,9 @@ public class SmartDeviceService {
         try {
             String ip = device.getIpAddress();
             TapoAuthProtocol protocol = extractAuthProtocol(device);
-            TapoDeviceState status = tapoDeviceService.getStatus(device.getExternalDeviceId(), ip, protocol);
+            String tapoRestName = extractTapoRestName(device);
+            TapoDeviceState status = tapoDeviceService.getStatus(
+                    device.getExternalDeviceId(), ip, protocol, tapoRestName);
             device.setOnline(status.online());
             device.setPoweredOn(status.poweredOn());
             if (status.nickname() != null && !status.nickname().isBlank()) {
@@ -392,6 +428,19 @@ public class SmartDeviceService {
             log.warn("Tapo device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
             device.setOnline(false);
         }
+    }
+
+    private String matchTapoRestName(String deviceName, Map<String, String> tapoRestNamesByAlias) {
+        if (deviceName == null || tapoRestNamesByAlias.isEmpty()) {
+            return null;
+        }
+        return tapoRestNamesByAlias.get(deviceName.toLowerCase());
+    }
+
+    private String extractTapoRestName(SmartDevice device) {
+        Map<String, Object> metadata = deserializeMetadata(device.getMetadata());
+        Object name = metadata.get("tapoRestName");
+        return name != null ? name.toString() : null;
     }
 
     // ==================== Meross Device Methods ====================

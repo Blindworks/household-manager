@@ -13,6 +13,8 @@ public class TapoProperties {
     private long cloudTokenExpiryMs = 86_400_000L;
     private String localDiscoveryTarget = "255.255.255.255";
     private long localDiscoveryTimeoutMs = 4_000L;
+    private String restUrl;
+    private String restPassword;
 
     public String getEmail() {
         return email;
@@ -60,5 +62,26 @@ public class TapoProperties {
 
     public void setLocalDiscoveryTimeoutMs(long localDiscoveryTimeoutMs) {
         this.localDiscoveryTimeoutMs = localDiscoveryTimeoutMs;
+    }
+
+    public String getRestUrl() {
+        return restUrl;
+    }
+
+    public void setRestUrl(String restUrl) {
+        this.restUrl = restUrl;
+    }
+
+    public String getRestPassword() {
+        return restPassword;
+    }
+
+    public void setRestPassword(String restPassword) {
+        this.restPassword = restPassword;
+    }
+
+    public boolean isRestEnabled() {
+        return restUrl != null && !restUrl.isBlank()
+                && restPassword != null && !restPassword.isBlank();
     }
 }
