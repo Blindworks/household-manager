@@ -101,7 +101,7 @@ public class SolarbankController {
         // 2. Min/Max-Validierung
         int minLoad = paramData.path("min_load").asInt(0);
         int maxLoad = paramData.path("max_load").asInt(Integer.MAX_VALUE);
-        if (watts < minLoad || watts > maxLoad) {
+        if (watts != 0 && (watts < minLoad || watts > maxLoad)) {
             throw new IllegalArgumentException(
                     "Watt-Wert " + watts + " liegt außerhalb des erlaubten Bereichs ["
                     + minLoad + ", " + maxLoad + "]");

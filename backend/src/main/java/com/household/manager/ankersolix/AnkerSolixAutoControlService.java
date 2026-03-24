@@ -56,6 +56,8 @@ public class AnkerSolixAutoControlService {
     private volatile int forceDischargeMinBatteryPercent;
     private volatile boolean forceDischargeActive = false;
     private volatile int lastBatteryPercent = -1;
+    private volatile boolean batteryPowerCutoffEnabled;
+    private volatile boolean batteryPowerCutoffActive = false;
 
     private volatile int lastSetOutputW = -1;
     private volatile LocalDateTime lastAdjustmentTime;
@@ -74,7 +76,8 @@ public class AnkerSolixAutoControlService {
             @Value("${ankersolix.auto-control.interval-ms:30000}") long intervalMs,
             @Value("${ankersolix.auto-control.grid-power-offset-w:20}") int gridPowerOffsetW,
             @Value("${ankersolix.auto-control.force-discharge.enabled:false}") boolean forceDischargeEnabled,
-            @Value("${ankersolix.auto-control.force-discharge.min-battery-percent:10}") int forceDischargeMinBatteryPercent) {
+            @Value("${ankersolix.auto-control.force-discharge.min-battery-percent:10}") int forceDischargeMinBatteryPercent,
+            @Value("${ankersolix.auto-control.battery-power-cutoff.enabled:false}") boolean batteryPowerCutoffEnabled) {
         this.ankerSolixService = ankerSolixService;
         this.autoControlReadingRepository = autoControlReadingRepository;
         this.restTemplate = restTemplate;
@@ -86,6 +89,7 @@ public class AnkerSolixAutoControlService {
         this.gridPowerOffsetW = gridPowerOffsetW;
         this.forceDischargeEnabled = forceDischargeEnabled;
         this.forceDischargeMinBatteryPercent = forceDischargeMinBatteryPercent;
+        this.batteryPowerCutoffEnabled = batteryPowerCutoffEnabled;
     }
 
     /**
@@ -133,6 +137,32 @@ public class AnkerSolixAutoControlService {
 
             int targetOutputW = currentOutputW + (int) Math.round(gridPowerW) + gridPowerOffsetW;
             int clampedOutputW = Math.max(minLoad, Math.min(maxLoad, targetOutputW));
+
+            // Battery power cutoff: turn off when target < minLoad, turn on when target >= minLoad
+            if (batteryPowerCutoffEnabled) {
+                if (targetOutputW < minLoad && !batteryPowerCutoffActive) {
+                    log.info("Auto-control: battery cutoff activated (target={}W < min={}W)", targetOutputW, minLoad);
+                    ankerSolixService.setOutputPower(0);
+                    batteryPowerCutoffActive = true;
+                    lastSetOutputW = 0;
+                    lastAdjustmentTime = LocalDateTime.now();
+                    lastSkipReason = null;
+                    saveReading((int) gridPowerW, currentOutputW, targetOutputW, 0, minLoad, maxLoad, true);
+                    evaluateForceDischarge();
+                    return;
+                } else if (targetOutputW < minLoad && batteryPowerCutoffActive) {
+                    lastSkipReason = String.format(
+                            "battery cutoff active (target=%dW < min=%dW)", targetOutputW, minLoad);
+                    log.debug("Auto-control: skipped – {}", lastSkipReason);
+                    saveReading((int) gridPowerW, 0, targetOutputW, 0, minLoad, maxLoad, false);
+                    evaluateForceDischarge();
+                    return;
+                } else if (batteryPowerCutoffActive && targetOutputW >= minLoad) {
+                    log.info("Auto-control: battery cutoff deactivated (target={}W >= min={}W)", targetOutputW, minLoad);
+                    batteryPowerCutoffActive = false;
+                    // Fall through to normal regulation with clampedOutputW
+                }
+            }
 
             int delta = Math.abs(clampedOutputW - currentOutputW);
             if (delta < thresholdW) {
@@ -213,6 +243,7 @@ public class AnkerSolixAutoControlService {
                 .lastSkipReason(lastSkipReason)
                 .forceDischargeActive(forceDischargeEnabled ? forceDischargeActive : null)
                 .lastBatteryPercent(lastBatteryPercent >= 0 ? lastBatteryPercent : null)
+                .batteryPowerCutoffActive(batteryPowerCutoffEnabled ? batteryPowerCutoffActive : null)
                 .build();
     }
 
@@ -227,6 +258,7 @@ public class AnkerSolixAutoControlService {
                 .gridPowerOffsetW(gridPowerOffsetW)
                 .forceDischargeEnabled(forceDischargeEnabled)
                 .forceDischargeMinBatteryPercent(forceDischargeMinBatteryPercent)
+                .batteryPowerCutoffEnabled(batteryPowerCutoffEnabled)
                 .build();
     }
 
@@ -235,6 +267,7 @@ public class AnkerSolixAutoControlService {
      */
     public void updateSettings(AnkerSolixAutoControlSettingsDto settings) {
         boolean wasForceDischargeEnabled = this.forceDischargeEnabled;
+        boolean wasBatteryPowerCutoffEnabled = this.batteryPowerCutoffEnabled;
 
         this.enabled = settings.isEnabled();
         this.thresholdW = settings.getThresholdW();
@@ -242,6 +275,7 @@ public class AnkerSolixAutoControlService {
         this.gridPowerOffsetW = settings.getGridPowerOffsetW();
         this.forceDischargeEnabled = settings.isForceDischargeEnabled();
         this.forceDischargeMinBatteryPercent = settings.getForceDischargeMinBatteryPercent();
+        this.batteryPowerCutoffEnabled = settings.isBatteryPowerCutoffEnabled();
 
         // Deactivate force-discharge on the device if the feature was just disabled
         if (wasForceDischargeEnabled && !forceDischargeEnabled && forceDischargeActive) {
@@ -254,9 +288,24 @@ public class AnkerSolixAutoControlService {
             }
         }
 
+        // Restore battery output if cutoff was just disabled while active
+        if (wasBatteryPowerCutoffEnabled && !batteryPowerCutoffEnabled && batteryPowerCutoffActive) {
+            try {
+                AnkerSolixDeviceParamDto deviceParams = ankerSolixService.getDeviceParams();
+                int minLoad = deviceParams.getMinLoadW();
+                ankerSolixService.setOutputPower(minLoad);
+                lastSetOutputW = minLoad;
+                batteryPowerCutoffActive = false;
+                log.info("Battery power cutoff deactivated on device (feature disabled via settings), restored to {}W", minLoad);
+            } catch (Exception ex) {
+                log.warn("Failed to deactivate battery power cutoff on device: {}", ex.getMessage(), ex);
+            }
+        }
+
         log.info("Auto-control settings updated: enabled={}, thresholdW={}, intervalMs={}, " +
-                        "gridPowerOffsetW={}, forceDischarge={}, minBattery={}%",
-                enabled, thresholdW, intervalMs, gridPowerOffsetW, forceDischargeEnabled, forceDischargeMinBatteryPercent);
+                        "gridPowerOffsetW={}, forceDischarge={}, minBattery={}%, batteryPowerCutoff={}",
+                enabled, thresholdW, intervalMs, gridPowerOffsetW, forceDischargeEnabled,
+                forceDischargeMinBatteryPercent, batteryPowerCutoffEnabled);
     }
 
     /**

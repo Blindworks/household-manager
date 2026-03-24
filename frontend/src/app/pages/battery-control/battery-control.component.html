@@ -81,6 +81,16 @@
                   </span>
                 </div>
               }
+              @if (status.batteryPowerCutoffActive !== null) {
+                <div class="status-section__stat">
+                  <span class="status-section__stat-label">Batterie-Abschaltung</span>
+                  <span class="status-section__badge"
+                        [class.status-section__badge--active]="status.batteryPowerCutoffActive"
+                        [class.status-section__badge--inactive]="!status.batteryPowerCutoffActive">
+                    {{ status.batteryPowerCutoffActive ? 'Aktiv' : 'Inaktiv' }}
+                  </span>
+                </div>
+              }
               @if (status.lastBatteryPercent !== null) {
                 <div class="status-section__stat">
                   <span class="status-section__stat-label">Akkustand</span>
@@ -194,6 +204,24 @@
                 type="button"
                 [attr.aria-pressed]="settings.forceDischargeEnabled"
                 aria-label="Batterie-Entladung erzwingen umschalten">
+                <span class="settings-section__toggle-knob"></span>
+              </button>
+            </div>
+
+            <!-- Batterie-Abschaltung bei niedriger Last -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label">Batterie-Abschaltung bei niedriger Last</label>
+                <span class="settings-section__hint">Schaltet die Batterie ab wenn der Bedarf unter die Mindestleistung (ca. 150 W) faellt</span>
+              </div>
+              <button
+                class="settings-section__toggle"
+                [class.settings-section__toggle--active]="settings.batteryPowerCutoffEnabled"
+                (click)="toggleBatteryPowerCutoff()"
+                [disabled]="isSaving"
+                type="button"
+                [attr.aria-pressed]="settings.batteryPowerCutoffEnabled"
+                aria-label="Batterie-Abschaltung umschalten">
                 <span class="settings-section__toggle-knob"></span>
               </button>
             </div>

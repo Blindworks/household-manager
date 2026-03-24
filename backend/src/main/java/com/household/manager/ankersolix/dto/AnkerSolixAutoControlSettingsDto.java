@@ -32,4 +32,7 @@ public class AnkerSolixAutoControlSettingsDto {
 
     /** Offset in watts added to the target calculation to keep grid power slightly positive instead of zero. */
     private int gridPowerOffsetW;
+
+    /** Whether to turn off the battery entirely when target output falls below the device minimum load. */
+    private boolean batteryPowerCutoffEnabled;
 }

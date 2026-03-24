@@ -30,6 +30,7 @@ export interface AnkerSolixAutoControlStatus {
   lastSkipReason: string | null;
   forceDischargeActive: boolean | null;
   lastBatteryPercent: number | null;
+  batteryPowerCutoffActive: boolean | null;
 }
 
 export interface AnkerSolixAutoControlSettings {
@@ -39,4 +40,5 @@ export interface AnkerSolixAutoControlSettings {
   gridPowerOffsetW: number;
   forceDischargeEnabled: boolean;
   forceDischargeMinBatteryPercent: number;
+  batteryPowerCutoffEnabled: boolean;
 }

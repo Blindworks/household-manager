@@ -46,4 +46,7 @@ public class AnkerSolixAutoControlStatusDto {
 
     /** Last observed battery state of charge in percent. */
     private Integer lastBatteryPercent;
+
+    /** Whether battery power cutoff is currently active (output set to 0W). */
+    private Boolean batteryPowerCutoffActive;
 }
