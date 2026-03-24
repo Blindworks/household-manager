@@ -56,6 +56,7 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
       enabled: this.settings.enabled,
       thresholdW: this.settings.thresholdW,
       intervalMs: this.intervalSeconds * 1000,
+      gridPowerOffsetW: this.settings.gridPowerOffsetW,
       forceDischargeEnabled: this.settings.forceDischargeEnabled,
       forceDischargeMinBatteryPercent: this.settings.forceDischargeMinBatteryPercent
     };

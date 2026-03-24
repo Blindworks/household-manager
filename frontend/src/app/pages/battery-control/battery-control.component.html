@@ -161,6 +161,25 @@
               </div>
             </div>
 
+            <!-- Netzbezug-Offset -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="offset-input">Netzbezug-Offset</label>
+                <span class="settings-section__hint">Zielwert fuer den Netzbezug in Watt (hoeher = weniger Einspeisung)</span>
+              </div>
+              <div class="settings-section__input-group">
+                <input
+                  id="offset-input"
+                  class="settings-section__number"
+                  type="number"
+                  [(ngModel)]="settings.gridPowerOffsetW"
+                  min="0"
+                  max="200"
+                  step="5">
+                <span class="settings-section__unit">W</span>
+              </div>
+            </div>
+
             <!-- Batterie-Entladung erzwingen -->
             <div class="settings-section__field">
               <div class="settings-section__field-header">
