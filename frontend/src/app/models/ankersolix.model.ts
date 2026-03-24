@@ -42,3 +42,15 @@ export interface AnkerSolixAutoControlSettings {
   forceDischargeMinBatteryPercent: number;
   batteryPowerCutoffEnabled: boolean;
 }
+
+export interface SolixAutoControlReading {
+  id: number;
+  timestamp: string;
+  gridPowerW: number;
+  currentOutputW: number;
+  targetOutputW: number;
+  clampedOutputW: number;
+  minLoadW: number;
+  maxLoadW: number;
+  applied: boolean;
+}

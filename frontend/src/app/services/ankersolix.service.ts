@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { AnkerSolixAutoControlSettings, AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../models/ankersolix.model';
+import { AnkerSolixAutoControlSettings, AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive, SolixAutoControlReading } from '../models/ankersolix.model';
 
 /**
  * Service for Anker Solix solar station data.
@@ -88,6 +88,13 @@ export class AnkerSolixService {
 
   setBatteryCutoff(enabled: boolean): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/battery-cutoff`, { enabled });
+  }
+
+  getAutoControlReadings(from?: string, to?: string): Observable<SolixAutoControlReading[]> {
+    const params: Record<string, string> = {};
+    if (from) { params['from'] = from; }
+    if (to) { params['to'] = to; }
+    return this.http.get<SolixAutoControlReading[]>(`${this.baseUrl}/auto-control/readings`, { params });
   }
 
   private connect(): void {

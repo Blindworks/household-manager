@@ -1,0 +1,56 @@
+<div class="energy-history">
+  <div class="container">
+    <header class="energy-history__header">
+      <div>
+        <p class="energy-history__eyebrow">Energie</p>
+        <h1 class="energy-history__title">Energieverlauf</h1>
+        <p class="energy-history__subtitle">
+          Zeitlicher Verlauf der Akku-Regelung: Netzleistung, Ausgangsleistung und Zielwerte.
+        </p>
+      </div>
+    </header>
+
+    <section class="energy-history__controls">
+      <div class="energy-history__tabs" role="tablist">
+        @for (range of timeRanges; track range.value) {
+          <button
+            type="button"
+            class="energy-history__tab"
+            [class.energy-history__tab--active]="selectedRange === range.value"
+            (click)="selectRange(range.value)">
+            {{ range.label }}
+          </button>
+        }
+      </div>
+    </section>
+
+    @if (isLoading) {
+      <div class="energy-history__state">Laedt Diagramm...</div>
+    } @else if (errorMessage) {
+      <div class="energy-history__state energy-history__state--error">{{ errorMessage }}</div>
+    } @else if (chartOptions) {
+      <div class="energy-history__card">
+        <div class="energy-history__chart-header">
+          <div>
+            <p class="energy-history__chart-title">Akku-Regelung</p>
+            <p class="energy-history__chart-subtitle">Einheit: Watt (W)</p>
+          </div>
+          <div class="energy-history__chart-meta">
+            <span>Messpunkte: {{ readingCount }}</span>
+          </div>
+        </div>
+
+        <div class="energy-history__chart">
+          <div
+            echarts
+            class="energy-history__echart"
+            [options]="chartOptions"></div>
+        </div>
+      </div>
+    } @else {
+      <div class="energy-history__state">
+        Keine Daten fuer den gewaehlten Zeitraum vorhanden.
+      </div>
+    }
+  </div>
+</div>

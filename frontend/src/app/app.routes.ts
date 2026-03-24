@@ -36,6 +36,11 @@ export const routes: Routes = [
     title: 'Akku Steuerung - Household Manager'
   },
   {
+    path: 'energy/history',
+    loadComponent: () => import('./pages/energy-history/energy-history.component').then(m => m.EnergyHistoryComponent),
+    title: 'Energieverlauf - Household Manager'
+  },
+  {
     path: 'air-quality',
     loadComponent: () => import('./pages/airrohr-charts/airrohr-charts.component').then(m => m.AirrohrChartsComponent),
     title: 'Luftqualitaet - Household Manager'
