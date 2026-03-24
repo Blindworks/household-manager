@@ -36,6 +36,7 @@ export interface AnkerSolixAutoControlSettings {
   enabled: boolean;
   thresholdW: number;
   intervalMs: number;
+  gridPowerOffsetW: number;
   forceDischargeEnabled: boolean;
   forceDischargeMinBatteryPercent: number;
 }

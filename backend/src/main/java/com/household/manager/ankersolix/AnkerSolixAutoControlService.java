@@ -51,6 +51,7 @@ public class AnkerSolixAutoControlService {
     private volatile int thresholdW;
     private volatile long intervalMs;
 
+    private volatile int gridPowerOffsetW;
     private volatile boolean forceDischargeEnabled;
     private volatile int forceDischargeMinBatteryPercent;
     private volatile boolean forceDischargeActive = false;
@@ -71,6 +72,7 @@ public class AnkerSolixAutoControlService {
             @Value("${ankersolix.auto-control.enabled:false}") boolean enabled,
             @Value("${ankersolix.auto-control.threshold-w:10}") int thresholdW,
             @Value("${ankersolix.auto-control.interval-ms:30000}") long intervalMs,
+            @Value("${ankersolix.auto-control.grid-power-offset-w:20}") int gridPowerOffsetW,
             @Value("${ankersolix.auto-control.force-discharge.enabled:false}") boolean forceDischargeEnabled,
             @Value("${ankersolix.auto-control.force-discharge.min-battery-percent:10}") int forceDischargeMinBatteryPercent) {
         this.ankerSolixService = ankerSolixService;
@@ -81,6 +83,7 @@ public class AnkerSolixAutoControlService {
         this.enabled = enabled;
         this.thresholdW = thresholdW;
         this.intervalMs = intervalMs;
+        this.gridPowerOffsetW = gridPowerOffsetW;
         this.forceDischargeEnabled = forceDischargeEnabled;
         this.forceDischargeMinBatteryPercent = forceDischargeMinBatteryPercent;
     }
@@ -113,7 +116,7 @@ public class AnkerSolixAutoControlService {
      * <ol>
      *   <li>Poll Tasmota for current grid power (positive = importing, negative = exporting)</li>
      *   <li>Read current battery output (cached from last adjustment, or from API on first run)</li>
-     *   <li>Calculate new target: {@code newOutput = currentOutput + gridPower}</li>
+     *   <li>Calculate new target: {@code newOutput = currentOutput + gridPower + gridPowerOffset}</li>
      *   <li>Clamp to device min/max limits</li>
      *   <li>Only apply if change exceeds the configured threshold</li>
      * </ol>
@@ -128,7 +131,7 @@ public class AnkerSolixAutoControlService {
             int maxLoad = deviceParams.getMaxLoadW();
             int currentOutputW = lastSetOutputW >= 0 ? lastSetOutputW : deviceParams.getCurrentOutputW();
 
-            int targetOutputW = currentOutputW + (int) Math.round(gridPowerW);
+            int targetOutputW = currentOutputW + (int) Math.round(gridPowerW) + gridPowerOffsetW;
             int clampedOutputW = Math.max(minLoad, Math.min(maxLoad, targetOutputW));
 
             int delta = Math.abs(clampedOutputW - currentOutputW);
@@ -221,6 +224,7 @@ public class AnkerSolixAutoControlService {
                 .enabled(enabled)
                 .thresholdW(thresholdW)
                 .intervalMs(intervalMs)
+                .gridPowerOffsetW(gridPowerOffsetW)
                 .forceDischargeEnabled(forceDischargeEnabled)
                 .forceDischargeMinBatteryPercent(forceDischargeMinBatteryPercent)
                 .build();
@@ -235,6 +239,7 @@ public class AnkerSolixAutoControlService {
         this.enabled = settings.isEnabled();
         this.thresholdW = settings.getThresholdW();
         this.intervalMs = settings.getIntervalMs();
+        this.gridPowerOffsetW = settings.getGridPowerOffsetW();
         this.forceDischargeEnabled = settings.isForceDischargeEnabled();
         this.forceDischargeMinBatteryPercent = settings.getForceDischargeMinBatteryPercent();
 
@@ -250,8 +255,8 @@ public class AnkerSolixAutoControlService {
         }
 
         log.info("Auto-control settings updated: enabled={}, thresholdW={}, intervalMs={}, " +
-                        "forceDischarge={}, minBattery={}%",
-                enabled, thresholdW, intervalMs, forceDischargeEnabled, forceDischargeMinBatteryPercent);
+                        "gridPowerOffsetW={}, forceDischarge={}, minBattery={}%",
+                enabled, thresholdW, intervalMs, gridPowerOffsetW, forceDischargeEnabled, forceDischargeMinBatteryPercent);
     }
 
     /**

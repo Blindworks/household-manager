@@ -29,4 +29,7 @@ public class AnkerSolixAutoControlSettingsDto {
 
     /** Battery SOC threshold in percent – force-discharge is disabled below this value. */
     private int forceDischargeMinBatteryPercent;
+
+    /** Offset in watts added to the target calculation to keep grid power slightly positive instead of zero. */
+    private int gridPowerOffsetW;
 }
