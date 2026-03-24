@@ -159,6 +159,111 @@
   }
 }
 
+// Direkte Steuerung
+.direct-control-section {
+  margin-bottom: var(--spacing-xl);
+
+  &__card {
+    background: var(--color-white);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid #f59e0b;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-lg);
+  }
+
+  &__title {
+    font-size: var(--font-size-xl);
+    color: var(--color-dark);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  &__description {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+    margin: 0 0 var(--spacing-lg) 0;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  &__action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--color-light-gray);
+    border-radius: var(--radius-md);
+  }
+
+  &__action-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+
+  &__action-label {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-dark);
+  }
+
+  &__action-hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+  }
+
+  &__action-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    border: 1px solid #d1d5db;
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+    color: var(--color-dark);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+
+    &:hover:not(:disabled) {
+      background: var(--color-primary);
+      color: var(--color-white);
+      border-color: var(--color-primary);
+    }
+
+    &--active {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+
+      &:hover:not(:disabled) {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: var(--color-white);
+      }
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
 // Einstellungen-Sektion
 .settings-section {
   margin-bottom: var(--spacing-xl);
@@ -351,6 +456,18 @@
 
     &__title {
       font-size: var(--font-size-3xl);
+    }
+  }
+
+  .direct-control-section {
+    &__action {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--spacing-sm);
+    }
+
+    &__action-controls {
+      justify-content: flex-start;
     }
   }
 

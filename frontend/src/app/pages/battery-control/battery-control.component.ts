@@ -29,6 +29,9 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
   saveSuccess = false;
   saveError = '';
 
+  isDirectActionLoading = false;
+  directActionError = '';
+
   private statusInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
@@ -101,6 +104,48 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
     }
     this.settings = { ...this.settings, batteryPowerCutoffEnabled: !this.settings.batteryPowerCutoffEnabled };
     this.saveSettings();
+  }
+
+  directToggleForceDischarge(): void {
+    if (!this.status || this.isDirectActionLoading) {
+      return;
+    }
+    this.isDirectActionLoading = true;
+    this.directActionError = '';
+    const newState = !this.status.forceDischargeActive;
+
+    this.ankerSolixService.setForceDischarge(newState).subscribe({
+      next: () => {
+        this.isDirectActionLoading = false;
+        this.loadStatus();
+      },
+      error: (err) => {
+        this.isDirectActionLoading = false;
+        this.directActionError = 'Fehler beim Setzen der Batterie-Entladung';
+        console.error('Fehler bei Force-Discharge:', err);
+      }
+    });
+  }
+
+  directToggleBatteryCutoff(): void {
+    if (!this.status || this.isDirectActionLoading) {
+      return;
+    }
+    this.isDirectActionLoading = true;
+    this.directActionError = '';
+    const newState = !this.status.batteryPowerCutoffActive;
+
+    this.ankerSolixService.setBatteryCutoff(newState).subscribe({
+      next: () => {
+        this.isDirectActionLoading = false;
+        this.loadStatus();
+      },
+      error: (err) => {
+        this.isDirectActionLoading = false;
+        this.directActionError = 'Fehler beim Setzen der Batterie-Abschaltung';
+        console.error('Fehler bei Battery-Cutoff:', err);
+      }
+    });
   }
 
   private loadStatus(): void {

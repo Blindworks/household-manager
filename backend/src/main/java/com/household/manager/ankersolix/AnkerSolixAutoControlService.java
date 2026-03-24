@@ -318,6 +318,27 @@ public class AnkerSolixAutoControlService {
         log.info("Force-discharge manually set to {}", enabled);
     }
 
+    /**
+     * Manually enables or disables battery power cutoff.
+     * When enabled, sets output to 0 W (battery off).
+     * When disabled, restores output to the device's minimum load.
+     */
+    public void setBatteryCutoffManual(boolean enabled) {
+        if (enabled) {
+            ankerSolixService.setOutputPower(0);
+            batteryPowerCutoffActive = true;
+            lastSetOutputW = 0;
+            log.info("Battery cutoff manually activated (output set to 0 W)");
+        } else {
+            AnkerSolixDeviceParamDto deviceParams = ankerSolixService.getDeviceParams();
+            int minLoad = deviceParams.getMinLoadW();
+            ankerSolixService.setOutputPower(minLoad);
+            batteryPowerCutoffActive = false;
+            lastSetOutputW = minLoad;
+            log.info("Battery cutoff manually deactivated (output restored to {} W)", minLoad);
+        }
+    }
+
     private void saveReading(int gridPowerW, int currentOutputW, int targetOutputW,
                              int clampedOutputW, int minLoadW, int maxLoadW, boolean applied) {
         try {

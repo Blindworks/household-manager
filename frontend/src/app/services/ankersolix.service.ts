@@ -82,6 +82,14 @@ export class AnkerSolixService {
     return this.http.put<AnkerSolixAutoControlSettings>(`${this.baseUrl}/auto-control/settings`, settings);
   }
 
+  setForceDischarge(enabled: boolean): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/force-discharge`, { enabled });
+  }
+
+  setBatteryCutoff(enabled: boolean): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/battery-cutoff`, { enabled });
+  }
+
   private connect(): void {
     if (this.eventSource) {
       return;
