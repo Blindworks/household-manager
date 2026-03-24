@@ -58,7 +58,8 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
       intervalMs: this.intervalSeconds * 1000,
       gridPowerOffsetW: this.settings.gridPowerOffsetW,
       forceDischargeEnabled: this.settings.forceDischargeEnabled,
-      forceDischargeMinBatteryPercent: this.settings.forceDischargeMinBatteryPercent
+      forceDischargeMinBatteryPercent: this.settings.forceDischargeMinBatteryPercent,
+      batteryPowerCutoffEnabled: this.settings.batteryPowerCutoffEnabled
     };
 
     this.ankerSolixService.updateAutoControlSettings(payload).subscribe({
@@ -91,6 +92,14 @@ export class BatteryControlComponent implements OnInit, OnDestroy {
       return;
     }
     this.settings = { ...this.settings, forceDischargeEnabled: !this.settings.forceDischargeEnabled };
+    this.saveSettings();
+  }
+
+  toggleBatteryPowerCutoff(): void {
+    if (!this.settings) {
+      return;
+    }
+    this.settings = { ...this.settings, batteryPowerCutoffEnabled: !this.settings.batteryPowerCutoffEnabled };
     this.saveSettings();
   }
 
