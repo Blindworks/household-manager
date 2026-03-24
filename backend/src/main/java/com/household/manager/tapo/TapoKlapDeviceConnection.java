@@ -12,11 +12,15 @@ import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
+
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final int SESSION_TTL_SECONDS = 300;
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -57,7 +61,21 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         executeRequest(request);
     }
 
+    @Override
+    public JsonNode getEnergyUsage() {
+        return executeRequest(objectMapper.createObjectNode().put("method", "get_energy_usage"));
+    }
+
+    @Override
+    public JsonNode getCurrentPower() {
+        return executeRequest(objectMapper.createObjectNode().put("method", "get_current_power"));
+    }
+
     private JsonNode executeRequest(JsonNode requestData) {
+        return executeRequestInternal(requestData, true);
+    }
+
+    private JsonNode executeRequestInternal(JsonNode requestData, boolean retryOnAuthError) {
         ensureAuthenticated();
         int seq = sequence.incrementAndGet();
         byte[] payload = encrypt(requestData.toString(), seq);
@@ -65,28 +83,48 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(appUrl + "/request?seq=" + seq))
                 .header("Cookie", sessionCookie)
+                .timeout(REQUEST_TIMEOUT)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
                 .build();
 
         try {
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+            if (response.statusCode() == 403 && retryOnAuthError) {
+                invalidateSession();
+                return executeRequestInternal(requestData, false);
+            }
+
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new TapoException("Tapo KLAP-Request fehlgeschlagen mit HTTP " + response.statusCode());
             }
 
             JsonNode parsed = objectMapper.readTree(decrypt(response.body(), seq));
+
+            int errorCode = parsed.path("error_code").asInt(0);
+            if (errorCode == -1301 && retryOnAuthError) {
+                invalidateSession();
+                return executeRequestInternal(requestData, false);
+            }
+
             validateResponse(parsed, "Tapo KLAP-Geraet");
             return parsed.path("result");
         } catch (IOException | InterruptedException ex) {
             if (ex instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new TapoException("Tapo KLAP-Kommunikation fehlgeschlagen.", ex);
+            throw new TapoException("Tapo KLAP-Kommunikation fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
 
+    private synchronized void invalidateSession() {
+        authenticatedAt = null;
+        sessionCookie = null;
+        key = null;
+    }
+
     private synchronized void ensureAuthenticated() {
-        if (authenticatedAt != null && Instant.now().isBefore(authenticatedAt.plusSeconds(300))) {
+        if (authenticatedAt != null && Instant.now().isBefore(authenticatedAt.plusSeconds(SESSION_TTL_SECONDS))) {
             return;
         }
 
@@ -101,11 +139,12 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         try {
             HttpRequest handshake1 = HttpRequest.newBuilder()
                     .uri(URI.create(appUrl + "/handshake1"))
+                    .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(localSeed))
                     .build();
             HttpResponse<byte[]> response1 = httpClient.send(handshake1, HttpResponse.BodyHandlers.ofByteArray());
             if (response1.statusCode() == 403) {
-                throw new TapoException("Tapo KLAP verweigert den Zugriff. Pruefe Third-Party Compatibility in der Tapo-App.");
+                throw new TapoException("Tapo KLAP verweigert den Zugriff (403). Pruefe 'Third-Party Compatibility' in der Tapo-App.");
             }
             if (response1.statusCode() < 200 || response1.statusCode() >= 300) {
                 throw new TapoException("Tapo KLAP-Handshake1 fehlgeschlagen mit HTTP " + response1.statusCode());
@@ -114,20 +153,21 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             sessionCookie = TapoSessionCookie.extract(response1.headers());
             byte[] body = response1.body();
             if (body.length < 48) {
-                throw new TapoException("Tapo KLAP-Handshake1 lieferte ungueltige Daten.");
+                throw new TapoException("Tapo KLAP-Handshake1 lieferte ungueltige Daten (Laenge: " + body.length + ").");
             }
 
             byte[] remoteSeed = Arrays.copyOfRange(body, 0, 16);
             byte[] serverHash = Arrays.copyOfRange(body, 16, 48);
             byte[] localHash = TapoCipher.sha256(concat(localSeed, remoteSeed, userHash));
             if (!Arrays.equals(localHash, serverHash)) {
-                throw new TapoException("Tapo KLAP-Handshake-Pruefung fehlgeschlagen.");
+                throw new TapoException("Tapo KLAP-Handshake-Pruefung fehlgeschlagen (falsches Passwort?).");
             }
 
             byte[] payload = TapoCipher.sha256(concat(remoteSeed, localSeed, userHash));
             HttpRequest handshake2 = HttpRequest.newBuilder()
                     .uri(URI.create(appUrl + "/handshake2"))
                     .header("Cookie", sessionCookie)
+                    .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
                     .build();
             HttpResponse<byte[]> response2 = httpClient.send(handshake2, HttpResponse.BodyHandlers.ofByteArray());
@@ -146,7 +186,7 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             if (ex instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new TapoException("Tapo KLAP-Authentifizierung fehlgeschlagen.", ex);
+            throw new TapoException("Tapo KLAP-Authentifizierung fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
 
@@ -158,7 +198,7 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
 
     private String decrypt(byte[] payload, int seq) {
         if (payload.length < 33) {
-            throw new TapoException("Tapo KLAP-Antwort ist zu kurz.");
+            throw new TapoException("Tapo KLAP-Antwort ist zu kurz (" + payload.length + " Bytes).");
         }
         byte[] cipherText = Arrays.copyOfRange(payload, 32, payload.length);
         return new String(TapoCipher.aesCbcDecrypt(key, ivForSequence(seq), cipherText), StandardCharsets.UTF_8);

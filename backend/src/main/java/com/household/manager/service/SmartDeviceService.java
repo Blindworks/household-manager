@@ -14,15 +14,18 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.tapo.TapoAuthProtocol;
 import com.household.manager.tapo.TapoCloudDevice;
 import com.household.manager.tapo.TapoDeviceService;
 import com.household.manager.tapo.TapoDeviceState;
+import com.household.manager.tapo.TapoDiscoveryDevice;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -184,7 +187,11 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOn(device.getExternalDeviceId());
-                case TAPO -> tapoDeviceService.turnOn(device.getExternalDeviceId());
+                case TAPO -> {
+                    String tapoIp = device.getIpAddress();
+                    TapoAuthProtocol tapoProto = extractAuthProtocol(device);
+                    tapoDeviceService.turnOn(device.getExternalDeviceId(), tapoIp, tapoProto);
+                }
                 case MEROSS -> merossDeviceService.turnOn(device.getExternalDeviceId());
             }
 
@@ -215,7 +222,11 @@ public class SmartDeviceService {
         try {
             switch (device.getDeviceType()) {
                 case KASA -> kasaService.turnOff(device.getExternalDeviceId());
-                case TAPO -> tapoDeviceService.turnOff(device.getExternalDeviceId());
+                case TAPO -> {
+                    String tapoIp = device.getIpAddress();
+                    TapoAuthProtocol tapoProto = extractAuthProtocol(device);
+                    tapoDeviceService.turnOff(device.getExternalDeviceId(), tapoIp, tapoProto);
+                }
                 case MEROSS -> merossDeviceService.turnOff(device.getExternalDeviceId());
             }
 
@@ -287,15 +298,30 @@ public class SmartDeviceService {
     // ==================== Tapo Device Methods ====================
 
     private List<SmartDevice> scanTapoDevices() {
-        List<TapoCloudDevice> discovered = tapoDeviceService.discoverDevices();
-        log.info("Discovered {} Tapo devices", discovered.size());
+        List<TapoCloudDevice> discovered = tapoDeviceService.discoverCloudDevices();
+        log.info("Discovered {} Tapo cloud devices", discovered.size());
+
+        Map<String, TapoDiscoveryDevice> localDeviceMap = discoverLocalTapoDevices();
 
         return discovered.stream()
-                .map(this::upsertTapoDevice)
+                .map(cloudDevice -> upsertTapoDevice(cloudDevice, localDeviceMap.get(cloudDevice.deviceId())))
                 .collect(Collectors.toList());
     }
 
-    private SmartDevice upsertTapoDevice(TapoCloudDevice dto) {
+    private Map<String, TapoDiscoveryDevice> discoverLocalTapoDevices() {
+        try {
+            List<TapoDiscoveryDevice> localDevices = tapoDeviceService.discoverLocalDevices();
+            log.info("Discovered {} Tapo local devices", localDevices.size());
+            return localDevices.stream()
+                    .filter(d -> d.deviceId() != null)
+                    .collect(Collectors.toMap(TapoDiscoveryDevice::deviceId, Function.identity(), (a, b) -> a));
+        } catch (Exception ex) {
+            log.warn("Local Tapo discovery failed, continuing with cloud only: {}", ex.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private SmartDevice upsertTapoDevice(TapoCloudDevice dto, TapoDiscoveryDevice localDevice) {
         String externalId = dto.deviceId();
         Optional<SmartDevice> existing = smartDeviceRepository
                 .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, externalId);
@@ -318,14 +344,22 @@ public class SmartDeviceService {
                         .orElseGet(() -> Optional.ofNullable(dto.deviceName()).filter(name -> !name.isBlank()).orElse("Tapo Device"))
         );
         device.setModel(dto.model());
-        device.setIpAddress(null);
-        device.setOnline(!"0".equals(dto.status()));
+        device.setOnline(true); // Cloud status field is unreliable for Tapo devices
         device.setPoweredOn(false);
         device.setCapabilities("SWITCH");
-        device.setMetadata(serializeMetadata(tapoDeviceService.buildMetadata(dto)));
 
+        Map<String, Object> metadata = tapoDeviceService.buildMetadata(dto);
+        if (localDevice != null) {
+            device.setIpAddress(localDevice.ipAddress());
+            metadata.put("authProtocol", localDevice.authProtocol().name());
+            log.debug("Tapo device {} found locally at {}", externalId, localDevice.ipAddress());
+        }
+        device.setMetadata(serializeMetadata(metadata));
+
+        String ip = device.getIpAddress();
+        TapoAuthProtocol protocol = extractAuthProtocol(device);
         try {
-            TapoDeviceState state = tapoDeviceService.getStatus(externalId);
+            TapoDeviceState state = tapoDeviceService.getStatus(externalId, ip, protocol);
             device.setOnline(state.online());
             device.setPoweredOn(state.poweredOn());
             if (state.nickname() != null && !state.nickname().isBlank()) {
@@ -343,7 +377,9 @@ public class SmartDeviceService {
 
     private void refreshTapoDeviceState(SmartDevice device) {
         try {
-            TapoDeviceState status = tapoDeviceService.getStatus(device.getExternalDeviceId());
+            String ip = device.getIpAddress();
+            TapoAuthProtocol protocol = extractAuthProtocol(device);
+            TapoDeviceState status = tapoDeviceService.getStatus(device.getExternalDeviceId(), ip, protocol);
             device.setOnline(status.online());
             device.setPoweredOn(status.poweredOn());
             if (status.nickname() != null && !status.nickname().isBlank()) {
@@ -447,6 +483,19 @@ public class SmartDeviceService {
             log.error("Failed to serialize metadata", ex);
             return null;
         }
+    }
+
+    private TapoAuthProtocol extractAuthProtocol(SmartDevice device) {
+        Map<String, Object> metadata = deserializeMetadata(device.getMetadata());
+        Object protocol = metadata.get("authProtocol");
+        if (protocol instanceof String protocolStr) {
+            try {
+                return TapoAuthProtocol.valueOf(protocolStr);
+            } catch (IllegalArgumentException ignored) {
+                // fall through
+            }
+        }
+        return null;
     }
 
     private Map<String, Object> deserializeMetadata(String json) {

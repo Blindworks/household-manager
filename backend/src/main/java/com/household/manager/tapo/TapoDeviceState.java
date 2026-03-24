@@ -9,6 +9,13 @@ public record TapoDeviceState(
         boolean online
 ) {
 
+    public static TapoDeviceState fromLocal(JsonNode deviceInfo, TapoCloudService tapoCloudService) {
+        String nickname = tapoCloudService.decodeAlias(firstText(deviceInfo, "nickname", "alias"));
+        String model = firstText(deviceInfo, "model", "device_model");
+        boolean poweredOn = deviceInfo.path("device_on").asBoolean(false);
+        return new TapoDeviceState(nickname, model, poweredOn, true);
+    }
+
     public static TapoDeviceState from(
             JsonNode deviceInfo,
             TapoCloudDevice cloudDevice,
@@ -25,8 +32,9 @@ public record TapoDeviceState(
         }
 
         boolean poweredOn = deviceInfo.path("device_on").asBoolean(false);
-        boolean online = cloudDevice == null || !"0".equals(cloudDevice.status());
-        return new TapoDeviceState(nickname, model, poweredOn, online);
+        // If we successfully got deviceInfo via passthrough, the device is online
+        // regardless of the cloud status field (which is unreliable for Tapo devices)
+        return new TapoDeviceState(nickname, model, poweredOn, true);
     }
 
     private static String firstText(JsonNode node, String... fieldNames) {

@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
 import java.net.http.HttpClient;
+import java.time.Duration;
 
 @Component
 public class TapoDeviceFactory {
 
-    private final HttpClient httpClient = HttpClient.newBuilder().build();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
     private final ObjectMapper objectMapper;
 
     public TapoDeviceFactory(ObjectMapper objectMapper) {
