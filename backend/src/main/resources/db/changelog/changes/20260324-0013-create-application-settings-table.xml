@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260324-0013" author="household-manager">
+        <comment>Create application_settings table for persisting runtime configuration in the database.</comment>
+
+        <createTable tableName="application_settings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="setting_key" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="setting_value" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="application_settings"
+                columnNames="category, setting_key"
+                constraintName="uq_category_setting_key"/>
+
+        <createIndex indexName="idx_application_settings_category" tableName="application_settings">
+            <column name="category"/>
+        </createIndex>
+
+        <!-- Seed default values for Anker Solix auto-control settings -->
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="enabled"/>
+            <column name="setting_value" value="false"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="interval_ms"/>
+            <column name="setting_value" value="30000"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="threshold_w"/>
+            <column name="setting_value" value="10"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="grid_power_offset_w"/>
+            <column name="setting_value" value="20"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="force_discharge_enabled"/>
+            <column name="setting_value" value="false"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="force_discharge_min_battery_percent"/>
+            <column name="setting_value" value="10"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="ANKERSOLIX_AUTO_CONTROL"/>
+            <column name="setting_key" value="battery_power_cutoff_enabled"/>
+            <column name="setting_value" value="false"/>
+        </insert>
+
+        <rollback>
+            <dropTable tableName="application_settings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
