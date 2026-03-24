@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260324-0012" author="household-manager">
+        <comment>Create solix_auto_control_readings table for Anker Solix auto-control history</comment>
+
+        <createTable tableName="solix_auto_control_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="timestamp" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="grid_power_w" type="INT"/>
+            <column name="current_output_w" type="INT"/>
+            <column name="target_output_w" type="INT"/>
+            <column name="clamped_output_w" type="INT"/>
+            <column name="min_load_w" type="INT"/>
+            <column name="max_load_w" type="INT"/>
+            <column name="applied" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_solix_auto_control_timestamp" tableName="solix_auto_control_readings">
+            <column name="timestamp"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="solix_auto_control_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -30,4 +30,7 @@
     <!-- Shelly Balcony Power Plant Feature -->
     <include file="db/changelog/changes/20260323-0011-add-shelly-readings-table.xml"/>
 
+    <!-- Anker Solix Auto-Control History -->
+    <include file="db/changelog/changes/20260324-0012-create-solix-auto-control-readings-table.xml"/>
+
 </databaseChangeLog>
