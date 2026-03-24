@@ -151,7 +151,7 @@
       </div>
     </section>
 
-    <!-- Auto-Control Status -->
+    <!-- Auto-Control Kompaktstatus -->
     @if (autoControlStatus) {
       <section class="auto-control-section">
         <div class="auto-control-section__card">
@@ -162,56 +162,26 @@
                   [class.auto-control-section__badge--inactive]="!autoControlStatus.enabled">
               {{ autoControlStatus.enabled ? 'Aktiv' : 'Inaktiv' }}
             </span>
+            <a routerLink="/energy/battery-control" class="auto-control-section__link">
+              Details & Einstellungen
+            </a>
           </div>
-
-          @if (autoControlStatus.enabled) {
-            <p class="auto-control-section__description">
-              Die Ausgangsleistung wird automatisch angepasst, um den Netzbezug nahe 0 W zu halten
-              und Einspeisung ins oeffentliche Netz zu vermeiden.
-            </p>
+          @if (autoControlStatus.enabled && autoControlStatus.lastSetOutputW !== null) {
             <div class="auto-control-section__stats">
               <div class="auto-control-section__stat">
-                <span class="auto-control-section__stat-label">Schwellwert</span>
-                <span class="auto-control-section__stat-value">{{ autoControlStatus.thresholdW }} W</span>
+                <span class="auto-control-section__stat-label">Letzte gesetzte Leistung</span>
+                <span class="auto-control-section__stat-value">{{ autoControlStatus.lastSetOutputW }} W</span>
               </div>
-              @if (autoControlStatus.lastSetOutputW !== null) {
-                <div class="auto-control-section__stat">
-                  <span class="auto-control-section__stat-label">Letzte gesetzte Leistung</span>
-                  <span class="auto-control-section__stat-value">{{ autoControlStatus.lastSetOutputW }} W</span>
-                </div>
-              }
               @if (autoControlStatus.lastGridPowerW !== null) {
                 <div class="auto-control-section__stat">
                   <span class="auto-control-section__stat-label">Letzter Netzbezug</span>
                   <span class="auto-control-section__stat-value"
                         [class.auto-control-section__stat-value--negative]="autoControlStatus.lastGridPowerW < 0">
                     {{ autoControlStatus.lastGridPowerW | number:'1.0-0' }} W
-                    @if (autoControlStatus.lastGridPowerW < 0) {
-                      (Einspeisung)
-                    }
-                  </span>
-                </div>
-              }
-              @if (autoControlStatus.lastAdjustmentTime) {
-                <div class="auto-control-section__stat">
-                  <span class="auto-control-section__stat-label">Letzte Anpassung</span>
-                  <span class="auto-control-section__stat-value">{{ autoControlStatus.lastAdjustmentTime }}</span>
-                </div>
-              }
-              @if (autoControlStatus.lastSkipReason) {
-                <div class="auto-control-section__stat auto-control-section__stat--full">
-                  <span class="auto-control-section__stat-label">Letzter Zyklus</span>
-                  <span class="auto-control-section__stat-value auto-control-section__stat-value--muted">
-                    Keine Anpassung: {{ autoControlStatus.lastSkipReason }}
                   </span>
                 </div>
               }
             </div>
-          } @else {
-            <p class="auto-control-section__description">
-              Die automatische Regelung ist deaktiviert. Aktivieren Sie sie in der Konfiguration
-              mit <code>ankersolix.auto-control.enabled=true</code>.
-            </p>
           }
         </div>
       </section>

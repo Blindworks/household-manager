@@ -23,8 +23,15 @@ export interface AnkerSolixDeviceParams {
 export interface AnkerSolixAutoControlStatus {
   enabled: boolean;
   thresholdW: number;
+  intervalMs: number;
   lastSetOutputW: number | null;
   lastGridPowerW: number | null;
   lastAdjustmentTime: string | null;
   lastSkipReason: string | null;
+}
+
+export interface AnkerSolixAutoControlSettings {
+  enabled: boolean;
+  thresholdW: number;
+  intervalMs: number;
 }

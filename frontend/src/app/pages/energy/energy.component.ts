@@ -7,6 +7,7 @@ import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { RouterLink } from '@angular/router';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
@@ -21,7 +22,7 @@ echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasR
 @Component({
   selector: 'app-energy',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxEchartsDirective],
+  imports: [CommonModule, FormsModule, NgxEchartsDirective, RouterLink],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './energy.component.html',
   styleUrl: './energy.component.scss'

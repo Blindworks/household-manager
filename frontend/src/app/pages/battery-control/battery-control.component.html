@@ -1,0 +1,184 @@
+<div class="battery-control-page">
+  <div class="container">
+
+    <!-- Seitentitel -->
+    <header class="battery-control-page__header">
+      <div>
+        <p class="battery-control-page__eyebrow">Automatische Regelung</p>
+        <h1 class="battery-control-page__title">Akku Steuerung</h1>
+        <p class="battery-control-page__subtitle">
+          Konfiguration und Status der automatischen Leistungsregelung.
+          Die Ausgangsleistung wird angepasst, um den Netzbezug nahe 0 W zu halten.
+        </p>
+      </div>
+      <a routerLink="/energy" class="battery-control-page__back-link">
+        Zur Energieuebersicht
+      </a>
+    </header>
+
+    <!-- Status-Karte -->
+    @if (status) {
+      <section class="status-section">
+        <div class="status-section__card">
+          <div class="status-section__header">
+            <h2 class="status-section__title">Aktueller Status</h2>
+            <span class="status-section__badge"
+                  [class.status-section__badge--active]="status.enabled"
+                  [class.status-section__badge--inactive]="!status.enabled">
+              {{ status.enabled ? 'Aktiv' : 'Inaktiv' }}
+            </span>
+          </div>
+
+          @if (status.enabled) {
+            <div class="status-section__stats">
+              <div class="status-section__stat">
+                <span class="status-section__stat-label">Schwellwert</span>
+                <span class="status-section__stat-value">{{ status.thresholdW }} W</span>
+              </div>
+              <div class="status-section__stat">
+                <span class="status-section__stat-label">Intervall</span>
+                <span class="status-section__stat-value">{{ status.intervalMs / 1000 }} s</span>
+              </div>
+              @if (status.lastSetOutputW !== null) {
+                <div class="status-section__stat">
+                  <span class="status-section__stat-label">Letzte gesetzte Leistung</span>
+                  <span class="status-section__stat-value">{{ status.lastSetOutputW }} W</span>
+                </div>
+              }
+              @if (status.lastGridPowerW !== null) {
+                <div class="status-section__stat">
+                  <span class="status-section__stat-label">Letzter Netzbezug</span>
+                  <span class="status-section__stat-value"
+                        [class.status-section__stat-value--negative]="status.lastGridPowerW < 0">
+                    {{ status.lastGridPowerW | number:'1.0-0' }} W
+                    @if (status.lastGridPowerW < 0) {
+                      (Einspeisung)
+                    }
+                  </span>
+                </div>
+              }
+              @if (status.lastAdjustmentTime) {
+                <div class="status-section__stat">
+                  <span class="status-section__stat-label">Letzte Anpassung</span>
+                  <span class="status-section__stat-value">{{ status.lastAdjustmentTime }}</span>
+                </div>
+              }
+              @if (status.lastSkipReason) {
+                <div class="status-section__stat status-section__stat--full">
+                  <span class="status-section__stat-label">Letzter Zyklus</span>
+                  <span class="status-section__stat-value status-section__stat-value--muted">
+                    Keine Anpassung: {{ status.lastSkipReason }}
+                  </span>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="status-section__description">
+              Die automatische Regelung ist deaktiviert. Aktivieren Sie sie ueber die Einstellungen unten.
+            </p>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Einstellungen-Karte -->
+    @if (settings) {
+      <section class="settings-section">
+        <div class="settings-section__card">
+          <h2 class="settings-section__title">Einstellungen</h2>
+
+          <div class="settings-section__body">
+
+            <!-- Aktivierung -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label">Automatische Regelung</label>
+                <span class="settings-section__hint">Aktiviert oder deaktiviert die automatische Leistungsanpassung</span>
+              </div>
+              <button
+                class="settings-section__toggle"
+                [class.settings-section__toggle--active]="settings.enabled"
+                (click)="toggleEnabled()"
+                [disabled]="isSaving"
+                type="button"
+                [attr.aria-pressed]="settings.enabled"
+                aria-label="Automatische Regelung umschalten">
+                <span class="settings-section__toggle-knob"></span>
+              </button>
+            </div>
+
+            <!-- Schwellwert -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="threshold-input">Schwellwert</label>
+                <span class="settings-section__hint">Minimale Aenderung in Watt, um eine Anpassung auszuloesen</span>
+              </div>
+              <div class="settings-section__input-group">
+                <input
+                  id="threshold-input"
+                  class="settings-section__number"
+                  type="number"
+                  [(ngModel)]="settings.thresholdW"
+                  min="1"
+                  max="500"
+                  step="1">
+                <span class="settings-section__unit">W</span>
+              </div>
+            </div>
+
+            <!-- Intervall -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="interval-input">Intervall</label>
+                <span class="settings-section__hint">Zeitabstand zwischen den Regelungszyklen</span>
+              </div>
+              <div class="settings-section__input-group">
+                <input
+                  id="interval-input"
+                  class="settings-section__number"
+                  type="number"
+                  [(ngModel)]="intervalSeconds"
+                  min="5"
+                  max="600"
+                  step="1">
+                <span class="settings-section__unit">Sekunden</span>
+              </div>
+            </div>
+
+            <!-- Speichern -->
+            <div class="settings-section__actions">
+              <button
+                class="btn btn--primary settings-section__btn"
+                type="button"
+                [disabled]="isSaving"
+                (click)="saveSettings()">
+                @if (isSaving) {
+                  <span class="settings-section__spinner"></span>
+                  Wird gespeichert...
+                } @else {
+                  Speichern
+                }
+              </button>
+            </div>
+
+            @if (saveSuccess) {
+              <p class="settings-section__feedback settings-section__feedback--success">
+                Einstellungen erfolgreich gespeichert.
+              </p>
+            }
+            @if (saveError) {
+              <p class="settings-section__feedback settings-section__feedback--error">
+                {{ saveError }}
+              </p>
+            }
+          </div>
+        </div>
+      </section>
+    } @else {
+      <div class="battery-control-page__loading">
+        <p>Einstellungen werden geladen...</p>
+      </div>
+    }
+
+  </div>
+</div>

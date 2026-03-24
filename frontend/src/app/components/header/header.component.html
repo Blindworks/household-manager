@@ -30,13 +30,39 @@
         <ul class="header__nav-list">
           @for (link of navLinks; track link.path) {
             <li class="header__nav-item">
-              <a [routerLink]="link.path"
-                 routerLinkActive="header__nav-link--active"
-                 [routerLinkActiveOptions]="{ exact: !!link.exact }"
-                 (click)="closeMobileMenu()"
-                 class="header__nav-link">
-                {{ link.label }}
-              </a>
+              @if (link.children) {
+                <button
+                  class="header__nav-link header__nav-link--parent"
+                  [class.header__nav-link--active]="isParentActive(link)"
+                  (click)="toggleSubmenu(link.path)"
+                  type="button">
+                  {{ link.label }}
+                  <span class="header__nav-chevron" [class.header__nav-chevron--open]="isSubmenuExpanded(link.path)">&#9662;</span>
+                </button>
+                @if (isSubmenuExpanded(link.path)) {
+                  <ul class="header__nav-submenu">
+                    @for (child of link.children; track child.path) {
+                      <li class="header__nav-subitem">
+                        <a [routerLink]="child.path"
+                           routerLinkActive="header__nav-link--active"
+                           [routerLinkActiveOptions]="{ exact: !!child.exact }"
+                           (click)="closeMobileMenu()"
+                           class="header__nav-link header__nav-sublink">
+                          {{ child.label }}
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              } @else {
+                <a [routerLink]="link.path"
+                   routerLinkActive="header__nav-link--active"
+                   [routerLinkActiveOptions]="{ exact: !!link.exact }"
+                   (click)="closeMobileMenu()"
+                   class="header__nav-link">
+                  {{ link.label }}
+                </a>
+              }
             </li>
           }
         </ul>
@@ -50,12 +76,37 @@
     <ul class="header-sidebar__list">
       @for (link of navLinks; track link.path) {
         <li class="header-sidebar__item">
-          <a [routerLink]="link.path"
-             routerLinkActive="header-sidebar__link--active"
-             [routerLinkActiveOptions]="{ exact: !!link.exact }"
-             class="header-sidebar__link">
-            {{ link.label }}
-          </a>
+          @if (link.children) {
+            <button
+              class="header-sidebar__link header-sidebar__link--parent"
+              [class.header-sidebar__link--active]="isParentActive(link)"
+              (click)="toggleSubmenu(link.path)"
+              type="button">
+              {{ link.label }}
+              <span class="header-sidebar__chevron" [class.header-sidebar__chevron--open]="isSubmenuExpanded(link.path)">&#9662;</span>
+            </button>
+            @if (isSubmenuExpanded(link.path)) {
+              <ul class="header-sidebar__submenu">
+                @for (child of link.children; track child.path) {
+                  <li class="header-sidebar__subitem">
+                    <a [routerLink]="child.path"
+                       routerLinkActive="header-sidebar__sublink--active"
+                       [routerLinkActiveOptions]="{ exact: !!child.exact }"
+                       class="header-sidebar__sublink">
+                      {{ child.label }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          } @else {
+            <a [routerLink]="link.path"
+               routerLinkActive="header-sidebar__link--active"
+               [routerLinkActiveOptions]="{ exact: !!link.exact }"
+               class="header-sidebar__link">
+              {{ link.label }}
+            </a>
+          }
         </li>
       }
     </ul>

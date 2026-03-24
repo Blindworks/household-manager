@@ -336,7 +336,7 @@
   }
 }
 
-// Auto-Control Sektion
+// Auto-Control Kompaktstatus
 .auto-control-section {
   margin-bottom: var(--spacing-xl);
 
@@ -346,97 +346,41 @@
     border-left: 4px solid #06b6d4;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
   }
 
   &__header {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
   }
 
-  &__title {
-    font-size: var(--font-size-xl);
-    color: var(--color-dark);
-    margin: 0;
-  }
+  &__title { font-size: var(--font-size-base); color: var(--color-dark); margin: 0; font-weight: 600; }
 
   &__badge {
-    display: inline-block;
     padding: 2px 10px;
     border-radius: var(--radius-sm);
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-
-    &--active {
-      background: rgba(16, 185, 129, 0.15);
-      color: #059669;
-      border: 1px solid rgba(16, 185, 129, 0.35);
-    }
-
-    &--inactive {
-      background: rgba(156, 163, 175, 0.15);
-      color: #6b7280;
-      border: 1px solid rgba(156, 163, 175, 0.35);
-    }
+    &--active { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.35); }
+    &--inactive { background: rgba(156, 163, 175, 0.15); color: #6b7280; border: 1px solid rgba(156, 163, 175, 0.35); }
   }
 
-  &__description {
+  &__link {
+    margin-left: auto;
     font-size: var(--font-size-sm);
-    color: var(--color-gray);
-    margin-bottom: var(--spacing-md);
-
-    code {
-      font-size: 0.8rem;
-      background: rgba(0, 0, 0, 0.05);
-      padding: 1px 6px;
-      border-radius: var(--radius-sm);
-      color: var(--color-dark);
-    }
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
   }
 
-  &__stats {
-    display: flex;
-    gap: var(--spacing-lg);
-    flex-wrap: wrap;
-  }
-
-  &__stat {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    &--full {
-      flex-basis: 100%;
-    }
-  }
-
-  &__stat-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-gray);
-  }
-
-  &__stat-value {
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    color: var(--color-dark);
-
-    &--negative {
-      color: #dc2626;
-    }
-
-    &--muted {
-      font-weight: 400;
-      color: var(--color-gray);
-      font-size: var(--font-size-sm);
-    }
-  }
+  &__stats { display: flex; gap: var(--spacing-lg); flex-wrap: wrap; margin-top: var(--spacing-sm); }
+  &__stat { display: flex; flex-direction: column; gap: 2px; }
+  &__stat-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--color-gray); }
+  &__stat-value { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-dark); &--negative { color: #dc2626; } }
 }
 
 // Diagrammsektion
