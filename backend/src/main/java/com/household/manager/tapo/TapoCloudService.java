@@ -34,11 +34,11 @@ public class TapoCloudService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final long DEVICE_LIST_CACHE_TTL_MS = 60_000;
+    private static final long TOKEN_EXPIRY_BUFFER_MS = 60_000;
 
-    private volatile String cloudToken;
-    private volatile Instant tokenExpiresAt;
     private volatile String terminalUuid = UUID.randomUUID().toString();
     private final Map<String, String> appServerUrlCache = new ConcurrentHashMap<>();
+    private final Map<String, TokenEntry> tokenCache = new ConcurrentHashMap<>();
     private volatile List<TapoCloudDevice> cachedDeviceList;
     private volatile Instant deviceListCachedAt;
 
@@ -52,21 +52,24 @@ public class TapoCloudService {
             return cachedDeviceList;
         }
 
-        JsonNode deviceListNode = invokeCloud("getDeviceList", null, true).path("result").path("deviceList");
+        JsonNode deviceListNode = invokeCloud("getDeviceList", null, true,
+                tapoProperties.getCloudApiUrl()).path("result").path("deviceList");
         List<TapoCloudDevice> devices = objectMapper.convertValue(deviceListNode, new TypeReference<>() {});
-        // Cache appServerUrl for ALL cloud devices (not just Tapo-filtered)
-        // so passthrough works for devices that might not pass the isTapoDevice filter
+
         devices.forEach(d -> {
             if (d.deviceId() != null && d.appServerUrl() != null && !d.appServerUrl().isBlank()) {
                 appServerUrlCache.put(d.deviceId(), d.appServerUrl());
             }
+            log.debug("Cloud-Geraet: id={}, alias={}, model={}, type={}, status={}, appServerUrl={}",
+                    d.deviceId(), d.alias(), d.model(), d.deviceType(), d.status(), d.appServerUrl());
         });
+
         List<TapoCloudDevice> tapoDevices = devices.stream()
                 .filter(this::isTapoDevice)
                 .toList();
         cachedDeviceList = tapoDevices;
         deviceListCachedAt = Instant.now();
-        log.debug("Tapo-Geraetliste aktualisiert: {} Geraete", tapoDevices.size());
+        log.info("Tapo-Geraetliste aktualisiert: {} Geraete (gesamt: {})", tapoDevices.size(), devices.size());
         return tapoDevices;
     }
 
@@ -103,6 +106,7 @@ public class TapoCloudService {
         params.put("deviceId", deviceId);
         params.put("requestData", requestData.toString());
 
+        log.debug("Passthrough fuer {}: server={}, request={}", deviceId, appServerUrl, requestData);
         JsonNode response = invokeCloud("passthrough", params, true, appServerUrl);
         String nestedResponse = response.path("result").path("responseData").asText(null);
         if (nestedResponse == null || nestedResponse.isBlank()) {
@@ -147,36 +151,46 @@ public class TapoCloudService {
                 || model.startsWith("ke");
     }
 
-    private synchronized String ensureCloudToken() {
+    private String ensureTokenForServer(String serverUrl) {
         validateConfiguration();
 
-        if (cloudToken != null && tokenExpiresAt != null && Instant.now().isBefore(tokenExpiresAt)) {
-            return cloudToken;
+        String normalizedUrl = normalizeServerUrl(serverUrl);
+        TokenEntry entry = tokenCache.get(normalizedUrl);
+        if (entry != null && Instant.now().isBefore(entry.expiresAt.minusMillis(TOKEN_EXPIRY_BUFFER_MS))) {
+            return entry.token;
         }
 
-        ObjectNode params = objectMapper.createObjectNode();
-        params.put("appType", APP_TYPE);
-        params.put("cloudUserName", tapoProperties.getEmail());
-        params.put("cloudPassword", tapoProperties.getPassword());
-        params.put("terminalUUID", terminalUuid);
+        synchronized (this) {
+            entry = tokenCache.get(normalizedUrl);
+            if (entry != null && Instant.now().isBefore(entry.expiresAt.minusMillis(TOKEN_EXPIRY_BUFFER_MS))) {
+                return entry.token;
+            }
 
-        JsonNode loginResponse = invokeCloud("login", params, false);
-        String token = loginResponse.path("result").path("token").asText(null);
-        if (token == null || token.isBlank()) {
-            throw new TapoException("Tapo-Cloud-Login erfolgreich ohne Token ist ungueltig.");
+            log.info("Tapo-Cloud-Login fuer Server: {}", normalizedUrl);
+            ObjectNode params = objectMapper.createObjectNode();
+            params.put("appType", APP_TYPE);
+            params.put("cloudUserName", tapoProperties.getEmail());
+            params.put("cloudPassword", tapoProperties.getPassword());
+            params.put("terminalUUID", terminalUuid);
+
+            JsonNode loginResponse = invokeCloud("login", params, false, normalizedUrl);
+            String token = loginResponse.path("result").path("token").asText(null);
+            if (token == null || token.isBlank()) {
+                throw new TapoException("Tapo-Cloud-Login fuer " + normalizedUrl + " lieferte kein Token.");
+            }
+
+            Instant expiresAt = Instant.now().plusMillis(tapoProperties.getCloudTokenExpiryMs());
+            tokenCache.put(normalizedUrl, new TokenEntry(token, expiresAt));
+            log.info("Tapo-Cloud-Login fuer {} erfolgreich; Token bis {} gecacht", normalizedUrl, expiresAt);
+            return token;
         }
-
-        cloudToken = token;
-        tokenExpiresAt = Instant.now().plusMillis(tapoProperties.getCloudTokenExpiryMs());
-        log.info("Tapo-Cloud-Login erfolgreich; Token bis {} gecacht", tokenExpiresAt);
-        return token;
     }
 
     private String resolveAppServerUrl(String deviceId) {
         String url = appServerUrlCache.get(deviceId);
         if (url == null) {
             log.debug("appServerUrl fuer {} nicht im Cache, lade Geraetliste", deviceId);
-            getTapoDevices();
+            getTapoDevices(true);
             url = appServerUrlCache.get(deviceId);
         }
         if (url == null || url.isBlank()) {
@@ -184,10 +198,6 @@ public class TapoCloudService {
             return tapoProperties.getCloudApiUrl();
         }
         return url;
-    }
-
-    private JsonNode invokeCloud(String method, JsonNode params, boolean withToken) {
-        return invokeCloud(method, params, withToken, tapoProperties.getCloudApiUrl());
     }
 
     private JsonNode invokeCloud(String method, JsonNode params, boolean withToken, String baseUrl) {
@@ -200,7 +210,7 @@ public class TapoCloudService {
 
             String url = baseUrl;
             if (withToken) {
-                url = url + "?token=" + ensureCloudToken();
+                url = url + "?token=" + ensureTokenForServer(baseUrl);
             }
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -211,6 +221,7 @@ public class TapoCloudService {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             JsonNode root = objectMapper.readTree(response.body());
+            log.debug("Cloud-Antwort von {}: method={}, error_code={}", baseUrl, method, root.path("error_code").asInt(0));
             ensureSuccess(root, "Tapo-Cloud");
             return root;
         } catch (InterruptedException ex) {
@@ -243,7 +254,13 @@ public class TapoCloudService {
         }
     }
 
+    private static String normalizeServerUrl(String url) {
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
     private static String safeLower(String value) {
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
+
+    private record TokenEntry(String token, Instant expiresAt) {}
 }
