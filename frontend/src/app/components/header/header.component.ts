@@ -1,7 +1,14 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+
+interface NavLink {
+  path: string;
+  label: string;
+  exact?: boolean;
+  children?: NavLink[];
+}
 
 /**
  * Header component for the Household Manager application.
@@ -15,11 +22,18 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
   styleUrl: './header.component.scss'
 })
 export class HeaderComponent {
-  readonly navLinks = [
+  readonly navLinks: NavLink[] = [
     { path: '/', label: 'Home', exact: true },
     { path: '/meter-readings', label: 'Zaehlerstaende' },
     { path: '/consumption', label: 'Verbrauch' },
-    { path: '/energy', label: 'Energie' },
+    {
+      path: '/energy',
+      label: 'Energie',
+      children: [
+        { path: '/energy', label: 'Uebersicht', exact: true },
+        { path: '/energy/battery-control', label: 'Akku Steuerung' }
+      ]
+    },
     { path: '/air-quality', label: 'Luftqualitaet' },
     { path: '/devices', label: 'Geraete' },
     { path: '/admin', label: 'Admin' }
@@ -27,6 +41,11 @@ export class HeaderComponent {
 
   /** Signal to track mobile menu open/closed state */
   isMobileMenuOpen = signal<boolean>(false);
+
+  /** Signal to track which submenu is expanded */
+  expandedMenu = signal<string | null>(null);
+
+  constructor(private readonly router: Router) {}
 
   /**
    * Toggles the mobile menu visibility.
@@ -40,5 +59,29 @@ export class HeaderComponent {
    */
   closeMobileMenu(): void {
     this.isMobileMenuOpen.set(false);
+  }
+
+  /**
+   * Toggles a submenu open/closed.
+   */
+  toggleSubmenu(path: string): void {
+    this.expandedMenu.update(current => current === path ? null : path);
+  }
+
+  /**
+   * Checks if a submenu is currently expanded.
+   */
+  isSubmenuExpanded(path: string): boolean {
+    return this.expandedMenu() === path;
+  }
+
+  /**
+   * Checks if any child route of a parent link is currently active.
+   */
+  isParentActive(link: NavLink): boolean {
+    if (!link.children) {
+      return false;
+    }
+    return this.router.url.startsWith(link.path);
   }
 }

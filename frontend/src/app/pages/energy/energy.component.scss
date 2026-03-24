@@ -52,12 +52,18 @@
     background: #9ca3af;
     flex-shrink: 0;
 
-    &--connected { background: var(--color-accent); }
+    &--connected {
+      background: var(--color-accent);
+    }
+
     &--connecting {
       background: var(--color-warning);
       animation: pulse 1.4s ease-in-out infinite;
     }
-    &--error { background: var(--color-error); }
+
+    &--error {
+      background: var(--color-error);
+    }
   }
 
   &__status-label {
@@ -65,11 +71,6 @@
     color: var(--color-gray);
     font-weight: 500;
   }
-}
-
-// Material Symbols
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 // Live-Karten Grid
@@ -90,23 +91,10 @@
   flex-direction: column;
   gap: var(--spacing-xs);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
-  position: relative;
 
   &:hover {
     transform: translateY(-3px);
     box-shadow: var(--shadow-xl);
-  }
-
-  &__top-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: var(--spacing-sm);
-  }
-
-  &__icon {
-    font-size: 2rem;
-    line-height: 1;
   }
 
   &__label {
@@ -116,17 +104,10 @@
     text-transform: uppercase;
     letter-spacing: 0.6px;
     color: var(--color-gray);
-    margin-bottom: 4px;
-  }
-
-  &__value-row {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
   }
 
   &__value {
-    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
     font-weight: 800;
     color: var(--color-dark);
     line-height: 1.1;
@@ -136,308 +117,92 @@
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--color-gray);
+    margin-left: 2px;
+  }
+
+  &__sub {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+  }
+
+  &__hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: auto;
   }
 
   &__badge {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
     font-size: 0.7rem;
     font-weight: 700;
-    letter-spacing: 0.3px;
-    background: rgba(156, 163, 175, 0.15);
-    color: #6b7280;
-    border: 1px solid rgba(156, 163, 175, 0.3);
-    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
 
     &--charging {
       background: rgba(16, 185, 129, 0.15);
       color: #059669;
-      border-color: rgba(16, 185, 129, 0.35);
+      border: 1px solid rgba(16, 185, 129, 0.35);
     }
 
     &--discharging {
       background: rgba(59, 130, 246, 0.15);
       color: #2563eb;
-      border-color: rgba(59, 130, 246, 0.35);
+      border: 1px solid rgba(59, 130, 246, 0.35);
     }
 
     &--idle {
       background: rgba(156, 163, 175, 0.15);
       color: #6b7280;
-      border-color: rgba(156, 163, 175, 0.35);
+      border: 1px solid rgba(156, 163, 175, 0.35);
     }
 
     &--import {
       background: rgba(239, 68, 68, 0.12);
       color: #dc2626;
-      border-color: rgba(239, 68, 68, 0.3);
+      border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
     &--export {
       background: rgba(16, 185, 129, 0.15);
       color: #059669;
-      border-color: rgba(16, 185, 129, 0.35);
-    }
-
-    &--stable {
-      background: rgba(59, 130, 246, 0.12);
-      color: #2563eb;
-      border-color: rgba(59, 130, 246, 0.3);
+      border: 1px solid rgba(16, 185, 129, 0.35);
     }
   }
 
-  // Farbige linke Leiste
+  // Farbige linke Leiste je Kartentyp
   &--solar {
     border-left: 4px solid #f59e0b;
-    background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, var(--color-white) 100%);
-    .live-card__icon { color: #b45309; }
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, var(--color-white) 100%);
+
     .live-card__value { color: #b45309; }
   }
 
   &--battery {
     border-left: 4px solid #10b981;
-    background: linear-gradient(135deg, rgba(16,185,129,0.07) 0%, var(--color-white) 100%);
-    .live-card__icon { color: #047857; }
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.07) 0%, var(--color-white) 100%);
+
     .live-card__value { color: #047857; }
   }
 
   &--home {
     border-left: 4px solid #8b5cf6;
-    background: linear-gradient(135deg, rgba(139,92,246,0.07) 0%, var(--color-white) 100%);
-    .live-card__icon { color: #6d28d9; }
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.07) 0%, var(--color-white) 100%);
+
     .live-card__value { color: #6d28d9; }
   }
 
   &--grid {
     border-left: 4px solid #3b82f6;
-    background: linear-gradient(135deg, rgba(59,130,246,0.07) 0%, var(--color-white) 100%);
-    .live-card__icon { color: #1d4ed8; }
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.07) 0%, var(--color-white) 100%);
+
     .live-card__value { color: #1d4ed8; }
   }
-}
-
-// Energie-Fluss-Diagramm
-.flow-section {
-  margin-bottom: var(--spacing-xl);
-
-  &__card {
-    background: var(--color-white);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    padding: var(--spacing-xl) var(--spacing-lg);
-  }
-}
-
-.flow-diagram {
-  display: grid;
-  grid-template-areas:
-    "pv   .    .    .    ."
-    "conn .    .    .    ."
-    "bat  cbh  haus chg  grid";
-  grid-template-columns: minmax(110px, 1fr) 60px minmax(140px, 1fr) 60px minmax(110px, 1fr);
-  grid-template-rows: auto 32px auto;
-  align-items: center;
-  justify-items: center;
-
-  // Grid-Area-Zuweisung via nth-child (Reihenfolge im DOM)
-  > *:nth-child(1) { grid-area: pv;   } // PV-Knoten
-  > *:nth-child(2) { grid-area: conn; } // Vertikaler Connector
-  > *:nth-child(3) { grid-area: bat;  } // Batterie-Knoten
-  > *:nth-child(4) { grid-area: cbh;  } // Connector Bat→Haus
-  > *:nth-child(5) { grid-area: haus; } // Haus-Knoten
-  > *:nth-child(6) { grid-area: chg;  } // Connector Haus→Grid
-  > *:nth-child(7) { grid-area: grid; } // Grid-Knoten
-}
-
-// Knoten (gemeinsam)
-.flow-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 110px;
-
-  &__circle {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    .material-symbols-outlined {
-      font-size: 28px;
-    }
-  }
-
-  &__name {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #64748b;
-    text-align: center;
-  }
-
-  &__watts {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-align: center;
-  }
-
-  // Solar-Knoten
-  &--solar {
-    margin-bottom: 0;
-
-    .flow-node__circle {
-      background: rgba(245, 158, 11, 0.12);
-      border: 2px solid #f59e0b;
-      .material-symbols-outlined { color: #b45309; }
-    }
-    .flow-node__watts { color: #b45309; }
-  }
-
-  // Batterie-Knoten
-  &--battery {
-    .flow-node__circle {
-      background: rgba(16, 185, 129, 0.12);
-      border: 2px solid #10b981;
-      .material-symbols-outlined { color: #047857; }
-    }
-    .flow-node__watts { color: #047857; }
-  }
-
-  // Grid-Knoten
-  &--grid {
-    .flow-node__circle {
-      background: rgba(59, 130, 246, 0.12);
-      border: 2px solid #3b82f6;
-      .material-symbols-outlined { color: #1d4ed8; }
-    }
-    .flow-node__watts { color: #1d4ed8; }
-  }
-
-  // Haus-Knoten (Hauptknoten, rechteckig)
-  &--house {
-    background: rgba(139, 92, 246, 0.08);
-    border: 2px solid #8b5cf6;
-    border-radius: 14px;
-    padding: 16px 24px;
-    min-width: 140px;
-    gap: 4px;
-  }
-
-  &__house-icon {
-    font-size: 32px;
-    color: #6d28d9;
-  }
-
-  &__house-watts {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #6d28d9;
-    line-height: 1.1;
-  }
-
-  &__house-label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #94a3b8;
-  }
-}
-
-// Verbindungslinien
-.flow-connector {
-  &--vertical {
-    width: 2px;
-    height: 32px;
-    // Standard: grau (inaktiv)
-    background: repeating-linear-gradient(
-      to bottom,
-      #cbd5e1 0px, #cbd5e1 6px,
-      transparent 6px, transparent 12px
-    );
-
-    // Aktiv: amber (PV lädt Akku)
-    &.flow-connector--pv-active {
-      background: repeating-linear-gradient(
-        to bottom,
-        #f59e0b 0px, #f59e0b 6px,
-        transparent 6px, transparent 12px
-      );
-      animation: flowDown 0.8s linear infinite;
-    }
-  }
-
-  &--horizontal {
-    width: 100%;
-    height: 2px;
-    // Standard: grau (idle)
-    background: repeating-linear-gradient(
-      to right,
-      #cbd5e1 0px, #cbd5e1 6px,
-      transparent 6px, transparent 12px
-    );
-
-    // Batterie → Haus: grün (laden) oder blau (entladen)
-    &.flow-connector--charging {
-      background: repeating-linear-gradient(
-        to right,
-        #10b981 0px, #10b981 6px,
-        transparent 6px, transparent 12px
-      );
-      background-size: 200% 100%;
-      animation: flowRight 0.8s linear infinite;
-    }
-
-    &.flow-connector--discharging {
-      background: repeating-linear-gradient(
-        to left,
-        #3b82f6 0px, #3b82f6 6px,
-        transparent 6px, transparent 12px
-      );
-      background-size: 200% 100%;
-      animation: flowLeft 0.8s linear infinite;
-    }
-
-    // Haus → Netz: rot (Bezug) oder grün (Einspeisung)
-    &.flow-connector--import {
-      background: repeating-linear-gradient(
-        to left,
-        #ef4444 0px, #ef4444 6px,
-        transparent 6px, transparent 12px
-      );
-      background-size: 200% 100%;
-      animation: flowLeft 0.8s linear infinite;
-    }
-
-    &.flow-connector--export {
-      background: repeating-linear-gradient(
-        to right,
-        #10b981 0px, #10b981 6px,
-        transparent 6px, transparent 12px
-      );
-      background-size: 200% 100%;
-      animation: flowRight 0.8s linear infinite;
-    }
-  }
-}
-
-@keyframes flowDown {
-  from { background-position: 0 0; }
-  to { background-position: 0 24px; }
-}
-
-@keyframes flowRight {
-  from { background-position: 0 0; }
-  to { background-position: 24px 0; }
-}
-
-@keyframes flowLeft {
-  from { background-position: 0 0; }
-  to { background-position: -24px 0; }
 }
 
 // Steuerungssektion
@@ -446,7 +211,7 @@
 
   &__card {
     background: var(--color-white);
-    border: 1px solid rgba(0,0,0,0.06);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     padding: var(--spacing-lg);
@@ -510,7 +275,7 @@
 
     &:focus {
       border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(13,110,189,0.12);
+      box-shadow: 0 0 0 3px rgba(13, 110, 189, 0.12);
     }
   }
 
@@ -526,13 +291,17 @@
     align-items: center;
     gap: var(--spacing-xs);
 
-    &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
   }
 
   &__spinner {
     width: 14px;
     height: 14px;
-    border: 2px solid rgba(255,255,255,0.4);
+    border: 2px solid rgba(255, 255, 255, 0.4);
     border-top-color: #fff;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
@@ -546,8 +315,17 @@
     border-radius: var(--radius-md);
     margin: 0;
 
-    &--success { color: #047857; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); }
-    &--error { color: var(--color-error); background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); }
+    &--success {
+      color: #047857;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    &--error {
+      color: var(--color-error);
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
   }
 
   &__loading {
@@ -558,22 +336,63 @@
   }
 }
 
-// Diagramme 2-Spalten-Grid
-.charts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xl);
+// Auto-Control Kompaktstatus
+.auto-control-section {
   margin-bottom: var(--spacing-xl);
-}
 
-.chart-section {
   &__card {
     background: var(--color-white);
-    border: 1px solid rgba(0,0,0,0.06);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid #06b6d4;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  &__title { font-size: var(--font-size-base); color: var(--color-dark); margin: 0; font-weight: 600; }
+
+  &__badge {
+    padding: 2px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    &--active { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.35); }
+    &--inactive { background: rgba(156, 163, 175, 0.15); color: #6b7280; border: 1px solid rgba(156, 163, 175, 0.35); }
+  }
+
+  &__link {
+    margin-left: auto;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+
+  &__stats { display: flex; gap: var(--spacing-lg); flex-wrap: wrap; margin-top: var(--spacing-sm); }
+  &__stat { display: flex; flex-direction: column; gap: 2px; }
+  &__stat-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--color-gray); }
+  &__stat-value { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-dark); &--negative { color: #dc2626; } }
+}
+
+// Diagrammsektion
+.chart-section {
+  margin-bottom: var(--spacing-xl);
+
+  &__card {
+    background: var(--color-white);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     padding: var(--spacing-lg);
-    height: 100%;
   }
 
   &__header {
@@ -608,10 +427,11 @@
     color: var(--color-dark);
     cursor: pointer;
     outline: none;
+    transition: border-color var(--transition-fast);
 
     &:focus {
       border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(13,110,189,0.12);
+      box-shadow: 0 0 0 3px rgba(13, 110, 189, 0.12);
     }
   }
 
@@ -646,7 +466,7 @@
   }
 
   &__chart {
-    height: 280px;
+    height: 320px;
     width: 100%;
   }
 
@@ -672,13 +492,7 @@
   to { transform: rotate(360deg); }
 }
 
-// Responsive
-@media (max-width: 1100px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
+// Responsive Design
 @media (max-width: 900px) {
   .live-section {
     grid-template-columns: repeat(2, 1fr);
@@ -718,8 +532,12 @@
       align-items: stretch;
     }
 
+    &__summary {
+      gap: var(--spacing-md);
+    }
+
     &__chart {
-      height: 220px;
+      height: 240px;
     }
   }
 
@@ -729,311 +547,13 @@
       align-items: stretch;
     }
 
-    &__number { width: 100%; }
-    &__btn { width: 100%; justify-content: center; }
-  }
-}
-
-// Balkonkraftwerke (Shelly)
-.shelly-section {
-  margin-bottom: var(--spacing-xl);
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-md);
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-  }
-
-  &__title {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    font-size: var(--font-size-xl);
-    color: var(--color-dark);
-    margin: 0;
-
-    .material-symbols-outlined {
-      font-size: 1.4rem;
-      color: #b45309;
-    }
-  }
-
-  &__total {
-    font-size: var(--font-size-sm);
-    color: var(--color-gray);
-
-    strong {
-      color: #b45309;
-      font-size: var(--font-size-base);
-    }
-  }
-
-  &__loading {
-    color: var(--color-gray);
-    font-size: var(--font-size-sm);
-    font-style: italic;
-    margin: 0;
-  }
-}
-
-.shelly-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.shelly-card {
-  background: var(--color-white);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-left: 4px solid #f59e0b;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: var(--spacing-lg);
-  background: linear-gradient(135deg, rgba(245,158,11,0.05) 0%, var(--color-white) 100%);
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-xl);
-  }
-
-  &--offline {
-    border-left-color: #9ca3af;
-    background: linear-gradient(135deg, rgba(156,163,175,0.05) 0%, var(--color-white) 100%);
-    opacity: 0.75;
-  }
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-md);
-  }
-
-  &__name {
-    font-size: var(--font-size-base);
-    font-weight: 700;
-    color: var(--color-dark);
-  }
-
-  &__controls {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-  }
-
-  &__toggle {
-    padding: 4px 16px;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    border: none;
-    cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast);
-
-    &--on {
-      background: rgba(16, 185, 129, 0.15);
-      color: #047857;
-      border: 1px solid rgba(16, 185, 129, 0.4);
-
-      &:hover { background: rgba(16, 185, 129, 0.25); }
+    &__number {
+      width: 100%;
     }
 
-    &--off {
-      background: rgba(156, 163, 175, 0.15);
-      color: #6b7280;
-      border: 1px solid rgba(156, 163, 175, 0.3);
-
-      &:hover { background: rgba(156, 163, 175, 0.25); }
+    &__btn {
+      width: 100%;
+      justify-content: center;
     }
-  }
-
-  &__offline-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
-    border: 1px solid rgba(239, 68, 68, 0.25);
-  }
-
-  &__metrics {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--spacing-sm);
-  }
-
-  &__metric {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    text-align: center;
-
-    &--power {
-      .shelly-card__metric-value { color: #b45309; font-size: 1.3rem; }
-      .shelly-card__metric-unit { color: #b45309; }
-    }
-  }
-
-  &__metric-value {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--color-dark);
-    line-height: 1.1;
-  }
-
-  &__metric-unit {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--color-gray);
-  }
-
-  &__metric-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-gray);
-  }
-
-  &__offline-msg {
-    font-size: var(--font-size-sm);
-    color: var(--color-gray);
-    font-style: italic;
-    margin: 0;
-    text-align: center;
-    padding: var(--spacing-sm) 0;
-  }
-
-  @media (max-width: 400px) {
-    &__metrics {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-}
-
-// Flow overview override: two balcony plants, one via battery and one direct to house
-.flow-diagram {
-  grid-template-areas:
-    "pvAlt .    pvDirect .    ."
-    "connA .    connB    .    ."
-    "bat   cbh  haus     chg  grid";
-  grid-template-columns: minmax(150px, 1fr) 96px minmax(170px, 1.15fr) 96px minmax(120px, 1fr);
-  grid-template-rows: auto 32px auto;
-  column-gap: var(--spacing-lg);
-
-  > *:nth-child(1) { grid-area: pvAlt; }
-  > *:nth-child(2) { grid-area: pvDirect; }
-  > *:nth-child(3) { grid-area: connA; }
-  > *:nth-child(4) { grid-area: connB; }
-  > *:nth-child(5) { grid-area: bat; }
-  > *:nth-child(6) { grid-area: cbh; }
-  > *:nth-child(7) { grid-area: haus; }
-  > *:nth-child(8) { grid-area: chg; }
-  > *:nth-child(9) { grid-area: grid; }
-}
-
-.flow-node--solar-direct {
-  .flow-node__circle {
-    background: rgba(249, 115, 22, 0.08);
-    border-color: #f97316;
-  }
-
-  .flow-node__watts {
-    color: #ea580c;
-  }
-}
-
-.flow-connector--vertical.flow-connector--solar-direct {
-  background: repeating-linear-gradient(
-    to bottom,
-    #3b82f6 0px, #3b82f6 6px,
-    transparent 6px, transparent 12px
-  );
-  animation: flowDown 0.8s linear infinite;
-}
-
-@media (max-width: 900px) {
-  .flow-diagram {
-    grid-template-areas:
-      "pvAlt pvDirect"
-      "connA connB"
-      "bat haus"
-      "cbh chg"
-      ". grid";
-    grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr);
-    grid-template-rows: auto 32px auto 32px auto;
-    row-gap: var(--spacing-sm);
-  }
-}
-
-@media (max-width: 600px) {
-  .flow-section__card {
-    padding: var(--spacing-lg) var(--spacing-sm);
-  }
-
-  .flow-diagram {
-    grid-template-areas:
-      "pvAlt"
-      "connA"
-      "bat"
-      "cbh"
-      "haus"
-      "pvDirect"
-      "connB"
-      "chg"
-      "grid";
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(9, auto);
-    row-gap: var(--spacing-sm);
-  }
-
-  .flow-node {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .flow-connector--horizontal {
-    width: 2px;
-    height: 32px;
-    background: repeating-linear-gradient(
-      to bottom,
-      #cbd5e1 0px, #cbd5e1 6px,
-      transparent 6px, transparent 12px
-    );
-  }
-
-  .flow-connector--horizontal.flow-connector--charging,
-  .flow-connector--horizontal.flow-connector--export {
-    background: repeating-linear-gradient(
-      to bottom,
-      #10b981 0px, #10b981 6px,
-      transparent 6px, transparent 12px
-    );
-    animation: flowDown 0.8s linear infinite;
-  }
-
-  .flow-connector--horizontal.flow-connector--discharging {
-    background: repeating-linear-gradient(
-      to bottom,
-      #3b82f6 0px, #3b82f6 6px,
-      transparent 6px, transparent 12px
-    );
-    animation: flowDown 0.8s linear infinite;
-  }
-
-  .flow-connector--horizontal.flow-connector--import {
-    background: repeating-linear-gradient(
-      to bottom,
-      #ef4444 0px, #ef4444 6px,
-      transparent 6px, transparent 12px
-    );
-    animation: flowDown 0.8s linear infinite;
   }
 }

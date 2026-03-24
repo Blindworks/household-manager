@@ -1,12 +1,14 @@
 <div class="energy-page">
   <div class="container">
 
-    <!-- Header -->
+    <!-- Seitentitel mit Verbindungsstatus -->
     <header class="energy-page__header">
       <div>
         <p class="energy-page__eyebrow">Solar & Speicher</p>
         <h1 class="energy-page__title">Anker Solix Energie</h1>
-        <p class="energy-page__subtitle">Live-Leistungsdaten, Akkustand und Tagesenergie der Solaranlage.</p>
+        <p class="energy-page__subtitle">
+          Live-Leistungsdaten, Akkustand und Tagesenergie der Solaranlage.
+        </p>
       </div>
       <div class="energy-page__status" *ngIf="connectionStatus$ | async as status">
         <span class="energy-page__status-dot"
@@ -22,237 +24,125 @@
     <section class="live-section">
 
       <div class="live-card live-card--solar">
-        <div class="live-card__top-row">
-          <span class="material-symbols-outlined live-card__icon">solar_power</span>
-          <span class="live-card__badge">+{{ liveData?.pvPowerW | number:'1.0-0' }}W</span>
-        </div>
-        <span class="live-card__label">PV Produktion</span>
-        <div class="live-card__value-row">
-          <span class="live-card__value">{{ liveData?.pvPowerW | number:'1.0-0' }}</span>
+        <span class="live-card__label">PV-Erzeugung</span>
+        <span class="live-card__value">
+          {{ liveData?.pvPowerW | number:'1.0-0' }}
           <span class="live-card__unit">W</span>
-        </div>
+        </span>
+        <span class="live-card__hint">Solarleistung aktuell</span>
       </div>
 
       <div class="live-card live-card--battery">
-        <div class="live-card__top-row">
-          <span class="material-symbols-outlined live-card__icon">
-            {{ batteryIsCharging ? 'battery_charging_80' : batteryIsIdle ? 'battery_full' : 'battery_3_bar' }}
-          </span>
-          <span class="live-card__badge"
-                [class.live-card__badge--charging]="batteryIsCharging"
-                [class.live-card__badge--discharging]="!batteryIsCharging && !batteryIsIdle"
-                [class.live-card__badge--idle]="batteryIsIdle">
-            {{ batteryIsCharging ? 'Laden...' : batteryIsIdle ? 'Standby' : 'Entladen' }}
-          </span>
-        </div>
-        <span class="live-card__label">Batterie Status</span>
-        <div class="live-card__value-row">
-          <span class="live-card__value">{{ liveData?.batteryPercent ?? '–' }}</span>
+        <span class="live-card__label">Akku</span>
+        <span class="live-card__value">
+          {{ liveData?.batteryPercent ?? '–' }}
           <span class="live-card__unit">%</span>
-        </div>
+        </span>
+        <span class="live-card__sub">
+          {{ liveData?.batteryPowerW | number:'1.0-0' }} W
+          &nbsp;
+          <span [class.live-card__badge--charging]="batteryIsCharging"
+                [class.live-card__badge--discharging]="!batteryIsCharging && !batteryIsIdle"
+                [class.live-card__badge--idle]="batteryIsIdle"
+                class="live-card__badge">
+            {{ batteryIsCharging ? 'Laden' : batteryIsIdle ? 'Standby' : 'Entladen' }}
+          </span>
+        </span>
+        <span class="live-card__hint">Akkustand & Leistung</span>
       </div>
 
       <div class="live-card live-card--home">
-        <div class="live-card__top-row">
-          <span class="material-symbols-outlined live-card__icon">home</span>
-          <span class="live-card__badge live-card__badge--stable">Stabil</span>
-        </div>
-        <span class="live-card__label">Hausnetz</span>
-        <div class="live-card__value-row">
+        <span class="live-card__label">Hausverbrauch</span>
+        <span class="live-card__value">
           @if (hausverbrauchW !== null) {
-            <span class="live-card__value">{{ hausverbrauchW | number:'1.0-0' }}</span>
+            {{ hausverbrauchW | number:'1.0-0' }}
             <span class="live-card__unit">W</span>
           } @else {
-            <span class="live-card__value">–</span>
+            –
           }
-        </div>
-      </div>
-
-      <div class="live-card live-card--grid">
-        <div class="live-card__top-row">
-          <span class="material-symbols-outlined live-card__icon">cell_tower</span>
-          <span class="live-card__badge"
-                [class.live-card__badge--import]="gridIsImporting"
-                [class.live-card__badge--export]="!gridIsImporting">
-            {{ gridIsImporting ? 'Bezug' : 'Einspeisung' }}
-          </span>
-        </div>
-        <span class="live-card__label">Netzbezug</span>
-        <div class="live-card__value-row">
-          <span class="live-card__value">{{ tasmotaReading?.momentaneWirkleistung | number:'1.0-0' }}</span>
-          <span class="live-card__unit">W</span>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- Balkonkraftwerke (Shelly Plus 1PM) -->
-    <section class="shelly-section">
-      <div class="shelly-section__header">
-        <div>
-          <h2 class="shelly-section__title">
-            <span class="material-symbols-outlined">solar_power</span>
-            Balkonkraftwerke
-          </h2>
-        </div>
-        <span class="shelly-section__total">
-          Gesamt: <strong>{{ shellyTotalPower | number:'1.0-0' }} W</strong>
+        </span>
+        <span class="live-card__hint">
+          @if (hausverbrauchW !== null) {
+            Akkuentladung + Netzbezug
+          } @else {
+            Noch nicht berechenbar
+          }
         </span>
       </div>
 
-      <div class="shelly-grid">
-        @for (device of shellyDevices; track device.deviceName) {
-          <div class="shelly-card" [class.shelly-card--offline]="!device.reachable">
-
-            <div class="shelly-card__header">
-              <span class="shelly-card__name">{{ device.deviceName }}</span>
-              <div class="shelly-card__controls">
-                @if (device.reachable) {
-                  <button class="shelly-card__toggle"
-                          [class.shelly-card__toggle--on]="device.output"
-                          [class.shelly-card__toggle--off]="!device.output"
-                          (click)="toggleShelly(device)"
-                          [attr.aria-label]="device.output ? 'Ausschalten' : 'Einschalten'">
-                    {{ device.output ? 'An' : 'Aus' }}
-                  </button>
-                } @else {
-                  <span class="shelly-card__offline-badge">Offline</span>
-                }
-              </div>
-            </div>
-
-            @if (device.reachable) {
-              <div class="shelly-card__metrics">
-                <div class="shelly-card__metric shelly-card__metric--power">
-                  <span class="shelly-card__metric-value">{{ device.power | number:'1.0-1' }}</span>
-                  <span class="shelly-card__metric-unit">W</span>
-                  <span class="shelly-card__metric-label">Leistung</span>
-                </div>
-                <div class="shelly-card__metric">
-                  <span class="shelly-card__metric-value">{{ device.voltage | number:'1.0-1' }}</span>
-                  <span class="shelly-card__metric-unit">V</span>
-                  <span class="shelly-card__metric-label">Spannung</span>
-                </div>
-                <div class="shelly-card__metric">
-                  <span class="shelly-card__metric-value">{{ device.current | number:'1.2-2' }}</span>
-                  <span class="shelly-card__metric-unit">A</span>
-                  <span class="shelly-card__metric-label">Strom</span>
-                </div>
-                <div class="shelly-card__metric">
-                  <span class="shelly-card__metric-value">{{ (device.totalEnergy ?? 0) / 1000 | number:'1.2-2' }}</span>
-                  <span class="shelly-card__metric-unit">kWh</span>
-                  <span class="shelly-card__metric-label">Gesamt</span>
-                </div>
-              </div>
-            } @else {
-              <p class="shelly-card__offline-msg">Gerät nicht erreichbar</p>
-            }
-
-          </div>
-        }
-
-        @if (shellyDevices.length === 0) {
-          <p class="shelly-section__loading">Shelly-Geräte werden geladen...</p>
-        }
+      <div class="live-card live-card--grid">
+        <span class="live-card__label">Stromnetz</span>
+        <span class="live-card__value">
+          {{ tasmotaReading?.momentaneWirkleistung | number:'1.0-0' }}
+          <span class="live-card__unit">W</span>
+        </span>
+        <span class="live-card__sub">
+          <span [class.live-card__badge--import]="gridIsImporting"
+                [class.live-card__badge--export]="!gridIsImporting"
+                class="live-card__badge">
+            {{ gridIsImporting ? 'Bezug' : 'Einspeisung' }}
+          </span>
+        </span>
+        <span class="live-card__hint">Netzbezug oder -einspeisung</span>
       </div>
-    </section>
 
-    <!-- Energie-Fluss-Diagramm -->
-    <section class="flow-section">
-      <div class="flow-section__card">
-
-        <div class="flow-diagram">
-
-          <div class="flow-node flow-node--solar flow-node--solar-alt">
-            <div class="flow-node__circle">
-              <span class="material-symbols-outlined">solar_power</span>
-            </div>
-            <span class="flow-node__name">Balkonkraftwerk-Neu</span>
-            <span class="flow-node__watts">{{ bkwNeuPower | number:'1.0-0' }} W</span>
-          </div>
-
-          <div class="flow-node flow-node--solar flow-node--solar-direct">
-            <div class="flow-node__circle">
-              <span class="material-symbols-outlined">solar_power</span>
-            </div>
-            <span class="flow-node__name">Balkonkraftwerk-Alt</span>
-            <span class="flow-node__watts">{{ bkwAltPower | number:'1.0-0' }} W</span>
-          </div>
-
-          <div class="flow-connector flow-connector--vertical"
-               [class.flow-connector--pv-active]="batteryIsCharging && bkwNeuPower > 0"></div>
-
-          <div class="flow-connector flow-connector--vertical"
-               [class.flow-connector--solar-direct]="bkwAltPower > 0"></div>
-
-          <div class="flow-node flow-node--battery">
-            <div class="flow-node__circle">
-              <span class="material-symbols-outlined">
-                {{ batteryIsCharging ? 'battery_charging_80' : batteryIsIdle ? 'battery_full' : 'battery_3_bar' }}
-              </span>
-            </div>
-            <span class="flow-node__name">Batterie</span>
-            <span class="flow-node__watts">{{ (liveData?.batteryPercent ?? 0) }}% / {{ (liveData?.batteryPowerW ?? 0) | number:'1.0-0' }} W</span>
-          </div>
-
-          <div class="flow-connector flow-connector--horizontal"
-               [class.flow-connector--charging]="batteryIsCharging"
-               [class.flow-connector--discharging]="!batteryIsCharging && !batteryIsIdle"></div>
-
-          <div class="flow-node flow-node--house">
-            <span class="material-symbols-outlined flow-node__house-icon">home</span>
-            <span class="flow-node__house-watts">{{ (hausverbrauchW ?? 0) | number:'1.0-0' }} W</span>
-            <span class="flow-node__house-label">Hausverbrauch</span>
-          </div>
-
-          <div class="flow-connector flow-connector--horizontal"
-               [class.flow-connector--import]="gridIsImporting"
-               [class.flow-connector--export]="!gridIsImporting"></div>
-
-          <div class="flow-node flow-node--grid">
-            <div class="flow-node__circle">
-              <span class="material-symbols-outlined">cell_tower</span>
-            </div>
-            <span class="flow-node__name">Stromnetz</span>
-            <span class="flow-node__watts">{{ (tasmotaReading?.momentaneWirkleistung ?? 0) | number:'1.0-0' }} W</span>
-          </div>
-
-        </div>
-      </div>
     </section>
 
     <!-- Ausgangsleistung steuern -->
     <section class="control-section">
       <div class="control-section__card">
         <h2 class="control-section__title">Ausgangsleistung steuern</h2>
-        <p class="control-section__subtitle">Legen Sie die Ausgangsleistung des Wechselrichters fest.</p>
+        <p class="control-section__subtitle">
+          Legen Sie die Ausgangsleistung des Wechselrichters fest.
+        </p>
 
         @if (deviceParams) {
           <div class="control-section__body">
             <div class="control-section__slider-wrap">
               <span class="control-section__bound">{{ deviceParams.minLoadW }} W</span>
-              <input class="control-section__slider" type="range" [(ngModel)]="outputWatts"
-                     [min]="deviceParams.minLoadW" [max]="deviceParams.maxLoadW" step="1"
-                     aria-label="Ausgangsleistung in Watt">
+              <input
+                class="control-section__slider"
+                type="range"
+                [(ngModel)]="outputWatts"
+                [min]="deviceParams.minLoadW"
+                [max]="deviceParams.maxLoadW"
+                step="1"
+                aria-label="Ausgangsleistung in Watt">
               <span class="control-section__bound">{{ deviceParams.maxLoadW }} W</span>
             </div>
+
             <div class="control-section__input-row">
-              <input class="control-section__number" type="number" [(ngModel)]="outputWatts"
-                     [min]="deviceParams.minLoadW" [max]="deviceParams.maxLoadW"
-                     aria-label="Ausgangsleistung numerisch eingeben">
+              <input
+                class="control-section__number"
+                type="number"
+                [(ngModel)]="outputWatts"
+                [min]="deviceParams.minLoadW"
+                [max]="deviceParams.maxLoadW"
+                aria-label="Ausgangsleistung numerisch eingeben">
               <span class="control-section__unit">W</span>
-              <button class="btn btn--primary control-section__btn" type="button"
-                      [disabled]="isSettingPower" (click)="setOutputPower()">
+              <button
+                class="btn btn--primary control-section__btn"
+                type="button"
+                [disabled]="isSettingPower"
+                (click)="setOutputPower()">
                 @if (isSettingPower) {
-                  <span class="control-section__spinner"></span> Wird gesetzt...
-                } @else { Setzen }
+                  <span class="control-section__spinner"></span>
+                  Wird gesetzt...
+                } @else {
+                  Setzen
+                }
               </button>
             </div>
+
             @if (powerSetSuccess) {
-              <p class="control-section__feedback control-section__feedback--success">Ausgangsleistung erfolgreich gesetzt.</p>
+              <p class="control-section__feedback control-section__feedback--success">
+                Ausgangsleistung erfolgreich gesetzt.
+              </p>
             }
             @if (powerSetError) {
-              <p class="control-section__feedback control-section__feedback--error">{{ powerSetError }}</p>
+              <p class="control-section__feedback control-section__feedback--error">
+                {{ powerSetError }}
+              </p>
             }
           </div>
         } @else {
@@ -261,61 +151,96 @@
       </div>
     </section>
 
-    <!-- Diagramme: Wochenübersicht + Tagesenergie -->
-    <div class="charts-grid">
-
-      <!-- Wochenübersicht -->
-      <section class="chart-section">
-        <div class="chart-section__card">
-          <div class="chart-section__header">
-            <h2 class="chart-section__title">Wochenübersicht</h2>
+    <!-- Auto-Control Kompaktstatus -->
+    @if (autoControlStatus) {
+      <section class="auto-control-section">
+        <div class="auto-control-section__card">
+          <div class="auto-control-section__header">
+            <h2 class="auto-control-section__title">Automatische Regelung</h2>
+            <span class="auto-control-section__badge"
+                  [class.auto-control-section__badge--active]="autoControlStatus.enabled"
+                  [class.auto-control-section__badge--inactive]="!autoControlStatus.enabled">
+              {{ autoControlStatus.enabled ? 'Aktiv' : 'Inaktiv' }}
+            </span>
+            <a routerLink="/energy/battery-control" class="auto-control-section__link">
+              Details & Einstellungen
+            </a>
           </div>
-          @if (weeklyChartOptions) {
-            <div echarts [options]="weeklyChartOptions" class="chart-section__chart" aria-label="Wochenübersicht Balkendiagramm"></div>
-          } @else {
-            <div class="chart-section__empty"><p>Wochendaten werden geladen...</p></div>
-          }
-        </div>
-      </section>
-
-      <!-- Tagesenergie -->
-      <section class="chart-section">
-        <div class="chart-section__card">
-          <div class="chart-section__header">
-            <h2 class="chart-section__title">Tagesenergie</h2>
-            <label class="chart-section__date-label" for="energy-date">
-              Datum
-              <input id="energy-date" class="chart-section__date-input" type="date"
-                     [(ngModel)]="selectedDate" (change)="loadEnergy()" aria-label="Datum für Tagesenergie auswählen">
-            </label>
-          </div>
-
-          @if (energyData) {
-            <div class="chart-section__summary">
-              <div class="chart-section__stat">
-                <span class="chart-section__stat-label">PV-Erzeugung</span>
-                <span class="chart-section__stat-value chart-section__stat-value--solar">{{ energyData.pvEnergyKwh | number:'1.2-2':'de-DE' }} kWh</span>
+          @if (autoControlStatus.enabled && autoControlStatus.lastSetOutputW !== null) {
+            <div class="auto-control-section__stats">
+              <div class="auto-control-section__stat">
+                <span class="auto-control-section__stat-label">Letzte gesetzte Leistung</span>
+                <span class="auto-control-section__stat-value">{{ autoControlStatus.lastSetOutputW }} W</span>
               </div>
-              <div class="chart-section__stat">
-                <span class="chart-section__stat-label">Akku Laden</span>
-                <span class="chart-section__stat-value chart-section__stat-value--charge">{{ energyData.batteryChargeKwh | number:'1.2-2':'de-DE' }} kWh</span>
-              </div>
-              <div class="chart-section__stat">
-                <span class="chart-section__stat-label">Akku Entladen</span>
-                <span class="chart-section__stat-value chart-section__stat-value--discharge">{{ energyData.batteryDischargeKwh | number:'1.2-2':'de-DE' }} kWh</span>
-              </div>
+              @if (autoControlStatus.lastGridPowerW !== null) {
+                <div class="auto-control-section__stat">
+                  <span class="auto-control-section__stat-label">Letzter Netzbezug</span>
+                  <span class="auto-control-section__stat-value"
+                        [class.auto-control-section__stat-value--negative]="autoControlStatus.lastGridPowerW < 0">
+                    {{ autoControlStatus.lastGridPowerW | number:'1.0-0' }} W
+                  </span>
+                </div>
+              }
             </div>
           }
-
-          @if (chartOptions) {
-            <div echarts [options]="chartOptions" class="chart-section__chart" aria-label="Tagesenergie Balkendiagramm"></div>
-          } @else {
-            <div class="chart-section__empty"><p>Keine Energiedaten für diesen Tag vorhanden.</p></div>
-          }
         </div>
       </section>
+    }
 
-    </div>
+    <!-- Tagesenergie Diagramm -->
+    <section class="chart-section">
+      <div class="chart-section__card">
+        <div class="chart-section__header">
+          <h2 class="chart-section__title">Tagesenergie</h2>
+          <label class="chart-section__date-label" for="energy-date">
+            Datum
+            <input
+              id="energy-date"
+              class="chart-section__date-input"
+              type="date"
+              [(ngModel)]="selectedDate"
+              (change)="loadEnergy()"
+              aria-label="Datum für Tagesenergie auswählen">
+          </label>
+        </div>
+
+        @if (energyData) {
+          <div class="chart-section__summary">
+            <div class="chart-section__stat">
+              <span class="chart-section__stat-label">PV-Erzeugung</span>
+              <span class="chart-section__stat-value chart-section__stat-value--solar">
+                {{ energyData.pvEnergyKwh | number:'1.2-2':'de-DE' }} kWh
+              </span>
+            </div>
+            <div class="chart-section__stat">
+              <span class="chart-section__stat-label">Akku Laden</span>
+              <span class="chart-section__stat-value chart-section__stat-value--charge">
+                {{ energyData.batteryChargeKwh | number:'1.2-2':'de-DE' }} kWh
+              </span>
+            </div>
+            <div class="chart-section__stat">
+              <span class="chart-section__stat-label">Akku Entladen</span>
+              <span class="chart-section__stat-value chart-section__stat-value--discharge">
+                {{ energyData.batteryDischargeKwh | number:'1.2-2':'de-DE' }} kWh
+              </span>
+            </div>
+          </div>
+        }
+
+        @if (chartOptions) {
+          <div
+            echarts
+            [options]="chartOptions"
+            class="chart-section__chart"
+            aria-label="Tagesenergie Balkendiagramm">
+          </div>
+        } @else {
+          <div class="chart-section__empty">
+            <p>Keine Energiedaten fuer diesen Tag vorhanden.</p>
+          </div>
+        }
+      </div>
+    </section>
 
   </div>
 </div>
