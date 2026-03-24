@@ -32,7 +32,8 @@ public class SolarbankController {
 
     /**
      * Prüft ob die erzwungene Batterie-Entladung aktiv ist.
-     * Liest den "priority_discharge_switch" Wert aus der param_data (param_type=4).
+     * Liest den "priority_discharge_switch" Wert aus den Ranges in param_data (param_type=4).
+     * Gibt true zurück wenn mindestens ein Range den Switch aktiviert hat.
      *
      * @param siteId Die Site-ID
      * @return true wenn Force-Discharge aktiv, false sonst
@@ -46,12 +47,18 @@ public class SolarbankController {
         String paramDataStr = getResponse.path("data").path("param_data").asText();
         JsonNode paramData = mapper.readTree(paramDataStr);
 
-        return paramData.path("priority_discharge_switch").asInt(0) == 1;
+        ArrayNode ranges = (ArrayNode) paramData.path("ranges");
+        for (JsonNode rangeNode : ranges) {
+            if (rangeNode.path("priority_discharge_switch").asInt(0) == 1) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Aktiviert oder deaktiviert die erzwungene Batterie-Entladung.
-     * Setzt das "priority_discharge_switch" Feld in der param_data.
+     * Setzt "priority_discharge_switch" in jedem Range der param_data.
      *
      * @param siteId  Die Site-ID
      * @param enabled true zum Aktivieren, false zum Deaktivieren
@@ -65,7 +72,11 @@ public class SolarbankController {
         String paramDataStr = getResponse.path("data").path("param_data").asText();
         ObjectNode paramData = (ObjectNode) mapper.readTree(paramDataStr);
 
-        paramData.put("priority_discharge_switch", enabled ? 1 : 0);
+        int value = enabled ? 1 : 0;
+        ArrayNode ranges = (ArrayNode) paramData.path("ranges");
+        for (JsonNode rangeNode : ranges) {
+            ((ObjectNode) rangeNode).put("priority_discharge_switch", value);
+        }
 
         ObjectNode setPayload = mapper.createObjectNode();
         setPayload.put("site_id", siteId);
