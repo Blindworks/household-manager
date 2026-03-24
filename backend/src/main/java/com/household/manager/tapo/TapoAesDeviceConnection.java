@@ -211,6 +211,9 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("requestByApp", "true")
+                    .header("User-Agent", "Tapo CameraClient Android")
                     .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofString(payload));
             if (cookie != null) {
