@@ -18,7 +18,9 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -34,13 +36,20 @@ public class TapoCloudService {
     private volatile String cloudToken;
     private volatile Instant tokenExpiresAt;
     private volatile String terminalUuid = UUID.randomUUID().toString();
+    private final Map<String, String> appServerUrlCache = new ConcurrentHashMap<>();
 
     public List<TapoCloudDevice> getTapoDevices() {
         JsonNode deviceListNode = invokeCloud("getDeviceList", null, true).path("result").path("deviceList");
         List<TapoCloudDevice> devices = objectMapper.convertValue(deviceListNode, new TypeReference<>() {});
-        return devices.stream()
+        List<TapoCloudDevice> tapoDevices = devices.stream()
                 .filter(this::isTapoDevice)
                 .toList();
+        tapoDevices.forEach(d -> {
+            if (d.deviceId() != null && d.appServerUrl() != null && !d.appServerUrl().isBlank()) {
+                appServerUrlCache.put(d.deviceId(), d.appServerUrl());
+            }
+        });
+        return tapoDevices;
     }
 
     public JsonNode getDeviceInfo(String deviceId) {
@@ -56,12 +65,20 @@ public class TapoCloudService {
         passthrough(deviceId, request);
     }
 
+    public JsonNode getEnergyUsage(String deviceId) {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("method", "get_energy_usage");
+        return passthrough(deviceId, request);
+    }
+
     public JsonNode passthrough(String deviceId, JsonNode requestData) {
+        String appServerUrl = resolveAppServerUrl(deviceId);
+
         ObjectNode params = objectMapper.createObjectNode();
         params.put("deviceId", deviceId);
         params.put("requestData", requestData.toString());
 
-        JsonNode response = invokeCloud("passthrough", params, true);
+        JsonNode response = invokeCloud("passthrough", params, true, appServerUrl);
         String nestedResponse = response.path("result").path("responseData").asText(null);
         if (nestedResponse == null || nestedResponse.isBlank()) {
             throw new TapoException("Tapo-Cloud lieferte keine Antwortdaten fuer Geraet " + deviceId);
@@ -130,7 +147,25 @@ public class TapoCloudService {
         return token;
     }
 
+    private String resolveAppServerUrl(String deviceId) {
+        String url = appServerUrlCache.get(deviceId);
+        if (url == null) {
+            log.debug("appServerUrl fuer {} nicht im Cache, lade Geraetliste", deviceId);
+            getTapoDevices();
+            url = appServerUrlCache.get(deviceId);
+        }
+        if (url == null || url.isBlank()) {
+            log.warn("Keine appServerUrl fuer {} gefunden, verwende Standard-Cloud-URL", deviceId);
+            return tapoProperties.getCloudApiUrl();
+        }
+        return url;
+    }
+
     private JsonNode invokeCloud(String method, JsonNode params, boolean withToken) {
+        return invokeCloud(method, params, withToken, tapoProperties.getCloudApiUrl());
+    }
+
+    private JsonNode invokeCloud(String method, JsonNode params, boolean withToken, String baseUrl) {
         try {
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("method", method);
@@ -138,7 +173,7 @@ public class TapoCloudService {
                 payload.set("params", params);
             }
 
-            String url = tapoProperties.getCloudApiUrl();
+            String url = baseUrl;
             if (withToken) {
                 url = url + "?token=" + ensureCloudToken();
             }

@@ -40,6 +40,10 @@ public class TapoDeviceService {
         log.info("Tapo device switched off (deviceId={})", deviceId);
     }
 
+    public JsonNode getEnergyUsage(String deviceId) {
+        return tapoCloudService.getEnergyUsage(deviceId);
+    }
+
     public String decodeAlias(String alias) {
         return tapoCloudService.decodeAlias(alias);
     }
