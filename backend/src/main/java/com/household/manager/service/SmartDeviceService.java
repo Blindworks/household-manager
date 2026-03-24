@@ -344,7 +344,7 @@ public class SmartDeviceService {
                         .orElseGet(() -> Optional.ofNullable(dto.deviceName()).filter(name -> !name.isBlank()).orElse("Tapo Device"))
         );
         device.setModel(dto.model());
-        device.setOnline(!"0".equals(dto.status()));
+        device.setOnline(true); // Cloud status field is unreliable for Tapo devices
         device.setPoweredOn(false);
         device.setCapabilities("SWITCH");
 

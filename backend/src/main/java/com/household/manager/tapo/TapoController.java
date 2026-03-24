@@ -74,7 +74,7 @@ public class TapoController {
                 .deviceType(device.deviceType())
                 .model(device.model())
                 .ip(null)
-                .online(!"0".equals(device.status()))
+                .online(true) // Cloud status field is unreliable for Tapo; actual status via passthrough
                 .fwVer(device.fwVer())
                 .build();
     }

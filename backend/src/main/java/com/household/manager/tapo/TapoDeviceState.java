@@ -32,8 +32,9 @@ public record TapoDeviceState(
         }
 
         boolean poweredOn = deviceInfo.path("device_on").asBoolean(false);
-        boolean online = cloudDevice == null || !"0".equals(cloudDevice.status());
-        return new TapoDeviceState(nickname, model, poweredOn, online);
+        // If we successfully got deviceInfo via passthrough, the device is online
+        // regardless of the cloud status field (which is unreliable for Tapo devices)
+        return new TapoDeviceState(nickname, model, poweredOn, true);
     }
 
     private static String firstText(JsonNode node, String... fieldNames) {
