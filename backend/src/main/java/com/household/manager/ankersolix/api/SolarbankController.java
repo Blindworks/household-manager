@@ -32,8 +32,7 @@ public class SolarbankController {
 
     /**
      * Prüft ob die erzwungene Batterie-Entladung aktiv ist.
-     * Liest den "preset_discharge" Wert aus der param_data (param_type=4).
-     * Der genaue Feldname muss ggf. nach API-Discovery angepasst werden.
+     * Liest den "priority_discharge_switch" Wert aus der param_data (param_type=4).
      *
      * @param siteId Die Site-ID
      * @return true wenn Force-Discharge aktiv, false sonst
@@ -47,15 +46,12 @@ public class SolarbankController {
         String paramDataStr = getResponse.path("data").path("param_data").asText();
         JsonNode paramData = mapper.readTree(paramDataStr);
 
-        // TODO: Das genaue Feld muss nach API-Discovery angepasst werden.
-        // Mögliche Kandidaten: "preset_discharge", "mode_type", "turn_on" in ranges
-        return paramData.path("preset_discharge").asInt(0) == 1;
+        return paramData.path("priority_discharge_switch").asInt(0) == 1;
     }
 
     /**
      * Aktiviert oder deaktiviert die erzwungene Batterie-Entladung.
-     * Setzt das "preset_discharge" Feld in der param_data.
-     * Der genaue Feldname muss ggf. nach API-Discovery angepasst werden.
+     * Setzt das "priority_discharge_switch" Feld in der param_data.
      *
      * @param siteId  Die Site-ID
      * @param enabled true zum Aktivieren, false zum Deaktivieren
@@ -69,8 +65,7 @@ public class SolarbankController {
         String paramDataStr = getResponse.path("data").path("param_data").asText();
         ObjectNode paramData = (ObjectNode) mapper.readTree(paramDataStr);
 
-        // TODO: Das genaue Feld muss nach API-Discovery angepasst werden.
-        paramData.put("preset_discharge", enabled ? 1 : 0);
+        paramData.put("priority_discharge_switch", enabled ? 1 : 0);
 
         ObjectNode setPayload = mapper.createObjectNode();
         setPayload.put("site_id", siteId);
