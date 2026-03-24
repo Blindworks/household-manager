@@ -25,6 +25,9 @@ public class AnkerSolixAutoControlStatusDto {
     /** Minimum change in watts required to trigger an adjustment. */
     private int thresholdW;
 
+    /** Current polling interval in milliseconds. */
+    private long intervalMs;
+
     /** Last output power that was set by auto-control (watts), or null if never adjusted. */
     private Integer lastSetOutputW;
 

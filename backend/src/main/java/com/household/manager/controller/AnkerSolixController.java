@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.household.manager.ankersolix.AnkerSolixAutoControlService;
 import com.household.manager.ankersolix.AnkerSolixLiveStreamService;
 import com.household.manager.ankersolix.AnkerSolixService;
+import com.household.manager.ankersolix.dto.AnkerSolixAutoControlSettingsDto;
 import com.household.manager.ankersolix.dto.AnkerSolixAutoControlStatusDto;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import com.household.manager.ankersolix.dto.AnkerSolixEnergyDayDto;
@@ -93,6 +94,32 @@ public class AnkerSolixController {
                     .build());
         }
         return ResponseEntity.ok(autoControlService.getStatus());
+    }
+
+    /**
+     * Returns the current auto-control settings.
+     */
+    @GetMapping("/auto-control/settings")
+    public ResponseEntity<AnkerSolixAutoControlSettingsDto> getAutoControlSettings() {
+        if (autoControlService == null) {
+            return ResponseEntity.ok(AnkerSolixAutoControlSettingsDto.builder()
+                    .enabled(false)
+                    .build());
+        }
+        return ResponseEntity.ok(autoControlService.getSettings());
+    }
+
+    /**
+     * Updates the auto-control settings at runtime.
+     */
+    @PutMapping("/auto-control/settings")
+    public ResponseEntity<AnkerSolixAutoControlSettingsDto> updateAutoControlSettings(
+            @RequestBody AnkerSolixAutoControlSettingsDto settings) {
+        if (autoControlService == null) {
+            return ResponseEntity.notFound().build();
+        }
+        autoControlService.updateSettings(settings);
+        return ResponseEntity.ok(autoControlService.getSettings());
     }
 
     /**

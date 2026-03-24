@@ -2,6 +2,7 @@ package com.household.manager.ankersolix;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.ankersolix.dto.AnkerSolixAutoControlSettingsDto;
 import com.household.manager.ankersolix.dto.AnkerSolixAutoControlStatusDto;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -27,39 +27,71 @@ import java.time.LocalDateTime;
  * accordingly. If grid power is negative (feeding into the public grid),
  * the battery output is reduced to avoid wasting energy.
  *
- * <p>Enabled only when {@code ankersolix.auto-control.enabled=true}.
+ * <p>Always instantiated when the Anker Solix integration is enabled.
+ * The auto-control regulation itself can be toggled at runtime via
+ * {@link #updateSettings(AnkerSolixAutoControlSettingsDto)}.
  */
 @Service
-@ConditionalOnProperty(name = "ankersolix.auto-control.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "ankersolix.enabled", havingValue = "true")
 @Slf4j
 public class AnkerSolixAutoControlService {
+
+    private static final long BASE_POLL_INTERVAL_MS = 5000;
 
     private final AnkerSolixService ankerSolixService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String tasmotaUrl;
-    private final int thresholdW;
+
+    private volatile boolean enabled;
+    private volatile int thresholdW;
+    private volatile long intervalMs;
 
     private volatile int lastSetOutputW = -1;
     private volatile LocalDateTime lastAdjustmentTime;
     private volatile double lastGridPowerW;
     private volatile String lastSkipReason;
+    private volatile long lastRunTimestamp = 0;
 
     public AnkerSolixAutoControlService(
             AnkerSolixService ankerSolixService,
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             @Value("${tasmota.electricity.url}") String tasmotaUrl,
-            @Value("${ankersolix.auto-control.threshold-w:10}") int thresholdW) {
+            @Value("${ankersolix.auto-control.enabled:false}") boolean enabled,
+            @Value("${ankersolix.auto-control.threshold-w:10}") int thresholdW,
+            @Value("${ankersolix.auto-control.interval-ms:30000}") long intervalMs) {
         this.ankerSolixService = ankerSolixService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.tasmotaUrl = tasmotaUrl;
+        this.enabled = enabled;
         this.thresholdW = thresholdW;
+        this.intervalMs = intervalMs;
     }
 
     /**
-     * Periodically reads the current grid power from the Tasmota smart meter
+     * Base-rate scheduled method that checks whether the configurable interval
+     * has elapsed before executing the actual regulation logic. This allows
+     * the interval to be changed at runtime without restarting the scheduler.
+     */
+    @Scheduled(fixedDelay = BASE_POLL_INTERVAL_MS)
+    public void scheduledTick() {
+        if (!enabled) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - lastRunTimestamp < intervalMs) {
+            return;
+        }
+        lastRunTimestamp = now;
+
+        autoAdjustOutputPower();
+    }
+
+    /**
+     * Reads the current grid power from the Tasmota smart meter
      * and adjusts the solarbank output to keep grid consumption near zero.
      *
      * <p>Algorithm:
@@ -71,8 +103,7 @@ public class AnkerSolixAutoControlService {
      *   <li>Only apply if change exceeds the configured threshold</li>
      * </ol>
      */
-    @Scheduled(fixedDelayString = "${ankersolix.auto-control.interval-ms:30000}")
-    public void autoAdjustOutputPower() {
+    private void autoAdjustOutputPower() {
         try {
             double gridPowerW = pollTasmotaGridPower();
             lastGridPowerW = gridPowerW;
@@ -112,13 +143,36 @@ public class AnkerSolixAutoControlService {
      */
     public AnkerSolixAutoControlStatusDto getStatus() {
         return AnkerSolixAutoControlStatusDto.builder()
-                .enabled(true)
+                .enabled(enabled)
                 .thresholdW(thresholdW)
+                .intervalMs(intervalMs)
                 .lastSetOutputW(lastSetOutputW >= 0 ? lastSetOutputW : null)
                 .lastGridPowerW(lastAdjustmentTime != null || lastSkipReason != null ? lastGridPowerW : null)
                 .lastAdjustmentTime(lastAdjustmentTime)
                 .lastSkipReason(lastSkipReason)
                 .build();
+    }
+
+    /**
+     * Returns the current settings of the auto-control regulation.
+     */
+    public AnkerSolixAutoControlSettingsDto getSettings() {
+        return AnkerSolixAutoControlSettingsDto.builder()
+                .enabled(enabled)
+                .thresholdW(thresholdW)
+                .intervalMs(intervalMs)
+                .build();
+    }
+
+    /**
+     * Updates the auto-control settings at runtime.
+     */
+    public void updateSettings(AnkerSolixAutoControlSettingsDto settings) {
+        this.enabled = settings.isEnabled();
+        this.thresholdW = settings.getThresholdW();
+        this.intervalMs = settings.getIntervalMs();
+        log.info("Auto-control settings updated: enabled={}, thresholdW={}, intervalMs={}",
+                enabled, thresholdW, intervalMs);
     }
 
     /**

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../models/ankersolix.model';
+import { AnkerSolixAutoControlSettings, AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../models/ankersolix.model';
 
 /**
  * Service for Anker Solix solar station data.
@@ -72,6 +72,14 @@ export class AnkerSolixService {
 
   getAutoControlStatus(): Observable<AnkerSolixAutoControlStatus> {
     return this.http.get<AnkerSolixAutoControlStatus>(`${this.baseUrl}/auto-control/status`);
+  }
+
+  getAutoControlSettings(): Observable<AnkerSolixAutoControlSettings> {
+    return this.http.get<AnkerSolixAutoControlSettings>(`${this.baseUrl}/auto-control/settings`);
+  }
+
+  updateAutoControlSettings(settings: AnkerSolixAutoControlSettings): Observable<AnkerSolixAutoControlSettings> {
+    return this.http.put<AnkerSolixAutoControlSettings>(`${this.baseUrl}/auto-control/settings`, settings);
   }
 
   private connect(): void {
