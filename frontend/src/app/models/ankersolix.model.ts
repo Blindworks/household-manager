@@ -28,10 +28,14 @@ export interface AnkerSolixAutoControlStatus {
   lastGridPowerW: number | null;
   lastAdjustmentTime: string | null;
   lastSkipReason: string | null;
+  forceDischargeActive: boolean | null;
+  lastBatteryPercent: number | null;
 }
 
 export interface AnkerSolixAutoControlSettings {
   enabled: boolean;
   thresholdW: number;
   intervalMs: number;
+  forceDischargeEnabled: boolean;
+  forceDischargeMinBatteryPercent: number;
 }

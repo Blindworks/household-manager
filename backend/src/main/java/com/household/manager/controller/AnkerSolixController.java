@@ -144,6 +144,17 @@ public class AnkerSolixController {
         return ResponseEntity.ok(ankerSolixService.getRawSystemInfo());
     }
 
+    /**
+     * Returns the raw GET_DEVICE_PARM response for a given param_type.
+     * Useful for discovering API fields (e.g. force-discharge settings).
+     * Default param_type is "4" (schedule).
+     */
+    @GetMapping("/debug/device-params")
+    public ResponseEntity<JsonNode> debugDeviceParams(
+            @RequestParam(defaultValue = "4") String paramType) {
+        return ResponseEntity.ok(ankerSolixService.getRawDeviceParams(paramType));
+    }
+
     /** Returns the raw ENERGY_ANALYSIS response to discover real field names. */
     @GetMapping("/debug/energy")
     public ResponseEntity<JsonNode> debugEnergy(
@@ -153,12 +164,31 @@ public class AnkerSolixController {
         return ResponseEntity.ok(ankerSolixService.getRawEnergyDay(queryDate));
     }
 
+    /**
+     * Manually enables or disables force-discharge (Entladung nur durch Batterie).
+     */
+    @PostMapping("/force-discharge")
+    public ResponseEntity<Void> setForceDischarge(@RequestBody ForceDischargeRequest request) {
+        log.info("Manual force-discharge request: enabled={}", request.isEnabled());
+        if (autoControlService != null) {
+            autoControlService.setForceDischargeManual(request.isEnabled());
+        } else {
+            ankerSolixService.setForceDischarge(request.isEnabled());
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     // -------------------------------------------------------------------------
-    // Inner request DTO
+    // Inner request DTOs
     // -------------------------------------------------------------------------
 
     @Data
     public static class SetOutputPowerRequest {
         private int watts;
+    }
+
+    @Data
+    public static class ForceDischargeRequest {
+        private boolean enabled;
     }
 }

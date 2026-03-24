@@ -23,4 +23,10 @@ public class AnkerSolixAutoControlSettingsDto {
 
     /** Polling interval in milliseconds. */
     private long intervalMs;
+
+    /** Whether force-discharge logic is enabled (forces battery discharge when grid import detected). */
+    private boolean forceDischargeEnabled;
+
+    /** Battery SOC threshold in percent – force-discharge is disabled below this value. */
+    private int forceDischargeMinBatteryPercent;
 }

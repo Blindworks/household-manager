@@ -307,6 +307,50 @@ public class AnkerSolixService {
     }
 
     /**
+     * Returns the raw GET_DEVICE_PARM response for a given param_type.
+     * Used for API field discovery (e.g. finding the force-discharge field).
+     */
+    public JsonNode getRawDeviceParams(String paramType) {
+        try {
+            return solarbankController.getRawDeviceParams(getSiteId(), paramType);
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to fetch raw device params (paramType={}): {}", paramType, ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch raw device params", ex);
+        }
+    }
+
+    /**
+     * Checks whether force-discharge (Entladung nur durch Batterie) is currently enabled.
+     */
+    public boolean isForceDischargeEnabled() {
+        try {
+            return solarbankController.isForceDischargeEnabled(getSiteId());
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to check force-discharge status: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to check force-discharge status", ex);
+        }
+    }
+
+    /**
+     * Enables or disables force-discharge (Entladung nur durch Batterie).
+     */
+    public void setForceDischarge(boolean enabled) {
+        try {
+            solarbankController.setForceDischarge(getSiteId(), enabled);
+            log.info("Force-discharge set to {}", enabled);
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to set force-discharge to {}: {}", enabled, ex.getMessage(), ex);
+            throw new RuntimeException("Failed to set force-discharge", ex);
+        }
+    }
+
+    /**
      * Sets the output power on the solarbank for all schedule time slots.
      *
      * @param watts desired output power in watts

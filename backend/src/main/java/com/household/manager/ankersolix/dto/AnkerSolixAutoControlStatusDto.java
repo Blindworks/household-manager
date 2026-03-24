@@ -40,4 +40,10 @@ public class AnkerSolixAutoControlStatusDto {
 
     /** Reason why the last cycle was skipped, or null if the last cycle made an adjustment. */
     private String lastSkipReason;
+
+    /** Whether force-discharge is currently active on the device. */
+    private Boolean forceDischargeActive;
+
+    /** Last observed battery state of charge in percent. */
+    private Integer lastBatteryPercent;
 }
