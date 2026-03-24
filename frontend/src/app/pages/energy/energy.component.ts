@@ -9,7 +9,7 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import { CanvasRenderer } from 'echarts/renderers';
 import { RouterLink } from '@angular/router';
 import { AnkerSolixService } from '../../services/ankersolix.service';
-import { AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
+import { AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 import { ShellyService } from '../../services/shelly.service';
@@ -36,6 +36,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
   tasmotaReading: TasmotaLiveReading | null = null;
   deviceParams: AnkerSolixDeviceParams | null = null;
   energyData: AnkerSolixEnergyDay | null = null;
+  autoControlStatus: AnkerSolixAutoControlStatus | null = null;
   chartOptions: Record<string, unknown> | null = null;
   weeklyChartOptions: Record<string, unknown> | null = null;
 
@@ -52,6 +53,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
   private liveSubscription: Subscription | null = null;
   private tasmotaSubscription: Subscription | null = null;
   private shellySubscription: Subscription | null = null;
+  private autoControlInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
     this.startLiveStream();
@@ -60,12 +62,17 @@ export class EnergyComponent implements OnInit, OnDestroy {
     this.loadDeviceParams();
     this.loadEnergy();
     this.loadWeekData();
+    this.loadAutoControlStatus();
+    this.autoControlInterval = setInterval(() => this.loadAutoControlStatus(), 30000);
   }
 
   ngOnDestroy(): void {
     this.liveSubscription?.unsubscribe();
     this.tasmotaSubscription?.unsubscribe();
     this.shellySubscription?.unsubscribe();
+    if (this.autoControlInterval) {
+      clearInterval(this.autoControlInterval);
+    }
     this.ankerSolixService.disconnectLive();
     this.tasmotaLiveService.disconnect();
     this.shellyLiveService.disconnect();
@@ -169,6 +176,13 @@ export class EnergyComponent implements OnInit, OnDestroy {
       case 'error': return 'Verbindungsfehler';
       default: return 'Getrennt';
     }
+  }
+
+  private loadAutoControlStatus(): void {
+    this.ankerSolixService.getAutoControlStatus().subscribe({
+      next: (status) => { this.autoControlStatus = status; },
+      error: () => { this.autoControlStatus = null; }
+    });
   }
 
   private startLiveStream(): void {
