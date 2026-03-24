@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -16,6 +19,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
@@ -54,7 +58,7 @@ public class TapoCloudService {
 
     private final ObjectMapper objectMapper;
     private final TapoProperties tapoProperties;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient;
 
     private final String terminalUuid = UUID.randomUUID().toString();
     private final Map<String, String> appServerUrlCache = new ConcurrentHashMap<>();
@@ -68,6 +72,33 @@ public class TapoCloudService {
     public TapoCloudService(ObjectMapper objectMapper, TapoProperties tapoProperties) {
         this.objectMapper = objectMapper;
         this.tapoProperties = tapoProperties;
+        this.httpClient = createTrustAllHttpClient();
+    }
+
+    /**
+     * TP-Link cloud servers use certificates that may not be trusted by default
+     * Java trust stores (some have expired certs). All reference implementations
+     * (Python, TypeScript) disable SSL verification for this reason.
+     */
+    private static HttpClient createTrustAllHttpClient() {
+        try {
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                    }
+            };
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+            return HttpClient.newBuilder().sslContext(sslContext).build();
+        } catch (Exception ex) {
+            log.warn("Konnte keinen SSL-toleranten HttpClient erstellen, verwende Standard: {}", ex.getMessage());
+            return HttpClient.newHttpClient();
+        }
     }
 
     public List<TapoCloudDevice> getTapoDevices() {
