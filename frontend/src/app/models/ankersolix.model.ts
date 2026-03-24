@@ -19,3 +19,12 @@ export interface AnkerSolixDeviceParams {
   maxLoadW: number;
   currentOutputW: number;
 }
+
+export interface AnkerSolixAutoControlStatus {
+  enabled: boolean;
+  thresholdW: number;
+  lastSetOutputW: number | null;
+  lastGridPowerW: number | null;
+  lastAdjustmentTime: string | null;
+  lastSkipReason: string | null;
+}

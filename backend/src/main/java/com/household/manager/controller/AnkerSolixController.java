@@ -1,13 +1,16 @@
 package com.household.manager.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.household.manager.ankersolix.AnkerSolixAutoControlService;
 import com.household.manager.ankersolix.AnkerSolixLiveStreamService;
 import com.household.manager.ankersolix.AnkerSolixService;
+import com.household.manager.ankersolix.dto.AnkerSolixAutoControlStatusDto;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import com.household.manager.ankersolix.dto.AnkerSolixEnergyDayDto;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
@@ -30,6 +33,9 @@ public class AnkerSolixController {
 
     private final AnkerSolixService ankerSolixService;
     private final AnkerSolixLiveStreamService ankerSolixLiveStreamService;
+
+    @Autowired(required = false)
+    private AnkerSolixAutoControlService autoControlService;
 
     /**
      * SSE stream with live power-flow data.
@@ -73,6 +79,20 @@ public class AnkerSolixController {
         log.info("Setting output power to {} W", request.getWatts());
         ankerSolixService.setOutputPower(request.getWatts());
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Returns the current status of the auto-control regulation.
+     * Returns enabled=false if auto-control is not active.
+     */
+    @GetMapping("/auto-control/status")
+    public ResponseEntity<AnkerSolixAutoControlStatusDto> getAutoControlStatus() {
+        if (autoControlService == null) {
+            return ResponseEntity.ok(AnkerSolixAutoControlStatusDto.builder()
+                    .enabled(false)
+                    .build());
+        }
+        return ResponseEntity.ok(autoControlService.getStatus());
     }
 
     /**
