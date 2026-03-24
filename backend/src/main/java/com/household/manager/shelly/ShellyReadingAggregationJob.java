@@ -25,21 +25,27 @@ public class ShellyReadingAggregationJob {
     @Scheduled(fixedDelay = 60_000)
     @Transactional
     public void aggregate() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(10);
-        List<ShellyReading> oldReadings = repository.findByTimestampBefore(cutoff);
+        int minutes = aggregateByUnit(LocalDateTime.now().minusMinutes(10), ChronoUnit.MINUTES);
+        int hours = aggregateByUnit(LocalDateTime.now().minusDays(2), ChronoUnit.HOURS);
 
-        if (oldReadings.isEmpty()) {
-            return;
+        if (minutes > 0 || hours > 0) {
+            log.debug("Aggregation: {} Minuten-Buckets, {} Stunden-Buckets verdichtet", minutes, hours);
+        }
+    }
+
+    private int aggregateByUnit(LocalDateTime cutoff, ChronoUnit unit) {
+        List<ShellyReading> readings = repository.findByTimestampBefore(cutoff);
+        if (readings.isEmpty()) {
+            return 0;
         }
 
-        Map<String, List<ShellyReading>> groups = oldReadings.stream()
+        Map<String, List<ShellyReading>> groups = readings.stream()
                 .collect(Collectors.groupingBy(r ->
-                        r.getDeviceName() + "|" + r.getTimestamp().truncatedTo(ChronoUnit.MINUTES)
+                        r.getDeviceName() + "|" + r.getTimestamp().truncatedTo(unit)
                 ));
 
         int aggregated = 0;
-        for (Map.Entry<String, List<ShellyReading>> entry : groups.entrySet()) {
-            List<ShellyReading> group = entry.getValue();
+        for (List<ShellyReading> group : groups.values()) {
             if (group.size() <= 1) {
                 continue;
             }
@@ -62,7 +68,7 @@ public class ShellyReadingAggregationJob {
                     .map(ShellyReading::getTotalEnergy)
                     .orElse(0.0);
 
-            LocalDateTime bucket = group.get(0).getTimestamp().truncatedTo(ChronoUnit.MINUTES);
+            LocalDateTime bucket = group.get(0).getTimestamp().truncatedTo(unit);
             String deviceName = group.get(0).getDeviceName();
 
             List<Long> ids = group.stream().map(ShellyReading::getId).toList();
@@ -80,8 +86,6 @@ public class ShellyReadingAggregationJob {
             aggregated++;
         }
 
-        if (aggregated > 0) {
-            log.debug("Aggregation abgeschlossen: {} Minuten-Buckets verdichtet", aggregated);
-        }
+        return aggregated;
     }
 }
