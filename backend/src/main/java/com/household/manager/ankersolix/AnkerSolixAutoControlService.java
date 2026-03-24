@@ -8,6 +8,7 @@ import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import com.household.manager.ankersolix.dto.AnkerSolixLiveDto;
 import com.household.manager.model.entity.SolixAutoControlReading;
 import com.household.manager.repository.SolixAutoControlReadingRepository;
+import com.household.manager.service.ApplicationSettingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,6 +21,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Automatically adjusts the Anker Solix solarbank output power to keep
@@ -40,9 +42,11 @@ import java.time.LocalDateTime;
 public class AnkerSolixAutoControlService {
 
     private static final long BASE_POLL_INTERVAL_MS = 5000;
+    private static final String SETTINGS_CATEGORY = "ANKERSOLIX_AUTO_CONTROL";
 
     private final AnkerSolixService ankerSolixService;
     private final SolixAutoControlReadingRepository autoControlReadingRepository;
+    private final ApplicationSettingsService applicationSettingsService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String tasmotaUrl;
@@ -68,28 +72,32 @@ public class AnkerSolixAutoControlService {
     public AnkerSolixAutoControlService(
             AnkerSolixService ankerSolixService,
             SolixAutoControlReadingRepository autoControlReadingRepository,
+            ApplicationSettingsService applicationSettingsService,
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
-            @Value("${tasmota.electricity.url}") String tasmotaUrl,
-            @Value("${ankersolix.auto-control.enabled:false}") boolean enabled,
-            @Value("${ankersolix.auto-control.threshold-w:10}") int thresholdW,
-            @Value("${ankersolix.auto-control.interval-ms:30000}") long intervalMs,
-            @Value("${ankersolix.auto-control.grid-power-offset-w:20}") int gridPowerOffsetW,
-            @Value("${ankersolix.auto-control.force-discharge.enabled:false}") boolean forceDischargeEnabled,
-            @Value("${ankersolix.auto-control.force-discharge.min-battery-percent:10}") int forceDischargeMinBatteryPercent,
-            @Value("${ankersolix.auto-control.battery-power-cutoff.enabled:false}") boolean batteryPowerCutoffEnabled) {
+            @Value("${tasmota.electricity.url}") String tasmotaUrl) {
         this.ankerSolixService = ankerSolixService;
         this.autoControlReadingRepository = autoControlReadingRepository;
+        this.applicationSettingsService = applicationSettingsService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.tasmotaUrl = tasmotaUrl;
-        this.enabled = enabled;
-        this.thresholdW = thresholdW;
-        this.intervalMs = intervalMs;
-        this.gridPowerOffsetW = gridPowerOffsetW;
-        this.forceDischargeEnabled = forceDischargeEnabled;
-        this.forceDischargeMinBatteryPercent = forceDischargeMinBatteryPercent;
-        this.batteryPowerCutoffEnabled = batteryPowerCutoffEnabled;
+        loadSettingsFromDb();
+    }
+
+    private void loadSettingsFromDb() {
+        Map<String, String> settings = applicationSettingsService.getSettingsByCategory(SETTINGS_CATEGORY);
+        this.enabled = Boolean.parseBoolean(settings.getOrDefault("enabled", "false"));
+        this.thresholdW = Integer.parseInt(settings.getOrDefault("threshold_w", "10"));
+        this.intervalMs = Long.parseLong(settings.getOrDefault("interval_ms", "30000"));
+        this.gridPowerOffsetW = Integer.parseInt(settings.getOrDefault("grid_power_offset_w", "20"));
+        this.forceDischargeEnabled = Boolean.parseBoolean(settings.getOrDefault("force_discharge_enabled", "false"));
+        this.forceDischargeMinBatteryPercent = Integer.parseInt(settings.getOrDefault("force_discharge_min_battery_percent", "10"));
+        this.batteryPowerCutoffEnabled = Boolean.parseBoolean(settings.getOrDefault("battery_power_cutoff_enabled", "false"));
+        log.info("Loaded auto-control settings from database: enabled={}, thresholdW={}, intervalMs={}, " +
+                        "gridPowerOffsetW={}, forceDischarge={}, minBattery={}%, batteryPowerCutoff={}",
+                enabled, thresholdW, intervalMs, gridPowerOffsetW, forceDischargeEnabled,
+                forceDischargeMinBatteryPercent, batteryPowerCutoffEnabled);
     }
 
     /**
@@ -302,7 +310,18 @@ public class AnkerSolixAutoControlService {
             }
         }
 
-        log.info("Auto-control settings updated: enabled={}, thresholdW={}, intervalMs={}, " +
+        // Persist settings to database
+        applicationSettingsService.saveSettings(SETTINGS_CATEGORY, Map.of(
+                "enabled", String.valueOf(enabled),
+                "threshold_w", String.valueOf(thresholdW),
+                "interval_ms", String.valueOf(intervalMs),
+                "grid_power_offset_w", String.valueOf(gridPowerOffsetW),
+                "force_discharge_enabled", String.valueOf(forceDischargeEnabled),
+                "force_discharge_min_battery_percent", String.valueOf(forceDischargeMinBatteryPercent),
+                "battery_power_cutoff_enabled", String.valueOf(batteryPowerCutoffEnabled)
+        ));
+
+        log.info("Auto-control settings updated and persisted: enabled={}, thresholdW={}, intervalMs={}, " +
                         "gridPowerOffsetW={}, forceDischarge={}, minBattery={}%, batteryPowerCutoff={}",
                 enabled, thresholdW, intervalMs, gridPowerOffsetW, forceDischargeEnabled,
                 forceDischargeMinBatteryPercent, batteryPowerCutoffEnabled);

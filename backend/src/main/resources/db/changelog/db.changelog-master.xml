@@ -33,4 +33,7 @@
     <!-- Anker Solix Auto-Control History -->
     <include file="db/changelog/changes/20260324-0012-create-solix-auto-control-readings-table.xml"/>
 
+    <!-- Application Settings -->
+    <include file="db/changelog/changes/20260324-0013-create-application-settings-table.xml"/>
+
 </databaseChangeLog>
