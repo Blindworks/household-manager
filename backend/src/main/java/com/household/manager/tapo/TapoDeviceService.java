@@ -31,6 +31,7 @@ public class TapoDeviceService {
 
     private final Map<String, TapoLocalDeviceConnection> localConnectionCache = new ConcurrentHashMap<>();
     private final Map<String, TapoAuthProtocol> workingProtocolCache = new ConcurrentHashMap<>();
+    private final Map<String, String> deviceIpCache = new ConcurrentHashMap<>();
 
     public TapoDeviceService(TapoCloudService tapoCloudService,
                              TapoDiscoveryService tapoDiscoveryService,
@@ -40,6 +41,14 @@ public class TapoDeviceService {
         this.tapoDiscoveryService = tapoDiscoveryService;
         this.tapoDeviceFactory = tapoDeviceFactory;
         this.tapoProperties = tapoProperties;
+
+        for (TapoProperties.TapoDeviceConfig config : tapoProperties.getDevices()) {
+            if (config.getDeviceId() != null && !config.getDeviceId().isBlank()
+                    && config.getIp() != null && !config.getIp().isBlank()) {
+                deviceIpCache.put(config.getDeviceId(), config.getIp());
+                log.info("Statische Tapo-IP registriert: {} -> {}", config.getDeviceId(), config.getIp());
+            }
+        }
     }
 
     public List<TapoCloudDevice> discoverCloudDevices() {
@@ -79,6 +88,7 @@ public class TapoDeviceService {
 
         for (TapoDiscoveryDevice device : devices) {
             if (device.deviceId() != null && device.ipAddress() != null) {
+                deviceIpCache.put(device.deviceId(), device.ipAddress());
                 workingProtocolCache.put(device.deviceId(), device.authProtocol());
                 getOrCreateLocalConnection(device.deviceId(), device.ipAddress(), device.authProtocol());
             }
@@ -122,7 +132,7 @@ public class TapoDeviceService {
     }
 
     public TapoDeviceState getStatus(String deviceId) {
-        return getStatus(deviceId, null, null);
+        return getStatus(deviceId, resolveIpAddress(deviceId), null);
     }
 
     public TapoDeviceState getStatus(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
@@ -144,7 +154,7 @@ public class TapoDeviceService {
     }
 
     public void turnOn(String deviceId) {
-        turnOn(deviceId, null, null);
+        turnOn(deviceId, resolveIpAddress(deviceId), null);
     }
 
     public void turnOn(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
@@ -164,7 +174,7 @@ public class TapoDeviceService {
     }
 
     public void turnOff(String deviceId) {
-        turnOff(deviceId, null, null);
+        turnOff(deviceId, resolveIpAddress(deviceId), null);
     }
 
     public void turnOff(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
@@ -184,7 +194,7 @@ public class TapoDeviceService {
     }
 
     public JsonNode getEnergyUsage(String deviceId) {
-        return getEnergyUsage(deviceId, null, null);
+        return getEnergyUsage(deviceId, resolveIpAddress(deviceId), null);
     }
 
     public JsonNode getEnergyUsage(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
@@ -229,6 +239,7 @@ public class TapoDeviceService {
     public void clearLocalConnection(String deviceId) {
         localConnectionCache.remove(deviceId);
         workingProtocolCache.remove(deviceId);
+        deviceIpCache.remove(deviceId);
     }
 
     /**
@@ -265,6 +276,20 @@ public class TapoDeviceService {
             localConnectionCache.remove(deviceId);
             throw new TapoException("Lokale Steuerung fuer " + deviceId + " mit beiden Protokollen fehlgeschlagen: " + ex.getMessage(), ex);
         }
+    }
+
+    private String resolveIpAddress(String deviceId) {
+        String cached = deviceIpCache.get(deviceId);
+        if (cached != null) {
+            return cached;
+        }
+        for (TapoProperties.TapoDeviceConfig config : tapoProperties.getDevices()) {
+            if (deviceId.equals(config.getDeviceId()) && config.getIp() != null && !config.getIp().isBlank()) {
+                deviceIpCache.put(deviceId, config.getIp());
+                return config.getIp();
+            }
+        }
+        return null;
     }
 
     private TapoAuthProtocol resolveProtocol(String deviceId, TapoAuthProtocol requested) {
