@@ -17,14 +17,14 @@ public class TapoDeviceService {
     private final TapoCloudService tapoCloudService;
 
     public List<TapoCloudDevice> discoverDevices() {
-        return tapoCloudService.getTapoDevices();
+        return tapoCloudService.getTapoDevices(true);
     }
 
     public TapoDeviceState getStatus(String deviceId) {
-        TapoCloudDevice cloudDevice = tapoCloudService.getTapoDevices().stream()
-                .filter(device -> deviceId.equals(device.deviceId()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Tapo-Geraet nicht gefunden: " + deviceId));
+        TapoCloudDevice cloudDevice = tapoCloudService.findDeviceById(deviceId);
+        if (cloudDevice == null) {
+            log.debug("Geraet {} nicht in Cloud-Liste gefunden, versuche Passthrough direkt", deviceId);
+        }
 
         JsonNode deviceInfo = tapoCloudService.getDeviceInfo(deviceId);
         return TapoDeviceState.from(deviceInfo, cloudDevice, tapoCloudService);

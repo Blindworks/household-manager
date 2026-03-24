@@ -33,23 +33,48 @@ public class TapoCloudService {
     private final TapoProperties tapoProperties;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
+    private static final long DEVICE_LIST_CACHE_TTL_MS = 60_000;
+
     private volatile String cloudToken;
     private volatile Instant tokenExpiresAt;
     private volatile String terminalUuid = UUID.randomUUID().toString();
     private final Map<String, String> appServerUrlCache = new ConcurrentHashMap<>();
+    private volatile List<TapoCloudDevice> cachedDeviceList;
+    private volatile Instant deviceListCachedAt;
 
     public List<TapoCloudDevice> getTapoDevices() {
+        return getTapoDevices(false);
+    }
+
+    public List<TapoCloudDevice> getTapoDevices(boolean forceRefresh) {
+        if (!forceRefresh && cachedDeviceList != null && deviceListCachedAt != null
+                && Instant.now().isBefore(deviceListCachedAt.plusMillis(DEVICE_LIST_CACHE_TTL_MS))) {
+            return cachedDeviceList;
+        }
+
         JsonNode deviceListNode = invokeCloud("getDeviceList", null, true).path("result").path("deviceList");
         List<TapoCloudDevice> devices = objectMapper.convertValue(deviceListNode, new TypeReference<>() {});
-        List<TapoCloudDevice> tapoDevices = devices.stream()
-                .filter(this::isTapoDevice)
-                .toList();
-        tapoDevices.forEach(d -> {
+        // Cache appServerUrl for ALL cloud devices (not just Tapo-filtered)
+        // so passthrough works for devices that might not pass the isTapoDevice filter
+        devices.forEach(d -> {
             if (d.deviceId() != null && d.appServerUrl() != null && !d.appServerUrl().isBlank()) {
                 appServerUrlCache.put(d.deviceId(), d.appServerUrl());
             }
         });
+        List<TapoCloudDevice> tapoDevices = devices.stream()
+                .filter(this::isTapoDevice)
+                .toList();
+        cachedDeviceList = tapoDevices;
+        deviceListCachedAt = Instant.now();
+        log.debug("Tapo-Geraetliste aktualisiert: {} Geraete", tapoDevices.size());
         return tapoDevices;
+    }
+
+    public TapoCloudDevice findDeviceById(String deviceId) {
+        return getTapoDevices().stream()
+                .filter(device -> deviceId.equals(device.deviceId()))
+                .findFirst()
+                .orElse(null);
     }
 
     public JsonNode getDeviceInfo(String deviceId) {
