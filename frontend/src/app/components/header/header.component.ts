@@ -31,7 +31,8 @@ export class HeaderComponent {
       label: 'Energie',
       children: [
         { path: '/energy', label: 'Uebersicht', exact: true },
-        { path: '/energy/battery-control', label: 'Akku Steuerung' }
+        { path: '/energy/battery-control', label: 'Akku Steuerung' },
+        { path: '/energy/history', label: 'Energieverlauf' }
       ]
     },
     { path: '/air-quality', label: 'Luftqualitaet' },
