@@ -128,11 +128,14 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
 
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-            generator.initialize(1024);
+            generator.initialize(2048);
             KeyPair keyPair = generator.generateKeyPair();
 
+            ObjectNode handshakeParams = objectMapper.createObjectNode();
+            handshakeParams.put("key", publicKeyPem(keyPair));
+            handshakeParams.put("requestTimeMils", System.currentTimeMillis());
             ObjectNode handshake = objectMapper.createObjectNode().put("method", "handshake");
-            handshake.set("params", objectMapper.createObjectNode().put("key", publicKeyPem(keyPair)));
+            handshake.set("params", handshakeParams);
 
             HttpResponse<String> handshakeResponse = postJsonRaw(appUrl, handshake.toString(), null);
             if (handshakeResponse.statusCode() == 403) {

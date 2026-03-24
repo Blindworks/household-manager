@@ -322,7 +322,7 @@ public class TapoDeviceService {
         if (cached != null && cached != TapoAuthProtocol.UNKNOWN) {
             return cached;
         }
-        return TapoAuthProtocol.KLAP;
+        return TapoAuthProtocol.AES;
     }
 
     private TapoLocalDeviceConnection getOrCreateLocalConnection(String deviceId, String ipAddress, TapoAuthProtocol protocol) {

@@ -15,12 +15,14 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
     private static final int SESSION_TTL_SECONDS = 300;
+    private static final String USER_AGENT = "Tapo CameraClient Android";
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -83,6 +85,7 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(appUrl + "/request?seq=" + seq))
                 .header("Cookie", sessionCookie)
+                .header("User-Agent", USER_AGENT)
                 .timeout(REQUEST_TIMEOUT)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
                 .build();
@@ -123,16 +126,51 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         key = null;
     }
 
+    /**
+     * Build candidate auth hashes. Newer Tapo firmware (1.4+) may require
+     * a different credential hash format. We try all known variants.
+     */
+    private List<byte[]> buildAuthHashCandidates() {
+        byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8);
+        byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8);
+
+        // V1: SHA256(SHA1(user) + SHA1(pass)) — original KLAP v2
+        byte[] v1 = TapoCipher.sha256(concat(
+                TapoCipher.sha1(usernameBytes),
+                TapoCipher.sha1(passwordBytes)
+        ));
+
+        // V2: SHA256(SHA1(SHA256(user)) + SHA1(SHA256(pass))) — newer firmware
+        byte[] v2 = TapoCipher.sha256(concat(
+                TapoCipher.sha1(TapoCipher.sha256(usernameBytes)),
+                TapoCipher.sha1(TapoCipher.sha256(passwordBytes))
+        ));
+
+        return List.of(v1, v2);
+    }
+
     private synchronized void ensureAuthenticated() {
         if (authenticatedAt != null && Instant.now().isBefore(authenticatedAt.plusSeconds(SESSION_TTL_SECONDS))) {
             return;
         }
 
-        byte[] userHash = TapoCipher.sha256(concat(
-                TapoCipher.sha1(username.getBytes(StandardCharsets.UTF_8)),
-                TapoCipher.sha1(password.getBytes(StandardCharsets.UTF_8))
-        ));
+        List<byte[]> authHashCandidates = buildAuthHashCandidates();
+        TapoException lastException = null;
 
+        for (byte[] userHash : authHashCandidates) {
+            try {
+                performHandshake(userHash);
+                return; // success
+            } catch (TapoException ex) {
+                lastException = ex;
+            }
+        }
+
+        throw lastException != null ? lastException
+                : new TapoException("Tapo KLAP-Authentifizierung mit allen Credential-Formaten fehlgeschlagen.");
+    }
+
+    private void performHandshake(byte[] userHash) {
         byte[] localSeed = new byte[16];
         new SecureRandom().nextBytes(localSeed);
 
@@ -140,12 +178,14 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             HttpRequest handshake1 = HttpRequest.newBuilder()
                     .uri(URI.create(appUrl + "/handshake1"))
                     .header("Content-Type", "application/octet-stream")
+                    .header("User-Agent", USER_AGENT)
+                    .header("Accept", "*/*")
                     .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(localSeed))
                     .build();
             HttpResponse<byte[]> response1 = httpClient.send(handshake1, HttpResponse.BodyHandlers.ofByteArray());
             if (response1.statusCode() == 403) {
-                throw new TapoException("Tapo KLAP-Request fehlgeschlagen mit HTTP 403");
+                throw new TapoException("Tapo KLAP-Handshake1 HTTP 403 (Zugriff verweigert)");
             }
             if (response1.statusCode() < 200 || response1.statusCode() >= 300) {
                 throw new TapoException("Tapo KLAP-Handshake1 fehlgeschlagen mit HTTP " + response1.statusCode());
@@ -161,13 +201,15 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             byte[] serverHash = Arrays.copyOfRange(body, 16, 48);
             byte[] localHash = TapoCipher.sha256(concat(localSeed, remoteSeed, userHash));
             if (!Arrays.equals(localHash, serverHash)) {
-                throw new TapoException("Tapo KLAP-Handshake-Pruefung fehlgeschlagen (falsches Passwort?).");
+                throw new TapoException("Tapo KLAP-Handshake-Pruefung fehlgeschlagen (Credential-Format passt nicht).");
             }
 
             byte[] payload = TapoCipher.sha256(concat(remoteSeed, localSeed, userHash));
             HttpRequest handshake2 = HttpRequest.newBuilder()
                     .uri(URI.create(appUrl + "/handshake2"))
                     .header("Cookie", sessionCookie)
+                    .header("Content-Type", "application/octet-stream")
+                    .header("User-Agent", USER_AGENT)
                     .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
                     .build();
