@@ -139,12 +139,13 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         try {
             HttpRequest handshake1 = HttpRequest.newBuilder()
                     .uri(URI.create(appUrl + "/handshake1"))
+                    .header("Content-Type", "application/octet-stream")
                     .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(localSeed))
                     .build();
             HttpResponse<byte[]> response1 = httpClient.send(handshake1, HttpResponse.BodyHandlers.ofByteArray());
             if (response1.statusCode() == 403) {
-                throw new TapoException("Tapo KLAP verweigert den Zugriff (403). Pruefe 'Third-Party Compatibility' in der Tapo-App.");
+                throw new TapoException("Tapo KLAP-Request fehlgeschlagen mit HTTP 403");
             }
             if (response1.statusCode() < 200 || response1.statusCode() >= 300) {
                 throw new TapoException("Tapo KLAP-Handshake1 fehlgeschlagen mit HTTP " + response1.statusCode());
