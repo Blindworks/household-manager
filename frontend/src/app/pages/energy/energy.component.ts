@@ -8,7 +8,7 @@ import { BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { AnkerSolixService } from '../../services/ankersolix.service';
-import { AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
+import { AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { TasmotaLiveReading } from '../../models/tasmota-live.model';
 
@@ -34,6 +34,7 @@ export class EnergyComponent implements OnInit, OnDestroy {
   tasmotaReading: TasmotaLiveReading | null = null;
   deviceParams: AnkerSolixDeviceParams | null = null;
   energyData: AnkerSolixEnergyDay | null = null;
+  autoControlStatus: AnkerSolixAutoControlStatus | null = null;
   chartOptions: Record<string, unknown> | null = null;
 
   outputWatts = 0;
@@ -46,17 +47,23 @@ export class EnergyComponent implements OnInit, OnDestroy {
 
   private liveSubscription: Subscription | null = null;
   private tasmotaSubscription: Subscription | null = null;
+  private autoControlInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
     this.startLiveStream();
     this.startTasmotaStream();
     this.loadDeviceParams();
     this.loadEnergy();
+    this.loadAutoControlStatus();
+    this.autoControlInterval = setInterval(() => this.loadAutoControlStatus(), 30000);
   }
 
   ngOnDestroy(): void {
     this.liveSubscription?.unsubscribe();
     this.tasmotaSubscription?.unsubscribe();
+    if (this.autoControlInterval) {
+      clearInterval(this.autoControlInterval);
+    }
     this.ankerSolixService.disconnectLive();
     this.tasmotaLiveService.disconnect();
   }
@@ -118,6 +125,13 @@ export class EnergyComponent implements OnInit, OnDestroy {
       case 'error': return 'Verbindungsfehler';
       default: return 'Getrennt';
     }
+  }
+
+  private loadAutoControlStatus(): void {
+    this.ankerSolixService.getAutoControlStatus().subscribe({
+      next: (status) => { this.autoControlStatus = status; },
+      error: () => { this.autoControlStatus = null; }
+    });
   }
 
   private startLiveStream(): void {
