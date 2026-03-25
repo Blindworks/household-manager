@@ -214,6 +214,7 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
                     .header("Accept", "application/json")
                     .header("requestByApp", "true")
                     .header("User-Agent", "Tapo CameraClient Android")
+                    .header("Referer", appUrl)
                     .timeout(REQUEST_TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofString(payload));
             if (cookie != null) {

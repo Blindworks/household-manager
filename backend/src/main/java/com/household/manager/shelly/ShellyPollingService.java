@@ -21,7 +21,7 @@ public class ShellyPollingService {
 
     @Scheduled(fixedDelayString = "${shelly.polling.interval-ms:60000}")
     public void pollAllDevices() {
-        log.debug("Polling Shelly devices...");
+        //log.debug("Polling Shelly devices...");
         List<ShellyStatusDto> statuses = shellyService.getAllDevicesStatus();
 
         for (ShellyStatusDto status : statuses) {
@@ -38,7 +38,7 @@ public class ShellyPollingService {
                     .totalEnergy(status.totalEnergy())
                     .build();
             shellyReadingRepository.save(reading);
-            log.debug("Saved reading for Shelly '{}': {}W", status.deviceName(), status.power());
+            //log.debug("Saved reading for Shelly '{}': {}W", status.deviceName(), status.power());
         }
     }
 }
