@@ -10,6 +10,24 @@ services:
       DB_USERNAME: household_manager
       DB_PASSWORD: ${DB_PASSWORD}
       CORS_ALLOWED_ORIGINS: http://192.168.1.100:4200
+
+      # AnkerSolix
+      ANKER_ENABLED: ${ANKER_ENABLED:-false}
+      ANKER_USER: ${ANKER_USER:-}
+      ANKER_PASSWORD: ${ANKER_PASSWORD:-}
+      ANKER_COUNTRY: ${ANKER_COUNTRY:-DE}
+
+      # Tapo
+      TAPO_EMAIL: ${TAPO_EMAIL:-}
+      TAPO_PASSWORD: ${TAPO_PASSWORD:-}
+
+      # Meross
+      MEROSS_EMAIL: ${MEROSS_EMAIL:-}
+      MEROSS_PASSWORD: ${MEROSS_PASSWORD:-}
+
+      # Shelly
+      SHELLY_1_IP: ${SHELLY_1_IP:-192.168.1.102}
+      SHELLY_2_IP: ${SHELLY_2_IP:-192.168.1.107}
     ports:
       - "8080:8080"
     networks:
