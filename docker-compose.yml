@@ -26,8 +26,8 @@ services:
       MEROSS_PASSWORD: ${MEROSS_PASSWORD:-}
 
       # Shelly
-      SHELLY_1_IP: ${SHELLY_1_IP:-192.168.1.102}
-      SHELLY_2_IP: ${SHELLY_2_IP:-192.168.1.107}
+      SHELLY_1_IP: ${SHELLY_1_IP:-192.168.1.104}
+      SHELLY_2_IP: ${SHELLY_2_IP:-192.168.1.117}
     ports:
       - "8080:8080"
     networks:
