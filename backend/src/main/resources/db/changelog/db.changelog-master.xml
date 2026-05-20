@@ -36,4 +36,7 @@
     <!-- Application Settings -->
     <include file="db/changelog/changes/20260324-0013-create-application-settings-table.xml"/>
 
+    <!-- Energy Flow Snapshots -->
+    <include file="db/changelog/changes/20260520-0014-create-energy-readings-table.xml"/>
+
 </databaseChangeLog>

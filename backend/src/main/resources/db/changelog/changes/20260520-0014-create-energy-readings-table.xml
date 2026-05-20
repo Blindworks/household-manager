@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260520-0014" author="household-manager">
+        <comment>Create energy_readings table for combined energy flow snapshots</comment>
+
+        <createTable tableName="energy_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="timestamp" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bkw_alt_w" type="DOUBLE PRECISION"/>
+            <column name="bkw_neu_w" type="DOUBLE PRECISION"/>
+            <column name="pv_total_w" type="DOUBLE PRECISION"/>
+            <column name="hausverbrauch_w" type="DOUBLE PRECISION"/>
+            <column name="grid_w" type="DOUBLE PRECISION"/>
+            <column name="anker_pv_w" type="DOUBLE PRECISION"/>
+            <column name="akku_percent" type="DOUBLE PRECISION"/>
+            <column name="akku_power_w" type="DOUBLE PRECISION"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_energy_readings_timestamp" tableName="energy_readings">
+            <column name="timestamp"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="energy_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

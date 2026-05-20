@@ -54,7 +54,10 @@
                     [style.animation-duration.s]="gridFlowSpeed > 0 ? (3 / gridFlowSpeed) : 0" />
             </svg>
 
-            <div class="flow-card flow-card--shelly-alt" style="left: 4.17%; top: 15.28%; width: 14%;">
+            <div class="flow-card flow-card--shelly-alt"
+                 [class.flow-card--selected]="selectedMetric === 'BKW_ALT'"
+                 (click)="selectMetric('BKW_ALT')"
+                 style="left: 4.17%; top: 15.28%; width: 14%;">
               <span class="flow-card__label">BKW Alt</span>
               <span class="flow-card__value">
                 {{ energyLive.bkwAltW | number:'1.0-0':'de-DE' }}
@@ -62,7 +65,10 @@
               </span>
             </div>
 
-            <div class="flow-card flow-card--shelly-neu" style="left: 4.17%; top: 41.67%; width: 14%;">
+            <div class="flow-card flow-card--shelly-neu"
+                 [class.flow-card--selected]="selectedMetric === 'BKW_NEU'"
+                 (click)="selectMetric('BKW_NEU')"
+                 style="left: 4.17%; top: 41.67%; width: 14%;">
               <span class="flow-card__label">BKW Neu</span>
               <span class="flow-card__value">
                 {{ energyLive.bkwNeuW | number:'1.0-0':'de-DE' }}
@@ -70,7 +76,10 @@
               </span>
             </div>
 
-            <div class="flow-card flow-card--pv" style="left: 31.94%; top: 15.28%; width: 16%;">
+            <div class="flow-card flow-card--pv"
+                 [class.flow-card--selected]="selectedMetric === 'PV_TOTAL'"
+                 (click)="selectMetric('PV_TOTAL')"
+                 style="left: 31.94%; top: 15.28%; width: 16%;">
               <span class="flow-card__label">PV gesamt</span>
               <span class="flow-card__value">
                 {{ energyLive.pvTotalW | number:'1.0-0':'de-DE' }}
@@ -81,7 +90,10 @@
               }
             </div>
 
-            <div class="flow-card flow-card--home" style="left: 78%; top: 43.89%; width: 19%;">
+            <div class="flow-card flow-card--home"
+                 [class.flow-card--selected]="selectedMetric === 'HAUSVERBRAUCH'"
+                 (click)="selectMetric('HAUSVERBRAUCH')"
+                 style="left: 78%; top: 43.89%; width: 19%;">
               <span class="flow-card__label">Hausverbrauch</span>
               <span class="flow-card__value flow-card__value--accent">
                 {{ energyLive.hausverbrauchW | number:'1.0-0':'de-DE' }}
@@ -92,6 +104,8 @@
             <div class="flow-card"
                  [class.flow-card--grid-import]="energyLive.gridImporting"
                  [class.flow-card--grid-export]="!energyLive.gridImporting"
+                 [class.flow-card--selected]="selectedMetric === 'GRID'"
+                 (click)="selectMetric('GRID')"
                  style="left: 31.94%; top: 68.06%; width: 16%;">
               <span class="flow-card__label">{{ energyLive.gridImporting ? 'Netzbezug' : 'Einspeisung' }}</span>
               <span class="flow-card__value"
@@ -104,44 +118,85 @@
                 <span class="flow-card__warning">offline</span>
               }
             </div>
+
+            <!-- Anker PV (links unter BKW Neu, ohne Flussverbindung) -->
+            <div class="flow-card flow-card--anker-pv"
+                 [class.flow-card--selected]="selectedMetric === 'ANKER_PV'"
+                 (click)="selectMetric('ANKER_PV')"
+                 style="left: 4.17%; top: 68%; width: 14%;">
+              <span class="flow-card__label">Anker PV</span>
+              <span class="flow-card__value">
+                {{ liveData?.pvPowerW | number:'1.0-0':'de-DE' }}
+                <span class="flow-card__unit">W</span>
+              </span>
+            </div>
+
+            <!-- Akku (links ganz unten, ohne Flussverbindung) -->
+            <div class="flow-card flow-card--akku"
+                 [class.flow-card--selected]="selectedMetric === 'AKKU'"
+                 (click)="selectMetric('AKKU')"
+                 style="left: 4.17%; top: 91%; width: 14%;">
+              <span class="flow-card__label">Akku</span>
+              <span class="flow-card__value">
+                {{ liveData?.batteryPercent ?? '–' }}
+                <span class="flow-card__unit">%</span>
+              </span>
+              <span class="flow-card__sub">
+                {{ liveData?.batteryPowerW | number:'1.0-0':'de-DE' }} W
+                <span [class.flow-card__badge--charging]="batteryIsCharging"
+                      [class.flow-card__badge--discharging]="!batteryIsCharging && !batteryIsIdle"
+                      [class.flow-card__badge--idle]="batteryIsIdle"
+                      class="flow-card__badge">
+                  {{ batteryIsCharging ? 'Laden' : batteryIsIdle ? 'Standby' : 'Entladen' }}
+                </span>
+              </span>
+            </div>
           </div>
         } @else {
           <p class="flow-section__loading">Live-Daten werden geladen…</p>
         }
+
+        @if (selectedMetric && selectedMetricDefinition) {
+          <div class="history-panel">
+            <div class="history-panel__header">
+              <div>
+                <span class="history-panel__eyebrow">Verlauf</span>
+                <h3 class="history-panel__title" [style.color]="selectedMetricDefinition.color">
+                  {{ selectedMetricDefinition.label }}
+                </h3>
+              </div>
+              <div class="history-panel__controls">
+                <button type="button" class="history-panel__range"
+                        [class.history-panel__range--active]="historyHours === 1"
+                        (click)="changeHistoryHours(1)">1 h</button>
+                <button type="button" class="history-panel__range"
+                        [class.history-panel__range--active]="historyHours === 6"
+                        (click)="changeHistoryHours(6)">6 h</button>
+                <button type="button" class="history-panel__range"
+                        [class.history-panel__range--active]="historyHours === 24"
+                        (click)="changeHistoryHours(24)">24 h</button>
+                <button type="button" class="history-panel__range"
+                        [class.history-panel__range--active]="historyHours === 168"
+                        (click)="changeHistoryHours(168)">7 Tage</button>
+                <button type="button" class="history-panel__close" (click)="selectMetric(selectedMetric)" aria-label="Schliessen">×</button>
+              </div>
+            </div>
+
+            @if (historyLoading) {
+              <p class="history-panel__loading">Verlauf wird geladen…</p>
+            } @else if (historyError) {
+              <p class="history-panel__error">{{ historyError }}</p>
+            } @else if (historyChartOptions) {
+              <div echarts [options]="historyChartOptions" class="history-panel__chart"
+                   [attr.aria-label]="'Verlauf ' + selectedMetricDefinition.label"></div>
+            } @else {
+              <p class="history-panel__empty">Keine Datenpunkte vorhanden.</p>
+            }
+          </div>
+        } @else {
+          <p class="history-panel__hint">Karte anklicken, um den Verlauf einzublenden.</p>
+        }
       </div>
-    </section>
-
-    <!-- Anker Solix Live-Karten -->
-    <section class="live-section">
-
-      <div class="live-card live-card--solar">
-        <span class="live-card__label">Anker PV</span>
-        <span class="live-card__value">
-          {{ liveData?.pvPowerW | number:'1.0-0' }}
-          <span class="live-card__unit">W</span>
-        </span>
-        <span class="live-card__hint">Anker Solix Solarleistung</span>
-      </div>
-
-      <div class="live-card live-card--battery">
-        <span class="live-card__label">Akku</span>
-        <span class="live-card__value">
-          {{ liveData?.batteryPercent ?? '–' }}
-          <span class="live-card__unit">%</span>
-        </span>
-        <span class="live-card__sub">
-          {{ liveData?.batteryPowerW | number:'1.0-0' }} W
-          &nbsp;
-          <span [class.live-card__badge--charging]="batteryIsCharging"
-                [class.live-card__badge--discharging]="!batteryIsCharging && !batteryIsIdle"
-                [class.live-card__badge--idle]="batteryIsIdle"
-                class="live-card__badge">
-            {{ batteryIsCharging ? 'Laden' : batteryIsIdle ? 'Standby' : 'Entladen' }}
-          </span>
-        </span>
-        <span class="live-card__hint">Akkustand & Leistung</span>
-      </div>
-
     </section>
 
     <!-- Ausgangsleistung steuern -->
