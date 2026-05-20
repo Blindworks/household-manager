@@ -5,9 +5,9 @@
     <header class="energy-page__header">
       <div>
         <p class="energy-page__eyebrow">Solar & Speicher</p>
-        <h1 class="energy-page__title">Anker Solix Energie</h1>
+        <h1 class="energy-page__title">Energie-Übersicht</h1>
         <p class="energy-page__subtitle">
-          Live-Leistungsdaten, Akkustand und Tagesenergie der Solaranlage.
+          Live-Energiefluss: Balkonkraftwerke, Hausverbrauch und Stromnetz.
         </p>
       </div>
       <div class="energy-page__status" *ngIf="connectionStatus$ | async as status">
@@ -20,16 +20,107 @@
       </div>
     </header>
 
-    <!-- Live-Karten -->
+    <!-- Energie-Flow-Diagramm -->
+    <section class="flow-section">
+      <div class="flow-section__card">
+        <h2 class="flow-section__title">Energiefluss (Live)</h2>
+
+        @if (energyLive) {
+          <div class="flow-diagram">
+            <svg viewBox="0 0 720 360" class="flow-diagram__lines" preserveAspectRatio="none">
+              <!-- Shelly-Alt → PV (oben, horizontal) -->
+              <path d="M 131 55 L 229 55"
+                    class="flow-line"
+                    [class.flow-line--active]="bkwAltFlowSpeed > 0"
+                    [style.animation-duration.s]="bkwAltFlowSpeed > 0 ? (3 / bkwAltFlowSpeed) : 0" />
+
+              <!-- Shelly-Neu → PV (kurvt nach oben) -->
+              <path d="M 131 150 C 180 150, 180 55, 229 55"
+                    class="flow-line"
+                    [class.flow-line--active]="bkwNeuFlowSpeed > 0"
+                    [style.animation-duration.s]="bkwNeuFlowSpeed > 0 ? (3 / bkwNeuFlowSpeed) : 0" />
+
+              <!-- PV → Hausverbrauch (oben → Mitte rechts) -->
+              <path d="M 347 55 C 460 55, 460 158, 561 158"
+                    class="flow-line"
+                    [class.flow-line--active]="pvFlowSpeed > 0"
+                    [style.animation-duration.s]="pvFlowSpeed > 0 ? (3 / pvFlowSpeed) : 0" />
+
+              <!-- Netzbezug ↔ Hausverbrauch (unten → Mitte rechts) -->
+              <path d="M 347 245 C 460 245, 460 158, 561 158"
+                    class="flow-line"
+                    [class.flow-line--grid-import]="energyLive.gridImporting && gridAbsW > 0"
+                    [class.flow-line--grid-export]="!energyLive.gridImporting && gridAbsW > 0"
+                    [style.animation-duration.s]="gridFlowSpeed > 0 ? (3 / gridFlowSpeed) : 0" />
+            </svg>
+
+            <div class="flow-card flow-card--shelly-alt" style="left: 4.17%; top: 15.28%; width: 14%;">
+              <span class="flow-card__label">BKW Alt</span>
+              <span class="flow-card__value">
+                {{ energyLive.bkwAltW | number:'1.0-0':'de-DE' }}
+                <span class="flow-card__unit">W</span>
+              </span>
+            </div>
+
+            <div class="flow-card flow-card--shelly-neu" style="left: 4.17%; top: 41.67%; width: 14%;">
+              <span class="flow-card__label">BKW Neu</span>
+              <span class="flow-card__value">
+                {{ energyLive.bkwNeuW | number:'1.0-0':'de-DE' }}
+                <span class="flow-card__unit">W</span>
+              </span>
+            </div>
+
+            <div class="flow-card flow-card--pv" style="left: 31.94%; top: 15.28%; width: 16%;">
+              <span class="flow-card__label">PV gesamt</span>
+              <span class="flow-card__value">
+                {{ energyLive.pvTotalW | number:'1.0-0':'de-DE' }}
+                <span class="flow-card__unit">W</span>
+              </span>
+              @if (!energyLive.shellyReachable) {
+                <span class="flow-card__warning">offline</span>
+              }
+            </div>
+
+            <div class="flow-card flow-card--home" style="left: 78%; top: 43.89%; width: 19%;">
+              <span class="flow-card__label">Hausverbrauch</span>
+              <span class="flow-card__value flow-card__value--accent">
+                {{ energyLive.hausverbrauchW | number:'1.0-0':'de-DE' }}
+                <span class="flow-card__unit">W</span>
+              </span>
+            </div>
+
+            <div class="flow-card"
+                 [class.flow-card--grid-import]="energyLive.gridImporting"
+                 [class.flow-card--grid-export]="!energyLive.gridImporting"
+                 style="left: 31.94%; top: 68.06%; width: 16%;">
+              <span class="flow-card__label">{{ energyLive.gridImporting ? 'Netzbezug' : 'Einspeisung' }}</span>
+              <span class="flow-card__value"
+                    [class.flow-card__value--import]="energyLive.gridImporting"
+                    [class.flow-card__value--export]="!energyLive.gridImporting">
+                {{ gridAbsW | number:'1.0-0':'de-DE' }}
+                <span class="flow-card__unit">W</span>
+              </span>
+              @if (!energyLive.tasmotaReachable) {
+                <span class="flow-card__warning">offline</span>
+              }
+            </div>
+          </div>
+        } @else {
+          <p class="flow-section__loading">Live-Daten werden geladen…</p>
+        }
+      </div>
+    </section>
+
+    <!-- Anker Solix Live-Karten -->
     <section class="live-section">
 
       <div class="live-card live-card--solar">
-        <span class="live-card__label">PV-Erzeugung</span>
+        <span class="live-card__label">Anker PV</span>
         <span class="live-card__value">
           {{ liveData?.pvPowerW | number:'1.0-0' }}
           <span class="live-card__unit">W</span>
         </span>
-        <span class="live-card__hint">Solarleistung aktuell</span>
+        <span class="live-card__hint">Anker Solix Solarleistung</span>
       </div>
 
       <div class="live-card live-card--battery">
@@ -49,41 +140,6 @@
           </span>
         </span>
         <span class="live-card__hint">Akkustand & Leistung</span>
-      </div>
-
-      <div class="live-card live-card--home">
-        <span class="live-card__label">Hausverbrauch</span>
-        <span class="live-card__value">
-          @if (hausverbrauchW !== null) {
-            {{ hausverbrauchW | number:'1.0-0' }}
-            <span class="live-card__unit">W</span>
-          } @else {
-            –
-          }
-        </span>
-        <span class="live-card__hint">
-          @if (hausverbrauchW !== null) {
-            Akkuentladung + Netzbezug
-          } @else {
-            Noch nicht berechenbar
-          }
-        </span>
-      </div>
-
-      <div class="live-card live-card--grid">
-        <span class="live-card__label">Stromnetz</span>
-        <span class="live-card__value">
-          {{ tasmotaReading?.momentaneWirkleistung | number:'1.0-0' }}
-          <span class="live-card__unit">W</span>
-        </span>
-        <span class="live-card__sub">
-          <span [class.live-card__badge--import]="gridIsImporting"
-                [class.live-card__badge--export]="!gridIsImporting"
-                class="live-card__badge">
-            {{ gridIsImporting ? 'Bezug' : 'Einspeisung' }}
-          </span>
-        </span>
-        <span class="live-card__hint">Netzbezug oder -einspeisung</span>
       </div>
 
     </section>

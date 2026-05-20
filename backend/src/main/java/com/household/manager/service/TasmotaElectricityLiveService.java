@@ -44,6 +44,24 @@ public class TasmotaElectricityLiveService {
     private final Object scheduleLock = new Object();
     private ScheduledFuture<?> scheduledFuture;
 
+    /**
+     * Holt den aktuellen Tasmota-Wert direkt vom Gerät, unabhängig vom SSE-Polling.
+     * Liefert null wenn das Gerät nicht erreichbar oder die Antwort unbrauchbar ist.
+     */
+    public TasmotaElectricityLiveResponse fetchCurrent() {
+        try {
+            String requestUrl = normalizeTasmotaUrl(tasmotaUrl);
+            String json = restTemplate.getForObject(requestUrl, String.class);
+            if (json == null || json.isBlank()) {
+                return null;
+            }
+            return parseLive(json);
+        } catch (Exception ex) {
+            log.debug("Tasmota fetchCurrent failed: {}", ex.getMessage());
+            return null;
+        }
+    }
+
     public SseEmitter subscribe() {
         SseEmitter emitter = new SseEmitter(0L);
         emitters.add(emitter);

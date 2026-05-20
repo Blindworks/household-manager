@@ -10,11 +10,8 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { RouterLink } from '@angular/router';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { AnkerSolixAutoControlStatus, AnkerSolixDeviceParams, AnkerSolixEnergyDay, AnkerSolixLive } from '../../models/ankersolix.model';
-import { TasmotaLiveService } from '../../services/tasmota-live.service';
-import { TasmotaLiveReading } from '../../models/tasmota-live.model';
-import { ShellyService } from '../../services/shelly.service';
-import { ShellyLiveService } from '../../services/shelly-live.service';
-import { ShellyStatus } from '../../models/shelly.model';
+import { EnergyLiveService } from '../../services/energy-live.service';
+import { EnergyLive } from '../../models/energy-live.model';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -28,19 +25,15 @@ echarts.use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasR
 })
 export class EnergyComponent implements OnInit, OnDestroy {
   private readonly ankerSolixService = inject(AnkerSolixService);
-  private readonly tasmotaLiveService = inject(TasmotaLiveService);
-  private readonly shellyService = inject(ShellyService);
-  private readonly shellyLiveService = inject(ShellyLiveService);
+  private readonly energyLiveService = inject(EnergyLiveService);
 
   liveData: AnkerSolixLive | null = null;
-  tasmotaReading: TasmotaLiveReading | null = null;
+  energyLive: EnergyLive | null = null;
   deviceParams: AnkerSolixDeviceParams | null = null;
   energyData: AnkerSolixEnergyDay | null = null;
   autoControlStatus: AnkerSolixAutoControlStatus | null = null;
   chartOptions: Record<string, unknown> | null = null;
   weeklyChartOptions: Record<string, unknown> | null = null;
-
-  shellyDevices: ShellyStatus[] = [];
 
   outputWatts = 0;
   selectedDate = new Date().toISOString().substring(0, 10);
@@ -51,14 +44,12 @@ export class EnergyComponent implements OnInit, OnDestroy {
   powerSetError = '';
 
   private liveSubscription: Subscription | null = null;
-  private tasmotaSubscription: Subscription | null = null;
-  private shellySubscription: Subscription | null = null;
+  private energyLiveSubscription: Subscription | null = null;
   private autoControlInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
     this.startLiveStream();
-    this.startTasmotaStream();
-    this.startShellyStream();
+    this.startEnergyLiveStream();
     this.loadDeviceParams();
     this.loadEnergy();
     this.loadWeekData();
@@ -68,14 +59,12 @@ export class EnergyComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.liveSubscription?.unsubscribe();
-    this.tasmotaSubscription?.unsubscribe();
-    this.shellySubscription?.unsubscribe();
+    this.energyLiveSubscription?.unsubscribe();
     if (this.autoControlInterval) {
       clearInterval(this.autoControlInterval);
     }
     this.ankerSolixService.disconnectLive();
-    this.tasmotaLiveService.disconnect();
-    this.shellyLiveService.disconnect();
+    this.energyLiveService.disconnect();
   }
 
   loadEnergy(): void {
@@ -134,39 +123,32 @@ export class EnergyComponent implements OnInit, OnDestroy {
     return (this.liveData?.batteryPowerW ?? 0) === 0;
   }
 
-  get gridIsImporting(): boolean {
-    return (this.tasmotaReading?.momentaneWirkleistung ?? 0) >= 0;
+  get pvFlowSpeed(): number {
+    const w = this.energyLive?.pvTotalW ?? 0;
+    if (w <= 0) return 0;
+    return Math.max(0.6, Math.min(3, w / 400));
   }
 
-  get shellyTotalPower(): number {
-    return this.shellyDevices
-      .filter(d => d.reachable)
-      .reduce((sum, d) => sum + (d.power ?? 0), 0);
+  get bkwAltFlowSpeed(): number {
+    const w = this.energyLive?.bkwAltW ?? 0;
+    if (w <= 0) return 0;
+    return Math.max(0.6, Math.min(3, w / 400));
   }
 
-  get bkwAltPower(): number {
-    return this.shellyDevices.find(d => d.deviceName === 'Balkonkraftwerk-Alt')?.power ?? 0;
+  get bkwNeuFlowSpeed(): number {
+    const w = this.energyLive?.bkwNeuW ?? 0;
+    if (w <= 0) return 0;
+    return Math.max(0.6, Math.min(3, w / 400));
   }
 
-  get bkwNeuPower(): number {
-    return this.shellyDevices.find(d => d.deviceName === 'Balkonkraftwerk-Neu')?.power ?? 0;
+  get gridFlowSpeed(): number {
+    const w = Math.abs(this.energyLive?.gridW ?? 0);
+    if (w <= 0) return 0;
+    return Math.max(0.6, Math.min(3, w / 400));
   }
 
-  toggleShelly(device: ShellyStatus): void {
-    const action = device.output
-      ? this.shellyService.turnOff(device.deviceName)
-      : this.shellyService.turnOn(device.deviceName);
-
-    action.subscribe({
-      error: (err) => console.error('Fehler beim Schalten von', device.deviceName, err)
-    });
-  }
-
-  get hausverbrauchW(): number | null {
-    if (this.tasmotaReading === null || this.shellyDevices.length === 0) {
-      return null;
-    }
-    return this.bkwAltPower + this.bkwNeuPower + this.tasmotaReading.momentaneWirkleistung;
+  get gridAbsW(): number {
+    return Math.abs(this.energyLive?.gridW ?? 0);
   }
 
   formatConnectionStatus(status: string): string {
@@ -192,17 +174,10 @@ export class EnergyComponent implements OnInit, OnDestroy {
     });
   }
 
-  private startTasmotaStream(): void {
-    this.tasmotaSubscription = this.tasmotaLiveService.getLiveStream().subscribe({
-      next: (reading) => { this.tasmotaReading = reading; },
-      error: (err) => { console.error('Tasmota SSE-Fehler:', err); }
-    });
-  }
-
-  private startShellyStream(): void {
-    this.shellySubscription = this.shellyLiveService.getLiveStream().subscribe({
-      next: (devices) => { this.shellyDevices = devices; },
-      error: (err) => { console.error('Shelly SSE-Fehler:', err); }
+  private startEnergyLiveStream(): void {
+    this.energyLiveSubscription = this.energyLiveService.getLiveStream().subscribe({
+      next: (data) => { this.energyLive = data; },
+      error: (err) => { console.error('Energy SSE-Fehler:', err); }
     });
   }
 
