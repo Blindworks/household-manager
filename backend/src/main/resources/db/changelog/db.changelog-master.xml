@@ -39,4 +39,7 @@
     <!-- Energy Flow Snapshots -->
     <include file="db/changelog/changes/20260520-0014-create-energy-readings-table.xml"/>
 
+    <!-- DWD Weather Feature -->
+    <include file="db/changelog/changes/20260621-0015-create-weather-readings-table.xml"/>
+
 </databaseChangeLog>
