@@ -1,0 +1,71 @@
+<section class="weather">
+  <header class="weather__header">
+    <h1 class="weather__title">Wetter</h1>
+  </header>
+
+  @if (isLoading) {
+    <p class="weather__status">Lade Wetterdaten…</p>
+  } @else if (errorMessage) {
+    <p class="weather__status weather__status--error">{{ errorMessage }}</p>
+  } @else if (overview) {
+
+    @if (overview.warnings.length) {
+      <div class="weather__warnings">
+        @for (warning of overview.warnings; track warning.warnId) {
+          <div class="weather__warning" [attr.data-severity]="severityFor(warning.level)">
+            @if (warning.headline) {
+              <strong class="weather__warning-headline">{{ warning.headline }}</strong>
+            }
+            @if (warning.description) {
+              <p class="weather__warning-text">{{ warning.description }}</p>
+            }
+            @if (warning.instruction) {
+              <p class="weather__warning-instruction">{{ warning.instruction }}</p>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (overview.current) {
+      <div class="weather__current">
+        <div class="weather__current-symbol">{{ symbolFor(overview.current.icon).emoji }}</div>
+        <div class="weather__current-main">
+          @if (overview.current.temperature !== null) {
+            <span class="weather__current-temp">{{ overview.current.temperature }} °C</span>
+          }
+          <span class="weather__current-label">{{ symbolFor(overview.current.icon).label }}</span>
+        </div>
+        <ul class="weather__current-details">
+          @if (overview.current.windSpeed !== null) {
+            <li>Wind: {{ overview.current.windSpeed }} km/h</li>
+          }
+          @if (overview.current.humidity !== null) {
+            <li>Luftfeuchte: {{ overview.current.humidity }} %</li>
+          }
+          @if (overview.current.pressure !== null) {
+            <li>Druck: {{ overview.current.pressure }} hPa</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="weather__rain" [class.weather__rain--active]="overview.nextRain">
+      {{ nextRainText }}
+    </div>
+
+    @if (forecastChartOptions) {
+      <div class="weather__card">
+        <h2 class="weather__card-title">Stundenvorhersage</h2>
+        <div echarts [options]="forecastChartOptions" class="weather__chart"></div>
+      </div>
+    }
+
+    @if (historyChartOptions) {
+      <div class="weather__card">
+        <h2 class="weather__card-title">Wetterverlauf</h2>
+        <div echarts [options]="historyChartOptions" class="weather__chart"></div>
+      </div>
+    }
+  }
+</section>
