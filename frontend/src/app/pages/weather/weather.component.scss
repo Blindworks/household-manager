@@ -1,0 +1,76 @@
+.weather {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  &__status {
+    color: #64748b;
+
+    &--error {
+      color: #dc2626;
+    }
+  }
+
+  &__warnings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__warning {
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid #94a3b8;
+    background: #f1f5f9;
+
+    &[data-severity='moderate'] { border-left-color: #eab308; background: #fefce8; }
+    &[data-severity='severe'] { border-left-color: #f97316; background: #fff7ed; }
+    &[data-severity='extreme'] { border-left-color: #dc2626; background: #fef2f2; }
+  }
+
+  &__warning-headline { display: block; }
+  &__warning-text, &__warning-instruction { margin: 0.25rem 0 0; font-size: 0.875rem; color: #475569; }
+
+  &__current {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  &__current-symbol { font-size: 3rem; line-height: 1; }
+  &__current-main { display: flex; flex-direction: column; }
+  &__current-temp { font-size: 2rem; font-weight: 700; }
+  &__current-label { color: #64748b; }
+  &__current-details { list-style: none; margin: 0 0 0 auto; padding: 0; color: #475569; font-size: 0.875rem; }
+
+  &__rain {
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 500;
+
+    &--active { background: #e0f2fe; color: #0369a1; }
+  }
+
+  &__card {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  &__card-title { margin: 0 0 1rem; font-size: 1.125rem; font-weight: 600; }
+  &__chart { width: 100%; height: 320px; }
+}

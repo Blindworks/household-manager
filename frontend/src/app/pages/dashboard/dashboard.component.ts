@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription, forkJoin, interval, startWith, switchMap } from 'rxjs';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+import { WeatherWidgetComponent } from '../../components/weather-widget/weather-widget.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
 import { AirrohrService } from '../../services/airrohr.service';
@@ -19,7 +20,7 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, WeatherWidgetComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })

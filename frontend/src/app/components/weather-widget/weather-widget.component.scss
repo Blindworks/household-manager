@@ -1,0 +1,24 @@
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  text-decoration: none;
+  color: inherit;
+
+  &__symbol { font-size: 1.75rem; }
+  &__temp { font-size: 1.25rem; font-weight: 700; }
+  &__label { color: #64748b; }
+  &__badge {
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}

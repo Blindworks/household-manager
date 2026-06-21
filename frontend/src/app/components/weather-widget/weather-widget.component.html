@@ -1,0 +1,14 @@
+<a class="weather-widget" routerLink="/weather">
+  @if (overview?.current) {
+    <span class="weather-widget__symbol">{{ symbolFor(overview!.current!.icon).emoji }}</span>
+    <span class="weather-widget__temp">{{ overview!.current!.temperature }} °C</span>
+    <span class="weather-widget__label">Wetter</span>
+    @if (overview!.warnings.length) {
+      <span class="weather-widget__badge">{{ overview!.warnings.length }} Warnung(en)</span>
+    }
+  } @else if (hasError) {
+    <span class="weather-widget__label">Wetter nicht verfügbar</span>
+  } @else {
+    <span class="weather-widget__label">Lade Wetter…</span>
+  }
+</a>

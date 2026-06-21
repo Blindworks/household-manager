@@ -36,6 +36,7 @@ export class HeaderComponent {
       ]
     },
     { path: '/air-quality', label: 'Luftqualitaet' },
+    { path: '/weather', label: 'Wetter' },
     { path: '/devices', label: 'Geraete' },
     { path: '/admin', label: 'Admin' }
   ];

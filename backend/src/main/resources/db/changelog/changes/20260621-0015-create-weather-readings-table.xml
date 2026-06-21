@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260621-0015" author="household-manager">
+        <comment>Create weather_readings table for DWD weather snapshots</comment>
+
+        <createTable tableName="weather_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="reading_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="temperature" type="DECIMAL(10,2)"/>
+            <column name="precipitation" type="DECIMAL(10,2)"/>
+            <column name="wind_speed" type="DECIMAL(10,2)"/>
+            <column name="wind_direction" type="INT"/>
+            <column name="humidity" type="INT"/>
+            <column name="pressure" type="DECIMAL(10,2)"/>
+            <column name="icon" type="INT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_weather_readings_time" tableName="weather_readings">
+            <column name="reading_time"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="weather_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

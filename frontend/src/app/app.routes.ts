@@ -46,6 +46,11 @@ export const routes: Routes = [
     title: 'Luftqualitaet - Household Manager'
   },
   {
+    path: 'weather',
+    loadComponent: () => import('./pages/weather/weather.component').then(m => m.WeatherComponent),
+    title: 'Wetter - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     title: 'Versorgerpreise - Household Manager'
