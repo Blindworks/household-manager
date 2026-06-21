@@ -28,11 +28,10 @@ class DwdWeatherServiceTest {
                 + "\"temperature\":[205,210,230,235],"
                 + "\"precipitationTotal\":[0,0,5,12],"
                 + "\"icon1h\":[1,1,8,8],"
-                + "\"windSpeed\":[120,130,140,150],"
-                + "\"windDirection\":[180,185,190,200],"
-                + "\"humidity\":[60,62,70,72],"
+                + "\"humidity\":[600,620,700,720],"
                 + "\"surfacePressure\":[10132,10130,10125,10120]"
                 + "},"
+                + "\"days\":[{\"windSpeed\":93,\"windDirection\":380}],"
                 + "\"warnings\":[{"
                 + "\"warnId\":42,\"event\":\"GEWITTER\",\"level\":3,"
                 + "\"headline\":\"Amtliche WARNUNG vor GEWITTER\","
@@ -50,6 +49,8 @@ class DwdWeatherServiceTest {
         assertThat(result.getCurrent().getHumidity()).isEqualTo(60);
         assertThat(result.getCurrent().getPressure()).isEqualByComparingTo("1013.2");
         assertThat(result.getCurrent().getIcon()).isEqualTo(1);
+        assertThat(result.getCurrent().getWindSpeed()).isEqualByComparingTo("9.3");
+        assertThat(result.getCurrent().getWindDirection()).isEqualTo(20);
     }
 
     @Test

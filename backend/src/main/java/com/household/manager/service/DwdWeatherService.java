@@ -83,7 +83,8 @@ public class DwdWeatherService {
             long step = forecast1.path("timeStep").asLong(3600000L);
 
             List<WeatherForecastHour> hours = buildHourly(forecast1, start, step);
-            WeatherConditions current = hours.isEmpty() ? null : toCurrent(forecast1, hours.get(0));
+            WeatherConditions current = hours.isEmpty() ? null
+                    : toCurrent(forecast1, stationNode.path("days"), hours.get(0));
             LocalDateTime nextRain = findNextRain(hours);
             List<WeatherWarning> warnings = buildWarnings(stationNode.path("warnings"));
 
@@ -119,14 +120,15 @@ public class DwdWeatherService {
         return hours;
     }
 
-    private WeatherConditions toCurrent(JsonNode forecast1, WeatherForecastHour first) {
+    private WeatherConditions toCurrent(JsonNode forecast1, JsonNode days, WeatherForecastHour first) {
+        JsonNode today = days.path(0);
         return WeatherConditions.builder()
                 .time(first.getTime())
                 .temperature(first.getTemperature())
                 .precipitation(first.getPrecipitation())
-                .windSpeed(scaleTenth(forecast1.path("windSpeed").path(0)))
-                .windDirection(intOrNull(forecast1.path("windDirection").path(0)))
-                .humidity(intOrNull(forecast1.path("humidity").path(0)))
+                .windSpeed(scaleTenth(today.path("windSpeed")))
+                .windDirection(directionDegrees(today.path("windDirection")))
+                .humidity(scaleTenthToInt(forecast1.path("humidity").path(0)))
                 .pressure(scaleTenth(forecast1.path("surfacePressure").path(0)))
                 .icon(first.getIcon())
                 .build();
@@ -167,6 +169,18 @@ public class DwdWeatherService {
             return null;
         }
         return node.decimalValue().divide(TENTH, 1, RoundingMode.HALF_UP);
+    }
+
+    private Integer scaleTenthToInt(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        return node.decimalValue().divide(TENTH, 0, RoundingMode.HALF_UP).intValue();
+    }
+
+    private Integer directionDegrees(JsonNode node) {
+        Integer raw = intOrNull(node);
+        return raw == null ? null : Math.floorMod(raw, 360);
     }
 
     private Integer intOrNull(JsonNode node) {
