@@ -12,6 +12,8 @@ import { TapoService } from '../../services/tapo.service';
 import { TapoDeviceInfo, TapoDiscoveryDevice, TapoEnergyUsage } from '../../models/tapo.model';
 import { MerossService } from '../../services/meross.service';
 import { MerossPlugResponse } from '../../models/meross.model';
+import { WeatherPollingService } from '../../services/weather-polling.service';
+import { WeatherPollingStatus } from '../../models/weather-polling.model';
 import { UtilityPricesComponent } from '../utility-prices/utility-prices.component';
 
 /**
@@ -30,6 +32,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly kasaService = inject(KasaService);
   private readonly tapoService = inject(TapoService);
   private readonly merossService = inject(MerossService);
+  private readonly weatherPollingService = inject(WeatherPollingService);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -68,10 +71,16 @@ export class AdminComponent implements OnInit, OnDestroy {
   isMerossActionRunning = false;
   merossErrorMessage: string | null = null;
   merossSuccessMessage: string | null = null;
-  activeTab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'versorgerpreise' = 'airrohr-config';
+  weatherStatus: WeatherPollingStatus | null = null;
+  isWeatherLoading = true;
+  isWeatherTriggering = false;
+  weatherErrorMessage: string | null = null;
+  weatherSuccessMessage: string | null = null;
+  activeTab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' | 'versorgerpreise' = 'airrohr-config';
 
   ngOnInit(): void {
     this.loadStatus();
+    this.loadWeatherStatus();
     this.startLiveStream();
   }
 
@@ -478,8 +487,43 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.runMerossAction('off');
   }
 
-  setActiveTab(tab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'versorgerpreise'): void {
+  setActiveTab(tab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' | 'versorgerpreise'): void {
     this.activeTab = tab;
+  }
+
+  loadWeatherStatus(): void {
+    this.isWeatherLoading = true;
+    this.weatherErrorMessage = null;
+    this.weatherPollingService.getStatus().subscribe({
+      next: (status) => {
+        this.weatherStatus = status;
+        this.isWeatherLoading = false;
+      },
+      error: (error: Error) => {
+        console.error('Error loading weather polling status:', error);
+        this.weatherErrorMessage = error.message;
+        this.isWeatherLoading = false;
+      }
+    });
+  }
+
+  triggerWeather(): void {
+    this.isWeatherTriggering = true;
+    this.weatherErrorMessage = null;
+    this.weatherSuccessMessage = null;
+
+    this.weatherPollingService.triggerOnce().subscribe({
+      next: () => {
+        this.weatherSuccessMessage = 'Wetterabruf ausgeloest.';
+        this.isWeatherTriggering = false;
+        setTimeout(() => this.loadWeatherStatus(), 800);
+      },
+      error: (error: Error) => {
+        console.error('Error triggering weather polling:', error);
+        this.weatherErrorMessage = error.message;
+        this.isWeatherTriggering = false;
+      }
+    });
   }
 
   private runMerossAction(action: 'on' | 'off'): void {
