@@ -37,7 +37,7 @@ public class DwdWeatherService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${dwd.base-url:https://app-prod-ws.warnwetter.de/v16/forecast_mosmix_with_warnings_all_stations}")
+    @Value("${dwd.base-url}")
     private String baseUrl;
 
     @Value("${dwd.station-id:10637}")
@@ -76,6 +76,9 @@ public class DwdWeatherService {
             }
 
             JsonNode forecast1 = stationNode.path("forecast1");
+            if (forecast1.isMissingNode()) {
+                throw new IllegalStateException("DWD response missing forecast1 for station " + station);
+            }
             long start = forecast1.path("start").asLong(stationNode.path("forecastStart").asLong());
             long step = forecast1.path("timeStep").asLong(3600000L);
 
@@ -163,8 +166,7 @@ public class DwdWeatherService {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        return BigDecimal.valueOf(node.asDouble())
-                .divide(TENTH, 1, RoundingMode.HALF_UP);
+        return node.decimalValue().divide(TENTH, 1, RoundingMode.HALF_UP);
     }
 
     private Integer intOrNull(JsonNode node) {
