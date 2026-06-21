@@ -43,6 +43,14 @@
     <button
       type="button"
       class="admin__tab"
+      [class.admin__tab--active]="activeTab === 'wetter'"
+      (click)="setActiveTab('wetter')"
+    >
+      Wetter
+    </button>
+    <button
+      type="button"
+      class="admin__tab"
       [class.admin__tab--active]="activeTab === 'versorgerpreise'"
       (click)="setActiveTab('versorgerpreise')"
     >
@@ -356,6 +364,49 @@
 
       <p class="message message--success" *ngIf="merossSuccessMessage">{{ merossSuccessMessage }}</p>
       <p class="message message--error" *ngIf="merossErrorMessage">{{ merossErrorMessage }}</p>
+    </section>
+  </section>
+
+  <section class="admin__tab-content" *ngIf="activeTab === 'wetter'">
+    <section class="admin__card">
+      <h2>Status</h2>
+      <div class="status" *ngIf="weatherStatus; else weatherLoadingState">
+        <div class="status__item">
+          <span>Station</span>
+          <strong>{{ weatherStatus.stationId }}</strong>
+        </div>
+        <div class="status__item">
+          <span>Zeitplan</span>
+          <strong>{{ weatherStatus.schedule }}</strong>
+        </div>
+        <div class="status__item">
+          <span>Letzter Poll</span>
+          <strong>{{ formatDate(weatherStatus.lastPollTime) }}</strong>
+        </div>
+        <div class="status__item status__item--full">
+          <span>Letzter Fehler</span>
+          <strong>{{ weatherStatus.lastError || '-' }}</strong>
+        </div>
+      </div>
+      <ng-template #weatherLoadingState>
+        <p class="muted" *ngIf="isWeatherLoading">Lade Status...</p>
+      </ng-template>
+    </section>
+
+    <section class="admin__card">
+      <h2>Aktionen</h2>
+      <p class="muted">Das Wetter-Polling laeuft automatisch alle 15 Minuten.</p>
+      <div class="form__actions">
+        <button class="btn btn--ghost" type="button" (click)="loadWeatherStatus()" [disabled]="isWeatherLoading">
+          Status aktualisieren
+        </button>
+        <button class="btn btn--secondary" type="button" (click)="triggerWeather()" [disabled]="isWeatherTriggering">
+          Wetter jetzt abrufen
+        </button>
+      </div>
+
+      <p class="message message--success" *ngIf="weatherSuccessMessage">{{ weatherSuccessMessage }}</p>
+      <p class="message message--error" *ngIf="weatherErrorMessage">{{ weatherErrorMessage }}</p>
     </section>
   </section>
 
