@@ -11,7 +11,7 @@
 
     @if (overview.warnings.length) {
       <div class="weather__warnings">
-        @for (warning of overview.warnings; track warning.warnId) {
+        @for (warning of overview.warnings; track (warning.warnId ?? $index)) {
           <div class="weather__warning" [attr.data-severity]="severityFor(warning.level)">
             @if (warning.headline) {
               <strong class="weather__warning-headline">{{ warning.headline }}</strong>
