@@ -3,12 +3,12 @@ package com.household.manager.zigbee.model;
 import lombok.Getter;
 
 /**
- * Typ einer Zigbee-Messgröße samt zugehöriger Standard-Einheit.
+ * Type of a Zigbee measurement together with its default unit.
  */
 @Getter
 public enum MeasurementType {
 
-    TEMPERATURE("°C"),
+    TEMPERATURE("\u00b0C"),
     HUMIDITY("%"),
     PRESSURE("hPa"),
     CONTACT(""),
