@@ -6,6 +6,7 @@ import com.household.manager.meross.exception.MerossException;
 import com.household.manager.shelly.ShellyException;
 import com.household.manager.tapo.TapoException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -204,6 +206,20 @@ public class GlobalExceptionHandler {
 
         log.warn("Tapo communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    /**
+     * Handle client disconnects on streaming (SSE) responses.
+     * <p>
+     * These occur normally whenever a browser closes a live stream (e.g. the user
+     * navigates away). The client is already gone, so there is nothing to send back
+     * and no body can be written to a {@code text/event-stream} response. Log at debug
+     * instead of polluting the logs with stack traces. Returning {@code void} prevents
+     * Spring from attempting to serialize an error body.
+     */
+    @ExceptionHandler({AsyncRequestNotUsableException.class, ClientAbortException.class})
+    public void handleStreamingClientDisconnect(Exception ex) {
+        log.debug("Streaming client disconnected: {}", ex.getMessage());
     }
 
     /**
