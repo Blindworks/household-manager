@@ -1,0 +1,78 @@
+.zigbee-page {
+  padding: 1.5rem;
+
+  .device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .device-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem;
+
+      h2 {
+        font-size: 1rem;
+        margin: 0;
+        flex: 1 1 100%;
+      }
+
+      .meta {
+        font-size: 0.85rem;
+        color: #666;
+      }
+    }
+
+    .values {
+      list-style: none;
+      padding: 0;
+      margin: 0.75rem 0 0;
+
+      li {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.15rem 0;
+
+        .type {
+          color: #888;
+          font-size: 0.8rem;
+        }
+
+        .value {
+          font-weight: 600;
+        }
+      }
+    }
+
+    .last-seen {
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .history {
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+
+      select {
+        padding: 0.35rem 0.5rem;
+      }
+    }
+
+    .chart {
+      width: 100%;
+      height: 360px;
+    }
+  }
+}

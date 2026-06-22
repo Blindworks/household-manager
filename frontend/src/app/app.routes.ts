@@ -66,6 +66,11 @@ export const routes: Routes = [
     title: 'Admin - Household Manager'
   },
   {
+    path: 'zigbee',
+    loadComponent: () => import('./pages/zigbee/zigbee.component').then(m => m.ZigbeeComponent),
+    title: 'Zigbee-Sensoren - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'
