@@ -1,0 +1,15 @@
+homeassistant: false
+permit_join: false
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto:1883
+  user: household
+  password: change-me-zigbee
+serial:
+  port: tcp://192.168.1.121:8888
+  adapter: ezsp
+frontend:
+  port: 8081
+advanced:
+  log_level: info
+  network_key: GENERATE
