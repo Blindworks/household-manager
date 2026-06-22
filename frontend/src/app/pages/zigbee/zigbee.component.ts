@@ -48,6 +48,9 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
   chartOptions: any = null;
 
   private liveSub?: Subscription;
+  private devicesSub?: Subscription;
+  private historySub?: Subscription;
+  private devicesLoading = false;
 
   ngOnInit(): void {
     this.loadDevices();
@@ -59,22 +62,31 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.liveSub?.unsubscribe();
+    this.devicesSub?.unsubscribe();
+    this.historySub?.unsubscribe();
     this.liveService.disconnect();
   }
 
   loadDevices(): void {
-    this.zigbeeService.getDevices().subscribe((devices) => {
-      this.devices = devices;
-      if (!this.selectedDevice && devices.length > 0) {
-        this.selectedDevice = devices[0].friendlyName;
-        this.loadHistory();
-      }
+    this.devicesSub?.unsubscribe();
+    this.devicesLoading = true;
+    this.devicesSub = this.zigbeeService.getDevices().subscribe({
+      next: (devices) => {
+        this.devicesLoading = false;
+        this.devices = devices;
+        if (!this.selectedDevice && devices.length > 0) {
+          this.selectedDevice = devices[0].friendlyName;
+          this.loadHistory();
+        }
+      },
+      error: () => { this.devicesLoading = false; }
     });
   }
 
   loadHistory(): void {
     if (!this.selectedDevice) { return; }
-    this.zigbeeService.getMeasurements(this.selectedDevice, this.selectedType).subscribe((measurements) => {
+    this.historySub?.unsubscribe();
+    this.historySub = this.zigbeeService.getMeasurements(this.selectedDevice, this.selectedType).subscribe((measurements) => {
       this.chartOptions = {
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'time' },
@@ -97,7 +109,12 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     };
     this.liveValues[event.friendlyName] = byType;
 
-    if (!this.devices.some(d => d.friendlyName === event.friendlyName)) {
+    const device = this.devices.find(d => d.friendlyName === event.friendlyName);
+    if (device) {
+      if (event.batteryPercent != null) { device.lastBatteryPercent = event.batteryPercent; }
+      if (event.linkQuality != null) { device.lastLinkQuality = event.linkQuality; }
+      device.lastSeen = event.measuredAt;
+    } else if (!this.devicesLoading) {
       this.loadDevices();
     }
   }
