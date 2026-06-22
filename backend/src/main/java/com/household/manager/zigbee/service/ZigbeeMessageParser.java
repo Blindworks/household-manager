@@ -71,6 +71,10 @@ public class ZigbeeMessageParser {
                 continue;
             }
             MeasurementType type = entry.getValue();
+            boolean alreadyPresent = measurements.stream().anyMatch(m -> m.type() == type);
+            if (alreadyPresent) {
+                continue;
+            }
             measurements.add(new ZigbeeMeasurementValue(type, value, type.getDefaultUnit()));
         }
 

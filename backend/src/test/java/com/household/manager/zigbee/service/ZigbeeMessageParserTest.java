@@ -98,4 +98,18 @@ class ZigbeeMessageParserTest {
         Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Leer", "{\"voltage\":3000,\"update\":{\"state\":\"idle\"}}");
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void deduplicatesIlluminanceWhenBothFieldsPresent() {
+        String payload = "{\"battery\":75,\"illuminance\":12,\"illuminance_lux\":12,\"linkquality\":60,\"occupancy\":true}";
+
+        Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Flur-Bewegung", payload);
+
+        assertThat(result).isPresent();
+        long illuminanceCount = result.get().measurements().stream()
+                .filter(m -> m.type() == MeasurementType.ILLUMINANCE)
+                .count();
+        assertThat(illuminanceCount).isEqualTo(1);
+        assertThat(valueOf(result.get(), MeasurementType.ILLUMINANCE)).isEqualByComparingTo("12");
+    }
 }
