@@ -44,9 +44,26 @@ services:
     networks:
       - app_net
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - "1883:1883"
+    networks:
+      - app_net
+
 networks:
   app_net:
     driver: bridge
 
   mariadb_default:
     external: true
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  zigbee2mqtt_data:
