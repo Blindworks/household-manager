@@ -1,4 +1,4 @@
-package com.household.manager.zigbee.repository;
+package com.household.manager.repository;
 
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import org.springframework.data.jpa.repository.JpaRepository;

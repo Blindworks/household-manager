@@ -1,4 +1,4 @@
-package com.household.manager.zigbee.repository;
+package com.household.manager.repository;
 
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.model.entity.ZigbeeMeasurement;
