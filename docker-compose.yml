@@ -28,6 +28,14 @@ services:
       # Shelly
       SHELLY_1_IP: ${SHELLY_1_IP:-192.168.1.130}
       SHELLY_2_IP: ${SHELLY_2_IP:-192.168.1.131}
+
+      # Zigbee MQTT
+      ZIGBEE_MQTT_HOST: mosquitto
+      ZIGBEE_MQTT_PORT: 1883
+      ZIGBEE_MQTT_USER: household
+      ZIGBEE_MQTT_PASSWORD: change-me-zigbee
+    depends_on:
+      - mosquitto
     ports:
       - "8080:8080"
     networks:
@@ -44,9 +52,40 @@ services:
     networks:
       - app_net
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - "1883:1883"
+    networks:
+      - app_net
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt
+    restart: unless-stopped
+    volumes:
+      - ./zigbee2mqtt/data:/app/data
+    ports:
+      - "8081:8081"
+    environment:
+      TZ: Europe/Berlin
+    depends_on:
+      - mosquitto
+    networks:
+      - app_net
+
 networks:
   app_net:
     driver: bridge
 
   mariadb_default:
     external: true
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  zigbee2mqtt_data:

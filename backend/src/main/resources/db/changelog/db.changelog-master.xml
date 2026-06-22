@@ -42,4 +42,7 @@
     <!-- DWD Weather Feature -->
     <include file="db/changelog/changes/20260621-0015-create-weather-readings-table.xml"/>
 
+    <!-- Zigbee Sensors Feature -->
+    <include file="db/changelog/changes/20260621-0016-create-zigbee-tables.xml"/>
+
 </databaseChangeLog>

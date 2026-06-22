@@ -37,6 +37,7 @@ export class HeaderComponent {
     },
     { path: '/air-quality', label: 'Luftqualitaet' },
     { path: '/weather', label: 'Wetter' },
+    { path: '/zigbee', label: 'Zigbee-Sensoren' },
     { path: '/devices', label: 'Geraete' },
     { path: '/admin', label: 'Admin' }
   ];

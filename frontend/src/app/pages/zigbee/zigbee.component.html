@@ -1,0 +1,56 @@
+<section class="zigbee-page">
+  <h1>Zigbee-Sensoren</h1>
+
+  <div class="device-grid">
+    @for (device of devices; track device.id) {
+      <article class="device-card">
+        <header>
+          <h2>{{ device.friendlyName }}</h2>
+          @if (device.lastBatteryPercent != null) {
+            <span class="meta">Bat: {{ device.lastBatteryPercent }}%</span>
+          }
+          @if (device.lastLinkQuality != null) {
+            <span class="meta">LQ: {{ device.lastLinkQuality }}</span>
+          }
+        </header>
+        <ul class="values">
+          @for (type of liveTypesFor(device.friendlyName); track type) {
+            <li>
+              <span class="type">{{ type }}</span>
+              <span class="value">
+                {{ liveValues[device.friendlyName][type].value }}
+                {{ liveValues[device.friendlyName][type].unit }}
+              </span>
+            </li>
+          }
+        </ul>
+        @if (device.lastSeen) {
+          <p class="last-seen">Zuletzt: {{ device.lastSeen }}</p>
+        }
+      </article>
+    }
+  </div>
+
+  <div class="history">
+    <h2>Verlauf</h2>
+    <div class="controls">
+      <select [(ngModel)]="selectedDevice" (change)="loadHistory()">
+        @for (device of devices; track device.id) {
+          <option [value]="device.friendlyName">{{ device.friendlyName }}</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedType" (change)="loadHistory()">
+        <option value="TEMPERATURE">Temperatur</option>
+        <option value="HUMIDITY">Luftfeuchte</option>
+        <option value="PRESSURE">Luftdruck</option>
+        <option value="CONTACT">Kontakt</option>
+        <option value="OCCUPANCY">Bewegung</option>
+        <option value="ILLUMINANCE">Helligkeit</option>
+        <option value="WATER_LEAK">Wasserleck</option>
+      </select>
+    </div>
+    @if (chartOptions) {
+      <div echarts [options]="chartOptions" class="chart"></div>
+    }
+  </div>
+</section>

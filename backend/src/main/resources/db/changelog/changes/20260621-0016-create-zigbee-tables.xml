@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260621-0016" author="household-manager">
+        <comment>Create zigbee_device and zigbee_measurement tables</comment>
+
+        <createTable tableName="zigbee_device">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="friendly_name" type="VARCHAR(128)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="ieee_address" type="VARCHAR(32)"/>
+            <column name="device_type" type="VARCHAR(64)"/>
+            <column name="model" type="VARCHAR(128)"/>
+            <column name="last_battery_percent" type="INT"/>
+            <column name="last_link_quality" type="INT"/>
+            <column name="last_seen" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="zigbee_measurement">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_zigbee_measurement_device"
+                             references="zigbee_device(id)"/>
+            </column>
+            <column name="measurement_type" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="DECIMAL(12,3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit" type="VARCHAR(16)"/>
+            <column name="measured_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_zigbee_measurement_device_type_time" tableName="zigbee_measurement">
+            <column name="device_id"/>
+            <column name="measurement_type"/>
+            <column name="measured_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="zigbee_measurement"/>
+            <dropTable tableName="zigbee_device"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
