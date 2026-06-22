@@ -4,6 +4,7 @@ import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
+import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeMessageParser;
 import com.household.manager.zigbee.service.ZigbeeReadingService;
 import jakarta.annotation.PostConstruct;
@@ -28,6 +29,7 @@ public class ZigbeeMqttConfig {
     private final ZigbeeMqttProperties properties;
     private final ZigbeeMessageParser parser;
     private final ZigbeeReadingService readingService;
+    private final ZigbeeLiveService liveService;
 
     private Mqtt3AsyncClient client;
 
@@ -87,7 +89,10 @@ public class ZigbeeMqttConfig {
             String topic = publish.getTopic().toString();
             String payload = new String(publish.getPayloadAsBytes(), StandardCharsets.UTF_8);
             Optional<ParsedZigbeeMessage> parsed = parser.parse(topic, payload);
-            parsed.ifPresent(readingService::record);
+            parsed.ifPresent(msg -> {
+                var events = readingService.record(msg);
+                events.forEach(liveService::broadcast);
+            });
         } catch (Exception ex) {
             log.debug("Failed to handle Zigbee MQTT message: {}", ex.getMessage());
         }

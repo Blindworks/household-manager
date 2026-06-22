@@ -13,9 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Aktualisiert das Geräte-Register, persistiert Messwerte und broadcastet sie live.
+ * Aktualisiert das Geräte-Register und persistiert Messwerte.
+ * Gibt die Live-Events zurück, damit der Aufrufer sie nach dem Commit broadcasten kann.
  */
 @Service
 @RequiredArgsConstructor
@@ -24,13 +27,13 @@ public class ZigbeeReadingService {
 
     private final ZigbeeDeviceRepository deviceRepository;
     private final ZigbeeMeasurementRepository measurementRepository;
-    private final ZigbeeLiveService liveService;
 
     @Transactional
-    public void record(ParsedZigbeeMessage message) {
+    public List<ZigbeeLiveResponse> record(ParsedZigbeeMessage message) {
         LocalDateTime now = LocalDateTime.now();
         ZigbeeDevice device = upsertDevice(message, now);
 
+        List<ZigbeeLiveResponse> events = new ArrayList<>();
         for (ZigbeeMeasurementValue value : message.measurements()) {
             ZigbeeMeasurement measurement = ZigbeeMeasurement.builder()
                     .device(device)
@@ -41,7 +44,7 @@ public class ZigbeeReadingService {
                     .build();
             measurementRepository.save(measurement);
 
-            liveService.broadcast(ZigbeeLiveResponse.builder()
+            events.add(ZigbeeLiveResponse.builder()
                     .friendlyName(device.getFriendlyName())
                     .measurementType(value.type())
                     .value(value.value())
@@ -51,6 +54,7 @@ public class ZigbeeReadingService {
                     .measuredAt(now)
                     .build());
         }
+        return events;
     }
 
     private ZigbeeDevice upsertDevice(ParsedZigbeeMessage message, LocalDateTime now) {

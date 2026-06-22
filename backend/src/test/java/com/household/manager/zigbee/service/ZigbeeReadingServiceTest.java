@@ -1,5 +1,6 @@
 package com.household.manager.zigbee.service;
 
+import com.household.manager.zigbee.dto.ZigbeeLiveResponse;
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import com.household.manager.zigbee.model.entity.ZigbeeMeasurement;
@@ -28,7 +29,6 @@ class ZigbeeReadingServiceTest {
 
     @Mock private ZigbeeDeviceRepository deviceRepository;
     @Mock private ZigbeeMeasurementRepository measurementRepository;
-    @Mock private ZigbeeLiveService liveService;
 
     @InjectMocks private ZigbeeReadingService service;
 
@@ -87,12 +87,19 @@ class ZigbeeReadingServiceTest {
     }
 
     @Test
-    void broadcastsEachMeasurementLive() {
+    void returnsLiveEventPerMeasurement() {
         when(deviceRepository.findByFriendlyName(any())).thenReturn(Optional.empty());
         when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.record(climateMessage);
+        List<ZigbeeLiveResponse> events = service.record(climateMessage);
 
-        verify(liveService, times(1)).broadcast(any());
+        assertThat(events).hasSize(1);
+        ZigbeeLiveResponse event = events.get(0);
+        assertThat(event.getFriendlyName()).isEqualTo("Wohnzimmer-Klima");
+        assertThat(event.getMeasurementType()).isEqualTo(MeasurementType.TEMPERATURE);
+        assertThat(event.getValue()).isEqualByComparingTo("21.5");
+        assertThat(event.getUnit()).isEqualTo("°C");
+        assertThat(event.getBatteryPercent()).isEqualTo(90);
+        assertThat(event.getLinkQuality()).isEqualTo(120);
     }
 }
