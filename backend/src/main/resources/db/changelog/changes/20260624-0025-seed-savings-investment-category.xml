@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260624-0025" author="household-manager">
+        <comment>Seed system TRANSFER category for savings and investments</comment>
+
+        <insert tableName="categories">
+            <column name="name" value="Sparen &amp; Investitionen"/>
+            <column name="kind" value="TRANSFER"/>
+            <column name="color" value="#5c6bc0"/>
+            <column name="is_system" valueBoolean="true"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="categories">
+                <where>name = 'Sparen &amp; Investitionen'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
