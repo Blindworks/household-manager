@@ -1,5 +1,6 @@
 package com.household.manager.repository;
 
+import com.household.manager.model.entity.RecurrenceInterval;
 import com.household.manager.model.entity.RecurringPayment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -14,5 +15,5 @@ public interface RecurringPaymentRepository extends JpaRepository<RecurringPayme
 
     Optional<RecurringPayment> findByAccountIdAndCounterpartyPatternAndInterval(
             Long accountId, String counterpartyPattern,
-            com.household.manager.model.entity.RecurrenceInterval interval);
+            RecurrenceInterval interval);
 }
