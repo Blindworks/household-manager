@@ -21,7 +21,9 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Manages monthly budgets (overall and per-category) and computes their status.
@@ -76,13 +78,15 @@ public class BudgetService {
                 })
                 .orElse(null);
 
+        Map<Long, String> categoryNames = categoryRepository.findAll().stream()
+                .collect(Collectors.toMap(Category::getId, Category::getName));
+
         List<BudgetStatusItem> categories = new ArrayList<>();
         for (Budget b : budgetRepository.findByCategoryIdNotNull()) {
             BigDecimal spent = transactionRepository
                     .sumByCategory(b.getCategoryId(), from, to).abs();
             BudgetEvaluation e = evaluator.evaluate(b.getAmount(), spent);
-            String name = categoryRepository.findById(b.getCategoryId())
-                    .map(Category::getName).orElse("?");
+            String name = categoryNames.getOrDefault(b.getCategoryId(), "?");
             categories.add(item(b.getCategoryId(), name, e));
         }
 

@@ -39,15 +39,16 @@ public class AnalyticsService {
         BigDecimal expenses = transactionRepository.sumExpenses(from, to, accountId).abs();
         BigDecimal income = transactionRepository.sumIncome(from, to, accountId);
 
-        Map<Long, String> categoryNames = categoryRepository.findAll().stream()
+        List<Category> allCategories = categoryRepository.findAll();
+        Map<Long, String> categoryNames = allCategories.stream()
                 .collect(Collectors.toMap(Category::getId, Category::getName));
-        Map<Long, String> categoryColors = categoryRepository.findAll().stream()
+        Map<Long, String> categoryColors = allCategories.stream()
                 .filter(c -> c.getColor() != null)
                 .collect(Collectors.toMap(Category::getId, Category::getColor));
 
         List<CategorySpendItem> categories = new ArrayList<>();
         for (Object[] row : transactionRepository.sumAmountByCategory(from, to, accountId)) {
-            Long categoryId = (Long) row[0];
+            Long categoryId = row[0] != null ? ((Number) row[0]).longValue() : null;
             BigDecimal sum = (BigDecimal) row[1];
             if (sum == null || sum.compareTo(BigDecimal.ZERO) >= 0) {
                 continue; // only expenses (negative sums) appear in the breakdown
