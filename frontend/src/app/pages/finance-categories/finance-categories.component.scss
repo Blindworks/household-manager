@@ -1,0 +1,9 @@
+.manage {
+  padding: 1rem;
+  .error { color: #c62828; }
+  .row-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 0.5rem; border-bottom: 1px solid #eee; text-align: left; }
+  .swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; }
+  .danger { color: #c62828; }
+}
