@@ -20,7 +20,7 @@ import java.util.List;
  */
 @Component
 @Slf4j
-public class CamtStatementParser {
+public class CamtStatementParser implements StatementParser {
 
     // JAXBContext is thread-safe and expensive to build — cache it once.
     private static final JAXBContext JAXB_CONTEXT = createContext();

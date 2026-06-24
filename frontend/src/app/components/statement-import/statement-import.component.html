@@ -1,5 +1,5 @@
 <div class="import-box">
-  <h3>Kontoauszug importieren (CAMT / camt.053)</h3>
+  <h3>Kontoauszug importieren (CAMT camt.053 XML oder CSV-CAMT)</h3>
 
   <label class="field">
     <span>Konto</span>
@@ -13,7 +13,7 @@
     </select>
   </label>
 
-  <input type="file" accept=".xml" (change)="onFileSelected($event)" />
+  <input type="file" accept=".xml,.csv" (change)="onFileSelected($event)" />
 
   <button type="button"
           [disabled]="!selectedFile || selectedAccountId == null || isUploading"

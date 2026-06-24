@@ -1,2 +1,6 @@
 # Brainstorming visual companion artifacts
 .superpowers/
+
+# Personal bank statement exports (never commit)
+backend/*.CSV
+backend/*.csv
