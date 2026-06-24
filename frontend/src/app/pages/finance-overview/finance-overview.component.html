@@ -38,6 +38,13 @@
             <strong [style.color]="statusColor(ov.status)">{{ ov.percent }} %</strong>
           </div>
         }
+        <div class="kpi">
+          <span class="label">Investitionen</span>
+          <strong>{{ o.totalInvestments | number:'1.2-2' }} €</strong>
+          @if (o.savingsRate != null) {
+            <span class="sub">Sparquote {{ o.savingsRate }} %</span>
+          }
+        </div>
       </div>
 
       <div class="card categories-card">
