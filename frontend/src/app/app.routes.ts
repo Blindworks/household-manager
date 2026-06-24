@@ -71,6 +71,41 @@ export const routes: Routes = [
     title: 'Zigbee-Sensoren - Household Manager'
   },
   {
+    path: 'finance',
+    loadComponent: () => import('./pages/finance-overview/finance-overview.component').then(m => m.FinanceOverviewComponent),
+    title: 'Ausgaben - Household Manager'
+  },
+  {
+    path: 'finance/transactions',
+    loadComponent: () => import('./pages/finance-transactions/finance-transactions.component').then(m => m.FinanceTransactionsComponent),
+    title: 'Transaktionen - Household Manager'
+  },
+  {
+    path: 'finance/accounts',
+    loadComponent: () => import('./pages/finance-accounts/finance-accounts.component').then(m => m.FinanceAccountsComponent),
+    title: 'Konten - Household Manager'
+  },
+  {
+    path: 'finance/categories',
+    loadComponent: () => import('./pages/finance-categories/finance-categories.component').then(m => m.FinanceCategoriesComponent),
+    title: 'Kategorien - Household Manager'
+  },
+  {
+    path: 'finance/rules',
+    loadComponent: () => import('./pages/finance-rules/finance-rules.component').then(m => m.FinanceRulesComponent),
+    title: 'Regeln - Household Manager'
+  },
+  {
+    path: 'finance/budgets',
+    loadComponent: () => import('./pages/finance-budgets/finance-budgets.component').then(m => m.FinanceBudgetsComponent),
+    title: 'Budgets - Household Manager'
+  },
+  {
+    path: 'finance/recurring',
+    loadComponent: () => import('./pages/finance-recurring/finance-recurring.component').then(m => m.FinanceRecurringComponent),
+    title: 'Wiederkehrende - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'
