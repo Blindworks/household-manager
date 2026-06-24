@@ -1,0 +1,49 @@
+<section class="manage">
+  <h1>Kategorisierungs-Regeln</h1>
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+  @if (infoMessage) {
+    <p class="info">{{ infoMessage }}</p>
+  }
+
+  <form class="row-form" (ngSubmit)="create()">
+    <select [(ngModel)]="form.field" name="field">
+      @for (f of fields; track f) {
+        <option [ngValue]="f">{{ f }}</option>
+      }
+    </select>
+    <select [(ngModel)]="form.matchType" name="matchType">
+      @for (t of matchTypes; track t) {
+        <option [ngValue]="t">{{ t }}</option>
+      }
+    </select>
+    <input type="text" [(ngModel)]="form.pattern" name="pattern" placeholder="Muster" required />
+    <select [(ngModel)]="form.categoryId" name="categoryId">
+      @for (c of categories; track c.id) {
+        <option [ngValue]="c.id">{{ c.name }}</option>
+      }
+    </select>
+    <input type="number" [(ngModel)]="form.priority" name="priority" placeholder="Prio" />
+    <button type="submit">Regel anlegen</button>
+  </form>
+
+  <button type="button" class="apply" (click)="applyAll()">Regeln auf unkategorisierte anwenden</button>
+
+  <table>
+    <thead><tr><th>Feld</th><th>Typ</th><th>Muster</th><th>Kategorie</th><th>Prio</th><th>Aktiv</th><th></th></tr></thead>
+    <tbody>
+      @for (r of rules; track r.id) {
+        <tr [class.disabled]="!r.enabled">
+          <td>{{ r.field }}</td><td>{{ r.matchType }}</td><td>{{ r.pattern }}</td>
+          <td>{{ categoryName(r.categoryId) }}</td><td>{{ r.priority }}</td>
+          <td><button type="button" (click)="toggle(r)">{{ r.enabled ? 'an' : 'aus' }}</button></td>
+          <td><button type="button" class="danger" (click)="remove(r)">Löschen</button></td>
+        </tr>
+      }
+      @if (rules.length === 0) {
+        <tr><td colspan="7" class="muted">Noch keine Regeln.</td></tr>
+      }
+    </tbody>
+  </table>
+</section>
