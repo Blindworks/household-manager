@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -38,6 +39,12 @@ public class AnalyticsService {
 
         BigDecimal expenses = transactionRepository.sumExpenses(from, to, accountId).abs();
         BigDecimal income = transactionRepository.sumIncome(from, to, accountId);
+        BigDecimal totalInvestments = transactionRepository.sumTransferOutflows(from, to, accountId).abs();
+        Integer savingsRate = income.compareTo(BigDecimal.ZERO) > 0
+                ? totalInvestments.multiply(BigDecimal.valueOf(100))
+                        .divide(income, 0, RoundingMode.HALF_UP)
+                        .intValue()
+                : null;
 
         List<Category> allCategories = categoryRepository.findAll();
         Map<Long, String> categoryNames = allCategories.stream()
@@ -68,6 +75,8 @@ public class AnalyticsService {
                 .totalExpenses(expenses)
                 .totalIncome(income)
                 .balance(income.subtract(expenses))
+                .totalInvestments(totalInvestments)
+                .savingsRate(savingsRate)
                 .budget(budgetService.getStatus(month))
                 .categories(categories)
                 .build();

@@ -27,41 +27,61 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByDedupHash(String dedupHash);
 
-    /** Sum of expenses (negative amounts) per category in a date range, returned as [categoryId, sum]. */
+    /** Sum of amounts per non-TRANSFER category in a date range, returned as [categoryId, sum]. */
     @Query("""
             SELECT t.categoryId, SUM(t.amount)
             FROM Transaction t
             WHERE t.bookingDate BETWEEN :from AND :to
               AND (:accountId IS NULL OR t.accountId = :accountId)
+              AND (t.categoryId IS NULL OR t.categoryId NOT IN
+                   (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER))
             GROUP BY t.categoryId
             """)
     List<Object[]> sumAmountByCategory(@Param("from") LocalDate from,
                                        @Param("to") LocalDate to,
                                        @Param("accountId") Long accountId);
 
-    /** Total of negative amounts (expenses) in range. Returns null if none. */
+    /** Total of negative amounts (expenses) in range, excluding TRANSFER categories. Returns 0 if none. */
     @Query("""
             SELECT COALESCE(SUM(t.amount), 0)
             FROM Transaction t
             WHERE t.amount < 0
               AND t.bookingDate BETWEEN :from AND :to
               AND (:accountId IS NULL OR t.accountId = :accountId)
+              AND (t.categoryId IS NULL OR t.categoryId NOT IN
+                   (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER))
             """)
     BigDecimal sumExpenses(@Param("from") LocalDate from,
                            @Param("to") LocalDate to,
                            @Param("accountId") Long accountId);
 
-    /** Total of positive amounts (income) in range. Returns 0 if none. */
+    /** Total of positive amounts (income) in range, excluding TRANSFER categories. Returns 0 if none. */
     @Query("""
             SELECT COALESCE(SUM(t.amount), 0)
             FROM Transaction t
             WHERE t.amount > 0
               AND t.bookingDate BETWEEN :from AND :to
               AND (:accountId IS NULL OR t.accountId = :accountId)
+              AND (t.categoryId IS NULL OR t.categoryId NOT IN
+                   (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER))
             """)
     BigDecimal sumIncome(@Param("from") LocalDate from,
                          @Param("to") LocalDate to,
                          @Param("accountId") Long accountId);
+
+    /** Total outflow (negative amounts) for TRANSFER categories — wealth-building transfers (investments, savings). */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transaction t
+            WHERE t.amount < 0
+              AND (:accountId IS NULL OR t.accountId = :accountId)
+              AND t.bookingDate BETWEEN :from AND :to
+              AND t.categoryId IN
+                  (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER)
+            """)
+    BigDecimal sumTransferOutflows(@Param("from") LocalDate from,
+                                   @Param("to") LocalDate to,
+                                   @Param("accountId") Long accountId);
 
     /** Sum of expenses for one category in range (negative number). */
     @Query("""
