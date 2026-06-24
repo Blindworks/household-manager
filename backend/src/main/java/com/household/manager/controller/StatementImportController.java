@@ -23,28 +23,34 @@ public class StatementImportController {
     private final StatementImportService importService;
 
     @PostMapping("/import")
-    public ResponseEntity<?> importStatement(
+    public ResponseEntity<ImportSummaryResponse> importStatement(
             @RequestParam("accountId") Long accountId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file) throws Exception {
         log.info("CAMT import request for account {}: {}", accountId, file.getOriginalFilename());
 
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Die Datei ist leer.");
+            throw new IllegalArgumentException("Die Datei ist leer.");
         }
-        try {
-            ImportSummaryResponse summary = importService.importStatement(
-                    accountId, file.getOriginalFilename(), file.getInputStream());
-            return ResponseEntity.ok(summary);
-        } catch (CamtParseException ex) {
-            log.warn("CAMT parse failed: {}", ex.getMessage());
-            return ResponseEntity.badRequest()
-                    .body("Die Datei konnte nicht als CAMT (camt.053) gelesen werden.");
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (Exception ex) {
-            log.error("Statement import failed", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Import fehlgeschlagen.");
-        }
+        ImportSummaryResponse summary = importService.importStatement(
+                accountId, file.getOriginalFilename(), file.getInputStream());
+        return ResponseEntity.ok(summary);
+    }
+
+    @ExceptionHandler(CamtParseException.class)
+    public ResponseEntity<String> handleCamtParseException(CamtParseException ex) {
+        log.warn("CAMT parse failed: {}", ex.getMessage());
+        return ResponseEntity.badRequest()
+                .body("Die Datei konnte nicht als CAMT (camt.053) gelesen werden.");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleGenericException(Exception ex) {
+        log.error("Statement import failed", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Import fehlgeschlagen.");
     }
 }
