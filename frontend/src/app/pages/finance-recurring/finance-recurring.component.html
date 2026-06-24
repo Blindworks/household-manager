@@ -1,0 +1,48 @@
+<section class="manage">
+  <h1>Wiederkehrende Zahlungen</h1>
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+  @if (infoMessage) {
+    <p class="info">{{ infoMessage }}</p>
+  }
+
+  <div class="row-form">
+    <select [(ngModel)]="selectedAccountId" name="acc">
+      @for (a of accounts; track a.id) {
+        <option [ngValue]="a.id">{{ a.name }}</option>
+      }
+    </select>
+    <button type="button" [disabled]="detecting || selectedAccountId == null" (click)="detect()">
+      {{ detecting ? 'Suche…' : 'Wiederkehrende suchen' }}
+    </button>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Empfänger</th><th>Betrag</th><th>Intervall</th><th>Nächste Fälligkeit</th>
+          <th>Kategorie</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (item of items; track item.id) {
+        <tr>
+          <td>{{ item.counterpartyPattern }}</td>
+          <td>{{ item.expectedAmount | number:'1.2-2' }} €</td>
+          <td>{{ item.interval }}</td>
+          <td>{{ item.nextDueDate }}</td>
+          <td>{{ categoryName(item.categoryId) }}</td>
+          <td>{{ item.confirmed ? 'bestätigt' : 'Kandidat' }}</td>
+          <td>
+            @if (!item.confirmed) {
+              <button type="button" (click)="confirm(item)">Bestätigen</button>
+            }
+            <button type="button" class="danger" (click)="remove(item)">Verwerfen</button>
+          </td>
+        </tr>
+      }
+      @if (items.length === 0) {
+        <tr><td colspan="7" class="muted">Noch nichts erkannt.</td></tr>
+      }
+    </tbody>
+  </table>
+</section>
