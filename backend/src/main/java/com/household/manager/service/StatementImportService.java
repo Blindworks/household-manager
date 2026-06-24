@@ -1,10 +1,10 @@
 package com.household.manager.service;
 
 import com.household.manager.dto.ImportSummaryResponse;
-import com.household.manager.finance.CamtStatementParser;
 import com.household.manager.finance.DedupHasher;
 import com.household.manager.finance.ParsedStatement;
 import com.household.manager.finance.ParsedTransaction;
+import com.household.manager.finance.StatementParserResolver;
 import com.household.manager.model.entity.BankAccount;
 import com.household.manager.model.entity.CategorizationRule;
 import com.household.manager.model.entity.ImportBatch;
@@ -29,7 +29,7 @@ import java.util.List;
 @Slf4j
 public class StatementImportService {
 
-    private final CamtStatementParser parser;
+    private final StatementParserResolver parserResolver;
     private final DedupHasher dedupHasher;
     private final CategorizationService categorizationService;
     private final TransactionRepository transactionRepository;
@@ -41,7 +41,7 @@ public class StatementImportService {
         BankAccount account = bankAccountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown account id: " + accountId));
 
-        ParsedStatement statement = parser.parse(xml);
+        ParsedStatement statement = parserResolver.resolve(filename).parse(xml);
         warnIfIbanMismatch(account, statement);
 
         List<CategorizationRule> rules = categorizationService.loadActiveRules();

@@ -40,7 +40,7 @@ public class StatementImportController {
     public ResponseEntity<String> handleCamtParseException(CamtParseException ex) {
         log.warn("CAMT parse failed: {}", ex.getMessage());
         return ResponseEntity.badRequest()
-                .body("Die Datei konnte nicht als CAMT (camt.053) gelesen werden.");
+                .body("Die Datei konnte nicht gelesen werden. Erwartet wird CAMT (camt.053 XML) oder CSV-CAMT.");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

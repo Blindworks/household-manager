@@ -1,0 +1,5 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE00111122223333444455";"24.06.26";"24.06.26";"DIGITALE KARTE (APPLE PAY)";"Einkauf Lebensmittel";"";"";"E2E-LIDL-001";"";"";"";"LIDL SAGT DANKE/Alte Frankfurter Str. 15/Bad Vilbel/DE";"DE61300500000008000119";"";"-22,93";"EUR";""
+"DE00111122223333444455";"01.06.26";"01.06.26";"LASTSCHRIFT";"Mitgliedsbeitrag";"";"";"E2E-BIG-002";"";"";"";"BIG SHOP GMBH";"DE11200400600062400000";"";"-1.234,56";"EUR";""
+"DE00111122223333444455";"15.06.26";"15.06.26";"LOHN GEHALT";"Gehalt Juni 2026";"";"";"E2E-ARBEIT-003";"";"";"";"ARBEITGEBER GMBH";"DE44200400600062400999";"";"+2500,00";"EUR";""
+"DE00111122223333444455";"20.06.26";"20.06.26";"GUTSCHRIFT";"Erstattung";"";"";"E2E-EMPTY-004";"";"";"";"SOMEONE";"DE99200400600062400888";"";"";"EUR";""
