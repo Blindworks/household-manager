@@ -23,7 +23,10 @@ export class FinanceRecurringComponent implements OnInit {
   infoMessage: string | null = null;
 
   ngOnInit(): void {
-    this.financeService.getCategories().subscribe(c => this.categories = c);
+    this.financeService.getCategories().subscribe({
+      next: (c) => this.categories = c,
+      error: (e: Error) => this.errorMessage = e.message
+    });
     this.financeService.getAccounts().subscribe({
       next: (a) => {
         this.accounts = a;

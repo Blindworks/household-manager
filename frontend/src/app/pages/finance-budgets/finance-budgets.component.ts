@@ -25,7 +25,10 @@ export class FinanceBudgetsComponent implements OnInit {
   errorMessage: string | null = null;
 
   ngOnInit(): void {
-    this.financeService.getCategories().subscribe(c => this.categories = c.filter(x => x.kind === 'EXPENSE'));
+    this.financeService.getCategories().subscribe({
+      next: (c) => this.categories = c.filter(x => x.kind === 'EXPENSE'),
+      error: (e: Error) => this.errorMessage = e.message
+    });
     this.load();
   }
 

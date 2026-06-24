@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
@@ -15,6 +16,7 @@ import {
 })
 export class FinanceTransactionsComponent implements OnInit {
   private readonly financeService = inject(FinanceService);
+  private readonly destroyRef = inject(DestroyRef);
 
   accounts: BankAccount[] = [];
   categories: Category[] = [];
@@ -31,8 +33,11 @@ export class FinanceTransactionsComponent implements OnInit {
   pendingSuggestion: RuleSuggestion | null = null;
 
   ngOnInit(): void {
-    this.financeService.getCategories().subscribe(c => this.categories = c);
-    this.financeService.getAccounts().subscribe({
+    this.financeService.getCategories().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (c) => this.categories = c,
+      error: (e: Error) => this.errorMessage = e.message
+    });
+    this.financeService.getAccounts().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (a) => { this.accounts = a; this.load(); },
       error: (e: Error) => this.errorMessage = e.message
     });
@@ -42,10 +47,11 @@ export class FinanceTransactionsComponent implements OnInit {
     this.loading = true;
     this.errorMessage = null;
     const [from, to] = this.monthRange(this.month);
-    this.financeService.getTransactions(from, to, this.selectedAccountId ?? undefined).subscribe({
-      next: (txs) => { this.transactions = txs; this.loading = false; },
-      error: (e: Error) => { this.errorMessage = e.message; this.loading = false; }
-    });
+    this.financeService.getTransactions(from, to, this.selectedAccountId ?? undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (txs) => { this.transactions = txs; this.loading = false; },
+        error: (e: Error) => { this.errorMessage = e.message; this.loading = false; }
+      });
   }
 
   get visibleTransactions(): TransactionDto[] {
@@ -70,7 +76,7 @@ export class FinanceTransactionsComponent implements OnInit {
   }
 
   onCategoryChange(tx: TransactionDto, categoryId: number): void {
-    this.financeService.categorize(tx.id, categoryId).subscribe({
+    this.financeService.categorize(tx.id, categoryId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         tx.categoryId = response.transaction.categoryId;
         tx.manuallyCategorized = response.transaction.manuallyCategorized;
@@ -88,7 +94,7 @@ export class FinanceTransactionsComponent implements OnInit {
     this.financeService.createRule({
       field: s.field, matchType: s.matchType, pattern: s.pattern,
       categoryId: s.categoryId, applyToExisting: true
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => { this.pendingSuggestion = null; this.load(); },
       error: (e: Error) => this.errorMessage = e.message
     });

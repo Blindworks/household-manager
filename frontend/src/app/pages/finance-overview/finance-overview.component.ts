@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
@@ -27,6 +28,7 @@ type Layout = 'A' | 'B';
 })
 export class FinanceOverviewComponent implements OnInit {
   private readonly financeService = inject(FinanceService);
+  private readonly destroyRef = inject(DestroyRef);
   private static readonly LAYOUT_KEY = 'finance.overviewLayout';
 
   accounts: BankAccount[] = [];
@@ -44,7 +46,7 @@ export class FinanceOverviewComponent implements OnInit {
   ngOnInit(): void {
     const stored = localStorage.getItem(FinanceOverviewComponent.LAYOUT_KEY);
     this.layout = stored === 'B' ? 'B' : 'A';
-    this.financeService.getAccounts().subscribe({
+    this.financeService.getAccounts().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (accounts) => {
         this.accounts = accounts;
         this.load();
@@ -67,7 +69,7 @@ export class FinanceOverviewComponent implements OnInit {
     this.errorMessage = null;
     const accountId = this.selectedAccountId ?? undefined;
 
-    this.financeService.getOverview(this.month, accountId).subscribe({
+    this.financeService.getOverview(this.month, accountId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (overview) => {
         this.overview = overview;
         this.donutOption = this.buildDonut(overview.categories);
@@ -77,7 +79,7 @@ export class FinanceOverviewComponent implements OnInit {
     });
 
     const from = this.monthsAgo(this.month, 5);
-    this.financeService.getTrend(from, this.month, accountId).subscribe({
+    this.financeService.getTrend(from, this.month, accountId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (trend) => {
         this.trend = trend;
         this.trendOption = this.buildTrend(trend);

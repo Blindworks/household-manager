@@ -29,11 +29,14 @@ export class FinanceRulesComponent implements OnInit {
   infoMessage: string | null = null;
 
   ngOnInit(): void {
-    this.financeService.getCategories().subscribe(c => {
-      this.categories = c;
-      if (c.length > 0) {
-        this.form.categoryId = c[0].id;
-      }
+    this.financeService.getCategories().subscribe({
+      next: (c) => {
+        this.categories = c;
+        if (c.length > 0) {
+          this.form.categoryId = c[0].id;
+        }
+      },
+      error: (e: Error) => this.errorMessage = e.message
     });
     this.load();
   }
