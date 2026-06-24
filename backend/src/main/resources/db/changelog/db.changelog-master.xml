@@ -45,4 +45,7 @@
     <!-- Zigbee Sensors Feature -->
     <include file="db/changelog/changes/20260621-0016-create-zigbee-tables.xml"/>
 
+    <!-- Finance: Expense Tracking Feature -->
+    <include file="db/changelog/changes/20260624-0017-create-bank-accounts-table.xml"/>
+
 </databaseChangeLog>
