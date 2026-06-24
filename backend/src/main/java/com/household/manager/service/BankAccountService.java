@@ -46,6 +46,9 @@ public class BankAccountService {
 
     @Transactional
     public void delete(Long id) {
+        if (!repository.existsById(id)) {
+            throw new IllegalArgumentException("Unknown account id: " + id);
+        }
         repository.deleteById(id);
     }
 
