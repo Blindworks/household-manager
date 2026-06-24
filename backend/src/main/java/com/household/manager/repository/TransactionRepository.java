@@ -68,6 +68,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             SELECT COALESCE(SUM(t.amount), 0)
             FROM Transaction t
             WHERE t.categoryId = :categoryId
+              AND t.amount < 0
               AND t.bookingDate BETWEEN :from AND :to
             """)
     BigDecimal sumByCategory(@Param("categoryId") Long categoryId,
