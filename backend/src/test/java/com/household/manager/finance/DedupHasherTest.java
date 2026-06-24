@@ -51,4 +51,14 @@ class DedupHasherTest {
     void hashIsSha256Hex64Chars() {
         assertEquals(64, hasher.hash(1L, tx(null, "REF-0001")).length());
     }
+
+    @Test
+    void fallsBackToEndToEndIdWhenAcctSvcrRefIsNull() {
+        String withE2e = hasher.hash(1L, tx("E2E-001", null));
+        // Same E2E + same account => same hash
+        assertEquals(hasher.hash(1L, tx("E2E-001", null)), withE2e);
+        // No references at all => composite hash, must differ
+        assertNotEquals(hasher.hash(1L, tx(null, null)), withE2e,
+                "composite fallback must differ from E2E-keyed hash");
+    }
 }

@@ -22,6 +22,17 @@ import java.util.List;
 @Slf4j
 public class CamtStatementParser {
 
+    // JAXBContext is thread-safe and expensive to build — cache it once.
+    private static final JAXBContext JAXB_CONTEXT = createContext();
+
+    private static JAXBContext createContext() {
+        try {
+            return JAXBContext.newInstance(CamtDocument.class);
+        } catch (JAXBException e) {
+            throw new IllegalStateException("Failed to initialise JAXB context", e);
+        }
+    }
+
     public ParsedStatement parse(InputStream xml) {
         CamtDocument document = unmarshal(xml);
 
@@ -61,8 +72,7 @@ public class CamtStatementParser {
 
     private CamtDocument unmarshal(InputStream xml) {
         try {
-            JAXBContext context = JAXBContext.newInstance(CamtDocument.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
+            Unmarshaller unmarshaller = JAXB_CONTEXT.createUnmarshaller();
             Object result = unmarshaller.unmarshal(xml);
             if (!(result instanceof CamtDocument doc)) {
                 throw new CamtParseException("Root element is not a camt.053 Document");
@@ -133,6 +143,10 @@ public class CamtStatementParser {
         if (iso == null || iso.isBlank()) {
             return null;
         }
-        return LocalDate.parse(iso);
+        try {
+            return LocalDate.parse(iso);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new CamtParseException("Unparseable date in CAMT entry: " + iso, e);
+        }
     }
 }
