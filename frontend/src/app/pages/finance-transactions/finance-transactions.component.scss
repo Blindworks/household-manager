@@ -1,0 +1,25 @@
+.transactions {
+  padding: 1rem;
+
+  .toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  .filters { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+  .check { display: flex; align-items: center; gap: 0.3rem; }
+  .error { color: #c62828; }
+  .muted { color: #888; text-align: center; }
+
+  .suggestion {
+    display: flex; align-items: center; gap: 0.75rem;
+    background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px;
+    padding: 0.6rem 1rem; margin: 0.75rem 0;
+    .ghost { background: transparent; }
+  }
+
+  .tx-table {
+    width: 100%; border-collapse: collapse;
+    th, td { padding: 0.5rem; border-bottom: 1px solid #eee; text-align: left; }
+    .num { text-align: right; }
+    .negative { color: #c62828; }
+    .purpose { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .manual { color: #2e7d32; margin-left: 0.3rem; }
+  }
+}
