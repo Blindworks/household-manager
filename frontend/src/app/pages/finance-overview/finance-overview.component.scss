@@ -21,12 +21,13 @@
   .kpis {
     grid-area: kpis;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
     .kpi {
       display: flex; flex-direction: column;
       padding: 0.75rem; border: 1px solid #e0e0e0; border-radius: 8px;
       .label { font-size: 0.8rem; color: #666; }
+      .sub { font-size: 0.75rem; color: var(--color-gray, #888); }
     }
   }
 

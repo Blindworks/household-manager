@@ -54,5 +54,6 @@
     <include file="db/changelog/changes/20260624-0022-create-import-batches-table.xml"/>
     <include file="db/changelog/changes/20260624-0023-create-recurring-payments-table.xml"/>
     <include file="db/changelog/changes/20260624-0024-create-budgets-table.xml"/>
+    <include file="db/changelog/changes/20260624-0025-seed-savings-investment-category.xml"/>
 
 </databaseChangeLog>

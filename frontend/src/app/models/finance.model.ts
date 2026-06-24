@@ -116,6 +116,8 @@ export interface OverviewResponse {
   totalExpenses: number;
   totalIncome: number;
   balance: number;
+  totalInvestments: number;
+  savingsRate?: number | null;
   budget: BudgetStatusResponse;
   categories: CategorySpendItem[];
 }
