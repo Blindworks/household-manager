@@ -49,5 +49,6 @@
     <include file="db/changelog/changes/20260624-0017-create-bank-accounts-table.xml"/>
     <include file="db/changelog/changes/20260624-0018-create-categories-table.xml"/>
     <include file="db/changelog/changes/20260624-0019-seed-default-categories.xml"/>
+    <include file="db/changelog/changes/20260624-0020-create-transactions-table.xml"/>
 
 </databaseChangeLog>

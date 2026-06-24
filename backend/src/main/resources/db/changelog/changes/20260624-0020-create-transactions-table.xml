@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260624-0020" author="household-manager">
+        <comment>Create transactions table</comment>
+
+        <createTable tableName="transactions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="account_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="booking_date" type="DATE"><constraints nullable="false"/></column>
+            <column name="value_date" type="DATE"/>
+            <column name="amount" type="DECIMAL(15,2)"><constraints nullable="false"/></column>
+            <column name="currency" type="VARCHAR(3)"><constraints nullable="false"/></column>
+            <column name="counterparty_name" type="VARCHAR(255)"/>
+            <column name="counterparty_iban" type="VARCHAR(34)"/>
+            <column name="purpose" type="TEXT"/>
+            <column name="end_to_end_id" type="VARCHAR(255)"/>
+            <column name="bank_tx_code" type="VARCHAR(100)"/>
+            <column name="category_id" type="BIGINT"/>
+            <column name="recurring_id" type="BIGINT"/>
+            <column name="manually_categorized" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="import_batch_id" type="BIGINT"/>
+            <column name="dedup_hash" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_transactions_account_booking" tableName="transactions">
+            <column name="account_id"/>
+            <column name="booking_date" descending="true"/>
+        </createIndex>
+        <createIndex indexName="idx_transactions_category" tableName="transactions">
+            <column name="category_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="transactions"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
