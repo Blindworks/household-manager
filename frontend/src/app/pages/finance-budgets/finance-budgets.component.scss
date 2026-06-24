@@ -1,0 +1,15 @@
+.manage {
+  padding: 1rem;
+  .error { color: #c62828; }
+  .muted { color: #888; text-align: center; }
+  .forms { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .row-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 0.5rem; border-bottom: 1px solid #eee; text-align: left; }
+  .danger { color: #c62828; }
+  .bar-row {
+    display: grid; grid-template-columns: 1fr 3fr 2fr; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem;
+    .bar { background: #eee; border-radius: 4px; height: 12px; overflow: hidden; }
+    .fill { height: 100%; }
+  }
+}

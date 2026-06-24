@@ -1,0 +1,67 @@
+<section class="manage">
+  <h1>Budgets</h1>
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+
+  <div class="forms">
+    <form class="row-form" (ngSubmit)="saveOverall()">
+      <strong>Gesamtbudget / Monat</strong>
+      <input type="number" [(ngModel)]="overallAmount" name="overall" placeholder="z. B. 2000" />
+      <button type="submit">Speichern</button>
+    </form>
+
+    <form class="row-form" (ngSubmit)="saveCategory()">
+      <strong>Kategorie-Budget</strong>
+      <select [(ngModel)]="categoryId" name="cat">
+        <option [ngValue]="null" disabled>Kategorie…</option>
+        @for (c of categories; track c.id) {
+          <option [ngValue]="c.id">{{ c.name }}</option>
+        }
+      </select>
+      <input type="number" [(ngModel)]="categoryAmount" name="catAmount" placeholder="Limit" />
+      <button type="submit">Speichern</button>
+    </form>
+  </div>
+
+  <label>Status-Monat <input type="month" [(ngModel)]="month" (ngModelChange)="load()" /></label>
+
+  <h2>Status {{ month }}</h2>
+  @if (status; as s) {
+    <div class="status">
+      @if (s.overall; as ov) {
+        <div class="bar-row">
+          <span class="name">Gesamt</span>
+          <div class="bar"><div class="fill" [style.width.%]="ov.percent > 100 ? 100 : ov.percent"
+                                [style.background]="statusColor(ov.status)"></div></div>
+          <span>{{ ov.spent | number:'1.0-0' }} / {{ ov.limit | number:'1.0-0' }} € ({{ ov.percent }} %)</span>
+        </div>
+      }
+      @for (item of s.categories; track item.categoryName) {
+        <div class="bar-row">
+          <span class="name">{{ item.categoryName }}</span>
+          <div class="bar"><div class="fill" [style.width.%]="item.percent > 100 ? 100 : item.percent"
+                                [style.background]="statusColor(item.status)"></div></div>
+          <span>{{ item.spent | number:'1.0-0' }} / {{ item.limit | number:'1.0-0' }} € ({{ item.percent }} %)</span>
+        </div>
+      }
+    </div>
+  }
+
+  <h2>Gesetzte Budgets</h2>
+  <table>
+    <thead><tr><th>Bereich</th><th>Limit</th><th></th></tr></thead>
+    <tbody>
+      @for (b of budgets; track b.id) {
+        <tr>
+          <td>{{ categoryName(b.categoryId) }}</td>
+          <td>{{ b.amount | number:'1.2-2' }} €</td>
+          <td><button type="button" class="danger" (click)="remove(b)">Löschen</button></td>
+        </tr>
+      }
+      @if (budgets.length === 0) {
+        <tr><td colspan="3" class="muted">Noch keine Budgets.</td></tr>
+      }
+    </tbody>
+  </table>
+</section>
