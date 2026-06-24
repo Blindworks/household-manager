@@ -11,6 +11,8 @@ import java.util.Optional;
 @Repository
 public interface RecurringPaymentRepository extends JpaRepository<RecurringPayment, Long> {
 
+    List<RecurringPayment> findByAccountId(Long accountId);
+
     List<RecurringPayment> findByConfirmed(boolean confirmed);
 
     Optional<RecurringPayment> findByAccountIdAndCounterpartyPatternAndInterval(

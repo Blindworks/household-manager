@@ -3,7 +3,6 @@ package com.household.manager.service;
 import com.household.manager.dto.RecurringPaymentResponse;
 import com.household.manager.finance.CounterpartyNameNormalizer;
 import com.household.manager.finance.RecurrenceAnalyzer;
-import com.household.manager.finance.RecurrenceResult;
 import com.household.manager.model.entity.RecurringPayment;
 import com.household.manager.model.entity.Transaction;
 import com.household.manager.repository.RecurringPaymentRepository;
@@ -15,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +49,12 @@ public class RecurringDetectionService {
         Map<String, List<Transaction>> grouped = txs.stream()
                 .collect(Collectors.groupingBy(t -> normalizer.normalize(t.getCounterpartyName())));
 
+        // Load all existing candidates for this account once to avoid N+1 queries.
+        Set<String> existingKeys = new HashSet<>(
+                recurringRepository.findByAccountId(accountId).stream()
+                        .map(rp -> rp.getCounterpartyPattern() + "|" + rp.getInterval())
+                        .collect(Collectors.toSet()));
+
         List<RecurringPaymentResponse> created = new ArrayList<>();
         for (Map.Entry<String, List<Transaction>> entry : grouped.entrySet()) {
             String pattern = entry.getKey();
@@ -59,7 +66,8 @@ public class RecurringDetectionService {
             List<java.math.BigDecimal> amounts = group.stream().map(Transaction::getAmount).toList();
 
             analyzer.analyze(dates, amounts).ifPresent(result -> {
-                if (alreadyKnown(accountId, pattern, result)) {
+                String key = pattern + "|" + result.getInterval();
+                if (existingKeys.contains(key)) {
                     return;
                 }
                 RecurringPayment saved = recurringRepository.save(RecurringPayment.builder()
@@ -71,6 +79,7 @@ public class RecurringDetectionService {
                         .nextDueDate(result.getNextDueDate())
                         .confirmed(false)
                         .build());
+                existingKeys.add(key);
                 created.add(toResponse(saved));
             });
         }
@@ -97,12 +106,6 @@ public class RecurringDetectionService {
     @Transactional
     public void delete(Long id) {
         recurringRepository.deleteById(id);
-    }
-
-    private boolean alreadyKnown(Long accountId, String pattern, RecurrenceResult result) {
-        return recurringRepository
-                .findByAccountIdAndCounterpartyPatternAndInterval(accountId, pattern, result.getInterval())
-                .isPresent();
     }
 
     private RecurringPaymentResponse toResponse(RecurringPayment rp) {
