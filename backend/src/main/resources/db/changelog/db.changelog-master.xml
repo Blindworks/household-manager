@@ -53,5 +53,6 @@
     <include file="db/changelog/changes/20260624-0021-create-categorization-rules-table.xml"/>
     <include file="db/changelog/changes/20260624-0022-create-import-batches-table.xml"/>
     <include file="db/changelog/changes/20260624-0023-create-recurring-payments-table.xml"/>
+    <include file="db/changelog/changes/20260624-0024-create-budgets-table.xml"/>
 
 </databaseChangeLog>
