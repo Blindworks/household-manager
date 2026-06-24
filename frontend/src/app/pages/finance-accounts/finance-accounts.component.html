@@ -1,0 +1,28 @@
+<section class="manage">
+  <h1>Konten</h1>
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+
+  <form class="row-form" (ngSubmit)="create()">
+    <input type="text" [(ngModel)]="form.name" name="name" placeholder="Name" required />
+    <input type="text" [(ngModel)]="form.iban" name="iban" placeholder="IBAN (optional)" />
+    <input type="text" [(ngModel)]="form.currency" name="currency" placeholder="Währung" required />
+    <button type="submit">Hinzufügen</button>
+  </form>
+
+  <table>
+    <thead><tr><th>Name</th><th>IBAN</th><th>Währung</th><th></th></tr></thead>
+    <tbody>
+      @for (a of accounts; track a.id) {
+        <tr>
+          <td>{{ a.name }}</td><td>{{ a.iban }}</td><td>{{ a.currency }}</td>
+          <td><button type="button" class="danger" (click)="remove(a)">Löschen</button></td>
+        </tr>
+      }
+      @if (accounts.length === 0) {
+        <tr><td colspan="4" class="muted">Noch keine Konten.</td></tr>
+      }
+    </tbody>
+  </table>
+</section>

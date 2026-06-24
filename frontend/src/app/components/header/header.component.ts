@@ -39,7 +39,20 @@ export class HeaderComponent {
     { path: '/weather', label: 'Wetter' },
     { path: '/zigbee', label: 'Zigbee-Sensoren' },
     { path: '/devices', label: 'Geraete' },
-    { path: '/admin', label: 'Admin' }
+    { path: '/admin', label: 'Admin' },
+    {
+      path: '/finance',
+      label: 'Ausgaben',
+      children: [
+        { path: '/finance', label: 'Uebersicht', exact: true },
+        { path: '/finance/transactions', label: 'Transaktionen' },
+        { path: '/finance/recurring', label: 'Wiederkehrende' },
+        { path: '/finance/budgets', label: 'Budgets' },
+        { path: '/finance/categories', label: 'Kategorien' },
+        { path: '/finance/rules', label: 'Regeln' },
+        { path: '/finance/accounts', label: 'Konten' }
+      ]
+    },
   ];
 
   /** Signal to track mobile menu open/closed state */

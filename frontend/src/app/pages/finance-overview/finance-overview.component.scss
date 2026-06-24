@@ -1,0 +1,77 @@
+.finance-overview {
+  padding: 1rem;
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+
+    .filters { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    .layout-switch button {
+      padding: 0.3rem 0.6rem;
+      &.active { font-weight: 700; text-decoration: underline; }
+    }
+  }
+
+  .error { color: #c62828; }
+  .muted { color: #888; }
+
+  .kpis {
+    grid-area: kpis;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    .kpi {
+      display: flex; flex-direction: column;
+      padding: 0.75rem; border: 1px solid #e0e0e0; border-radius: 8px;
+      .label { font-size: 0.8rem; color: #666; }
+    }
+  }
+
+  .card {
+    border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem;
+    .chart { width: 100%; height: 260px; }
+  }
+  .categories-card { grid-area: categories; }
+  .budgets-card { grid-area: budgets; }
+  .trend-card { grid-area: trend; }
+  .import-card { grid-area: import; }
+
+  .budget-bar {
+    display: grid; grid-template-columns: 1fr 3fr auto; gap: 0.5rem; align-items: center;
+    margin-bottom: 0.4rem;
+    .bar { background: #eee; border-radius: 4px; height: 10px; overflow: hidden; }
+    .fill { height: 100%; }
+  }
+
+  /* Layout A: KPIs on top, donut + trend side by side, budgets + import below */
+  .grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "kpis kpis"
+      "categories trend"
+      "budgets import";
+  }
+
+  /* Layout B: budgets sidebar left, content right */
+  &.layout-b .grid {
+    grid-template-columns: 1fr 2fr;
+    grid-template-areas:
+      "kpis kpis"
+      "budgets trend"
+      "budgets categories"
+      "import import";
+  }
+
+  @media (max-width: 800px) {
+    .grid, &.layout-b .grid {
+      grid-template-columns: 1fr;
+      grid-template-areas: "kpis" "categories" "trend" "budgets" "import";
+    }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+  }
+}

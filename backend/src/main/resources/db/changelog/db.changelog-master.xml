@@ -45,4 +45,14 @@
     <!-- Zigbee Sensors Feature -->
     <include file="db/changelog/changes/20260621-0016-create-zigbee-tables.xml"/>
 
+    <!-- Finance: Expense Tracking Feature -->
+    <include file="db/changelog/changes/20260624-0017-create-bank-accounts-table.xml"/>
+    <include file="db/changelog/changes/20260624-0018-create-categories-table.xml"/>
+    <include file="db/changelog/changes/20260624-0019-seed-default-categories.xml"/>
+    <include file="db/changelog/changes/20260624-0020-create-transactions-table.xml"/>
+    <include file="db/changelog/changes/20260624-0021-create-categorization-rules-table.xml"/>
+    <include file="db/changelog/changes/20260624-0022-create-import-batches-table.xml"/>
+    <include file="db/changelog/changes/20260624-0023-create-recurring-payments-table.xml"/>
+    <include file="db/changelog/changes/20260624-0024-create-budgets-table.xml"/>
+
 </databaseChangeLog>

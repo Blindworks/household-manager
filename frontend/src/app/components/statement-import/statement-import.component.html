@@ -1,0 +1,35 @@
+<div class="import-box">
+  <h3>Kontoauszug importieren (CAMT / camt.053)</h3>
+
+  <label class="field">
+    <span>Konto</span>
+    <select [(ngModel)]="selectedAccountId">
+      <option [ngValue]="null" disabled>Konto wählen…</option>
+      @for (account of accounts; track account.id) {
+        <option [ngValue]="account.id">
+          {{ account.name }}@if (account.iban) { ({{ account.iban }})}
+        </option>
+      }
+    </select>
+  </label>
+
+  <input type="file" accept=".xml" (change)="onFileSelected($event)" />
+
+  <button type="button"
+          [disabled]="!selectedFile || selectedAccountId == null || isUploading"
+          (click)="upload()">
+    {{ isUploading ? 'Importiere…' : 'Importieren' }}
+  </button>
+
+  @if (summary) {
+    <p class="success">
+      Import abgeschlossen: {{ summary.importedCount }} neu,
+      {{ summary.skippedDuplicates }} Dubletten übersprungen,
+      {{ summary.failedCount }} fehlerhaft,
+      {{ summary.uncategorizedCount }} unkategorisiert.
+    </p>
+  }
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+</div>

@@ -1,0 +1,70 @@
+<section class="transactions">
+  <header class="toolbar">
+    <h1>Transaktionen</h1>
+    <div class="filters">
+      <label>Konto
+        <select [(ngModel)]="selectedAccountId" (ngModelChange)="load()">
+          <option [ngValue]="null">Alle</option>
+          @for (a of accounts; track a.id) {
+            <option [ngValue]="a.id">{{ a.name }}</option>
+          }
+        </select>
+      </label>
+      <label>Monat <input type="month" [(ngModel)]="month" (ngModelChange)="load()" /></label>
+      <label>Suche <input type="text" [(ngModel)]="search" placeholder="Empfänger/Zweck" /></label>
+      <label class="check"><input type="checkbox" [(ngModel)]="onlyUncategorized" /> Nur unkategorisiert</label>
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+  @if (loading) {
+    <p>Lade…</p>
+  }
+
+  @if (pendingSuggestion; as s) {
+    <div class="suggestion">
+      <span>Künftig „{{ s.pattern }}" immer als <strong>{{ suggestedCategoryName() }}</strong>?</span>
+      <button type="button" (click)="acceptSuggestion()">Regel anlegen</button>
+      <button type="button" class="ghost" (click)="dismissSuggestion()">Nein danke</button>
+    </div>
+  }
+
+  @if (!loading) {
+    <table class="tx-table">
+      <thead>
+        <tr>
+          <th>Datum</th><th>Empfänger</th><th>Zweck</th><th class="num">Betrag</th><th>Kategorie</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (tx of visibleTransactions; track tx.id) {
+          <tr>
+            <td>{{ tx.bookingDate }}</td>
+            <td>{{ tx.counterpartyName }}</td>
+            <td class="purpose">{{ tx.purpose }}</td>
+            <td class="num" [class.negative]="tx.amount < 0">{{ tx.amount | number:'1.2-2' }} €</td>
+            <td>
+              <select [ngModel]="tx.categoryId ?? null"
+                      (ngModelChange)="onCategoryChange(tx, $event)">
+                <option [ngValue]="null" disabled>Unkategorisiert</option>
+                @for (c of categories; track c.id) {
+                  <option [ngValue]="c.id">{{ c.name }}</option>
+                }
+              </select>
+              @if (tx.manuallyCategorized) {
+                <span class="manual" title="Manuell gesetzt">&#10003;</span>
+              }
+            </td>
+          </tr>
+        }
+        @if (visibleTransactions.length === 0) {
+          <tr>
+            <td colspan="5" class="muted">Keine Transaktionen.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

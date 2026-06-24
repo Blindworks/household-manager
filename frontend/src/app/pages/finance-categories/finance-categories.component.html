@@ -1,0 +1,36 @@
+<section class="manage">
+  <h1>Kategorien</h1>
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+
+  <form class="row-form" (ngSubmit)="create()">
+    <input type="text" [(ngModel)]="form.name" name="name" placeholder="Name" required />
+    <select [(ngModel)]="form.kind" name="kind">
+      @for (k of kinds; track k) {
+        <option [ngValue]="k">{{ k }}</option>
+      }
+    </select>
+    <input type="color" [(ngModel)]="form.color" name="color" />
+    <button type="submit">Hinzufügen</button>
+  </form>
+
+  <table>
+    <thead><tr><th>Farbe</th><th>Name</th><th>Typ</th><th>System</th><th></th></tr></thead>
+    <tbody>
+      @for (c of categories; track c.id) {
+        <tr>
+          <td><span class="swatch" [style.background]="c.color"></span></td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.kind }}</td>
+          <td>{{ c.system ? 'ja' : 'nein' }}</td>
+          <td>
+            @if (!c.system) {
+              <button type="button" class="danger" (click)="remove(c)">Löschen</button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

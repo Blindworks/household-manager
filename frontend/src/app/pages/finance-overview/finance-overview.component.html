@@ -1,0 +1,74 @@
+<section class="finance-overview" [class.layout-b]="layout === 'B'">
+  <header class="toolbar">
+    <h1>Ausgaben-Übersicht</h1>
+    <div class="filters">
+      <label>
+        Konto
+        <select [(ngModel)]="selectedAccountId" (ngModelChange)="onFilterChange()">
+          <option [ngValue]="null">Alle</option>
+          @for (account of accounts; track account.id) {
+            <option [ngValue]="account.id">{{ account.name }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Monat
+        <input type="month" [(ngModel)]="month" (ngModelChange)="onFilterChange()" />
+      </label>
+      <div class="layout-switch">
+        <button type="button" [class.active]="layout === 'A'" (click)="setLayout('A')">Layout A</button>
+        <button type="button" [class.active]="layout === 'B'" (click)="setLayout('B')">Layout B</button>
+      </div>
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+
+  @if (overview; as o) {
+    <div class="grid">
+      <div class="kpis">
+        <div class="kpi"><span class="label">Ausgaben</span><strong>{{ o.totalExpenses | number:'1.2-2' }} €</strong></div>
+        <div class="kpi"><span class="label">Einnahmen</span><strong>{{ o.totalIncome | number:'1.2-2' }} €</strong></div>
+        <div class="kpi"><span class="label">Saldo</span><strong>{{ o.balance | number:'1.2-2' }} €</strong></div>
+        @if (o.budget.overall; as ov) {
+          <div class="kpi">
+            <span class="label">Budget</span>
+            <strong [style.color]="statusColor(ov.status)">{{ ov.percent }} %</strong>
+          </div>
+        }
+      </div>
+
+      <div class="card categories-card">
+        <h2>Kategorien</h2>
+        <div echarts [options]="donutOption" class="chart"></div>
+      </div>
+
+      <div class="card budgets-card">
+        <h2>Budgets</h2>
+        @for (b of categoryBudgets; track b.categoryName) {
+          <div class="budget-bar">
+            <span class="name">{{ b.categoryName }}</span>
+            <div class="bar"><div class="fill" [style.width.%]="b.percent > 100 ? 100 : b.percent"
+                                  [style.background]="statusColor(b.status)"></div></div>
+            <span class="pct">{{ b.percent }} %</span>
+          </div>
+        }
+        @if (categoryBudgets.length === 0) {
+          <p class="muted">Noch keine Kategorie-Budgets gesetzt.</p>
+        }
+      </div>
+
+      <div class="card trend-card">
+        <h2>Trend (6 Monate)</h2>
+        <div echarts [options]="trendOption" class="chart"></div>
+      </div>
+
+      <div class="card import-card">
+        <app-statement-import [accounts]="accounts" [selectedAccountId]="selectedAccountId"
+                              (importCompleted)="load()"></app-statement-import>
+      </div>
+    </div>
+  }
+</section>

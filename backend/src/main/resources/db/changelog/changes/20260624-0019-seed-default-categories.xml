@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260624-0019" author="household-manager">
+        <comment>Seed default system categories</comment>
+
+        <insert tableName="categories"><column name="name" value="Lebensmittel"/><column name="kind" value="EXPENSE"/><column name="color" value="#66bb6a"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Wohnen/Miete"/><column name="kind" value="EXPENSE"/><column name="color" value="#8d6e63"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Energie"/><column name="kind" value="EXPENSE"/><column name="color" value="#ffa726"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Mobilität"/><column name="kind" value="EXPENSE"/><column name="color" value="#42a5f5"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Versicherungen"/><column name="kind" value="EXPENSE"/><column name="color" value="#7e57c2"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Abos &amp; Medien"/><column name="kind" value="EXPENSE"/><column name="color" value="#ec407a"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Gesundheit"/><column name="kind" value="EXPENSE"/><column name="color" value="#26a69a"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Freizeit"/><column name="kind" value="EXPENSE"/><column name="color" value="#26c6da"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Shopping"/><column name="kind" value="EXPENSE"/><column name="color" value="#ab47bc"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Restaurant"/><column name="kind" value="EXPENSE"/><column name="color" value="#ff7043"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Bargeld"/><column name="kind" value="EXPENSE"/><column name="color" value="#bdbdbd"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Sonstiges"/><column name="kind" value="EXPENSE"/><column name="color" value="#90a4ae"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Gehalt"/><column name="kind" value="INCOME"/><column name="color" value="#9ccc65"/><column name="is_system" valueBoolean="true"/></insert>
+        <insert tableName="categories"><column name="name" value="Erstattung"/><column name="kind" value="INCOME"/><column name="color" value="#d4e157"/><column name="is_system" valueBoolean="true"/></insert>
+
+        <rollback>
+            <delete tableName="categories"><where>is_system = true</where></delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

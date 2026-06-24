@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <Stmt>
+      <Acct>
+        <Id><IBAN>DE00111122223333444455</IBAN></Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Ntry>
+        <Amt Ccy="EUR">29.99</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <BookgDt><Dt>2026-06-01</Dt></BookgDt>
+        <ValDt><Dt>2026-06-02</Dt></ValDt>
+        <AcctSvcrRef>REF-0001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd></Domn></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>E2E-NETFLIX-06</EndToEndId></Refs>
+            <RltdPties>
+              <Cdtr><Nm>NETFLIX INTERNATIONAL</Nm></Cdtr>
+              <CdtrAcct><Id><IBAN>NL00NETFLIX0000001</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Netflix Abo Juni</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">2500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-06-01</Dt></BookgDt>
+        <NtryDtls>
+          <TxDtls>
+            <RltdPties>
+              <Dbtr><Nm>ARBEITGEBER GMBH</Nm></Dbtr>
+              <DbtrAcct><Id><IBAN>DE00EMPLOYER000001</IBAN></Id></DbtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Gehalt Juni 2026</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>
