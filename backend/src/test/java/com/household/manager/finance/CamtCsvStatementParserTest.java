@@ -21,9 +21,24 @@ class CamtCsvStatementParserTest {
     }
 
     @Test
-    void parsesThreeTransactionsSkippingEmptyBetrag() {
+    void parsesThreeTransactionsSkippingInvalidRows() {
         List<ParsedTransaction> transactions = parseSample().getTransactions();
-        assertEquals(3, transactions.size(), "empty-Betrag row must be skipped");
+        // fixture has 5 data rows: 3 valid, 1 with empty Betrag (silent skip), 1 with garbage Betrag (resilient skip)
+        assertEquals(3, transactions.size(), "rows with empty or malformed Betrag must both be skipped");
+    }
+
+    @Test
+    void malformedBetragRowIsSkippedAndOtherRowsStillParse() {
+        // Confirms row-level resilience: a garbage non-blank Betrag does not abort the whole file.
+        List<ParsedTransaction> transactions = parseSample().getTransactions();
+        assertEquals(3, transactions.size(), "bad-Betrag row must be skipped, leaving 3 valid rows");
+        // Verify the bad row's counterparty is not present
+        boolean badRowPresent = transactions.stream()
+                .anyMatch(tx -> "BAD PAYER GMBH".equals(tx.getCounterpartyName()));
+        assertFalse(badRowPresent, "the malformed row must not appear in the parsed results");
+        // Verify the valid rows are still present
+        assertTrue(transactions.stream().anyMatch(tx -> "ARBEITGEBER GMBH".equals(tx.getCounterpartyName())),
+                "credit row must still be parsed after the bad row is skipped");
     }
 
     @Test
