@@ -51,5 +51,6 @@
     <include file="db/changelog/changes/20260624-0019-seed-default-categories.xml"/>
     <include file="db/changelog/changes/20260624-0020-create-transactions-table.xml"/>
     <include file="db/changelog/changes/20260624-0021-create-categorization-rules-table.xml"/>
+    <include file="db/changelog/changes/20260624-0022-create-import-batches-table.xml"/>
 
 </databaseChangeLog>
