@@ -204,6 +204,364 @@ button {
 .mb-lg { margin-bottom: var(--spacing-lg); }
 .mb-xl { margin-bottom: var(--spacing-xl); }
 
+/* ============================================================
+   Finance page global form/table styling
+   Scoped under the finance container classes so these raw-element
+   rules never bleed into other pages that already use .form-control
+   or .btn utilities.
+   Containers: .import-box, .finance-overview, .transactions, .manage
+   ============================================================ */
+
+$finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
+
+// Shared input/select/textarea mixin
+@mixin finance-field {
+  padding: 0.55rem 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  background-color: var(--color-white);
+  color: var(--color-dark);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  min-width: 0;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(13, 110, 189, 0.12);
+  }
+
+  &:disabled,
+  &[disabled] {
+    background-color: #f3f4f6;
+    color: var(--color-gray);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+#{$finance-scopes} {
+
+  // ---- Inputs ----
+  input[type='text'],
+  input[type='number'],
+  input[type='month'],
+  input[type='email'],
+  input[type='password'],
+  input[type='search'],
+  input[type='date'],
+  textarea {
+    @include finance-field;
+  }
+
+  // ---- Color picker ----
+  input[type='color'] {
+    padding: 0.2rem 0.3rem;
+    border: 2px solid #e5e7eb;
+    border-radius: var(--radius-md);
+    height: 2.25rem;
+    width: 3rem;
+    cursor: pointer;
+    background-color: var(--color-white);
+    transition: border-color var(--transition-fast);
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+
+  // ---- File input ----
+  input[type='file'] {
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    color: var(--color-dark);
+    cursor: pointer;
+
+    &::file-selector-button {
+      padding: 0.45rem 0.85rem;
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      background-color: transparent;
+      color: var(--color-primary);
+      font-family: var(--font-family);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 0.5rem;
+      transition: background-color var(--transition-fast), color var(--transition-fast);
+
+      &:hover {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+      }
+    }
+  }
+
+  // ---- Checkbox ----
+  input[type='checkbox'] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+  }
+
+  // ---- Select ----
+  select {
+    @include finance-field;
+    min-width: 8rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%236b7280' d='M4.427 6.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 6H4.604a.25.25 0 00-.177.427z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+  }
+
+  // ---- Textarea ----
+  textarea {
+    resize: vertical;
+    min-height: 4rem;
+  }
+
+  // ---- Labels ----
+  label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-dark);
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  // ---- Buttons (default = primary) ----
+  button:not(.layout-switch button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1.1rem;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast),
+                color var(--transition-fast), box-shadow var(--transition-fast),
+                transform var(--transition-fast);
+    background-color: var(--color-primary);
+    color: var(--color-white);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-dark);
+      box-shadow: var(--shadow-md);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    &:disabled,
+    &[disabled] {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    // Danger variant (delete / discard)
+    &.danger {
+      background-color: transparent;
+      border-color: var(--color-error);
+      color: var(--color-error);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-error);
+        color: var(--color-white);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+      }
+    }
+
+    // Ghost variant (secondary/dismiss)
+    &.ghost {
+      background-color: transparent;
+      border-color: #d1d5db;
+      color: var(--color-gray);
+
+      &:hover:not(:disabled) {
+        background-color: #f3f4f6;
+        border-color: #9ca3af;
+      }
+    }
+
+    // Apply / secondary action variant
+    &.apply {
+      background-color: var(--color-secondary);
+      border-color: var(--color-secondary);
+      color: var(--color-white);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-secondary-dark);
+        border-color: var(--color-secondary-dark);
+        box-shadow: var(--shadow-md);
+      }
+    }
+  }
+
+  // ---- Layout-switch toggle group ----
+  .layout-switch {
+    display: inline-flex;
+    gap: 0;
+    border: 2px solid #e5e7eb;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+
+    button {
+      background-color: transparent;
+      color: var(--color-gray);
+      border: none;
+      border-radius: 0;
+      padding: 0.3rem 0.7rem;
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+
+      &:hover:not(:disabled) {
+        background-color: #f3f4f6;
+        color: var(--color-dark);
+        box-shadow: none;
+      }
+
+      &.active {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+        font-weight: 700;
+        text-decoration: none;
+      }
+    }
+  }
+
+  // ---- Tables ----
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+
+    thead {
+      background-color: #f8fafc;
+      border-bottom: 2px solid #e5e7eb;
+
+      th {
+        padding: 0.65rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--color-dark);
+        white-space: nowrap;
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color var(--transition-fast);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: #fafafa;
+        }
+      }
+
+      td {
+        padding: 0.6rem 0.75rem;
+        color: var(--color-dark);
+        vertical-align: middle;
+      }
+    }
+  }
+
+  // tx-table specifics (inline selects should be compact)
+  .tx-table {
+    select {
+      min-width: 7rem;
+      padding: 0.3rem 1.8rem 0.3rem 0.5rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  // ---- Suggestion banner ----
+  .suggestion {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: var(--radius-md);
+    padding: 0.6rem 1rem;
+    margin: 0.75rem 0;
+    font-size: var(--font-size-sm);
+
+    button {
+      padding: 0.35rem 0.8rem;
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  // ---- KPI cards ----
+  .kpi {
+    background-color: var(--color-white);
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    .label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-gray);
+    }
+
+    strong {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--color-dark);
+    }
+  }
+
+  // ---- Color swatch ----
+  .swatch {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    vertical-align: middle;
+  }
+
+  // ---- Feedback messages ----
+  .error {
+    color: var(--color-error);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+  }
+
+  .info {
+    color: #1565c0;
+    font-size: var(--font-size-sm);
+  }
+
+  .muted {
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   :root {
