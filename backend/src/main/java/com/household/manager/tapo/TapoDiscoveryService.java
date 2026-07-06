@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +20,9 @@ import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.zip.CRC32;
@@ -68,13 +73,13 @@ public class TapoDiscoveryService {
             socket.setSoTimeout((int) properties.getLocalDiscoveryTimeoutMs());
 
             byte[] query = generateDiscoveryQuery();
-            DatagramPacket packet = new DatagramPacket(
-                    query,
-                    query.length,
-                    InetAddress.getByName(properties.getLocalDiscoveryTarget()),
-                    20002
-            );
-            socket.send(packet);
+            for (InetAddress target : resolveBroadcastTargets(properties)) {
+                try {
+                    socket.send(new DatagramPacket(query, query.length, target, 20002));
+                } catch (IOException ex) {
+                    // Some targets are unreachable per interface state (e.g. VPN adapters); keep trying the rest.
+                }
+            }
 
             long deadline = System.currentTimeMillis() + properties.getLocalDiscoveryTimeoutMs();
             while (System.currentTimeMillis() < deadline) {
@@ -99,6 +104,37 @@ public class TapoDiscoveryService {
         }
 
         return results;
+    }
+
+    /**
+     * The limited broadcast 255.255.255.255 leaves a multi-homed host (VPN, WSL,
+     * LAN adapters) on only one interface, which may be the wrong one. Query the
+     * subnet-directed broadcast address of every active IPv4 interface as well.
+     */
+    static Set<InetAddress> resolveBroadcastTargets(TapoProperties properties) {
+        Set<InetAddress> targets = new LinkedHashSet<>();
+        try {
+            targets.add(InetAddress.getByName(properties.getLocalDiscoveryTarget()));
+        } catch (IOException ex) {
+            // Fall through to interface broadcasts.
+        }
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface nic = interfaces.nextElement();
+                if (!nic.isUp() || nic.isLoopback()) {
+                    continue;
+                }
+                for (InterfaceAddress address : nic.getInterfaceAddresses()) {
+                    if (address.getBroadcast() != null) {
+                        targets.add(address.getBroadcast());
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            // Interface enumeration is best effort; the configured target remains.
+        }
+        return targets;
     }
 
     private byte[] generateDiscoveryQuery() {
