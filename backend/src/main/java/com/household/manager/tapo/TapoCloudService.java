@@ -55,6 +55,7 @@ public class TapoCloudService {
     private static final String PATH_PASSTHROUGH = "/api/v2/common/passthrough";
 
     private static final long DEVICE_LIST_CACHE_TTL_MS = 60_000;
+    private static final java.time.Duration REQUEST_TIMEOUT = java.time.Duration.ofSeconds(15);
 
     private final ObjectMapper objectMapper;
     private final TapoProperties tapoProperties;
@@ -94,7 +95,10 @@ public class TapoCloudService {
             };
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-            return HttpClient.newBuilder().sslContext(sslContext).build();
+            return HttpClient.newBuilder()
+                    .sslContext(sslContext)
+                    .connectTimeout(REQUEST_TIMEOUT)
+                    .build();
         } catch (Exception ex) {
             log.warn("Konnte keinen SSL-toleranten HttpClient erstellen, verwende Standard: {}", ex.getMessage());
             return HttpClient.newHttpClient();
@@ -303,6 +307,7 @@ public class TapoCloudService {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(REQUEST_TIMEOUT)
                     .header("Content-Type", "application/json;charset=UTF-8")
                     .header("User-Agent", USER_AGENT)
                     .header("Content-MD5", contentMd5)

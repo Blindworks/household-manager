@@ -110,7 +110,12 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         return executeRequestInternal(requestData, true);
     }
 
-    private JsonNode executeRequestInternal(JsonNode requestData, boolean retryOnAuthError) {
+    /**
+     * Serialized per connection: concurrent requests (e.g. info + energy fired together
+     * by the UI) would otherwise interleave reads/writes on the shared socket and both
+     * time out.
+     */
+    private synchronized JsonNode executeRequestInternal(JsonNode requestData, boolean retryOnAuthError) {
         ensureAuthenticated();
         int seq = sequence.incrementAndGet();
         log.debug("KLAP /request seq={} ({})", seq, seq < 0 ? "negativ!" : "positiv");
@@ -305,15 +310,11 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             }
 
             // --- Derive session keys ---
-            byte[] sessionHash = TapoCipher.sha256(concat(localSeed, remoteSeed, userHash));
-            key = Arrays.copyOf(
-                    TapoCipher.sha256(concat("lsk".getBytes(StandardCharsets.UTF_8), sessionHash)), 16);
-            byte[] ivDigest = TapoCipher.sha256(
-                    concat("iv".getBytes(StandardCharsets.UTF_8), sessionHash));
-            ivPrefix = Arrays.copyOf(ivDigest, 12);
-            sequence = new AtomicInteger(ByteBuffer.wrap(ivDigest, ivDigest.length - 4, 4).getInt());
-            signatureSeed = Arrays.copyOf(
-                    TapoCipher.sha256(concat("ldk".getBytes(StandardCharsets.UTF_8), sessionHash)), 28);
+            KlapSessionKeys sessionKeys = deriveSessionKeys(localSeed, remoteSeed, userHash);
+            key = sessionKeys.key();
+            ivPrefix = sessionKeys.ivPrefix();
+            sequence = new AtomicInteger(sessionKeys.initialSequence());
+            signatureSeed = sessionKeys.signatureSeed();
             authenticatedAt = Instant.now();
 
             // Handshake succeeded — keep this session open for subsequent requests.
@@ -328,6 +329,27 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
     // -------------------------------------------------------------------------
     // Crypto helpers
     // -------------------------------------------------------------------------
+
+    record KlapSessionKeys(byte[] key, byte[] ivPrefix, int initialSequence, byte[] signatureSeed) {
+    }
+
+    /**
+     * KLAP derives every session component from "lsk"/"iv"/"ldk" plus the RAW
+     * concatenation of localSeed, remoteSeed and userHash — hashing the
+     * concatenation first yields keys the device rejects with 403 on /request.
+     */
+    static KlapSessionKeys deriveSessionKeys(byte[] localSeed, byte[] remoteSeed, byte[] userHash) {
+        byte[] sessionSeed = concat(localSeed, remoteSeed, userHash);
+        byte[] key = Arrays.copyOf(
+                TapoCipher.sha256(concat("lsk".getBytes(StandardCharsets.UTF_8), sessionSeed)), 16);
+        byte[] ivDigest = TapoCipher.sha256(
+                concat("iv".getBytes(StandardCharsets.UTF_8), sessionSeed));
+        byte[] ivPrefix = Arrays.copyOf(ivDigest, 12);
+        int initialSequence = ByteBuffer.wrap(ivDigest, ivDigest.length - 4, 4).getInt();
+        byte[] signatureSeed = Arrays.copyOf(
+                TapoCipher.sha256(concat("ldk".getBytes(StandardCharsets.UTF_8), sessionSeed)), 28);
+        return new KlapSessionKeys(key, ivPrefix, initialSequence, signatureSeed);
+    }
 
     private byte[] encrypt(String requestData, int seq) {
         byte[] cipherText = TapoCipher.aesCbcEncrypt(
