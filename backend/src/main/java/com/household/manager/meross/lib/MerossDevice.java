@@ -45,7 +45,7 @@ public class MerossDevice {
         state = new boolean[device.getChannels().size()];
     }
 
-    public Map toggle(boolean enabled) {
+    public Map toggle(boolean enabled) throws MQTTException {
         ImmutableMap<String, Serializable> payload = ImmutableMap.of(
                 "channel", 0,
                 "toggle", ImmutableMap.of("onoff", enabled? 1 : 0)
@@ -53,7 +53,7 @@ public class MerossDevice {
         return connection.executecmd("SET", TOGGLE.getNamespace(), payload, clientRequestTopic);
     }
 
-    public Map togglex(int channel, boolean enabled) {
+    public Map togglex(int channel, boolean enabled) throws MQTTException {
         Map<String, Serializable> payload = ImmutableMap.of(
                 "togglex", ImmutableMap.of(
                         "onoff", enabled? 1:0,
@@ -120,7 +120,7 @@ public class MerossDevice {
         this.handleNamespacePayload(payload);
     }
 
-    Map getReport() {
+    Map getReport() throws MQTTException {
         return connection.executecmd("GET", "Appliance.System.Report", ImmutableMap.of(), clientRequestTopic);
     }
 
@@ -186,6 +186,10 @@ public class MerossDevice {
 
     private void initStatesFromTogglexMap(Map map) {
         int channelindex = Integer.parseInt(map.get("channel").toString());
+        // The cloud device list carries no channel metadata, so the initial array may be too small.
+        if (channelindex >= state.length) {
+            state = Arrays.copyOf(state, channelindex + 1);
+        }
         this.state[channelindex] = map.get("onoff").toString().equals("1");
     }
 

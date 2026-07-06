@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -51,7 +52,8 @@ public class MqttConnection {
     @Getter
     private String appId = null;
     private String domain = null;
-    private int port = 2001;
+    // Meross retired the legacy MQTT port 2001 (connection reset); brokers now serve MQTT over TLS on 443.
+    private int port = 443;
     private String clientid = null;
     private String clientResponseTopic;
     private Consumer<Map> globalMessageConsumer;
@@ -101,11 +103,13 @@ public class MqttConnection {
     }
 
     protected synchronized Map executecmd(String method, String namespace, Map payload,
-                                          String clientRequestTopic) {
+                                          String clientRequestTopic) throws MQTTException {
         try {
             mqttMessage(method, namespace, clientRequestTopic, payload);
+        } catch (MQTTException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error executing command for " + method, e);
+            throw new MQTTException("Error executing command " + method + " " + namespace + ": " + e.getMessage());
         }
         return null;
     }
@@ -254,15 +258,16 @@ public class MqttConnection {
         return false;
     }
 
-    public Map receiveMessage() throws Exception {
+    public Map receiveMessage() throws MQTTException {
         try (Mqtt3BlockingClient.Mqtt3Publishes publishes = blockingClient.publishes(SUBSCRIBED)) {
-            Mqtt3Publish publishMessage = publishes.receive();
-            System.out.println("receivedMessage = " + publishMessage);
+            Mqtt3Publish publishMessage = publishes.receive(LONG_TIMEOUT, TimeUnit.SECONDS)
+                    .orElseThrow(() -> new MQTTException(
+                            "Timeout after " + LONG_TIMEOUT + "s waiting for device response"));
             return this.messageArrived(publishMessage.getTopic().toString(), publishMessage.getPayloadAsBytes());
         } catch (InterruptedException e) {
-            log.error(e.getMessage(),e);
+            Thread.currentThread().interrupt();
+            throw new MQTTException("Interrupted while waiting for device response");
         }
-        return null;
     }
     public void onGlobalMessage(Consumer<Map> consumer) throws Exception {
         globalMessageConsumer = consumer;

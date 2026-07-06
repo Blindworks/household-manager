@@ -16,6 +16,7 @@ public class NetworkDevice {
     private All all;
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class All {
         private System system;
@@ -23,6 +24,7 @@ public class NetworkDevice {
         private Map control;
     }
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class Digest {
         private ArrayList< Map > togglex = new ArrayList <> ();
@@ -30,6 +32,7 @@ public class NetworkDevice {
         private ArrayList < Object > timerx = new ArrayList < Object > ();
     }
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class System {
         private Firmware firmware;
@@ -42,6 +45,7 @@ public class NetworkDevice {
         }
     }
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class Time {
         private String timezone;
@@ -49,11 +53,13 @@ public class NetworkDevice {
         private ArrayList < Integer[] > timeRule = new ArrayList<>();
     }
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class Online {
         private int status;
     }
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class Hardware {
         private String version;
@@ -64,6 +70,7 @@ public class NetworkDevice {
         private String type;
     }
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @NoArgsConstructor
     public static class Firmware {
         private String version;
