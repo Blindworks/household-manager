@@ -1,7 +1,5 @@
 package com.household.manager.meross.service;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.meross.config.MerossProperties;
 import com.household.manager.meross.dto.MerossCloudDevice;
 import com.household.manager.meross.dto.MerossCloudDevicesResponse;
@@ -70,7 +68,6 @@ public class MerossDeviceService {
         validateConfiguration();
         try {
             log.info("Meross MQTT build start (deviceId={})", deviceId);
-            configureMerossLibraryObjectMappers();
             MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
             MerossCloudDevicesResponse devices = merossCloudAuthService.listDevicesWithConfiguredCredentials();
             MerossCloudDevice cloudDevice = devices.devices().stream()
@@ -108,28 +105,6 @@ public class MerossDeviceService {
         } catch (Exception ex) {
             log.warn("Meross MQTT build failed (deviceId={}): {}", deviceId, ex.getMessage());
             throw new MerossException("Meross-Geraet konnte nicht verbunden werden: " + ex.getMessage(), ex);
-        }
-    }
-
-    private void configureMerossLibraryObjectMappers() {
-        configureMapperForClass("com.scout24.ha.meross.mqtt.MqttConnection", "mapper");
-        configureMapperForClass("com.scout24.ha.meross.mqtt.MerossDevice", "mapper");
-    }
-
-    private void configureMapperForClass(String className, String fieldName) {
-        try {
-            Class<?> targetClass = Class.forName(className);
-            Field mapperField = targetClass.getDeclaredField(fieldName);
-            mapperField.setAccessible(true);
-            Object value = mapperField.get(null);
-            if (value instanceof ObjectMapper mapper) {
-                mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                log.debug("Configured {}.{} to ignore unknown JSON fields", className, fieldName);
-            }
-        } catch (ClassNotFoundException | NoSuchFieldException ignored) {
-            // Best effort: keep running even if library internals change.
-        } catch (Throwable ex) {
-            log.debug("Could not configure mapper for {}.{}: {}", className, fieldName, ex.getMessage());
         }
     }
 
