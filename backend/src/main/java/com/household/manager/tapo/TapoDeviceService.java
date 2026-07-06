@@ -1,6 +1,10 @@
 package com.household.manager.tapo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.model.entity.DeviceType;
+import com.household.manager.model.entity.SmartDevice;
+import com.household.manager.repository.SmartDeviceRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +32,8 @@ public class TapoDeviceService {
     private final TapoDiscoveryService tapoDiscoveryService;
     private final TapoDeviceFactory tapoDeviceFactory;
     private final TapoProperties tapoProperties;
+    private final SmartDeviceRepository smartDeviceRepository;
+    private final ObjectMapper objectMapper;
 
     private final Map<String, TapoLocalDeviceConnection> localConnectionCache = new ConcurrentHashMap<>();
     private final Map<String, TapoAuthProtocol> workingProtocolCache = new ConcurrentHashMap<>();
@@ -36,11 +42,15 @@ public class TapoDeviceService {
     public TapoDeviceService(TapoCloudService tapoCloudService,
                              TapoDiscoveryService tapoDiscoveryService,
                              TapoDeviceFactory tapoDeviceFactory,
-                             TapoProperties tapoProperties) {
+                             TapoProperties tapoProperties,
+                             SmartDeviceRepository smartDeviceRepository,
+                             ObjectMapper objectMapper) {
         this.tapoCloudService = tapoCloudService;
         this.tapoDiscoveryService = tapoDiscoveryService;
         this.tapoDeviceFactory = tapoDeviceFactory;
         this.tapoProperties = tapoProperties;
+        this.smartDeviceRepository = smartDeviceRepository;
+        this.objectMapper = objectMapper;
 
         log.info("Tapo-Konfiguration: email={}, {} statische Geraete konfiguriert",
                 tapoProperties.getEmail() != null ? tapoProperties.getEmail() : "NICHT GESETZT",
@@ -284,7 +294,7 @@ public class TapoDeviceService {
         }
     }
 
-    private String resolveIpAddress(String deviceId) {
+    String resolveIpAddress(String deviceId) {
         String cached = deviceIpCache.get(deviceId);
         if (cached != null) {
             log.debug("IP fuer {} aus Cache: {}", deviceId, cached);
@@ -296,6 +306,19 @@ public class TapoDeviceService {
                 log.info("IP fuer {} aus statischer Konfiguration: {}", deviceId, config.getIp());
                 return config.getIp();
             }
+        }
+
+        SmartDevice stored = smartDeviceRepository
+                .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, deviceId)
+                .orElse(null);
+        if (stored != null && stored.getIpAddress() != null && !stored.getIpAddress().isBlank()) {
+            deviceIpCache.put(deviceId, stored.getIpAddress());
+            TapoAuthProtocol storedProtocol = readAuthProtocol(stored.getMetadata());
+            if (storedProtocol != null && storedProtocol != TapoAuthProtocol.UNKNOWN) {
+                workingProtocolCache.put(deviceId, storedProtocol);
+            }
+            log.info("IP fuer {} aus Datenbank: {}", deviceId, stored.getIpAddress());
+            return stored.getIpAddress();
         }
 
         // Auto-discover: try local UDP broadcast to find the device
@@ -312,6 +335,18 @@ public class TapoDeviceService {
             log.debug("Auto-Discovery fehlgeschlagen: {}", ex.getMessage());
         }
         return null;
+    }
+
+    private TapoAuthProtocol readAuthProtocol(String metadataJson) {
+        if (metadataJson == null || metadataJson.isBlank()) {
+            return null;
+        }
+        try {
+            Object value = objectMapper.readValue(metadataJson, java.util.Map.class).get("authProtocol");
+            return value instanceof String name ? TapoAuthProtocol.valueOf(name) : null;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private TapoAuthProtocol resolveProtocol(String deviceId, TapoAuthProtocol requested) {
