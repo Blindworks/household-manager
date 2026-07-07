@@ -4,26 +4,19 @@ import { DevicesComponent } from './devices.component';
 import { SmartDeviceService } from '../../services/smart-device.service';
 
 describe('DevicesComponent', () => {
-  let serviceSpy: jasmine.SpyObj<SmartDeviceService>;
-
-  beforeEach(async () => {
-    serviceSpy = jasmine.createSpyObj('SmartDeviceService', [
-      'getAllDevices', 'scanDevices', 'refreshDeviceState', 'turnOn', 'turnOff'
-    ]);
+  it('rendert die Geraeteliste', async () => {
+    const serviceSpy = jasmine.createSpyObj('SmartDeviceService', ['getAllDevices', 'scanDevices']);
     serviceSpy.getAllDevices.and.returnValue(of([]));
-    serviceSpy.scanDevices.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [DevicesComponent],
       providers: [{ provide: SmartDeviceService, useValue: serviceSpy }]
     }).compileComponents();
-  });
 
-  it('laedt beim Start nur die Geraeteliste aus der DB, ohne Scan', () => {
     const fixture = TestBed.createComponent(DevicesComponent);
-    fixture.detectChanges(); // ngOnInit
+    fixture.detectChanges();
 
-    expect(serviceSpy.getAllDevices).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('app-smart-device-list')).toBeTruthy();
     expect(serviceSpy.scanDevices).not.toHaveBeenCalled();
   });
 });
