@@ -75,3 +75,4 @@ com.household.manager/
 ## Links to Detailed Notes
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
 - [api-design.md](api-design.md) - REST API design standards
+- [smart-device-persistence.md](smart-device-persistence.md) - Tapo device discovery-to-DB upsert pattern, metadata merge rules, TDD flow
