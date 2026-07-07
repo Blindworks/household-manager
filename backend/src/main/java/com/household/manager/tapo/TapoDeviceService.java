@@ -1,9 +1,15 @@
 package com.household.manager.tapo;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.model.entity.DeviceType;
+import com.household.manager.model.entity.SmartDevice;
+import com.household.manager.repository.SmartDeviceRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +34,8 @@ public class TapoDeviceService {
     private final TapoDiscoveryService tapoDiscoveryService;
     private final TapoDeviceFactory tapoDeviceFactory;
     private final TapoProperties tapoProperties;
+    private final SmartDeviceRepository smartDeviceRepository;
+    private final ObjectMapper objectMapper;
 
     private final Map<String, TapoLocalDeviceConnection> localConnectionCache = new ConcurrentHashMap<>();
     private final Map<String, TapoAuthProtocol> workingProtocolCache = new ConcurrentHashMap<>();
@@ -36,11 +44,15 @@ public class TapoDeviceService {
     public TapoDeviceService(TapoCloudService tapoCloudService,
                              TapoDiscoveryService tapoDiscoveryService,
                              TapoDeviceFactory tapoDeviceFactory,
-                             TapoProperties tapoProperties) {
+                             TapoProperties tapoProperties,
+                             SmartDeviceRepository smartDeviceRepository,
+                             ObjectMapper objectMapper) {
         this.tapoCloudService = tapoCloudService;
         this.tapoDiscoveryService = tapoDiscoveryService;
         this.tapoDeviceFactory = tapoDeviceFactory;
         this.tapoProperties = tapoProperties;
+        this.smartDeviceRepository = smartDeviceRepository;
+        this.objectMapper = objectMapper;
 
         log.info("Tapo-Konfiguration: email={}, {} statische Geraete konfiguriert",
                 tapoProperties.getEmail() != null ? tapoProperties.getEmail() : "NICHT GESETZT",
@@ -97,9 +109,57 @@ public class TapoDeviceService {
                 deviceIpCache.put(device.deviceId(), device.ipAddress());
                 workingProtocolCache.put(device.deviceId(), device.authProtocol());
                 getOrCreateLocalConnection(device.deviceId(), device.ipAddress(), device.authProtocol());
+                persistDiscoveredDevice(device);
             }
         }
         return devices;
+    }
+
+    private void persistDiscoveredDevice(TapoDiscoveryDevice discovered) {
+        try {
+            SmartDevice device = smartDeviceRepository
+                    .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, discovered.deviceId())
+                    .orElseGet(() -> {
+                        SmartDevice created = new SmartDevice();
+                        created.setDeviceType(DeviceType.TAPO);
+                        created.setExternalDeviceId(discovered.deviceId());
+                        created.setCapabilities("SWITCH");
+                        return created;
+                    });
+            if (device.getDeviceName() == null || device.getDeviceName().isBlank()) {
+                device.setDeviceName(firstNonBlank(discovered.nickname(), discovered.model(), discovered.deviceId()));
+            }
+            if (discovered.model() != null && !discovered.model().isBlank()) {
+                device.setModel(discovered.model());
+            }
+            device.setIpAddress(discovered.ipAddress());
+            device.setOnline(true);
+            device.setPoweredOn(discovered.deviceOn());
+            device.setMetadata(mergeAuthProtocol(device.getMetadata(), discovered.authProtocol()));
+            smartDeviceRepository.save(device);
+        } catch (Exception ex) {
+            log.warn("Tapo-Geraet {} konnte nicht persistiert werden: {}",
+                    discovered.deviceId(), ex.getMessage());
+        }
+    }
+
+    private String mergeAuthProtocol(String metadataJson, TapoAuthProtocol protocol) {
+        Map<String, Object> metadata = new HashMap<>(readMetadata(metadataJson));
+        metadata.put("authProtocol", protocol.name());
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (Exception ex) {
+            return metadataJson;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "Tapo Device";
     }
 
     /**
@@ -142,21 +202,9 @@ public class TapoDeviceService {
     }
 
     public TapoDeviceState getStatus(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                JsonNode deviceInfo = executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        TapoLocalDeviceConnection::getDeviceInfo);
-                log.debug("Tapo-Geraet {} lokal erreicht ({})", deviceId, ipAddress);
-                return TapoDeviceState.fromLocal(deviceInfo, tapoCloudService);
-            } catch (Exception ex) {
-                log.debug("Lokale Verbindung zu {} ({}) fehlgeschlagen: {}, versuche V2 Cloud",
-                        deviceId, ipAddress, ex.getMessage());
-            }
-        }
-
-        TapoCloudDevice cloudDevice = tapoCloudService.findDeviceById(deviceId);
-        JsonNode deviceInfo = tapoCloudService.getDeviceInfo(deviceId);
-        return TapoDeviceState.from(deviceInfo, cloudDevice, tapoCloudService);
+        JsonNode deviceInfo = executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                TapoLocalDeviceConnection::getDeviceInfo);
+        return TapoDeviceState.fromLocal(deviceInfo, tapoCloudService);
     }
 
     public void turnOn(String deviceId) {
@@ -164,19 +212,9 @@ public class TapoDeviceService {
     }
 
     public void turnOn(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        conn -> { conn.setDevicePowered(true); return null; });
-                log.info("Tapo device switched on locally (deviceId={}, ip={})", deviceId, ipAddress);
-                return;
-            } catch (Exception ex) {
-                log.debug("Lokale Steuerung fuer {} ({}) fehlgeschlagen: {}, versuche V2 Cloud",
-                        deviceId, ipAddress, ex.getMessage());
-            }
-        }
-        tapoCloudService.setDevicePowered(deviceId, true);
-        log.info("Tapo device switched on via V2 Cloud (deviceId={})", deviceId);
+        executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                conn -> { conn.setDevicePowered(true); return null; });
+        log.info("Tapo device switched on locally (deviceId={})", deviceId);
     }
 
     public void turnOff(String deviceId) {
@@ -184,19 +222,9 @@ public class TapoDeviceService {
     }
 
     public void turnOff(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        conn -> { conn.setDevicePowered(false); return null; });
-                log.info("Tapo device switched off locally (deviceId={}, ip={})", deviceId, ipAddress);
-                return;
-            } catch (Exception ex) {
-                log.debug("Lokale Steuerung fuer {} ({}) fehlgeschlagen: {}, versuche V2 Cloud",
-                        deviceId, ipAddress, ex.getMessage());
-            }
-        }
-        tapoCloudService.setDevicePowered(deviceId, false);
-        log.info("Tapo device switched off via V2 Cloud (deviceId={})", deviceId);
+        executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                conn -> { conn.setDevicePowered(false); return null; });
+        log.info("Tapo device switched off locally (deviceId={})", deviceId);
     }
 
     public JsonNode getEnergyUsage(String deviceId) {
@@ -204,16 +232,8 @@ public class TapoDeviceService {
     }
 
     public JsonNode getEnergyUsage(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                return executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        TapoLocalDeviceConnection::getEnergyUsage);
-            } catch (Exception ex) {
-                log.debug("Lokaler Energieverbrauch fuer {} fehlgeschlagen: {}, versuche Cloud",
-                        deviceId, ex.getMessage());
-            }
-        }
-        return tapoCloudService.getEnergyUsage(deviceId);
+        return executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                TapoLocalDeviceConnection::getEnergyUsage);
     }
 
     public JsonNode getCurrentPower(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
@@ -243,9 +263,58 @@ public class TapoDeviceService {
     }
 
     public void clearLocalConnection(String deviceId) {
-        localConnectionCache.remove(deviceId);
+        removeLocalConnections(deviceId);
         workingProtocolCache.remove(deviceId);
         deviceIpCache.remove(deviceId);
+    }
+
+    /**
+     * Fuehrt eine lokale Aktion aus. Schlaegt sie fehl (oder fehlt die IP),
+     * laeuft genau EINE Re-Discovery; liefert sie eine neue IP, wird die Aktion
+     * einmal wiederholt. Der Tapo-Cloud-Passthrough kann Geraete nicht steuern
+     * (immer -20571) und wird bewusst nicht mehr verwendet.
+     */
+    private JsonNode executeLocalWithRediscovery(String deviceId, String ipAddress,
+                                                 TapoAuthProtocol protocol,
+                                                 LocalDeviceAction action) {
+        if (ipAddress == null || ipAddress.isBlank()) {
+            String discovered = rediscoverIp(deviceId);
+            if (discovered == null) {
+                throw new TapoException("Keine IP fuer Tapo-Geraet " + deviceId
+                        + " bekannt (auch nach erneuter Suche). Bitte Rescan ausfuehren.");
+            }
+            return executeLocalWithFallback(deviceId, discovered, resolveProtocol(deviceId, protocol), action);
+        }
+        try {
+            return executeLocalWithFallback(deviceId, ipAddress, protocol, action);
+        } catch (Exception ex) {
+            log.info("Lokale Steuerung fuer {} ({}) fehlgeschlagen ({}), starte Re-Discovery",
+                    deviceId, ipAddress, ex.getMessage());
+            String freshIp = rediscoverIp(deviceId);
+            if (freshIp == null || freshIp.equals(ipAddress)) {
+                throw new TapoException("Tapo-Geraet " + deviceId
+                        + " ist lokal nicht erreichbar (auch nach erneuter Suche): " + ex.getMessage(), ex);
+            }
+            log.info("Neue IP fuer {} gefunden: {} (vorher {})", deviceId, freshIp, ipAddress);
+            return executeLocalWithFallback(deviceId, freshIp, resolveProtocol(deviceId, null), action);
+        }
+    }
+
+    private String rediscoverIp(String deviceId) {
+        deviceIpCache.remove(deviceId);
+        removeLocalConnections(deviceId);
+        try {
+            discoverLocalDevices();
+        } catch (Exception ex) {
+            log.debug("Re-Discovery fehlgeschlagen: {}", ex.getMessage());
+        }
+        return deviceIpCache.get(deviceId);
+    }
+
+    private void removeLocalConnections(String deviceId) {
+        for (TapoAuthProtocol protocol : TapoAuthProtocol.values()) {
+            localConnectionCache.remove(deviceId + ":" + protocol.name());
+        }
     }
 
     /**
@@ -268,7 +337,7 @@ public class TapoDeviceService {
         } catch (Exception ex) {
             log.debug("{}-Protokoll fuer {} fehlgeschlagen: {}, versuche {}",
                     preferred, deviceId, ex.getMessage(), alternative);
-            localConnectionCache.remove(deviceId);
+            localConnectionCache.remove(deviceId + ":" + preferred.name());
         }
 
         // Try alternative protocol
@@ -279,12 +348,12 @@ public class TapoDeviceService {
             log.info("Tapo device {} funktioniert mit {} (statt {})", deviceId, alternative, preferred);
             return result;
         } catch (Exception ex) {
-            localConnectionCache.remove(deviceId);
+            localConnectionCache.remove(deviceId + ":" + alternative.name());
             throw new TapoException("Lokale Steuerung fuer " + deviceId + " mit beiden Protokollen fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
 
-    private String resolveIpAddress(String deviceId) {
+    String resolveIpAddress(String deviceId) {
         String cached = deviceIpCache.get(deviceId);
         if (cached != null) {
             log.debug("IP fuer {} aus Cache: {}", deviceId, cached);
@@ -296,6 +365,19 @@ public class TapoDeviceService {
                 log.info("IP fuer {} aus statischer Konfiguration: {}", deviceId, config.getIp());
                 return config.getIp();
             }
+        }
+
+        SmartDevice stored = smartDeviceRepository
+                .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, deviceId)
+                .orElse(null);
+        if (stored != null && stored.getIpAddress() != null && !stored.getIpAddress().isBlank()) {
+            deviceIpCache.put(deviceId, stored.getIpAddress());
+            TapoAuthProtocol storedProtocol = readAuthProtocol(stored.getMetadata());
+            if (storedProtocol != null && storedProtocol != TapoAuthProtocol.UNKNOWN) {
+                workingProtocolCache.put(deviceId, storedProtocol);
+            }
+            log.info("IP fuer {} aus Datenbank: {}", deviceId, stored.getIpAddress());
+            return stored.getIpAddress();
         }
 
         // Auto-discover: try local UDP broadcast to find the device
@@ -310,6 +392,30 @@ public class TapoDeviceService {
             log.info("Auto-Discovery fand {} Geraete, aber keines mit ID {}", localDevices.size(), deviceId);
         } catch (Exception ex) {
             log.debug("Auto-Discovery fehlgeschlagen: {}", ex.getMessage());
+        }
+        return null;
+    }
+
+    private Map<String, Object> readMetadata(String metadataJson) {
+        if (metadataJson == null || metadataJson.isBlank()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception ex) {
+            log.debug("Geraete-Metadata nicht lesbar: {}", ex.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private TapoAuthProtocol readAuthProtocol(String metadataJson) {
+        Object value = readMetadata(metadataJson).get("authProtocol");
+        if (value instanceof String name) {
+            try {
+                return TapoAuthProtocol.valueOf(name);
+            } catch (IllegalArgumentException ex) {
+                log.debug("Unbekanntes authProtocol in Metadata: {}", name);
+            }
         }
         return null;
     }
