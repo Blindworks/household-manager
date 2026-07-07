@@ -26,7 +26,7 @@ export class DevicesComponent implements OnInit {
   togglingDevices = new Set<number>();
 
   ngOnInit(): void {
-    this.scanAllDeviceTypes();
+    this.loadDevices();
   }
 
   private updateDeviceInList(updatedDevice: SmartDevice): void {
