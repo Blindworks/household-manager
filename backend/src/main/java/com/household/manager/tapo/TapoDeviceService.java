@@ -104,62 +104,19 @@ public class TapoDeviceService {
             }
         }
 
+        // Discovery updates only the in-memory caches. Writing to smart_devices here
+        // would run as a side effect inside whatever transaction called us (refresh /
+        // switch), and concurrent background refreshes would then write the same rows
+        // from parallel connections -> MariaDB 1020 "Record has changed". Persistence
+        // belongs solely to the explicit scan (SmartDeviceService.upsertTapoDevice).
         for (TapoDiscoveryDevice device : devices) {
             if (device.deviceId() != null && device.ipAddress() != null) {
                 deviceIpCache.put(device.deviceId(), device.ipAddress());
                 workingProtocolCache.put(device.deviceId(), device.authProtocol());
                 getOrCreateLocalConnection(device.deviceId(), device.ipAddress(), device.authProtocol());
-                persistDiscoveredDevice(device);
             }
         }
         return devices;
-    }
-
-    private void persistDiscoveredDevice(TapoDiscoveryDevice discovered) {
-        try {
-            SmartDevice device = smartDeviceRepository
-                    .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, discovered.deviceId())
-                    .orElseGet(() -> {
-                        SmartDevice created = new SmartDevice();
-                        created.setDeviceType(DeviceType.TAPO);
-                        created.setExternalDeviceId(discovered.deviceId());
-                        created.setCapabilities("SWITCH");
-                        return created;
-                    });
-            if (device.getDeviceName() == null || device.getDeviceName().isBlank()) {
-                device.setDeviceName(firstNonBlank(discovered.nickname(), discovered.model(), discovered.deviceId()));
-            }
-            if (discovered.model() != null && !discovered.model().isBlank()) {
-                device.setModel(discovered.model());
-            }
-            device.setIpAddress(discovered.ipAddress());
-            device.setOnline(true);
-            device.setPoweredOn(discovered.deviceOn());
-            device.setMetadata(mergeAuthProtocol(device.getMetadata(), discovered.authProtocol()));
-            smartDeviceRepository.save(device);
-        } catch (Exception ex) {
-            log.warn("Tapo-Geraet {} konnte nicht persistiert werden: {}",
-                    discovered.deviceId(), ex.getMessage());
-        }
-    }
-
-    private String mergeAuthProtocol(String metadataJson, TapoAuthProtocol protocol) {
-        Map<String, Object> metadata = new HashMap<>(readMetadata(metadataJson));
-        metadata.put("authProtocol", protocol.name());
-        try {
-            return objectMapper.writeValueAsString(metadata);
-        } catch (Exception ex) {
-            return metadataJson;
-        }
-    }
-
-    private static String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return "Tapo Device";
     }
 
     /**
@@ -202,7 +159,7 @@ public class TapoDeviceService {
     }
 
     public TapoDeviceState getStatus(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        JsonNode deviceInfo = executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+        JsonNode deviceInfo = executeLocalReadOnly(deviceId, ipAddress, protocol,
                 TapoLocalDeviceConnection::getDeviceInfo);
         return TapoDeviceState.fromLocal(deviceInfo, tapoCloudService);
     }
@@ -232,7 +189,7 @@ public class TapoDeviceService {
     }
 
     public JsonNode getEnergyUsage(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        return executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+        return executeLocalReadOnly(deviceId, ipAddress, protocol,
                 TapoLocalDeviceConnection::getEnergyUsage);
     }
 
@@ -269,10 +226,26 @@ public class TapoDeviceService {
     }
 
     /**
-     * Fuehrt eine lokale Aktion aus. Schlaegt sie fehl (oder fehlt die IP),
-     * laeuft genau EINE Re-Discovery; liefert sie eine neue IP, wird die Aktion
-     * einmal wiederholt. Der Tapo-Cloud-Passthrough kann Geraete nicht steuern
-     * (immer -20571) und wird bewusst nicht mehr verwendet.
+     * Reiner Lesepfad (Status/Energie): genau EIN lokaler Versuch mit der bekannten IP,
+     * ohne Re-Discovery. Statusabfragen werden im Hintergrund und parallel fuer alle
+     * Geraete gefeuert; eine Re-Discovery pro Fehlschlag wuerde einen UDP-Broadcast-Sturm
+     * ausloesen. Bei fehlender IP oder lokalem Fehlschlag wird eine TapoException geworfen,
+     * die der Aufrufer als "offline" behandelt. Selbstheilung bleibt dem Schreibpfad
+     * (turnOn/turnOff) vorbehalten.
+     */
+    private JsonNode executeLocalReadOnly(String deviceId, String ipAddress,
+                                          TapoAuthProtocol protocol, LocalDeviceAction action) {
+        if (ipAddress == null || ipAddress.isBlank()) {
+            throw new TapoException("Keine lokale IP fuer Tapo-Geraet " + deviceId + " bekannt.");
+        }
+        return executeLocalWithFallback(deviceId, ipAddress, protocol, action);
+    }
+
+    /**
+     * Schreibpfad (turnOn/turnOff): fuehrt eine lokale Aktion aus. Schlaegt sie fehl
+     * (oder fehlt die IP), laeuft genau EINE Re-Discovery; liefert sie eine neue IP,
+     * wird die Aktion einmal wiederholt. Der Tapo-Cloud-Passthrough kann Geraete nicht
+     * steuern (immer -20571) und wird bewusst nicht mehr verwendet.
      */
     private JsonNode executeLocalWithRediscovery(String deviceId, String ipAddress,
                                                  TapoAuthProtocol protocol,
