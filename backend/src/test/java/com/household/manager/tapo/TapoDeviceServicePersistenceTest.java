@@ -10,8 +10,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
-import org.mockito.ArgumentCaptor;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -69,10 +67,8 @@ class TapoDeviceServicePersistenceTest {
     }
 
     @Test
-    @DisplayName("Discovery legt unbekannte Geraete in der DB an")
-    void discoveryPersistsNewDevices() {
-        when(repository.findByDeviceTypeAndExternalDeviceId(any(), any()))
-                .thenReturn(Optional.empty());
+    @DisplayName("Discovery schreibt NICHT in die DB (kein transaktionaler Nebeneffekt)")
+    void discoverLocalDevicesDoesNotPersist() {
         when(discoveryService.discoverLocalDevices(any(), any())).thenReturn(List.of(
                 new TapoDiscoveryDevice("192.168.1.153", TapoAuthProtocol.KLAP,
                         "DEV1", "L900-5(EU)", "Lichtstreifen Buero", true)));
@@ -81,45 +77,27 @@ class TapoDeviceServicePersistenceTest {
 
         newService().discoverLocalDevices();
 
-        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
-        verify(repository).save(captor.capture());
-        SmartDevice saved = captor.getValue();
-        assertEquals("192.168.1.153", saved.getIpAddress());
-        assertEquals("DEV1", saved.getExternalDeviceId());
-        assertEquals("Lichtstreifen Buero", saved.getDeviceName());
-        assertTrue(saved.getMetadata().contains("\"authProtocol\":\"KLAP\""));
+        // Persistenz gehoert ausschliesslich in den expliziten Scan (SmartDeviceService),
+        // damit Discovery gefahrlos aus fremden Transaktionen (Refresh/Steuerung) aufgerufen werden kann.
+        verify(repository, never()).save(any(SmartDevice.class));
     }
 
     @Test
-    @DisplayName("Discovery aktualisiert IP, ohne Namen oder fremde Metadata zu ueberschreiben")
-    void discoveryUpdatesExistingDeviceWithoutClobbering() {
-        SmartDevice existing = new SmartDevice();
-        existing.setDeviceType(DeviceType.TAPO);
-        existing.setExternalDeviceId("DEV1");
-        existing.setDeviceName("Mein Wunschname");
-        existing.setIpAddress("192.168.1.99");
-        existing.setMetadata("{\"deviceMac\":\"aa:bb\"}");
-        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
-                .thenReturn(Optional.of(existing));
-        when(discoveryService.discoverLocalDevices(any(), any())).thenReturn(List.of(
-                new TapoDiscoveryDevice("192.168.1.153", TapoAuthProtocol.KLAP,
-                        "DEV1", "L900-5(EU)", "Lichtstreifen Buero", true)));
-        when(deviceFactory.create(any(), any(), any(), any()))
-                .thenReturn(mock(TapoLocalDeviceConnection.class));
+    @DisplayName("getStatus loest bei lokalem Fehlschlag KEINE Re-Discovery aus")
+    void getStatusDoesNotRediscoverOnLocalFailure() {
+        TapoLocalDeviceConnection deadConnection = mock(TapoLocalDeviceConnection.class);
+        when(deadConnection.getDeviceInfo()).thenThrow(new TapoException("connect timed out"));
+        when(deviceFactory.create(any(), any(), any(), any())).thenReturn(deadConnection);
 
-        newService().discoverLocalDevices();
+        assertThrows(TapoException.class,
+                () -> newService().getStatus("DEV1", "192.168.1.50", TapoAuthProtocol.KLAP));
 
-        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
-        verify(repository).save(captor.capture());
-        SmartDevice saved = captor.getValue();
-        assertEquals("192.168.1.153", saved.getIpAddress());
-        assertEquals("Mein Wunschname", saved.getDeviceName());
-        assertTrue(saved.getMetadata().contains("deviceMac"));
-        assertTrue(saved.getMetadata().contains("\"authProtocol\":\"KLAP\""));
+        // Lesepfade duerfen keinen UDP-Discovery-Sturm ausloesen (nur turnOn/turnOff heilen selbst).
+        verify(discoveryService, never()).discoverLocalDevices(any(), any());
     }
 
     @Test
-    @DisplayName("Bei toter gespeicherter IP: Re-Discovery, DB-Update, ein Retry")
+    @DisplayName("Bei toter gespeicherter IP: Re-Discovery und ein Retry (ohne DB-Schreiben)")
     void healsStaleIpViaRediscovery() {
         TapoLocalDeviceConnection deadConnection = mock(TapoLocalDeviceConnection.class);
         doThrow(new TapoException("connect timed out"))
@@ -130,8 +108,6 @@ class TapoDeviceServicePersistenceTest {
                 .thenReturn(deadConnection);
         when(deviceFactory.create(any(), eq("192.168.1.153"), any(), any()))
                 .thenReturn(freshConnection);
-        when(repository.findByDeviceTypeAndExternalDeviceId(any(), any()))
-                .thenReturn(Optional.empty());
         when(discoveryService.discoverLocalDevices(any(), any())).thenReturn(List.of(
                 new TapoDiscoveryDevice("192.168.1.153", TapoAuthProtocol.KLAP,
                         "DEV1", "P110(EU)", "Stern", true)));
@@ -139,7 +115,8 @@ class TapoDeviceServicePersistenceTest {
         newService().turnOn("DEV1", "192.168.1.99", TapoAuthProtocol.KLAP);
 
         verify(freshConnection).setDevicePowered(true);
-        verify(repository).save(any(SmartDevice.class));
+        // Selbstheilung aktualisiert nur den In-Memory-Cache; die DB wird beim naechsten Scan geschrieben.
+        verify(repository, never()).save(any(SmartDevice.class));
         verify(cloudService, never()).setDevicePowered(any(), anyBoolean());
     }
 
