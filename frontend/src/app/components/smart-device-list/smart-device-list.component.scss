@@ -39,16 +39,6 @@
   }
 }
 
-.refresh-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  stroke-width: 2.5;
-
-  .refresh-btn:hover & {
-    animation: spin 0.6s ease-in-out;
-  }
-}
-
 // Loading State
 .dashboard__loading {
   display: flex;
