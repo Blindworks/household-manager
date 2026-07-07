@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -73,6 +74,16 @@ public class MqttConnection {
 
     protected MqttConnection() {
 
+    }
+
+    public void disconnect() {
+        try {
+            if (blockingClient != null) {
+                blockingClient.disconnect();
+            }
+        } catch (Exception e) {
+            log.debug("Error disconnecting MQTT client: {}", e.getMessage());
+        }
     }
 
     public void connectToBroker() throws MQTTException {
@@ -220,7 +231,12 @@ public class MqttConnection {
 
 
     protected void generateFClientandAppId() {
-        String stringToHash = String.format("%s%s", "API", this.uuid);
+        // Meross requires a UNIQUE MQTT client id per connection. The old code hashed
+        // this.uuid, which is always null here, so every connection shared one constant id.
+        // Concurrent connections with the same id evict each other from the broker
+        // ("Session expired as connection was closed"), which broke parallel status reads.
+        // The reference meross_iot library randomises the app id per instance; do the same.
+        String stringToHash = String.format("%s%s", "API", UUID.randomUUID());
         this.appId = md5DigestAsHex(stringToHash.getBytes(UTF_8));
         this.clientid = "app:" + appId;
     }

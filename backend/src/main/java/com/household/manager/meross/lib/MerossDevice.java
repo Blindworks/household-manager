@@ -38,6 +38,10 @@ public class MerossDevice {
 
 
 
+    public void disconnect() {
+        connection.disconnect();
+    }
+
     public MerossDevice(AttachedDevice device, MqttConnection connection) {
         this.device = device;
         this.connection = connection;

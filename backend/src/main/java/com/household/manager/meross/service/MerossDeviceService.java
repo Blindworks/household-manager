@@ -27,21 +27,22 @@ public class MerossDeviceService {
 
     public List<MerossPlugResponse> discoverPlugs() {
         MerossCloudDevicesResponse response = merossCloudAuthService.listDevicesWithConfiguredCredentials();
+        MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
         return response.devices().stream()
-                .map(this::toResponse)
+                .map(device -> toResponse(device, login))
                 .sorted((a, b) -> a.name().compareToIgnoreCase(b.name()))
                 .toList();
     }
 
     public MerossPlugResponse getStatus(String deviceId) {
-        // Use Cloud API instead of MQTT to avoid library initialization issues
         MerossCloudDevicesResponse response = merossCloudAuthService.listDevicesWithConfiguredCredentials();
         MerossCloudDevice cloudDevice = response.devices().stream()
                 .filter(device -> deviceId.equals(device.uuid()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Meross-Geraet nicht gefunden: " + deviceId));
 
-        return toResponse(cloudDevice);
+        MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
+        return toResponse(cloudDevice, login);
     }
 
     public void turnOn(String deviceId) {
@@ -66,15 +67,20 @@ public class MerossDeviceService {
 
     private MerossDevice buildMqttDevice(String deviceId) {
         validateConfiguration();
+        MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
+        MerossCloudDevicesResponse devices = merossCloudAuthService.listDevicesWithConfiguredCredentials();
+        MerossCloudDevice cloudDevice = devices.devices().stream()
+                .filter(device -> deviceId.equals(device.uuid()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Meross-Geraet nicht gefunden: " + deviceId));
+        return buildMqttDevice(cloudDevice, login);
+    }
+
+    private MerossDevice buildMqttDevice(MerossCloudDevice cloudDevice, MerossCloudLoginResponse login) {
+        validateConfiguration();
+        String deviceId = cloudDevice.uuid();
         try {
             log.info("Meross MQTT build start (deviceId={})", deviceId);
-            MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
-            MerossCloudDevicesResponse devices = merossCloudAuthService.listDevicesWithConfiguredCredentials();
-            MerossCloudDevice cloudDevice = devices.devices().stream()
-                    .filter(device -> deviceId.equals(device.uuid()))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Meross-Geraet nicht gefunden: " + deviceId));
-
             Device mqttDevice = new Device();
             mqttDevice.setUuid(cloudDevice.uuid());
             mqttDevice.setDevName(cloudDevice.devName());
@@ -117,44 +123,34 @@ public class MerossDeviceService {
         }
     }
 
-    private MerossPlugResponse toResponse(String deviceId, MerossDevice merossDevice) {
-        AttachedDevice attachedDevice = readAttachedDevice(merossDevice);
-        boolean on = readFirstChannelState(merossDevice);
-
-        String name = attachedDevice != null && attachedDevice.getDevName() != null && !attachedDevice.getDevName().isBlank()
-                ? attachedDevice.getDevName()
-                : deviceId;
-        String deviceType = attachedDevice != null && attachedDevice.getDeviceType() != null
-                ? attachedDevice.getDeviceType()
-                : "unknown";
-        String onlineStatus = attachedDevice == null ? "unknown" : (attachedDevice.isOnline() ? "online" : "offline");
-
-        return new MerossPlugResponse(deviceId, name, deviceType, on, onlineStatus);
-    }
-
-    private MerossPlugResponse toResponse(MerossCloudDevice cloudDevice) {
+    private MerossPlugResponse toResponse(MerossCloudDevice cloudDevice, MerossCloudLoginResponse login) {
         String onlineStatus = toOnlineStatus(cloudDevice.onlineStatus());
+        // The cloud device list carries no toggle state. Read it over MQTT (the only path that
+        // works against the device). Skip offline devices, which cannot answer and would only
+        // block on the MQTT receive timeout.
+        boolean on = "online".equals(onlineStatus) && readOnStateViaMqtt(cloudDevice, login);
         return new MerossPlugResponse(
                 cloudDevice.uuid(),
                 cloudDevice.devName(),
                 cloudDevice.deviceType(),
-                false,
+                on,
                 onlineStatus
         );
     }
 
-    private AttachedDevice readAttachedDevice(MerossDevice merossDevice) {
+    private boolean readOnStateViaMqtt(MerossCloudDevice cloudDevice, MerossCloudLoginResponse login) {
+        MerossDevice device = null;
         try {
-            Field field = MerossDevice.class.getDeclaredField("device");
-            field.setAccessible(true);
-            Object value = field.get(merossDevice);
-            if (value instanceof AttachedDevice attachedDevice) {
-                return attachedDevice;
+            device = buildMqttDevice(cloudDevice, login);
+            return readFirstChannelState(device);
+        } catch (Exception ex) {
+            log.warn("Meross MQTT state read failed (deviceId={}): {}", cloudDevice.uuid(), ex.getMessage());
+            return false;
+        } finally {
+            if (device != null) {
+                device.disconnect();
             }
-        } catch (Throwable ex) {
-            log.debug("Could not read Meross attached device metadata", ex);
         }
-        return null;
     }
 
     private boolean readFirstChannelState(MerossDevice merossDevice) {
