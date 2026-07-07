@@ -344,8 +344,8 @@ public class SmartDeviceService {
                         .orElseGet(() -> Optional.ofNullable(dto.deviceName()).filter(name -> !name.isBlank()).orElse("Tapo Device"))
         );
         device.setModel(dto.model());
-        device.setOnline(true); // Cloud status field is unreliable for Tapo devices
-        device.setPoweredOn(false);
+        // Cloud status field is unreliable for Tapo devices; only trust local reachability.
+        device.setOnline(localDevice != null);
         device.setCapabilities("SWITCH");
 
         Map<String, Object> metadata = tapoDeviceService.buildMetadata(dto);
@@ -369,6 +369,9 @@ public class SmartDeviceService {
                 device.setModel(state.model());
             }
         } catch (Exception ex) {
+            // Live probe failed: keep online (set above from local reachability) and
+            // poweredOn (last known-good value, either just persisted by local discovery
+            // or the SmartDevice default) untouched rather than clobbering them.
             log.debug("Skipping live Tapo state during scan for {}: {}", externalId, ex.getMessage());
         }
 
