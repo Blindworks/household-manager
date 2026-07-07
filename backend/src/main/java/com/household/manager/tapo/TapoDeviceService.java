@@ -202,21 +202,9 @@ public class TapoDeviceService {
     }
 
     public TapoDeviceState getStatus(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                JsonNode deviceInfo = executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        TapoLocalDeviceConnection::getDeviceInfo);
-                log.debug("Tapo-Geraet {} lokal erreicht ({})", deviceId, ipAddress);
-                return TapoDeviceState.fromLocal(deviceInfo, tapoCloudService);
-            } catch (Exception ex) {
-                log.debug("Lokale Verbindung zu {} ({}) fehlgeschlagen: {}, versuche V2 Cloud",
-                        deviceId, ipAddress, ex.getMessage());
-            }
-        }
-
-        TapoCloudDevice cloudDevice = tapoCloudService.findDeviceById(deviceId);
-        JsonNode deviceInfo = tapoCloudService.getDeviceInfo(deviceId);
-        return TapoDeviceState.from(deviceInfo, cloudDevice, tapoCloudService);
+        JsonNode deviceInfo = executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                TapoLocalDeviceConnection::getDeviceInfo);
+        return TapoDeviceState.fromLocal(deviceInfo, tapoCloudService);
     }
 
     public void turnOn(String deviceId) {
@@ -224,19 +212,9 @@ public class TapoDeviceService {
     }
 
     public void turnOn(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        conn -> { conn.setDevicePowered(true); return null; });
-                log.info("Tapo device switched on locally (deviceId={}, ip={})", deviceId, ipAddress);
-                return;
-            } catch (Exception ex) {
-                log.debug("Lokale Steuerung fuer {} ({}) fehlgeschlagen: {}, versuche V2 Cloud",
-                        deviceId, ipAddress, ex.getMessage());
-            }
-        }
-        tapoCloudService.setDevicePowered(deviceId, true);
-        log.info("Tapo device switched on via V2 Cloud (deviceId={})", deviceId);
+        executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                conn -> { conn.setDevicePowered(true); return null; });
+        log.info("Tapo device switched on locally (deviceId={})", deviceId);
     }
 
     public void turnOff(String deviceId) {
@@ -244,19 +222,9 @@ public class TapoDeviceService {
     }
 
     public void turnOff(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        conn -> { conn.setDevicePowered(false); return null; });
-                log.info("Tapo device switched off locally (deviceId={}, ip={})", deviceId, ipAddress);
-                return;
-            } catch (Exception ex) {
-                log.debug("Lokale Steuerung fuer {} ({}) fehlgeschlagen: {}, versuche V2 Cloud",
-                        deviceId, ipAddress, ex.getMessage());
-            }
-        }
-        tapoCloudService.setDevicePowered(deviceId, false);
-        log.info("Tapo device switched off via V2 Cloud (deviceId={})", deviceId);
+        executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                conn -> { conn.setDevicePowered(false); return null; });
+        log.info("Tapo device switched off locally (deviceId={})", deviceId);
     }
 
     public JsonNode getEnergyUsage(String deviceId) {
@@ -264,16 +232,8 @@ public class TapoDeviceService {
     }
 
     public JsonNode getEnergyUsage(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
-        if (ipAddress != null && !ipAddress.isBlank()) {
-            try {
-                return executeLocalWithFallback(deviceId, ipAddress, protocol,
-                        TapoLocalDeviceConnection::getEnergyUsage);
-            } catch (Exception ex) {
-                log.debug("Lokaler Energieverbrauch fuer {} fehlgeschlagen: {}, versuche Cloud",
-                        deviceId, ex.getMessage());
-            }
-        }
-        return tapoCloudService.getEnergyUsage(deviceId);
+        return executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                TapoLocalDeviceConnection::getEnergyUsage);
     }
 
     public JsonNode getCurrentPower(String deviceId, String ipAddress, TapoAuthProtocol protocol) {
@@ -303,9 +263,58 @@ public class TapoDeviceService {
     }
 
     public void clearLocalConnection(String deviceId) {
-        localConnectionCache.remove(deviceId);
+        removeLocalConnections(deviceId);
         workingProtocolCache.remove(deviceId);
         deviceIpCache.remove(deviceId);
+    }
+
+    /**
+     * Fuehrt eine lokale Aktion aus. Schlaegt sie fehl (oder fehlt die IP),
+     * laeuft genau EINE Re-Discovery; liefert sie eine neue IP, wird die Aktion
+     * einmal wiederholt. Der Tapo-Cloud-Passthrough kann Geraete nicht steuern
+     * (immer -20571) und wird bewusst nicht mehr verwendet.
+     */
+    private JsonNode executeLocalWithRediscovery(String deviceId, String ipAddress,
+                                                 TapoAuthProtocol protocol,
+                                                 LocalDeviceAction action) {
+        if (ipAddress == null || ipAddress.isBlank()) {
+            String discovered = rediscoverIp(deviceId);
+            if (discovered == null) {
+                throw new TapoException("Keine IP fuer Tapo-Geraet " + deviceId
+                        + " bekannt (auch nach erneuter Suche). Bitte Rescan ausfuehren.");
+            }
+            return executeLocalWithFallback(deviceId, discovered, resolveProtocol(deviceId, protocol), action);
+        }
+        try {
+            return executeLocalWithFallback(deviceId, ipAddress, protocol, action);
+        } catch (Exception ex) {
+            log.info("Lokale Steuerung fuer {} ({}) fehlgeschlagen ({}), starte Re-Discovery",
+                    deviceId, ipAddress, ex.getMessage());
+            String freshIp = rediscoverIp(deviceId);
+            if (freshIp == null || freshIp.equals(ipAddress)) {
+                throw new TapoException("Tapo-Geraet " + deviceId
+                        + " ist lokal nicht erreichbar (auch nach erneuter Suche): " + ex.getMessage(), ex);
+            }
+            log.info("Neue IP fuer {} gefunden: {} (vorher {})", deviceId, freshIp, ipAddress);
+            return executeLocalWithFallback(deviceId, freshIp, resolveProtocol(deviceId, null), action);
+        }
+    }
+
+    private String rediscoverIp(String deviceId) {
+        deviceIpCache.remove(deviceId);
+        removeLocalConnections(deviceId);
+        try {
+            discoverLocalDevices();
+        } catch (Exception ex) {
+            log.debug("Re-Discovery fehlgeschlagen: {}", ex.getMessage());
+        }
+        return deviceIpCache.get(deviceId);
+    }
+
+    private void removeLocalConnections(String deviceId) {
+        for (TapoAuthProtocol protocol : TapoAuthProtocol.values()) {
+            localConnectionCache.remove(deviceId + ":" + protocol.name());
+        }
     }
 
     /**
@@ -328,7 +337,7 @@ public class TapoDeviceService {
         } catch (Exception ex) {
             log.debug("{}-Protokoll fuer {} fehlgeschlagen: {}, versuche {}",
                     preferred, deviceId, ex.getMessage(), alternative);
-            localConnectionCache.remove(deviceId);
+            localConnectionCache.remove(deviceId + ":" + preferred.name());
         }
 
         // Try alternative protocol
@@ -339,7 +348,7 @@ public class TapoDeviceService {
             log.info("Tapo device {} funktioniert mit {} (statt {})", deviceId, alternative, preferred);
             return result;
         } catch (Exception ex) {
-            localConnectionCache.remove(deviceId);
+            localConnectionCache.remove(deviceId + ":" + alternative.name());
             throw new TapoException("Lokale Steuerung fuer " + deviceId + " mit beiden Protokollen fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
