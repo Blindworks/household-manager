@@ -1,5 +1,6 @@
 package com.household.manager.tapo;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.model.entity.DeviceType;
@@ -8,6 +9,7 @@ import com.household.manager.repository.SmartDeviceRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,9 +109,57 @@ public class TapoDeviceService {
                 deviceIpCache.put(device.deviceId(), device.ipAddress());
                 workingProtocolCache.put(device.deviceId(), device.authProtocol());
                 getOrCreateLocalConnection(device.deviceId(), device.ipAddress(), device.authProtocol());
+                persistDiscoveredDevice(device);
             }
         }
         return devices;
+    }
+
+    private void persistDiscoveredDevice(TapoDiscoveryDevice discovered) {
+        try {
+            SmartDevice device = smartDeviceRepository
+                    .findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, discovered.deviceId())
+                    .orElseGet(() -> {
+                        SmartDevice created = new SmartDevice();
+                        created.setDeviceType(DeviceType.TAPO);
+                        created.setExternalDeviceId(discovered.deviceId());
+                        created.setCapabilities("SWITCH");
+                        return created;
+                    });
+            if (device.getDeviceName() == null || device.getDeviceName().isBlank()) {
+                device.setDeviceName(firstNonBlank(discovered.nickname(), discovered.model(), discovered.deviceId()));
+            }
+            if (discovered.model() != null && !discovered.model().isBlank()) {
+                device.setModel(discovered.model());
+            }
+            device.setIpAddress(discovered.ipAddress());
+            device.setOnline(true);
+            device.setPoweredOn(discovered.deviceOn());
+            device.setMetadata(mergeAuthProtocol(device.getMetadata(), discovered.authProtocol()));
+            smartDeviceRepository.save(device);
+        } catch (Exception ex) {
+            log.warn("Tapo-Geraet {} konnte nicht persistiert werden: {}",
+                    discovered.deviceId(), ex.getMessage());
+        }
+    }
+
+    private String mergeAuthProtocol(String metadataJson, TapoAuthProtocol protocol) {
+        Map<String, Object> metadata = new HashMap<>(readMetadata(metadataJson));
+        metadata.put("authProtocol", protocol.name());
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (Exception ex) {
+            return metadataJson;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "Tapo Device";
     }
 
     /**
@@ -337,16 +387,28 @@ public class TapoDeviceService {
         return null;
     }
 
-    private TapoAuthProtocol readAuthProtocol(String metadataJson) {
+    private Map<String, Object> readMetadata(String metadataJson) {
         if (metadataJson == null || metadataJson.isBlank()) {
-            return null;
+            return Collections.emptyMap();
         }
         try {
-            Object value = objectMapper.readValue(metadataJson, java.util.Map.class).get("authProtocol");
-            return value instanceof String name ? TapoAuthProtocol.valueOf(name) : null;
+            return objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {});
         } catch (Exception ex) {
-            return null;
+            log.debug("Geraete-Metadata nicht lesbar: {}", ex.getMessage());
+            return Collections.emptyMap();
         }
+    }
+
+    private TapoAuthProtocol readAuthProtocol(String metadataJson) {
+        Object value = readMetadata(metadataJson).get("authProtocol");
+        if (value instanceof String name) {
+            try {
+                return TapoAuthProtocol.valueOf(name);
+            } catch (IllegalArgumentException ex) {
+                log.debug("Unbekanntes authProtocol in Metadata: {}", name);
+            }
+        }
+        return null;
     }
 
     private TapoAuthProtocol resolveProtocol(String deviceId, TapoAuthProtocol requested) {
