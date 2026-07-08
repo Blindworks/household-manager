@@ -3,6 +3,8 @@ package com.household.manager.zigbee.config;
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.mapper.ZigbeeEntityMapper;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeMessageParser;
@@ -30,6 +32,8 @@ public class ZigbeeMqttConfig {
     private final ZigbeeMessageParser parser;
     private final ZigbeeReadingService readingService;
     private final ZigbeeLiveService liveService;
+    private final ZigbeeEntityMapper zigbeeEntityMapper;
+    private final EntityStateService entityStateService;
 
     private Mqtt3AsyncClient client;
 
@@ -92,9 +96,19 @@ public class ZigbeeMqttConfig {
             parsed.ifPresent(msg -> {
                 var events = readingService.record(msg);
                 events.forEach(liveService::broadcast);
+                reportEntityStates(msg);
             });
         } catch (Exception ex) {
             log.debug("Failed to handle Zigbee MQTT message: {}", ex.getMessage());
+        }
+    }
+
+    private void reportEntityStates(ParsedZigbeeMessage message) {
+        try {
+            zigbeeEntityMapper.map(message).forEach(entityStateService::reportState);
+        } catch (Exception ex) {
+            log.warn("Failed to report zigbee entity states for {}: {}",
+                    message.friendlyName(), ex.getMessage());
         }
     }
 

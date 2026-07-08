@@ -1,0 +1,71 @@
+package com.household.manager.entitystate.mapper;
+
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityStateUpdate;
+import com.household.manager.zigbee.model.MeasurementType;
+import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
+import com.household.manager.zigbee.parser.ZigbeeMeasurementValue;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class ZigbeeEntityMapperTest {
+
+    private final ZigbeeEntityMapper mapper = new ZigbeeEntityMapper();
+
+    @Test
+    void mapsNumericMeasurementToSensorEntity() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage(
+                "Wohnzimmer Sensor", 87, 120,
+                List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")));
+
+        List<EntityStateUpdate> updates = mapper.map(message);
+
+        assertEquals(1, updates.size());
+        EntityStateUpdate update = updates.get(0);
+        assertEquals("sensor.zigbee_wohnzimmer_sensor_temperature", update.entityId());
+        assertEquals(EntityDomain.SENSOR, update.domain());
+        assertEquals("21.5", update.state());
+        assertEquals("°C", update.attributes().get("unit"));
+        assertEquals(87, update.attributes().get("batteryPercent"));
+        assertEquals(120, update.attributes().get("linkQuality"));
+        assertEquals("Wohnzimmer Sensor Temperatur", update.friendlyName());
+    }
+
+    @Test
+    void mapsBinaryMeasurementToBinarySensorEntity() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage(
+                "Haustür", null, null,
+                List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ONE, "")));
+
+        List<EntityStateUpdate> updates = mapper.map(message);
+
+        EntityStateUpdate update = updates.get(0);
+        assertEquals("binary_sensor.zigbee_haustuer_contact", update.entityId());
+        assertEquals(EntityDomain.BINARY_SENSOR, update.domain());
+        assertEquals("on", update.state());
+    }
+
+    @Test
+    void mapsZeroBinaryValueToOff() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage(
+                "Haustür", null, null,
+                List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ZERO, "")));
+
+        assertEquals("off", mapper.map(message).get(0).state());
+    }
+
+    @Test
+    void mapsMultipleMeasurementsToMultipleEntities() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage(
+                "Bad", 50, 100,
+                List.of(
+                        new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("22.0"), "°C"),
+                        new ZigbeeMeasurementValue(MeasurementType.HUMIDITY, new BigDecimal("55"), "%")));
+
+        assertEquals(2, mapper.map(message).size());
+    }
+}
