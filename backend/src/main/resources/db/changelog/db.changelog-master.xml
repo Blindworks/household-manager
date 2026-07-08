@@ -62,4 +62,7 @@
     <!-- Remove Kasa devices that were misclassified and persisted as Tapo -->
     <include file="db/changelog/changes/20260707-0027-remove-kasa-rows-misclassified-as-tapo.xml"/>
 
+    <!-- Alexa TTS Announcements Feature -->
+    <include file="db/changelog/changes/20260708-0028-create-alexa-tables.xml"/>
+
 </databaseChangeLog>
