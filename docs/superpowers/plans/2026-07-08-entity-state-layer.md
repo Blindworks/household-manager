@@ -28,6 +28,9 @@ cd backend
 - Schemaänderungen NUR über Liquibase-Changesets.
 - Lombok verwenden (`@Data`, `@Builder`, `@Slf4j`, `@RequiredArgsConstructor`).
 
+**KANONISCHES HOOK-MUSTER (Review-Erkenntnis aus Task 6, gilt für ALLE Hooks in Tasks 6–12):**
+Das Mapping läuft außerhalb des try/catch der Facade — deshalb muss der private Report-Helper in der Integration selbst die Fehlergrenze sein. Jeder Hook-Helper wrappt seinen GESAMTEN Rumpf (Mapping + reportState-Aufrufe) in `try { ... } catch (Exception ex) { log.warn("Failed to report entity state ...: {}", ex.getMessage()); }`. Damit kann weder ein Mapper-Fehler (z. B. `EntityIds.build` bei leerem Slug) noch sonst irgendetwas aus der Spiegel-Schicht eine Integration brechen, eine Polling-Schleife abbrechen oder eine Transaktion zurückrollen. Die Code-Blöcke der Tasks 7–12 unten sind entsprechend zu interpretieren: Helper-Rumpf immer so wrappen.
+
 ---
 
 ### Task 1: Enums, JPA-Entity, Repository, Liquibase-Changeset
