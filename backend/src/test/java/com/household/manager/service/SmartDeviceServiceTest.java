@@ -1,6 +1,8 @@
 package com.household.manager.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
 import com.household.manager.kasa.KasaService;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
@@ -40,10 +42,13 @@ class SmartDeviceServiceTest {
     private final KasaDiscoveryService kasaDiscoveryService = mock(KasaDiscoveryService.class);
     private final MerossDeviceService merossDeviceService = mock(MerossDeviceService.class);
     private final TapoDeviceService tapoDeviceService = mock(TapoDeviceService.class);
+    private final SmartDeviceEntityMapper smartDeviceEntityMapper = new SmartDeviceEntityMapper();
+    private final EntityStateService entityStateService = mock(EntityStateService.class);
 
     private SmartDeviceService newService() {
         return new SmartDeviceService(repository, kasaService, kasaDiscoveryService,
-                merossDeviceService, tapoDeviceService, new ObjectMapper());
+                merossDeviceService, tapoDeviceService, new ObjectMapper(),
+                smartDeviceEntityMapper, entityStateService);
     }
 
     @Test

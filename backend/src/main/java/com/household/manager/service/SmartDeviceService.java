@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
 import com.household.manager.kasa.KasaService;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
@@ -44,6 +46,8 @@ public class SmartDeviceService {
     private final MerossDeviceService merossDeviceService;
     private final TapoDeviceService tapoDeviceService;
     private final ObjectMapper objectMapper;
+    private final SmartDeviceEntityMapper smartDeviceEntityMapper;
+    private final EntityStateService entityStateService;
 
     /**
      * Get all smart devices from the database.
@@ -91,6 +95,8 @@ public class SmartDeviceService {
             case TAPO -> scanTapoDevices();
             case MEROSS -> scanMerossDevices();
         };
+
+        persistedDevices.forEach(this::reportEntityState);
 
         log.info("Scanned and persisted {} {} devices", persistedDevices.size(), deviceType);
         return persistedDevices.stream()
@@ -161,6 +167,7 @@ public class SmartDeviceService {
             }
 
             SmartDevice updated = smartDeviceRepository.save(device);
+            reportEntityState(updated);
             log.info("Successfully refreshed device state for: {}", device.getDeviceName());
             return toResponse(updated);
         } catch (RuntimeException ex) {
@@ -197,6 +204,7 @@ public class SmartDeviceService {
 
             device.setPoweredOn(true);
             smartDeviceRepository.save(device);
+            reportEntityState(device);
             log.info("Successfully turned on device: {}", device.getDeviceName());
         } catch (RuntimeException ex) {
             throw ex;
@@ -232,6 +240,7 @@ public class SmartDeviceService {
 
             device.setPoweredOn(false);
             smartDeviceRepository.save(device);
+            reportEntityState(device);
             log.info("Successfully turned off device: {}", device.getDeviceName());
         } catch (RuntimeException ex) {
             throw ex;
@@ -516,5 +525,9 @@ public class SmartDeviceService {
             log.error("Failed to deserialize metadata", ex);
             return Collections.emptyMap();
         }
+    }
+
+    private void reportEntityState(SmartDevice device) {
+        entityStateService.reportState(smartDeviceEntityMapper.map(device));
     }
 }
