@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        The Tapo cloud account also lists Kasa devices. A too-permissive filter used to persist
+        those Kasa devices as DeviceType.TAPO, producing duplicate (and permanently "offline")
+        Tapo entries. The filter is now fixed; this changeset removes the already-persisted
+        misclassified rows. They are identified by the Kasa cloud deviceType ("IOT.*" / "*KASA*")
+        stored in their metadata JSON. Genuine Kasa entries (DeviceType.KASA) are untouched.
+    -->
+    <changeSet id="20260707-0027-remove-kasa-rows-misclassified-as-tapo" author="household-manager">
+        <sql dbms="mariadb,mysql">
+            DELETE FROM smart_devices
+            WHERE device_type = 'TAPO'
+              AND (
+                    LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceType'))) LIKE 'iot%'
+                 OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceType'))) LIKE '%kasa%'
+              )
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -3,6 +3,7 @@ package com.household.manager.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
 import com.household.manager.kasa.KasaService;
+import com.household.manager.kasa.dto.KasaDiscoveryDto;
 import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -105,5 +107,47 @@ class SmartDeviceServiceTest {
         verify(repository).save(captor.capture());
         SmartDevice saved = captor.getValue();
         assertFalse(saved.isOnline(), "nicht erreichbares Cloud-only-Geraet darf nicht als online gelten");
+    }
+
+    @Test
+    @DisplayName("Kasa-Scan identifiziert das Geraet ueber die stabile deviceId, nicht ueber die (DHCP-)IP")
+    void scanKasaUsesStableDeviceIdAsIdentity() {
+        KasaDiscoveryDto dto = new KasaDiscoveryDto();
+        dto.setIp("192.168.1.77");
+        dto.setDeviceId("8006ABCDEF");
+        dto.setModel("HS100(EU)");
+        dto.setAlias("Wohnzimmer");
+        dto.setRelayState(true);
+        when(kasaDiscoveryService.discover()).thenReturn(List.of(dto));
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.KASA, "8006ABCDEF"))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanAndPersistDevices(DeviceType.KASA);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals("8006ABCDEF", saved.getExternalDeviceId(),
+                "Kasa-Identitaet muss die stabile deviceId sein, nicht die IP");
+        assertEquals("192.168.1.77", saved.getIpAddress(), "IP wird weiterhin als Kommunikationsadresse gepflegt");
+        assertTrue(saved.isOnline(), "frisch entdecktes Geraet muss online sein");
+    }
+
+    @Test
+    @DisplayName("Kasa turnOn spricht das Geraet ueber die IP-Adresse an, nicht ueber die externalDeviceId")
+    void turnOnKasaUsesIpAddressForCommunication() {
+        SmartDevice device = new SmartDevice();
+        device.setId(5L);
+        device.setDeviceType(DeviceType.KASA);
+        device.setExternalDeviceId("8006ABCDEF");
+        device.setIpAddress("192.168.1.77");
+        device.setDeviceName("Wohnzimmer");
+        when(repository.findById(5L)).thenReturn(Optional.of(device));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().turnOn(5L);
+
+        verify(kasaService).turnOn("192.168.1.77");
     }
 }

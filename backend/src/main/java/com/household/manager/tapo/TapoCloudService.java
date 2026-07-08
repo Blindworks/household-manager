@@ -378,9 +378,19 @@ public class TapoCloudService {
 
     // ==================== Helpers ====================
 
-    private boolean isTapoDevice(TapoCloudDevice device) {
+    boolean isTapoDevice(TapoCloudDevice device) {
         String type = safeLower(device.deviceType());
         String model = safeLower(device.model());
+
+        // Kasa devices live in the same TP-Link cloud account but are controlled through the
+        // local Kasa integration. Their cloud deviceType is "iot.*" (e.g. IOT.SMARTPLUGSWITCH)
+        // or contains "kasa". Excluding them here stops duplicate Kasa entries from being
+        // persisted under Tapo. This exclusion wins over the permissive model-prefix heuristics
+        // below, which would otherwise misclassify Kasa models (e.g. LB/KL bulbs, cameras).
+        if (type.startsWith("iot") || type.contains("kasa")) {
+            return false;
+        }
+
         return type.contains("smart.tapo")
                 || model.startsWith("p1")
                 || model.startsWith("l")

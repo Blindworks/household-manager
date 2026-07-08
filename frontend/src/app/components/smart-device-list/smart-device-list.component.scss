@@ -39,6 +39,40 @@
   }
 }
 
+// View Toggle (Normal / Kompakt)
+.view-toggle {
+  display: inline-flex;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.view-toggle__btn {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(.view-toggle__btn--active) {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.view-toggle__btn--active {
+  background: white;
+  color: #5a3d8a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
 // Loading State
 .dashboard__loading {
   display: flex;
@@ -381,6 +415,95 @@
   border-top-color: #4a5568;
 }
 
+// Compact View
+.device-grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.device-card--compact {
+  padding: 0.875rem 1rem;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  cursor: pointer;
+
+  // Kartenspezifische Klick-Fläche liegt über dem Inhalt
+  .device-card__meta {
+    display: none;
+  }
+
+  .device-card__header {
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .device-card__name {
+    margin: 0;
+    font-size: 0.9375rem;
+    // Langer Titel bricht um, statt mit Ellipsis abgeschnitten zu werden
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+  }
+
+  .device-card__icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.625rem;
+  }
+
+  .icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+// Ganze Karte als Touch-Schaltfläche
+.device-card__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  border-radius: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background: rgba(66, 153, 225, 0.06);
+  }
+
+  &:not(:disabled):active {
+    background: rgba(66, 153, 225, 0.12);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(66, 153, 225, 0.6);
+    outline-offset: -3px;
+  }
+
+  .spinner--small {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-width: 3px;
+  }
+}
+
 // Error Message
 .message {
   position: relative;
@@ -465,10 +588,28 @@
   .device-card {
     padding: 1.25rem;
   }
+
+  // Kompakt bleibt mehrspaltig, damit der Touch-Vorteil auf kleinen Screens greift
+  .device-grid--compact {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+  }
+
+  .device-card--compact {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .view-toggle {
+    margin-left: 0;
+  }
 }
 
 @media (min-width: 1400px) {
   .device-grid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+
+  .device-grid--compact {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   }
 }

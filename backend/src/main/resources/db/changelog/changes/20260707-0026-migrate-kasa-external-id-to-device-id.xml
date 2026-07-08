@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Kasa devices used to be identified by their IP address (external_device_id = IP).
+        Because DHCP can reassign the IP, this created duplicate rows on rescan and left
+        stale entries stuck "offline". This changeset re-keys Kasa rows onto the stable
+        hardware deviceId (stored in the metadata JSON), keeping the IP only in ip_address.
+
+        Order matters: we must remove duplicates BEFORE rewriting external_device_id,
+        otherwise the unique constraint (device_type, external_device_id) would be violated.
+    -->
+    <changeSet id="20260707-0026-migrate-kasa-external-id-to-device-id" author="household-manager">
+
+        <!-- 1) Drop duplicate Kasa rows that share the same hardware deviceId, keeping the
+                most recently created row (highest id = latest known IP). -->
+        <sql dbms="mariadb,mysql">
+            DELETE t1 FROM smart_devices t1
+            INNER JOIN smart_devices t2
+                ON t1.device_type = 'KASA'
+               AND t2.device_type = 'KASA'
+               AND JSON_UNQUOTE(JSON_EXTRACT(t1.metadata, '$.deviceId'))
+                     = JSON_UNQUOTE(JSON_EXTRACT(t2.metadata, '$.deviceId'))
+               AND JSON_UNQUOTE(JSON_EXTRACT(t1.metadata, '$.deviceId')) IS NOT NULL
+               AND t1.id &lt; t2.id
+        </sql>
+
+        <!-- 2) Re-key the surviving Kasa rows onto the stable deviceId. Rows without a
+                deviceId in their metadata keep their IP-based id as a fallback. -->
+        <sql dbms="mariadb,mysql">
+            UPDATE smart_devices
+            SET external_device_id = JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceId'))
+            WHERE device_type = 'KASA'
+              AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceId')) IS NOT NULL
+              AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceId')) &lt;&gt; external_device_id
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>

@@ -4,6 +4,8 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { SmartDevice } from '../../models/smart-device.model';
 
+export type DeviceViewMode = 'normal' | 'compact';
+
 /**
  * Wiederverwendbare Geraeteliste aus der smart_devices-Datenbank
  * mit Schalten, Status-Refresh und manuellem Rescan (gesamt oder je Typ).
@@ -16,6 +18,8 @@ import { SmartDevice } from '../../models/smart-device.model';
   styleUrl: './smart-device-list.component.scss'
 })
 export class SmartDeviceListComponent implements OnInit {
+  private static readonly VIEW_MODE_STORAGE_KEY = 'smartDeviceViewMode';
+
   private readonly smartDeviceService = inject(SmartDeviceService);
   private readonly typeOrder: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
   readonly scanTypes: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
@@ -26,9 +30,37 @@ export class SmartDeviceListComponent implements OnInit {
   scanningType: SmartDevice['deviceType'] | 'ALL' | null = null;
   errorMessage: string | null = null;
   togglingDevices = new Set<number>();
+  viewMode: DeviceViewMode = 'normal';
 
   ngOnInit(): void {
+    this.viewMode = this.readStoredViewMode();
     this.loadDevices();
+  }
+
+  setViewMode(mode: DeviceViewMode): void {
+    if (this.viewMode === mode) {
+      return;
+    }
+    this.viewMode = mode;
+    this.persistViewMode(mode);
+  }
+
+  private readStoredViewMode(): DeviceViewMode {
+    try {
+      const stored = localStorage.getItem(SmartDeviceListComponent.VIEW_MODE_STORAGE_KEY);
+      return stored === 'compact' ? 'compact' : 'normal';
+    } catch {
+      // localStorage nicht verfügbar (z. B. Private Mode) - Standard verwenden
+      return 'normal';
+    }
+  }
+
+  private persistViewMode(mode: DeviceViewMode): void {
+    try {
+      localStorage.setItem(SmartDeviceListComponent.VIEW_MODE_STORAGE_KEY, mode);
+    } catch {
+      // Persistenz optional - Fehler still ignorieren
+    }
   }
 
   loadDevices(): void {
@@ -138,6 +170,11 @@ export class SmartDeviceListComponent implements OnInit {
 
   isDeviceToggling(deviceId: number): boolean {
     return this.togglingDevices.has(deviceId);
+  }
+
+  /** Flache, nach Typ-Reihenfolge sortierte Liste - für die Kompakt-Ansicht ohne Kategorien. */
+  get orderedDevices(): SmartDevice[] {
+    return this.groupedDevices.flatMap(group => group.devices);
   }
 
   get groupedDevices(): Array<{ type: SmartDevice['deviceType']; label: string; devices: SmartDevice[] }> {

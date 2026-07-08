@@ -56,4 +56,10 @@
     <include file="db/changelog/changes/20260624-0024-create-budgets-table.xml"/>
     <include file="db/changelog/changes/20260624-0025-seed-savings-investment-category.xml"/>
 
+    <!-- Kasa: re-key devices from IP to stable hardware deviceId -->
+    <include file="db/changelog/changes/20260707-0026-migrate-kasa-external-id-to-device-id.xml"/>
+
+    <!-- Remove Kasa devices that were misclassified and persisted as Tapo -->
+    <include file="db/changelog/changes/20260707-0027-remove-kasa-rows-misclassified-as-tapo.xml"/>
+
 </databaseChangeLog>

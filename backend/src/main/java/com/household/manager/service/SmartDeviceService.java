@@ -186,7 +186,7 @@ public class SmartDeviceService {
 
         try {
             switch (device.getDeviceType()) {
-                case KASA -> kasaService.turnOn(device.getExternalDeviceId());
+                case KASA -> kasaService.turnOn(device.getIpAddress());
                 case TAPO -> {
                     String tapoIp = device.getIpAddress();
                     TapoAuthProtocol tapoProto = extractAuthProtocol(device);
@@ -221,7 +221,7 @@ public class SmartDeviceService {
 
         try {
             switch (device.getDeviceType()) {
-                case KASA -> kasaService.turnOff(device.getExternalDeviceId());
+                case KASA -> kasaService.turnOff(device.getIpAddress());
                 case TAPO -> {
                     String tapoIp = device.getIpAddress();
                     TapoAuthProtocol tapoProto = extractAuthProtocol(device);
@@ -253,7 +253,11 @@ public class SmartDeviceService {
     }
 
     private SmartDevice upsertKasaDevice(KasaDiscoveryDto dto) {
-        String externalId = dto.getIp();  // For Kasa, IP is the unique identifier
+        // The hardware deviceId is stable, the IP is not: DHCP can reassign it, which used to
+        // create duplicate records and leave stale entries stuck "offline". Identify by deviceId
+        // and keep the IP purely as the (refreshable) communication address.
+        String deviceId = dto.getDeviceId();
+        String externalId = (deviceId != null && !deviceId.isBlank()) ? deviceId : dto.getIp();
         Optional<SmartDevice> existing = smartDeviceRepository
                 .findByDeviceTypeAndExternalDeviceId(DeviceType.KASA, externalId);
 
@@ -285,12 +289,13 @@ public class SmartDeviceService {
 
     private void refreshKasaDeviceState(SmartDevice device) {
         try {
-            KasaStatusDto status = kasaService.getStatus(device.getExternalDeviceId());
+            KasaStatusDto status = kasaService.getStatus(device.getIpAddress());
             device.setOnline(true);
             device.setPoweredOn(status.relayState());
             device.setDeviceName(status.alias() != null ? status.alias() : device.getDeviceName());
         } catch (Exception ex) {
-            log.warn("Kasa device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
+            log.warn("Kasa device {} ({}) appears offline: {}",
+                    device.getExternalDeviceId(), device.getIpAddress(), ex.getMessage());
             device.setOnline(false);
         }
     }
