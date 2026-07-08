@@ -3,6 +3,11 @@ package com.household.manager.service;
 import com.household.manager.dto.WeatherConditions;
 import com.household.manager.dto.WeatherOverviewResponse;
 import com.household.manager.dto.WeatherPollingStatusResponse;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.WeatherReadingRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /** Pollt DWD-Wetter und persistiert einen Ist-Bedingungen-Snapshot. */
 @Service
@@ -26,6 +32,7 @@ public class WeatherPollingService {
     private final DwdWeatherService dwdWeatherService;
     private final WeatherReadingRepository repository;
     private final TaskScheduler taskScheduler;
+    private final EntityStateService entityStateService;
 
     @Value("${dwd.station-id}")
     private String stationId;
@@ -75,11 +82,39 @@ public class WeatherPollingService {
                     .build();
 
             repository.save(entity);
+            reportEntityStates(current);
             lastError = null;
             log.debug("Saved weather reading at {}", current.getTime());
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Failed to poll DWD weather", ex);
         }
+    }
+
+    private void reportEntityStates(WeatherConditions current) {
+        try {
+            reportSensor("temperature", "Temperatur", current.getTemperature(), "°C", "temperature");
+            reportSensor("humidity", "Luftfeuchtigkeit", current.getHumidity(), "%", "humidity");
+            reportSensor("precipitation", "Niederschlag", current.getPrecipitation(), "mm", "precipitation");
+            reportSensor("wind_speed", "Windgeschwindigkeit", current.getWindSpeed(), "km/h", "wind_speed");
+            reportSensor("pressure", "Luftdruck", current.getPressure(), "hPa", "pressure");
+        } catch (Exception ex) {
+            log.warn("Failed to report weather entity states: {}", ex.getMessage());
+        }
+    }
+
+    private void reportSensor(String suffix, String label, Object value, String unit, String deviceClass) {
+        if (value == null) {
+            return;
+        }
+        entityStateService.reportState(EntityStateUpdate.builder()
+                .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.WEATHER, "dwd", suffix))
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.WEATHER)
+                .sourceRef(stationId)
+                .friendlyName("Wetter " + label)
+                .state(String.valueOf(value))
+                .attributes(Map.of("unit", unit, "deviceClass", deviceClass, "stationId", stationId))
+                .build());
     }
 }
