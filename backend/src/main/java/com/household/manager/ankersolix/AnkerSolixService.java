@@ -9,7 +9,13 @@ import com.household.manager.ankersolix.api.SolarbankController;
 import com.household.manager.ankersolix.dto.AnkerSolixDeviceParamDto;
 import com.household.manager.ankersolix.dto.AnkerSolixEnergyDayDto;
 import com.household.manager.ankersolix.dto.AnkerSolixLiveDto;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.EntityStateUpdate;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Spring-managed service wrapping the Anker Solix Cloud API.
@@ -25,8 +32,11 @@ import java.time.LocalDateTime;
  */
 @Service
 @ConditionalOnProperty(name = "ankersolix.enabled", havingValue = "true", matchIfMissing = false)
+@RequiredArgsConstructor
 @Slf4j
 public class AnkerSolixService {
+
+    private final EntityStateService entityStateService;
 
     @Value("${ankersolix.user}")
     private String email;
@@ -153,7 +163,7 @@ public class AnkerSolixService {
             // Home consumption
             double homePowerW = parseWatt(data.path("home_load_power"));
 
-            return AnkerSolixLiveDto.builder()
+            AnkerSolixLiveDto live = AnkerSolixLiveDto.builder()
                     .pvPowerW(pvPowerW)
                     .batteryPercent(batteryPercent)
                     .batteryPowerW(batteryPowerW)
@@ -161,6 +171,8 @@ public class AnkerSolixService {
                     .homePowerW(homePowerW)
                     .timestamp(LocalDateTime.now())
                     .build();
+            reportEntityStates(live);
+            return live;
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -365,5 +377,29 @@ public class AnkerSolixService {
             log.error("Failed to set output power to {} W: {}", watts, ex.getMessage(), ex);
             throw new RuntimeException("Failed to set Anker Solix output power", ex);
         }
+    }
+
+    private void reportEntityStates(AnkerSolixLiveDto live) {
+        try {
+            reportSensor("pv_power", "Solarleistung", String.valueOf(live.getPvPowerW()), "W", "power");
+            reportSensor("battery_percent", "Akkustand", String.valueOf(live.getBatteryPercent()), "%", "battery");
+            reportSensor("battery_power", "Akkuleistung", String.valueOf(live.getBatteryPowerW()), "W", "power");
+            reportSensor("grid_power", "Netzleistung", String.valueOf(live.getGridPowerW()), "W", "power");
+            reportSensor("home_power", "Hausverbrauch", String.valueOf(live.getHomePowerW()), "W", "power");
+        } catch (Exception ex) {
+            log.warn("Failed to report anker solix entity states: {}", ex.getMessage());
+        }
+    }
+
+    private void reportSensor(String suffix, String label, String state, String unit, String deviceClass) {
+        entityStateService.reportState(EntityStateUpdate.builder()
+                .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.ANKER_SOLIX, "solarbank", suffix))
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.ANKER_SOLIX)
+                .sourceRef("solarbank")
+                .friendlyName("Anker Solix " + label)
+                .state(state)
+                .attributes(Map.of("unit", unit, "deviceClass", deviceClass))
+                .build());
     }
 }
