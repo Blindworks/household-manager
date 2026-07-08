@@ -245,6 +245,14 @@ docker-compose down
 - Historical data storage and visualization
 - Implementation in `backend/src/main/java/com/household/manager/service/Airrohr*`
 
+### Amazon Alexa (Text-to-Speech)
+- Inofficial integration with `alexa.amazon.<domain>` (same approach as alexa-remote-control / alexa_media_player); there is no official push-TTS API
+- Login as an in-app flow (email/password + MFA, optional captcha); only the refresh token is persisted, never the credentials
+- Manual announcements, scheduled announcements, and an internal `AlexaAnnouncementService` building block for future automatic notifications
+- TTS via `/api/behaviors/preview`: `Alexa.Speak` (single device, no chime) and `AlexaAnnouncement` (one or more devices, with chime)
+- Device identity via stable `serialNumber`; the whole Amazon-specific, brittle flow is isolated in `AlexaAuthService`/`AlexaApiClient`
+- Implementation in `backend/src/main/java/com/household/manager/alexa/`; frontend page under `frontend/src/app/pages/announcements/`
+
 ## Code Quality Standards
 
 This project follows **Clean Code** principles across both frontend and backend:
