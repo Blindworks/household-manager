@@ -150,6 +150,46 @@ public class AlexaAuthService {
         }
     }
 
+    /**
+     * Kontext eines Browser-Login-Vorgangs ueber den Proxy: die PKCE-/Geraete-Identitaet,
+     * die die initiale Authorize-URL und spaeter die Registrierung verknuepft.
+     */
+    @Getter
+    public static final class ProxyLoginContext {
+        private final String deviceSerial;
+        private final String codeVerifier;
+        private final String frc;
+        private final String mapMd;
+        private final String authorizeUrl;
+
+        private ProxyLoginContext(String deviceSerial, String codeVerifier, String frc,
+                                  String mapMd, String authorizeUrl) {
+            this.deviceSerial = deviceSerial;
+            this.codeVerifier = codeVerifier;
+            this.frc = frc;
+            this.mapMd = mapMd;
+            this.authorizeUrl = authorizeUrl;
+        }
+    }
+
+    /**
+     * Bereitet einen Browser-Login vor: erzeugt eine frische PKCE-/Geraete-Identitaet und die
+     * initiale Amazon-Authorize-URL, die der Proxy dem Browser (umgeschrieben) praesentiert.
+     */
+    public ProxyLoginContext beginProxyLogin() {
+        try {
+            String deviceSerial = randomHexUpper(16);
+            String codeVerifier = generateCodeVerifier();
+            String codeChallenge = codeChallengeFor(codeVerifier);
+            String frc = randomBase64Bytes(313);
+            String mapMd = buildMapMd();
+            String authorizeUrl = buildInitialSigninUrl(buildClientId(deviceSerial), codeChallenge);
+            return new ProxyLoginContext(deviceSerial, codeVerifier, frc, mapMd, authorizeUrl);
+        } catch (Exception ex) {
+            throw new AlexaException("Alexa-Login konnte nicht vorbereitet werden.", ex);
+        }
+    }
+
     // ==================== Public API ====================
 
     public synchronized LoginStep login(String email, String password, String captchaSolution) {
@@ -255,16 +295,40 @@ public class AlexaAuthService {
         return new LoginStep(LoginResult.OK, null, null);
     }
 
-    /** Nach erfolgreichem Signin: /auth/register aufrufen, refresh_token speichern. */
+    /** Nach erfolgreichem Signin: /auth/register aufrufen, refresh_token speichern (Headless-Pfad). */
     private void completeRegistration(String authorizationCode) {
         PendingLogin pl = this.pendingLogin;
         if (pl == null) {
             throw new AlexaException("Kein laufender Login-Vorgang fuer Registrierung.");
         }
         try {
-            Map<String, String> sanitizedCookies = sanitizeAmazonCookies(parseCookieHeader(pl.sessionCookies));
-            String sanitizedCookieHeader = serializeCookies(sanitizedCookies);
-            String clientId = buildClientId(pl.deviceSerial);
+            String cookieHeader = serializeCookies(sanitizeAmazonCookies(parseCookieHeader(pl.sessionCookies)));
+            registerDevice(authorizationCode, pl.deviceSerial, pl.codeVerifier, pl.frc, pl.email, cookieHeader);
+        } finally {
+            pendingLogin = null;
+        }
+    }
+
+    /**
+     * Registriert das Geraet nach erfolgreichem Browser-Login ueber den Proxy.
+     * Der Authorization-Code stammt aus dem abgefangenen maplanding-Redirect,
+     * der Kontext (deviceSerial, codeVerifier, frc) aus {@link #beginProxyLogin()},
+     * die Cookies aus dem Cookie-Jar des Proxys.
+     */
+    public synchronized void completeProxyRegistration(String authorizationCode,
+                                                       ProxyLoginContext ctx,
+                                                       String rawCookieHeader) {
+        reauthRequired = false;
+        String cookieHeader = serializeCookies(sanitizeAmazonCookies(parseCookieHeader(rawCookieHeader)));
+        registerDevice(authorizationCode, ctx.deviceSerial, ctx.codeVerifier, ctx.frc, null, cookieHeader);
+    }
+
+    /** Gemeinsame /auth/register-Logik fuer Headless- und Proxy-Login. */
+    private void registerDevice(String authorizationCode, String deviceSerial, String codeVerifier,
+                                String frc, String email, String sanitizedCookieHeader) {
+        try {
+            Map<String, String> sanitizedCookies = parseCookieHeader(sanitizedCookieHeader);
+            String clientId = buildClientId(deviceSerial);
 
             ObjectNode registerData = mapper.createObjectNode();
             registerData.putArray("requested_extensions").add("device_info").add("customer_info");
@@ -284,7 +348,7 @@ public class AlexaAuthService {
             registrationData.put("device_type", DEVICE_TYPE);
             registrationData.put("device_name", "%FIRST_NAME%'s%DUPE_STRATEGY_1ST%" + DEVICE_APP_NAME);
             registrationData.put("os_version", "18.3.1");
-            registrationData.put("device_serial", pl.deviceSerial);
+            registrationData.put("device_serial", deviceSerial);
             registrationData.put("device_model", "iPhone");
             registrationData.put("app_name", DEVICE_APP_NAME);
             registrationData.put("software_version", "1");
@@ -292,12 +356,12 @@ public class AlexaAuthService {
             ObjectNode authData = registerData.putObject("auth_data");
             authData.put("client_id", clientId);
             authData.put("authorization_code", authorizationCode);
-            authData.put("code_verifier", pl.codeVerifier);
+            authData.put("code_verifier", codeVerifier);
             authData.put("code_algorithm", "SHA-256");
             authData.put("client_domain", "DeviceLegacy");
 
             ObjectNode userContextMap = registerData.putObject("user_context_map");
-            userContextMap.put("frc", pl.frc);
+            userContextMap.put("frc", frc);
 
             ArrayNode requestedTokenType = registerData.putArray("requested_token_type");
             requestedTokenType.add("bearer");
@@ -328,7 +392,7 @@ public class AlexaAuthService {
             }
             String accountName = success.path("extensions").path("customer_info").path("name").asText(null);
             if (accountName == null || accountName.isBlank()) {
-                accountName = pl.email;
+                accountName = email;
             }
             saveRefreshToken(refreshToken, accountName);
             session = buildSessionFromRefreshToken(refreshToken);
@@ -337,8 +401,6 @@ public class AlexaAuthService {
             throw ex;
         } catch (Exception ex) {
             throw new AlexaException("Amazon-Geraeteregistrierung fehlgeschlagen.", ex);
-        } finally {
-            pendingLogin = null;
         }
     }
 

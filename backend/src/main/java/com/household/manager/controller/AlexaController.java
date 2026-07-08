@@ -1,6 +1,7 @@
 package com.household.manager.controller;
 
 import com.household.manager.alexa.AlexaAuthService;
+import com.household.manager.alexa.AlexaLoginProxyService;
 import com.household.manager.alexa.AlexaTtsMode;
 import com.household.manager.dto.alexa.*;
 import com.household.manager.model.entity.AlexaDevice;
@@ -22,29 +23,31 @@ import java.util.List;
 public class AlexaController {
 
     private final AlexaAuthService authService;
+    private final AlexaLoginProxyService proxyService;
     private final AlexaDeviceService deviceService;
     private final AlexaAnnouncementService announcementService;
     private final AlexaScheduledAnnouncementService scheduledService;
 
-    // ---------- Auth ----------
+    // ---------- Auth (Browser-Login ueber Proxy) ----------
 
-    @PostMapping("/auth/login")
-    public AlexaLoginResponse login(@RequestBody AlexaLoginRequest request) {
-        AlexaAuthService.LoginStep step =
-                authService.login(request.email(), request.password(), request.captcha());
-        return new AlexaLoginResponse(step.getResult().name(), step.getCaptchaImageUrl(), step.getMessage());
+    /** Startet den Browser-Login und liefert die lokale URL, die der Nutzer im Browser oeffnet. */
+    @PostMapping("/auth/proxy/start")
+    public AlexaProxyStartResponse startProxyLogin() {
+        return new AlexaProxyStartResponse(proxyService.start());
     }
 
-    @PostMapping("/auth/mfa")
-    public AlexaLoginResponse mfa(@RequestBody AlexaMfaRequest request) {
-        AlexaAuthService.LoginStep step = authService.submitMfa(request.code());
-        return new AlexaLoginResponse(step.getResult().name(), step.getCaptchaImageUrl(), step.getMessage());
+    /** Bricht einen laufenden Browser-Login ab (stoppt den Proxy). */
+    @PostMapping("/auth/proxy/stop")
+    public ResponseEntity<Void> stopProxyLogin() {
+        proxyService.stop();
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/auth/status")
     public AlexaAuthStatusResponse status() {
         return new AlexaAuthStatusResponse(
-                authService.isLoggedIn(), authService.getAccountName(), authService.isReauthRequired());
+                authService.isLoggedIn(), authService.getAccountName(), authService.isReauthRequired(),
+                proxyService.getLastError());
     }
 
     @PostMapping("/auth/logout")
