@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260708-0029-create-entity-states-table" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="entity_states"/>
+            </not>
+        </preConditions>
+        <createTable tableName="entity_states">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="entity_id" type="VARCHAR(150)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_entity_states_entity_id"/>
+            </column>
+            <column name="domain" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="friendly_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_ref" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attributes" type="TEXT"/>
+            <column name="last_changed" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_updated" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="entity_states" indexName="idx_entity_states_domain">
+            <column name="domain"/>
+        </createIndex>
+
+        <createIndex tableName="entity_states" indexName="idx_entity_states_source">
+            <column name="source"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

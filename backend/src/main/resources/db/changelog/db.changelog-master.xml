@@ -65,4 +65,7 @@
     <!-- Alexa TTS Announcements Feature -->
     <include file="db/changelog/changes/20260708-0028-create-alexa-tables.xml"/>
 
+    <!-- Generic Entity/State Layer -->
+    <include file="db/changelog/changes/20260708-0029-create-entity-states-table.xml"/>
+
 </databaseChangeLog>
