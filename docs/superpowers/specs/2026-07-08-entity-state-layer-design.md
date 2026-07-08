@@ -48,6 +48,7 @@ JPA-Entity `EntityState` in `model/entity/`, Repository in `com.household.manage
 - **Entity-ID-Schema:** `<domain>.<source>_<stabile-ref>[_<messgröße>]` — maschinell generiert, nie aus dem änderbaren Anzeigenamen abgeleitet. Beispiele: `switch.kasa_8006a1b2`, `sensor.airrohr_esp123_pm25`, `sensor.weather_dwd_temperature`.
 - **Domains:** `switch` (schaltbar), `sensor` (Messwert), `binary_sensor` (an/aus, nicht schaltbar). Erweiterbar.
 - **Sonderzustände:** `unavailable` (Quelle offline/nicht erreichbar), `unknown` (noch kein Wert gemeldet).
+- **Binärsensor-Semantik (HA-Konvention):** `on` = offen/erkannt/aktiv, `off` = geschlossen/nichts erkannt. Achtung bei Tür-/Fensterkontakten: zigbee2mqtt meldet `contact:true` für GESCHLOSSEN — der Mapper invertiert das zu `off`. Die spätere Regel-Engine kann sich damit auf „`on` = Tür offen / Bewegung erkannt / Leck erkannt" verlassen. `deviceClass`-Attribute tragen echte HA-device_class-Werte (`door`, `motion`, `moisture`, `temperature`, …).
 - **Werte stringly-typed:** numerische Werte als String im `state`, Einheit in den Attributen. Die spätere Regel-Engine parst bei Bedarf.
 
 ## Architektur (Backend)
