@@ -125,6 +125,7 @@ public class SmartDeviceService {
         }
 
         SmartDevice updated = smartDeviceRepository.save(device);
+        reportEntityState(updated);
         log.info("Successfully updated device: {}", updated.getDeviceName());
         return toResponse(updated);
     }
@@ -528,6 +529,11 @@ public class SmartDeviceService {
     }
 
     private void reportEntityState(SmartDevice device) {
-        entityStateService.reportState(smartDeviceEntityMapper.map(device));
+        try {
+            entityStateService.reportState(smartDeviceEntityMapper.map(device));
+        } catch (Exception ex) {
+            log.warn("Failed to report entity state for device {}: {}",
+                    device.getExternalDeviceId(), ex.getMessage());
+        }
     }
 }
