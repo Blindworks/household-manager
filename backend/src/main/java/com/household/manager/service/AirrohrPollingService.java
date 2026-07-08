@@ -2,6 +2,11 @@ package com.household.manager.service;
 
 import com.household.manager.dto.AirrohrPollingStatusResponse;
 import com.household.manager.dto.AirrohrReadingResponse;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AirrohrReading;
 import com.household.manager.repository.AirrohrReadingRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Polls Airrohr data and persists readings in the database.
@@ -27,6 +33,7 @@ public class AirrohrPollingService {
     private final AirrohrService airrohrService;
     private final AirrohrReadingRepository airrohrReadingRepository;
     private final TaskScheduler taskScheduler;
+    private final EntityStateService entityStateService;
 
     @Value("${airrohr.url}")
     private String airrohrUrl;
@@ -69,11 +76,36 @@ public class AirrohrPollingService {
                     .build();
 
             airrohrReadingRepository.save(entity);
+            reportEntityStates(response);
             lastError = null;
             log.debug("Saved Airrohr reading at {}", response.getReadingTime());
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Failed to poll Airrohr sensor", ex);
         }
+    }
+
+    private void reportEntityStates(AirrohrReadingResponse response) {
+        try {
+            reportSensor("pm10", "Feinstaub PM10", response.getSdsP1());
+            reportSensor("pm25", "Feinstaub PM2.5", response.getSdsP2());
+        } catch (Exception ex) {
+            log.warn("Failed to report airrohr entity states: {}", ex.getMessage());
+        }
+    }
+
+    private void reportSensor(String suffix, String label, Object value) {
+        if (value == null) {
+            return;
+        }
+        entityStateService.reportState(EntityStateUpdate.builder()
+                .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.AIRROHR, "airrohr", suffix))
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.AIRROHR)
+                .sourceRef("airrohr")
+                .friendlyName("Airrohr " + label)
+                .state(String.valueOf(value))
+                .attributes(Map.of("unit", "µg/m³", "deviceClass", "pm"))
+                .build());
     }
 }
