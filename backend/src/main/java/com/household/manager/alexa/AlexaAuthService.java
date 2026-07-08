@@ -143,6 +143,13 @@ public class AlexaAuthService {
     private record CookieAndCsrf(String cookie, String csrf) {
     }
 
+    /** Signalisiert, dass Amazon das Refresh-Token endgueltig abgelehnt hat (Neuanmeldung noetig). */
+    private static class RefreshTokenRejectedException extends RuntimeException {
+        RefreshTokenRejectedException(String message) {
+            super(message);
+        }
+    }
+
     // ==================== Public API ====================
 
     public synchronized LoginStep login(String email, String password, String captchaSolution) {
@@ -366,10 +373,13 @@ public class AlexaAuthService {
             session = buildSessionFromRefreshToken(account.getRefreshToken());
             reauthRequired = false;
             return session;
-        } catch (Exception ex) {
+        } catch (RefreshTokenRejectedException ex) {
             reauthRequired = true;
-            log.warn("Alexa-Sitzung konnte nicht erneuert werden: {}", ex.getMessage());
+            log.warn("Alexa Refresh-Token endgueltig abgelehnt, Neuanmeldung erforderlich: {}", ex.getMessage());
             throw new AlexaException("Alexa-Sitzung abgelaufen, Neuanmeldung erforderlich.", ex);
+        } catch (Exception ex) {
+            log.warn("Alexa-Sitzung konnte voruebergehend nicht erneuert werden: {}", ex.getMessage());
+            throw new AlexaException("Alexa-Sitzung konnte voruebergehend nicht erneuert werden.", ex);
         }
     }
 
@@ -393,6 +403,8 @@ public class AlexaAuthService {
                     .customerId(customerId)
                     .expiresAt(Instant.now().plus(SESSION_TTL))
                     .build();
+        } catch (RefreshTokenRejectedException ex) {
+            throw ex;
         } catch (AlexaException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -437,6 +449,11 @@ public class AlexaAuthService {
                 .POST(HttpRequest.BodyPublishers.ofString(toFormBody(form)))
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 400 || response.statusCode() == 401) {
+            // Amazon lehnt ein ungueltiges/abgelaufenes Refresh-Token mit 400 oder 401 ab -> endgueltig, Neuanmeldung noetig.
+            throw new RefreshTokenRejectedException(
+                    "Alexa /auth/token HTTP " + response.statusCode() + ": " + response.body());
+        }
         if (response.statusCode() / 100 != 2) {
             throw new AlexaException("Alexa /auth/token HTTP " + response.statusCode() + ": " + response.body());
         }
