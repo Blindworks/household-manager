@@ -63,6 +63,8 @@ Neues Package `com.household.manager.entitystate`:
 
 **Fehlerisolierung:** `reportState` fängt intern alle Fehler und loggt sie — ein Fehler in der Spiegel-Schicht darf niemals die aufrufende Integration (Polling, MQTT-Handler, Schaltbefehl) brechen.
 
+**Hinweis für Stufe 3 (Regel-Engine):** `@EventListener` läuft synchron im Thread des Aufrufers. Für Listener, die I/O machen (z. B. Alexa-Ansage per HTTP), muss die Zustellung dann asynchron entkoppelt werden (`@Async`). Achtung Footgun: `@TransactionalEventListener(AFTER_COMMIT)` verwirft Events stillschweigend, wenn `reportState` ohne aktive äußere Transaktion aufgerufen wird (der Polling-Normalfall) — diese Variante nicht unreflektiert wählen.
+
 **Change-Detection:** alter Zustand ≠ neuer Zustand → `last_changed` setzen + Event publizieren; unverändert → nur `last_updated` aktualisieren, kein Event.
 
 ### Hook-Punkte in den bestehenden Services
