@@ -1,0 +1,17 @@
+{
+  "name": "alexa-sidecar",
+  "version": "1.0.0",
+  "description": "HTTP sidecar wrapping alexa-remote2 for Amazon Alexa login and TTS, called by the Household-Manager Spring Boot backend.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "alexa-remote2": "^7.0.0",
+    "express": "^4.21.2"
+  }
+}
