@@ -87,14 +87,14 @@ public class AirrohrPollingService {
 
     private void reportEntityStates(AirrohrReadingResponse response) {
         try {
-            reportSensor("pm10", "Feinstaub PM10", response.getSdsP1());
-            reportSensor("pm25", "Feinstaub PM2.5", response.getSdsP2());
+            reportSensor("pm10", "Feinstaub PM10", response.getSdsP1(), "pm10");
+            reportSensor("pm25", "Feinstaub PM2.5", response.getSdsP2(), "pm25");
         } catch (Exception ex) {
             log.warn("Failed to report airrohr entity states: {}", ex.getMessage());
         }
     }
 
-    private void reportSensor(String suffix, String label, Object value) {
+    private void reportSensor(String suffix, String label, Object value, String deviceClass) {
         if (value == null) {
             return;
         }
@@ -105,7 +105,7 @@ public class AirrohrPollingService {
                 .sourceRef("airrohr")
                 .friendlyName("Airrohr " + label)
                 .state(String.valueOf(value))
-                .attributes(Map.of("unit", "µg/m³", "deviceClass", "pm"))
+                .attributes(Map.of("unit", "µg/m³", "deviceClass", deviceClass))
                 .build());
     }
 }
