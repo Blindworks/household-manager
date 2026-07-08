@@ -1,7 +1,6 @@
 package com.household.manager.controller;
 
-import com.household.manager.alexa.AlexaAuthService;
-import com.household.manager.alexa.AlexaLoginProxyService;
+import com.household.manager.alexa.AlexaSidecarClient;
 import com.household.manager.alexa.AlexaTtsMode;
 import com.household.manager.dto.alexa.*;
 import com.household.manager.model.entity.AlexaDevice;
@@ -22,37 +21,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AlexaController {
 
-    private final AlexaAuthService authService;
-    private final AlexaLoginProxyService proxyService;
+    private final AlexaSidecarClient sidecarClient;
     private final AlexaDeviceService deviceService;
     private final AlexaAnnouncementService announcementService;
     private final AlexaScheduledAnnouncementService scheduledService;
 
-    // ---------- Auth (Browser-Login ueber Proxy) ----------
+    // ---------- Auth (Browser-Login ueber den Sidecar) ----------
 
-    /** Startet den Browser-Login und liefert die lokale URL, die der Nutzer im Browser oeffnet. */
+    /** Startet den Browser-Login und liefert die URL, die der Nutzer im Browser oeffnet. */
     @PostMapping("/auth/proxy/start")
     public AlexaProxyStartResponse startProxyLogin() {
-        return new AlexaProxyStartResponse(proxyService.start());
-    }
-
-    /** Bricht einen laufenden Browser-Login ab (stoppt den Proxy). */
-    @PostMapping("/auth/proxy/stop")
-    public ResponseEntity<Void> stopProxyLogin() {
-        proxyService.stop();
-        return ResponseEntity.noContent().build();
+        return new AlexaProxyStartResponse(sidecarClient.startLogin());
     }
 
     @GetMapping("/auth/status")
     public AlexaAuthStatusResponse status() {
-        return new AlexaAuthStatusResponse(
-                authService.isLoggedIn(), authService.getAccountName(), authService.isReauthRequired(),
-                proxyService.getLastError());
+        AlexaSidecarClient.SidecarStatus s = sidecarClient.getStatus();
+        return new AlexaAuthStatusResponse(s.loggedIn(), s.accountName(), false, null);
     }
 
     @PostMapping("/auth/logout")
     public ResponseEntity<Void> logout() {
-        authService.logout();
+        sidecarClient.logout();
         return ResponseEntity.noContent().build();
     }
 

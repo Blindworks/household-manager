@@ -15,18 +15,15 @@ public class AlexaProperties {
     /** Amazon-Domain des Kontos, z. B. amazon.de. */
     private String domain = "amazon.de";
 
-    /** Konfiguration des Browser-Login-Proxys. */
-    private Proxy proxy = new Proxy();
+    /** Konfiguration des alexa-remote2-Sidecars (Login + Alexa-Kommunikation). */
+    private Sidecar sidecar = new Sidecar();
 
-    /** Einstellungen des eingebetteten Login-Proxys, ueber den sich der Nutzer im Browser anmeldet. */
+    /** Der Node-Sidecar uebernimmt Login, Geraeteliste und TTS; das Backend ruft ihn per HTTP auf. */
     @Getter
     @Setter
-    public static class Proxy {
+    public static class Sidecar {
 
-        /** Host/IP, unter der der Browser den Proxy erreicht (lokaler Login: localhost). */
-        private String host = "localhost";
-
-        /** Port des eingebetteten Proxy-Servers. */
-        private int port = 8091;
+        /** Basis-URL des Sidecar-Dienstes. */
+        private String baseUrl = "http://localhost:3456";
     }
 }

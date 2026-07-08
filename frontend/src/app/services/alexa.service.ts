@@ -17,14 +17,10 @@ export class AlexaService {
     return this.http.get<AlexaAuthStatus>(`${this.baseUrl}/auth/status`).pipe(catchError(this.handleError));
   }
 
-  /** Startet den Browser-Login und liefert die lokale URL, die der Nutzer oeffnen soll. */
+  /** Startet den Browser-Login und liefert die URL, die der Nutzer oeffnen soll. */
   startProxyLogin(): Observable<AlexaProxyStartResponse> {
     return this.http.post<AlexaProxyStartResponse>(`${this.baseUrl}/auth/proxy/start`, {})
       .pipe(catchError(this.handleError));
-  }
-
-  stopProxyLogin(): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/auth/proxy/stop`, {}).pipe(catchError(this.handleError));
   }
 
   logout(): Observable<void> {

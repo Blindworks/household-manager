@@ -83,7 +83,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
     this.clearPolling();
     this.loginWaiting.set(false);
     this.proxyUrl.set(null);
-    this.alexa.stopProxyLogin().subscribe({ error: () => {} });
   }
 
   private startPolling(): void {

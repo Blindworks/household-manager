@@ -1,6 +1,8 @@
 package com.household.manager.service;
 
-import com.household.manager.alexa.*;
+import com.household.manager.alexa.AlexaException;
+import com.household.manager.alexa.AlexaSidecarClient;
+import com.household.manager.alexa.AlexaTtsMode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -9,23 +11,16 @@ import java.util.List;
 /**
  * Fachschnittstelle fuer Alexa-Durchsagen. Genutzt von Controller, Scheduler und
  * kuenftig anderen Services (interner Baustein fuer automatische Benachrichtigungen).
+ * Die eigentliche Ausgabe uebernimmt der alexa-remote2-Sidecar.
  */
 @Service
 @Slf4j
 public class AlexaAnnouncementService {
 
-    private static final String LOCALE = "de-DE";
+    private final AlexaSidecarClient sidecarClient;
 
-    private final AlexaAuthService authService;
-    private final AlexaApiClient apiClient;
-    private final AlexaSequenceBuilder sequenceBuilder;
-
-    public AlexaAnnouncementService(AlexaAuthService authService,
-                                    AlexaApiClient apiClient,
-                                    AlexaSequenceBuilder sequenceBuilder) {
-        this.authService = authService;
-        this.apiClient = apiClient;
-        this.sequenceBuilder = sequenceBuilder;
+    public AlexaAnnouncementService(AlexaSidecarClient sidecarClient) {
+        this.sidecarClient = sidecarClient;
     }
 
     /**
@@ -43,28 +38,14 @@ public class AlexaAnnouncementService {
             throw new AlexaException("Es wurde kein Zielgeraet ausgewaehlt.");
         }
 
-        AlexaSession session = authService.getValidSession();
-        List<AlexaRemoteDevice> allDevices = apiClient.listDevices(session);
-        List<AlexaRemoteDevice> targets = allDevices.stream()
-                .filter(d -> serialNumbers.contains(d.serialNumber()))
-                .toList();
-
-        if (targets.isEmpty()) {
-            throw new AlexaException("Keines der gewaehlten Geraete wurde in der Cloud gefunden.");
-        }
-
         if (mode == AlexaTtsMode.ANNOUNCE) {
-            String body = sequenceBuilder.buildAnnouncement(
-                    targets, session.getCustomerId(), LOCALE, text);
-            apiClient.sendBehavior(session, body);
+            sidecarClient.announce(serialNumbers, text);
         } else {
             // SPEAK adressiert je genau ein Geraet -> pro Ziel ein Aufruf
-            for (AlexaRemoteDevice target : targets) {
-                String body = sequenceBuilder.buildSpeak(
-                        target, session.getCustomerId(), LOCALE, text);
-                apiClient.sendBehavior(session, body);
+            for (String serialNumber : serialNumbers) {
+                sidecarClient.speak(serialNumber, text);
             }
         }
-        log.info("Alexa-Ansage ({}) an {} Geraet(e) gesendet", mode, targets.size());
+        log.info("Alexa-Ansage ({}) an {} Geraet(e) gesendet", mode, serialNumbers.size());
     }
 }
