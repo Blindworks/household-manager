@@ -1,0 +1,44 @@
+.announcements {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+
+  &__message { padding: .5rem; background: #eef; border-radius: 4px; }
+  &__warn { color: #a60; }
+}
+
+.card {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  label { display: block; margin: .5rem 0; }
+  textarea { width: 100%; min-height: 3rem; }
+}
+
+.devices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+
+  &__disabled { opacity: .5; }
+}
+
+.weekdays {
+  display: flex;
+  gap: .25rem;
+
+  button { padding: .25rem .5rem; }
+  &__active { background: #46c; color: #fff; }
+}
+
+.schedule-list {
+  list-style: none;
+  padding: 0;
+
+  li { display: flex; gap: .5rem; align-items: center; padding: .25rem 0; }
+  &__error { color: #c00; }
+}
+
+.hint { font-size: .85rem; color: #666; }

@@ -1,0 +1,89 @@
+<div class="announcements">
+  <h1>Ansagen</h1>
+
+  <p class="announcements__message" *ngIf="message()">{{ message() }}</p>
+
+  <!-- Konto -->
+  <section class="card">
+    <h2>Amazon-Konto</h2>
+
+    <ng-container *ngIf="authStatus() as status">
+      <div *ngIf="status.loggedIn; else loginForm">
+        <p>Angemeldet als <strong>{{ status.accountName || 'Amazon-Konto' }}</strong>.</p>
+        <p class="announcements__warn" *ngIf="status.reauthRequired">
+          Sitzung abgelaufen &mdash; bitte neu anmelden.
+        </p>
+        <button type="button" (click)="logout()">Abmelden</button>
+      </div>
+    </ng-container>
+
+    <ng-template #loginForm>
+      <ng-container *ngIf="loginStage() !== 'MFA_REQUIRED'">
+        <label>E-Mail <input type="email" [(ngModel)]="email" name="email"></label>
+        <label>Passwort <input type="password" [(ngModel)]="password" name="password"></label>
+        <div *ngIf="loginStage() === 'CAPTCHA_REQUIRED'">
+          <img [src]="captchaUrl()" alt="Captcha">
+          <label>Captcha <input type="text" [(ngModel)]="captcha" name="captcha"></label>
+        </div>
+        <button type="button" (click)="login()">Anmelden</button>
+      </ng-container>
+
+      <ng-container *ngIf="loginStage() === 'MFA_REQUIRED'">
+        <label>Bestaetigungscode <input type="text" [(ngModel)]="mfaCode" name="mfaCode"></label>
+        <button type="button" (click)="submitMfa()">Code bestaetigen</button>
+      </ng-container>
+    </ng-template>
+  </section>
+
+  <!-- Durchsage -->
+  <section class="card" *ngIf="authStatus()?.loggedIn">
+    <h2>Durchsage</h2>
+    <button type="button" (click)="loadDevices(true)">Geraete neu suchen</button>
+
+    <div class="devices">
+      <label *ngFor="let d of devices()" [class.devices__disabled]="!d.ttsCapable">
+        <input type="checkbox" [(ngModel)]="selectedSerials[d.serialNumber]"
+               [name]="'dev-' + d.serialNumber" [disabled]="!d.ttsCapable">
+        {{ d.name }}
+      </label>
+    </div>
+
+    <label>Text <textarea [(ngModel)]="announceText" name="announceText"></textarea></label>
+
+    <label>Modus
+      <select [(ngModel)]="announceMode" name="announceMode">
+        <option value="ANNOUNCE">Durchsage (mit Ton)</option>
+        <option value="SPEAK">Sprechen (ohne Ton)</option>
+      </select>
+    </label>
+
+    <button type="button" (click)="sendAnnouncement()">Senden</button>
+  </section>
+
+  <!-- Geplante Ansagen -->
+  <section class="card" *ngIf="authStatus()?.loggedIn">
+    <h2>Geplante Ansagen</h2>
+
+    <ul class="schedule-list">
+      <li *ngFor="let a of scheduled()">
+        <span>{{ a.timeOfDay }} &mdash; {{ a.text }} ({{ a.weekdays.join(', ') }})</span>
+        <span class="schedule-list__error" *ngIf="a.lastError">Fehler: {{ a.lastError }}</span>
+        <button type="button" (click)="toggleScheduleEnabled(a)">
+          {{ a.enabled ? 'Deaktivieren' : 'Aktivieren' }}
+        </button>
+        <button type="button" (click)="deleteSchedule(a)">Loeschen</button>
+      </li>
+    </ul>
+
+    <h3>Neue geplante Ansage</h3>
+    <label>Text <input type="text" [(ngModel)]="newSchedule.text" name="schedText"></label>
+    <label>Uhrzeit <input type="time" [(ngModel)]="newSchedule.timeOfDay" name="schedTime"></label>
+    <div class="weekdays">
+      <button type="button" *ngFor="let w of weekdayOptions"
+              [class.weekdays__active]="newSchedule.weekdays.includes(w.key)"
+              (click)="toggleNewScheduleWeekday(w.key)">{{ w.label }}</button>
+    </div>
+    <p class="hint">Zielgeraete werden aus der Durchsage-Auswahl oben uebernommen.</p>
+    <button type="button" (click)="createSchedule()">Anlegen</button>
+  </section>
+</div>
