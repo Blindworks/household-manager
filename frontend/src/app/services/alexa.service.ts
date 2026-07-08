@@ -3,8 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
-  AlexaAuthStatus, AlexaDevice, AlexaProxyStartResponse,
-  AlexaTtsMode, ScheduledAnnouncement
+  AlexaAuthStatus, AlexaDevice, AlexaProxyStartResponse, AlexaTtsMode
 } from '../models/alexa.model';
 
 /** Service fuer die Alexa-TTS-Integration. */
@@ -34,26 +33,6 @@ export class AlexaService {
 
   announce(payload: { text: string; serialNumbers: string[]; mode: AlexaTtsMode }): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/announce`, payload).pipe(catchError(this.handleError));
-  }
-
-  getScheduled(): Observable<ScheduledAnnouncement[]> {
-    return this.http.get<ScheduledAnnouncement[]>(`${this.baseUrl}/scheduled-announcements`)
-      .pipe(catchError(this.handleError));
-  }
-
-  createScheduled(a: ScheduledAnnouncement): Observable<ScheduledAnnouncement> {
-    return this.http.post<ScheduledAnnouncement>(`${this.baseUrl}/scheduled-announcements`, a)
-      .pipe(catchError(this.handleError));
-  }
-
-  updateScheduled(id: number, a: ScheduledAnnouncement): Observable<ScheduledAnnouncement> {
-    return this.http.put<ScheduledAnnouncement>(`${this.baseUrl}/scheduled-announcements/${id}`, a)
-      .pipe(catchError(this.handleError));
-  }
-
-  deleteScheduled(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/scheduled-announcements/${id}`)
-      .pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

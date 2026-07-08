@@ -2,12 +2,9 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AlexaService } from '../../services/alexa.service';
-import {
-  AlexaAuthStatus, AlexaDevice,
-  AlexaTtsMode, ScheduledAnnouncement
-} from '../../models/alexa.model';
+import { AlexaAuthStatus, AlexaDevice, AlexaTtsMode } from '../../models/alexa.model';
 
-/** Seite fuer Alexa-Durchsagen: Konto, manuelle Durchsage und geplante Ansagen. */
+/** Seite fuer Alexa-Durchsagen: Konto und manuelle Durchsage. */
 @Component({
   selector: 'app-announcements',
   standalone: true,
@@ -18,16 +15,8 @@ import {
 export class AnnouncementsComponent implements OnInit, OnDestroy {
   private readonly alexa = inject(AlexaService);
 
-  readonly weekdayOptions = [
-    { key: 'MONDAY', label: 'Mo' }, { key: 'TUESDAY', label: 'Di' },
-    { key: 'WEDNESDAY', label: 'Mi' }, { key: 'THURSDAY', label: 'Do' },
-    { key: 'FRIDAY', label: 'Fr' }, { key: 'SATURDAY', label: 'Sa' },
-    { key: 'SUNDAY', label: 'So' }
-  ];
-
   readonly authStatus = signal<AlexaAuthStatus | null>(null);
   readonly devices = signal<AlexaDevice[]>([]);
-  readonly scheduled = signal<ScheduledAnnouncement[]>([]);
   readonly message = signal<string>('');
 
   // Browser-Login
@@ -39,11 +28,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
   announceText = '';
   announceMode: AlexaTtsMode = 'ANNOUNCE';
   selectedSerials: Record<string, boolean> = {};
-
-  // Neue geplante Ansage
-  newSchedule: ScheduledAnnouncement = {
-    text: '', timeOfDay: '08:00', weekdays: [], serialNumbers: [], mode: 'ANNOUNCE', enabled: true
-  };
 
   ngOnInit(): void {
     this.refreshStatus();
@@ -59,7 +43,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
         this.authStatus.set(s);
         if (s.loggedIn) {
           this.loadDevices(false);
-          this.loadScheduled();
         }
       },
       error: e => this.message.set(e.message)
@@ -94,7 +77,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
           if (s.loggedIn) {
             this.finishLogin();
             this.loadDevices(false);
-            this.loadScheduled();
           } else if (s.loginError) {
             this.finishLogin();
             this.message.set('Anmeldung fehlgeschlagen: ' + s.loginError);
@@ -128,13 +110,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadScheduled(): void {
-    this.alexa.getScheduled().subscribe({
-      next: s => this.scheduled.set(s),
-      error: e => this.message.set(e.message)
-    });
-  }
-
   private selectedSerialNumbers(): string[] {
     return Object.keys(this.selectedSerials).filter(k => this.selectedSerials[k]);
   }
@@ -150,35 +125,5 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
         next: () => this.message.set('Durchsage gesendet.'),
         error: e => this.message.set(e.message)
       });
-  }
-
-  toggleNewScheduleWeekday(key: string): void {
-    const days = this.newSchedule.weekdays;
-    this.newSchedule.weekdays = days.includes(key) ? days.filter(d => d !== key) : [...days, key];
-  }
-
-  createSchedule(): void {
-    this.newSchedule.serialNumbers = this.selectedSerialNumbers();
-    if (!this.newSchedule.text.trim() || this.newSchedule.serialNumbers.length === 0
-        || this.newSchedule.weekdays.length === 0) {
-      this.message.set('Bitte Text, Wochentage und Geraete fuer die geplante Ansage waehlen.');
-      return;
-    }
-    this.alexa.createScheduled(this.newSchedule).subscribe({
-      next: () => {
-        this.loadScheduled();
-        this.newSchedule = { text: '', timeOfDay: '08:00', weekdays: [], serialNumbers: [], mode: 'ANNOUNCE', enabled: true };
-      },
-      error: e => this.message.set(e.message)
-    });
-  }
-
-  toggleScheduleEnabled(a: ScheduledAnnouncement): void {
-    this.alexa.updateScheduled(a.id!, { ...a, enabled: !a.enabled })
-      .subscribe({ next: () => this.loadScheduled() });
-  }
-
-  deleteSchedule(a: ScheduledAnnouncement): void {
-    this.alexa.deleteScheduled(a.id!).subscribe({ next: () => this.loadScheduled() });
   }
 }
