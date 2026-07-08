@@ -140,13 +140,20 @@ public class AlexaLoginProxyService {
             HttpResponse<byte[]> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
             storeCookies(response.headers().allValues("set-cookie"));
 
-            // Erfolg: Amazon hat den Browser auf /ap/maplanding mit dem Code geleitet.
-            if (path.equals("/ap/maplanding") && query != null) {
-                String code = queryParam(query, "openid.oa2.authorization_code");
-                if (code != null && !code.isBlank()) {
-                    handleAuthorizationCode(exchange, code);
-                    return;
-                }
+            // Erfolg: Der Authorization-Code wird serverseitig abgegriffen, sobald Amazon ihn
+            // ausstellt - entweder im Location-Header eines Redirects oder in der aufgerufenen
+            // maplanding-URL. So ist es unerheblich, wohin der Browser anschliessend navigiert.
+            String location = response.headers().firstValue("location").orElse(null);
+            String code = extractCodeFromUrl(location);
+            if (code == null && path.equals("/ap/maplanding") && query != null) {
+                code = queryParam(query, "openid.oa2.authorization_code");
+            }
+            log.info("Alexa-Proxy: {} {} -> {} (redirect={}, code={})",
+                    exchange.getRequestMethod(), path, response.statusCode(),
+                    location != null, code != null);
+            if (code != null && !code.isBlank()) {
+                handleAuthorizationCode(exchange, code);
+                return;
             }
 
             writeProxiedResponse(exchange, response);
@@ -348,6 +355,18 @@ public class AlexaLoginProxyService {
     private static String firstHeader(HttpExchange exchange, String name) {
         List<String> values = exchange.getRequestHeaders().get(name);
         return values == null || values.isEmpty() ? null : values.get(0);
+    }
+
+    /** Liest den Authorization-Code aus einer (evtl. relativen) URL mit Query-String. */
+    private static String extractCodeFromUrl(String url) {
+        if (url == null) {
+            return null;
+        }
+        int q = url.indexOf('?');
+        if (q < 0) {
+            return null;
+        }
+        return queryParam(url.substring(q + 1), "openid.oa2.authorization_code");
     }
 
     private static String queryParam(String query, String name) {
