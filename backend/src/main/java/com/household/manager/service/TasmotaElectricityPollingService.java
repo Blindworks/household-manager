@@ -4,6 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.household.manager.dto.TasmotaElectricityPollingStatusResponse;
 import com.household.manager.dto.TasmotaStatusResponse;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.TasmotaElectricityReading;
 import com.household.manager.repository.TasmotaElectricityReadingRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -36,6 +43,7 @@ public class TasmotaElectricityPollingService {
     private final ObjectMapper objectMapper;
     private final TasmotaElectricityReadingRepository repository;
     private final TaskScheduler taskScheduler;
+    private final EntityStateService entityStateService;
 
     @Value("${tasmota.electricity.url}")
     private String tasmotaUrl;
@@ -105,6 +113,8 @@ public class TasmotaElectricityPollingService {
                 return;
             }
 
+            reportEntityStates(payload.getPosWirkenergieTariflos(), payload.getMomentaneWirkleistung());
+
             if (repository.existsByReadingTime(readingTime)) {
                 log.debug("Tasmota reading for {} already exists, skipping", readingTime);
                 return;
@@ -161,6 +171,8 @@ public class TasmotaElectricityPollingService {
                 return false;
             }
 
+            reportEntityStates(posNode.decimalValue(), powerNode.decimalValue());
+
             if (repository.existsByReadingTime(readingTime)) {
                 log.debug("Tasmota reading for {} already exists, skipping", readingTime);
                 return true;
@@ -180,6 +192,31 @@ public class TasmotaElectricityPollingService {
             log.error("Fallback parsing failed", ex);
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             return false;
+        }
+    }
+
+    private void reportEntityStates(BigDecimal energyKwh, BigDecimal powerW) {
+        try {
+            entityStateService.reportState(EntityStateUpdate.builder()
+                    .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.TASMOTA, "main", "energy"))
+                    .domain(EntityDomain.SENSOR)
+                    .source(EntitySource.TASMOTA)
+                    .sourceRef("main")
+                    .friendlyName("Stromzähler Wirkenergie")
+                    .state(energyKwh.toPlainString())
+                    .attributes(Map.of("unit", "kWh", "deviceClass", "energy"))
+                    .build());
+            entityStateService.reportState(EntityStateUpdate.builder()
+                    .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.TASMOTA, "main", "power"))
+                    .domain(EntityDomain.SENSOR)
+                    .source(EntitySource.TASMOTA)
+                    .sourceRef("main")
+                    .friendlyName("Stromzähler Momentanleistung")
+                    .state(powerW.toPlainString())
+                    .attributes(Map.of("unit", "W", "deviceClass", "power"))
+                    .build());
+        } catch (Exception ex) {
+            log.warn("Failed to report tasmota entity states: {}", ex.getMessage());
         }
     }
 
