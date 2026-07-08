@@ -1,8 +1,8 @@
 package com.household.manager.entitystate;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,13 +22,16 @@ class EntityStateServiceTest {
     private EntityStateWriter writer;
 
     @Mock
-    private com.household.manager.repository.EntityStateRepository repository;
-
-    @Mock
     private ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
     private EntityStateService service;
+
+    @BeforeEach
+    void setUp() {
+        // Repository is deliberately not mocked: reportState() never touches it,
+        // and an unused @Mock field would be dead test setup.
+        service = new EntityStateService(writer, null, eventPublisher);
+    }
 
     private EntityStateUpdate update() {
         return EntityStateUpdate.builder()

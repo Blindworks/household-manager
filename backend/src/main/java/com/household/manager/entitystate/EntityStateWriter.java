@@ -34,6 +34,9 @@ public class EntityStateWriter {
      *
      * @return Event, wenn sich der Zustandswert geändert hat; sonst leer
      */
+    // Muss public bleiben: Springs proxy-basiertes @Transactional ignoriert
+    // nicht-public Methoden stillschweigend (REQUIRES_NEW wäre lautlos weg).
+    // Nur über EntityStateService.reportState aufrufen (Fehlerkapselung).
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<EntityStateChangedEvent> upsert(EntityStateUpdate update) {
         LocalDateTime now = LocalDateTime.now();

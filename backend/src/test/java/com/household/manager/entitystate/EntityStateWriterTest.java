@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,7 +53,7 @@ class EntityStateWriterTest {
         Optional<EntityStateChangedEvent> event = writer.upsert(update("21.5"));
 
         assertTrue(event.isPresent());
-        assertEquals("unknown", event.get().oldState());
+        assertEquals(EntityStateWriter.STATE_UNKNOWN, event.get().oldState());
         assertEquals("21.5", event.get().newState());
 
         ArgumentCaptor<EntityState> captor = ArgumentCaptor.forClass(EntityState.class);
@@ -109,6 +110,35 @@ class EntityStateWriterTest {
         Optional<EntityStateChangedEvent> event = writer.upsert(update(null));
 
         assertTrue(event.isEmpty());
+    }
+
+    @Test
+    void eventCarriesRawAttributesMap() {
+        when(repository.findByEntityId("sensor.zigbee_wohnzimmer_temperature")).thenReturn(Optional.empty());
+
+        Optional<EntityStateChangedEvent> event = writer.upsert(update("21.5"));
+
+        assertEquals(Map.of("unit", "°C"), event.orElseThrow().attributes());
+    }
+
+    @Test
+    void serializationFailureStoresNullAttributesButStillSavesState() {
+        ObjectMapper failingMapper = mock(ObjectMapper.class);
+        try {
+            when(failingMapper.writeValueAsString(any())).thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("boom") {});
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+        EntityStateWriter failingWriter = new EntityStateWriter(repository, failingMapper);
+        when(repository.findByEntityId("sensor.zigbee_wohnzimmer_temperature")).thenReturn(Optional.empty());
+
+        Optional<EntityStateChangedEvent> event = failingWriter.upsert(update("21.5"));
+
+        assertTrue(event.isPresent());
+        ArgumentCaptor<EntityState> captor = ArgumentCaptor.forClass(EntityState.class);
+        verify(repository).save(captor.capture());
+        assertNull(captor.getValue().getAttributes());
+        assertEquals("21.5", captor.getValue().getState());
     }
 
     private EntityState existingEntity(String state, LocalDateTime timestamps) {
