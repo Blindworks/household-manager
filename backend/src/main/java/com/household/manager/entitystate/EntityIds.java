@@ -13,12 +13,16 @@ public final class EntityIds {
     }
 
     public static String build(EntityDomain domain, EntitySource source, String sourceRef, String suffix) {
+        String refSlug = slug(sourceRef);
+        if (refSlug.isEmpty()) {
+            throw new IllegalArgumentException("sourceRef produces empty slug: '" + sourceRef + "'");
+        }
         StringBuilder sb = new StringBuilder();
         sb.append(domain.idPrefix())
                 .append('.')
                 .append(slug(source.name()))
                 .append('_')
-                .append(slug(sourceRef));
+                .append(refSlug);
         if (suffix != null && !suffix.isBlank()) {
             sb.append('_').append(slug(suffix));
         }

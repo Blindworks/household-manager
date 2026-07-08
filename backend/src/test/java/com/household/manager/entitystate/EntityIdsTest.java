@@ -3,6 +3,7 @@ package com.household.manager.entitystate;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EntityIdsTest {
 
@@ -32,5 +33,17 @@ class EntityIdsTest {
     void binarySensorDomainUsesUnderscorePrefix() {
         String id = EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.ZIGBEE, "Tür", "contact");
         assertEquals("binary_sensor.zigbee_tuer_contact", id);
+    }
+
+    @Test
+    void buildRejectsSourceRefThatSlugsToEmpty() {
+        assertThrows(IllegalArgumentException.class,
+                () -> EntityIds.build(EntityDomain.SENSOR, EntitySource.ZIGBEE, "!!!", "temperature"));
+    }
+
+    @Test
+    void buildRejectsBlankSourceRef() {
+        assertThrows(IllegalArgumentException.class,
+                () -> EntityIds.build(EntityDomain.SENSOR, EntitySource.ZIGBEE, "  ", null));
     }
 }
