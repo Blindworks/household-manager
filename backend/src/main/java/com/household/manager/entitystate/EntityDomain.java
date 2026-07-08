@@ -10,6 +10,6 @@ public enum EntityDomain {
 
     /** Präfix für Entity-IDs, z. B. "sensor" oder "binary_sensor". */
     public String idPrefix() {
-        return name().toLowerCase();
+        return name().toLowerCase(java.util.Locale.ROOT);
     }
 }
