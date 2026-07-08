@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -119,6 +120,30 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Illegal state: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Handle request parameters that cannot be converted to the target type
+     * (e.g. an invalid enum value for a {@code @RequestParam}).
+     *
+     * @param ex      The type mismatch exception
+     * @param request The web request
+     * @return Error response with 400 status
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message("Invalid value '%s' for parameter '%s'".formatted(ex.getValue(), ex.getName()))
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Method argument type mismatch: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(errorResponse);
     }
 

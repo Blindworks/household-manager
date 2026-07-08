@@ -1,14 +1,19 @@
 package com.household.manager.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.exception.GlobalExceptionHandler;
 import com.household.manager.model.entity.EntityState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -31,7 +36,14 @@ class EntityStateControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new EntityStateController(entityStateService)).build();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        mockMvc = MockMvcBuilders.standaloneSetup(new EntityStateController(entityStateService, objectMapper))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
     }
 
     private EntityState sensor() {
@@ -56,7 +68,8 @@ class EntityStateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].entityId").value("sensor.zigbee_wohnzimmer_temperature"))
                 .andExpect(jsonPath("$[0].state").value("21.5"))
-                .andExpect(jsonPath("$[0].attributes.unit").value("°C"));
+                .andExpect(jsonPath("$[0].attributes.unit").value("°C"))
+                .andExpect(jsonPath("$[0].lastChanged").value("2026-07-08T12:00:00"));
     }
 
     @Test
@@ -100,5 +113,11 @@ class EntityStateControllerTest {
 
         mockMvc.perform(delete("/v1/entities/sensor.unknown"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void invalidDomainParamReturns400() throws Exception {
+        mockMvc.perform(get("/v1/entities").param("domain", "FOO"))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -24,10 +24,11 @@ import java.util.Map;
 public class EntityStateController {
 
     private final EntityStateService entityStateService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
-    public EntityStateController(EntityStateService entityStateService) {
+    public EntityStateController(EntityStateService entityStateService, ObjectMapper objectMapper) {
         this.entityStateService = entityStateService;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping
