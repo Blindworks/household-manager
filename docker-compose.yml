@@ -34,8 +34,12 @@ services:
       ZIGBEE_MQTT_PORT: 1883
       ZIGBEE_MQTT_USER: household
       ZIGBEE_MQTT_PASSWORD: change-me-zigbee
+
+      # Alexa (alexa-remote2 Sidecar)
+      ALEXA_SIDECAR_URL: http://alexa-sidecar:3456
     depends_on:
       - mosquitto
+      - alexa-sidecar
     ports:
       - "8080:8080"
     networks:
@@ -49,6 +53,26 @@ services:
       - "4200:80"
     depends_on:
       - backend
+    networks:
+      - app_net
+
+  alexa-sidecar:
+    build:
+      context: ./alexa-sidecar
+    restart: unless-stopped
+    environment:
+      PORT: "3456"
+      PROXY_PORT: "3457"
+      # Adresse, unter der der BROWSER den Login-Proxy erreicht (Host-IP, NICHT der Container).
+      # Muss vom Browser des Nutzers aus auf Port 3457 erreichbar sein.
+      PROXY_HOST: ${ALEXA_PROXY_HOST:-192.168.1.100}
+      AMAZON_PAGE: ${ALEXA_DOMAIN:-amazon.de}
+      COOKIE_PATH: /data/alexa-cookie.json
+    volumes:
+      - alexa_sidecar_data:/data
+    ports:
+      - "3456:3456"
+      - "3457:3457"
     networks:
       - app_net
 
@@ -89,3 +113,4 @@ volumes:
   mosquitto_data:
   mosquitto_log:
   zigbee2mqtt_data:
+  alexa_sidecar_data:
