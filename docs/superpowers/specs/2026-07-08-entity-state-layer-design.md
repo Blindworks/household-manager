@@ -109,6 +109,13 @@ Neue Seite `pages/entities/` (standalone, separate HTML/SCSS):
 - **Neustart:** Zustände kommen aus der DB und sind sofort da — ggf. veraltet bis zum ersten Polling-Durchlauf, erkennbar an `last_updated`.
 - **Gleichzeitige Updates** (MQTT-Push + Polling): Upsert über eindeutige `entity_id` mit `@Transactional`; bei Einzelhaushalts-Lastprofil ausreichend, kein zusätzliches Locking.
 
+## Offene Punkte für Stufe 3 (Regel-Engine) — aus dem Abschluss-Review
+
+- **`unavailable`-Semantik ist quellenabhängig:** Switch-Entitäten (Kasa/Tapo/Meross) und Shelly melden bei offline/unreachable explizit `unavailable`. Die reinen Poller (Tasmota, Airrohr, Wetter, AnkerSolix) und Zigbee melden bei Abruf-Fehlern nichts — die Entität behält ihren letzten Zustand, erkennbar nur an veraltetem `last_updated`. Regeln der Form „wenn unavailable" sind also nur für Switch/Shelly verlässlich; für Poller-Quellen stattdessen auf `last_updated`-Staleness prüfen (oder vorher Staleness→`unavailable`-Erkennung nachrüsten).
+- **Event-Payload:** `EntityStateChangedEvent` trägt bewusst nur `entityId/oldState/newState/attributes/timestamp` — kein `domain`/`source`. Wenn die Regel-Engine nach Quelle/Domain routen soll, das Event vorher (solange es erst einen Logging-Listener gibt) billig um diese Felder erweitern.
+- **Attribut-Änderungen feuern keine Events** (nur State-Wert-Änderungen). Für Regeln wie „Batterie < 20 %" müsste `batteryPercent` als eigene Sensor-Entität modelliert werden statt als Attribut.
+- **Asynchrone Event-Zustellung** vor I/O-lastigen Listenern klären (siehe Hinweis im Architektur-Abschnitt).
+
 ## Tests
 
 - `EntityStateServiceTest`: Upsert-Verhalten, Change-Detection (Event nur bei Wertänderung, `last_changed` vs. `last_updated`), Fehler in `reportState` erreicht den Aufrufer nicht

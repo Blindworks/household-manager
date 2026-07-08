@@ -111,7 +111,9 @@ public class WeatherPollingService {
                 .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.WEATHER, "dwd", suffix))
                 .domain(EntityDomain.SENSOR)
                 .source(EntitySource.WEATHER)
-                .sourceRef(stationId)
+                // sourceRef entspricht dem ID-Segment (Invariante aller Quellen); die
+                // konkrete Station steht im Attribut "stationId".
+                .sourceRef("dwd")
                 .friendlyName("Wetter " + label)
                 .state(String.valueOf(value))
                 .attributes(Map.of("unit", unit, "deviceClass", deviceClass, "stationId", stationId))
