@@ -21,7 +21,7 @@ public class WeatherConditions {
 
     private BigDecimal temperature;     // °C
     private BigDecimal precipitation;   // mm
-    private BigDecimal windSpeed;       // wie geliefert (in Task 9 verifizieren)
+    private BigDecimal windSpeed;       // km/h (verifiziert gegen Frontend-Anzeige, siehe weather.component.html)
     private Integer windDirection;      // Grad
     private Integer humidity;           // %
     private BigDecimal pressure;        // hPa
