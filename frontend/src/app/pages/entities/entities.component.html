@@ -1,0 +1,81 @@
+<div class="entities-page">
+  <h1>Entitäten</h1>
+  <p class="entities-page__subtitle">
+    Alle Geräte und Messwerte als generische Entitäten mit aktuellem Zustand.
+  </p>
+
+  @if (error()) {
+    <div class="entities-page__error">{{ error() }}</div>
+  }
+
+  <div class="entities-page__filters">
+    <select [ngModel]="domainFilter()" (ngModelChange)="domainFilter.set($event)">
+      <option value="">Alle Domains</option>
+      <option value="SWITCH">Switch</option>
+      <option value="SENSOR">Sensor</option>
+      <option value="BINARY_SENSOR">Binary Sensor</option>
+    </select>
+
+    <select [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">
+      <option value="">Alle Quellen</option>
+      @for (source of sources(); track source) {
+        <option [value]="source">{{ source }}</option>
+      }
+    </select>
+
+    <input
+      type="text"
+      placeholder="Suche nach Name oder Entity-ID..."
+      [ngModel]="searchText()"
+      (ngModelChange)="searchText.set($event)" />
+  </div>
+
+  <table class="entities-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Entity-ID</th>
+        <th>Domain</th>
+        <th>Quelle</th>
+        <th>Zustand</th>
+        <th>Geändert</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (entity of filteredEntities(); track entity.entityId) {
+        <tr class="entities-table__row" (click)="toggleExpanded(entity.entityId)">
+          <td>{{ entity.friendlyName }}</td>
+          <td class="entities-table__id">{{ entity.entityId }}</td>
+          <td>{{ entity.domain }}</td>
+          <td>{{ entity.source }}</td>
+          <td>
+            <span class="state-badge" [class]="'state-badge ' + stateClass(entity)">
+              {{ stateWithUnit(entity) }}
+            </span>
+          </td>
+          <td>{{ relativeTime(entity.lastChanged) }}</td>
+        </tr>
+        @if (expandedEntityId() === entity.entityId) {
+          <tr class="entities-table__details">
+            <td colspan="6">
+              <dl class="entities-table__attributes">
+                @for (attr of attributeEntries(entity); track attr.key) {
+                  <dt>{{ attr.key }}</dt>
+                  <dd>{{ attr.value }}</dd>
+                }
+                <dt>lastUpdated</dt>
+                <dd>{{ entity.lastUpdated }}</dd>
+                <dt>sourceRef</dt>
+                <dd>{{ entity.sourceRef }}</dd>
+              </dl>
+            </td>
+          </tr>
+        }
+      } @empty {
+        <tr>
+          <td colspan="6" class="entities-table__empty">Keine Entitäten gefunden.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

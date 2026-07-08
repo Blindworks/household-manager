@@ -29,6 +29,6 @@ export class EntityStateService {
 
   private handleError(error: HttpErrorResponse): Observable<never> {
     console.error('Entity-API-Fehler:', error);
-    return throwError(() => new Error('Fehler beim Laden der Entitäten.'));
+    return throwError(() => new Error('Fehler bei der Entitäten-Anfrage.'));
   }
 }

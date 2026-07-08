@@ -39,6 +39,7 @@ export class HeaderComponent {
     { path: '/weather', label: 'Wetter' },
     { path: '/zigbee', label: 'Zigbee-Sensoren' },
     { path: '/devices', label: 'Geraete' },
+    { path: '/entities', label: 'Entitaeten' },
     { path: '/announcements', label: 'Ansagen' },
     { path: '/admin', label: 'Admin' },
     {
