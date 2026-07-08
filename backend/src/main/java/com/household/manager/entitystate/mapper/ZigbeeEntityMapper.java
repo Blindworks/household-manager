@@ -22,6 +22,11 @@ import java.util.Set;
  * (ZigbeeDevice.findByFriendlyName) — über den zigbee2mqtt-friendlyName gebildet.
  * Zwei Geräte, deren Namen auf denselben Slug abbilden, würden kollidieren;
  * das ist eine bewusst geteilte Annahme mit dem bestehenden Identitätsmodell.
+ * <p>
+ * Binärzustands-Semantik folgt der HA-Konvention "on = offen/erkannt":
+ * für CONTACT ist das gegenüber dem rohen zigbee2mqtt-Wert invertiert
+ * (zigbee2mqtt: {@code contact=true} = Magnet anliegend = Tür GESCHLOSSEN),
+ * für OCCUPANCY/WATER_LEAK stimmt truthy=erkannt bereits mit HA überein.
  */
 @Component
 public class ZigbeeEntityMapper {
@@ -39,6 +44,16 @@ public class ZigbeeEntityMapper {
             MeasurementType.WATER_LEAK, "Wasserleck"
     );
 
+    private static final Map<MeasurementType, String> HA_DEVICE_CLASSES = Map.of(
+            MeasurementType.TEMPERATURE, "temperature",
+            MeasurementType.HUMIDITY, "humidity",
+            MeasurementType.PRESSURE, "pressure",
+            MeasurementType.CONTACT, "door",
+            MeasurementType.OCCUPANCY, "motion",
+            MeasurementType.ILLUMINANCE, "illuminance",
+            MeasurementType.WATER_LEAK, "moisture"
+    );
+
     public List<EntityStateUpdate> map(ParsedZigbeeMessage message) {
         List<EntityStateUpdate> updates = new ArrayList<>();
         for (ZigbeeMeasurementValue value : message.measurements()) {
@@ -49,7 +64,8 @@ public class ZigbeeEntityMapper {
             if (value.unit() != null && !value.unit().isBlank()) {
                 attributes.put("unit", value.unit());
             }
-            attributes.put("deviceClass", value.type().name().toLowerCase(java.util.Locale.ROOT));
+            attributes.put("deviceClass",
+                    HA_DEVICE_CLASSES.getOrDefault(value.type(), value.type().name().toLowerCase(java.util.Locale.ROOT)));
             if (message.batteryPercent() != null) {
                 attributes.put("batteryPercent", message.batteryPercent());
             }
@@ -57,7 +73,7 @@ public class ZigbeeEntityMapper {
                 attributes.put("linkQuality", message.linkQuality());
             }
 
-            String state = binary ? toOnOff(value.value()) : value.value().toPlainString();
+            String state = binary ? toOnOff(value.type(), value.value()) : value.value().toPlainString();
             String suffix = value.type().name().toLowerCase(java.util.Locale.ROOT);
 
             updates.add(EntityStateUpdate.builder()
@@ -65,7 +81,7 @@ public class ZigbeeEntityMapper {
                     .domain(domain)
                     .source(EntitySource.ZIGBEE)
                     .sourceRef(message.friendlyName())
-                    .friendlyName(message.friendlyName() + " " + GERMAN_LABELS.get(value.type()))
+                    .friendlyName(message.friendlyName() + " " + GERMAN_LABELS.getOrDefault(value.type(), value.type().name()))
                     .state(state)
                     .attributes(attributes)
                     .build());
@@ -73,7 +89,14 @@ public class ZigbeeEntityMapper {
         return updates;
     }
 
-    private String toOnOff(BigDecimal value) {
-        return value != null && value.compareTo(BigDecimal.ZERO) != 0 ? "on" : "off";
+    private String toOnOff(MeasurementType type, BigDecimal value) {
+        boolean truthy = value != null && value.compareTo(BigDecimal.ZERO) != 0;
+        if (type == MeasurementType.CONTACT) {
+            // zigbee2mqtt: contact=true = Magnet anliegend = Tür geschlossen.
+            // HA-Konvention fuer binary_sensor.door: on = offen -> invertieren.
+            return truthy ? "off" : "on";
+        }
+        // OCCUPANCY / WATER_LEAK: truthy = erkannt = "on" (HA-konform, keine Inversion).
+        return truthy ? "on" : "off";
     }
 }

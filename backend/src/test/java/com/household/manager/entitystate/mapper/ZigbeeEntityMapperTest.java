@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class ZigbeeEntityMapperTest {
 
@@ -33,10 +34,13 @@ class ZigbeeEntityMapperTest {
         assertEquals(87, update.attributes().get("batteryPercent"));
         assertEquals(120, update.attributes().get("linkQuality"));
         assertEquals("Wohnzimmer Sensor Temperatur", update.friendlyName());
+        assertEquals("temperature", update.attributes().get("deviceClass"));
     }
 
     @Test
-    void mapsBinaryMeasurementToBinarySensorEntity() {
+    void mapsClosedContactToOff() {
+        // zigbee2mqtt: contact=true bedeutet Magnet anliegend, also Tür GESCHLOSSEN.
+        // HA-Konvention fuer binary_sensor.door: off = geschlossen.
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ONE, "")));
@@ -46,7 +50,20 @@ class ZigbeeEntityMapperTest {
         EntityStateUpdate update = updates.get(0);
         assertEquals("binary_sensor.zigbee_haustuer_contact", update.entityId());
         assertEquals(EntityDomain.BINARY_SENSOR, update.domain());
-        assertEquals("on", update.state());
+        assertEquals("off", update.state());
+        assertEquals("door", update.attributes().get("deviceClass"));
+        assertFalse(update.attributes().containsKey("batteryPercent"));
+    }
+
+    @Test
+    void mapsOpenContactToOn() {
+        // contact=false (BigDecimal.ZERO) bedeutet Magnet nicht anliegend, also Tür OFFEN.
+        // HA-Konvention: on = offen.
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage(
+                "Haustür", null, null,
+                List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ZERO, "")));
+
+        assertEquals("on", mapper.map(message).get(0).state());
     }
 
     @Test
@@ -56,6 +73,15 @@ class ZigbeeEntityMapperTest {
                 List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ZERO, "")));
 
         assertEquals("off", mapper.map(message).get(0).state());
+    }
+
+    @Test
+    void mapsOccupancyDetectedToOn() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage(
+                "Flur", null, null,
+                List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ONE, "")));
+
+        assertEquals("on", mapper.map(message).get(0).state());
     }
 
     @Test
