@@ -18,20 +18,20 @@
     </ng-container>
 
     <ng-template #loginForm>
-      <ng-container *ngIf="loginStage() !== 'MFA_REQUIRED'">
-        <label>E-Mail <input type="email" [(ngModel)]="email" name="email"></label>
-        <label>Passwort <input type="password" [(ngModel)]="password" name="password"></label>
-        <div *ngIf="loginStage() === 'CAPTCHA_REQUIRED'">
-          <img [src]="captchaUrl()" alt="Captcha">
-          <label>Captcha <input type="text" [(ngModel)]="captcha" name="captcha"></label>
-        </div>
-        <button type="button" (click)="login()">Anmelden</button>
-      </ng-container>
+      <div *ngIf="!loginWaiting()">
+        <p>Die Anmeldung laeuft ueber ein echtes Browser-Fenster direkt bei Amazon
+          (inkl. Passwort und MFA). Es werden keine Zugangsdaten gespeichert.</p>
+        <button type="button" (click)="startLogin()">Login starten</button>
+      </div>
 
-      <ng-container *ngIf="loginStage() === 'MFA_REQUIRED'">
-        <label>Bestaetigungscode <input type="text" [(ngModel)]="mfaCode" name="mfaCode"></label>
-        <button type="button" (click)="submitMfa()">Code bestaetigen</button>
-      </ng-container>
+      <div *ngIf="loginWaiting()" class="login-wait">
+        <p><strong>Schritt 1:</strong> Diesen Link im Browser oeffnen und bei Amazon anmelden:</p>
+        <p><a [href]="proxyUrl()" target="_blank" rel="noopener">{{ proxyUrl() }}</a></p>
+        <p><strong>Schritt 2:</strong> Nach erfolgreicher Anmeldung erkennt der Household Manager
+          das automatisch (wird alle paar Sekunden geprueft).</p>
+        <p class="hint">Warte auf Abschluss der Anmeldung&hellip;</p>
+        <button type="button" (click)="cancelLogin()">Abbrechen</button>
+      </div>
     </ng-template>
   </section>
 

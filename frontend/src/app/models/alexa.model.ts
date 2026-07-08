@@ -1,16 +1,14 @@
 export type AlexaTtsMode = 'SPEAK' | 'ANNOUNCE';
-export type AlexaLoginStatus = 'OK' | 'MFA_REQUIRED' | 'CAPTCHA_REQUIRED' | 'FAILED';
 
-export interface AlexaLoginResponse {
-  status: AlexaLoginStatus;
-  captchaImageUrl?: string;
-  message?: string;
+export interface AlexaProxyStartResponse {
+  proxyUrl: string;
 }
 
 export interface AlexaAuthStatus {
   loggedIn: boolean;
   accountName?: string;
   reauthRequired: boolean;
+  loginError?: string;
 }
 
 export interface AlexaDevice {

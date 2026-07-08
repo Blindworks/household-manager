@@ -1,9 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AlexaService } from '../../services/alexa.service';
 import {
-  AlexaAuthStatus, AlexaDevice, AlexaLoginStatus,
+  AlexaAuthStatus, AlexaDevice,
   AlexaTtsMode, ScheduledAnnouncement
 } from '../../models/alexa.model';
 
@@ -15,7 +15,7 @@ import {
   templateUrl: './announcements.component.html',
   styleUrl: './announcements.component.scss'
 })
-export class AnnouncementsComponent implements OnInit {
+export class AnnouncementsComponent implements OnInit, OnDestroy {
   private readonly alexa = inject(AlexaService);
 
   readonly weekdayOptions = [
@@ -28,15 +28,12 @@ export class AnnouncementsComponent implements OnInit {
   readonly authStatus = signal<AlexaAuthStatus | null>(null);
   readonly devices = signal<AlexaDevice[]>([]);
   readonly scheduled = signal<ScheduledAnnouncement[]>([]);
-  readonly loginStage = signal<AlexaLoginStatus | 'NONE'>('NONE');
-  readonly captchaUrl = signal<string | undefined>(undefined);
   readonly message = signal<string>('');
 
-  // Login-Formular
-  email = '';
-  password = '';
-  captcha = '';
-  mfaCode = '';
+  // Browser-Login
+  readonly proxyUrl = signal<string | null>(null);
+  readonly loginWaiting = signal<boolean>(false);
+  private pollHandle: ReturnType<typeof setInterval> | null = null;
 
   // Durchsage-Formular
   announceText = '';
@@ -52,6 +49,10 @@ export class AnnouncementsComponent implements OnInit {
     this.refreshStatus();
   }
 
+  ngOnDestroy(): void {
+    this.clearPolling();
+  }
+
   refreshStatus(): void {
     this.alexa.getAuthStatus().subscribe({
       next: s => {
@@ -65,28 +66,55 @@ export class AnnouncementsComponent implements OnInit {
     });
   }
 
-  login(): void {
-    this.alexa.login(this.email, this.password, this.captcha || undefined).subscribe({
-      next: r => this.handleLoginResponse(r),
+  /** Startet den Browser-Login: holt die Proxy-URL und pollt anschliessend den Status. */
+  startLogin(): void {
+    this.message.set('');
+    this.alexa.startProxyLogin().subscribe({
+      next: r => {
+        this.proxyUrl.set(r.proxyUrl);
+        this.loginWaiting.set(true);
+        this.startPolling();
+      },
       error: e => this.message.set(e.message)
     });
   }
 
-  submitMfa(): void {
-    this.alexa.submitMfa(this.mfaCode).subscribe({
-      next: r => this.handleLoginResponse(r),
-      error: e => this.message.set(e.message)
-    });
+  cancelLogin(): void {
+    this.clearPolling();
+    this.loginWaiting.set(false);
+    this.proxyUrl.set(null);
+    this.alexa.stopProxyLogin().subscribe({ error: () => {} });
   }
 
-  private handleLoginResponse(r: { status: AlexaLoginStatus; captchaImageUrl?: string; message?: string }): void {
-    this.loginStage.set(r.status);
-    this.captchaUrl.set(r.captchaImageUrl);
-    this.message.set(r.message ?? '');
-    if (r.status === 'OK') {
-      this.email = this.password = this.captcha = this.mfaCode = '';
-      this.loginStage.set('NONE');
-      this.refreshStatus();
+  private startPolling(): void {
+    this.clearPolling();
+    this.pollHandle = setInterval(() => {
+      this.alexa.getAuthStatus().subscribe({
+        next: s => {
+          this.authStatus.set(s);
+          if (s.loggedIn) {
+            this.finishLogin();
+            this.loadDevices(false);
+            this.loadScheduled();
+          } else if (s.loginError) {
+            this.finishLogin();
+            this.message.set('Anmeldung fehlgeschlagen: ' + s.loginError);
+          }
+        }
+      });
+    }, 3000);
+  }
+
+  private finishLogin(): void {
+    this.clearPolling();
+    this.loginWaiting.set(false);
+    this.proxyUrl.set(null);
+  }
+
+  private clearPolling(): void {
+    if (this.pollHandle !== null) {
+      clearInterval(this.pollHandle);
+      this.pollHandle = null;
     }
   }
 

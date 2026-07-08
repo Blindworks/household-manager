@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
-  AlexaAuthStatus, AlexaDevice, AlexaLoginResponse,
+  AlexaAuthStatus, AlexaDevice, AlexaProxyStartResponse,
   AlexaTtsMode, ScheduledAnnouncement
 } from '../models/alexa.model';
 
@@ -17,14 +17,14 @@ export class AlexaService {
     return this.http.get<AlexaAuthStatus>(`${this.baseUrl}/auth/status`).pipe(catchError(this.handleError));
   }
 
-  login(email: string, password: string, captcha?: string): Observable<AlexaLoginResponse> {
-    return this.http.post<AlexaLoginResponse>(`${this.baseUrl}/auth/login`, { email, password, captcha })
+  /** Startet den Browser-Login und liefert die lokale URL, die der Nutzer oeffnen soll. */
+  startProxyLogin(): Observable<AlexaProxyStartResponse> {
+    return this.http.post<AlexaProxyStartResponse>(`${this.baseUrl}/auth/proxy/start`, {})
       .pipe(catchError(this.handleError));
   }
 
-  submitMfa(code: string): Observable<AlexaLoginResponse> {
-    return this.http.post<AlexaLoginResponse>(`${this.baseUrl}/auth/mfa`, { code })
-      .pipe(catchError(this.handleError));
+  stopProxyLogin(): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/proxy/stop`, {}).pipe(catchError(this.handleError));
   }
 
   logout(): Observable<void> {
