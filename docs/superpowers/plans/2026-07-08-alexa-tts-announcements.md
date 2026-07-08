@@ -17,7 +17,7 @@
 - Liquibase: neue Changeset-Datei unter `db/changelog/changes/`, Include in `db.changelog-master.xml`.
 - Amazon-Domain konfigurierbar über Property `alexa.domain` (Default `amazon.de`).
 
-**Arbeitsbasis:** Branch von `main` erstellen (Task 0).
+**Arbeitsbasis:** Direkt auf `main` (ausdrücklicher Wunsch des Nutzers). Task 0 stellt nur sicher, dass `main` ausgecheckt und aktuell ist.
 
 ---
 
@@ -66,22 +66,23 @@
 
 ---
 
-## Task 0: Feature-Branch anlegen
+## Task 0: Auf main-Branch wechseln
 
 **Files:** keine.
 
-- [ ] **Step 1: Branch von main erstellen**
+- [ ] **Step 1: main auschecken und aktualisieren**
 
 ```bash
 git checkout main
 git pull --ff-only
-git checkout -b feature/alexa-tts-announcements
 ```
 
 - [ ] **Step 2: Verifizieren**
 
 Run: `git status -sb`
-Expected: `## feature/alexa-tts-announcements` und ein sauberer Working Tree (außer bereits vorhandene, unverwandte Änderungen — die nicht anfassen).
+Expected: `## main` (bzw. `## main...origin/main`). Es wird direkt auf `main` committet — kein Feature-Branch.
+
+> **Hinweis:** Spec und Plan wurden auf dem Branch `fix/meross-power-state-mqtt` committet. Damit sie auf `main` verfügbar sind, muss dieser Branch nach `main` gemergt sein (oder die beiden Doc-Commits nach `main` übernommen werden), bevor die Implementierung startet. Das ist eine Vorbedingung dieses Tasks.
 
 ---
 
