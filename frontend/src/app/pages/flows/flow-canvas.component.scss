@@ -1,0 +1,111 @@
+:host {
+  display: block;
+  height: 600px;
+
+  // Workaround für ein bekanntes @foblex/flow-Rendering-Problem (Chromium):
+  // f-connection shippt sein internes <svg> ohne width/height, wodurch der Browser
+  // eine intrinsische Box von 0x0 berechnet und die Verbindungslinie unsichtbar bleibt,
+  // trotz `overflow: visible !important`. Siehe foblex-spike.notes.md.
+  // Component-scoped statt global, weil f-connection sein <svg> im eigenen Template
+  // rendert (View-Encapsulation-Grenze) — ::ng-deep ist hier nötig, um es zu erreichen.
+  ::ng-deep f-connection svg {
+    width: 1px;
+    height: 1px;
+  }
+}
+
+f-flow {
+  display: block;
+  height: 100%;
+}
+
+.flow-canvas {
+  &__node {
+    position: relative;
+    min-width: 160px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #c7c7c7;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    cursor: grab;
+  }
+
+  &__node-delete {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #c7c7c7;
+    background: #fff;
+    color: #888;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      color: #c62828;
+      border-color: #c62828;
+    }
+  }
+
+  &__node-type {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  &__node-name {
+    font-size: 0.75rem;
+    color: #666;
+  }
+
+  &__connector {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #607d8b;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #607d8b;
+
+    &--in {
+      margin-bottom: 0.35rem;
+    }
+  }
+
+  &__ports-out {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    margin-top: 0.35rem;
+  }
+
+  &__port-out {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  &__port-label {
+    font-size: 0.65rem;
+    color: #888;
+  }
+
+  &__connection-delete {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid #c7c7c7;
+    background: #fff;
+    color: #888;
+    line-height: 1;
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    &:hover {
+      color: #c62828;
+      border-color: #c62828;
+    }
+  }
+}

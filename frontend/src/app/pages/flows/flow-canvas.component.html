@@ -1,0 +1,73 @@
+<f-flow
+  fDraggable
+  (fCreateConnection)="onCreateConnection($event)"
+  (fMoveNodes)="onMoveNodes($event)"
+  (fSelectionChange)="onSelectionChange($event)"
+>
+  <f-canvas fZoom>
+    @for (connection of connections(); track connectionKey(connection)) {
+      <f-connection
+        [fSourceId]="outConnectorId(connection.fromNode, connection.fromPort)"
+        [fTargetId]="inConnectorId(connection.toNode)"
+      >
+        <button
+          type="button"
+          fConnectionContent
+          class="flow-canvas__connection-delete"
+          title="Verbindung löschen"
+          (click)="onDeleteConnection(connection)"
+        >
+          &times;
+        </button>
+      </f-connection>
+    }
+
+    @for (node of nodes(); track node.id) {
+      <div
+        fNode
+        fDragHandle
+        [fNodeId]="node.id"
+        [fNodePosition]="{ x: node.x, y: node.y }"
+        class="flow-canvas__node"
+      >
+        <button
+          type="button"
+          fDragBlocker
+          class="flow-canvas__node-delete"
+          title="Node löschen"
+          (click)="onDeleteNode(node.id)"
+        >
+          &times;
+        </button>
+
+        <div class="flow-canvas__node-type">{{ node.type }}</div>
+        @if (node.name) {
+          <div class="flow-canvas__node-name">{{ node.name }}</div>
+        }
+
+        <div
+          fConnector
+          fConnectorType="target"
+          [fConnectorId]="inConnectorId(node.id)"
+          class="flow-canvas__connector flow-canvas__connector--in"
+        ></div>
+
+        <div class="flow-canvas__ports-out">
+          @for (label of outPortLabels(node.type); track $index) {
+            <div class="flow-canvas__port-out">
+              <span class="flow-canvas__port-label">{{ label }}</span>
+              <div
+                fConnector
+                fConnectorType="source"
+                [fConnectorId]="outConnectorId(node.id, $index)"
+                class="flow-canvas__connector flow-canvas__connector--out"
+              ></div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </f-canvas>
+
+  <f-minimap></f-minimap>
+</f-flow>
