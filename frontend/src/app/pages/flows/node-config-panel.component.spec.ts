@@ -48,4 +48,12 @@ describe('NodeConfigPanelComponent', () => {
     expect(fixture.componentInstance.isRequired('entityId')).toBe(true);
     expect(fixture.componentInstance.isRequired('forSeconds')).toBe(false);
   });
+
+  it('shows unknown-type hint when nodeType is missing', () => {
+    const fixture = TestBed.createComponent(NodeConfigPanelComponent);
+    fixture.componentRef.setInput('node', { id: 'x', type: 'mystery', x: 0, y: 0, config: {} } as CanvasNode);
+    fixture.componentRef.setInput('nodeType', undefined);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Unbekannter Typ');
+  });
 });

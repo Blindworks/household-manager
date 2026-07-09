@@ -31,4 +31,10 @@
       </div>
     }
   </div>
+} @else if (node() && !nodeType()) {
+  <div class="config-panel">
+    <h3>Unbekannter Typ</h3>
+    <p class="config-panel__unknown">Node-Typ „{{ node()!.type }}" ist dem Editor nicht bekannt
+      (evtl. neuere Backend-Version). Keine Konfiguration verfügbar.</p>
+  </div>
 }
