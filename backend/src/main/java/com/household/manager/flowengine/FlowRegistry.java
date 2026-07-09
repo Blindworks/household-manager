@@ -79,6 +79,7 @@ public class FlowRegistry {
         rebuildTriggerIndex();
         if (old != null) {
             runCleanups(flowId, old.cleanups);
+            cancelScheduledFutures(old);
         }
         log.info("Flow {} deployed ({} nodes)", flowId, flow.graph.nodes().size());
     }
@@ -88,6 +89,7 @@ public class FlowRegistry {
         if (old != null) {
             rebuildTriggerIndex();
             runCleanups(flowId, old.cleanups);
+            cancelScheduledFutures(old);
             log.info("Flow {} undeployed", flowId);
         }
     }
@@ -100,6 +102,28 @@ public class FlowRegistry {
                 log.warn("Flow {} cleanup failed: {}", flowId, ex.getMessage());
             }
         });
+    }
+
+    /** Storniert alle noch offenen ScheduledFutures, die Nodes im state() geparkt haben
+     *  (Delay-Timer, Verweildauer-Timer). Ergänzt die register()-Cleanups generisch, damit
+     *  die Spec-Zusage "offene Delays verfallen bei Re-Deploy" auch für Nodes gilt, die keinen
+     *  eigenen register()-Cleanup schreiben. cancel(false) ist idempotent, doppeltes Stornieren
+     *  (z. B. zusätzlich zum EntityStateTrigger-eigenen register()-Cleanup) ist harmlos. */
+    private void cancelScheduledFutures(DeployedFlow flow) {
+        for (NodeContext ctx : flow.contexts.values()) {
+            for (Object value : ctx.state().values()) {
+                cancelIfFuture(value);
+                if (value instanceof java.util.Collection<?> collection) {
+                    collection.forEach(this::cancelIfFuture);
+                }
+            }
+        }
+    }
+
+    private void cancelIfFuture(Object value) {
+        if (value instanceof java.util.concurrent.ScheduledFuture<?> future) {
+            future.cancel(false);
+        }
     }
 
     public Optional<FlowGraph> graph(long flowId) {

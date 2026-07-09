@@ -3,16 +3,22 @@ package com.household.manager.flowengine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.flowengine.model.FlowDefinitionParser;
 import com.household.manager.flowengine.model.NodeConfig;
+import com.household.manager.flowengine.nodes.DelayNodeHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class FlowEngineTest {
 
@@ -177,5 +183,32 @@ class FlowEngineTest {
 
         deploy(1L, def); // Re-Deploy
         assertNull(registry.context(1L, "r1").state().get("k"));
+    }
+
+    @Test
+    void undeployCancelsPendingDelayFutures() {
+        List<NodeHandler> handlers = List.of(
+                new RecordingHandler(), new RouterHandler(), new FailingHandler(),
+                new TestTriggerHandler(), new DelayNodeHandler());
+        FlowRegistry reg = new FlowRegistry(handlers);
+        org.springframework.scheduling.TaskScheduler delayScheduler =
+                mock(org.springframework.scheduling.TaskScheduler.class);
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        doReturn(future).when(delayScheduler).schedule(any(Runnable.class), any(Instant.class));
+        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer());
+        reg.setEngine(delayEngine);
+
+        reg.deploy(2L, parser.parse("""
+                { "nodes": [
+                    { "id": "t", "type": "test-trigger", "config": {} },
+                    { "id": "d", "type": "delay", "config": { "seconds": 300 } } ],
+                  "wires": [ { "from": { "node": "t", "port": 0 }, "to": { "node": "d" } } ] }
+                """));
+
+        delayEngine.runFrom(2L, "t", 0, FlowMessage.of(Map.of("v", "1")));
+
+        reg.undeploy(2L);
+
+        verify(future).cancel(false);
     }
 }
