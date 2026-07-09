@@ -11,7 +11,7 @@ Das Backend (`/api/v1/flows` inkl. `node-types`-Katalog, deploy, inject, debug) 
 
 ## Gewählte Grundentscheidungen (aus dem Brainstorming)
 
-- **Canvas-Bibliothek: `@foblex/flow`** — Angular-native Editor-Lib (Signals, Standalone) mit Drag-to-connect, Auswahl, Zoom, Minimap, Snapping. Hinter eigenen Komponenten gekapselt, damit ein späterer Wechsel überschaubar bleibt.
+- **Canvas-Bibliothek: `@foblex/flow`** — Angular-native Editor-Lib (Signals, Standalone) mit Drag-to-connect, Auswahl, Zoom, Minimap, Snapping. Hinter eigenen Komponenten gekapselt, damit ein späterer Wechsel überschaubar bleibt. Bei der Umsetzung wird eine mit Angular 19 kompatible Version festgelegt (erster Plan-Schritt: `npm install` + Kompatibilität verifizieren); falls sich die Lib als unreif erweist, ist der dokumentierte Fallback der CDK-Eigenbau (Option B aus dem Brainstorming) — der Rest des Designs (Format, Adapter, Panel, Debug) bleibt davon unberührt.
 - **Konfig-Panel: schema-getriebener Hybrid** — ein generisches, aus dem Backend-Katalog gerendertes Formular, plus Spezial-Widgets (Entity-Picker, Geräte-Picker, Alexa-Geräte-Mehrfachauswahl). Erhält die „neuer Node-Typ = nur Backend"-Erweiterbarkeit.
 - **Layout:** Palette links, Canvas mittig, rechte Spalte mit Tabs **Konfig** / **Debug** (Node-RED-Klassiker).
 - **Debug: Polling** (~2 s, nur bei sichtbarem Debug-Tab und deploytem Flow) über die vorhandene REST-Debug-API; kein SSE.
