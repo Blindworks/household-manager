@@ -128,6 +128,10 @@ GET    /v1/flows/node-types               → Katalog (Typ, Ports, Config-Schema
 - **Backend-Neustart:** deployte, enabled Flows werden beim Start aus der DB geladen; laufende Timer verfallen (siehe Engine).
 - **Deploy während laufender Executions:** laufende Executions beenden auf dem alten Graphen, neue Events treffen den neuen (atomarer Registry-Swap).
 
+## Offene Punkte für Stufe 3b (Canvas-Editor) — aus dem Abschluss-Review
+
+- **`node-types`-Katalog anreichern:** `NodeTypeResponse` liefert aktuell `type`, `outputPorts` (nackte Zahl), `trigger`, `configSchema` (nur Feld→Beschreibung). Für einen generischen Property-Editor und eine Palette braucht 3b reichere Metadaten: pro Config-Feld den Typ (String/Zahl/Enum/Liste), Pflicht-Flag und Enum-Optionen (operator-Menge, `mode` SPEAK/ANNOUNCE, `action` on/off), außerdem **Port-Labels** (bei `entity-condition`: Port 0 = wahr, Port 1 = falsch). Bewusst nach 3b verschoben, weil dort der konkrete Palette-Bedarf bekannt ist und es noch keinen Consumer gibt (kein Contract-Bruch). Diese Erweiterung ist die erste Aufgabe der 3b-Umsetzung.
+
 ## Tests
 
 - Engine-Kern: Traversierung inkl. Ports/Verzweigung, Message-Kopie pro Zweig, Hop-Limit, Fehlerisolation pro Zweig
