@@ -64,6 +64,13 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
     }
 
     @Override
+    public Runnable register(NodeConfig config, NodeContext ctx) {
+        // Cleanup beim Undeploy/Re-Deploy: laufenden Verweildauer-Timer stornieren,
+        // damit er nicht verwaist in einen neuen Graphen feuert.
+        return () -> cancelTimer(ctx);
+    }
+
+    @Override
     public Map<String, String> configSchema() {
         return Map.of(
                 "entityId", "Entity-ID, auf die gelauscht wird",
@@ -99,20 +106,28 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     private void startTimer(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx,
                             String operator, String value, int forSeconds) {
-        cancelTimer(ctx);
-        String entityId = config.string("entityId").orElseThrow();
-        ScheduledFuture<?> future = ctx.scheduler().schedule(() -> {
-            ctx.state().remove(STATE_KEY_TIMER);
-            String currentState = entityStateService.getByEntityId(entityId)
-                    .map(e -> e.getState()).orElse(null);
-            if (StateComparator.matches(currentState, operator, value)) {
-                ctx.emit(0, toMessage(event, ctx).with("newState", currentState));
-            }
-        }, Instant.now().plusSeconds(forSeconds));
-        ctx.state().put(STATE_KEY_TIMER, future);
+        synchronized (ctx.state()) {
+            cancelTimerLocked(ctx);
+            String entityId = config.string("entityId").orElseThrow();
+            ScheduledFuture<?> future = ctx.scheduler().schedule(() -> {
+                ctx.state().remove(STATE_KEY_TIMER);
+                String currentState = entityStateService.getByEntityId(entityId)
+                        .map(e -> e.getState()).orElse(null);
+                if (StateComparator.matches(currentState, operator, value)) {
+                    ctx.emit(0, toMessage(event, ctx).with("newState", currentState));
+                }
+            }, Instant.now().plusSeconds(forSeconds));
+            ctx.state().put(STATE_KEY_TIMER, future);
+        }
     }
 
     private void cancelTimer(NodeContext ctx) {
+        synchronized (ctx.state()) {
+            cancelTimerLocked(ctx);
+        }
+    }
+
+    private void cancelTimerLocked(NodeContext ctx) {
         Object pending = ctx.state().remove(STATE_KEY_TIMER);
         if (pending instanceof ScheduledFuture<?> future) {
             future.cancel(false);

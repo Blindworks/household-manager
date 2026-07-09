@@ -38,6 +38,9 @@ public class FlowEngineListener {
                         return;
                     }
                     FlowNode node = graph.node(ref.nodeId());
+                    if (node == null) {
+                        return;
+                    }
                     if (registry.handler(node.type()) instanceof TriggerNodeHandler trigger) {
                         trigger.onEntityEvent(event, node.config(), ctx);
                     }
