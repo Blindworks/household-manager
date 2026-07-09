@@ -4,6 +4,8 @@ import com.household.manager.entitystate.EntityStateChangedEvent;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.StateComparator;
 import com.household.manager.flowengine.TriggerNodeHandler;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -46,6 +48,16 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
     @Override
     public Optional<String> watchedEntityId(NodeConfig config) {
         return config.string("entityId");
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(
+                NodeFieldDescriptor.field("entityId", "Entity", NodeFieldType.ENTITY_REF, true),
+                NodeFieldDescriptor.enumField("operator", "Operator", true,
+                        List.of("<", "<=", ">", ">=", "==", "!=", "changed")),
+                NodeFieldDescriptor.field("value", "Wert", NodeFieldType.STRING, false),
+                NodeFieldDescriptor.field("forSeconds", "seit (Sek.)", NodeFieldType.NUMBER, false));
     }
 
     @Override

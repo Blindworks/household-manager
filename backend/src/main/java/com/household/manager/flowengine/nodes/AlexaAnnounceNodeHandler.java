@@ -3,6 +3,8 @@ package com.household.manager.flowengine.nodes;
 import com.household.manager.alexa.AlexaTtsMode;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.NodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -73,5 +75,13 @@ public class AlexaAnnounceNodeHandler implements NodeHandler {
     private String stringValue(FlowMessage message, String key) {
         Object value = message.get(key);
         return value != null ? String.valueOf(value) : "";
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(
+                NodeFieldDescriptor.field("text", "Ansagetext", NodeFieldType.STRING, true),
+                NodeFieldDescriptor.enumField("mode", "Modus", true, List.of("SPEAK", "ANNOUNCE")),
+                NodeFieldDescriptor.field("deviceSerials", "Alexa-Geräte", NodeFieldType.ALEXA_DEVICE_LIST, true));
     }
 }

@@ -2,6 +2,8 @@ package com.household.manager.flowengine.nodes;
 
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.NodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -35,5 +37,10 @@ public class DebugNodeHandler implements NodeHandler {
     public NodeResult handle(FlowMessage message, NodeConfig config, NodeContext ctx) {
         ctx.debug(config.string("label").orElse(null), message);
         return NodeResult.none();
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(NodeFieldDescriptor.field("label", "Beschriftung", NodeFieldType.STRING, false));
     }
 }

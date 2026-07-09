@@ -3,6 +3,8 @@ package com.household.manager.flowengine.nodes;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.NodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.StateComparator;
@@ -58,5 +60,19 @@ public class EntityConditionHandler implements NodeHandler {
                 .map(e -> e.getState()).orElse(null);
         boolean matches = StateComparator.matches(currentState, operator, value);
         return NodeResult.port(matches ? 0 : 1, message);
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(
+                NodeFieldDescriptor.field("entityId", "Entity", NodeFieldType.ENTITY_REF, true),
+                NodeFieldDescriptor.enumField("operator", "Operator", true,
+                        List.of("<", "<=", ">", ">=", "==", "!=")),
+                NodeFieldDescriptor.field("value", "Wert", NodeFieldType.STRING, true));
+    }
+
+    @Override
+    public List<String> portLabels() {
+        return List.of("wahr", "falsch");
     }
 }

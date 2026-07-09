@@ -2,6 +2,8 @@ package com.household.manager.flowengine.nodes;
 
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.NodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -61,5 +63,10 @@ public class RateLimitNodeHandler implements NodeHandler {
             ctx.state().put(STATE_KEY_LAST_PASSED, now);
         }
         return NodeResult.single(message);
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(NodeFieldDescriptor.field("minIntervalSeconds", "Mindestabstand (Sek.)", NodeFieldType.NUMBER, true));
     }
 }

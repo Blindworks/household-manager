@@ -2,6 +2,8 @@ package com.household.manager.flowengine.nodes;
 
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.NodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -56,5 +58,12 @@ public class SwitchDeviceNodeHandler implements NodeHandler {
             smartDeviceService.turnOff(deviceId);
         }
         return NodeResult.single(message);
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(
+                NodeFieldDescriptor.field("deviceId", "Gerät", NodeFieldType.DEVICE_REF, true),
+                NodeFieldDescriptor.enumField("action", "Aktion", true, List.of("on", "off")));
     }
 }

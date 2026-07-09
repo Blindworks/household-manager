@@ -2,6 +2,8 @@ package com.household.manager.flowengine.nodes;
 
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
+import com.household.manager.flowengine.NodeFieldDescriptor;
+import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.TriggerNodeHandler;
 import com.household.manager.flowengine.model.NodeConfig;
 import org.springframework.scheduling.support.CronExpression;
@@ -34,6 +36,11 @@ public class ScheduleTriggerHandler implements TriggerNodeHandler {
     @Override
     public Optional<String> watchedEntityId(NodeConfig config) {
         return Optional.empty();
+    }
+
+    @Override
+    public List<NodeFieldDescriptor> fields() {
+        return List.of(NodeFieldDescriptor.field("cron", "Cron-Ausdruck", NodeFieldType.STRING, true));
     }
 
     @Override
