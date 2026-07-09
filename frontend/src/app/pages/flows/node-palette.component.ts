@@ -16,9 +16,24 @@ export class NodePaletteComponent {
 
   private readonly actionTypes = new Set(['alexa-announce', 'switch-device']);
 
+  private readonly labels: Record<string, string> = {
+    'entity-state-trigger': 'Entity-Trigger',
+    'schedule-trigger': 'Zeitplan',
+    'entity-condition': 'Bedingung',
+    'delay': 'Verzögerung',
+    'rate-limit': 'Drossel',
+    'debug': 'Debug',
+    'alexa-announce': 'Alexa-Ansage',
+    'switch-device': 'Gerät schalten'
+  };
+
   readonly triggers = computed(() => this.nodeTypes().filter(t => t.trigger));
   readonly actions = computed(() => this.nodeTypes().filter(t => !t.trigger && this.actionTypes.has(t.type)));
   readonly logic = computed(() => this.nodeTypes().filter(t => !t.trigger && !this.actionTypes.has(t.type)));
+
+  label(type: string): string {
+    return this.labels[type] ?? type;
+  }
 
   onAdd(type: string): void {
     this.add.emit(type);

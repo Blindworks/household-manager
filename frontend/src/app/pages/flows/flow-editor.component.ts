@@ -25,6 +25,7 @@ export class FlowEditorComponent implements OnInit {
 
   readonly flowId = Number(this.route.snapshot.paramMap.get('id'));
   readonly name = signal('');
+  readonly description = signal('');
   readonly enabled = signal(false);
   readonly deployed = signal(false);
   readonly nodeTypes = signal<NodeType[]>([]);
@@ -49,6 +50,7 @@ export class FlowEditorComponent implements OnInit {
     forkJoin({ flow: this.flowService.getFlow(this.flowId), types: this.flowService.getNodeTypes() })
       .subscribe(({ flow, types }) => {
         this.name.set(flow.name);
+        this.description.set(flow.description ?? '');
         this.enabled.set(flow.enabled);
         this.deployed.set(flow.deployed);
         this.nodeTypes.set(types);
@@ -113,27 +115,38 @@ export class FlowEditorComponent implements OnInit {
 
   save(): void {
     const draft = this.serialize();
-    this.flowService.saveDraft(this.flowId, this.name(), '', draft).subscribe(() => {
-      this.savedSnapshot = draft;
-      this.dirty.set(false);
+    this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft).subscribe({
+      next: () => {
+        this.savedSnapshot = draft;
+        this.dirty.set(false);
+      },
+      error: () => this.deployErrors.set(['Speichern fehlgeschlagen.'])
     });
   }
 
   deploy(): void {
+    this.deployErrors.set([]);
+    this.deployWarnings.set([]);
     const draft = this.serialize();
-    this.flowService.saveDraft(this.flowId, this.name(), '', draft).subscribe(() => {
-      this.savedSnapshot = draft;
-      this.dirty.set(false);
-      this.flowService.deploy(this.flowId).subscribe(result => {
-        this.deployErrors.set(result.errors);
-        this.deployWarnings.set(result.warnings);
-        if (result.errors.length === 0) { this.deployed.set(true); }
-      });
+    this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft).subscribe({
+      next: () => {
+        this.savedSnapshot = draft;
+        this.dirty.set(false);
+        this.flowService.deploy(this.flowId).subscribe(result => {
+          this.deployErrors.set(result.errors);
+          this.deployWarnings.set(result.warnings);
+          if (result.errors.length === 0) { this.deployed.set(true); }
+        });
+      },
+      error: () => this.deployErrors.set(['Speichern fehlgeschlagen.'])
     });
   }
 
   toggleEnabled(): void {
-    this.flowService.setEnabled(this.flowId, !this.enabled()).subscribe(() => this.enabled.set(!this.enabled()));
+    this.flowService.setEnabled(this.flowId, !this.enabled()).subscribe({
+      next: () => this.enabled.set(!this.enabled()),
+      error: () => this.deployErrors.set(['Aktivierung/Deaktivierung fehlgeschlagen.'])
+    });
   }
 
   testTrigger(nodeId: string): void {

@@ -4,6 +4,10 @@
     <button class="flow-list-page__new" (click)="createFlow()">+ Neuer Flow</button>
   </div>
 
+  @if (error()) {
+    <div class="flow-list-page__error">{{ error() }}</div>
+  }
+
   <table class="flow-table">
     <thead>
       <tr><th>Name</th><th>Status</th><th>Aktiv</th><th></th></tr>

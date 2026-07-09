@@ -17,17 +17,27 @@ export class FlowListComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly flows = signal<FlowSummary[]>([]);
+  readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
     this.reload();
   }
 
   private reload(): void {
-    this.flowService.getFlows().subscribe(flows => this.flows.set(flows));
+    this.flowService.getFlows().subscribe({
+      next: flows => {
+        this.flows.set(flows);
+        this.error.set(null);
+      },
+      error: err => this.error.set(err.message)
+    });
   }
 
   createFlow(): void {
-    this.flowService.createFlow('Neuer Flow', '').subscribe(flow => this.router.navigate(['/flows', flow.id]));
+    this.flowService.createFlow('Neuer Flow', '').subscribe({
+      next: flow => this.router.navigate(['/flows', flow.id]),
+      error: err => this.error.set(err.message)
+    });
   }
 
   open(flow: FlowSummary): void {
@@ -35,10 +45,17 @@ export class FlowListComponent implements OnInit {
   }
 
   toggleEnabled(flow: FlowSummary): void {
-    this.flowService.setEnabled(flow.id, !flow.enabled).subscribe(() => this.reload());
+    this.flowService.setEnabled(flow.id, !flow.enabled).subscribe({
+      next: () => this.reload(),
+      error: err => this.error.set(err.message)
+    });
   }
 
   deleteFlow(flow: FlowSummary): void {
-    this.flowService.deleteFlow(flow.id).subscribe(() => this.reload());
+    if (!confirm(`Flow "${flow.name}" wirklich löschen?`)) { return; }
+    this.flowService.deleteFlow(flow.id).subscribe({
+      next: () => this.reload(),
+      error: err => this.error.set(err.message)
+    });
   }
 }

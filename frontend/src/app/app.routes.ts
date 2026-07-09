@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { unsavedChangesGuard } from './pages/flows/unsaved-changes.guard';
 
 /**
  * Application routes configuration.
@@ -73,6 +74,7 @@ export const routes: Routes = [
   {
     path: 'flows/:id',
     loadComponent: () => import('./pages/flows/flow-editor.component').then(m => m.FlowEditorComponent),
+    canDeactivate: [unsavedChangesGuard],
     title: 'Flow-Editor - Household Manager'
   },
   {

@@ -26,6 +26,7 @@ describe('FlowListComponent', () => {
   });
 
   it('deletes a flow and reloads', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
     flowService.deleteFlow.and.returnValue(of(void 0));
     const fixture = TestBed.createComponent(FlowListComponent);
     fixture.detectChanges();

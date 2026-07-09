@@ -4,7 +4,7 @@
   } @else if (!entries().length) {
     <p class="debug-panel__hint">Noch keine Nachrichten. Flow testen oder auf ein Ereignis warten.</p>
   } @else {
-    @for (e of entries(); track e.timestamp + ($any(e).label ?? '')) {
+    @for (e of entries(); track e.timestamp + (e.label ?? '')) {
       <div class="debug-panel__entry">
         <div class="debug-panel__meta">{{ e.timestamp }} @if (e.label) { · {{ e.label }} }</div>
         <pre class="debug-panel__msg">{{ e.message | json }}</pre>
