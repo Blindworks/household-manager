@@ -50,6 +50,9 @@ class FlowServiceTest {
                 mock(com.household.manager.entitystate.EntityStateService.class));
         service = new FlowService(flowRepository, parser, validator, registry, engine);
         lenient().when(flowRepository.save(any(Flow.class))).thenAnswer(inv -> inv.getArgument(0));
+        // undeploy() clears the flow's debug buffer via engine.debugBuffer() -- stub with a
+        // real instance so FlowRegistry.undeploy doesn't NPE on the mocked FlowEngine.
+        lenient().when(engine.debugBuffer()).thenReturn(new DebugBuffer());
     }
 
     private Flow flow(Long id, String draft, String deployed, boolean enabled) {

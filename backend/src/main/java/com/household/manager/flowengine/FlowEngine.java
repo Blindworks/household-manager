@@ -30,7 +30,7 @@ public class FlowEngine {
 
     public FlowEngine(FlowRegistry registry,
                       @Qualifier("flowEngineExecutor") Executor executor,
-                      TaskScheduler scheduler,
+                      @Qualifier("flowTaskScheduler") TaskScheduler scheduler,
                       DebugBuffer debugBuffer) {
         this.registry = registry;
         this.executor = executor;

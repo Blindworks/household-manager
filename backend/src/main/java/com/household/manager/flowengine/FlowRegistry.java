@@ -90,6 +90,9 @@ public class FlowRegistry {
             rebuildTriggerIndex();
             runCleanups(flowId, old.cleanups);
             cancelScheduledFutures(old);
+            if (engine != null) {
+                engine.debugBuffer().clearFlow(flowId);
+            }
             log.info("Flow {} undeployed", flowId);
         }
     }
