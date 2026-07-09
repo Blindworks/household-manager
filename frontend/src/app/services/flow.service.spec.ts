@@ -27,7 +27,9 @@ describe('FlowService', () => {
 
   it('loads node types', () => {
     service.getNodeTypes().subscribe();
-    httpMock.expectOne('/api/v1/flows/node-types').flush([]);
+    const req = httpMock.expectOne('/api/v1/flows/node-types');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 
   it('creates a flow', () => {
@@ -59,6 +61,13 @@ describe('FlowService', () => {
     httpMock.expectOne('/api/v1/flows/1/deploy')
       .flush({ errors: ['kaputt'], warnings: [] }, { status: 400, statusText: 'Bad Request' });
     expect(result?.errors).toEqual(['kaputt']);
+  });
+
+  it('deploy falls back to a usable result on network error', () => {
+    let result: ValidationResult | undefined;
+    service.deploy(1).subscribe(r => (result = r));
+    httpMock.expectOne('/api/v1/flows/1/deploy').error(new ProgressEvent('error'));
+    expect(result?.errors.length).toBeGreaterThan(0);
   });
 
   it('enables, disables, deletes, injects, reads debug', () => {

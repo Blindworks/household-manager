@@ -32,10 +32,19 @@ export class FlowService {
     return this.http.put<FlowDetail>(`${this.baseUrl}/${id}`, { name, description, draftDefinition });
   }
 
-  /** Deploy: 200 (valide) und 400 (invalide) liefern denselben ValidationResult-Body. */
+  /**
+   * Deploy: 200 (valide) und 400 (invalide) liefern denselben ValidationResult-Body.
+   * Bei echten Netzwerkfehlern (Timeout/DNS/Status 0) ist err.error kein ValidationResult
+   * (z.B. null oder ProgressEvent) — dann liefern wir einen brauchbaren Fallback statt
+   * den Aufrufer mit einem kaputten Objekt crashen zu lassen.
+   */
   deploy(id: number): Observable<ValidationResult> {
     return this.http.post<ValidationResult>(`${this.baseUrl}/${id}/deploy`, {}).pipe(
-      catchError(err => of(err.error as ValidationResult))
+      catchError(err => of(
+        (err?.error && Array.isArray(err.error.errors))
+          ? err.error as ValidationResult
+          : { errors: ['Netzwerkfehler beim Deploy.'], warnings: [] }
+      ))
     );
   }
 
