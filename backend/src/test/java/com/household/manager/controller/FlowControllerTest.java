@@ -110,6 +110,15 @@ class FlowControllerTest {
     }
 
     @Test
+    void mutatingEndpointReturns404ForUnknownFlow() throws Exception {
+        when(flowService.deploy(99L))
+                .thenThrow(new com.household.manager.exception.ResourceNotFoundException("Flow not found with ID: 99"));
+
+        mockMvc.perform(post("/v1/flows/99/deploy"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void listsNodeTypes() throws Exception {
         mockMvc.perform(get("/v1/flows/node-types"))
                 .andExpect(status().isOk())

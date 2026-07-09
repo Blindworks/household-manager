@@ -1,5 +1,6 @@
 package com.household.manager.flowengine;
 
+import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.flowengine.model.FlowDefinition;
 import com.household.manager.flowengine.model.FlowDefinitionParser;
 import com.household.manager.flowengine.model.FlowNode;
@@ -124,6 +125,6 @@ public class FlowService {
 
     private Flow require(Long id) {
         return flowRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Flow not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Flow not found with ID: " + id));
     }
 }
