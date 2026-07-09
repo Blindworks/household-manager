@@ -10,6 +10,13 @@ import java.util.Optional;
  */
 public record NodeConfig(Map<String, Object> values) {
 
+    public NodeConfig {
+        // HashMap statt Map.copyOf: config-Werte aus dem JSON-Parser können
+        // explizite JSON-null-Werte enthalten (z. B. "value": null); Map.copyOf
+        // verbietet null-Values und würde dabei eine NullPointerException werfen.
+        values = values == null ? Map.of() : Collections.unmodifiableMap(new java.util.HashMap<>(values));
+    }
+
     public static NodeConfig empty() {
         return new NodeConfig(Map.of());
     }

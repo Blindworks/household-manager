@@ -63,4 +63,11 @@ class FlowDefinitionParserTest {
         FlowDefinition def = parser.parse(JSON.replace("\"forSeconds\": 180", "\"forSeconds\": \"180\""));
         assertEquals(Optional.of(180), def.nodes().get(0).config().integer("forSeconds"));
     }
+
+    @Test
+    void missingIdAndTypeParseToNullNotStringNull() {
+        FlowDefinition def = parser.parse("{ \"nodes\": [ { \"config\": {} } ], \"wires\": [] }");
+        assertNull(def.nodes().get(0).id());
+        assertNull(def.nodes().get(0).type());
+    }
 }
