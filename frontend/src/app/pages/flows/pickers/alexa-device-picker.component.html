@@ -1,0 +1,10 @@
+<div class="picker picker--multi">
+  @for (opt of options(); track opt.serialNumber) {
+    <label class="picker__check">
+      <input type="checkbox" [checked]="isSelected(opt.serialNumber)"
+             (change)="toggle(opt.serialNumber, $any($event.target).checked)" />
+      {{ opt.name }}
+    </label>
+  }
+  @if (!options().length) { <span class="picker__missing">Keine Alexa-Geräte gefunden.</span> }
+</div>

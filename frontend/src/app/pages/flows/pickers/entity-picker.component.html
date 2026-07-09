@@ -1,0 +1,11 @@
+<div class="picker">
+  <select [value]="value() ?? ''" (change)="select($any($event.target).value)">
+    <option value="" disabled>Entity wählen…</option>
+    @for (opt of options(); track opt.entityId) {
+      <option [value]="opt.entityId">{{ opt.friendlyName }} ({{ opt.state }})</option>
+    }
+  </select>
+  @if (displayLabel().startsWith('nicht gefunden')) {
+    <span class="picker__missing">{{ displayLabel() }}</span>
+  }
+</div>

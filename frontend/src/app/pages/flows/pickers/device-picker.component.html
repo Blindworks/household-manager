@@ -1,0 +1,11 @@
+<div class="picker">
+  <select [value]="value() ?? ''" (change)="select($any($event.target).value)">
+    <option value="" disabled>Gerät wählen…</option>
+    @for (opt of options(); track opt.id) {
+      <option [value]="opt.id">{{ opt.deviceName }}</option>
+    }
+  </select>
+  @if (displayLabel().startsWith('nicht gefunden')) {
+    <span class="picker__missing">{{ displayLabel() }}</span>
+  }
+</div>
