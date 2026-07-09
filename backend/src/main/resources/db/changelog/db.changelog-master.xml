@@ -68,4 +68,7 @@
     <!-- Generic Entity/State Layer -->
     <include file="db/changelog/changes/20260708-0029-create-entity-states-table.xml"/>
 
+    <!-- Flow Engine (Stage 3a) -->
+    <include file="db/changelog/changes/20260709-0030-create-flows-table.xml"/>
+
 </databaseChangeLog>
