@@ -96,7 +96,8 @@ public class FlowController {
                         .type(handler.type())
                         .outputPorts(handler.outputPorts())
                         .trigger(handler instanceof TriggerNodeHandler)
-                        .configSchema(handler.configSchema())
+                        .portLabels(handler.portLabels())
+                        .fields(handler.fields())
                         .build())
                 .sorted(Comparator.comparing(NodeTypeResponse::type))
                 .toList();

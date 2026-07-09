@@ -3,7 +3,6 @@ package com.household.manager.flowengine;
 import com.household.manager.flowengine.model.NodeConfig;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Ein Node-Typ der Flow-Engine. Ein Spring-Bean pro Typ; neue Typen = neues Bean.
@@ -23,8 +22,15 @@ public interface NodeHandler {
     /** Verarbeitet eine eingehende Message. */
     NodeResult handle(FlowMessage message, NodeConfig config, NodeContext ctx);
 
-    /** Beschreibung der Config-Felder (Schlüssel → Kurzbeschreibung) für den node-types-Katalog. */
-    default Map<String, String> configSchema() {
-        return Map.of();
+    /** Typisierte Feld-Deskriptoren für den node-types-Katalog (schema-getriebenes Panel). */
+    default List<NodeFieldDescriptor> fields() {
+        return List.of();
+    }
+
+    /** Labels der Ausgangsports (Länge == outputPorts); Default "Ausgang" je Port. */
+    default List<String> portLabels() {
+        return java.util.stream.IntStream.range(0, outputPorts())
+                .mapToObj(i -> "Ausgang")
+                .toList();
     }
 }

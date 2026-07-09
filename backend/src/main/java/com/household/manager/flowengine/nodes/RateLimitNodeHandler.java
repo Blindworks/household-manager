@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Drossel: lässt höchstens eine Message pro Intervall durch, Überschuss wird
@@ -48,11 +47,6 @@ public class RateLimitNodeHandler implements NodeHandler {
             return List.of("minIntervalSeconds fehlt oder ist nicht > 0");
         }
         return List.of();
-    }
-
-    @Override
-    public Map<String, String> configSchema() {
-        return Map.of("minIntervalSeconds", "Mindestabstand zwischen zwei durchgelassenen Messages");
     }
 
     @Override

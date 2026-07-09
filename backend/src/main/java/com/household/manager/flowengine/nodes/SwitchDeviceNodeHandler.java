@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Aktions-Node: schaltet ein SmartDevice (Kasa/Tapo/Meross) ein oder aus.
@@ -45,13 +44,6 @@ public class SwitchDeviceNodeHandler implements NodeHandler {
             errors.add("action muss 'on' oder 'off' sein");
         }
         return errors;
-    }
-
-    @Override
-    public Map<String, String> configSchema() {
-        return Map.of(
-                "deviceId", "ID des SmartDevice (siehe Geräte-Seite)",
-                "action", "'on' oder 'off'");
     }
 
     @Override

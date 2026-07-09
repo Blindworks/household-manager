@@ -71,15 +71,6 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
     }
 
     @Override
-    public Map<String, String> configSchema() {
-        return Map.of(
-                "entityId", "Entity-ID, auf die gelauscht wird",
-                "operator", "<, <=, >, >=, ==, != oder changed",
-                "value", "Vergleichswert (entfällt bei changed)",
-                "forSeconds", "optional: Bedingung muss so lange ununterbrochen gelten");
-    }
-
-    @Override
     public void onEntityEvent(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx) {
         String operator = config.string("operator").orElse(OP_CHANGED);
 

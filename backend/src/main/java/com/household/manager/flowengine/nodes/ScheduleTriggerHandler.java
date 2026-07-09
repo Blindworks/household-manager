@@ -49,11 +49,6 @@ public class ScheduleTriggerHandler implements TriggerNodeHandler {
     }
 
     @Override
-    public Map<String, String> configSchema() {
-        return Map.of("cron", "Spring-Cron-Ausdruck, z. B. '0 0 7 * * *' (täglich 7:00)");
-    }
-
-    @Override
     public Runnable register(NodeConfig config, NodeContext ctx) {
         String cron = config.string("cron").orElseThrow();
         ScheduledFuture<?> future = ctx.scheduler().schedule(

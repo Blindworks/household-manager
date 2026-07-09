@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -42,11 +41,6 @@ public class DelayNodeHandler implements NodeHandler {
             return List.of("seconds fehlt oder ist nicht > 0");
         }
         return List.of();
-    }
-
-    @Override
-    public Map<String, String> configSchema() {
-        return Map.of("seconds", "Verzögerung in Sekunden");
     }
 
     @Override

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Prüft den AKTUELLEN Zustand einer beliebigen Entität (Cross-Entity-Bedingung).
@@ -47,14 +46,6 @@ public class EntityConditionHandler implements NodeHandler {
             errors.add("value fehlt");
         }
         return errors;
-    }
-
-    @Override
-    public Map<String, String> configSchema() {
-        return Map.of(
-                "entityId", "Entity, deren aktueller Zustand geprüft wird",
-                "operator", "<, <=, >, >=, == oder !=",
-                "value", "Vergleichswert");
     }
 
     @Override

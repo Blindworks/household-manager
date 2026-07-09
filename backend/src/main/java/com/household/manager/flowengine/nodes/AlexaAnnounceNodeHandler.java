@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Aktions-Node: Alexa-Ansage über den bestehenden AlexaAnnouncementService.
@@ -54,14 +53,6 @@ public class AlexaAnnounceNodeHandler implements NodeHandler {
             errors.add("deviceSerials fehlt oder ist leer");
         }
         return errors;
-    }
-
-    @Override
-    public Map<String, String> configSchema() {
-        return Map.of(
-                "text", "Ansagetext; Platzhalter: {entityId}, {newState}, {oldState}",
-                "mode", "SPEAK (ohne Signalton) oder ANNOUNCE (mit Signalton)",
-                "deviceSerials", "Liste der Alexa-Seriennummern");
     }
 
     @Override

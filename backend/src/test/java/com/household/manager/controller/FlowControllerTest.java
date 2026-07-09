@@ -14,7 +14,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +30,11 @@ class FlowControllerTest {
         public int outputPorts() { return 1; }
         public List<String> validate(NodeConfig config) { return List.of(); }
         public Optional<String> watchedEntityId(NodeConfig config) { return Optional.empty(); }
-        public Map<String, String> configSchema() { return Map.of("k", "beschreibung"); }
+        public java.util.List<com.household.manager.flowengine.NodeFieldDescriptor> fields() {
+            return java.util.List.of(com.household.manager.flowengine.NodeFieldDescriptor.field(
+                    "k", "Feld K", com.household.manager.flowengine.NodeFieldType.STRING, true));
+        }
+        public java.util.List<String> portLabels() { return java.util.List.of("Ausgang"); }
     }
 
     @Mock
@@ -125,6 +128,9 @@ class FlowControllerTest {
                 .andExpect(jsonPath("$[0].type").value("test-trigger"))
                 .andExpect(jsonPath("$[0].trigger").value(true))
                 .andExpect(jsonPath("$[0].outputPorts").value(1))
-                .andExpect(jsonPath("$[0].configSchema.k").value("beschreibung"));
+                .andExpect(jsonPath("$[0].portLabels[0]").value("Ausgang"))
+                .andExpect(jsonPath("$[0].fields[0].key").value("k"))
+                .andExpect(jsonPath("$[0].fields[0].type").value("STRING"))
+                .andExpect(jsonPath("$[0].fields[0].required").value(true));
     }
 }

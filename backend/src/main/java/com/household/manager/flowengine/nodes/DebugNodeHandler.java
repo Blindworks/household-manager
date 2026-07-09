@@ -8,7 +8,6 @@ import com.household.manager.flowengine.model.NodeConfig;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Schreibt jede eingehende Message in den Debug-Ringpuffer (via NodeContext).
@@ -30,11 +29,6 @@ public class DebugNodeHandler implements NodeHandler {
     @Override
     public List<String> validate(NodeConfig config) {
         return List.of();
-    }
-
-    @Override
-    public Map<String, String> configSchema() {
-        return Map.of("label", "optionale Beschriftung des Eintrags");
     }
 
     @Override
