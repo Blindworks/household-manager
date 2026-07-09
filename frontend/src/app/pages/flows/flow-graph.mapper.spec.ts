@@ -39,4 +39,11 @@ describe('FlowGraphMapper', () => {
     const back = mapper.toDefinition(nodes, orphan);
     expect(back.wires.length).toBe(0);
   });
+
+  it('does not share config references with the input definition', () => {
+    const { nodes } = mapper.toCanvas(def);
+    expect(nodes[0].config).not.toBe(def.nodes[0].config);
+    const back = mapper.toDefinition(nodes, []);
+    expect(back.nodes[0].config).not.toBe(nodes[0].config);
+  });
 });

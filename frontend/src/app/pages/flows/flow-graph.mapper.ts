@@ -25,7 +25,7 @@ export class FlowGraphMapper {
         type: n.type,
         x: n.position?.x ?? 0,
         y: n.position?.y ?? 0,
-        config: n.config ?? {}
+        config: { ...(n.config ?? {}) }
       };
       if (n.name !== undefined) {
         node.name = n.name;
@@ -43,7 +43,7 @@ export class FlowGraphMapper {
   toDefinition(nodes: CanvasNode[], connections: CanvasConnection[]): FlowDefinition {
     const ids = new Set(nodes.map(n => n.id));
     const outNodes: FlowNode[] = nodes.map(n => {
-      const node: FlowNode = { id: n.id, type: n.type, position: { x: n.x, y: n.y }, config: n.config ?? {} };
+      const node: FlowNode = { id: n.id, type: n.type, position: { x: n.x, y: n.y }, config: { ...(n.config ?? {}) } };
       if (n.name !== undefined) {
         node.name = n.name;
       }
