@@ -1,0 +1,31 @@
+.debug-panel {
+  padding: 0.5rem;
+  overflow-y: auto;
+  font-size: 0.8rem;
+}
+
+.debug-panel__hint {
+  color: #888;
+  padding: 0.5rem;
+}
+
+.debug-panel__entry {
+  border-bottom: 1px solid #eee;
+  padding: 0.4rem 0;
+}
+
+.debug-panel__meta {
+  color: #6a9955;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+.debug-panel__msg {
+  margin: 0.25rem 0 0;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 0.4rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.72rem;
+}
