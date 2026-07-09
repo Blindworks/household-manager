@@ -1,0 +1,53 @@
+<div class="editor">
+  <div class="editor__toolbar">
+    <input class="editor__name" [value]="name()" (input)="name.set($any($event.target).value)" />
+    @if (deployed()) { <span class="badge badge--deployed">aktiv/deployed</span> }
+    @else { <span class="badge badge--draft">Entwurf</span> }
+    @if (dirty()) { <span class="editor__dirty">● ungespeichert</span> }
+    <span class="editor__spacer"></span>
+    <button (click)="save()" [disabled]="!dirty()">Speichern</button>
+    <button (click)="deploy()">Deploy</button>
+    <button (click)="toggleEnabled()">{{ enabled() ? 'Deaktivieren' : 'Aktivieren' }}</button>
+  </div>
+
+  @if (deployErrors().length) {
+    <div class="editor__errors">
+      @for (e of deployErrors(); track e) { <div class="editor__error">✕ {{ e }}</div> }
+    </div>
+  }
+  @if (deployWarnings().length) {
+    <div class="editor__warnings">
+      @for (w of deployWarnings(); track w) { <div class="editor__warning">⚠ {{ w }}</div> }
+    </div>
+  }
+
+  <div class="editor__body">
+    <app-node-palette [nodeTypes]="nodeTypes()" (add)="addNode($event)" />
+
+    <app-flow-canvas class="editor__canvas"
+      [nodes]="canvasNodes()" [connections]="canvasConnections()" [portLabelsByType]="portLabelsByType()"
+      (nodeMoved)="onNodeMoved($event)" (connectionCreated)="onConnectionCreated($event)"
+      (connectionDeleted)="onConnectionDeleted($event)" (nodeSelected)="onNodeSelected($event)"
+      (nodeDeleted)="onNodeDeleted($event)" />
+
+    <div class="editor__side">
+      <div class="editor__tabs">
+        <button [class.active]="activeTab() === 'config'" (click)="activeTab.set('config')">Konfig</button>
+        <button [class.active]="activeTab() === 'debug'" (click)="activeTab.set('debug')">Debug</button>
+      </div>
+      @if (activeTab() === 'config') {
+        @if (selectedNode()) {
+          <app-node-config-panel [node]="selectedNode()" [nodeType]="selectedNodeType()"
+            (configChange)="onConfigChange($event)" />
+          @if (selectedNodeType()?.trigger && deployed()) {
+            <button class="editor__test" (click)="testTrigger(selectedNodeId()!)">▶ Testen</button>
+          }
+        } @else {
+          <p class="editor__hint">Node auswählen oder aus der Palette ziehen.</p>
+        }
+      } @else {
+        <app-debug-panel [flowId]="flowId" [nodes]="canvasNodes()" [deployed]="deployed()" [active]="activeTab() === 'debug'" />
+      }
+    </div>
+  </div>
+</div>

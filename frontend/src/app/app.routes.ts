@@ -71,6 +71,11 @@ export const routes: Routes = [
     title: 'Automatisierungen - Household Manager'
   },
   {
+    path: 'flows/:id',
+    loadComponent: () => import('./pages/flows/flow-editor.component').then(m => m.FlowEditorComponent),
+    title: 'Flow-Editor - Household Manager'
+  },
+  {
     path: 'announcements',
     loadComponent: () => import('./pages/announcements/announcements.component').then(m => m.AnnouncementsComponent),
     title: 'Ansagen - Household Manager'
