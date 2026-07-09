@@ -59,35 +59,47 @@ public class FlowRegistry {
     }
 
     public void deploy(long flowId, FlowDefinition definition) {
-        undeploy(flowId);
         DeployedFlow flow = new DeployedFlow(new FlowGraph(definition));
         for (FlowNode node : flow.graph.nodes()) {
             flow.contexts.put(node.id(), new EngineNodeContext(flowId, node.id()));
         }
-        // Trigger registrieren (z. B. Cron) — Cleanups für Undeploy sammeln
-        for (FlowNode node : flow.graph.nodes()) {
-            if (handler(node.type()) instanceof TriggerNodeHandler trigger) {
-                flow.cleanups.add(trigger.register(node.config(), flow.contexts.get(node.id())));
+        // Trigger registrieren; falls eine Registrierung wirft, die bereits
+        // gesammelten Cleanups laufen lassen, damit nichts leakt (z. B. Cron-Job).
+        try {
+            for (FlowNode node : flow.graph.nodes()) {
+                if (handler(node.type()) instanceof TriggerNodeHandler trigger) {
+                    flow.cleanups.add(trigger.register(node.config(), flow.contexts.get(node.id())));
+                }
             }
+        } catch (RuntimeException ex) {
+            runCleanups(flowId, flow.cleanups);
+            throw ex;
         }
-        deployed.put(flowId, flow);
+        DeployedFlow old = deployed.put(flowId, flow); // atomarer Swap
         rebuildTriggerIndex();
+        if (old != null) {
+            runCleanups(flowId, old.cleanups);
+        }
         log.info("Flow {} deployed ({} nodes)", flowId, flow.graph.nodes().size());
     }
 
     public void undeploy(long flowId) {
         DeployedFlow old = deployed.remove(flowId);
         if (old != null) {
-            old.cleanups.forEach(cleanup -> {
-                try {
-                    cleanup.run();
-                } catch (Exception ex) {
-                    log.warn("Flow {} cleanup failed: {}", flowId, ex.getMessage());
-                }
-            });
             rebuildTriggerIndex();
+            runCleanups(flowId, old.cleanups);
             log.info("Flow {} undeployed", flowId);
         }
+    }
+
+    private void runCleanups(long flowId, List<Runnable> cleanups) {
+        cleanups.forEach(cleanup -> {
+            try {
+                cleanup.run();
+            } catch (Exception ex) {
+                log.warn("Flow {} cleanup failed: {}", flowId, ex.getMessage());
+            }
+        });
     }
 
     public Optional<FlowGraph> graph(long flowId) {

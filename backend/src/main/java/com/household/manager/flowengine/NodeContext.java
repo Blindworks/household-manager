@@ -14,7 +14,12 @@ public interface NodeContext {
 
     String nodeId();
 
-    /** Per-Node-Zustand (Timer, lastFired, ...). Lebt bis zum Re-Deploy/Neustart. */
+    /**
+     * Per-Node-Zustand (Timer, lastFired, ...). Lebt bis zum Re-Deploy/Neustart.
+     * ACHTUNG: Mehrere Executor-Threads können handle() derselben Node parallel
+     * ausführen. Zusammengesetzte Updates (get-dann-put) müssen atomar über
+     * compute/merge/putIfAbsent erfolgen, nicht als getrennte get/put-Schritte.
+     */
     ConcurrentMap<String, Object> state();
 
     /** Setzt die Traversierung asynchron ab diesem Node-Ausgang fort (Delay, Trigger-Feuern). */
