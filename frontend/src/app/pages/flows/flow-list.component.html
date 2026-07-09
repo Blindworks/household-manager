@@ -1,0 +1,33 @@
+<div class="flow-list-page">
+  <div class="flow-list-page__header">
+    <h1>Automatisierungen</h1>
+    <button class="flow-list-page__new" (click)="createFlow()">+ Neuer Flow</button>
+  </div>
+
+  <table class="flow-table">
+    <thead>
+      <tr><th>Name</th><th>Status</th><th>Aktiv</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (flow of flows(); track flow.id) {
+        <tr class="flow-table__row" (click)="open(flow)">
+          <td>{{ flow.name }}</td>
+          <td>
+            @if (flow.deployed) { <span class="badge badge--deployed">deployed</span> }
+            @else { <span class="badge badge--draft">Entwurf</span> }
+          </td>
+          <td (click)="$event.stopPropagation()">
+            <button class="toggle" [class.toggle--on]="flow.enabled" (click)="toggleEnabled(flow)">
+              {{ flow.enabled ? 'aktiv' : 'aus' }}
+            </button>
+          </td>
+          <td (click)="$event.stopPropagation()">
+            <button class="flow-table__delete" (click)="deleteFlow(flow)">Löschen</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="4" class="flow-table__empty">Noch keine Automatisierungen. Lege eine neue an.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

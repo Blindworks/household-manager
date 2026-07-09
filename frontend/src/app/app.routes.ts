@@ -66,6 +66,11 @@ export const routes: Routes = [
     title: 'Entitaeten - Household Manager'
   },
   {
+    path: 'flows',
+    loadComponent: () => import('./pages/flows/flow-list.component').then(m => m.FlowListComponent),
+    title: 'Automatisierungen - Household Manager'
+  },
+  {
     path: 'announcements',
     loadComponent: () => import('./pages/announcements/announcements.component').then(m => m.AnnouncementsComponent),
     title: 'Ansagen - Household Manager'
