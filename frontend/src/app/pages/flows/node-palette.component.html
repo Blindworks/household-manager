@@ -1,0 +1,20 @@
+<div class="palette">
+  <div class="palette__group">
+    <div class="palette__title">Trigger</div>
+    @for (t of triggers(); track t.type) {
+      <button class="palette__item palette__item--trigger" (click)="onAdd(t.type)">{{ t.type }}</button>
+    }
+  </div>
+  <div class="palette__group">
+    <div class="palette__title">Logik</div>
+    @for (t of logic(); track t.type) {
+      <button class="palette__item palette__item--logic" (click)="onAdd(t.type)">{{ t.type }}</button>
+    }
+  </div>
+  <div class="palette__group">
+    <div class="palette__title">Aktionen</div>
+    @for (t of actions(); track t.type) {
+      <button class="palette__item palette__item--action" (click)="onAdd(t.type)">{{ t.type }}</button>
+    }
+  </div>
+</div>

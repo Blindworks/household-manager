@@ -1,0 +1,44 @@
+.palette {
+  padding: 0.5rem;
+  width: 150px;
+}
+
+.palette__group {
+  margin-bottom: 0.75rem;
+}
+
+.palette__title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.palette__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: grab;
+  font-size: 0.75rem;
+  background: #fff;
+
+  &--trigger {
+    border-color: #1565c0;
+    color: #0d47a1;
+  }
+
+  &--logic {
+    border-color: #f9a825;
+    color: #855b00;
+  }
+
+  &--action {
+    border-color: #2e7d32;
+    color: #1b5e20;
+  }
+}
