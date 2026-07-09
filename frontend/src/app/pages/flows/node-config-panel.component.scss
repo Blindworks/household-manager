@@ -1,0 +1,60 @@
+.config-panel {
+  padding: 0.75rem;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+  }
+}
+
+.config-field {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  label {
+    font-size: 0.8rem;
+    color: #555;
+  }
+
+  .req {
+    color: #b71c1c;
+  }
+
+  input, select {
+    padding: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  select, input {
+    padding: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+}
+
+.picker__missing {
+  font-size: 0.75rem;
+  color: #b71c1c;
+}
+
+.picker--multi {
+  gap: 0.15rem;
+}
+
+.picker__check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}

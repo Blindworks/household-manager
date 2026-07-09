@@ -1,0 +1,34 @@
+@if (node() && nodeType()) {
+  <div class="config-panel">
+    <h3>{{ nodeType()!.type }}</h3>
+    @for (field of fields(); track field.key) {
+      <div class="config-field">
+        <label>{{ field.label }} @if (field.required) { <span class="req">*</span> }</label>
+
+        @switch (field.type) {
+          @case ('ENUM') {
+            <select [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field.key, $event)">
+              <option value="" disabled>wählen…</option>
+              @for (opt of field.options; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+          }
+          @case ('NUMBER') {
+            <input type="number" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field.key, $event)" />
+          }
+          @case ('ENTITY_REF') {
+            <app-entity-picker [value]="$any(fieldValue(field.key))" (valueChange)="setField(field.key, $event)" />
+          }
+          @case ('DEVICE_REF') {
+            <app-device-picker [value]="$any(fieldValue(field.key))" (valueChange)="setField(field.key, $event)" />
+          }
+          @case ('ALEXA_DEVICE_LIST') {
+            <app-alexa-device-picker [value]="$any(fieldValue(field.key))" (valueChange)="setField(field.key, $event)" />
+          }
+          @default {
+            <input type="text" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field.key, $event)" />
+          }
+        }
+      </div>
+    }
+  </div>
+}
