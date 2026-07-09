@@ -92,6 +92,13 @@ Neue Bausteine (Angular 19 standalone, `frontend/src/app/pages/flows/`, `compone
   - Picker-Komponenten: Optionen laden, unbekannte Roh-Werte behalten
   - `DebugPanelComponent`: Polling nur bei sichtbarem Tab + deploytem Flow, Zeit-Sortierung
 
+## Offene Follow-ups (aus dem Abschluss-Review, nicht blockierend)
+
+- **Palette-Aktionsgruppierung hartkodiert:** `NodePaletteComponent` erkennt Aktions-Nodes über ein hartkodiertes Set (`alexa-announce`, `switch-device`). Ein künftiger Backend-Aktions-Node landet sonst in der Gruppe „Logik". Sauberer wäre eine Kategorie-Angabe im `node-types`-Katalog (Backend liefert `category`: trigger/logic/action) statt der Frontend-Heuristik.
+- **Kein UI für `FlowNode.name`:** Der optionale Anzeigename einer Node übersteht den Round-Trip, kann im Editor aber nicht gesetzt werden (Nodes behalten die Auto-ID). Ein Namensfeld im Konfig-Panel wäre reiner Komfort.
+- **ENUM-Placeholder-Optik:** Ein noch nicht gesetztes Enum-Feld zeigt initial leer statt „wählen…" (der `value=""`-Platzhalter matcht `undefined` nicht). Kosmetisch, kein Datenverlust.
+- **Visuelle Feinpolitur & manueller End-to-End-Test** stehen noch aus (Letzterer braucht eine laufende DB/Backend, in der Entwicklungsumgebung nicht durchführbar).
+
 ## Umsetzungsschnitt
 
 Eine Spec, zwei natürliche Blöcke:
