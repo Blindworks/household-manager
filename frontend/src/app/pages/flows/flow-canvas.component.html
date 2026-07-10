@@ -5,6 +5,8 @@
   (fSelectionChange)="onSelectionChange($event)"
 >
   <f-canvas fZoom>
+    <f-connection-for-create></f-connection-for-create>
+
     @for (connection of connections(); track connectionKey(connection)) {
       <f-connection
         [fSourceId]="outConnectorId(connection.fromNode, connection.fromPort)"

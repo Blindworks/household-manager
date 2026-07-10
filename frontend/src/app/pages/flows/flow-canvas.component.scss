@@ -61,12 +61,22 @@ f-flow {
   }
 
   &__connector {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #607d8b;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #607d8b;
+    // Der Connector-Div IST das Drag-to-Connect-Hit-Target der Lib (siehe
+    // `isConnector()` in @foblex/flow: `closest('[fConnector]')`). Das Theme
+    // (`@foblex/flow/styles/domains/_connector.scss`) setzt Größe/Farbe selbst
+    // über `f-flow .f-connector-source:not(.f-node)` (Specificity 0,2,1) — höher
+    // als eine simple `.flow-canvas__connector[_ngcontent]`-Regel (0,2,0). Deshalb
+    // hier auf Basis- + Modifier-Klasse kompoundiert (0,3,0), um zu gewinnen, statt
+    // `!important`. Vergrößert bewusst den ganzen Connector (nicht nur unsichtbare
+    // Hit-Box) — ein 10px-Kreis ist real-world zu klein zum präzisen Treffen,
+    // verpasste Klicks fielen sonst auf Node-Move zurück (verifiziert per Playwright).
+    cursor: crosshair;
+
+    &.flow-canvas__connector--in,
+    &.flow-canvas__connector--out {
+      width: 18px;
+      height: 18px;
+    }
 
     &--in {
       margin-bottom: 0.35rem;
@@ -90,6 +100,14 @@ f-flow {
   &__port-label {
     font-size: 0.65rem;
     color: #888;
+    // Der Connector daneben ist `position: absolute` (vom @foblex/flow-Theme
+    // gesetzt, siehe `_socket-frame()`) und respektiert daher NICHT den
+    // Flex-Gap zum Label — sein sichtbarer/klickbarer Bereich überlappt den
+    // Label-Text teilweise. Ohne `pointer-events: none` fängt das Label
+    // Drag-to-Connect-Klicks ab, die eigentlich dem Connector galten
+    // (verifiziert per Playwright: `elementFromPoint` traf den Label-Span
+    // statt den Connector).
+    pointer-events: none;
   }
 
   &__connection-delete {
