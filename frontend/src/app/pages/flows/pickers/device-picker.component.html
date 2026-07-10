@@ -1,5 +1,5 @@
 <div class="picker">
-  <select [value]="value() ?? ''" (change)="select($any($event.target).value)">
+  <select [ngModel]="value() ?? ''" (ngModelChange)="select($event)">
     <option value="" disabled>Gerät wählen…</option>
     @for (opt of options(); track opt.id) {
       <option [value]="opt.id">{{ opt.deviceName }}</option>

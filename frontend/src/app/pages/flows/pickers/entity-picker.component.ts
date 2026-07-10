@@ -1,5 +1,6 @@
 import { Component, EventEmitter, OnInit, Output, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { EntityStateService } from '../../../services/entity-state.service';
 import { EntityState } from '../../../models/entity-state.model';
 
@@ -7,7 +8,7 @@ import { EntityState } from '../../../models/entity-state.model';
 @Component({
   selector: 'app-entity-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './entity-picker.component.html'
 })
 export class EntityPickerComponent implements OnInit {

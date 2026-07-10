@@ -1,5 +1,5 @@
 <div class="picker">
-  <select [value]="value() ?? ''" (change)="select($any($event.target).value)">
+  <select [ngModel]="value() ?? ''" (ngModelChange)="select($event)">
     <option value="" disabled>Entity wählen…</option>
     @for (opt of options(); track opt.entityId) {
       <option [value]="opt.entityId">{{ opt.friendlyName }} ({{ opt.state }})</option>

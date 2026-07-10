@@ -1,5 +1,6 @@
 import { Component, EventEmitter, OnInit, Output, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SmartDeviceService } from '../../../services/smart-device.service';
 import { SmartDevice } from '../../../models/smart-device.model';
 
@@ -7,7 +8,7 @@ import { SmartDevice } from '../../../models/smart-device.model';
 @Component({
   selector: 'app-device-picker',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './device-picker.component.html'
 })
 export class DevicePickerComponent implements OnInit {
