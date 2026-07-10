@@ -1,6 +1,14 @@
+// Host als scrollendes Flex-Element im Seitenpanel: min-height:0 erlaubt Schrumpfen,
+// overflow-y:auto macht den Debug-Bereich scrollbar statt vom Panel abgeschnitten.
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .debug-panel {
   padding: 0.5rem;
-  overflow-y: auto;
   font-size: 0.8rem;
 }
 
