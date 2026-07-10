@@ -30,7 +30,9 @@
       (connectionDeleted)="onConnectionDeleted($event)" (nodeSelected)="onNodeSelected($event)"
       (nodeDeleted)="onNodeDeleted($event)" />
 
-    <div class="editor__side">
+    <div class="editor__resize-handle" title="Breite ziehen" (pointerdown)="startResize($event)"></div>
+
+    <div class="editor__side" [style.width.px]="sideWidth()">
       <div class="editor__tabs">
         <button [class.active]="activeTab() === 'config'" (click)="activeTab.set('config')">Konfig</button>
         <button [class.active]="activeTab() === 'debug'" (click)="activeTab.set('debug')">Debug</button>

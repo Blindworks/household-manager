@@ -37,6 +37,11 @@ export class FlowEditorComponent implements OnInit {
   readonly deployWarnings = signal<string[]>([]);
   readonly activeTab = signal<'config' | 'debug'>('config');
 
+  /** Breite des rechten Panels (Konfig/Debug) in px — per Zieh-Griff verstellbar. */
+  readonly sideWidth = signal(320);
+  private static readonly MIN_SIDE_WIDTH = 220;
+  private static readonly MAX_SIDE_WIDTH = 720;
+
   private savedSnapshot = '';
   private nodeCounter = 0;
 
@@ -151,5 +156,26 @@ export class FlowEditorComponent implements OnInit {
 
   testTrigger(nodeId: string): void {
     this.flowService.inject(this.flowId, nodeId, {}).subscribe();
+  }
+
+  /** Beschränkt die Panel-Breite auf den erlaubten Bereich. */
+  clampSideWidth(width: number): number {
+    return Math.max(FlowEditorComponent.MIN_SIDE_WIDTH,
+      Math.min(FlowEditorComponent.MAX_SIDE_WIDTH, width));
+  }
+
+  /** Startet das Ziehen des Griffs zwischen Canvas und rechtem Panel. */
+  startResize(event: PointerEvent): void {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = this.sideWidth();
+    // Das Panel liegt rechts: Griff nach links ziehen (clientX sinkt) → breiter.
+    const onMove = (e: PointerEvent) => this.sideWidth.set(this.clampSideWidth(startWidth + (startX - e.clientX)));
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
 }

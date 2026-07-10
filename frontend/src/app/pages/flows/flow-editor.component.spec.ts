@@ -61,4 +61,13 @@ describe('FlowEditorComponent', () => {
     fixture.componentInstance.deploy();
     expect(fixture.componentInstance.deployErrors()).toEqual(['x']);
   });
+
+  it('clamps the side panel width to its allowed range', () => {
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.clampSideWidth(100)).toBe(220);
+    expect(c.clampSideWidth(9000)).toBe(720);
+    expect(c.clampSideWidth(400)).toBe(400);
+  });
 });
