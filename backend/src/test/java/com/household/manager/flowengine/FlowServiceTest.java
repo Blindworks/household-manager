@@ -133,4 +133,37 @@ class FlowServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> service.inject(1L, "ghost", Map.of()));
     }
+
+    @Test
+    void importCreatesDisabledDraft() {
+        Flow saved = service.importFlow(1, "Imported", "desc", VALID_DEF);
+
+        assertEquals("Imported", saved.getName());
+        assertEquals("desc", saved.getDescription());
+        assertFalse(saved.isEnabled());
+        assertEquals(VALID_DEF, saved.getDraftDefinition());
+        assertNull(saved.getDeployedDefinition());
+        verify(flowRepository).save(any(Flow.class));
+    }
+
+    @Test
+    void importRejectsUnsupportedSchemaVersion() {
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(2, "n", "", VALID_DEF));
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(null, "n", "", VALID_DEF));
+    }
+
+    @Test
+    void importRejectsBlankName() {
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "  ", "", VALID_DEF));
+    }
+
+    @Test
+    void importRejectsMissingDefinition() {
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "n", "", null));
+    }
+
+    @Test
+    void importRejectsUnparseableDefinition() {
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "n", "", "{ broken json"));
+    }
 }

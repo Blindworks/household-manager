@@ -66,6 +66,30 @@ public class FlowService {
     }
 
     /**
+     * Legt einen Flow aus einer importierten Definition an. Der neue Flow ist
+     * bewusst deaktiviert (enabled=false) und nicht deployt — scharf wird er erst
+     * durch den expliziten Deploy-Schritt. Es wird nur die JSON-Struktur geprüft
+     * (wie beim Draft-Speichern); die volle Graph-Validierung bleibt dem Deploy.
+     */
+    @Transactional
+    public Flow importFlow(Integer schemaVersion, String name, String description, String definitionJson) {
+        if (schemaVersion == null || schemaVersion != 1) {
+            throw new IllegalArgumentException("Nicht unterstützte schemaVersion: " + schemaVersion);
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name fehlt");
+        }
+        if (definitionJson == null || definitionJson.isBlank()) {
+            throw new IllegalArgumentException("definition fehlt");
+        }
+        parser.parse(definitionJson); // wirft IllegalArgumentException bei kaputtem JSON -> 400
+        Flow flow = Flow.builder()
+                .name(name).description(description).enabled(false)
+                .draftDefinition(definitionJson).build();
+        return flowRepository.save(flow);
+    }
+
+    /**
      * Validiert den Draft; bei Erfolg draft -> deployed + Registry-Reload.
      * Bei Fehlern bleibt der bisherige Deploy-Stand unangetastet.
      */
