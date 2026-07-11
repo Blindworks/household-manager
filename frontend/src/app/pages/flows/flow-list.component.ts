@@ -45,7 +45,9 @@ export class FlowListComponent implements OnInit {
     const file = input.files?.[0];
     input.value = ''; // erlaubt erneuten Upload derselben Datei
     if (!file) { return; }
-    file.text().then(text => this.importFromText(text));
+    file.text()
+      .then(text => this.importFromText(text))
+      .catch(() => this.error.set('Die Datei konnte nicht gelesen werden.'));
   }
 
   private importFromText(text: string): void {
