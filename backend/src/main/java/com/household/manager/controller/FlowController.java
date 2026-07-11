@@ -41,6 +41,13 @@ public class FlowController {
         return toDetail(flowService.create(request.name(), request.description()));
     }
 
+    @PostMapping("/import")
+    public FlowDetailResponse importFlow(@RequestBody ImportFlowRequest request) {
+        String definitionJson = request.definition() == null ? null : request.definition().toString();
+        return toDetail(flowService.importFlow(
+                request.schemaVersion(), request.name(), request.description(), definitionJson));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<FlowDetailResponse> getFlow(@PathVariable Long id) {
         return flowService.getById(id)

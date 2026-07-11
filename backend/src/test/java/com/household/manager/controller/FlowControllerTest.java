@@ -122,6 +122,23 @@ class FlowControllerTest {
     }
 
     @Test
+    void importDelegatesToServiceAndMapsResponse() throws Exception {
+        Flow saved = Flow.builder().id(7L).name("Imported").description("desc")
+                .enabled(false).draftDefinition("{\"nodes\":[],\"wires\":[]}").build();
+        when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), any())).thenReturn(saved);
+
+        mockMvc.perform(post("/v1/flows/import").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"schemaVersion\":1,\"name\":\"Imported\",\"description\":\"desc\","
+                                + "\"definition\":{\"nodes\":[],\"wires\":[]}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.name").value("Imported"))
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        verify(flowService).importFlow(eq(1), eq("Imported"), eq("desc"), eq("{\"nodes\":[],\"wires\":[]}"));
+    }
+
+    @Test
     void listsNodeTypes() throws Exception {
         mockMvc.perform(get("/v1/flows/node-types"))
                 .andExpect(status().isOk())
