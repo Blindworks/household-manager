@@ -86,4 +86,13 @@ describe('FlowService', () => {
     service.getDebug(1, 'n1').subscribe();
     httpMock.expectOne('/api/v1/flows/1/nodes/n1/debug').flush([]);
   });
+
+  it('imports a flow via POST /import', () => {
+    const payload = { schemaVersion: 1, name: 'X', description: '', definition: { nodes: [], wires: [] } };
+    service.importFlow(payload).subscribe();
+    const req = httpMock.expectOne('/api/v1/flows/import');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(payload);
+    req.flush({ id: 9, name: 'X', enabled: false, deployed: false });
+  });
 });

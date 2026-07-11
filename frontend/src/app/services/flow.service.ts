@@ -28,6 +28,11 @@ export class FlowService {
     return this.http.post<FlowDetail>(this.baseUrl, { name, description });
   }
 
+  /** Importiert eine extern erzeugte Flow-Wrapper-Datei; legt einen deaktivierten Draft an. */
+  importFlow(payload: unknown): Observable<FlowDetail> {
+    return this.http.post<FlowDetail>(`${this.baseUrl}/import`, payload);
+  }
+
   saveDraft(id: number, name: string, description: string, draftDefinition: string): Observable<FlowDetail> {
     return this.http.put<FlowDetail>(`${this.baseUrl}/${id}`, { name, description, draftDefinition });
   }
