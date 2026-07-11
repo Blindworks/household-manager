@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "Flurlicht bei Bewegung",
+  "description": "Schaltet Gerät 1 ein, wenn der Bewegungsmelder auslöst",
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "entity-state-trigger",
+        "name": "Bewegung erkannt",
+        "position": { "x": 80, "y": 120 },
+        "config": { "entityId": "binary_sensor.flur_bewegung", "operator": "==", "value": "on" }
+      },
+      {
+        "id": "switch",
+        "type": "switch-device",
+        "name": "Flurlicht an",
+        "position": { "x": 360, "y": 120 },
+        "config": { "deviceId": 1, "action": "on" }
+      }
+    ],
+    "wires": [
+      { "from": { "node": "trigger", "port": 0 }, "to": { "node": "switch" } }
+    ]
+  }
+}

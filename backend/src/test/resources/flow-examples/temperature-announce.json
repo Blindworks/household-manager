@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "name": "Warnung bei hoher Temperatur",
+  "description": "Sagt eine Warnung an, wenn die Temperatur 25 Grad übersteigt",
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "entity-state-trigger",
+        "name": "Temperatur",
+        "position": { "x": 80, "y": 120 },
+        "config": { "entityId": "sensor.wohnzimmer_temperatur", "operator": ">", "value": "25" }
+      },
+      {
+        "id": "limit",
+        "type": "rate-limit",
+        "name": "Höchstens alle 10 Minuten",
+        "position": { "x": 340, "y": 120 },
+        "config": { "minIntervalSeconds": 600 }
+      },
+      {
+        "id": "say",
+        "type": "alexa-announce",
+        "name": "Ansage",
+        "position": { "x": 620, "y": 120 },
+        "config": {
+          "text": "Achtung, {entityId} liegt bei {newState} Grad.",
+          "mode": "ANNOUNCE",
+          "deviceSerials": ["G0000000000000000"]
+        }
+      }
+    ],
+    "wires": [
+      { "from": { "node": "trigger", "port": 0 }, "to": { "node": "limit" } },
+      { "from": { "node": "limit", "port": 0 }, "to": { "node": "say" } }
+    ]
+  }
+}
