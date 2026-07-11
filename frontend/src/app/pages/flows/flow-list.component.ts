@@ -40,6 +40,28 @@ export class FlowListComponent implements OnInit {
     });
   }
 
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // erlaubt erneuten Upload derselben Datei
+    if (!file) { return; }
+    file.text().then(text => this.importFromText(text));
+  }
+
+  private importFromText(text: string): void {
+    let payload: unknown;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      this.error.set('Die Datei enthält kein gültiges JSON.');
+      return;
+    }
+    this.flowService.importFlow(payload).subscribe({
+      next: flow => this.router.navigate(['/flows', flow.id]),
+      error: err => this.error.set(err.error?.message ?? 'Import fehlgeschlagen.')
+    });
+  }
+
   open(flow: FlowSummary): void {
     this.router.navigate(['/flows', flow.id]);
   }

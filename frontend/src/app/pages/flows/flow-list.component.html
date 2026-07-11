@@ -1,8 +1,13 @@
 <div class="flow-list-page">
   <div class="flow-list-page__header">
     <h1>Automatisierungen</h1>
-    <button class="flow-list-page__new" (click)="createFlow()">+ Neuer Flow</button>
+    <div class="flow-list-page__actions">
+      <button class="flow-list-page__import" (click)="importFile.click()">Importieren</button>
+      <button class="flow-list-page__new" (click)="createFlow()">+ Neuer Flow</button>
+    </div>
   </div>
+  <input #importFile type="file" accept=".json,application/json" hidden
+         (change)="onImportFileSelected($event)" />
 
   @if (error()) {
     <div class="flow-list-page__error">{{ error() }}</div>

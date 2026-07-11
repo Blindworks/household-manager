@@ -17,3 +17,16 @@
   &--draft { background: #eceff1; color: #546e7a; } }
 .toggle { padding: 0.2rem 0.6rem; border: 1px solid #ccc; border-radius: 10px; background: #eceff1; cursor: pointer;
   &--on { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; } }
+
+.flow-list-page__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flow-list-page__import {
+  background: transparent;
+  border: 1px solid var(--color-border, #ccc);
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
