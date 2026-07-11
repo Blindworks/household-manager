@@ -24,8 +24,14 @@ interface NavLink {
 export class HeaderComponent {
   readonly navLinks: NavLink[] = [
     { path: '/', label: 'Home', exact: true },
-    { path: '/meter-readings', label: 'Zaehlerstaende' },
-    { path: '/consumption', label: 'Verbrauch' },
+    {
+      path: '/consumption',
+      label: 'Verbrauch',
+      children: [
+        { path: '/consumption', label: 'Uebersicht', exact: true },
+        { path: '/meter-readings', label: 'Zaehlerstaende' }
+      ]
+    },
     {
       path: '/energy',
       label: 'Energie',
@@ -35,14 +41,32 @@ export class HeaderComponent {
         { path: '/energy/history', label: 'Energieverlauf' }
       ]
     },
-    { path: '/air-quality', label: 'Luftqualitaet' },
-    { path: '/weather', label: 'Wetter' },
-    { path: '/zigbee', label: 'Zigbee-Sensoren' },
-    { path: '/devices', label: 'Geraete' },
-    { path: '/entities', label: 'Entitaeten' },
-    { path: '/flows', label: 'Automatisierungen' },
-    { path: '/announcements', label: 'Ansagen' },
-    { path: '/admin', label: 'Admin' },
+    {
+      path: '/environment',
+      label: 'Umwelt',
+      children: [
+        { path: '/air-quality', label: 'Luftqualitaet' },
+        { path: '/weather', label: 'Wetter' }
+      ]
+    },
+    {
+      path: '/smart-home',
+      label: 'Smart Home',
+      children: [
+        { path: '/zigbee', label: 'Zigbee-Sensoren' },
+        { path: '/devices', label: 'Geraete' },
+        { path: '/entities', label: 'Entitaeten' }
+      ]
+    },
+    {
+      path: '/admin',
+      label: 'Admin',
+      children: [
+        { path: '/admin', label: 'Uebersicht', exact: true },
+        { path: '/flows', label: 'Automatisierungen' },
+        { path: '/announcements', label: 'Ansagen' }
+      ]
+    },
     {
       path: '/finance',
       label: 'Ausgaben',
@@ -95,12 +119,19 @@ export class HeaderComponent {
   }
 
   /**
+   * Closes any expanded submenu (used when navigating).
+   */
+  closeSubmenu(): void {
+    this.expandedMenu.set(null);
+  }
+
+  /**
    * Checks if any child route of a parent link is currently active.
    */
   isParentActive(link: NavLink): boolean {
     if (!link.children) {
       return false;
     }
-    return this.router.url.startsWith(link.path);
+    return link.children.some(child => this.router.url.startsWith(child.path));
   }
 }
