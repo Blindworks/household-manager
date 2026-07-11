@@ -4,29 +4,31 @@
  */
 export interface WeatherSymbol {
   emoji: string;
+  /** Name eines Lucide-Icons aus der app-icon-Komponente. */
+  icon: string;
   label: string;
 }
 
 const ICONS: Record<number, WeatherSymbol> = {
-  1: { emoji: '☀️', label: 'Klar' },
-  2: { emoji: '🌤️', label: 'Leicht bewölkt' },
-  3: { emoji: '⛅', label: 'Wolkig' },
-  4: { emoji: '☁️', label: 'Bedeckt' },
-  5: { emoji: '🌫️', label: 'Nebel' },
-  6: { emoji: '🌫️', label: 'Gefrierender Nebel' },
-  7: { emoji: '🌦️', label: 'Leichter Regen' },
-  8: { emoji: '🌧️', label: 'Regen' },
-  9: { emoji: '🌧️', label: 'Starker Regen' },
-  10: { emoji: '🌧️', label: 'Gefrierender Regen' },
-  11: { emoji: '🌨️', label: 'Schneeregen' },
-  12: { emoji: '🌨️', label: 'Leichter Schnee' },
-  13: { emoji: '❄️', label: 'Schnee' },
-  14: { emoji: '🌦️', label: 'Leichter Schauer' },
-  15: { emoji: '🌧️', label: 'Schauer' },
-  16: { emoji: '⛈️', label: 'Gewitter' }
+  1: { emoji: '☀️', icon: 'sun', label: 'Klar' },
+  2: { emoji: '🌤️', icon: 'cloud-sun', label: 'Leicht bewölkt' },
+  3: { emoji: '⛅', icon: 'cloud-sun', label: 'Wolkig' },
+  4: { emoji: '☁️', icon: 'cloud', label: 'Bedeckt' },
+  5: { emoji: '🌫️', icon: 'cloud-fog', label: 'Nebel' },
+  6: { emoji: '🌫️', icon: 'cloud-fog', label: 'Gefrierender Nebel' },
+  7: { emoji: '🌦️', icon: 'cloud-drizzle', label: 'Leichter Regen' },
+  8: { emoji: '🌧️', icon: 'cloud-rain', label: 'Regen' },
+  9: { emoji: '🌧️', icon: 'cloud-rain-wind', label: 'Starker Regen' },
+  10: { emoji: '🌧️', icon: 'cloud-rain', label: 'Gefrierender Regen' },
+  11: { emoji: '🌨️', icon: 'cloud-snow', label: 'Schneeregen' },
+  12: { emoji: '🌨️', icon: 'cloud-snow', label: 'Leichter Schnee' },
+  13: { emoji: '❄️', icon: 'cloud-snow', label: 'Schnee' },
+  14: { emoji: '🌦️', icon: 'cloud-drizzle', label: 'Leichter Schauer' },
+  15: { emoji: '🌧️', icon: 'cloud-rain', label: 'Schauer' },
+  16: { emoji: '⛈️', icon: 'cloud-lightning', label: 'Gewitter' }
 };
 
-const DEFAULT_SYMBOL: WeatherSymbol = { emoji: '🌡️', label: 'Unbekannt' };
+const DEFAULT_SYMBOL: WeatherSymbol = { emoji: '🌡️', icon: 'thermometer', label: 'Unbekannt' };
 
 export function weatherSymbol(icon: number | null | undefined): WeatherSymbol {
   if (icon == null) {

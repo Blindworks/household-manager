@@ -6,36 +6,48 @@ import { LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { WeatherService } from '../../services/weather.service';
-import { WeatherHistoryReading, WeatherOverview } from '../../models/weather.model';
+import { AirQualityService } from '../../services/air-quality.service';
+import { WeatherOverview } from '../../models/weather.model';
+import { AirQualityOverview } from '../../models/air-quality.model';
 import { weatherSymbol, warnSeverity, WeatherSymbol, WarnSeverity } from '../../shared/weather-icon.util';
+import { airQualityCategory, AirQualityCategory } from '../../shared/air-quality-index.util';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 @Component({
   selector: 'app-weather',
   standalone: true,
-  imports: [CommonModule, NgxEchartsDirective],
+  imports: [CommonModule, NgxEchartsDirective, IconComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './weather.component.html',
   styleUrl: './weather.component.scss'
 })
 export class WeatherComponent implements OnInit {
   private readonly weatherService = inject(WeatherService);
+  private readonly airQualityService = inject(AirQualityService);
 
   overview: WeatherOverview | null = null;
   forecastChartOptions: Record<string, unknown> | null = null;
-  historyChartOptions: Record<string, unknown> | null = null;
 
   isLoading = true;
   errorMessage: string | null = null;
 
+  airQuality: AirQualityOverview | null = null;
+  airQualityLoading = true;
+  airQualityError = false;
+
   ngOnInit(): void {
     this.loadOverview();
-    this.loadHistory();
+    this.loadAirQuality();
   }
 
   symbolFor(icon: number | null | undefined): WeatherSymbol {
     return weatherSymbol(icon);
+  }
+
+  categoryFor(index: number | null | undefined): AirQualityCategory {
+    return airQualityCategory(index);
   }
 
   severityFor(level: number | null | undefined): WarnSeverity {
@@ -53,6 +65,22 @@ export class WeatherComponent implements OnInit {
     return `Regen ab ${time} Uhr`;
   }
 
+  private loadAirQuality(): void {
+    this.airQualityLoading = true;
+    this.airQualityError = false;
+    this.airQualityService.getOverview().subscribe({
+      next: airQuality => {
+        this.airQuality = airQuality;
+        this.airQualityLoading = false;
+      },
+      error: (error: Error) => {
+        console.error('Fehler beim Laden der Luftqualität:', error);
+        this.airQualityError = true;
+        this.airQualityLoading = false;
+      }
+    });
+  }
+
   private loadOverview(): void {
     this.isLoading = true;
     this.errorMessage = null;
@@ -67,15 +95,6 @@ export class WeatherComponent implements OnInit {
         this.errorMessage = 'Fehler beim Laden der Wetterdaten. Bitte erneut versuchen.';
         this.isLoading = false;
       }
-    });
-  }
-
-  private loadHistory(): void {
-    this.weatherService.getHistory().subscribe({
-      next: readings => {
-        this.historyChartOptions = readings.length ? this.buildHistoryChart(readings) : null;
-      },
-      error: (error: Error) => console.error('Fehler beim Laden des Wetterverlaufs:', error)
     });
   }
 
@@ -99,21 +118,6 @@ export class WeatherComponent implements OnInit {
           data: overview.hourlyForecast.map(h => h.temperature), lineStyle: { width: 2.5, color: '#f59e0b' }, itemStyle: { color: '#f59e0b' } },
         { name: 'Niederschlag', type: 'bar', yAxisIndex: 1,
           data: overview.hourlyForecast.map(h => h.precipitation), itemStyle: { color: '#0ea5e9' } }
-      ]
-    };
-  }
-
-  private buildHistoryChart(readings: WeatherHistoryReading[]): Record<string, unknown> {
-    const sorted = [...readings].sort((a, b) => a.readingTime.getTime() - b.readingTime.getTime());
-    const labels = sorted.map(r => r.readingTime.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit' }));
-    return {
-      grid: { left: 56, right: 24, top: 24, bottom: 36, containLabel: false },
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: labels, axisLabel: { color: '#94a3b8', fontSize: 11 } },
-      yAxis: { type: 'value', axisLabel: { color: '#94a3b8', formatter: '{value} °C' }, splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } } },
-      series: [
-        { name: 'Temperatur', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, connectNulls: true,
-          data: sorted.map(r => r.temperature), lineStyle: { width: 2.5, color: '#f59e0b' }, itemStyle: { color: '#f59e0b' } }
       ]
     };
   }

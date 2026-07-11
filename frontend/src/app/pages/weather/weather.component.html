@@ -27,28 +27,62 @@
       </div>
     }
 
-    @if (overview.current) {
-      <div class="weather__current">
-        <div class="weather__current-symbol">{{ symbolFor(overview.current.icon).emoji }}</div>
-        <div class="weather__current-main">
-          @if (overview.current.temperature !== null) {
-            <span class="weather__current-temp">{{ overview.current.temperature }} °C</span>
-          }
-          <span class="weather__current-label">{{ symbolFor(overview.current.icon).label }}</span>
+    <div class="weather__tiles">
+      @if (overview.current) {
+        <div class="weather__current">
+          <app-icon
+            class="weather__current-symbol"
+            [name]="symbolFor(overview.current.icon).icon"
+            [size]="56"></app-icon>
+          <div class="weather__current-main">
+            @if (overview.current.temperature !== null) {
+              <span class="weather__current-temp">{{ overview.current.temperature }} °C</span>
+            }
+            <span class="weather__current-label">{{ symbolFor(overview.current.icon).label }}</span>
+          </div>
+          <ul class="weather__current-details">
+            @if (overview.current.windSpeed !== null) {
+              <li>Wind: {{ overview.current.windSpeed }} km/h</li>
+            }
+            @if (overview.current.humidity !== null) {
+              <li>Luftfeuchte: {{ overview.current.humidity }} %</li>
+            }
+            @if (overview.current.pressure !== null) {
+              <li>Druck: {{ overview.current.pressure }} hPa</li>
+            }
+          </ul>
         </div>
-        <ul class="weather__current-details">
-          @if (overview.current.windSpeed !== null) {
-            <li>Wind: {{ overview.current.windSpeed }} km/h</li>
+      }
+
+      <div class="weather__air">
+        @if (airQualityLoading) {
+          <p class="weather__air-status">Lade Luftqualität…</p>
+        } @else if (airQualityError || !airQuality) {
+          <p class="weather__air-status">Luftqualität nicht verfügbar</p>
+        } @else {
+          <div class="weather__air-badge"
+               [style.background]="categoryFor(airQuality.overallIndex).color"
+               [style.color]="categoryFor(airQuality.overallIndex).textColor">
+            <span class="weather__air-index-label">{{ categoryFor(airQuality.overallIndex).label }}</span>
+            <span class="weather__air-index-sub">Luftqualität</span>
+          </div>
+          <span class="weather__air-station">UBA-Station {{ airQuality.stationId }}</span>
+          @if (airQuality.incomplete) {
+            <span class="weather__air-hint">Messwerte teilweise unvollständig</span>
           }
-          @if (overview.current.humidity !== null) {
-            <li>Luftfeuchte: {{ overview.current.humidity }} %</li>
-          }
-          @if (overview.current.pressure !== null) {
-            <li>Druck: {{ overview.current.pressure }} hPa</li>
-          }
-        </ul>
+          <ul class="weather__air-components">
+            @for (component of airQuality.components; track component.code) {
+              <li class="weather__air-component">
+                <span class="weather__air-component-symbol">{{ component.symbol }}</span>
+                <span class="weather__air-component-value">
+                  {{ component.value === null ? '–' : component.value }} {{ component.unit }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
       </div>
-    }
+    </div>
 
     <div class="weather__rain" [class.weather__rain--active]="overview.nextRain">
       {{ nextRainText }}
@@ -58,13 +92,6 @@
       <div class="weather__card">
         <h2 class="weather__card-title">Stundenvorhersage</h2>
         <div echarts [options]="forecastChartOptions" class="weather__chart"></div>
-      </div>
-    }
-
-    @if (historyChartOptions) {
-      <div class="weather__card">
-        <h2 class="weather__card-title">Wetterverlauf</h2>
-        <div echarts [options]="historyChartOptions" class="weather__chart"></div>
       </div>
     }
   }

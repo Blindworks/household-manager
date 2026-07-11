@@ -38,7 +38,15 @@
   &__warning-headline { display: block; }
   &__warning-text, &__warning-instruction { margin: 0.25rem 0 0; font-size: 0.875rem; color: #475569; }
 
+  &__tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
   &__current {
+    flex: 1 1 320px;
     display: flex;
     align-items: center;
     gap: 1.25rem;
@@ -48,7 +56,54 @@
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
-  &__current-symbol { font-size: 3rem; line-height: 1; }
+  &__current-symbol { color: #0284c7; flex: none; }
+
+  &__air {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  &__air-status { margin: auto; color: #64748b; }
+
+  &__air-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+  }
+
+  &__air-index-label { font-size: 1.5rem; font-weight: 700; line-height: 1.1; }
+  &__air-index-sub { font-size: 0.8125rem; opacity: 0.85; }
+
+  &__air-station { color: #64748b; font-size: 0.8125rem; }
+  &__air-hint { color: #b45309; font-size: 0.8125rem; }
+
+  &__air-components {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.5rem 0.75rem;
+  }
+
+  &__air-component {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    color: #475569;
+    font-size: 0.875rem;
+  }
+
+  &__air-component-symbol { font-weight: 600; color: #1e293b; min-width: 2.5rem; }
+  &__air-component-value { white-space: nowrap; }
   &__current-main { display: flex; flex-direction: column; }
   &__current-temp { font-size: 2rem; font-weight: 700; }
   &__current-label { color: #64748b; }
