@@ -120,9 +120,11 @@ Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
 | `deviceId` | ja | numerische SmartDevice-ID (Kasa/Tapo/Meross) |
 | `action` | ja | `on` oder `off` |
 
-> `entityId`, `deviceId` und `deviceSerials` müssen zu deiner Umgebung passen. Sind sie
-> unbekannt, meldet der Deploy eine **Warnung** (kein Fehler) — der Flow greift, sobald
-> die Entität/das Gerät existiert.
+> Referenzen müssen zu deiner Umgebung passen. Ist eine **`entityId`** beim Deploy noch
+> unbekannt, meldet der Validator eine **Warnung** (kein Fehler) — der Flow greift, sobald
+> die Entität existiert. **`deviceId`** und **`deviceSerials`** werden beim Deploy dagegen
+> nicht auf Existenz geprüft; ein falscher Wert fällt erst zur Laufzeit auf, wenn die
+> Aktion ausgeführt wird.
 
 ## Beispiel 1 — Flurlicht bei Bewegung
 
