@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const AlexaRemote = require('alexa-remote2');
+const { extractAirQualityMonitors, mapDeviceStates } = require('./smarthome');
 
 // ---------------------------------------------------------------------------
 // Configuration (all via env, with sane defaults)
@@ -314,6 +315,85 @@ app.post('/announce', (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     res.status(204).end();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Smart home: Amazon Air Quality Monitors
+// ---------------------------------------------------------------------------
+// Discovery is cached because the backend polls every few minutes and the
+// monitor list / instance mapping changes practically never.
+const AQM_CACHE_TTL_MS = 10 * 60 * 1000;
+let aqmCache = { monitors: null, fetchedAt: 0 };
+
+function getAirQualityMonitors(callback) {
+  if (aqmCache.monitors && Date.now() - aqmCache.fetchedAt < AQM_CACHE_TTL_MS) {
+    return callback(null, aqmCache.monitors);
+  }
+  alexa.getSmarthomeDevices((err, locationDetails) => {
+    if (err) return callback(err);
+    try {
+      const monitors = extractAirQualityMonitors(locationDetails);
+      aqmCache = { monitors, fetchedAt: Date.now() };
+      callback(null, monitors);
+    } catch (mapErr) {
+      callback(mapErr);
+    }
+  });
+}
+
+// Debug/spike endpoint: raw discovery payload to inspect the real format.
+app.get('/smarthome/raw', (req, res) => {
+  if (!isLoggedIn()) {
+    return res.status(409).json({ error: 'not logged in' });
+  }
+  alexa.getSmarthomeDevices((err, locationDetails) => {
+    if (err) {
+      log('smarthome/raw failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(200).json(locationDetails);
+  });
+});
+
+app.get('/smarthome/air-quality-monitors', (req, res) => {
+  if (!isLoggedIn()) {
+    return res.status(409).json({ error: 'not logged in' });
+  }
+  getAirQualityMonitors((err, monitors) => {
+    if (err) {
+      log('air-quality-monitors failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(200).json(monitors);
+  });
+});
+
+app.get('/smarthome/air-quality-monitors/state', (req, res) => {
+  if (!isLoggedIn()) {
+    return res.status(409).json({ error: 'not logged in' });
+  }
+  getAirQualityMonitors((err, monitors) => {
+    if (err) {
+      log('air-quality state (discovery) failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    if (monitors.length === 0) {
+      return res.status(200).json([]);
+    }
+    const ids = monitors.map((m) => m.applianceId);
+    alexa.querySmarthomeDevices(ids, 'APPLIANCE', (queryErr, stateResponse) => {
+      if (queryErr) {
+        log('air-quality state (query) failed:', queryErr.message);
+        return res.status(500).json({ error: queryErr.message });
+      }
+      try {
+        res.status(200).json(mapDeviceStates(stateResponse, monitors));
+      } catch (mapErr) {
+        log('air-quality state (mapping) failed:', mapErr.message);
+        res.status(500).json({ error: mapErr.message });
+      }
+    });
   });
 });
 
