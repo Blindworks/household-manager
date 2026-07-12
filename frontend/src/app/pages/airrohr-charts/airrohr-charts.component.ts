@@ -8,6 +8,7 @@ import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { AirrohrService } from '../../services/airrohr.service';
 import { AirrohrHistoryReading } from '../../models/airrohr.model';
+import { AlexaAirQualitySectionComponent } from './alexa-air-quality-section.component';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -24,7 +25,7 @@ interface AirrohrChartSeries {
 @Component({
   selector: 'app-airrohr-charts',
   standalone: true,
-  imports: [CommonModule, IconComponent, NgxEchartsDirective],
+  imports: [CommonModule, IconComponent, NgxEchartsDirective, AlexaAirQualitySectionComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './airrohr-charts.component.html',
   styleUrl: './airrohr-charts.component.scss'

@@ -3,16 +3,20 @@
     <header class="airrohr-charts__header">
       <div>
         <p class="airrohr-charts__eyebrow">Luftqualitaet</p>
-        <h1 class="airrohr-charts__title">Airrohr Feinstaub als Graph</h1>
+        <h1 class="airrohr-charts__title">Luftqualitaet: Innenraum &amp; Aussen</h1>
         <p class="airrohr-charts__subtitle">
-          Verlauf der Messwerte Feinstaub PM10 und Feinstaub PM2.5 (kein Verbrauch, sondern Luftqualitaet).
+          Innenraum-Werte der Amazon Smart Air Quality Monitore und Feinstaub-Verlauf des Airrohr-Sensors.
         </p>
       </div>
       <div class="airrohr-charts__legend">
         <app-icon name="wind" class="airrohr-charts__icon"></app-icon>
-        <span>Einheit: ug/m3</span>
+        <span>Einheit: ug/m3 (Airrohr)</span>
       </div>
     </header>
+
+    <app-alexa-air-quality-section />
+
+    <h2 class="airrohr-charts__section-title">Aussen (Airrohr Feinstaub)</h2>
 
     <section class="airrohr-charts__controls">
       <div class="airrohr-charts__controls-right">
