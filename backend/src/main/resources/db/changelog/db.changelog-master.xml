@@ -71,4 +71,7 @@
     <!-- Flow Engine (Stage 3a) -->
     <include file="db/changelog/changes/20260709-0030-create-flows-table.xml"/>
 
+    <!-- Amazon Smart Air Quality Monitor Feature -->
+    <include file="db/changelog/changes/20260712-0031-create-alexa-air-quality-readings-table.xml"/>
+
 </databaseChangeLog>

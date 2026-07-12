@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260712-0031" author="household-manager">
+        <comment>Create alexa_air_quality_readings table for Amazon Smart Air Quality Monitor data</comment>
+
+        <createTable tableName="alexa_air_quality_readings">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appliance_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_name" type="VARCHAR(255)"/>
+            <column name="reading_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="iaq" type="INT"/>
+            <column name="pm25" type="DECIMAL(10,2)"/>
+            <column name="voc" type="DECIMAL(10,2)"/>
+            <column name="co" type="DECIMAL(10,3)"/>
+            <column name="temperature" type="DECIMAL(5,2)"/>
+            <column name="humidity" type="DECIMAL(5,2)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_alexa_aq_readings_device_time" tableName="alexa_air_quality_readings">
+            <column name="appliance_id"/>
+            <column name="reading_time"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="alexa_air_quality_readings"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
