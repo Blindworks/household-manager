@@ -1,0 +1,48 @@
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "displayName": "Luftqualitätsmonitor Schlafzimmer ",
+    "description": "Amazon Indoor Air Quality Monitor",
+    "supportedProperties": [],
+    "availability": "AVAILABLE",
+    "icon": { "@iconType": "SmartHomeApplianceType", "value": "AIR_QUALITY_MONITOR" },
+    "providerData": {
+      "enabled": true,
+      "categoryType": "APPLIANCE",
+      "deviceType": "AIR_QUALITY_MONITOR",
+      "dmsDeviceIdentifiers": [
+        { "deviceSerialNumber": "GAJ0000000000001", "deviceType": "AEZME1X38KDRA" }
+      ]
+    }
+  },
+  {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "displayName": "Erster Luftqualitätsmonitor",
+    "description": "Amazon Indoor Air Quality Monitor",
+    "supportedProperties": [],
+    "availability": "AVAILABLE",
+    "icon": { "@iconType": "SmartHomeApplianceType", "value": "AIR_QUALITY_MONITOR" },
+    "providerData": {
+      "enabled": true,
+      "categoryType": "APPLIANCE",
+      "deviceType": "AIR_QUALITY_MONITOR",
+      "dmsDeviceIdentifiers": [
+        { "deviceSerialNumber": "GAJ0000000000002", "deviceType": "AEZME1X38KDRA" }
+      ]
+    }
+  },
+  {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "displayName": "Stehlampe",
+    "description": "Tapo Smart Wi-Fi Bulb L530",
+    "supportedProperties": ["turnOn", "turnOff", "setBrightness"],
+    "availability": "AVAILABLE",
+    "icon": { "@iconType": "SmartHomeApplianceType", "value": "LIGHT" },
+    "providerData": {
+      "enabled": true,
+      "categoryType": "APPLIANCE",
+      "deviceType": "LIGHT",
+      "dmsDeviceIdentifiers": []
+    }
+  }
+]

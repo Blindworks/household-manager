@@ -1,0 +1,32 @@
+{
+  "deviceStates": [
+    {
+      "entity": { "entityId": "11111111-1111-4111-8111-111111111111", "entityType": "ENTITY" },
+      "capabilityStates": [
+        "{\"namespace\":\"Alexa.ToggleController\",\"name\":\"toggleState\",\"instance\":\"11\",\"value\":\"OFF\"}",
+        "{\"namespace\":\"Alexa.TemperatureSensor\",\"name\":\"temperature\",\"value\":{\"value\":24.75,\"scale\":\"CELSIUS\"}}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"4\",\"value\":53.0}",
+        "{\"namespace\":\"Alexa.EndpointHealth\",\"name\":\"connectivity\",\"value\":{\"value\":\"OK\"}}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"5\",\"value\":15.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"8\",\"value\":0.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"9\",\"value\":80.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"6\",\"value\":1.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"7\",\"value\":1.0}"
+      ],
+      "error": null
+    },
+    {
+      "entity": { "entityId": "22222222-2222-4222-8222-222222222222", "entityType": "ENTITY" },
+      "capabilityStates": [
+        "{\"namespace\":\"Alexa.TemperatureSensor\",\"name\":\"temperature\",\"value\":{\"value\":23.5,\"scale\":\"CELSIUS\"}}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"4\",\"value\":46.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"5\",\"value\":5.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"8\",\"value\":0.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"9\",\"value\":94.0}",
+        "{\"namespace\":\"Alexa.RangeController\",\"name\":\"rangeValue\",\"instance\":\"6\",\"value\":2.0}"
+      ],
+      "error": null
+    }
+  ],
+  "errors": []
+}

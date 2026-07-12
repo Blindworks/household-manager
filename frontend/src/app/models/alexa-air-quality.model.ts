@@ -30,15 +30,15 @@ export const ALEXA_AIR_QUALITY_METRICS: AlexaAirQualityMetric[] = [
 
 export type IaqLevel = 'good' | 'moderate' | 'bad' | 'unknown';
 
-/** Amazons IAQ-Skala: 0-50 gut, 51-100 maessig, ab 101 schlecht. */
+/** Amazons IAQ-Skala: 0-100, hoeher = besser. Ab 65 gut, ab 35 maessig, darunter schlecht. */
 export function iaqLevel(iaq: number | null): IaqLevel {
   if (iaq === null || iaq === undefined || Number.isNaN(iaq)) {
     return 'unknown';
   }
-  if (iaq <= 50) {
+  if (iaq >= 65) {
     return 'good';
   }
-  if (iaq <= 100) {
+  if (iaq >= 35) {
     return 'moderate';
   }
   return 'bad';

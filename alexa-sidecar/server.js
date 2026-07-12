@@ -330,10 +330,10 @@ function getAirQualityMonitors(callback) {
   if (aqmCache.monitors && Date.now() - aqmCache.fetchedAt < AQM_CACHE_TTL_MS) {
     return callback(null, aqmCache.monitors);
   }
-  alexa.getSmarthomeDevices((err, locationDetails) => {
+  alexa.getSmarthomeEntities((err, entities) => {
     if (err) return callback(err);
     try {
-      const monitors = extractAirQualityMonitors(locationDetails);
+      const monitors = extractAirQualityMonitors(entities);
       aqmCache = { monitors, fetchedAt: Date.now() };
       callback(null, monitors);
     } catch (mapErr) {
@@ -342,17 +342,17 @@ function getAirQualityMonitors(callback) {
   });
 }
 
-// Debug/spike endpoint: raw discovery payload to inspect the real format.
+// Debug/spike endpoint: raw smart-home entities payload to inspect the real format.
 app.get('/smarthome/raw', (req, res) => {
   if (!isLoggedIn()) {
     return res.status(409).json({ error: 'not logged in' });
   }
-  alexa.getSmarthomeDevices((err, locationDetails) => {
+  alexa.getSmarthomeEntities((err, entities) => {
     if (err) {
       log('smarthome/raw failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.status(200).json(locationDetails);
+    res.status(200).json(entities);
   });
 });
 
@@ -381,8 +381,8 @@ app.get('/smarthome/air-quality-monitors/state', (req, res) => {
     if (monitors.length === 0) {
       return res.status(200).json([]);
     }
-    const ids = monitors.map((m) => m.applianceId);
-    alexa.querySmarthomeDevices(ids, 'APPLIANCE', (queryErr, stateResponse) => {
+    const ids = monitors.map((m) => m.entityId);
+    alexa.querySmarthomeDevices(ids, 'ENTITY', (queryErr, stateResponse) => {
       if (queryErr) {
         log('air-quality state (query) failed:', queryErr.message);
         return res.status(500).json({ error: queryErr.message });

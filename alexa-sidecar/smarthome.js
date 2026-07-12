@@ -1,83 +1,76 @@
 'use strict';
 
 /**
- * Mapping helpers for Amazon smart home (phoenix) responses.
+ * Mapping helpers for the Amazon Smart Air Quality Monitor.
  *
- * Isolates the Amazon-specific, brittle format inside the sidecar: input is
- * the raw getSmarthomeDevices() / querySmarthomeDevices() payload, output are
- * flat objects the Spring Boot backend consumes. AQM sensors are generic
- * Alexa.RangeController instances; the instance -> sensor mapping is resolved
- * via the asset ids in the capability resources.
+ * Isolates the Amazon-specific, brittle format inside the sidecar: input is the
+ * raw getSmarthomeEntities() / querySmarthomeDevices() payload, output are flat
+ * objects the Spring Boot backend consumes.
+ *
+ * Discovery: the monitors live in the Alexa behaviors "entities" API
+ * (getSmarthomeEntities -> `/api/behaviors/entities?skillId=amzn1.ask.1p.smarthome`),
+ * identified by `providerData.deviceType === 'AIR_QUALITY_MONITOR'`. The old
+ * `/api/phoenix` discovery returns only `{success:true}` for these accounts.
+ *
+ * State: queried with querySmarthomeDevices(entityIds, 'ENTITY') against
+ * `/api/phoenix/state`; each device returns `capabilityStates` (an array of JSON
+ * strings) with numbered `Alexa.RangeController` instances plus a
+ * `Alexa.TemperatureSensor`.
+ *
+ * Sensor identity: Amazon exposes the range sensors as bare numbered instances
+ * with NO asset labels anywhere in the API. The instance -> sensor mapping is
+ * therefore fixed for the Amazon monitor hardware; it was verified against the
+ * Alexa app (identical monitors use identical instance numbers). IAQ uses a
+ * 0-100 scale where HIGHER is better.
  */
 
-// Asset ids from Amazon's public asset catalog identifying AQM sensors.
-const SENSOR_ASSET_IDS = {
-  'Alexa.AirQuality.IndoorAirQuality': 'iaq',
-  'Alexa.AirQuality.ParticulateMatter': 'pm25',
-  'Alexa.AirQuality.VolatileOrganicCompounds': 'voc',
-  'Alexa.AirQuality.CarbonMonoxide': 'co',
-  'Alexa.AirQuality.Humidity': 'humidity'
+// RangeController instance number -> our sensor key, for the Amazon monitor model.
+const RANGE_INSTANCE_SENSORS = {
+  '9': 'iaq',      // Indoor Air Quality score (0-100, higher = better)
+  '6': 'pm25',     // Feinstaub / particulate matter (µg/m³)
+  '5': 'voc',      // VOC-Index
+  '8': 'co',       // Carbon monoxide (ppm)
+  '4': 'humidity'  // Relative humidity (%)
 };
 
-function collectAppliances(locationDetails) {
-  if (!locationDetails || typeof locationDetails !== 'object') return [];
-  const appliances = [];
-  for (const location of Object.values(locationDetails)) {
-    const bridges =
-      (location && location.amazonBridgeDetails && location.amazonBridgeDetails.amazonBridgeDetails) || {};
-    for (const bridge of Object.values(bridges)) {
-      const details = (bridge && bridge.applianceDetails && bridge.applianceDetails.applianceDetails) || {};
-      for (const appliance of Object.values(details)) {
-        appliances.push(appliance);
-      }
-    }
-  }
-  return appliances;
+function asEntityList(entities) {
+  if (Array.isArray(entities)) return entities;
+  if (entities && Array.isArray(entities.entities)) return entities.entities;
+  return [];
 }
 
-function isAirQualityMonitor(appliance) {
-  const types = Array.isArray(appliance.applianceTypes) ? appliance.applianceTypes : [];
-  return types.includes('AIR_QUALITY_MONITOR');
+function isAirQualityMonitor(entity) {
+  return !!(entity && entity.providerData && entity.providerData.deviceType === 'AIR_QUALITY_MONITOR');
 }
 
-function extractSensorInstances(appliance) {
-  const sensors = {};
-  const caps = Array.isArray(appliance.capabilities) ? appliance.capabilities : [];
-  for (const cap of caps) {
-    if (cap.interfaceName === 'Alexa.TemperatureSensor') {
-      sensors.temperature = { namespace: 'Alexa.TemperatureSensor' };
-      continue;
-    }
-    if (cap.interfaceName !== 'Alexa.RangeController' || !cap.instance) continue;
-    const friendlyNames =
-      (cap.resources && Array.isArray(cap.resources.friendlyNames)) ? cap.resources.friendlyNames : [];
-    for (const fn of friendlyNames) {
-      const key = SENSOR_ASSET_IDS[fn && fn.value && fn.value.assetId];
-      if (key) {
-        sensors[key] = { namespace: 'Alexa.RangeController', instance: cap.instance };
-        break;
-      }
-    }
-  }
-  return sensors;
+/** Stable hardware serial from the DMS identifiers, or null if absent. */
+function stableSerial(entity) {
+  const ids =
+    entity.providerData && Array.isArray(entity.providerData.dmsDeviceIdentifiers)
+      ? entity.providerData.dmsDeviceIdentifiers
+      : [];
+  return ids.length && ids[0].deviceSerialNumber ? ids[0].deviceSerialNumber : null;
 }
 
 /**
- * Filters the discovery payload down to Amazon Air Quality Monitors and
- * resolves which RangeController instance belongs to which sensor.
+ * Filters the smart-home entities down to Amazon Air Quality Monitors.
+ * `applianceId` is the stable hardware serial (falls back to the entity UUID);
+ * `entityId` is the UUID required for the state query.
  */
-function extractAirQualityMonitors(locationDetails) {
-  return collectAppliances(locationDetails)
-    .filter(isAirQualityMonitor)
-    .map((a) => ({
-      applianceId: a.applianceId,
-      entityId: a.entityId,
-      friendlyName: a.friendlyName,
-      manufacturerName: a.manufacturerName,
-      modelName: a.modelName,
-      sensors: extractSensorInstances(a)
-    }))
-    .filter((m) => Object.keys(m.sensors).length > 0);
+function extractAirQualityMonitors(entities) {
+  const monitors = [];
+  for (const entity of asEntityList(entities)) {
+    if (!isAirQualityMonitor(entity)) continue;
+    if (!entity.id) continue;
+    const applianceId = stableSerial(entity) || entity.id;
+    monitors.push({
+      applianceId,
+      entityId: entity.id,
+      friendlyName: (entity.displayName || '').trim(),
+      modelName: entity.description || null
+    });
+  }
+  return monitors;
 }
 
 function parseCapabilityStates(deviceState) {
@@ -101,24 +94,21 @@ function toCelsius(value) {
 
 /**
  * Maps a querySmarthomeDevices() response to flat per-device sensor values.
- * Unknown devices and unreachable endpoints (listed under `errors`) are
- * silently skipped; missing individual sensors yield null.
+ * Devices are matched by their entity UUID; unknown devices are skipped and
+ * missing individual sensors yield null. Non-sensor capabilities
+ * (ToggleController, EndpointHealth, unmapped range instances) are ignored.
  */
 function mapDeviceStates(stateResponse, monitors) {
-  const byId = new Map();
-  for (const m of monitors) {
-    byId.set(m.applianceId, m);
-    if (m.entityId) byId.set(m.entityId, m);
-  }
+  const byEntityId = new Map();
+  for (const m of monitors) byEntityId.set(m.entityId, m);
 
   const results = [];
   const deviceStates =
-    (stateResponse && Array.isArray(stateResponse.deviceStates)) ? stateResponse.deviceStates : [];
+    stateResponse && Array.isArray(stateResponse.deviceStates) ? stateResponse.deviceStates : [];
   for (const ds of deviceStates) {
-    const monitor = byId.get(ds.entity && ds.entity.entityId);
+    const monitor = byEntityId.get(ds.entity && ds.entity.entityId);
     if (!monitor) continue;
 
-    const caps = parseCapabilityStates(ds);
     const values = {
       applianceId: monitor.applianceId,
       friendlyName: monitor.friendlyName,
@@ -129,15 +119,12 @@ function mapDeviceStates(stateResponse, monitors) {
       temperature: null,
       humidity: null
     };
-    for (const [key, ref] of Object.entries(monitor.sensors)) {
-      if (ref.namespace === 'Alexa.TemperatureSensor') {
-        const cap = caps.find((c) => c.namespace === 'Alexa.TemperatureSensor');
-        values.temperature = cap ? toCelsius(cap.value) : null;
-      } else {
-        const cap = caps.find(
-          (c) => c.namespace === 'Alexa.RangeController' && c.instance === ref.instance
-        );
-        if (cap && typeof cap.value === 'number') values[key] = cap.value;
+    for (const cap of parseCapabilityStates(ds)) {
+      if (cap.namespace === 'Alexa.TemperatureSensor' && cap.name === 'temperature') {
+        values.temperature = toCelsius(cap.value);
+      } else if (cap.namespace === 'Alexa.RangeController' && cap.name === 'rangeValue') {
+        const sensor = RANGE_INSTANCE_SENSORS[String(cap.instance)];
+        if (sensor && typeof cap.value === 'number') values[sensor] = cap.value;
       }
     }
     results.push(values);
@@ -145,4 +132,4 @@ function mapDeviceStates(stateResponse, monitors) {
   return results;
 }
 
-module.exports = { extractAirQualityMonitors, mapDeviceStates, SENSOR_ASSET_IDS };
+module.exports = { extractAirQualityMonitors, mapDeviceStates, RANGE_INSTANCE_SENSORS };

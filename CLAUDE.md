@@ -254,10 +254,12 @@ docker-compose down
 - Implementation in `backend/src/main/java/com/household/manager/alexa/`; frontend page under `frontend/src/app/pages/announcements/`
 
 ### Amazon Smart Air Quality Monitor
-- No official/local API; values are read via the inofficial Alexa smart home (phoenix) API through the alexa-remote2 sidecar
-- Sidecar endpoints: `GET /smarthome/air-quality-monitors` (discovery incl. sensor instance mapping), `GET /smarthome/air-quality-monitors/state` (normalized flat values)
+- No official/local API; values are read via the inofficial Alexa API through the alexa-remote2 sidecar
+- Discovery via the behaviors "entities" API (`getSmarthomeEntities`), filtered to `deviceType === 'AIR_QUALITY_MONITOR'` (the older `/api/phoenix` discovery returns only `{success:true}`); state via `querySmarthomeDevices(entityIds, 'ENTITY')`
+- Amazon exposes the sensors as bare numbered `Alexa.RangeController` instances with NO asset labels; the instance→sensor mapping is fixed in the sidecar (`RANGE_INSTANCE_SENSORS` in `alexa-sidecar/smarthome.js`), verified against the Alexa app. IAQ is 0-100 where HIGHER is better
+- Sidecar endpoints: `GET /smarthome/air-quality-monitors` (discovery), `GET /smarthome/air-quality-monitors/state` (normalized flat values), `GET /smarthome/raw` (debug)
 - Backend polls every 5 minutes (`AlexaAirQualityPollingService`), stores readings in `alexa_air_quality_readings`, reports entity states (`EntitySource.ALEXA`) usable as flow triggers
-- Sensors: IAQ score, PM2.5, VOC, CO, temperature, humidity; device identity via stable `applianceId`
+- Sensors: IAQ score, PM2.5, VOC, CO, temperature, humidity; device identity via the stable hardware serial (`applianceId`)
 - Frontend: indoor section on the air quality page (`alexa-air-quality-section.component`)
 
 ## Code Quality Standards
