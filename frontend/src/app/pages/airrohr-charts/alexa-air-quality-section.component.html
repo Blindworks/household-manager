@@ -1,0 +1,94 @@
+<section class="alexa-aq">
+  <header class="alexa-aq__header">
+    <div>
+      <h2 class="alexa-aq__title">Innenraum (Amazon Air Quality Monitor)</h2>
+      <p class="alexa-aq__subtitle">Aktuelle Werte und Verlauf der Amazon Smart Air Quality Monitore.</p>
+    </div>
+  </header>
+
+  @if (isLoading) {
+    <div class="alexa-aq__state">Laedt Innenraum-Daten...</div>
+  } @else if (errorMessage) {
+    <div class="alexa-aq__state alexa-aq__state--error">{{ errorMessage }}</div>
+  } @else if (!hasData) {
+    <div class="alexa-aq__state">
+      Noch keine Daten der Amazon-Luftsensoren. Ist der Alexa-Login aktiv (Seite „Ansagen")?
+    </div>
+  } @else {
+    <div class="alexa-aq__tiles">
+      @for (device of latest; track device.applianceId) {
+        <div class="alexa-aq__tile" [attr.data-level]="iaqLevelFor(device)">
+          <div class="alexa-aq__tile-header">
+            <span class="alexa-aq__device">{{ device.deviceName }}</span>
+            <span class="alexa-aq__iaq-badge">IAQ {{ device.iaq ?? '–' }}</span>
+          </div>
+          <dl class="alexa-aq__values">
+            @for (metric of metrics; track metric.key) {
+              @if (metric.key !== 'iaq') {
+                <div class="alexa-aq__value">
+                  <dt>{{ metric.label }}</dt>
+                  <dd>
+                    {{ metricValue(device, metric.key) ?? '–' }}
+                    <span class="alexa-aq__unit">{{ metric.unit }}</span>
+                  </dd>
+                </div>
+              }
+            }
+          </dl>
+          <p class="alexa-aq__timestamp">Stand: {{ device.readingTime | date: 'dd.MM.yyyy HH:mm' }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="alexa-aq__chart-card">
+      <div class="alexa-aq__chart-controls">
+        <label class="alexa-aq__select">
+          <span>Kennzahl</span>
+          <select (change)="setMetric($any($event.target).value)">
+            @for (metric of metrics; track metric.key) {
+              <option [value]="metric.key" [selected]="selectedMetric === metric.key">{{ metric.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="alexa-aq__select">
+          <span>Jahr</span>
+          <select (change)="setYear($any($event.target).value)">
+            <option value="ALL" [selected]="selectedYear === 'ALL'">Alle Jahre</option>
+            @for (year of availableYears; track year) {
+              <option [value]="year" [selected]="selectedYear === year">{{ year }}</option>
+            }
+          </select>
+        </label>
+        @if (selectedYear !== 'ALL') {
+          <label class="alexa-aq__select">
+            <span>Monat</span>
+            <select (change)="setMonth($any($event.target).value)">
+              <option value="ALL" [selected]="selectedMonth === 'ALL'">Alle Monate</option>
+              @for (month of availableMonths; track month) {
+                <option [value]="month" [selected]="selectedMonth === month">{{ month }}</option>
+              }
+            </select>
+          </label>
+        }
+        @if (selectedMonth !== 'ALL') {
+          <label class="alexa-aq__select">
+            <span>Tag</span>
+            <select (change)="setDay($any($event.target).value)">
+              <option value="ALL" [selected]="selectedDay === 'ALL'">Alle Tage</option>
+              @for (day of availableDays; track day) {
+                <option [value]="day" [selected]="selectedDay === day">{{ day }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+      @if (chartOptions) {
+        <div class="alexa-aq__chart">
+          <div echarts class="alexa-aq__echart" [options]="chartOptions"></div>
+        </div>
+      } @else {
+        <div class="alexa-aq__state">Keine Daten fuer die gewaehlte Auswahl.</div>
+      }
+    </div>
+  }
+</section>
