@@ -82,6 +82,10 @@
 - `anyComponentStyle`: 16kB warning, 24kB error
 - Pre-existing warning on `energy.component.scss` (16.16 kB) — not actionable
 
+## Third-Party Package Docs
+- Check `node_modules/<pkg>/AI.md` or similar LLM-oriented guide files before reading `index.d.ts` cold — some modern packages (e.g. `@foblex/flow`) ship one; it's more version-accurate than training data. Still verify hard claims against `index.d.ts` / compiled bundle.
+- See [foblex-flow.md](foblex-flow.md) for the Stufe-3b flow editor canvas library: Angular 19 compat, API surface, and a verified Chromium rendering gotcha (0×0 SVG + overflow:visible doesn't paint — needs explicit nonzero size).
+
 ## Testing (Karma/Jasmine)
 - Test builder is `@angular-devkit/build-angular:karma` configured in `angular.json` — no standalone `karma.conf.js` file exists or is needed.
 - ChromeHeadless launches and runs fine in this environment (verified Chrome 149 on Windows, no NEEDS_CONTEXT blockers encountered).
@@ -89,3 +93,9 @@
 - Spy pattern for services: `jasmine.createSpyObj('ServiceName', ['method1', 'method2'])`, then `serviceSpy.method.and.returnValue(of(...))`; provide via `{ provide: ServiceClass, useValue: serviceSpy }` in `TestBed.configureTestingModule.providers`.
 - Standalone components go directly into `imports: [ComponentClass]` in the TestBed config (no module wrapper needed).
 - Devices page: `pages/devices/devices.component.ts` — `ngOnInit` calls `loadDevices()` only (DB load), NOT `scanAllDeviceTypes()` (full network rescan). The scan method still exists for manual/explicit triggering elsewhere, just not on page load.
+- `HttpTestingController.expectOne(url)` can be called twice for the same URL when only one matching request was fired and it hasn't been flushed yet — the request stays in the "open" list until `flush()`/`error()` resolves it, so a first `expectOne` to assert `.request.method` followed by a second `expectOne` + `.flush()` on the same URL both succeed (no need for the workaround of splitting into two separate calls). Confirmed with Angular's Karma/Jasmine harness in this repo (frontend, Chrome 149).
+
+## Flow Editor (Stufe 3b) — Frontend
+- See [flow-editor-frontend.md](flow-editor-frontend.md) for full build history: `flow.model.ts`/`flow.service.ts` contract, ED-B3 through ED-B11 (list page, pickers, config panel, canvas, debug panel, editor orchestration, final review fixes), the import button, and the `@foblex/flow` link.
+- Quick facts: routes are `/flows` (list) and `/flows/:id` (editor, `unsavedChangesGuard`); error-signal convention is `error.set(err.message)` (or `err.error?.message` for structured 400 bodies) + a `*__error` banner div, used across all flow pages.
+- Known pre-existing (unrelated) full-suite failure: `AppComponent`/`HeaderComponent`/`HeroComponent` specs fail with `NullInjectorError: No provider for ActivatedRoute!` — confirmed via `git stash` this predates flow-editor work; not a regression to chase.

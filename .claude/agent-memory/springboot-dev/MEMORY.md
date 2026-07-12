@@ -76,3 +76,5 @@ com.household.manager/
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
 - [api-design.md](api-design.md) - REST API design standards
 - [smart-device-persistence.md](smart-device-persistence.md) - Tapo device discovery-to-DB upsert pattern, metadata merge rules, TDD flow
+- [entitystate-facade.md](entitystate-facade.md) - EntityState mirror layer: facade/writer split, REQUIRES_NEW rationale, upsert/event semantics, 15-task rollout status
+- [flowengine-stage3a.md](flowengine-stage3a.md) - Flow engine: NodeHandler/TriggerNodeHandler contracts, NodeContext.state() concurrency tradeoff, 13-task rollout complete + post-review hardening (dedicated scheduler, debug-buffer cleanup on undeploy)
