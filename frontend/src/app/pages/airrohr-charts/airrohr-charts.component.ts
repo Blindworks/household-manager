@@ -209,6 +209,7 @@ export class AirrohrChartsComponent implements OnInit {
     this.airrohrService.getReadings().subscribe({
       next: readings => {
         this.rawPoints = this.buildPoints(readings);
+        this.applyDefaultSelection();
         this.updateAvailableYears();
         this.refreshCharts();
         this.isLoading = false;
@@ -219,6 +220,30 @@ export class AirrohrChartsComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  /**
+   * Preselect the current month so the initial view is scoped to it instead of
+   * showing the entire history. Falls back to the most recent month with data.
+   */
+  private applyDefaultSelection(): void {
+    if (!this.rawPoints.length) {
+      return;
+    }
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const hasCurrentMonth = this.rawPoints.some(
+      point => point.date.getFullYear() === currentYear && point.date.getMonth() + 1 === currentMonth
+    );
+    if (hasCurrentMonth) {
+      this.selectedYear = currentYear;
+      this.selectedMonth = currentMonth;
+      return;
+    }
+    const latest = this.rawPoints.reduce((a, b) => (a.date.getTime() >= b.date.getTime() ? a : b));
+    this.selectedYear = latest.date.getFullYear();
+    this.selectedMonth = latest.date.getMonth() + 1;
   }
 
   private buildPoints(readings: AirrohrHistoryReading[]): AirrohrChartPoint[] {
