@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -42,6 +43,17 @@ public class AlexaSidecarClient {
     /** Login-Status laut Sidecar. */
     public record SidecarStatus(boolean loggedIn, String accountName) {}
 
+    /** Ein Amazon Air Quality Monitor laut Sidecar-Discovery. */
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    public record SidecarAirQualityMonitor(
+            String applianceId, String entityId, String friendlyName, String modelName) {}
+
+    /** Normalisierte Momentanwerte eines Air Quality Monitors (Sidecar-Format). */
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    public record SidecarAirQualityState(
+            String applianceId, String friendlyName, Integer iaq, BigDecimal pm25,
+            BigDecimal voc, BigDecimal co, BigDecimal temperature, BigDecimal humidity) {}
+
     public SidecarStatus getStatus() {
         JsonNode root = get("/status");
         return new SidecarStatus(
@@ -69,6 +81,24 @@ public class AlexaSidecarClient {
             return mapper.convertValue(root, new TypeReference<>() {});
         } catch (IllegalArgumentException ex) {
             throw new AlexaException("Sidecar-Geraeteliste konnte nicht gelesen werden.", ex);
+        }
+    }
+
+    public List<SidecarAirQualityMonitor> getAirQualityMonitors() {
+        JsonNode root = get("/smarthome/air-quality-monitors");
+        try {
+            return mapper.convertValue(root, new TypeReference<>() {});
+        } catch (IllegalArgumentException ex) {
+            throw new AlexaException("Sidecar-AQM-Geraeteliste konnte nicht gelesen werden.", ex);
+        }
+    }
+
+    public List<SidecarAirQualityState> getAirQualityStates() {
+        JsonNode root = get("/smarthome/air-quality-monitors/state");
+        try {
+            return mapper.convertValue(root, new TypeReference<>() {});
+        } catch (IllegalArgumentException ex) {
+            throw new AlexaException("Sidecar-AQM-Zustaende konnten nicht gelesen werden.", ex);
         }
     }
 

@@ -11,6 +11,7 @@ public enum EntitySource {
     SHELLY,
     TASMOTA,
     AIRROHR,
+    ALEXA,
     WEATHER,
     ANKER_SOLIX
 }
