@@ -1,0 +1,82 @@
+{
+  "Default_Location": {
+    "locationId": "Default_Location",
+    "amazonBridgeDetails": {
+      "amazonBridgeDetails": {
+        "LambdaBridge_AAA/SonarCloudService": {
+          "applianceDetails": {
+            "applianceDetails": {
+              "AAA_SonarCloudService_G0911W0793960XYZ": {
+                "applianceId": "AAA_SonarCloudService_G0911W0793960XYZ",
+                "entityId": "11111111-2222-3333-4444-555555555555",
+                "friendlyName": "Luftsensor Wohnzimmer",
+                "manufacturerName": "Amazon",
+                "modelName": "Amazon Smart Air Quality Monitor",
+                "applianceTypes": ["AIR_QUALITY_MONITOR"],
+                "capabilities": [
+                  {
+                    "interfaceName": "Alexa.RangeController",
+                    "instance": "2",
+                    "resources": {
+                      "friendlyNames": [
+                        { "@type": "asset", "value": { "assetId": "Alexa.AirQuality.IndoorAirQuality" } }
+                      ]
+                    }
+                  },
+                  {
+                    "interfaceName": "Alexa.RangeController",
+                    "instance": "4",
+                    "resources": {
+                      "friendlyNames": [
+                        { "@type": "asset", "value": { "assetId": "Alexa.AirQuality.ParticulateMatter" } }
+                      ]
+                    }
+                  },
+                  {
+                    "interfaceName": "Alexa.RangeController",
+                    "instance": "5",
+                    "resources": {
+                      "friendlyNames": [
+                        { "@type": "asset", "value": { "assetId": "Alexa.AirQuality.VolatileOrganicCompounds" } }
+                      ]
+                    }
+                  },
+                  {
+                    "interfaceName": "Alexa.RangeController",
+                    "instance": "6",
+                    "resources": {
+                      "friendlyNames": [
+                        { "@type": "asset", "value": { "assetId": "Alexa.AirQuality.CarbonMonoxide" } }
+                      ]
+                    }
+                  },
+                  {
+                    "interfaceName": "Alexa.RangeController",
+                    "instance": "3",
+                    "resources": {
+                      "friendlyNames": [
+                        { "@type": "asset", "value": { "assetId": "Alexa.AirQuality.Humidity" } }
+                      ]
+                    }
+                  },
+                  { "interfaceName": "Alexa.TemperatureSensor" }
+                ]
+              },
+              "AAA_SonarCloudService_ECHODOT123": {
+                "applianceId": "AAA_SonarCloudService_ECHODOT123",
+                "entityId": "99999999-8888-7777-6666-555555555555",
+                "friendlyName": "Echo Dot Kueche",
+                "manufacturerName": "Amazon",
+                "modelName": "Echo Dot",
+                "applianceTypes": ["ALEXA_VOICE_ENABLED"],
+                "capabilities": [
+                  { "interfaceName": "Alexa.TemperatureSensor" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
