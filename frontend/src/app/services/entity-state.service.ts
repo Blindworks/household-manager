@@ -2,7 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { EntityState, EntityDomain } from '../models/entity-state.model';
+import {
+  EntityState,
+  EntityDomain,
+  CreateManualEntityRequest,
+  RenameManualEntityRequest
+} from '../models/entity-state.model';
 
 /**
  * REST-Service für die generische Entity-/State-Schicht.
@@ -11,6 +16,7 @@ import { EntityState, EntityDomain } from '../models/entity-state.model';
 export class EntityStateService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1/entities';
+  private readonly manualUrl = `${this.baseUrl}/manual`;
 
   getEntities(domain?: EntityDomain, source?: string): Observable<EntityState[]> {
     let params = new HttpParams();
@@ -23,6 +29,41 @@ export class EntityStateService {
 
   deleteEntity(entityId: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${entityId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Legt eine vom Benutzer definierte Boolean-Entität an (z. B. "Nachtmodus"). */
+  createManualEntity(request: CreateManualEntityRequest): Observable<EntityState> {
+    return this.http.post<EntityState>(this.manualUrl, request).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Setzt den Zustand ("on"/"off") einer manuellen Entität. */
+  setManualState(entityId: string, state: string): Observable<EntityState> {
+    return this.http.put<EntityState>(`${this.manualUrl}/${entityId}/state`, { state }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Schaltet eine manuelle Entität um (on ↔ off). */
+  toggleManualEntity(entityId: string): Observable<EntityState> {
+    return this.http.post<EntityState>(`${this.manualUrl}/${entityId}/toggle`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Benennt eine manuelle Entität um; die Entity-ID bleibt unverändert. */
+  renameManualEntity(entityId: string, request: RenameManualEntityRequest): Observable<EntityState> {
+    return this.http.put<EntityState>(`${this.manualUrl}/${entityId}`, request).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Löscht eine manuelle Entität. */
+  deleteManualEntity(entityId: string): Observable<void> {
+    return this.http.delete<void>(`${this.manualUrl}/${entityId}`).pipe(
       catchError(this.handleError)
     );
   }

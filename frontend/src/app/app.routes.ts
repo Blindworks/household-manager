@@ -66,6 +66,11 @@ export const routes: Routes = [
     title: 'Entitaeten - Household Manager'
   },
   {
+    path: 'custom-entities',
+    loadComponent: () => import('./pages/custom-entities/custom-entities.component').then(m => m.CustomEntitiesComponent),
+    title: 'Eigene Modi - Household Manager'
+  },
+  {
     path: 'announcements',
     loadComponent: () => import('./pages/announcements/announcements.component').then(m => m.AnnouncementsComponent),
     title: 'Ansagen - Household Manager'
