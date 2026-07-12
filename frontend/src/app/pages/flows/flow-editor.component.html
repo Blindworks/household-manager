@@ -26,6 +26,7 @@
 
     <app-flow-canvas class="editor__canvas"
       [nodes]="canvasNodes()" [connections]="canvasConnections()" [portLabelsByType]="portLabelsByType()"
+      [categoryByType]="categoryByType()"
       (nodeMoved)="onNodeMoved($event)" (connectionCreated)="onConnectionCreated($event)"
       (connectionDeleted)="onConnectionDeleted($event)" (nodeSelected)="onNodeSelected($event)"
       (nodeDeleted)="onNodeDeleted($event)" />

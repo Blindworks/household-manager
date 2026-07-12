@@ -6,6 +6,7 @@ import { FlowService } from '../../services/flow.service';
 import { FlowDefinition, NodeType } from '../../models/flow.model';
 import { CanvasConnection, CanvasNode, FlowGraphMapper } from './flow-graph.mapper';
 import { NodePaletteComponent } from './node-palette.component';
+import { NodeCategory, nodeCategory } from './node-catalog';
 import { NodeConfigPanelComponent } from './node-config-panel.component';
 import { FlowCanvasComponent } from './flow-canvas.component';
 import { DebugPanelComponent } from './debug-panel.component';
@@ -50,6 +51,8 @@ export class FlowEditorComponent implements OnInit {
     this.nodeTypes().find(t => t.type === this.selectedNode()?.type) ?? undefined);
   readonly portLabelsByType = computed<Record<string, string[]>>(() =>
     Object.fromEntries(this.nodeTypes().map(t => [t.type, t.portLabels])));
+  readonly categoryByType = computed<Record<string, NodeCategory>>(() =>
+    Object.fromEntries(this.nodeTypes().map(t => [t.type, nodeCategory(t.type, t.trigger)])));
 
   ngOnInit(): void {
     forkJoin({ flow: this.flowService.getFlow(this.flowId), types: this.flowService.getNodeTypes() })

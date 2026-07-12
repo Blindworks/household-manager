@@ -11,6 +11,9 @@
       <f-connection
         [fSourceId]="outConnectorId(connection.fromNode, connection.fromPort)"
         [fTargetId]="inConnectorId(connection.toNode)"
+        fType="bezier"
+        fSourceSide="right"
+        fTargetSide="left"
       >
         <button
           type="button"
@@ -31,6 +34,9 @@
         [fNodeId]="node.id"
         [fNodePosition]="{ x: node.x, y: node.y }"
         class="flow-canvas__node"
+        [class.flow-canvas__node--trigger]="category(node.type) === 'trigger'"
+        [class.flow-canvas__node--logic]="category(node.type) === 'logic'"
+        [class.flow-canvas__node--action]="category(node.type) === 'action'"
       >
         <button
           type="button"
@@ -42,30 +48,32 @@
           &times;
         </button>
 
-        <div class="flow-canvas__node-type">{{ node.type }}</div>
-        @if (node.name) {
-          <div class="flow-canvas__node-name">{{ node.name }}</div>
-        }
+        <div class="flow-canvas__node-header">
+          <div class="flow-canvas__node-title">{{ node.name || nodeLabel(node.type) }}</div>
+          <div class="flow-canvas__node-type">{{ node.type }}</div>
+        </div>
 
-        <div
-          fConnector
-          fConnectorType="target"
-          [fConnectorId]="inConnectorId(node.id)"
-          class="flow-canvas__connector flow-canvas__connector--in"
-        ></div>
+        <div class="flow-canvas__node-body">
+          <div
+            fConnector
+            fConnectorType="target"
+            [fConnectorId]="inConnectorId(node.id)"
+            class="flow-canvas__connector flow-canvas__connector--in"
+          ></div>
 
-        <div class="flow-canvas__ports-out">
-          @for (label of outPortLabels(node.type); track $index) {
-            <div class="flow-canvas__port-out">
-              <span class="flow-canvas__port-label">{{ label }}</span>
-              <div
-                fConnector
-                fConnectorType="source"
-                [fConnectorId]="outConnectorId(node.id, $index)"
-                class="flow-canvas__connector flow-canvas__connector--out"
-              ></div>
-            </div>
-          }
+          <div class="flow-canvas__ports-out">
+            @for (label of outPortLabels(node.type); track $index) {
+              <div class="flow-canvas__port-out">
+                <span class="flow-canvas__port-label">{{ label }}</span>
+                <div
+                  fConnector
+                  fConnectorType="source"
+                  [fConnectorId]="outConnectorId(node.id, $index)"
+                  class="flow-canvas__connector flow-canvas__connector--out"
+                ></div>
+              </div>
+            }
+          </div>
         </div>
       </div>
     }

@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FFlowModule, FCreateConnectionEvent, FMoveNodesEvent, FSelectionChangeEvent } from '@foblex/flow';
 import { CanvasNode, CanvasConnection } from './flow-graph.mapper';
+import { NodeCategory, nodeLabel } from './node-catalog';
 
 const OUT_CONNECTOR_MARKER = '::out::';
 const IN_CONNECTOR_SUFFIX = '::in';
@@ -23,6 +24,8 @@ export class FlowCanvasComponent {
   readonly connections = input<CanvasConnection[]>([]);
   /** Port-Labels je Node-Typ (aus node-types), für die Port-Beschriftung. */
   readonly portLabelsByType = input<Record<string, string[]>>({});
+  /** Kategorie je Node-Typ (aus node-types), steuert die Box-Farbe. */
+  readonly categoryByType = input<Record<string, NodeCategory>>({});
 
   @Output() nodeMoved = new EventEmitter<{ id: string; x: number; y: number }>();
   @Output() connectionCreated = new EventEmitter<CanvasConnection>();
@@ -36,6 +39,16 @@ export class FlowCanvasComponent {
   outPortLabels(type: string): string[] {
     const labels = this.portLabelsByType()[type];
     return labels && labels.length > 0 ? labels : FlowCanvasComponent.DEFAULT_PORT_LABELS;
+  }
+
+  /** Menschenlesbares Label für die Box-Überschrift. */
+  nodeLabel(type: string): string {
+    return nodeLabel(type);
+  }
+
+  /** Kategorie für die Box-Farbe; Fallback „logic" für unbekannte Typen. */
+  category(type: string): NodeCategory {
+    return this.categoryByType()[type] ?? 'logic';
   }
 
   inConnectorId(nodeId: string): string {
