@@ -1,0 +1,51 @@
+package com.household.manager.entitystate.mapper;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.dto.EntityStateResponse;
+import com.household.manager.model.entity.EntityState;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+import java.util.Map;
+
+/**
+ * Bildet {@link EntityState}-Entities auf die API-{@link EntityStateResponse} ab.
+ * Kapselt insbesondere das Deserialisieren der als JSON-String gespeicherten Attribute.
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class EntityStateResponseMapper {
+
+    private final ObjectMapper objectMapper;
+
+    public EntityStateResponse toResponse(EntityState entity) {
+        return EntityStateResponse.builder()
+                .entityId(entity.getEntityId())
+                .domain(entity.getDomain().name())
+                .source(entity.getSource().name())
+                .sourceRef(entity.getSourceRef())
+                .friendlyName(entity.getFriendlyName())
+                .state(entity.getState())
+                .attributes(parseAttributes(entity.getAttributes()))
+                .lastChanged(entity.getLastChanged())
+                .lastUpdated(entity.getLastUpdated())
+                .build();
+    }
+
+    /** Deserialisiert den JSON-Attribut-String; leere/ungültige Werte ergeben eine leere Map. */
+    public Map<String, Object> parseAttributes(String json) {
+        if (json == null || json.isBlank()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception ex) {
+            log.warn("Failed to parse entity attributes: {}", ex.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+}

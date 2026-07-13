@@ -13,5 +13,7 @@ public enum EntitySource {
     AIRROHR,
     ALEXA,
     WEATHER,
-    ANKER_SOLIX
+    ANKER_SOLIX,
+    /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
+    MANUAL
 }

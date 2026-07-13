@@ -24,14 +24,8 @@ interface NavLink {
 export class HeaderComponent {
   readonly navLinks: NavLink[] = [
     { path: '/', label: 'Home', exact: true },
-    {
-      path: '/consumption',
-      label: 'Verbrauch',
-      children: [
-        { path: '/consumption', label: 'Uebersicht', exact: true },
-        { path: '/meter-readings', label: 'Zaehlerstaende' }
-      ]
-    },
+    { path: '/meter-readings', label: 'Zaehlerstaende' },
+    { path: '/consumption', label: 'Verbrauch' },
     {
       path: '/energy',
       label: 'Energie',
@@ -119,19 +113,12 @@ export class HeaderComponent {
   }
 
   /**
-   * Closes any expanded submenu (used when navigating).
-   */
-  closeSubmenu(): void {
-    this.expandedMenu.set(null);
-  }
-
-  /**
    * Checks if any child route of a parent link is currently active.
    */
   isParentActive(link: NavLink): boolean {
     if (!link.children) {
       return false;
     }
-    return link.children.some(child => this.router.url.startsWith(child.path));
+    return this.router.url.startsWith(link.path);
   }
 }
