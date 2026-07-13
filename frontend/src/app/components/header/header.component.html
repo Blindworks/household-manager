@@ -46,7 +46,7 @@
                         <a [routerLink]="child.path"
                            routerLinkActive="header__nav-link--active"
                            [routerLinkActiveOptions]="{ exact: !!child.exact }"
-                           (click)="closeMobileMenu()"
+                           (click)="closeSubmenu(); closeMobileMenu()"
                            class="header__nav-link header__nav-sublink">
                           {{ child.label }}
                         </a>
@@ -92,6 +92,7 @@
                     <a [routerLink]="child.path"
                        routerLinkActive="header-sidebar__sublink--active"
                        [routerLinkActiveOptions]="{ exact: !!child.exact }"
+                       (click)="closeSubmenu()"
                        class="header-sidebar__sublink">
                       {{ child.label }}
                     </a>
