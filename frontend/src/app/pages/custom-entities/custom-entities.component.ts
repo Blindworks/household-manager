@@ -4,14 +4,25 @@ import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, startWith, switchMap } from 'rxjs';
 import { EntityStateService } from '../../services/entity-state.service';
-import { EntityState, MANUAL_SOURCE } from '../../models/entity-state.model';
+import {
+  EntityState,
+  CreateManualEntityRequest,
+  ManualEntityType,
+  MANUAL_SOURCE
+} from '../../models/entity-state.model';
 
 const REFRESH_INTERVAL_MS = 10000;
 
+interface HelperTypeOption {
+  value: ManualEntityType;
+  label: string;
+}
+
 /**
- * Seite zum Anlegen und Steuern eigener Boolean-Entitäten (Modi/Helfer wie
- * "Nachtmodus" oder "Haus abgeschlossen"). Manuelle Entitäten werden vom
- * Benutzer erstellt und direkt hier geschaltet, umbenannt oder gelöscht.
+ * Seite zum Anlegen und Steuern eigener Entitäten (Helfer): schaltbare Modi
+ * (Boolean), Zahlen, Freitext und Auswahlwerte – z. B. "Nachtmodus",
+ * "Zieltemperatur" oder "Urlaubsstatus". Manuelle Entitäten werden vom Benutzer
+ * erstellt und je nach Typ direkt hier bedient, umbenannt oder gelöscht.
  */
 @Component({
   selector: 'app-custom-entities',
@@ -24,12 +35,25 @@ export class CustomEntitiesComponent implements OnInit {
   private readonly entityStateService = inject(EntityStateService);
   private readonly destroyRef = inject(DestroyRef);
 
+  readonly typeOptions: HelperTypeOption[] = [
+    { value: 'INPUT_BOOLEAN', label: 'Schalter (an/aus)' },
+    { value: 'INPUT_NUMBER', label: 'Zahl' },
+    { value: 'INPUT_TEXT', label: 'Text' },
+    { value: 'INPUT_SELECT', label: 'Auswahl' }
+  ];
+
   readonly entities = signal<EntityState[]>([]);
   readonly error = signal<string | null>(null);
   readonly saving = signal<boolean>(false);
 
   readonly newName = signal<string>('');
+  readonly newType = signal<ManualEntityType>('INPUT_BOOLEAN');
   readonly newIcon = signal<string>('');
+  readonly newOptions = signal<string>('');
+  readonly newMin = signal<string>('');
+  readonly newMax = signal<string>('');
+  readonly newStep = signal<string>('');
+  readonly newUnit = signal<string>('');
 
   readonly editingId = signal<string | null>(null);
   readonly editName = signal<string>('');
@@ -38,7 +62,7 @@ export class CustomEntitiesComponent implements OnInit {
   ngOnInit(): void {
     interval(REFRESH_INTERVAL_MS).pipe(
       startWith(0),
-      switchMap(() => this.entityStateService.getEntities('INPUT_BOOLEAN', MANUAL_SOURCE)),
+      switchMap(() => this.entityStateService.getEntities(undefined, MANUAL_SOURCE)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: entities => {
@@ -54,12 +78,12 @@ export class CustomEntitiesComponent implements OnInit {
     if (!name || this.saving()) {
       return;
     }
+    const request = this.buildCreateRequest(name);
     this.saving.set(true);
-    this.entityStateService.createManualEntity({ name, icon: this.newIcon().trim() || undefined }).subscribe({
+    this.entityStateService.createManualEntity(request).subscribe({
       next: entity => {
         this.entities.update(list => [...list, entity].sort((a, b) => a.entityId.localeCompare(b.entityId)));
-        this.newName.set('');
-        this.newIcon.set('');
+        this.resetForm();
         this.error.set(null);
         this.saving.set(false);
       },
@@ -70,8 +94,45 @@ export class CustomEntitiesComponent implements OnInit {
     });
   }
 
+  private buildCreateRequest(name: string): CreateManualEntityRequest {
+    const type = this.newType();
+    const request: CreateManualEntityRequest = {
+      name,
+      type,
+      icon: this.newIcon().trim() || undefined
+    };
+    if (type === 'INPUT_NUMBER') {
+      request.min = this.parseNumber(this.newMin());
+      request.max = this.parseNumber(this.newMax());
+      request.step = this.parseNumber(this.newStep());
+      request.unit = this.newUnit().trim() || undefined;
+    }
+    if (type === 'INPUT_SELECT') {
+      request.options = this.parseOptions(this.newOptions());
+    }
+    return request;
+  }
+
+  private resetForm(): void {
+    this.newName.set('');
+    this.newIcon.set('');
+    this.newOptions.set('');
+    this.newMin.set('');
+    this.newMax.set('');
+    this.newStep.set('');
+    this.newUnit.set('');
+  }
+
   toggle(entity: EntityState): void {
     this.entityStateService.toggleManualEntity(entity.entityId).subscribe({
+      next: updated => this.replace(updated),
+      error: err => this.error.set(err.message)
+    });
+  }
+
+  setValue(entity: EntityState, event: Event): void {
+    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
+    this.entityStateService.setManualState(entity.entityId, value).subscribe({
       next: updated => this.replace(updated),
       error: err => this.error.set(err.message)
     });
@@ -114,6 +175,11 @@ export class CustomEntitiesComponent implements OnInit {
     });
   }
 
+  isBoolean(entity: EntityState): boolean { return entity.domain === 'INPUT_BOOLEAN'; }
+  isNumber(entity: EntityState): boolean { return entity.domain === 'INPUT_NUMBER'; }
+  isText(entity: EntityState): boolean { return entity.domain === 'INPUT_TEXT'; }
+  isSelect(entity: EntityState): boolean { return entity.domain === 'INPUT_SELECT'; }
+
   isOn(entity: EntityState): boolean {
     return entity.state === 'on';
   }
@@ -121,6 +187,38 @@ export class CustomEntitiesComponent implements OnInit {
   iconOf(entity: EntityState): string {
     const icon = entity.attributes?.['icon'];
     return typeof icon === 'string' ? icon : '';
+  }
+
+  optionsOf(entity: EntityState): string[] {
+    const options = entity.attributes?.['options'];
+    return Array.isArray(options) ? options.map(o => String(o)) : [];
+  }
+
+  unitOf(entity: EntityState): string {
+    const unit = entity.attributes?.['unit'];
+    return typeof unit === 'string' ? unit : '';
+  }
+
+  numberAttr(entity: EntityState, key: 'min' | 'max' | 'step'): number | null {
+    const value = entity.attributes?.[key];
+    return typeof value === 'number' ? value : null;
+  }
+
+  typeLabel(entity: EntityState): string {
+    return this.typeOptions.find(t => t.value === entity.domain)?.label ?? entity.domain;
+  }
+
+  private parseNumber(raw: string): number | undefined {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const value = Number(trimmed);
+    return Number.isNaN(value) ? undefined : value;
+  }
+
+  private parseOptions(raw: string): string[] {
+    return raw.split('\n').map(o => o.trim()).filter(o => o.length > 0);
   }
 
   private replace(updated: EntityState): void {

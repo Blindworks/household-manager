@@ -4,6 +4,7 @@ import com.household.manager.dto.CreateManualEntityRequest;
 import com.household.manager.dto.EntityStateResponse;
 import com.household.manager.dto.ManualEntityStateRequest;
 import com.household.manager.dto.RenameManualEntityRequest;
+import com.household.manager.entitystate.ManualEntityDefinition;
 import com.household.manager.entitystate.ManualEntityService;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import jakarta.validation.Valid;
@@ -28,8 +29,18 @@ public class ManualEntityController {
 
     @PostMapping
     public ResponseEntity<EntityStateResponse> create(@Valid @RequestBody CreateManualEntityRequest request) {
-        EntityStateResponse response = responseMapper.toResponse(
-                manualEntityService.create(request.getName(), request.getState(), request.getIcon()));
+        ManualEntityDefinition definition = ManualEntityDefinition.builder()
+                .domain(request.getType())
+                .name(request.getName())
+                .state(request.getState())
+                .icon(request.getIcon())
+                .options(request.getOptions())
+                .min(request.getMin())
+                .max(request.getMax())
+                .step(request.getStep())
+                .unit(request.getUnit())
+                .build();
+        EntityStateResponse response = responseMapper.toResponse(manualEntityService.create(definition));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

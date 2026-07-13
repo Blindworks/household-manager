@@ -16,10 +16,22 @@
 
   &__create {
     display: flex;
+    flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
+    max-width: 720px;
+  }
+
+  &__row {
+    display: flex;
+    gap: 0.75rem;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  &__config input {
+    flex: 1;
+    min-width: 90px;
   }
 
   &__icon-input {
@@ -29,15 +41,24 @@
 
   &__name-input {
     flex: 1;
-    min-width: 220px;
+    min-width: 200px;
   }
 
+  &__type-select,
+  &__options,
   &__icon-input,
-  &__name-input {
+  &__name-input,
+  &__config input {
     padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 0.9rem;
+    font-family: inherit;
+  }
+
+  &__options {
+    width: 100%;
+    resize: vertical;
   }
 
   &__add-btn {
@@ -98,6 +119,53 @@
   &__name {
     font-weight: 600;
     font-size: 1.05rem;
+  }
+
+  &__type {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: #90a4ae;
+    background: #eceff1;
+    padding: 0.1rem 0.5rem;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  &__control {
+    min-height: 2.2rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__number,
+  &__text,
+  & select {
+    width: 100%;
+  }
+
+  &__number {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    input {
+      flex: 1;
+    }
+  }
+
+  &__unit {
+    color: #546e7a;
+    font-weight: 600;
+  }
+
+  &__number input,
+  &__text,
+  & select {
+    padding: 0.45rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
   }
 
   &__toggle {

@@ -15,6 +15,9 @@
       <option value="SENSOR">Sensor</option>
       <option value="BINARY_SENSOR">Binary Sensor</option>
       <option value="INPUT_BOOLEAN">Input Boolean</option>
+      <option value="INPUT_NUMBER">Input Number</option>
+      <option value="INPUT_TEXT">Input Text</option>
+      <option value="INPUT_SELECT">Input Select</option>
     </select>
 
     <select [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">

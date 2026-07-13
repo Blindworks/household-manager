@@ -13,16 +13,27 @@ export interface EntityState {
   lastUpdated: string;
 }
 
-export type EntityDomain = 'SWITCH' | 'SENSOR' | 'BINARY_SENSOR' | 'INPUT_BOOLEAN';
+export type EntityDomain =
+  | 'SWITCH' | 'SENSOR' | 'BINARY_SENSOR'
+  | 'INPUT_BOOLEAN' | 'INPUT_NUMBER' | 'INPUT_TEXT' | 'INPUT_SELECT';
+
+/** Vom Benutzer anlegbare Helfer-Typen. */
+export type ManualEntityType = 'INPUT_BOOLEAN' | 'INPUT_NUMBER' | 'INPUT_TEXT' | 'INPUT_SELECT';
 
 /** Quelle für vom Benutzer selbst angelegte Entitäten. */
 export const MANUAL_SOURCE = 'MANUAL';
 
-/** Anlage einer manuellen Boolean-Entität (Modus/Helfer wie "Nachtmodus"). */
+/** Anlage einer manuellen Entität. Relevante Felder hängen vom {@link type} ab. */
 export interface CreateManualEntityRequest {
   name: string;
+  type: ManualEntityType;
   state?: string;
   icon?: string;
+  options?: string[];
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
 }
 
 /** Umbenennen einer manuellen Entität (Entity-ID bleibt stabil). */
