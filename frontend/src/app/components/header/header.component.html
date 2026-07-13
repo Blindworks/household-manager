@@ -46,7 +46,7 @@
                         <a [routerLink]="child.path"
                            routerLinkActive="header__nav-link--active"
                            [routerLinkActiveOptions]="{ exact: !!child.exact }"
-                           (click)="closeMobileMenu()"
+                           (click)="closeSubmenu(); closeMobileMenu()"
                            class="header__nav-link header__nav-sublink">
                           {{ child.label }}
                         </a>
@@ -69,36 +69,31 @@
       </nav>
     }
   </div>
+</header>
 
-  <nav class="header__nav header__nav--desktop" aria-label="Hauptnavigation">
-    <a routerLink="/" class="header__nav-logo" aria-label="Startseite">
-      <img
-        src="/assets/Household_manager_logo.png"
-        alt="Household Manager Logo"
-        class="header__logo-image"
-      />
-    </a>
-    <ul class="header__nav-list">
+<aside class="header-sidebar">
+  <nav class="header-sidebar__nav" aria-label="Hauptnavigation">
+    <ul class="header-sidebar__list">
       @for (link of navLinks; track link.path) {
-        <li class="header__nav-item">
+        <li class="header-sidebar__item">
           @if (link.children) {
             <button
-              class="header__nav-link header__nav-link--parent"
-              [class.header__nav-link--active]="isParentActive(link)"
+              class="header-sidebar__link header-sidebar__link--parent"
+              [class.header-sidebar__link--active]="isParentActive(link)"
               (click)="toggleSubmenu(link.path)"
               type="button">
               {{ link.label }}
-              <span class="header__nav-chevron" [class.header__nav-chevron--open]="isSubmenuExpanded(link.path)">&#9662;</span>
+              <span class="header-sidebar__chevron" [class.header-sidebar__chevron--open]="isSubmenuExpanded(link.path)">&#9662;</span>
             </button>
             @if (isSubmenuExpanded(link.path)) {
-              <ul class="header__nav-submenu header__nav-submenu--dropdown">
+              <ul class="header-sidebar__submenu">
                 @for (child of link.children; track child.path) {
-                  <li class="header__nav-subitem">
+                  <li class="header-sidebar__subitem">
                     <a [routerLink]="child.path"
-                       routerLinkActive="header__nav-link--active"
+                       routerLinkActive="header-sidebar__sublink--active"
                        [routerLinkActiveOptions]="{ exact: !!child.exact }"
                        (click)="closeSubmenu()"
-                       class="header__nav-link header__nav-sublink">
+                       class="header-sidebar__sublink">
                       {{ child.label }}
                     </a>
                   </li>
@@ -107,10 +102,9 @@
             }
           } @else {
             <a [routerLink]="link.path"
-               routerLinkActive="header__nav-link--active"
+               routerLinkActive="header-sidebar__link--active"
                [routerLinkActiveOptions]="{ exact: !!link.exact }"
-               (click)="closeSubmenu()"
-               class="header__nav-link">
+               class="header-sidebar__link">
               {{ link.label }}
             </a>
           }
@@ -118,4 +112,4 @@
       }
     </ul>
   </nav>
-</header>
+</aside>
