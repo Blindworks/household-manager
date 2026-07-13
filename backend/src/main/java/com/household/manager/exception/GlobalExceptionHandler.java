@@ -85,6 +85,30 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle duplicate entity creation (e.g. a manual helper whose name maps to
+     * an already existing entity ID).
+     *
+     * @param ex      The duplicate entity exception
+     * @param request The web request
+     * @return Error response with 409 status
+     */
+    @ExceptionHandler(DuplicateEntityException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEntityException(
+            DuplicateEntityException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Duplicate entity: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
      * Handle illegal argument exceptions.
      *
      * @param ex      The illegal argument exception

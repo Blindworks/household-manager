@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.exception.GlobalExceptionHandler;
 import com.household.manager.model.entity.EntityState;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,8 @@ class EntityStateControllerTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new EntityStateController(entityStateService, objectMapper))
+        EntityStateResponseMapper responseMapper = new EntityStateResponseMapper(objectMapper);
+        mockMvc = MockMvcBuilders.standaloneSetup(new EntityStateController(entityStateService, responseMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();

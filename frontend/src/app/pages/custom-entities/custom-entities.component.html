@@ -1,0 +1,165 @@
+<div class="custom-entities">
+  <h1>Eigene Helfer</h1>
+  <p class="custom-entities__subtitle">
+    Lege eigene Entitäten an – Schalter wie „Nachtmodus", Zahlen wie eine
+    „Zieltemperatur", Freitext oder eine Auswahl – und steuere sie direkt hier.
+  </p>
+
+  @if (error()) {
+    <div class="custom-entities__error">{{ error() }}</div>
+  }
+
+  <form class="custom-entities__create" (ngSubmit)="create()">
+    <div class="custom-entities__row">
+      <select
+        class="custom-entities__type-select"
+        aria-label="Typ"
+        [ngModel]="newType()"
+        (ngModelChange)="newType.set($event)"
+        name="newType">
+        @for (type of typeOptions; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+
+      <input
+        class="custom-entities__icon-input"
+        type="text"
+        maxlength="4"
+        placeholder="Icon"
+        aria-label="Icon (optional)"
+        [ngModel]="newIcon()"
+        (ngModelChange)="newIcon.set($event)"
+        name="newIcon" />
+
+      <input
+        class="custom-entities__name-input"
+        type="text"
+        placeholder="Name (z. B. Nachtmodus)"
+        aria-label="Name"
+        [ngModel]="newName()"
+        (ngModelChange)="newName.set($event)"
+        name="newName" />
+
+      <button
+        class="custom-entities__add-btn"
+        type="submit"
+        [disabled]="!newName().trim() || saving()">
+        Anlegen
+      </button>
+    </div>
+
+    @if (newType() === 'INPUT_NUMBER') {
+      <div class="custom-entities__row custom-entities__config">
+        <input type="number" placeholder="Min" aria-label="Minimum"
+               [ngModel]="newMin()" (ngModelChange)="newMin.set($event)" name="newMin" />
+        <input type="number" placeholder="Max" aria-label="Maximum"
+               [ngModel]="newMax()" (ngModelChange)="newMax.set($event)" name="newMax" />
+        <input type="number" placeholder="Schritt" aria-label="Schrittweite"
+               [ngModel]="newStep()" (ngModelChange)="newStep.set($event)" name="newStep" />
+        <input type="text" placeholder="Einheit (z. B. °C)" aria-label="Einheit"
+               [ngModel]="newUnit()" (ngModelChange)="newUnit.set($event)" name="newUnit" />
+      </div>
+    }
+
+    @if (newType() === 'INPUT_SELECT') {
+      <div class="custom-entities__row">
+        <textarea
+          class="custom-entities__options"
+          rows="3"
+          placeholder="Optionen – eine pro Zeile (z. B. Zuhause / Urlaub / Abwesend)"
+          aria-label="Optionen"
+          [ngModel]="newOptions()"
+          (ngModelChange)="newOptions.set($event)"
+          name="newOptions"></textarea>
+      </div>
+    }
+  </form>
+
+  <div class="custom-entities__grid">
+    @for (entity of entities(); track entity.entityId) {
+      <div class="mode-card" [class.mode-card--on]="isBoolean(entity) && isOn(entity)">
+        @if (editingId() === entity.entityId) {
+          <div class="mode-card__edit">
+            <input
+              class="custom-entities__icon-input"
+              type="text"
+              maxlength="4"
+              placeholder="Icon"
+              aria-label="Icon"
+              [ngModel]="editIcon()"
+              (ngModelChange)="editIcon.set($event)" />
+            <input
+              class="custom-entities__name-input"
+              type="text"
+              aria-label="Name"
+              [ngModel]="editName()"
+              (ngModelChange)="editName.set($event)" />
+            <div class="mode-card__edit-actions">
+              <button type="button" class="mode-card__btn" (click)="saveEdit(entity)">Speichern</button>
+              <button type="button" class="mode-card__btn mode-card__btn--ghost" (click)="cancelEdit()">Abbrechen</button>
+            </div>
+          </div>
+        } @else {
+          <div class="mode-card__header">
+            <span class="mode-card__icon">{{ iconOf(entity) || '💡' }}</span>
+            <span class="mode-card__name">{{ entity.friendlyName }}</span>
+            <span class="mode-card__type">{{ typeLabel(entity) }}</span>
+          </div>
+
+          <div class="mode-card__control">
+            @if (isBoolean(entity)) {
+              <button
+                type="button"
+                class="mode-card__toggle"
+                role="switch"
+                [attr.aria-checked]="isOn(entity)"
+                [class.mode-card__toggle--on]="isOn(entity)"
+                (click)="toggle(entity)">
+                <span class="mode-card__toggle-track">
+                  <span class="mode-card__toggle-thumb"></span>
+                </span>
+                <span class="mode-card__toggle-label">{{ isOn(entity) ? 'An' : 'Aus' }}</span>
+              </button>
+            } @else if (isNumber(entity)) {
+              <div class="mode-card__number">
+                <input
+                  type="number"
+                  [value]="entity.state"
+                  [attr.min]="numberAttr(entity, 'min')"
+                  [attr.max]="numberAttr(entity, 'max')"
+                  [attr.step]="numberAttr(entity, 'step')"
+                  (change)="setValue(entity, $event)" />
+                @if (unitOf(entity)) {
+                  <span class="mode-card__unit">{{ unitOf(entity) }}</span>
+                }
+              </div>
+            } @else if (isSelect(entity)) {
+              <select [value]="entity.state" (change)="setValue(entity, $event)">
+                @for (option of optionsOf(entity); track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                type="text"
+                class="mode-card__text"
+                [value]="entity.state"
+                placeholder="Text eingeben…"
+                (change)="setValue(entity, $event)" />
+            }
+          </div>
+
+          <div class="mode-card__actions">
+            <button type="button" class="mode-card__btn mode-card__btn--ghost" (click)="startEdit(entity)">Umbenennen</button>
+            <button type="button" class="mode-card__btn mode-card__btn--danger" (click)="remove(entity)">Löschen</button>
+          </div>
+
+          <code class="mode-card__id">{{ entity.entityId }}</code>
+        }
+      </div>
+    } @empty {
+      <p class="custom-entities__empty">Noch keine eigenen Helfer angelegt.</p>
+    }
+  </div>
+</div>

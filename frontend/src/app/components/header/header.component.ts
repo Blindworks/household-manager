@@ -40,6 +40,7 @@ export class HeaderComponent {
     { path: '/zigbee', label: 'Zigbee-Sensoren' },
     { path: '/devices', label: 'Geraete' },
     { path: '/entities', label: 'Entitaeten' },
+    { path: '/custom-entities', label: 'Eigene Helfer' },
     { path: '/announcements', label: 'Ansagen' },
     { path: '/admin', label: 'Admin' },
     {
