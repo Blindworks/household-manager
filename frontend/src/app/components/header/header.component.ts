@@ -88,6 +88,13 @@ export class HeaderComponent {
   }
 
   /**
+   * Collapses any expanded submenu (used when navigating via a sub-link).
+   */
+  closeSubmenu(): void {
+    this.expandedMenu.set(null);
+  }
+
+  /**
    * Checks if a submenu is currently expanded.
    */
   isSubmenuExpanded(path: string): boolean {
