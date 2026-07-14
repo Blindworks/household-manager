@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { FooterComponent } from './components/footer/footer.component';
+import { ViewModeService } from './services/view-mode.service';
 
 /**
  * Root component of the Household Manager application.
@@ -17,4 +18,7 @@ import { FooterComponent } from './components/footer/footer.component';
 export class AppComponent {
   /** Application title */
   readonly title: string = 'Household Manager';
+
+  /** Steuert das Ein-/Ausblenden des Headers je nach Ansichtsmodus. */
+  readonly viewMode = inject(ViewModeService);
 }
