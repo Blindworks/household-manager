@@ -84,6 +84,7 @@ export class TemperaturesComponent implements OnInit {
     const yAxis: Record<string, unknown>[] = [
       {
         type: 'value',
+        scale: true,
         axisLabel: { color: '#94a3b8', formatter: '{value} °C' },
         splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }
       }
@@ -105,6 +106,7 @@ export class TemperaturesComponent implements OnInit {
       legend.push('Luftfeuchtigkeit');
       yAxis.push({
         type: 'value',
+        scale: true,
         position: 'right',
         axisLabel: { color: '#94a3b8', formatter: '{value} %' },
         splitLine: { show: false }
