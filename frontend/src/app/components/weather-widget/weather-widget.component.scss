@@ -1,24 +1,113 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
 .weather-widget {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  flex-direction: column;
+  gap: var(--spacing-md);
+  height: 100%;
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #4fa3e329 0%, #ffffff 100%);
+  border: 1px solid #0d6ebd3d;
+  box-shadow: var(--shadow-md);
   text-decoration: none;
   color: inherit;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
 
-  &__symbol { font-size: 1.75rem; }
-  &__temp { font-size: 1.25rem; font-weight: 700; }
-  &__label { color: #64748b; }
-  &__badge {
-    margin-left: auto;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    background: #fef2f2;
-    color: #dc2626;
-    font-size: 0.75rem;
-    font-weight: 600;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+  }
+
+  &__title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    color: var(--color-dark);
+  }
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+  }
+
+  &__status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9ca3af;
+  }
+
+  &__status-dot--on {
+    background: var(--color-accent);
+  }
+
+  &__status-dot--warn {
+    background: #f97316;
+  }
+
+  &__body {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex: 1;
+  }
+
+  &__body--message {
+    color: var(--color-gray);
+  }
+
+  &__symbol {
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+
+  &__readout {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__temp {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 800;
+    color: var(--color-primary-dark);
+    line-height: 1.1;
+  }
+
+  &__condition {
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+  }
+
+  &__meta {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+  }
+
+  &__label {
+    color: var(--color-gray);
   }
 }

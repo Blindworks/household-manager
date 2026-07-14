@@ -1,14 +1,48 @@
 <a class="weather-widget" routerLink="/weather">
+  <div class="weather-widget__header">
+    <div class="weather-widget__title-wrap">
+      <h2 class="weather-widget__title">Wetter</h2>
+      <div class="weather-widget__status">
+        @if (overview?.warnings?.length) {
+          <span class="weather-widget__status-dot weather-widget__status-dot--warn"></span>
+          <span [title]="warningTitle()">{{ warningLabel() }}</span>
+        } @else if (hasError) {
+          <span class="weather-widget__status-dot"></span>
+          <span>Nicht verfügbar</span>
+        } @else if (overview?.current) {
+          <span class="weather-widget__status-dot weather-widget__status-dot--on"></span>
+          <span>Aktuell</span>
+        } @else {
+          <span class="weather-widget__status-dot"></span>
+          <span>Lädt…</span>
+        }
+      </div>
+    </div>
+  </div>
+
   @if (overview?.current) {
-    <span class="weather-widget__symbol">{{ symbolFor(overview!.current!.icon).emoji }}</span>
-    <span class="weather-widget__temp">{{ overview!.current!.temperature }} °C</span>
-    <span class="weather-widget__label">Wetter</span>
-    @if (overview!.warnings.length) {
-      <span class="weather-widget__badge">{{ overview!.warnings.length }} Warnung(en)</span>
-    }
-  } @else if (hasError) {
-    <span class="weather-widget__label">Wetter nicht verfügbar</span>
+    <div class="weather-widget__body">
+      <app-icon
+        class="weather-widget__symbol"
+        [name]="symbolFor(overview!.current!.icon).icon"
+        [size]="44"
+        [attr.aria-label]="symbolFor(overview!.current!.icon).label"></app-icon>
+      <div class="weather-widget__readout">
+        <span class="weather-widget__temp">{{ overview!.current!.temperature }} °C</span>
+        <span class="weather-widget__condition">{{ symbolFor(overview!.current!.icon).label }}</span>
+      </div>
+    </div>
+    <div class="weather-widget__meta">
+      @if (overview!.current!.precipitation != null) {
+        <span>Niederschlag {{ overview!.current!.precipitation }} mm</span>
+      }
+      @if (overview!.current!.humidity != null) {
+        <span>Luftfeuchte {{ overview!.current!.humidity }} %</span>
+      }
+    </div>
   } @else {
-    <span class="weather-widget__label">Lade Wetter…</span>
+    <div class="weather-widget__body weather-widget__body--message">
+      <span class="weather-widget__label">{{ hasError ? 'Wetter nicht verfügbar' : 'Lade Wetter…' }}</span>
+    </div>
   }
 </a>
