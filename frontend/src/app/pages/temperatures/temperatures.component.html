@@ -24,7 +24,22 @@
     <div class="temperatures__grid">
       @for (chart of charts; track chart.sensorId) {
         <article class="temperatures__card">
-          <h2 class="temperatures__card-title">{{ chart.name }}</h2>
+          <div class="temperatures__card-head">
+            <h2 class="temperatures__card-title">{{ chart.name }}</h2>
+            @if (chart.hasHumidity) {
+              <div class="temperatures__metrics" role="group" aria-label="Messgröße">
+                @for (metric of metrics; track metric.value) {
+                  <button
+                    type="button"
+                    class="temperatures__metric"
+                    [class.temperatures__metric--active]="metric.value === chart.activeMetric"
+                    (click)="setMetric(chart, metric.value)">
+                    {{ metric.label }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
           <div
             echarts
             class="temperatures__chart"

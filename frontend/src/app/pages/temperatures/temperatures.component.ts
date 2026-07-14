@@ -15,9 +15,23 @@ interface RangeOption {
   label: string;
 }
 
+/** Umschaltbare Messgröße einer Kachel. */
+type Metric = 'temperature' | 'humidity';
+
+interface MetricOption {
+  value: Metric;
+  label: string;
+}
+
 interface ChartTile {
   sensorId: string;
   name: string;
+  /** Ob der Sensor Feuchtewerte liefert (steuert die Sichtbarkeit des Umschalters). */
+  hasHumidity: boolean;
+  /** Aktuell angezeigte Messgröße. */
+  activeMetric: Metric;
+  /** Rohserie, um die Chart-Optionen beim Umschalten neu zu bauen. */
+  series: TemperatureSensorSeries;
   options: Record<string, unknown>;
 }
 
@@ -38,6 +52,11 @@ export class TemperaturesComponent implements OnInit {
     { value: 'MONTH', label: '30 Tage' }
   ];
 
+  readonly metrics: MetricOption[] = [
+    { value: 'temperature', label: 'Temperatur' },
+    { value: 'humidity', label: 'Luftfeuchte' }
+  ];
+
   activeRange: TimeRange = 'WEEK';
   charts: ChartTile[] = [];
   isLoading = true;
@@ -56,6 +75,14 @@ export class TemperaturesComponent implements OnInit {
     this.load(range);
   }
 
+  setMetric(tile: ChartTile, metric: Metric): void {
+    if (tile.activeMetric === metric) {
+      return;
+    }
+    tile.activeMetric = metric;
+    tile.options = this.chartOptionsFor(tile.series, metric);
+  }
+
   private load(range: TimeRange): void {
     this.isLoading = true;
     this.isEmpty = false;
@@ -65,7 +92,10 @@ export class TemperaturesComponent implements OnInit {
         this.charts = series.map(s => ({
           sensorId: s.sensorId,
           name: s.name,
-          options: this.chartOptionsFor(s)
+          hasHumidity: s.humidity.length > 0,
+          activeMetric: 'temperature' as Metric,
+          series: s,
+          options: this.chartOptionsFor(s, 'temperature')
         }));
         this.isEmpty = this.charts.length === 0;
         this.isLoading = false;
@@ -78,61 +108,38 @@ export class TemperaturesComponent implements OnInit {
     });
   }
 
-  chartOptionsFor(series: TemperatureSensorSeries): Record<string, unknown> {
-    const hasHumidity = series.humidity.length > 0;
-    const legend = ['Temperatur'];
-    const yAxis: Record<string, unknown>[] = [
-      {
-        type: 'value',
-        scale: true,
-        axisLabel: { color: '#94a3b8', formatter: '{value} °C' },
-        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }
-      }
-    ];
-    const chartSeries: Record<string, unknown>[] = [
-      {
-        name: 'Temperatur',
-        type: 'line',
-        yAxisIndex: 0,
-        smooth: true,
-        showSymbol: false,
-        data: series.temperature.map(p => [p.time, p.value]),
-        lineStyle: { width: 2.5, color: '#e6484d' },
-        itemStyle: { color: '#e6484d' }
-      }
-    ];
-
-    if (hasHumidity) {
-      legend.push('Luftfeuchtigkeit');
-      yAxis.push({
-        type: 'value',
-        scale: true,
-        position: 'right',
-        axisLabel: { color: '#94a3b8', formatter: '{value} %' },
-        splitLine: { show: false }
-      });
-      chartSeries.push({
-        name: 'Luftfeuchtigkeit',
-        type: 'line',
-        yAxisIndex: 1,
-        smooth: true,
-        showSymbol: false,
-        data: series.humidity.map(p => [p.time, p.value]),
-        lineStyle: { width: 2, color: '#3b82f6', type: 'dashed' },
-        itemStyle: { color: '#3b82f6' }
-      });
-    }
+  chartOptionsFor(series: TemperatureSensorSeries, metric: Metric): Record<string, unknown> {
+    const isTemperature = metric === 'temperature';
+    const points = isTemperature ? series.temperature : series.humidity;
+    const name = isTemperature ? 'Temperatur' : 'Luftfeuchtigkeit';
+    const unit = isTemperature ? '°C' : '%';
+    const color = isTemperature ? '#e6484d' : '#3b82f6';
 
     return {
-      grid: { left: 48, right: hasHumidity ? 48 : 16, top: 32, bottom: 32, containLabel: false },
+      grid: { left: 48, right: 16, top: 32, bottom: 32, containLabel: false },
       tooltip: { trigger: 'axis' },
-      legend: { data: legend, top: 0, textStyle: { color: '#94a3b8' } },
+      legend: { data: [name], top: 0, textStyle: { color: '#94a3b8' } },
       xAxis: {
         type: 'time',
         axisLabel: { color: '#94a3b8', fontSize: 11 }
       },
-      yAxis,
-      series: chartSeries
+      yAxis: {
+        type: 'value',
+        scale: true,
+        axisLabel: { color: '#94a3b8', formatter: `{value} ${unit}` },
+        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }
+      },
+      series: [
+        {
+          name,
+          type: 'line',
+          smooth: true,
+          showSymbol: false,
+          data: points.map(p => [p.time, p.value]),
+          lineStyle: { width: 2.5, color },
+          itemStyle: { color }
+        }
+      ]
     };
   }
 }

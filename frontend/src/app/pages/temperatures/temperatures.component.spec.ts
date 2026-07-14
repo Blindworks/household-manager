@@ -51,11 +51,33 @@ describe('TemperaturesComponent', () => {
     expect(serviceSpy.getSeries).not.toHaveBeenCalled();
   });
 
-  it('builds a humidity series only when humidity data exists', () => {
-    const withHum = component.chartOptionsFor(withHumidity) as { series: unknown[] };
-    const withoutHum = component.chartOptionsFor(withoutHumidity) as { series: unknown[] };
-    expect(withHum.series.length).toBe(2);
-    expect(withoutHum.series.length).toBe(1);
+  it('flags tiles with and without humidity and defaults to temperature', () => {
+    expect(component.charts[0].hasHumidity).toBeTrue();
+    expect(component.charts[1].hasHumidity).toBeFalse();
+    expect(component.charts[0].activeMetric).toBe('temperature');
+  });
+
+  it('builds a single-series chart for the requested metric', () => {
+    const temp = component.chartOptionsFor(withHumidity, 'temperature') as { series: unknown[] };
+    const hum = component.chartOptionsFor(withHumidity, 'humidity') as { series: { data: unknown[] }[] };
+    expect(temp.series.length).toBe(1);
+    expect(hum.series.length).toBe(1);
+    expect(hum.series[0].data.length).toBe(1);
+  });
+
+  it('switches a tile to humidity and rebuilds its options', () => {
+    const tile = component.charts[0];
+    const before = tile.options;
+    component.setMetric(tile, 'humidity');
+    expect(tile.activeMetric).toBe('humidity');
+    expect(tile.options).not.toBe(before);
+  });
+
+  it('does not rebuild when the active metric is reselected', () => {
+    const tile = component.charts[0];
+    const before = tile.options;
+    component.setMetric(tile, 'temperature');
+    expect(tile.options).toBe(before);
   });
 
   it('shows the empty state when no sensors are returned', () => {
