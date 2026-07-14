@@ -1,436 +1,787 @@
-.dashboard {
+// ============================================================================
+//  Lumina Wand-Dashboard – Umsetzung des Stitch-Designs in SCSS.
+//  Farben, Typografie und Effekte sind lokal auf .lumina begrenzt, damit das
+//  globale App-Theme unberuehrt bleibt.
+// ============================================================================
+
+.lumina {
+  // ---- Design-Tokens (Material 3, aus dem Stitch-Entwurf) -----------------
+  --primary: #aac7ff;
+  --on-primary: #003064;
+  --secondary: #53e16f;
+  --on-secondary: #003911;
+  --tertiary: #e9c400;
+  --on-tertiary: #3b2f00;
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --on-surface: #e4e2e4;
+  --on-surface-variant: #c0c6d6;
+  --surface: #131315;
+
+  --gutter: 24px;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
   min-height: calc(100vh - 4rem);
-  padding: var(--spacing-xl) 0;
-  background: linear-gradient(135deg, var(--color-light-gray) 0%, var(--color-white) 100%);
+  padding: 40px;
+  color: var(--on-surface);
+  font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(170, 199, 255, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(83, 225, 111, 0.06), transparent 60%),
+    #050505;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
 
-  &__header {
-    text-align: center;
-    margin-bottom: var(--spacing-2xl);
-  }
+// ---- Wiederverwendbare Glass-Card ----------------------------------------
+.lumina-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-xl);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  &__logo {
-    width: 300px;
-    height: 300px;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto var(--spacing-md);
-  }
-
-  &__title {
-    font-size: var(--font-size-4xl);
-    color: var(--color-dark);
-    margin-bottom: var(--spacing-sm);
-  }
-
-  &__subtitle {
-    font-size: var(--font-size-lg);
-    color: var(--color-gray);
-  }
-
-  &__actions {
-    display: flex;
-    gap: var(--spacing-md);
-    justify-content: center;
-    margin-bottom: var(--spacing-2xl);
-    flex-wrap: wrap;
-
-    .btn {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-xs);
-      padding: var(--spacing-md) var(--spacing-lg);
-      font-size: var(--font-size-base);
-
-      &__icon {
-        font-size: var(--font-size-xl);
-      }
-    }
-  }
-
-  &__live {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xl);
-  }
-
-  &__meters {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: var(--spacing-lg);
-    margin-bottom: var(--spacing-2xl);
-  }
-
-  &__info {
-    max-width: 800px;
-    margin: 0 auto;
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border-color: rgba(170, 199, 255, 0.3);
+    box-shadow: 0 0 30px rgba(170, 199, 255, 0.15);
   }
 }
 
-.live-card {
-  background: linear-gradient(135deg, #4fa3e329 0%, #ffffff 100%);
-  border: 1px solid #0d6ebd3d;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: var(--spacing-lg);
+// ---- Labels (Space Grotesk, gesperrt, versal) ----------------------------
+.lumina__label {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 16px;
+  text-transform: uppercase;
+  color: rgba(192, 198, 214, 0.7);
 
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
-    flex-wrap: wrap;
+  &--primary {
+    color: var(--primary);
   }
 
-  &__title-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
+  &--secondary {
+    color: var(--secondary);
+  }
+}
+
+// ============================================================================
+//  Uhr & Wetter
+// ============================================================================
+.lumina__clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.lumina__time {
+  margin: 0;
+  font-weight: 600;
+  font-size: clamp(64px, 11vw, 140px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+}
+
+.lumina__clock-meta {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-top: 8px;
+}
+
+.lumina__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.lumina__date-value {
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 40px;
+  letter-spacing: -0.01em;
+}
+
+.lumina__divider {
+  width: 1px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lumina__weather {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lumina__weather-icon {
+  font-size: 48px;
+  color: var(--secondary);
+}
+
+.lumina__weather-text {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.lumina__weather-temp {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+// ============================================================================
+//  Hauptbereich – Grid 8/4
+// ============================================================================
+.lumina__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gutter);
+  align-items: stretch;
+}
+
+.lumina__main {
+  grid-column: span 8;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+}
+
+.lumina__side {
+  grid-column: span 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+}
+
+// ---- Raum-Kacheln --------------------------------------------------------
+.lumina__rooms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gutter);
+}
+
+.lumina__room {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  aspect-ratio: 1 / 1;
+  padding: 32px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    transform: scale(1.03);
   }
 
-  &__title {
-    margin: 0;
-    font-size: var(--font-size-xl);
-    color: var(--color-dark);
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+// ---- Energie-Kachel (Live-Werte) -----------------------------------------
+.lumina__energy-tile {
+  .lumina__room-icon {
+    background: rgba(83, 225, 111, 0.1);
+    color: var(--secondary);
   }
 
-  &__status {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    color: var(--color-gray);
-    font-size: var(--font-size-sm);
+  &:hover .lumina__room-icon {
+    background: var(--secondary);
+    color: var(--on-secondary);
+  }
+}
+
+.lumina__energy-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.lumina__energy-metric {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lumina__energy-metric-label {
+  font-size: 13px;
+  color: rgba(192, 198, 214, 0.7);
+}
+
+.lumina__energy-metric-value {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--on-surface);
+  white-space: nowrap;
+
+  &--export {
+    color: var(--secondary);
   }
 
-  &__status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #9ca3af;
+  &--import {
+    color: var(--error);
   }
 
-  &__status-dot--on {
-    background: var(--color-accent);
+  &--neutral {
+    color: var(--on-surface);
+  }
+}
+
+.lumina__room-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.lumina__room-icon {
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: rgba(170, 199, 255, 0.1);
+  color: var(--primary);
+  transition: all 0.3s ease;
+
+  .material-symbols-outlined {
+    font-size: 36px;
+    display: block;
+  }
+}
+
+.lumina__room:hover .lumina__room-icon {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.lumina__badge {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 0.25rem;
+  color: rgba(192, 198, 214, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+
+  &--active {
+    color: var(--secondary);
+    background: rgba(83, 225, 111, 0.1);
+    animation: lumina-status-pulse 2s infinite ease-in-out;
+  }
+}
+
+.lumina__room-name {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.lumina__room-detail {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(192, 198, 214, 0.7);
+}
+
+// ---- Aktive Szene --------------------------------------------------------
+.lumina__scene {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 32px;
+}
+
+.lumina__scene-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lumina__scene-icon {
+  padding: 12px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+
+  .material-symbols-outlined {
+    display: block;
+  }
+}
+
+.lumina__scene-name {
+  margin: 4px 0 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.lumina__scene-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.lumina__pill {
+  padding: 12px 24px;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--on-surface-variant);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
   }
 
-  &__value {
-    font-size: clamp(2rem, 5vw, 3rem);
-    font-weight: 800;
-    color: var(--color-primary-dark);
-    line-height: 1.1;
-    margin-bottom: var(--spacing-sm);
+  &--active {
+    color: var(--primary);
+    background: rgba(170, 199, 255, 0.2);
+    border-color: rgba(170, 199, 255, 0.3);
+
+    &:hover {
+      background: rgba(170, 199, 255, 0.3);
+    }
+  }
+}
+
+// ============================================================================
+//  Intelligence Hub
+// ============================================================================
+.lumina__hub {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 32px;
+}
+
+.lumina__hub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.lumina__hub-header-icon {
+  color: var(--primary);
+}
+
+.lumina__hub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 8px;
+  flex: 1;
+
+  &::-webkit-scrollbar {
+    width: 4px;
   }
 
-  &__value--small {
-    font-size: clamp(1.4rem, 3vw, 2rem);
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
   }
 
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+}
+
+.lumina__insight {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
   }
 
-  &__grid--single {
+  &--primary {
+    border-left: 4px solid var(--primary);
+
+    .lumina__insight-icon {
+      color: var(--primary);
+    }
+  }
+
+  &--secondary {
+    border-left: 4px solid var(--secondary);
+
+    .lumina__insight-icon {
+      color: var(--secondary);
+    }
+  }
+
+  &--muted {
+    .lumina__insight-icon {
+      color: rgba(192, 198, 214, 0.6);
+    }
+  }
+}
+
+.lumina__insight-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lumina__insight-text {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(192, 198, 214, 0.8);
+}
+
+// ============================================================================
+//  Energie-Ring
+// ============================================================================
+.lumina__energy {
+  height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lumina__energy-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.lumina__energy-number {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 48px;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.lumina__energy-unit {
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.lumina__energy-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--secondary);
+
+  &--off {
+    color: rgba(192, 198, 214, 0.6);
+
+    .lumina__status-dot {
+      background: rgba(192, 198, 214, 0.5);
+      box-shadow: none;
+    }
+  }
+}
+
+.lumina__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--secondary);
+  box-shadow: 0 0 8px rgba(83, 225, 111, 0.6);
+}
+
+.lumina__ring {
+  position: relative;
+  width: 8rem;
+  height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lumina__ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  animation: lumina-gauge-breathe 4s infinite ease-in-out;
+}
+
+.lumina__ring-track {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+.lumina__ring-value {
+  stroke: var(--secondary);
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lumina__ring-icon {
+  position: absolute;
+  color: var(--secondary);
+  opacity: 0.4;
+  font-size: 36px;
+}
+
+// ============================================================================
+//  Fussleiste – Status & Modi
+// ============================================================================
+.lumina__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gutter);
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+
+.lumina__secured {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-radius: var(--radius-full);
+}
+
+.lumina__secured-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary);
+
+  .material-symbols-outlined {
+    font-size: 24px;
+  }
+}
+
+.lumina__pulse-ring {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid rgba(83, 225, 111, 0.3);
+  animation: lumina-pulse-ring 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.lumina__secured-detail {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(192, 198, 214, 0.7);
+}
+
+.lumina__modes {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lumina__mode {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 32px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: var(--on-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.lumina__mode-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+
+  .material-symbols-outlined {
+    font-size: 20px;
+  }
+}
+
+.lumina__mode-label {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+
+// Modus-Farbvarianten
+.lumina__mode--primary {
+  border-color: rgba(170, 199, 255, 0.2);
+  .lumina__mode-icon { background: rgba(170, 199, 255, 0.1); color: var(--primary); }
+  &:hover {
+    border-color: rgba(170, 199, 255, 0.5);
+    .lumina__mode-icon { background: var(--primary); color: var(--on-primary); }
+    .lumina__mode-label { color: var(--primary); }
+  }
+}
+
+.lumina__mode--tertiary {
+  border-color: rgba(233, 196, 0, 0.2);
+  .lumina__mode-icon { background: rgba(233, 196, 0, 0.1); color: var(--tertiary); }
+  &:hover {
+    border-color: rgba(233, 196, 0, 0.5);
+    .lumina__mode-icon { background: var(--tertiary); color: var(--on-tertiary); }
+    .lumina__mode-label { color: var(--tertiary); }
+  }
+}
+
+.lumina__mode--neutral {
+  .lumina__mode-icon { background: rgba(255, 255, 255, 0.05); color: var(--on-surface); }
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    .lumina__mode-icon { background: #fff; color: #131315; }
+    .lumina__mode-label { color: #fff; }
+  }
+}
+
+.lumina__mode--error {
+  border-color: rgba(255, 180, 171, 0.2);
+  .lumina__mode-icon { background: rgba(255, 180, 171, 0.1); color: var(--error); }
+  &:hover {
+    border-color: rgba(255, 180, 171, 0.5);
+    .lumina__mode-icon { background: var(--error); color: var(--on-error); }
+    .lumina__mode-label { color: var(--error); }
+  }
+}
+
+// ============================================================================
+//  Animationen
+// ============================================================================
+.lumina__fade {
+  animation: lumina-fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--delay, 0s);
+  opacity: 0;
+}
+
+@keyframes lumina-fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lumina-status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
+@keyframes lumina-pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 0.4; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+@keyframes lumina-gauge-breathe {
+  0%, 100% { transform: rotate(-90deg) scale(1); }
+  50% { transform: rotate(-90deg) scale(1.02); }
+}
+
+// ============================================================================
+//  Responsiv
+// ============================================================================
+@media (max-width: 1100px) {
+  .lumina__grid {
     grid-template-columns: 1fr;
   }
 
-  &__metric {
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(13, 110, 189, 0.15);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-sm);
-  }
-
-  &__metric--neutral {
-    background: rgba(255, 255, 255, 0.6);
-    border-color: rgba(13, 110, 189, 0.15);
-  }
-
-  &__metric--good {
-    background: rgba(34, 197, 94, 0.14);
-    border-color: rgba(21, 128, 61, 0.35);
-  }
-
-  &__metric--warn {
-    background: rgba(249, 115, 22, 0.16);
-    border-color: rgba(194, 65, 12, 0.35);
-  }
-
-  &__metric--bad {
-    background: rgba(239, 68, 68, 0.16);
-    border-color: rgba(185, 28, 28, 0.35);
-  }
-
-  &__label {
-    display: block;
-    font-size: var(--font-size-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-gray);
-    margin-bottom: 4px;
-  }
-
-  &__meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    flex-wrap: wrap;
-    color: var(--color-gray);
-    font-size: var(--font-size-sm);
-  }
-
-  &__error {
-    color: var(--color-error);
-    font-weight: 600;
+  .lumina__main,
+  .lumina__side {
+    grid-column: auto;
   }
 }
 
-.meter-card {
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: var(--spacing-lg);
-  transition: all var(--transition-base);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-xl);
-  }
-
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-md);
-    border-bottom: 2px solid var(--color-light-gray);
-  }
-
-  &__icon {
-    width: 56px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-lg);
-    font-size: 2rem;
-  }
-
-  &__title {
-    font-size: var(--font-size-xl);
-    color: var(--color-dark);
-    margin: 0;
-  }
-
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-lg);
-    margin-bottom: var(--spacing-lg);
-  }
-
-  &__reading,
-  &__consumption {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-  }
-
-  &__line {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    flex-wrap: wrap;
-  }
-
-  &__line--consumption {
-    justify-content: space-between;
-  }
-
-  &__trend-group {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-xs);
-  }
-
-  &__trend-value {
-    font-size: var(--font-size-sm);
-    font-weight: 700;
-    color: var(--color-gray);
-  }
-
-  &__trend-value--stacked {
-    line-height: 1.1;
-  }
-
-  &__value--cost {
-    font-size: var(--font-size-xl);
-  }
-
-  &__label {
-    font-size: var(--font-size-sm);
-    color: var(--color-gray);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &__value {
-    font-size: var(--font-size-2xl);
-    font-weight: 700;
-    color: var(--color-dark);
-  }
-
-  &__unit {
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    color: var(--color-gray);
-    margin-left: var(--spacing-xs);
-  }
-
-  &__consumption-value {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  &__trend {
-    font-size: var(--font-size-2xl);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
-
-    &.trend--up {
-      background-color: rgba(239, 68, 68, 0.1);
-      color: var(--color-error);
-    }
-
-    &.trend--down {
-      background-color: rgba(16, 185, 129, 0.1);
-      color: var(--color-success);
-    }
-
-    &.trend--stable {
-      background-color: rgba(107, 114, 128, 0.1);
-      color: var(--color-gray);
-    }
-  }
-
-}
-
-.info-box {
-  display: flex;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-  background: linear-gradient(135deg, var(--color-info) 0%, var(--color-primary) 100%);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  color: var(--color-white);
-
-  &__icon {
-    font-size: 2.5rem;
-    flex-shrink: 0;
-  }
-
-  &__content {
-    flex: 1;
-  }
-
-  &__title {
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-    margin-bottom: var(--spacing-xs);
-    color: var(--color-white);
-  }
-
-  &__text {
-    font-size: var(--font-size-base);
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.95);
-    margin: 0;
-  }
-}
-
-// Responsive Design
 @media (max-width: 768px) {
-  .dashboard {
-    padding: var(--spacing-lg) 0;
-
-    &__title {
-      font-size: var(--font-size-3xl);
-    }
-
-    &__logo {
-      width: 64px;
-      height: 64px;
-    }
-
-    &__subtitle {
-      font-size: var(--font-size-base);
-    }
-
-    &__actions {
-      flex-direction: column;
-      align-items: stretch;
-
-      .btn {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-
-    &__live {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    &__meters {
-      grid-template-columns: 1fr;
-      gap: var(--spacing-md);
-    }
+  .lumina {
+    padding: 20px;
   }
 
-  .live-card {
-    &__header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-
-  .meter-card {
-    padding: var(--spacing-md);
-
-    &__value {
-      font-size: var(--font-size-xl);
-    }
-  }
-
-  .info-box {
+  .lumina__clock-meta {
     flex-direction: column;
-    text-align: center;
+    gap: 16px;
+  }
 
-    &__icon {
-      font-size: 3rem;
-    }
+  .lumina__divider {
+    display: none;
+  }
+
+  .lumina__rooms {
+    grid-template-columns: 1fr;
+  }
+
+  .lumina__room {
+    aspect-ratio: auto;
+  }
+
+  .lumina__scene {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .lumina__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lumina__modes {
+    justify-content: center;
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
-  .dashboard__meters {
-    grid-template-columns: repeat(2, 1fr);
+@media (prefers-reduced-motion: reduce) {
+  .lumina__fade,
+  .lumina__ring-svg,
+  .lumina__pulse-ring,
+  .lumina__badge--active {
+    animation: none;
   }
-}
 
-@media (min-width: 1025px) {
-  .dashboard__meters {
-    grid-template-columns: repeat(3, 1fr);
+  .lumina__fade {
+    opacity: 1;
   }
 }

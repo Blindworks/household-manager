@@ -1,128 +1,195 @@
-<div class="dashboard">
-  <div class="container">
-    <header class="dashboard__header">
-      <img src="/assets/Household_manager_logo.png" alt="Household Manager Logo" class="dashboard__logo">
-    </header>
-
-    <div class="dashboard__weather">
-      <app-weather-widget></app-weather-widget>
-    </div>
-
-    <section class="dashboard__live">
-      <div class="live-card">
-        <div class="live-card__header">
-          <div class="live-card__title-wrap">
-            <h2 class="live-card__title">Live-Momentanverbrauch</h2>
-            <div class="live-card__status">
-              <span class="live-card__status-dot" [class.live-card__status-dot--on]="liveStatus === 'connected'"></span>
-              <span>{{ formatLiveStatus() }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="live-card__grid live-card__grid--single">
-          <div class="live-card__metric live-card__metric--neutral">
-            <span class="live-card__label">Aktuelle Leistung</span>
-            <span class="live-card__value live-card__value--small">{{ formatPower(liveReading?.momentaneWirkleistung) }}</span>
-          </div>
-        </div>
-        <div class="live-card__meta">
-          <span>Letztes Update: {{ formatDateTime(lastLiveUpdate ? lastLiveUpdate.toISOString() : null) }}</span>
-          <span class="live-card__error" *ngIf="liveError">{{ liveError }}</span>
+<div class="lumina">
+  <!-- Uhr & Wetter -->
+  <header class="lumina__clock lumina__fade" style="--delay: 0s">
+    <h1 class="lumina__time">{{ clockTime }}</h1>
+    <div class="lumina__clock-meta">
+      <div class="lumina__date">
+        <span class="lumina__label">{{ weekday }}</span>
+        <span class="lumina__date-value">{{ calendarDate }}</span>
+      </div>
+      <div class="lumina__divider"></div>
+      <div class="lumina__weather">
+        <span class="material-symbols-outlined lumina__weather-icon">{{ weatherIcon }}</span>
+        <div class="lumina__weather-text">
+          <span class="lumina__weather-temp">{{ temperature }}°C</span>
+          <span class="lumina__label">{{ weatherLabel }}</span>
         </div>
       </div>
-      <div class="live-card live-card--air">
-        <div class="live-card__header">
-          <div class="live-card__title-wrap">
-            <h2 class="live-card__title">Airrohr Feinstaub</h2>
-            <div class="live-card__status">
-              <span class="live-card__status-dot" [class.live-card__status-dot--on]="!airrohrError"></span>
-              <span>{{ airrohrError ? 'Fehler' : 'Aktiv' }}</span>
+    </div>
+  </header>
+
+  <!-- Hauptbereich -->
+  <div class="lumina__grid">
+    <!-- Raum-Kacheln & Szene -->
+    <section class="lumina__main">
+      <div class="lumina__rooms">
+        <!-- Energie-Kachel mit Live-Werten -->
+        <a
+          routerLink="/energy"
+          class="lumina-card lumina__room lumina__energy-tile lumina__fade"
+          style="--delay: 0.1s"
+        >
+          <div class="lumina__room-top">
+            <div class="lumina__room-icon">
+              <span class="material-symbols-outlined">bolt</span>
             </div>
-          </div>
-        </div>
-        <div class="live-card__grid">
-          <div class="live-card__metric" [ngClass]="getPm10LevelClass(airrohrReading?.sdsP1)">
-            <span class="live-card__label">Feinstaub PM10</span>
-            <span class="live-card__value live-card__value--small">{{ formatDust(airrohrReading?.sdsP1) }}</span>
-          </div>
-          <div class="live-card__metric" [ngClass]="getPm25LevelClass(airrohrReading?.sdsP2)">
-            <span class="live-card__label">Feinstaub PM2.5</span>
-            <span class="live-card__value live-card__value--small">{{ formatDust(airrohrReading?.sdsP2) }}</span>
-          </div>
-        </div>
-        <div class="live-card__meta">
-          <span>Letztes Update: {{ formatDateTime(lastAirrohrUpdate ? lastAirrohrUpdate.toISOString() : null) }}</span>
-          <span class="live-card__error" *ngIf="airrohrError">{{ airrohrError }}</span>
-        </div>
-      </div>
-    </section>
-
-    <div class="dashboard__loading" *ngIf="isLoading">
-      <div class="spinner"></div>
-      <p>Lade Zaehlerdaten...</p>
-    </div>
-
-    <div class="alert alert--error" *ngIf="errorMessage && !isLoading">
-      <app-icon name="alert-triangle" class="alert__icon"></app-icon>
-      <span class="alert__message">{{ errorMessage }}</span>
-    </div>
-
-    <section class="dashboard__meters" *ngIf="!isLoading">
-      <div class="meter-card" *ngFor="let meter of meterData">
-        <div class="meter-card__header">
-          <div class="meter-card__icon" [style.background-color]="meter.color + '20'">
-            <app-icon [name]="meter.iconName" [style.color]="meter.color"></app-icon>
-          </div>
-          <h3 class="meter-card__title">{{ meter.type }}</h3>
-        </div>
-
-        <div class="meter-card__body">
-          <div class="meter-card__reading">
-            <span class="meter-card__label">Aktueller Zaehlerstand</span>
-            <span class="meter-card__value">
-              {{ meter.lastReading | number:'1.1-1':'de-DE' }}
-              <span class="meter-card__unit">{{ meter.unit }}</span>
+            <span class="lumina__badge" [class.lumina__badge--active]="energyConnected">
+              {{ energyConnected ? 'Live' : 'Offline' }}
             </span>
           </div>
+          <div class="lumina__room-body">
+            <h3 class="lumina__room-name">Energie</h3>
+            <div class="lumina__energy-metrics">
+              <div class="lumina__energy-metric">
+                <span class="lumina__energy-metric-label">PV-Erzeugung</span>
+                <span class="lumina__energy-metric-value lumina__energy-metric-value--export">
+                  {{ energyLive ? (energyLive.pvTotalW | number:'1.0-0':'de-DE') : '--' }} W
+                </span>
+              </div>
+              <div class="lumina__energy-metric">
+                <span class="lumina__energy-metric-label">Hausverbrauch</span>
+                <span class="lumina__energy-metric-value">
+                  {{ energyLive ? (energyLive.hausverbrauchW | number:'1.0-0':'de-DE') : '--' }} W
+                </span>
+              </div>
+              <div class="lumina__energy-metric">
+                <span class="lumina__energy-metric-label">{{ gridFlowLabel }}</span>
+                <span
+                  class="lumina__energy-metric-value"
+                  [ngClass]="'lumina__energy-metric-value--' + gridFlowTone"
+                >
+                  {{ energyLive ? (gridAbsW | number:'1.0-0':'de-DE') : '--' }} W
+                </span>
+              </div>
+            </div>
+          </div>
+        </a>
 
-          <div class="meter-card__consumption">
-            <span class="meter-card__label">Verbrauch &amp; Kosten ({{ meter.consumptionPeriod }})</span>
-            <div class="meter-card__line meter-card__line--consumption">
-              <span class="meter-card__value">
-                {{ meter.consumption | number:'1.1-1':'de-DE' }}
-                <span class="meter-card__unit">{{ meter.unit }}</span>
-              </span>
-              <span class="meter-card__value meter-card__value--cost">
-                {{ formatCurrency(meter.costLast7Days) }}
-              </span>
-              <span class="meter-card__trend-group" *ngIf="meter.consumptionChange !== null">
-                <span [class]="'meter-card__trend ' + getTrendClass(meter.trend)">
-                  <app-icon [name]="getTrendIconName(meter.trend)" [size]="16"></app-icon>
-                </span>
-                <span class="meter-card__trend-value meter-card__trend-value--stacked">
-                  {{ formatSigned(meter.consumptionChange) }}
-                  <span class="meter-card__unit">{{ meter.unit }}</span>
-                </span>
-              </span>
+        <!-- Raum-Kacheln (Platzhalter) -->
+        <button
+          *ngFor="let room of rooms; let i = index"
+          type="button"
+          class="lumina-card lumina__room lumina__fade"
+          [style.--delay]="(0.2 + i * 0.1) + 's'"
+        >
+          <div class="lumina__room-top">
+            <div class="lumina__room-icon">
+              <span class="material-symbols-outlined">{{ room.icon }}</span>
+            </div>
+            <span class="lumina__badge" [class.lumina__badge--active]="room.tone === 'active'">
+              {{ room.status }}
+            </span>
+          </div>
+          <div class="lumina__room-body">
+            <h3 class="lumina__room-name">{{ room.name }}</h3>
+            <p class="lumina__room-detail">{{ room.detail }}</p>
+          </div>
+        </button>
+      </div>
+
+      <div class="lumina-card lumina__scene lumina__fade" style="--delay: 0.4s">
+        <div class="lumina__scene-info">
+          <div class="lumina__scene-icon">
+            <span class="material-symbols-outlined">wb_incandescent</span>
+          </div>
+          <div>
+            <h4 class="lumina__label">Aktive Szene</h4>
+            <p class="lumina__scene-name">{{ activeScene }}</p>
+          </div>
+        </div>
+        <div class="lumina__scene-actions">
+          <button
+            *ngFor="let scene of scenes"
+            type="button"
+            class="lumina__pill"
+            [class.lumina__pill--active]="scene.active"
+          >
+            {{ scene.label }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Intelligence Hub & Energie -->
+    <aside class="lumina__side">
+      <div class="lumina-card lumina__hub lumina__fade" style="--delay: 0.5s">
+        <div class="lumina__hub-header">
+          <h3 class="lumina__label lumina__label--primary">Intelligence Hub</h3>
+          <span class="material-symbols-outlined lumina__hub-header-icon">insights</span>
+        </div>
+        <div class="lumina__hub-list">
+          <div
+            *ngFor="let item of insights"
+            class="lumina__insight"
+            [ngClass]="'lumina__insight--' + item.tone"
+          >
+            <span class="material-symbols-outlined lumina__insight-icon">{{ item.icon }}</span>
+            <div>
+              <p class="lumina__insight-title">{{ item.title }}</p>
+              <p class="lumina__insight-text">{{ item.text }}</p>
             </div>
           </div>
         </div>
       </div>
-    </section>
 
-    <section class="dashboard__info">
-      <div class="info-box">
-        <div class="info-box__icon">
-          <app-icon name="info" [size]="24"></app-icon>
-        </div>
-        <div class="info-box__content">
-          <h4 class="info-box__title">Regelmaessige Ablesungen empfohlen</h4>
-          <p class="info-box__text">
-            Erfassen Sie Ihre Zaehlerstaende regelmaessig, um Ihren Verbrauch optimal zu ueberwachen
-            und unerwartete Nachzahlungen zu vermeiden.
+      <div class="lumina-card lumina__energy lumina__fade" style="--delay: 0.6s">
+        <div class="lumina__energy-info">
+          <h3 class="lumina__label">Aktueller Verbrauch</h3>
+          <div class="lumina__energy-value">
+            <span class="lumina__energy-number">{{ currentDrawKw }}</span>
+            <span class="lumina__energy-unit">kW</span>
+          </div>
+          <p class="lumina__energy-status" [class.lumina__energy-status--off]="!energyConnected">
+            <span class="lumina__status-dot"></span>
+            {{ energyConnected ? 'Live' : 'Getrennt' }}
           </p>
         </div>
+        <div class="lumina__ring">
+          <svg class="lumina__ring-svg" viewBox="0 0 100 100">
+            <circle class="lumina__ring-track" cx="50" cy="50" r="40" fill="none" stroke-width="8"></circle>
+            <circle
+              class="lumina__ring-value"
+              cx="50"
+              cy="50"
+              r="40"
+              fill="none"
+              stroke-width="8"
+              stroke-linecap="round"
+              [attr.stroke-dasharray]="ringCircumference"
+              [attr.stroke-dashoffset]="ringOffset"
+            ></circle>
+          </svg>
+          <span class="material-symbols-outlined lumina__ring-icon">bolt</span>
+        </div>
       </div>
-    </section>
+    </aside>
   </div>
+
+  <!-- Status & Modi -->
+  <footer class="lumina__footer lumina__fade" style="--delay: 0.7s">
+    <div class="lumina-card lumina__secured">
+      <div class="lumina__secured-icon">
+        <span class="lumina__pulse-ring"></span>
+        <span class="material-symbols-outlined">security</span>
+      </div>
+      <div>
+        <h4 class="lumina__label lumina__label--secondary">System gesichert</h4>
+        <p class="lumina__secured-detail">8 Zugänge verriegelt • 4 Zonen aktiv</p>
+      </div>
+    </div>
+
+    <div class="lumina__modes">
+      <button
+        *ngFor="let mode of modes"
+        type="button"
+        class="lumina-card lumina__mode"
+        [ngClass]="'lumina__mode--' + mode.tone"
+      >
+        <span class="lumina__mode-icon">
+          <span class="material-symbols-outlined">{{ mode.icon }}</span>
+        </span>
+        <span class="lumina__mode-label">{{ mode.label }}</span>
+      </button>
+    </div>
+  </footer>
 </div>
