@@ -4,6 +4,7 @@ import com.household.manager.model.entity.AlexaAirQualityReading;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,4 +16,7 @@ public interface AlexaAirQualityReadingRepository extends JpaRepository<AlexaAir
 
     @Query("select distinct r.applianceId from AlexaAirQualityReading r")
     List<String> findDistinctApplianceIds();
+
+    List<AlexaAirQualityReading> findByReadingTimeBetweenOrderByReadingTimeAsc(
+            LocalDateTime from, LocalDateTime to);
 }

@@ -4,6 +4,7 @@ import com.household.manager.model.entity.WeatherReading;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /** Repository für {@link WeatherReading}. */
@@ -11,4 +12,7 @@ import java.util.List;
 public interface WeatherReadingRepository extends JpaRepository<WeatherReading, Long> {
 
     List<WeatherReading> findAllByOrderByReadingTimeAsc();
+
+    List<WeatherReading> findByReadingTimeBetweenOrderByReadingTimeAsc(
+            LocalDateTime from, LocalDateTime to);
 }

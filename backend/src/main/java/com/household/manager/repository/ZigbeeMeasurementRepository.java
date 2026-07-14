@@ -1,8 +1,11 @@
 package com.household.manager.repository;
 
 import com.household.manager.zigbee.model.MeasurementType;
+import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import com.household.manager.zigbee.model.entity.ZigbeeMeasurement;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -15,4 +18,12 @@ public interface ZigbeeMeasurementRepository extends JpaRepository<ZigbeeMeasure
             Long deviceId, MeasurementType measurementType, LocalDateTime from, LocalDateTime to);
 
     List<ZigbeeMeasurement> findByDeviceIdOrderByMeasuredAtAsc(Long deviceId);
+
+    /** Geräte, die im Zeitfenster mindestens einen Messwert des Typs geliefert haben. */
+    @Query("select distinct m.device from ZigbeeMeasurement m "
+            + "where m.measurementType = :type and m.measuredAt between :from and :to")
+    List<ZigbeeDevice> findDistinctDevicesByMeasurementTypeInRange(
+            @Param("type") MeasurementType type,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }
