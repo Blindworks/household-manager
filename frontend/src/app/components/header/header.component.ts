@@ -40,7 +40,8 @@ export class HeaderComponent {
       label: 'Umwelt',
       children: [
         { path: '/air-quality', label: 'Luftqualitaet' },
-        { path: '/weather', label: 'Wetter' }
+        { path: '/weather', label: 'Wetter' },
+        { path: '/temperatures', label: 'Temperaturen' }
       ]
     },
     {
