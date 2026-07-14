@@ -18,7 +18,6 @@ interface RangeOption {
 interface ChartTile {
   sensorId: string;
   name: string;
-  source: string;
   options: Record<string, unknown>;
 }
 
@@ -66,7 +65,6 @@ export class TemperaturesComponent implements OnInit {
         this.charts = series.map(s => ({
           sensorId: s.sensorId,
           name: s.name,
-          source: s.source,
           options: this.chartOptionsFor(s)
         }));
         this.isEmpty = this.charts.length === 0;
