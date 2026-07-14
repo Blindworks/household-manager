@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "Erster Flow – Zeitplan-Test",
+  "description": "Feuert jede Minute und schreibt eine Message ins Debug-Panel. Braucht keine Geräte/Entitäten – ideal zum Ausprobieren von Import, Deploy und Debug.",
+  "definition": {
+    "nodes": [
+      {
+        "id": "zeitplan",
+        "type": "schedule-trigger",
+        "name": "Jede Minute",
+        "position": { "x": 100, "y": 140 },
+        "config": { "cron": "0 * * * * *" }
+      },
+      {
+        "id": "ausgabe",
+        "type": "debug",
+        "name": "Debug-Ausgabe",
+        "position": { "x": 400, "y": 140 },
+        "config": { "label": "Zeitplan hat gefeuert" }
+      }
+    ],
+    "wires": [
+      { "from": { "node": "zeitplan", "port": 0 }, "to": { "node": "ausgabe" } }
+    ]
+  }
+}
