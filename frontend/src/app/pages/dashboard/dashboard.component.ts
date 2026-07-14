@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { Subscription, interval, startWith } from 'rxjs';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
+import { ViewModeService } from '../../services/view-mode.service';
 import { EnergyLive } from '../../models/energy-live.model';
 import { WeatherOverview } from '../../models/weather.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
@@ -28,6 +29,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
   private readonly energyLiveService = inject(EnergyLiveService);
 
+  /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
+  readonly viewMode = inject(ViewModeService);
+
   private clockSubscription?: Subscription;
   private weatherSubscription?: Subscription;
   private liveSubscription?: Subscription;
@@ -35,8 +39,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
-  /** Hausverbrauch, der den Ring komplett fuellt (5 kW). */
-  private static readonly RING_MAX_WATT = 5000;
+  /** Hausverbrauch, der den Verbrauchs-Ring komplett fuellt (5 kW). */
+  private static readonly CONSUMPTION_MAX_WATT = 5000;
+  /** PV-Erzeugung, die den PV-Ring komplett fuellt (2 kW). */
+  private static readonly PV_MAX_WATT = 2000;
+  /** Netzbezug, der den Bezugs-Ring komplett fuellt (5 kW). */
+  private static readonly GRID_MAX_WATT = 5000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -141,24 +149,57 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.weatherMaterialSymbol(this.weather?.current?.icon);
   }
 
-  /** Aktueller Hausverbrauch in kW mit einer Nachkommastelle. */
-  get currentDrawKw(): string {
-    const watt = this.energyLive?.hausverbrauchW;
-    if (watt == null) {
-      return '--';
-    }
-    return (watt / 1000).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  get ringCircumference(): number {
+    return DashboardComponent.RING_CIRCUMFERENCE;
   }
 
-  /** Ring-Offset abhaengig vom Verbrauch (voller Ring = 0). */
-  get ringOffset(): number {
-    const watt = this.energyLive?.hausverbrauchW ?? 0;
-    const fraction = Math.min(Math.max(watt / DashboardComponent.RING_MAX_WATT, 0), 1);
+  /**
+   * Drei Live-Gauges des Energieflusses: PV-Erzeugung, Hausverbrauch und Netzbezug.
+   * Jeder Gauge liefert Anzeigewert (kW), Ring-Offset und Farbton fuer das Template.
+   */
+  get energyGauges(): EnergyGauge[] {
+    const live = this.energyLive;
+    const pvWatt = live?.pvTotalW ?? 0;
+    const consumptionWatt = live?.hausverbrauchW ?? 0;
+    const gridDrawWatt = live && live.gridImporting ? Math.abs(live.gridW) : 0;
+
+    return [
+      {
+        key: 'pv',
+        label: 'PV-Erzeugung',
+        icon: 'solar_power',
+        value: this.formatWatt(live ? pvWatt : null),
+        offset: this.gaugeOffset(pvWatt, DashboardComponent.PV_MAX_WATT)
+      },
+      {
+        key: 'consumption',
+        label: 'Verbrauch',
+        icon: 'bolt',
+        value: this.formatWatt(live ? consumptionWatt : null),
+        offset: this.gaugeOffset(consumptionWatt, DashboardComponent.CONSUMPTION_MAX_WATT)
+      },
+      {
+        key: 'grid',
+        label: 'Bezug',
+        icon: 'power',
+        value: this.formatWatt(live ? gridDrawWatt : null),
+        offset: this.gaugeOffset(gridDrawWatt, DashboardComponent.GRID_MAX_WATT)
+      }
+    ];
+  }
+
+  /** Ring-Offset fuer einen Wert relativ zu seinem Maximum (voller Ring = 0). */
+  private gaugeOffset(watt: number, maxWatt: number): number {
+    const fraction = Math.min(Math.max(watt / maxWatt, 0), 1);
     return DashboardComponent.RING_CIRCUMFERENCE * (1 - fraction);
   }
 
-  get ringCircumference(): number {
-    return DashboardComponent.RING_CIRCUMFERENCE;
+  /** Formatiert Watt als ganzzahligen W-String mit Tausendertrennung ("--" bei fehlenden Daten). */
+  private formatWatt(watt: number | null): string {
+    if (watt == null) {
+      return '--';
+    }
+    return Math.round(watt).toLocaleString('de-DE', { maximumFractionDigits: 0 });
   }
 
   /** True, wenn der Live-Energie-Stream verbunden ist. */
@@ -269,6 +310,15 @@ interface IntelligenceItem {
   readonly tone: 'primary' | 'secondary' | 'muted';
   readonly title: string;
   readonly text: string;
+}
+
+/** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug). */
+interface EnergyGauge {
+  readonly key: 'pv' | 'consumption' | 'grid';
+  readonly label: string;
+  readonly icon: string;
+  readonly value: string;
+  readonly offset: number;
 }
 
 /** Modus-Schnellaktion in der Fussleiste. */

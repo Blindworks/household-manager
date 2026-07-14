@@ -1,4 +1,18 @@
 <div class="lumina">
+  <!-- Dezenter Umschalter: blendet die obere Navigationsleiste aus/ein -->
+  <button
+    type="button"
+    class="lumina__view-toggle"
+    [class.lumina__view-toggle--active]="viewMode.isTabletView()"
+    (click)="viewMode.toggle()"
+    [attr.aria-pressed]="viewMode.isTabletView()"
+    [title]="viewMode.isTabletView() ? 'Menü einblenden (Website-Ansicht)' : 'Menü ausblenden (Tablet-Ansicht)'"
+  >
+    <span class="material-symbols-outlined">
+      {{ viewMode.isTabletView() ? 'web' : 'tablet_mac' }}
+    </span>
+  </button>
+
   <!-- Uhr & Wetter -->
   <header class="lumina__clock lumina__fade" style="--delay: 0s">
     <h1 class="lumina__time">{{ clockTime }}</h1>
@@ -133,33 +147,42 @@
       </div>
 
       <div class="lumina-card lumina__energy lumina__fade" style="--delay: 0.6s">
-        <div class="lumina__energy-info">
-          <h3 class="lumina__label">Aktueller Verbrauch</h3>
-          <div class="lumina__energy-value">
-            <span class="lumina__energy-number">{{ currentDrawKw }}</span>
-            <span class="lumina__energy-unit">kW</span>
-          </div>
+        <div class="lumina__energy-head">
+          <h3 class="lumina__label">Energiefluss</h3>
           <p class="lumina__energy-status" [class.lumina__energy-status--off]="!energyConnected">
             <span class="lumina__status-dot"></span>
             {{ energyConnected ? 'Live' : 'Getrennt' }}
           </p>
         </div>
-        <div class="lumina__ring">
-          <svg class="lumina__ring-svg" viewBox="0 0 100 100">
-            <circle class="lumina__ring-track" cx="50" cy="50" r="40" fill="none" stroke-width="8"></circle>
-            <circle
-              class="lumina__ring-value"
-              cx="50"
-              cy="50"
-              r="40"
-              fill="none"
-              stroke-width="8"
-              stroke-linecap="round"
-              [attr.stroke-dasharray]="ringCircumference"
-              [attr.stroke-dashoffset]="ringOffset"
-            ></circle>
-          </svg>
-          <span class="material-symbols-outlined lumina__ring-icon">bolt</span>
+        <div class="lumina__gauges">
+          <div
+            *ngFor="let gauge of energyGauges"
+            class="lumina__gauge"
+            [ngClass]="'lumina__gauge--' + gauge.key"
+          >
+            <div class="lumina__gauge-ring">
+              <svg class="lumina__ring-svg" viewBox="0 0 100 100">
+                <circle class="lumina__ring-track" cx="50" cy="50" r="40" fill="none" stroke-width="10"></circle>
+                <circle
+                  class="lumina__gauge-value"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="none"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  [attr.stroke-dasharray]="ringCircumference"
+                  [attr.stroke-dashoffset]="gauge.offset"
+                ></circle>
+              </svg>
+              <span class="material-symbols-outlined lumina__gauge-icon">{{ gauge.icon }}</span>
+            </div>
+            <div class="lumina__gauge-readout">
+              <span class="lumina__gauge-number">{{ gauge.value }}</span>
+              <span class="lumina__gauge-unit">W</span>
+            </div>
+            <span class="lumina__gauge-label">{{ gauge.label }}</span>
+          </div>
         </div>
       </div>
     </aside>

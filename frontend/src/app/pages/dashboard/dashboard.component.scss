@@ -4,6 +4,14 @@
 //  globale App-Theme unberuehrt bleibt.
 // ============================================================================
 
+// Host fuellt den verfuegbaren Platz der .main-content-Flexspalte, damit das
+// Dashboard die Hoehe automatisch ausfuellt – mit oder ohne Header/Footer.
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
 .lumina {
   // ---- Design-Tokens (Material 3, aus dem Stitch-Entwurf) -----------------
   --primary: #aac7ff;
@@ -26,7 +34,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--gutter);
-  min-height: calc(100vh - 4rem);
+  flex: 1;
   padding: 40px;
   color: var(--on-surface);
   font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
@@ -36,6 +44,44 @@
     #050505;
   border-radius: var(--radius-xl);
   overflow: hidden;
+}
+
+// ---- Dezenter Ansichts-Umschalter (oben rechts) --------------------------
+.lumina__view-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+  .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  &:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(170, 199, 255, 0.3);
+    color: var(--primary);
+  }
+
+  &--active {
+    opacity: 0.6;
+    color: var(--primary);
+    border-color: rgba(170, 199, 255, 0.25);
+  }
 }
 
 // ---- Wiederverwendbare Glass-Card ----------------------------------------
@@ -465,45 +511,28 @@
 }
 
 // ============================================================================
-//  Energie-Ring
+//  Energiefluss-Gauges (PV / Verbrauch / Bezug)
 // ============================================================================
 .lumina__energy {
-  height: 12rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 32px;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 28px;
   position: relative;
   overflow: hidden;
 }
 
-.lumina__energy-value {
+.lumina__energy-head {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.lumina__energy-number {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 48px;
-  font-weight: 500;
-  color: var(--on-surface);
-}
-
-.lumina__energy-unit {
-  color: var(--secondary);
-  font-weight: 700;
-  font-size: 20px;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .lumina__energy-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
   font-size: 13px;
   font-weight: 700;
   color: var(--secondary);
@@ -526,14 +555,39 @@
   box-shadow: 0 0 8px rgba(83, 225, 111, 0.6);
 }
 
-.lumina__ring {
+.lumina__gauges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.lumina__gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  // Farbton je Kennzahl: PV gruen, Verbrauch blau, Bezug rot.
+  &--pv {
+    --gauge-color: var(--secondary);
+  }
+
+  &--consumption {
+    --gauge-color: var(--primary);
+  }
+
+  &--grid {
+    --gauge-color: var(--error);
+  }
+}
+
+.lumina__gauge-ring {
   position: relative;
-  width: 8rem;
-  height: 8rem;
+  width: 5.5rem;
+  height: 5.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
 .lumina__ring-svg {
@@ -547,16 +601,42 @@
   stroke: rgba(255, 255, 255, 0.05);
 }
 
-.lumina__ring-value {
-  stroke: var(--secondary);
+.lumina__gauge-value {
+  stroke: var(--gauge-color);
   transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.lumina__ring-icon {
+.lumina__gauge-icon {
   position: absolute;
-  color: var(--secondary);
-  opacity: 0.4;
-  font-size: 36px;
+  color: var(--gauge-color);
+  opacity: 0.55;
+  font-size: 26px;
+}
+
+.lumina__gauge-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.lumina__gauge-number {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.lumina__gauge-unit {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gauge-color);
+  text-transform: uppercase;
+}
+
+.lumina__gauge-label {
+  font-size: 12px;
+  color: rgba(192, 198, 214, 0.7);
+  text-align: center;
 }
 
 // ============================================================================
