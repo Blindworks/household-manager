@@ -1,0 +1,36 @@
+<section class="temperatures">
+  <header class="temperatures__header">
+    <h1 class="temperatures__title">Temperaturen</h1>
+    <div class="temperatures__ranges" role="group" aria-label="Zeitraum">
+      @for (range of ranges; track range.value) {
+        <button
+          type="button"
+          class="temperatures__range"
+          [class.temperatures__range--active]="range.value === activeRange"
+          (click)="setRange(range.value)">
+          {{ range.label }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (isLoading) {
+    <p class="temperatures__status">Lade Temperaturdaten…</p>
+  } @else if (errorMessage) {
+    <p class="temperatures__status temperatures__status--error">{{ errorMessage }}</p>
+  } @else if (isEmpty) {
+    <p class="temperatures__status">Keine Temperatursensoren gefunden.</p>
+  } @else {
+    <div class="temperatures__grid">
+      @for (chart of charts; track chart.sensorId) {
+        <article class="temperatures__card">
+          <h2 class="temperatures__card-title">{{ chart.name }}</h2>
+          <div
+            echarts
+            class="temperatures__chart"
+            [options]="chart.options"></div>
+        </article>
+      }
+    </div>
+  }
+</section>
