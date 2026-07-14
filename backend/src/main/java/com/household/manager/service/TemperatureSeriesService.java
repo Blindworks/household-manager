@@ -54,7 +54,7 @@ public class TemperatureSeriesService {
         try {
             return supplier.get();
         } catch (Exception ex) {
-            log.warn("Temperatur-Quelle '{}' fehlgeschlagen: {}", source, ex.getMessage());
+            log.warn("Temperatur-Quelle '{}' fehlgeschlagen: {}", source, ex.getMessage(), ex);
             return List.of();
         }
     }
