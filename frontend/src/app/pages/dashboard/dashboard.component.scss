@@ -288,6 +288,17 @@
   font-weight: 600;
 }
 
+// Weitere Außenfühler (nach dem primären) kleiner darstellen.
+.lumina__climate-primary--secondary {
+  .lumina__climate-primary-icon {
+    font-size: 15px;
+  }
+
+  .lumina__climate-primary-value {
+    font-size: 17px;
+  }
+}
+
 .lumina__climate-secondary {
   display: inline-flex;
   align-items: center;
