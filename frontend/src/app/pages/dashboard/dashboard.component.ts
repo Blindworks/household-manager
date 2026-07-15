@@ -1,17 +1,20 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval, of, startWith, switchMap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
+import { AnkerSolixService } from '../../services/ankersolix.service';
 import { ViewModeService } from '../../services/view-mode.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { EnergyLive } from '../../models/energy-live.model';
+import { AnkerSolixLive } from '../../models/ankersolix.model';
 import { WeatherOverview } from '../../models/weather.model';
 import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
 import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.util';
+import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -25,13 +28,14 @@ import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, EnergyFlowComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
   private readonly energyLiveService = inject(EnergyLiveService);
+  private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly temperatureService = inject(TemperatureService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
@@ -42,6 +46,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
   private temperatureSubscription?: Subscription;
+  private ankerSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -62,6 +67,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   energyLive: EnergyLive | null = null;
   liveStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+
+  /** Anker-Speicher-Live-Werte fuer den Energiefluss-Dialog (nur waehrend geoeffnet aktiv). */
+  ankerLive: AnkerSolixLive | null = null;
+  /** True, wenn der Energiefluss-Dialog geoeffnet ist. */
+  flowDialogOpen = false;
 
   climate: ClimateView = { outdoor: [], weatherLabel: '--', rows: [] };
 
@@ -121,7 +131,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.liveSubscription?.unsubscribe();
     this.statusSubscription?.unsubscribe();
     this.temperatureSubscription?.unsubscribe();
+    this.closeFlowDialog();
     this.energyLiveService.disconnect();
+  }
+
+  /**
+   * Oeffnet den Energiefluss-Dialog und abonniert dafuer den Anker-Live-Stream.
+   * Der EnergyLive-Stream laeuft bereits fuer die Gauges und wird an den Dialog
+   * durchgereicht, sodass pro Seite nur ein Abonnent je Live-Service existiert.
+   */
+  openFlowDialog(): void {
+    if (this.flowDialogOpen) {
+      return;
+    }
+    this.flowDialogOpen = true;
+    this.ankerSubscription = this.ankerSolixService.getLiveStream().subscribe({
+      next: reading => (this.ankerLive = reading),
+      error: err => console.error('Anker SSE-Fehler:', err)
+    });
+  }
+
+  /** Schliesst den Energiefluss-Dialog per Escape-Taste. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeFlowDialog();
+  }
+
+  /** Schliesst den Dialog und trennt den nur dafuer benoetigten Anker-Live-Stream. */
+  closeFlowDialog(): void {
+    if (!this.flowDialogOpen) {
+      return;
+    }
+    this.flowDialogOpen = false;
+    this.ankerSubscription?.unsubscribe();
+    this.ankerSubscription = undefined;
+    this.ankerSolixService.disconnectLive();
+    this.ankerLive = null;
   }
 
   /** Uhrzeit im Format HH:MM (24h). */
