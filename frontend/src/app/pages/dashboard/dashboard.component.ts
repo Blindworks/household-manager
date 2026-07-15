@@ -1,7 +1,8 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription, interval, startWith, switchMap } from 'rxjs';
+import { Subscription, interval, of, startWith, switchMap } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
 import { ViewModeService } from '../../services/view-mode.service';
@@ -272,13 +273,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.temperatureSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
       .pipe(
         startWith(0),
-        switchMap(() => this.temperatureService.getCurrent())
+        switchMap(() =>
+          this.temperatureService.getCurrent().pipe(
+            catchError(() => of<CurrentTemperatureReading[]>([]))
+          )
+        )
       )
-      .subscribe({
-        next: (readings: CurrentTemperatureReading[]) =>
-          (this.climate = buildClimateView(readings, Date.now())),
-        error: () => (this.climate = { outsideLabel: '--', rows: [] })
-      });
+      .subscribe(readings => (this.climate = buildClimateView(readings, Date.now())));
   }
 
   /** Mappt DWD-Icon-Codes auf Material-Symbols-Namen fuer die Wetteranzeige. */
