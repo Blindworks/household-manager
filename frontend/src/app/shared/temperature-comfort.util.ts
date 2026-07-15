@@ -32,8 +32,8 @@ export interface OutdoorReading {
 
 /** Aufbereitetes View-Model der Klima-Kachel. */
 export interface ClimateView {
-  /** Realer Außenfühler (primär). Null, wenn kein Außenfühler gemeldet hat. */
-  outdoorPrimary: OutdoorReading | null;
+  /** Reale Außenfühler, erster = primär. Leer, wenn keiner gemeldet hat. */
+  outdoor: OutdoorReading[];
   /** DWD-/Wetter-Außentemperatur als sekundäre Referenz, z. B. "12°" oder "--". */
   weatherLabel: string;
   /** Innensensor-Zeilen. */
@@ -79,14 +79,15 @@ export function buildClimateView(
   const weather = readings.find(reading => reading.source === 'WEATHER');
   const weatherLabel = weather ? formatCelsius(Math.round(weather.temperature), 0) : '--';
 
-  const outdoorSensor = readings.find(isOutdoorSensor);
-  const outdoorPrimary = outdoorSensor ? toOutdoorReading(outdoorSensor, nowMs) : null;
+  const outdoor = readings
+    .filter(isOutdoorSensor)
+    .map(reading => toOutdoorReading(reading, nowMs));
 
   const rows = readings
     .filter(reading => reading.source !== 'WEATHER' && !isOutdoorSensor(reading))
     .map(reading => toRow(reading, nowMs));
 
-  return { outdoorPrimary, weatherLabel, rows };
+  return { outdoor, weatherLabel, rows };
 }
 
 function toOutdoorReading(reading: CurrentTemperatureReading, nowMs: number): OutdoorReading {

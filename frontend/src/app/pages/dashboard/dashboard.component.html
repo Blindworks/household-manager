@@ -49,13 +49,14 @@
             </div>
             <div class="lumina__climate-outdoor">
               <div
-                *ngIf="climate.outdoorPrimary as primary"
+                *ngFor="let outdoor of climate.outdoor; let first = first"
                 class="lumina__climate-primary"
-                [class.lumina__climate-primary--stale]="primary.stale"
-                [title]="primary.name"
+                [class.lumina__climate-primary--secondary]="!first"
+                [class.lumina__climate-primary--stale]="outdoor.stale"
+                [title]="outdoor.name"
               >
                 <span class="material-symbols-outlined lumina__climate-primary-icon">yard</span>
-                <span class="lumina__climate-primary-value">{{ primary.valueLabel }}</span>
+                <span class="lumina__climate-primary-value">{{ outdoor.valueLabel }}</span>
               </div>
               <div class="lumina__climate-secondary">
                 <span class="material-symbols-outlined lumina__climate-secondary-icon">cloud</span>
