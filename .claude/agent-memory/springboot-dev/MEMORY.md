@@ -73,6 +73,7 @@ com.household.manager/
 6. Health check endpoints: `/v1/health`, `/management/health`
 
 ## Links to Detailed Notes
+- [bounded-discovery-queries.md](bounded-discovery-queries.md) - discovery/distinct queries over append-only history tables must be time-bounded, not full scans
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
 - [api-design.md](api-design.md) - REST API design standards
 - [smart-device-persistence.md](smart-device-persistence.md) - Tapo device discovery-to-DB upsert pattern, metadata merge rules, TDD flow
