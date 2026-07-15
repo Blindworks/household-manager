@@ -152,7 +152,16 @@
         </div>
       </div>
 
-      <div class="lumina-card lumina__energy lumina__fade" style="--delay: 0.6s">
+      <div
+        class="lumina-card lumina__energy lumina__energy--clickable lumina__fade"
+        style="--delay: 0.6s"
+        role="button"
+        tabindex="0"
+        (click)="openFlowDialog()"
+        (keydown.enter)="openFlowDialog()"
+        (keydown.space)="$event.preventDefault(); openFlowDialog()"
+        aria-label="Energiefluss-Details öffnen"
+      >
         <div class="lumina__energy-head">
           <h3 class="lumina__label">Energiefluss</h3>
           <p class="lumina__energy-status" [class.lumina__energy-status--off]="!energyConnected">
@@ -221,4 +230,34 @@
       </button>
     </div>
   </footer>
+
+  <!-- Energiefluss-Dialog (oeffnet sich beim Klick auf die Energiefluss-Kachel) -->
+  <div
+    *ngIf="flowDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeFlowDialog()"
+  >
+    <div
+      class="lumina__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Energiefluss (Live)"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">Energiefluss (Live)</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeFlowDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <app-energy-flow [energyLive]="energyLive" [liveData]="ankerLive"></app-energy-flow>
+      </div>
+    </div>
+  </div>
 </div>
