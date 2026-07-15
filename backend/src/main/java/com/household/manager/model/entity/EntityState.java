@@ -36,6 +36,10 @@ public class EntityState {
     @Column(name = "friendly_name", nullable = false, length = 255)
     private String friendlyName;
 
+    /** Optionaler, vom Benutzer gesetzter Kurzname. Wird vom Polling-Upsert nie überschrieben. */
+    @Column(name = "custom_name", length = 255)
+    private String customName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
     private EntitySource source;
