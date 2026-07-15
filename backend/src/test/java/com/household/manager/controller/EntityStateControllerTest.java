@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -143,5 +145,43 @@ class EntityStateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].customName").value("Wohnzimmer"))
                 .andExpect(jsonPath("$[0].displayName").value("Wohnzimmer"));
+    }
+
+    @Test
+    void setsCustomName() throws Exception {
+        EntityState updated = sensor();
+        updated.setCustomName("Wohnzimmer");
+        when(entityStateService.setCustomName("sensor.zigbee_wohnzimmer_temperature", "Wohnzimmer"))
+                .thenReturn(Optional.of(updated));
+
+        mockMvc.perform(put("/v1/entities/sensor.zigbee_wohnzimmer_temperature/custom-name")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customName\":\"Wohnzimmer\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customName").value("Wohnzimmer"))
+                .andExpect(jsonPath("$.displayName").value("Wohnzimmer"));
+    }
+
+    @Test
+    void setCustomNameReturns404ForUnknownEntity() throws Exception {
+        when(entityStateService.setCustomName("sensor.unknown", "X")).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/v1/entities/sensor.unknown/custom-name")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customName\":\"X\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void setCustomNameAcceptsNullToClear() throws Exception {
+        EntityState cleared = sensor();
+        when(entityStateService.setCustomName("sensor.zigbee_wohnzimmer_temperature", null))
+                .thenReturn(Optional.of(cleared));
+
+        mockMvc.perform(put("/v1/entities/sensor.zigbee_wohnzimmer_temperature/custom-name")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customName\":null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Wohnzimmer Temperatur"));
     }
 }
