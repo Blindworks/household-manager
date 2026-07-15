@@ -74,4 +74,7 @@
     <!-- Amazon Smart Air Quality Monitor Feature -->
     <include file="db/changelog/changes/20260712-0031-create-alexa-air-quality-readings-table.xml"/>
 
+    <!-- Editierbarer Kurzname für Entitäten -->
+    <include file="db/changelog/changes/20260715-0032-add-custom-name-to-entity-states.xml"/>
+
 </databaseChangeLog>
