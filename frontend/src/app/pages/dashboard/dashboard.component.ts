@@ -218,11 +218,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const live = this.energyLive;
     const pvWatt = live?.pvTotalW ?? 0;
     const consumptionWatt = live?.hausverbrauchW ?? 0;
-    const gridDrawWatt = live && live.gridImporting ? Math.abs(live.gridW) : 0;
+    const gridWatt = Math.abs(live?.gridW ?? 0);
+    // Einspeisung: Netz exportiert (nicht importierend) mit tatsaechlichem Fluss.
+    const exporting = !!live && !live.gridImporting && gridWatt > 0;
 
     return [
       {
         key: 'pv',
+        tone: 'pv',
         label: 'PV-Erzeugung',
         icon: 'solar_power',
         value: this.formatWatt(live ? pvWatt : null),
@@ -230,6 +233,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       {
         key: 'consumption',
+        tone: 'consumption',
         label: 'Verbrauch',
         icon: 'bolt',
         value: this.formatWatt(live ? consumptionWatt : null),
@@ -237,10 +241,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       {
         key: 'grid',
-        label: 'Bezug',
-        icon: 'power',
-        value: this.formatWatt(live ? gridDrawWatt : null),
-        offset: this.gaugeOffset(gridDrawWatt, DashboardComponent.GRID_MAX_WATT)
+        tone: exporting ? 'export' : 'grid',
+        label: exporting ? 'Einspeisung' : 'Bezug',
+        icon: exporting ? 'solar_power' : 'power',
+        value: this.formatWatt(live ? gridWatt : null),
+        offset: this.gaugeOffset(gridWatt, DashboardComponent.GRID_MAX_WATT)
       }
     ];
   }
@@ -382,9 +387,11 @@ interface IntelligenceItem {
   readonly text: string;
 }
 
-/** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug). */
+/** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug/Einspeisung). */
 interface EnergyGauge {
   readonly key: 'pv' | 'consumption' | 'grid';
+  /** Farbton-Modifier: 'grid' = Bezug (rot), 'export' = Einspeisung (gruen). */
+  readonly tone: 'pv' | 'consumption' | 'grid' | 'export';
   readonly label: string;
   readonly icon: string;
   readonly value: string;
