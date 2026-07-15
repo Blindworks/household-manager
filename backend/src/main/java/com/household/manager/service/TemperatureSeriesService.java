@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
 import com.household.manager.model.entity.AlexaAirQualityReading;
@@ -21,6 +22,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -49,8 +51,74 @@ public class TemperatureSeriesService {
         return series;
     }
 
-    private List<TemperatureSensorSeries> safe(
-            String source, Supplier<List<TemperatureSensorSeries>> supplier) {
+    public List<CurrentTemperatureReading> getCurrent() {
+        List<CurrentTemperatureReading> result = new ArrayList<>();
+        result.addAll(safe("zigbee", this::zigbeeCurrent));
+        result.addAll(safe("weather", this::weatherCurrent));
+        result.addAll(safe("alexa", this::alexaCurrent));
+        return result;
+    }
+
+    private List<CurrentTemperatureReading> zigbeeCurrent() {
+        List<ZigbeeDevice> devices = zigbeeRepository
+                .findDistinctDevicesByMeasurementType(MeasurementType.TEMPERATURE)
+                .stream()
+                .sorted(Comparator.comparing(ZigbeeDevice::getFriendlyName))
+                .toList();
+
+        List<CurrentTemperatureReading> result = new ArrayList<>();
+        for (ZigbeeDevice device : devices) {
+            zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+                    device.getId(), MeasurementType.TEMPERATURE).ifPresent(temp -> {
+                BigDecimal humidity = zigbeeRepository
+                        .findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+                                device.getId(), MeasurementType.HUMIDITY)
+                        .map(ZigbeeMeasurement::getValue).orElse(null);
+                result.add(CurrentTemperatureReading.builder()
+                        .sensorId("zigbee:" + device.getId())
+                        .name(device.getFriendlyName())
+                        .source("ZIGBEE")
+                        .temperature(temp.getValue())
+                        .humidity(humidity)
+                        .measuredAt(temp.getMeasuredAt())
+                        .build());
+            });
+        }
+        return result;
+    }
+
+    private List<CurrentTemperatureReading> weatherCurrent() {
+        return weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc()
+                .map(r -> CurrentTemperatureReading.builder()
+                        .sensorId("weather:outdoor")
+                        .name("Außen")
+                        .source("WEATHER")
+                        .temperature(r.getTemperature())
+                        .humidity(r.getHumidity() != null ? BigDecimal.valueOf(r.getHumidity()) : null)
+                        .measuredAt(r.getReadingTime())
+                        .build())
+                .map(List::of)
+                .orElseGet(List::of);
+    }
+
+    private List<CurrentTemperatureReading> alexaCurrent() {
+        List<CurrentTemperatureReading> result = new ArrayList<>();
+        for (String applianceId : alexaRepository.findDistinctApplianceIds()) {
+            alexaRepository.findTopByApplianceIdOrderByReadingTimeDesc(applianceId)
+                    .filter(r -> r.getTemperature() != null)
+                    .ifPresent(r -> result.add(CurrentTemperatureReading.builder()
+                            .sensorId("alexa:" + applianceId)
+                            .name(r.getDeviceName() != null ? r.getDeviceName() : applianceId)
+                            .source("ALEXA")
+                            .temperature(r.getTemperature())
+                            .humidity(r.getHumidity())
+                            .measuredAt(r.getReadingTime())
+                            .build()));
+        }
+        return result;
+    }
+
+    private <T> List<T> safe(String source, Supplier<List<T>> supplier) {
         try {
             return supplier.get();
         } catch (Exception ex) {

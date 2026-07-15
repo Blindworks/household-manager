@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.model.entity.AlexaAirQualityReading;
 import com.household.manager.model.entity.WeatherReading;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -128,6 +130,89 @@ class TemperatureSeriesServiceTest {
                 .thenReturn(List.of());
 
         List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.WEEK);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void currentReturnsLatestPerZigbeeDevice() {
+        LocalDateTime now = LocalDateTime.now();
+        ZigbeeDevice wohnzimmer = device(1L, "Wohnzimmer");
+        when(zigbeeRepository.findDistinctDevicesByMeasurementType(MeasurementType.TEMPERATURE))
+                .thenReturn(List.of(wohnzimmer));
+        when(zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+                1L, MeasurementType.TEMPERATURE))
+                .thenReturn(Optional.of(measurement(MeasurementType.TEMPERATURE, "21.5", now)));
+        when(zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+                1L, MeasurementType.HUMIDITY))
+                .thenReturn(Optional.of(measurement(MeasurementType.HUMIDITY, "48", now)));
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.empty());
+        when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of());
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
+
+        assertThat(result).hasSize(1);
+        CurrentTemperatureReading reading = result.get(0);
+        assertThat(reading.getSensorId()).isEqualTo("zigbee:1");
+        assertThat(reading.getName()).isEqualTo("Wohnzimmer");
+        assertThat(reading.getSource()).isEqualTo("ZIGBEE");
+        assertThat(reading.getTemperature()).isEqualByComparingTo("21.5");
+        assertThat(reading.getHumidity()).isEqualByComparingTo("48");
+        assertThat(reading.getMeasuredAt()).isEqualTo(now);
+    }
+
+    @Test
+    void currentReturnsLatestWeatherAsOutside() {
+        LocalDateTime now = LocalDateTime.now();
+        WeatherReading reading = WeatherReading.builder()
+                .readingTime(now).temperature(new BigDecimal("12.30")).humidity(80).build();
+        when(zigbeeRepository.findDistinctDevicesByMeasurementType(any())).thenReturn(List.of());
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.of(reading));
+        when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of());
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getSensorId()).isEqualTo("weather:outdoor");
+        assertThat(result.get(0).getName()).isEqualTo("Außen");
+        assertThat(result.get(0).getSource()).isEqualTo("WEATHER");
+        assertThat(result.get(0).getTemperature()).isEqualByComparingTo("12.30");
+        assertThat(result.get(0).getHumidity()).isEqualByComparingTo("80");
+    }
+
+    @Test
+    void currentReturnsLatestPerAlexaAppliance() {
+        LocalDateTime now = LocalDateTime.now();
+        AlexaAirQualityReading latest = AlexaAirQualityReading.builder()
+                .applianceId("APP-A").deviceName("Sensor Bad").readingTime(now)
+                .temperature(new BigDecimal("22.50")).humidity(new BigDecimal("54.00")).build();
+        when(zigbeeRepository.findDistinctDevicesByMeasurementType(any())).thenReturn(List.of());
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.empty());
+        when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of("APP-A"));
+        when(alexaRepository.findTopByApplianceIdOrderByReadingTimeDesc("APP-A"))
+                .thenReturn(Optional.of(latest));
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getSensorId()).isEqualTo("alexa:APP-A");
+        assertThat(result.get(0).getName()).isEqualTo("Sensor Bad");
+        assertThat(result.get(0).getSource()).isEqualTo("ALEXA");
+        assertThat(result.get(0).getTemperature()).isEqualByComparingTo("22.50");
+    }
+
+    @Test
+    void currentSkipsFailingSource() {
+        when(zigbeeRepository.findDistinctDevicesByMeasurementType(any()))
+                .thenThrow(new RuntimeException("db down"));
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.empty());
+        lenient().when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of());
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
 
         assertThat(result).isEmpty();
     }
