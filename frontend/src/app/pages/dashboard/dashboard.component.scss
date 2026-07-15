@@ -259,25 +259,50 @@
   }
 }
 
-.lumina__climate-outside {
+.lumina__climate-outdoor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.lumina__climate-primary {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(192, 198, 214, 0.7);
+  color: var(--on-surface);
+
+  &--stale {
+    opacity: 0.45;
+  }
+}
+
+.lumina__climate-primary-icon {
+  font-size: 18px;
+  color: var(--secondary);
+}
+
+.lumina__climate-primary-value {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.lumina__climate-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(192, 198, 214, 0.55);
   font-size: 13px;
 }
 
-.lumina__climate-outside-icon {
-  font-size: 16px;
+.lumina__climate-secondary-icon {
+  font-size: 14px;
 }
 
-.lumina__climate-outside-value {
+.lumina__climate-secondary-value {
   font-family: 'Space Grotesk', 'Geist', sans-serif;
   font-weight: 600;
-  color: var(--on-surface);
 }
 
 .lumina__climate-rows {

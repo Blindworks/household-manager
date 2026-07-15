@@ -31,13 +31,14 @@ describe('buildClimateView', () => {
     };
   }
 
-  it('trennt Aussen von Innensensoren', () => {
+  it('trennt DWD-Aussen von Innensensoren', () => {
     const view = buildClimateView([
       reading({ sensorId: 'weather:outdoor', name: 'Außen', source: 'WEATHER', temperature: 12.4 }),
       reading({ sensorId: 'zigbee:1', name: 'Wohnzimmer', temperature: 21.4 })
     ], now);
 
-    expect(view.outsideLabel).toBe('12°');
+    expect(view.weatherLabel).toBe('12°');
+    expect(view.outdoorPrimary).toBeNull();
     expect(view.rows.length).toBe(1);
     expect(view.rows[0].name).toBe('Wohnzimmer');
     expect(view.rows[0].valueLabel).toBe('21,4°');
@@ -45,12 +46,50 @@ describe('buildClimateView', () => {
     expect(view.rows[0].stale).toBe(false);
   });
 
-  it('zeigt -- wenn keine Aussenquelle vorliegt', () => {
+  it('zeigt -- fuer den DWD-Wert, wenn keine Wetterquelle vorliegt', () => {
     const view = buildClimateView([reading({ sensorId: 'zigbee:1' })], now);
-    expect(view.outsideLabel).toBe('--');
+    expect(view.weatherLabel).toBe('--');
   });
 
-  it('markiert veraltete Messungen', () => {
+  it('fuehrt den Gartenfuehler als primaeren Aussenwert, nicht als Innenzeile', () => {
+    const view = buildClimateView([
+      reading({ sensorId: 'weather:outdoor', name: 'Außen', source: 'WEATHER', temperature: 12 }),
+      reading({ sensorId: 'zigbee:9', name: 'Temperatur Aqara Garten', temperature: 11.4 }),
+      reading({ sensorId: 'zigbee:1', name: 'Wohnzimmer', temperature: 21.4 })
+    ], now);
+
+    expect(view.outdoorPrimary).not.toBeNull();
+    expect(view.outdoorPrimary!.name).toBe('Temperatur Aqara Garten');
+    expect(view.outdoorPrimary!.valueLabel).toBe('11,4°');
+    expect(view.outdoorPrimary!.stale).toBe(false);
+    expect(view.weatherLabel).toBe('12°');
+    expect(view.rows.map(r => r.name)).toEqual(['Wohnzimmer']);
+  });
+
+  it('erkennt den Aussenfuehler unabhaengig von Gross-/Kleinschreibung', () => {
+    const view = buildClimateView(
+      [reading({ sensorId: 'zigbee:9', name: 'garten' })],
+      now,
+      ['Garten']
+    );
+    expect(view.outdoorPrimary).not.toBeNull();
+    expect(view.rows.length).toBe(0);
+  });
+
+  it('liefert keinen primaeren Aussenwert, wenn kein Aussenfuehler gemeldet hat', () => {
+    const view = buildClimateView([reading({ sensorId: 'zigbee:1', name: 'Wohnzimmer' })], now);
+    expect(view.outdoorPrimary).toBeNull();
+  });
+
+  it('markiert einen veralteten Gartenfuehler', () => {
+    const view = buildClimateView([
+      reading({ sensorId: 'zigbee:9', name: 'Temperatur Aqara Garten', measuredAt: '2026-07-15T09:00:00Z' })
+    ], now);
+
+    expect(view.outdoorPrimary!.stale).toBe(true);
+  });
+
+  it('markiert veraltete Innen-Messungen', () => {
     const view = buildClimateView([
       reading({ sensorId: 'zigbee:1', name: 'Bad', measuredAt: '2026-07-15T09:00:00Z' })
     ], now);
