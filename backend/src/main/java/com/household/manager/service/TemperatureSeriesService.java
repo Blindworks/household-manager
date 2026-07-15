@@ -36,6 +36,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TemperatureSeriesService {
 
+    /** Zeitfenster für die Sensor-Discovery in {@link #getCurrent()}: begrenzt den Scan der
+     * append-only Historientabellen, statt bei jedem Poll die komplette Lebenszeit zu scannen. */
+    private static final int CURRENT_LOOKBACK_DAYS = 7;
+
     private final ZigbeeMeasurementRepository zigbeeRepository;
     private final WeatherReadingRepository weatherRepository;
     private final AlexaAirQualityReadingRepository alexaRepository;
@@ -52,16 +56,19 @@ public class TemperatureSeriesService {
     }
 
     public List<CurrentTemperatureReading> getCurrent() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime since = now.minusDays(CURRENT_LOOKBACK_DAYS);
+
         List<CurrentTemperatureReading> result = new ArrayList<>();
-        result.addAll(safe("zigbee", this::zigbeeCurrent));
+        result.addAll(safe("zigbee", () -> zigbeeCurrent(since, now)));
         result.addAll(safe("weather", this::weatherCurrent));
-        result.addAll(safe("alexa", this::alexaCurrent));
+        result.addAll(safe("alexa", () -> alexaCurrent(since)));
         return result;
     }
 
-    private List<CurrentTemperatureReading> zigbeeCurrent() {
+    private List<CurrentTemperatureReading> zigbeeCurrent(LocalDateTime since, LocalDateTime now) {
         List<ZigbeeDevice> devices = zigbeeRepository
-                .findDistinctDevicesByMeasurementType(MeasurementType.TEMPERATURE)
+                .findDistinctDevicesByMeasurementTypeInRange(MeasurementType.TEMPERATURE, since, now)
                 .stream()
                 .sorted(Comparator.comparing(ZigbeeDevice::getFriendlyName))
                 .toList();
@@ -101,9 +108,9 @@ public class TemperatureSeriesService {
                 .orElseGet(List::of);
     }
 
-    private List<CurrentTemperatureReading> alexaCurrent() {
+    private List<CurrentTemperatureReading> alexaCurrent(LocalDateTime since) {
         List<CurrentTemperatureReading> result = new ArrayList<>();
-        for (String applianceId : alexaRepository.findDistinctApplianceIds()) {
+        for (String applianceId : alexaRepository.findDistinctApplianceIdsSince(since)) {
             alexaRepository.findTopByApplianceIdOrderByReadingTimeDesc(applianceId)
                     .filter(r -> r.getTemperature() != null)
                     .ifPresent(r -> result.add(CurrentTemperatureReading.builder()

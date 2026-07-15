@@ -28,10 +28,6 @@ public interface ZigbeeMeasurementRepository extends JpaRepository<ZigbeeMeasure
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
 
-    /** Alle Geräte, die jemals einen Messwert des Typs geliefert haben. */
-    @Query("select distinct m.device from ZigbeeMeasurement m where m.measurementType = :type")
-    List<ZigbeeDevice> findDistinctDevicesByMeasurementType(@Param("type") MeasurementType type);
-
     /** Jüngster Messwert eines Geräts für einen Messtyp. */
     Optional<ZigbeeMeasurement> findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
             Long deviceId, MeasurementType measurementType);

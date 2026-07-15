@@ -138,7 +138,8 @@ class TemperatureSeriesServiceTest {
     void currentReturnsLatestPerZigbeeDevice() {
         LocalDateTime now = LocalDateTime.now();
         ZigbeeDevice wohnzimmer = device(1L, "Wohnzimmer");
-        when(zigbeeRepository.findDistinctDevicesByMeasurementType(MeasurementType.TEMPERATURE))
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(
+                eq(MeasurementType.TEMPERATURE), any(), any()))
                 .thenReturn(List.of(wohnzimmer));
         when(zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
                 1L, MeasurementType.TEMPERATURE))
@@ -148,7 +149,7 @@ class TemperatureSeriesServiceTest {
                 .thenReturn(Optional.of(measurement(MeasurementType.HUMIDITY, "48", now)));
         when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
                 .thenReturn(Optional.empty());
-        when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of());
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of());
 
         List<CurrentTemperatureReading> result = service.getCurrent();
 
@@ -167,10 +168,11 @@ class TemperatureSeriesServiceTest {
         LocalDateTime now = LocalDateTime.now();
         WeatherReading reading = WeatherReading.builder()
                 .readingTime(now).temperature(new BigDecimal("12.30")).humidity(80).build();
-        when(zigbeeRepository.findDistinctDevicesByMeasurementType(any())).thenReturn(List.of());
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(any(), any(), any()))
+                .thenReturn(List.of());
         when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
                 .thenReturn(Optional.of(reading));
-        when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of());
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of());
 
         List<CurrentTemperatureReading> result = service.getCurrent();
 
@@ -188,10 +190,11 @@ class TemperatureSeriesServiceTest {
         AlexaAirQualityReading latest = AlexaAirQualityReading.builder()
                 .applianceId("APP-A").deviceName("Sensor Bad").readingTime(now)
                 .temperature(new BigDecimal("22.50")).humidity(new BigDecimal("54.00")).build();
-        when(zigbeeRepository.findDistinctDevicesByMeasurementType(any())).thenReturn(List.of());
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(any(), any(), any()))
+                .thenReturn(List.of());
         when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
                 .thenReturn(Optional.empty());
-        when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of("APP-A"));
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of("APP-A"));
         when(alexaRepository.findTopByApplianceIdOrderByReadingTimeDesc("APP-A"))
                 .thenReturn(Optional.of(latest));
 
@@ -206,11 +209,11 @@ class TemperatureSeriesServiceTest {
 
     @Test
     void currentSkipsFailingSource() {
-        when(zigbeeRepository.findDistinctDevicesByMeasurementType(any()))
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(any(), any(), any()))
                 .thenThrow(new RuntimeException("db down"));
         when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
                 .thenReturn(Optional.empty());
-        lenient().when(alexaRepository.findDistinctApplianceIds()).thenReturn(List.of());
+        lenient().when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of());
 
         List<CurrentTemperatureReading> result = service.getCurrent();
 
