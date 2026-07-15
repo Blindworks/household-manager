@@ -643,7 +643,7 @@
   align-items: center;
   gap: 8px;
 
-  // Farbton je Kennzahl: PV gruen, Verbrauch blau, Bezug rot.
+  // Farbton je Kennzahl: PV gruen, Verbrauch blau, Bezug rot, Einspeisung gruen.
   &--pv {
     --gauge-color: var(--secondary);
   }
@@ -654,6 +654,10 @@
 
   &--grid {
     --gauge-color: var(--error);
+  }
+
+  &--export {
+    --gauge-color: var(--secondary);
   }
 }
 
