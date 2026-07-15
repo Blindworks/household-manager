@@ -1,5 +1,8 @@
 # Angular 21 Frontend Development - Project Memory
 
+## Git Safety
+- [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
+
 ## Project Structure
 - **Location**: `C:\Users\bened\IdeaProjects\Household-Manager\frontend\src\app`
 - **Architecture**: Angular 21 standalone components (no NgModules)
