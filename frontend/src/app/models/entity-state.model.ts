@@ -7,6 +7,8 @@ export interface EntityState {
   source: string;
   sourceRef: string;
   friendlyName: string;
+  customName?: string | null;
+  displayName: string;
   state: string;
   attributes: Record<string, unknown>;
   lastChanged: string;

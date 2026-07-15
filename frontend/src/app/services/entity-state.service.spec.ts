@@ -43,4 +43,21 @@ describe('EntityStateService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  it('sets a custom name for an entity', () => {
+    service.setCustomName('sensor.zigbee_bad_temperature', 'Bad').subscribe();
+
+    const req = httpMock.expectOne('/api/v1/entities/sensor.zigbee_bad_temperature/custom-name');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ customName: 'Bad' });
+    req.flush({});
+  });
+
+  it('clears a custom name by sending null', () => {
+    service.setCustomName('sensor.zigbee_bad_temperature', null).subscribe();
+
+    const req = httpMock.expectOne('/api/v1/entities/sensor.zigbee_bad_temperature/custom-name');
+    expect(req.request.body).toEqual({ customName: null });
+    req.flush({});
+  });
 });
