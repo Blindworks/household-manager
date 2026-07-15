@@ -33,6 +33,13 @@ export class EntityStateService {
     );
   }
 
+  /** Setzt oder löscht (null) den Kurznamen einer Entität. Gilt für alle Quellen. */
+  setCustomName(entityId: string, customName: string | null): Observable<EntityState> {
+    return this.http.put<EntityState>(`${this.baseUrl}/${entityId}/custom-name`, { customName }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** Legt eine vom Benutzer definierte Boolean-Entität an (z. B. "Nachtmodus"). */
   createManualEntity(request: CreateManualEntityRequest): Observable<EntityState> {
     return this.http.post<EntityState>(this.manualUrl, request).pipe(
