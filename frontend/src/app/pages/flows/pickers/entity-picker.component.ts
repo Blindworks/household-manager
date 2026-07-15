@@ -23,7 +23,7 @@ export class EntityPickerComponent implements OnInit {
     const v = this.value();
     if (!v) { return ''; }
     const found = this.options().find(o => o.entityId === v);
-    return found ? `${found.friendlyName} (${found.state})` : `nicht gefunden: ${v}`;
+    return found ? `${found.displayName} (${found.state})` : `nicht gefunden: ${v}`;
   });
 
   ngOnInit(): void {

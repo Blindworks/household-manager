@@ -2,7 +2,7 @@
   <select [ngModel]="value() ?? ''" (ngModelChange)="select($event)">
     <option value="" disabled>Entity wählen…</option>
     @for (opt of options(); track opt.entityId) {
-      <option [value]="opt.entityId">{{ opt.friendlyName }} ({{ opt.state }})</option>
+      <option [value]="opt.entityId">{{ opt.displayName }} ({{ opt.state }})</option>
     }
   </select>
   @if (displayLabel().startsWith('nicht gefunden')) {
