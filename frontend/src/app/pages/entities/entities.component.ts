@@ -26,6 +26,8 @@ export class EntitiesComponent implements OnInit {
   readonly entities = signal<EntityState[]>([]);
   readonly error = signal<string | null>(null);
   readonly expandedEntityId = signal<string | null>(null);
+  readonly editingEntityId = signal<string | null>(null);
+  readonly editName = signal<string>('');
 
   domainFilter = signal<EntityDomain | ''>('');
   sourceFilter = signal<string>('');
@@ -41,6 +43,7 @@ export class EntitiesComponent implements OnInit {
       (!this.domainFilter() || e.domain === this.domainFilter()) &&
       (!this.sourceFilter() || e.source === this.sourceFilter()) &&
       (!search ||
+        e.displayName.toLowerCase().includes(search) ||
         e.friendlyName.toLowerCase().includes(search) ||
         e.entityId.toLowerCase().includes(search))
     );
@@ -62,6 +65,31 @@ export class EntitiesComponent implements OnInit {
 
   toggleExpanded(entityId: string): void {
     this.expandedEntityId.set(this.expandedEntityId() === entityId ? null : entityId);
+  }
+
+  startEditName(entity: EntityState, event: Event): void {
+    event.stopPropagation();
+    this.editingEntityId.set(entity.entityId);
+    this.editName.set(entity.customName ?? '');
+  }
+
+  cancelEditName(event: Event): void {
+    event.stopPropagation();
+    this.editingEntityId.set(null);
+  }
+
+  saveCustomName(entity: EntityState, event: Event): void {
+    event.stopPropagation();
+    const value = this.editName().trim();
+    this.entityStateService.setCustomName(entity.entityId, value === '' ? null : value)
+      .subscribe({
+        next: updated => {
+          this.entities.update(list =>
+            list.map(e => e.entityId === updated.entityId ? updated : e));
+          this.editingEntityId.set(null);
+        },
+        error: err => this.error.set(err.message)
+      });
   }
 
   attributeEntries(entity: EntityState): { key: string; value: unknown }[] {

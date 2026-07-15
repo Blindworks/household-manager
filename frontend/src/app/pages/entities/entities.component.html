@@ -48,7 +48,27 @@
     <tbody>
       @for (entity of filteredEntities(); track entity.entityId) {
         <tr class="entities-table__row" (click)="toggleExpanded(entity.entityId)">
-          <td>{{ entity.friendlyName }}</td>
+          <td class="entities-table__name-cell" (click)="$event.stopPropagation()">
+            @if (editingEntityId() === entity.entityId) {
+              <div class="entities-table__edit">
+                <input
+                  type="text"
+                  [ngModel]="editName()"
+                  (ngModelChange)="editName.set($event)"
+                  (keyup.enter)="saveCustomName(entity, $event)"
+                  placeholder="Kurzname (leer = Standard)" />
+                <button type="button" (click)="saveCustomName(entity, $event)" title="Speichern">✓</button>
+                <button type="button" (click)="cancelEditName($event)" title="Abbrechen">✕</button>
+              </div>
+            } @else {
+              <span class="entities-table__name">{{ entity.displayName }}</span>
+              <button
+                type="button"
+                class="entities-table__edit-btn"
+                (click)="startEditName(entity, $event)"
+                title="Kurznamen bearbeiten">✎</button>
+            }
+          </td>
           <td class="entities-table__id">{{ entity.entityId }}</td>
           <td>{{ entity.domain }}</td>
           <td>{{ entity.source }}</td>
