@@ -1,10 +1,12 @@
 package com.household.manager.controller;
 
 import com.household.manager.dto.EntityStateResponse;
+import com.household.manager.dto.UpdateEntityCustomNameRequest;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -44,5 +46,14 @@ public class EntityStateController {
     public ResponseEntity<Void> deleteEntity(@PathVariable String entityId) {
         boolean deleted = entityStateService.deleteByEntityId(entityId);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{entityId}/custom-name")
+    public ResponseEntity<EntityStateResponse> setCustomName(
+            @PathVariable String entityId,
+            @Valid @RequestBody UpdateEntityCustomNameRequest request) {
+        return entityStateService.setCustomName(entityId, request.getCustomName())
+                .map(entity -> ResponseEntity.ok(responseMapper.toResponse(entity)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
