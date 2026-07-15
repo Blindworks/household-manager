@@ -22,12 +22,29 @@ export interface TemperatureRow {
   stale: boolean;
 }
 
+/** Primärer Außenfühler (realer Sensor am Haus, z. B. Garten). */
+export interface OutdoorReading {
+  name: string;
+  /** Temperatur, z. B. "11,4°". */
+  valueLabel: string;
+  stale: boolean;
+}
+
 /** Aufbereitetes View-Model der Klima-Kachel. */
 export interface ClimateView {
-  /** Außentemperatur als Referenz, z. B. "12°" oder "--". */
-  outsideLabel: string;
+  /** Realer Außenfühler (primär). Null, wenn kein Außenfühler gemeldet hat. */
+  outdoorPrimary: OutdoorReading | null;
+  /** DWD-/Wetter-Außentemperatur als sekundäre Referenz, z. B. "12°" oder "--". */
+  weatherLabel: string;
+  /** Innensensor-Zeilen. */
   rows: TemperatureRow[];
 }
+
+/**
+ * Sensornamen, die als reale Außenfühler (nicht als Innenraum) behandelt werden.
+ * Erweiterbar um weitere Außenfühler, ohne die Logik zu ändern.
+ */
+export const OUTDOOR_SENSOR_NAMES: readonly string[] = ['Temperatur Aqara Garten'];
 
 /** Messung gilt als veraltet, wenn älter als diese Schwelle. */
 const STALE_THRESHOLD_MS = 60 * 60 * 1000;
@@ -46,23 +63,42 @@ export function comfortRating(celsius: number): ComfortRating {
   return { label: 'heiß', tone: 'hot' };
 }
 
-/** Trennt Außen von Innensensoren und baut die Kachelzeilen. */
+/**
+ * Teilt die Messwerte in primären Außenfühler, DWD-Referenz und Innensensor-Zeilen.
+ * Außenfühler werden über {@link OUTDOOR_SENSOR_NAMES} erkannt (Name, case-insensitiv).
+ */
 export function buildClimateView(
   readings: CurrentTemperatureReading[],
-  nowMs: number
+  nowMs: number,
+  outdoorNames: readonly string[] = OUTDOOR_SENSOR_NAMES
 ): ClimateView {
-  const outside = readings.find(r => r.source === 'WEATHER');
-  const outsideLabel = outside ? formatCelsius(Math.round(outside.temperature), 0) : '--';
+  const outdoorSet = new Set(outdoorNames.map(name => name.trim().toLowerCase()));
+  const isOutdoorSensor = (reading: CurrentTemperatureReading): boolean =>
+    reading.source !== 'WEATHER' && outdoorSet.has(reading.name.trim().toLowerCase());
+
+  const weather = readings.find(reading => reading.source === 'WEATHER');
+  const weatherLabel = weather ? formatCelsius(Math.round(weather.temperature), 0) : '--';
+
+  const outdoorSensor = readings.find(isOutdoorSensor);
+  const outdoorPrimary = outdoorSensor ? toOutdoorReading(outdoorSensor, nowMs) : null;
 
   const rows = readings
-    .filter(r => r.source !== 'WEATHER')
-    .map(r => toRow(r, nowMs));
+    .filter(reading => reading.source !== 'WEATHER' && !isOutdoorSensor(reading))
+    .map(reading => toRow(reading, nowMs));
 
-  return { outsideLabel, rows };
+  return { outdoorPrimary, weatherLabel, rows };
+}
+
+function toOutdoorReading(reading: CurrentTemperatureReading, nowMs: number): OutdoorReading {
+  return {
+    name: reading.name,
+    valueLabel: formatCelsius(reading.temperature, 1),
+    stale: isStale(reading, nowMs)
+  };
 }
 
 function toRow(reading: CurrentTemperatureReading, nowMs: number): TemperatureRow {
-  const stale = nowMs - new Date(reading.measuredAt).getTime() > STALE_THRESHOLD_MS;
+  const stale = isStale(reading, nowMs);
   const comfort = comfortRating(reading.temperature);
   return {
     name: reading.name,
@@ -71,6 +107,10 @@ function toRow(reading: CurrentTemperatureReading, nowMs: number): TemperatureRo
     tone: stale ? 'stale' : comfort.tone,
     stale
   };
+}
+
+function isStale(reading: CurrentTemperatureReading, nowMs: number): boolean {
+  return nowMs - new Date(reading.measuredAt).getTime() > STALE_THRESHOLD_MS;
 }
 
 function formatCelsius(value: number, fractionDigits: number): string {

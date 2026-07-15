@@ -63,7 +63,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   energyLive: EnergyLive | null = null;
   liveStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
 
-  climate: ClimateView = { outsideLabel: '--', rows: [] };
+  climate: ClimateView = { outdoorPrimary: null, weatherLabel: '--', rows: [] };
 
   /** Raum-Kacheln (Platzhalter, spaeter aus Entitaeten befuellbar). */
   readonly rooms: RoomTile[] = [

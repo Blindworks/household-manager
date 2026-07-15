@@ -47,11 +47,22 @@
             <div class="lumina__room-icon">
               <span class="material-symbols-outlined">device_thermostat</span>
             </div>
-            <span class="lumina__climate-outside">
-              <span class="material-symbols-outlined lumina__climate-outside-icon">cloud</span>
-              <span class="lumina__climate-outside-label">Außen</span>
-              <span class="lumina__climate-outside-value">{{ climate.outsideLabel }}</span>
-            </span>
+            <div class="lumina__climate-outdoor">
+              <div
+                *ngIf="climate.outdoorPrimary as primary"
+                class="lumina__climate-primary"
+                [class.lumina__climate-primary--stale]="primary.stale"
+                [title]="primary.name"
+              >
+                <span class="material-symbols-outlined lumina__climate-primary-icon">yard</span>
+                <span class="lumina__climate-primary-value">{{ primary.valueLabel }}</span>
+              </div>
+              <div class="lumina__climate-secondary">
+                <span class="material-symbols-outlined lumina__climate-secondary-icon">cloud</span>
+                <span class="lumina__climate-secondary-label">DWD</span>
+                <span class="lumina__climate-secondary-value">{{ climate.weatherLabel }}</span>
+              </div>
+            </div>
           </div>
           <div class="lumina__room-body">
             <h3 class="lumina__room-name">Temperaturen</h3>
