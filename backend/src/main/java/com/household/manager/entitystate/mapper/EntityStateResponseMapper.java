@@ -29,11 +29,19 @@ public class EntityStateResponseMapper {
                 .source(entity.getSource().name())
                 .sourceRef(entity.getSourceRef())
                 .friendlyName(entity.getFriendlyName())
+                .customName(entity.getCustomName())
+                .displayName(displayName(entity))
                 .state(entity.getState())
                 .attributes(parseAttributes(entity.getAttributes()))
                 .lastChanged(entity.getLastChanged())
                 .lastUpdated(entity.getLastUpdated())
                 .build();
+    }
+
+    /** Effektiver Anzeigename: Kurzname, falls gesetzt, sonst der Integrationsname. */
+    private String displayName(EntityState entity) {
+        String custom = entity.getCustomName();
+        return custom != null && !custom.isBlank() ? custom : entity.getFriendlyName();
     }
 
     /** Deserialisiert den JSON-Attribut-String; leere/ungültige Werte ergeben eine leere Map. */
