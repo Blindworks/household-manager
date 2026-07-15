@@ -80,4 +80,28 @@ public class EntityStateService {
         repository.deleteByEntityId(entityId);
         return true;
     }
+
+    /**
+     * Setzt oder löscht den benutzerdefinierten Kurznamen einer Entität.
+     * Leerer/nur-Whitespace-Wert löscht den Kurznamen (Fallback auf friendlyName).
+     * Bewusst ein direkter, benutzerinitiierter Schreibpfad – nicht der
+     * fehlertolerante reportState/upsert-Pfad der Integrationen.
+     *
+     * @return aktualisierte Entität, oder leer wenn die entityId unbekannt ist
+     */
+    @Transactional
+    public Optional<EntityState> setCustomName(String entityId, String customName) {
+        return repository.findByEntityId(entityId).map(entity -> {
+            entity.setCustomName(normalizeCustomName(customName));
+            return repository.save(entity);
+        });
+    }
+
+    private String normalizeCustomName(String customName) {
+        if (customName == null) {
+            return null;
+        }
+        String trimmed = customName.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 }
