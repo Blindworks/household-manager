@@ -2,7 +2,12 @@ package com.household.manager.service;
 
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.model.entity.AlexaAirQualityReading;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
 import com.household.manager.repository.WeatherReadingRepository;
@@ -33,11 +38,19 @@ class TemperatureSeriesServiceTest {
     @Mock private ZigbeeMeasurementRepository zigbeeRepository;
     @Mock private WeatherReadingRepository weatherRepository;
     @Mock private AlexaAirQualityReadingRepository alexaRepository;
+    @Mock private EntityStateService entityStateService;
 
     @InjectMocks private TemperatureSeriesService service;
 
     private ZigbeeDevice device(long id, String name) {
         return ZigbeeDevice.builder().id(id).friendlyName(name).build();
+    }
+
+    /** Stubbt die Temperatur-Entity einer Quelle mit gesetztem Kurznamen. */
+    private void stubCustomName(EntitySource source, String sourceRef, String customName) {
+        String entityId = EntityIds.build(EntityDomain.SENSOR, source, sourceRef, "temperature");
+        when(entityStateService.getByEntityId(entityId))
+                .thenReturn(Optional.of(EntityState.builder().customName(customName).build()));
     }
 
     private ZigbeeMeasurement measurement(MeasurementType type, String value, LocalDateTime at) {
@@ -218,5 +231,87 @@ class TemperatureSeriesServiceTest {
         List<CurrentTemperatureReading> result = service.getCurrent();
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void currentUsesCustomNameForZigbeeWhenSet() {
+        LocalDateTime now = LocalDateTime.now();
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(
+                eq(MeasurementType.TEMPERATURE), any(), any()))
+                .thenReturn(List.of(device(1L, "Wohnzimmer")));
+        when(zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+                1L, MeasurementType.TEMPERATURE))
+                .thenReturn(Optional.of(measurement(MeasurementType.TEMPERATURE, "21.5", now)));
+        when(zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+                1L, MeasurementType.HUMIDITY)).thenReturn(Optional.empty());
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.empty());
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of());
+        stubCustomName(EntitySource.ZIGBEE, "Wohnzimmer", "Couch-Sensor");
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Couch-Sensor");
+    }
+
+    @Test
+    void currentUsesCustomNameForWeatherWhenSet() {
+        LocalDateTime now = LocalDateTime.now();
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(any(), any(), any()))
+                .thenReturn(List.of());
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.of(WeatherReading.builder()
+                        .readingTime(now).temperature(new BigDecimal("12.30")).humidity(80).build()));
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of());
+        stubCustomName(EntitySource.WEATHER, "dwd", "Garten");
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Garten");
+    }
+
+    @Test
+    void currentUsesCustomNameForAlexaWhenSet() {
+        LocalDateTime now = LocalDateTime.now();
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(any(), any(), any()))
+                .thenReturn(List.of());
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc())
+                .thenReturn(Optional.empty());
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of("APP-A"));
+        when(alexaRepository.findTopByApplianceIdOrderByReadingTimeDesc("APP-A"))
+                .thenReturn(Optional.of(AlexaAirQualityReading.builder()
+                        .applianceId("APP-A").deviceName("Sensor Bad").readingTime(now)
+                        .temperature(new BigDecimal("22.50")).build()));
+        stubCustomName(EntitySource.ALEXA, "APP-A", "Badezimmer");
+
+        List<CurrentTemperatureReading> result = service.getCurrent();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Badezimmer");
+    }
+
+    @Test
+    void seriesUsesCustomNameForZigbeeWhenSet() {
+        LocalDateTime now = LocalDateTime.now();
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(
+                eq(MeasurementType.TEMPERATURE), any(), any()))
+                .thenReturn(List.of(device(1L, "Wohnzimmer")));
+        when(zigbeeRepository.findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                eq(1L), eq(MeasurementType.TEMPERATURE), any(), any()))
+                .thenReturn(List.of(measurement(MeasurementType.TEMPERATURE, "21.5", now)));
+        when(zigbeeRepository.findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                eq(1L), eq(MeasurementType.HUMIDITY), any(), any())).thenReturn(List.of());
+        when(weatherRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any()))
+                .thenReturn(List.of());
+        when(alexaRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any()))
+                .thenReturn(List.of());
+        stubCustomName(EntitySource.ZIGBEE, "Wohnzimmer", "Couch-Sensor");
+
+        List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.WEEK);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Couch-Sensor");
     }
 }

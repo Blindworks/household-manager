@@ -3,7 +3,12 @@ package com.household.manager.service;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.model.entity.AlexaAirQualityReading;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
 import com.household.manager.repository.WeatherReadingRepository;
@@ -43,6 +48,7 @@ public class TemperatureSeriesService {
     private final ZigbeeMeasurementRepository zigbeeRepository;
     private final WeatherReadingRepository weatherRepository;
     private final AlexaAirQualityReadingRepository alexaRepository;
+    private final EntityStateService entityStateService;
 
     public List<TemperatureSensorSeries> getSeries(TemperatureRange range) {
         LocalDateTime to = LocalDateTime.now();
@@ -83,7 +89,7 @@ public class TemperatureSeriesService {
                         .map(ZigbeeMeasurement::getValue).orElse(null);
                 result.add(CurrentTemperatureReading.builder()
                         .sensorId("zigbee:" + device.getId())
-                        .name(device.getFriendlyName())
+                        .name(temperatureName(EntitySource.ZIGBEE, device.getFriendlyName(), device.getFriendlyName()))
                         .source("ZIGBEE")
                         .temperature(temp.getValue())
                         .humidity(humidity)
@@ -98,7 +104,7 @@ public class TemperatureSeriesService {
         return weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc()
                 .map(r -> CurrentTemperatureReading.builder()
                         .sensorId("weather:outdoor")
-                        .name("Außen")
+                        .name(temperatureName(EntitySource.WEATHER, "dwd", "Außen"))
                         .source("WEATHER")
                         .temperature(r.getTemperature())
                         .humidity(r.getHumidity() != null ? BigDecimal.valueOf(r.getHumidity()) : null)
@@ -115,7 +121,8 @@ public class TemperatureSeriesService {
                     .filter(r -> r.getTemperature() != null)
                     .ifPresent(r -> result.add(CurrentTemperatureReading.builder()
                             .sensorId("alexa:" + applianceId)
-                            .name(r.getDeviceName() != null ? r.getDeviceName() : applianceId)
+                            .name(temperatureName(EntitySource.ALEXA, applianceId,
+                                    r.getDeviceName() != null ? r.getDeviceName() : applianceId))
                             .source("ALEXA")
                             .temperature(r.getTemperature())
                             .humidity(r.getHumidity())
@@ -132,6 +139,20 @@ public class TemperatureSeriesService {
             log.warn("Temperatur-Quelle '{}' fehlgeschlagen: {}", source, ex.getMessage(), ex);
             return List.of();
         }
+    }
+
+    /**
+     * Anzeigename eines Temperatursensors: der benutzerdefinierte Kurzname der zugehörigen
+     * Temperatur-Entity, falls gesetzt, sonst der Rohname der Quelle. Die Entity-ID wird
+     * deterministisch aus Quelle und stabiler Referenz gebildet – identisch zum jeweiligen
+     * Entity-Mapper, sodass sie ohne zusätzliche Verknüpfungstabelle zueinander finden.
+     */
+    private String temperatureName(EntitySource source, String sourceRef, String rawName) {
+        String entityId = EntityIds.build(EntityDomain.SENSOR, source, sourceRef, "temperature");
+        return entityStateService.getByEntityId(entityId)
+                .map(EntityState::getCustomName)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse(rawName);
     }
 
     private List<TemperatureSensorSeries> zigbeeSeries(LocalDateTime from, LocalDateTime to) {
@@ -154,7 +175,7 @@ public class TemperatureSeriesService {
 
             result.add(TemperatureSensorSeries.builder()
                     .sensorId("zigbee:" + device.getId())
-                    .name(device.getFriendlyName())
+                    .name(temperatureName(EntitySource.ZIGBEE, device.getFriendlyName(), device.getFriendlyName()))
                     .source("ZIGBEE")
                     .temperature(temperature)
                     .humidity(humidity)
@@ -181,7 +202,7 @@ public class TemperatureSeriesService {
 
         return List.of(TemperatureSensorSeries.builder()
                 .sensorId("weather:outdoor")
-                .name("Außen")
+                .name(temperatureName(EntitySource.WEATHER, "dwd", "Außen"))
                 .source("WEATHER")
                 .temperature(temperature)
                 .humidity(humidity)
@@ -213,7 +234,7 @@ public class TemperatureSeriesService {
 
             result.add(TemperatureSensorSeries.builder()
                     .sensorId("alexa:" + applianceId)
-                    .name(name != null ? name : applianceId)
+                    .name(temperatureName(EntitySource.ALEXA, applianceId, name != null ? name : applianceId))
                     .source("ALEXA")
                     .temperature(temperature)
                     .humidity(humidity)
