@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TemperatureService } from './temperature.service';
-import { TemperatureSensorSeries } from '../models/temperature.model';
+import { TemperatureSensorSeries, CurrentTemperatureReading } from '../models/temperature.model';
 
 describe('TemperatureService', () => {
   let service: TemperatureService;
@@ -34,5 +34,14 @@ describe('TemperatureService', () => {
     const req = httpMock.expectOne(r => r.url === '/api/v1/temperatures');
     expect(req.request.params.get('range')).toBe('DAY');
     req.flush([]);
+  });
+
+  it('requests current readings', () => {
+    const current: CurrentTemperatureReading[] = [];
+    service.getCurrent().subscribe(result => expect(result).toEqual(current));
+
+    const req = httpMock.expectOne('/api/v1/temperatures/current');
+    expect(req.request.method).toBe('GET');
+    req.flush(current);
   });
 });

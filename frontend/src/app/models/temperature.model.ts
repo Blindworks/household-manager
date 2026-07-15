@@ -18,3 +18,14 @@ export interface TemperatureSensorSeries {
   temperature: TimeValue[];
   humidity: TimeValue[];
 }
+
+/** Aktueller (jüngster) Wert eines Temperatursensors. */
+export interface CurrentTemperatureReading {
+  sensorId: string;
+  name: string;
+  source: TemperatureSource;
+  temperature: number;
+  humidity?: number;
+  /** ISO-Zeitstempel der Messung. */
+  measuredAt: string;
+}
