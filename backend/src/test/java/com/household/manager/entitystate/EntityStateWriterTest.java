@@ -141,6 +141,29 @@ class EntityStateWriterTest {
         assertEquals("21.5", captor.getValue().getState());
     }
 
+    @Test
+    void upsertPreservesUserSetCustomName() {
+        EntityState existing = EntityState.builder()
+                .entityId("sensor.zigbee_wohnzimmer_temperature")
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.ZIGBEE)
+                .sourceRef("Wohnzimmer")
+                .friendlyName("Wohnzimmer Temperatur")
+                .customName("Küche")
+                .state("21.5")
+                .lastChanged(LocalDateTime.now())
+                .lastUpdated(LocalDateTime.now())
+                .build();
+        when(repository.findByEntityId("sensor.zigbee_wohnzimmer_temperature"))
+                .thenReturn(Optional.of(existing));
+
+        writer.upsert(update("22.0"));
+
+        ArgumentCaptor<EntityState> captor = ArgumentCaptor.forClass(EntityState.class);
+        verify(repository).save(captor.capture());
+        assertEquals("Küche", captor.getValue().getCustomName());
+    }
+
     private EntityState existingEntity(String state, LocalDateTime timestamps) {
         return EntityState.builder()
                 .id(1L)
