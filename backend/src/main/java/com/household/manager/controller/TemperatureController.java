@@ -1,5 +1,6 @@
 package com.household.manager.controller;
 
+import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.service.TemperatureRange;
 import com.household.manager.service.TemperatureSeriesService;
@@ -25,5 +26,10 @@ public class TemperatureController {
     public List<TemperatureSensorSeries> getTemperatures(
             @RequestParam(required = false, defaultValue = "WEEK") TemperatureRange range) {
         return temperatureSeriesService.getSeries(range);
+    }
+
+    @GetMapping("/current")
+    public List<CurrentTemperatureReading> getCurrentTemperatures() {
+        return temperatureSeriesService.getCurrent();
     }
 }
