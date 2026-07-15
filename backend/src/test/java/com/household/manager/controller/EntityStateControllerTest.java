@@ -122,4 +122,26 @@ class EntityStateControllerTest {
         mockMvc.perform(get("/v1/entities").param("domain", "FOO"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void displayNameFallsBackToFriendlyNameWhenNoCustomName() throws Exception {
+        when(entityStateService.find(null, null)).thenReturn(List.of(sensor()));
+
+        mockMvc.perform(get("/v1/entities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].customName").doesNotExist())
+                .andExpect(jsonPath("$[0].displayName").value("Wohnzimmer Temperatur"));
+    }
+
+    @Test
+    void displayNameUsesCustomNameWhenSet() throws Exception {
+        EntityState withCustom = sensor();
+        withCustom.setCustomName("Wohnzimmer");
+        when(entityStateService.find(null, null)).thenReturn(List.of(withCustom));
+
+        mockMvc.perform(get("/v1/entities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].customName").value("Wohnzimmer"))
+                .andExpect(jsonPath("$[0].displayName").value("Wohnzimmer"));
+    }
 }
