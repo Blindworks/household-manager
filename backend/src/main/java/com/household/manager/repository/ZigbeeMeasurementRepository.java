@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ZigbeeMeasurementRepository extends JpaRepository<ZigbeeMeasurement, Long> {
@@ -26,4 +27,12 @@ public interface ZigbeeMeasurementRepository extends JpaRepository<ZigbeeMeasure
             @Param("type") MeasurementType type,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    /** Alle Geräte, die jemals einen Messwert des Typs geliefert haben. */
+    @Query("select distinct m.device from ZigbeeMeasurement m where m.measurementType = :type")
+    List<ZigbeeDevice> findDistinctDevicesByMeasurementType(@Param("type") MeasurementType type);
+
+    /** Jüngster Messwert eines Geräts für einen Messtyp. */
+    Optional<ZigbeeMeasurement> findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
+            Long deviceId, MeasurementType measurementType);
 }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /** Repository für {@link WeatherReading}. */
 @Repository
@@ -15,4 +16,7 @@ public interface WeatherReadingRepository extends JpaRepository<WeatherReading, 
 
     List<WeatherReading> findByReadingTimeBetweenOrderByReadingTimeAsc(
             LocalDateTime from, LocalDateTime to);
+
+    /** Jüngste Wettermessung, die eine Temperatur gesetzt hat. */
+    Optional<WeatherReading> findTopByTemperatureIsNotNullOrderByReadingTimeDesc();
 }
