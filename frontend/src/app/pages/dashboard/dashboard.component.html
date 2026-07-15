@@ -37,43 +37,37 @@
     <!-- Raum-Kacheln & Szene -->
     <section class="lumina__main">
       <div class="lumina__rooms">
-        <!-- Energie-Kachel mit Live-Werten -->
+        <!-- Klima-Kachel: Innentemperaturen vs. Außen -->
         <a
-          routerLink="/energy"
-          class="lumina-card lumina__room lumina__energy-tile lumina__fade"
+          routerLink="/temperatures"
+          class="lumina-card lumina__room lumina__climate-tile lumina__fade"
           style="--delay: 0.1s"
         >
           <div class="lumina__room-top">
             <div class="lumina__room-icon">
-              <span class="material-symbols-outlined">bolt</span>
+              <span class="material-symbols-outlined">device_thermostat</span>
             </div>
-            <span class="lumina__badge" [class.lumina__badge--active]="energyConnected">
-              {{ energyConnected ? 'Live' : 'Offline' }}
+            <span class="lumina__climate-outside">
+              <span class="material-symbols-outlined lumina__climate-outside-icon">cloud</span>
+              <span class="lumina__climate-outside-label">Außen</span>
+              <span class="lumina__climate-outside-value">{{ climate.outsideLabel }}</span>
             </span>
           </div>
           <div class="lumina__room-body">
-            <h3 class="lumina__room-name">Energie</h3>
-            <div class="lumina__energy-metrics">
-              <div class="lumina__energy-metric">
-                <span class="lumina__energy-metric-label">PV-Erzeugung</span>
-                <span class="lumina__energy-metric-value lumina__energy-metric-value--export">
-                  {{ energyLive ? (energyLive.pvTotalW | number:'1.0-0':'de-DE') : '--' }} W
-                </span>
-              </div>
-              <div class="lumina__energy-metric">
-                <span class="lumina__energy-metric-label">Hausverbrauch</span>
-                <span class="lumina__energy-metric-value">
-                  {{ energyLive ? (energyLive.hausverbrauchW | number:'1.0-0':'de-DE') : '--' }} W
-                </span>
-              </div>
-              <div class="lumina__energy-metric">
-                <span class="lumina__energy-metric-label">{{ gridFlowLabel }}</span>
-                <span
-                  class="lumina__energy-metric-value"
-                  [ngClass]="'lumina__energy-metric-value--' + gridFlowTone"
-                >
-                  {{ energyLive ? (gridAbsW | number:'1.0-0':'de-DE') : '--' }} W
-                </span>
+            <h3 class="lumina__room-name">Temperaturen</h3>
+            <div class="lumina__climate-rows">
+              <p *ngIf="climate.rows.length === 0" class="lumina__climate-empty">
+                Keine Innensensoren verfügbar
+              </p>
+              <div
+                *ngFor="let row of climate.rows"
+                class="lumina__climate-row"
+                [class.lumina__climate-row--stale]="row.stale"
+              >
+                <span class="lumina__climate-dot" [ngClass]="'lumina__climate-dot--' + row.tone"></span>
+                <span class="lumina__climate-name">{{ row.name }}</span>
+                <span class="lumina__climate-status">{{ row.statusLabel }}</span>
+                <span class="lumina__climate-value">{{ row.valueLabel }}</span>
               </div>
             </div>
           </div>
