@@ -15,6 +15,8 @@ public record EntityStateResponse(
         String source,
         String sourceRef,
         String friendlyName,
+        String customName,
+        String displayName,
         String state,
         Map<String, Object> attributes,
         LocalDateTime lastChanged,
