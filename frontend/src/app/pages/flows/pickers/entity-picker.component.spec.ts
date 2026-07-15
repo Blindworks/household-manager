@@ -9,8 +9,8 @@ describe('EntityPickerComponent', () => {
   beforeEach(async () => {
     entityService = jasmine.createSpyObj('EntityStateService', ['getEntities']);
     entityService.getEntities.and.returnValue(of([
-      { entityId: 'sensor.a', friendlyName: 'Sensor A', state: '5' },
-      { entityId: 'switch.b', friendlyName: 'Schalter B', state: 'on' }
+      { entityId: 'sensor.a', displayName: 'Sensor A', state: '5' },
+      { entityId: 'switch.b', displayName: 'Schalter B', state: 'on' }
     ] as any));
     await TestBed.configureTestingModule({
       imports: [EntityPickerComponent],
@@ -76,8 +76,8 @@ describe('EntityPickerComponent', () => {
     expect(select.options.length).toBe(1); // only the disabled placeholder so far
 
     entities$.next([
-      { entityId: 'sensor.a', friendlyName: 'Sensor A', state: '5' },
-      { entityId: 'switch.b', friendlyName: 'Schalter B', state: 'on' }
+      { entityId: 'sensor.a', displayName: 'Sensor A', state: '5' },
+      { entityId: 'switch.b', displayName: 'Schalter B', state: 'on' }
     ]);
     fixture.detectChanges();
     tick();
