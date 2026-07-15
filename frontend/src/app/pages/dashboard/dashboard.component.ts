@@ -1,13 +1,16 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription, interval, startWith } from 'rxjs';
+import { Subscription, interval, startWith, switchMap } from 'rxjs';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
 import { ViewModeService } from '../../services/view-mode.service';
+import { TemperatureService } from '../../services/temperature.service';
 import { EnergyLive } from '../../models/energy-live.model';
 import { WeatherOverview } from '../../models/weather.model';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
+import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.util';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -28,6 +31,7 @@ import { weatherSymbol } from '../../shared/weather-icon.util';
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
   private readonly energyLiveService = inject(EnergyLiveService);
+  private readonly temperatureService = inject(TemperatureService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -36,6 +40,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private weatherSubscription?: Subscription;
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
+  private temperatureSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -45,6 +50,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PV_MAX_WATT = 2000;
   /** Netzbezug, der den Bezugs-Ring komplett fuellt (5 kW). */
   private static readonly GRID_MAX_WATT = 5000;
+  /** Aktualisierungsintervall der Klima-Kachel (60 s). */
+  private static readonly CLIMATE_REFRESH_MS = 60000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -54,6 +61,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   energyLive: EnergyLive | null = null;
   liveStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+
+  climate: ClimateView = { outsideLabel: '--', rows: [] };
 
   /** Raum-Kacheln (Platzhalter, spaeter aus Entitaeten befuellbar). */
   readonly rooms: RoomTile[] = [
@@ -102,6 +111,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startClock();
     this.loadWeather();
     this.startLiveStream();
+    this.startClimateRefresh();
   }
 
   ngOnDestroy(): void {
@@ -109,6 +119,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.weatherSubscription?.unsubscribe();
     this.liveSubscription?.unsubscribe();
     this.statusSubscription?.unsubscribe();
+    this.temperatureSubscription?.unsubscribe();
     this.energyLiveService.disconnect();
   }
 
@@ -255,6 +266,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription = this.energyLiveService.getStatusStream().subscribe({
       next: status => (this.liveStatus = status)
     });
+  }
+
+  private startClimateRefresh(): void {
+    this.temperatureSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.temperatureService.getCurrent())
+      )
+      .subscribe({
+        next: (readings: CurrentTemperatureReading[]) =>
+          (this.climate = buildClimateView(readings, Date.now())),
+        error: () => (this.climate = { outsideLabel: '--', rows: [] })
+      });
   }
 
   /** Mappt DWD-Icon-Codes auf Material-Symbols-Namen fuer die Wetteranzeige. */
