@@ -77,6 +77,9 @@
     <!-- Editierbarer Kurzname für Entitäten -->
     <include file="db/changelog/changes/20260715-0032-add-custom-name-to-entity-states.xml"/>
 
+    <!-- Nutzungszaehler fuer die Schalter-Kachel -->
+    <include file="db/changelog/changes/20260716-0033-create-entity-usage-table.xml"/>
+
     <!-- Muellabfuhr-Termine aus dem Google-Kalender -->
     <include file="db/changelog/changes/20260716-0034-create-waste-collection-events-table.xml"/>
 

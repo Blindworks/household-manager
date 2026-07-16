@@ -88,6 +88,40 @@
         <!-- Muellabfuhr: blendet sich aus, wenn nichts ansteht -->
         <app-waste-collection-tile></app-waste-collection-tile>
 
+        <!-- Schalter-Kachel: meistgenutzte Schalter, direkt schaltbar -->
+        <div
+          class="lumina-card lumina__room lumina__switch-tile lumina__fade"
+          style="--delay: 0.2s"
+        >
+          <div class="lumina__room-top">
+            <div class="lumina__room-icon">
+              <span class="material-symbols-outlined">toggle_on</span>
+            </div>
+            <button
+              type="button"
+              class="lumina__switch-all"
+              (click)="openSwitchDialog()"
+              title="Alle Schalter anzeigen"
+              aria-label="Alle Schalter anzeigen"
+            >
+              <span class="material-symbols-outlined">expand_content</span>
+            </button>
+          </div>
+          <div class="lumina__room-body">
+            <h3 class="lumina__room-name">Schalter</h3>
+            <p *ngIf="topSwitches.length === 0" class="lumina__switch-empty">
+              Keine Schalter
+            </p>
+            <app-switch-list
+              [switches]="topSwitches"
+              [pendingIds]="pendingSwitchIds"
+              variant="tile"
+              (toggled)="toggleSwitch($event)"
+            ></app-switch-list>
+            <p *ngIf="switchError" class="lumina__switch-error">{{ switchError }}</p>
+          </div>
+        </div>
+
         <!-- Raum-Kacheln (Platzhalter) -->
         <button
           *ngFor="let room of rooms; let i = index"
@@ -260,6 +294,47 @@
       </header>
       <div class="lumina__dialog-body">
         <app-energy-flow [energyLive]="energyLive" [liveData]="ankerLive"></app-energy-flow>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schalter-Dialog (oeffnet sich ueber den Button in der Schalter-Kachel) -->
+  <div
+    *ngIf="switchDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeSwitchDialog()"
+  >
+    <div
+      class="lumina__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Alle Schalter"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">Alle Schalter</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeSwitchDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <p *ngIf="allSwitches.length === 0" class="lumina__switch-empty">
+          Keine Schalter
+        </p>
+        <app-switch-list
+          [switches]="allSwitches"
+          [pendingIds]="pendingSwitchIds"
+          variant="dialog"
+          (toggled)="toggleSwitch($event)"
+        ></app-switch-list>
+        <p *ngIf="switchError" class="lumina__switch-error lumina__switch-error--dialog">
+          {{ switchError }}
+        </p>
       </div>
     </div>
   </div>

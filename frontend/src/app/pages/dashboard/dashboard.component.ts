@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval, of, startWith, switchMap } from 'rxjs';
@@ -16,6 +16,9 @@ import { weatherSymbol } from '../../shared/weather-icon.util';
 import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.util';
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
 import { WasteCollectionTileComponent } from '../../components/waste-collection-tile/waste-collection-tile.component';
+import { SwitchService } from '../../services/switch.service';
+import { SwitchEntity } from '../../models/switch.model';
+import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -29,7 +32,7 @@ import { WasteCollectionTileComponent } from '../../components/waste-collection-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, EnergyFlowComponent, WasteCollectionTileComponent],
+  imports: [CommonModule, RouterLink, EnergyFlowComponent, WasteCollectionTileComponent, SwitchListComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
@@ -38,6 +41,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly energyLiveService = inject(EnergyLiveService);
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly temperatureService = inject(TemperatureService);
+  private readonly switchService = inject(SwitchService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -48,6 +52,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private statusSubscription?: Subscription;
   private temperatureSubscription?: Subscription;
   private ankerSubscription?: Subscription;
+  private switchSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -59,6 +64,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly GRID_MAX_WATT = 5000;
   /** Aktualisierungsintervall der Klima-Kachel (60 s). */
   private static readonly CLIMATE_REFRESH_MS = 60000;
+  /** Anzahl der Schalter auf der Kachel; alle weiteren stehen im Dialog. */
+  private static readonly SWITCH_TILE_LIMIT = 4;
+  /** Aktualisierungsintervall der Schalter-Kachel (30 s). */
+  private static readonly SWITCH_REFRESH_MS = 30000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -76,9 +85,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   climate: ClimateView = { outdoor: [], weatherLabel: '--', rows: [] };
 
+  /** Meistgenutzte Schalter fuer die Kachel. */
+  topSwitches: SwitchEntity[] = [];
+  /** Alle Schalter; nur geladen, solange der Schalter-Dialog offen ist. */
+  allSwitches: SwitchEntity[] = [];
+  /** True, wenn der Schalter-Dialog geoeffnet ist. */
+  switchDialogOpen = false;
+  /** Entity-IDs mit laufendem Schaltbefehl (verhindert Doppelklicks). */
+  readonly pendingSwitchIds = new Set<string>();
+  switchError: string | null = null;
+
   /** Raum-Kacheln (Platzhalter, spaeter aus Entitaeten befuellbar). */
   readonly rooms: RoomTile[] = [
-    { name: 'Küche', icon: 'kitchen', status: 'Ruhe', tone: 'idle', detail: 'Kühlschrank: Normal • Ofen: Aus' },
     { name: 'Schlafzimmer', icon: 'bed', status: 'Ruhe', tone: 'idle', detail: 'Luftreiniger: An • Rollo: Zu' }
   ];
 
@@ -124,6 +142,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadWeather();
     this.startLiveStream();
     this.startClimateRefresh();
+    this.startSwitchRefresh();
   }
 
   ngOnDestroy(): void {
@@ -132,6 +151,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.liveSubscription?.unsubscribe();
     this.statusSubscription?.unsubscribe();
     this.temperatureSubscription?.unsubscribe();
+    this.switchSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -152,10 +172,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Schliesst den Energiefluss-Dialog per Escape-Taste. */
+  /** Schliesst die geoeffneten Dialoge per Escape-Taste. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.closeFlowDialog();
+    this.closeSwitchDialog();
   }
 
   /** Schliesst den Dialog und trennt den nur dafuer benoetigten Anker-Live-Stream. */
@@ -168,6 +189,68 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.ankerSubscription = undefined;
     this.ankerSolixService.disconnectLive();
     this.ankerLive = null;
+  }
+
+  /**
+   * Schaltet einen Schalter direkt. Der Zustand wird optimistisch umgeschaltet und
+   * bei einem Fehler zurueckgesetzt, damit die Kachel sofort reagiert.
+   */
+  toggleSwitch(entity: SwitchEntity): void {
+    if (this.pendingSwitchIds.has(entity.entityId)) {
+      return;
+    }
+    const previousState = entity.state;
+    this.pendingSwitchIds.add(entity.entityId);
+    this.switchError = null;
+    this.applySwitchState(entity.entityId, entity.state === 'on' ? 'off' : 'on');
+
+    this.switchService.toggle(entity.entityId).subscribe({
+      next: updated => {
+        this.pendingSwitchIds.delete(entity.entityId);
+        this.applySwitchState(updated.entityId, updated.state);
+      },
+      error: () => {
+        this.pendingSwitchIds.delete(entity.entityId);
+        this.applySwitchState(entity.entityId, previousState);
+        this.switchError = `${entity.displayName} konnte nicht geschaltet werden.`;
+      }
+    });
+  }
+
+  /**
+   * Setzt den Zustand in Kachel- und Dialogliste. Die Zuordnung laeuft ueber die
+   * entityId, damit sie auch nach einem zwischenzeitlichen Neuladen greift.
+   */
+  private applySwitchState(entityId: string, state: string): void {
+    for (const list of [this.topSwitches, this.allSwitches]) {
+      const match = list.find(item => item.entityId === entityId);
+      if (match) {
+        match.state = state;
+      }
+    }
+  }
+
+  /** Oeffnet den Schalter-Dialog und laedt dafuer die vollstaendige Liste. */
+  openSwitchDialog(): void {
+    if (this.switchDialogOpen) {
+      return;
+    }
+    this.switchDialogOpen = true;
+    this.switchService.getSwitches().subscribe({
+      next: switches => (this.allSwitches = switches),
+      error: () => (this.switchError = 'Schalter konnten nicht geladen werden.')
+    });
+  }
+
+  /** Schliesst den Dialog und laedt die Kachel neu (die Reihenfolge kann sich geaendert haben). */
+  closeSwitchDialog(): void {
+    if (!this.switchDialogOpen) {
+      return;
+    }
+    this.switchDialogOpen = false;
+    this.allSwitches = [];
+    this.switchError = null;
+    this.loadTopSwitches();
   }
 
   /** Uhrzeit im Format HH:MM (24h). */
@@ -331,6 +414,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
         )
       )
       .subscribe(readings => (this.climate = buildClimateView(readings, Date.now())));
+  }
+
+  private startSwitchRefresh(): void {
+    this.switchSubscription = interval(DashboardComponent.SWITCH_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.topSwitchRequest())
+      )
+      .subscribe(switches => {
+        this.topSwitches = switches;
+        // Der Hinweis gehoert zum letzten Schaltversuch: mit frischen Daten ist er ueberholt.
+        this.switchError = null;
+      });
+  }
+
+  private loadTopSwitches(): void {
+    this.topSwitchRequest().subscribe(switches => (this.topSwitches = switches));
+  }
+
+  private topSwitchRequest() {
+    return this.switchService.getSwitches(DashboardComponent.SWITCH_TILE_LIMIT).pipe(
+      catchError(() => of<SwitchEntity[]>([]))
+    );
   }
 
   /** Mappt DWD-Icon-Codes auf Material-Symbols-Namen fuer die Wetteranzeige. */
