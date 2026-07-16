@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -280,6 +281,37 @@ public class GlobalExceptionHandler {
 
         log.warn("Alexa communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    /**
+     * Handle {@link ResponseStatusException} thrown directly by controllers for
+     * lightweight input validation (e.g. Muellabfuhr-Settings).
+     * <p>
+     * Without this handler, the catch-all {@link #handleGlobalException} below would
+     * intercept it first (it matches {@code Exception.class}, and the
+     * {@code ExceptionHandlerExceptionResolver} that runs {@code @RestControllerAdvice}
+     * methods is tried before Spring's built-in {@code ResponseStatusExceptionResolver}),
+     * silently turning a deliberate 400 with a useful message into a generic 500.
+     *
+     * @param ex      The response status exception
+     * @param request The web request
+     * @return Error response using the status and reason carried by the exception
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(
+            ResponseStatusException ex, WebRequest request) {
+
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(ex.getStatusCode().value())
+                .error(status != null ? status.getReasonPhrase() : "Error")
+                .message(ex.getReason())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Response status exception: {}", ex.getReason());
+        return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);
     }
 
     /**
