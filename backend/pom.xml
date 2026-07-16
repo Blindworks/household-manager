@@ -129,6 +129,13 @@
             <artifactId>guava</artifactId>
             <version>25.0-jre</version>
         </dependency>
+
+        <!-- iCalendar-Parsing fuer den Muellabfuhr-Kalender -->
+        <dependency>
+            <groupId>net.sf.biweekly</groupId>
+            <artifactId>biweekly</artifactId>
+            <version>0.6.8</version>
+        </dependency>
     </dependencies>
 
     <build>
