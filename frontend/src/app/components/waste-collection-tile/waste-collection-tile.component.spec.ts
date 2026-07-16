@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { WasteCollectionTileComponent } from './waste-collection-tile.component';
 import { WasteCollectionService } from '../../services/waste-collection.service';
@@ -71,4 +71,35 @@ describe('WasteCollectionTileComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.waste-tile')).toBeNull();
   });
+
+  // Der reine Kalenderrechnung von msUntilNextMidnight() haengt vom echten Systemdatum ab
+  // und laesst sich ohne eine injizierte Uhr nicht deterministisch pruefen. Stattdessen wird
+  // hier die Verdrahtung geprueft: msUntilNextMidnight() wird auf eine feste, kurze Verzoegerung
+  // gestubbt (weit unterhalb des stuendlichen Takts), damit sich der Mitternachts-Timer isoliert
+  // von der stuendlichen Aktualisierung beobachten laesst.
+  it('loest zusaetzlich zur stuendlichen Aktualisierung einen Refresh kurz nach Mitternacht aus', fakeAsync(async () => {
+    serviceSpy = jasmine.createSpyObj('WasteCollectionService', ['getUpcoming']);
+    serviceSpy.getUpcoming.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [WasteCollectionTileComponent],
+      providers: [{ provide: WasteCollectionService, useValue: serviceSpy }]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(WasteCollectionTileComponent);
+    component = fixture.componentInstance;
+    spyOn<any>(component, 'msUntilNextMidnight').and.returnValue(5000);
+
+    fixture.detectChanges(); // ngOnInit
+    tick(0);
+    expect(serviceSpy.getUpcoming).toHaveBeenCalledTimes(1); // startWith(0)
+
+    tick(4999);
+    expect(serviceSpy.getUpcoming).toHaveBeenCalledTimes(1); // Mitternachts-Timer noch nicht faellig
+
+    tick(1);
+    expect(serviceSpy.getUpcoming).toHaveBeenCalledTimes(2); // vom Mitternachts-Timer ausgeloest
+
+    discardPeriodicTasks();
+  }));
 });
