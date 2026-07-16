@@ -96,6 +96,7 @@
 - Spy pattern for services: `jasmine.createSpyObj('ServiceName', ['method1', 'method2'])`, then `serviceSpy.method.and.returnValue(of(...))`; provide via `{ provide: ServiceClass, useValue: serviceSpy }` in `TestBed.configureTestingModule.providers`.
 - Standalone components go directly into `imports: [ComponentClass]` in the TestBed config (no module wrapper needed).
 - Devices page: `pages/devices/devices.component.ts` — `ngOnInit` calls `loadDevices()` only (DB load), NOT `scanAllDeviceTypes()` (full network rescan). The scan method still exists for manual/explicit triggering elsewhere, just not on page load.
+- Fresh git worktrees under `.claude/worktrees/<name>/frontend` do NOT have `node_modules` installed — `ng test` fails with "Could not find the '@angular-devkit/build-angular:karma' builder's node package." Run `npm install` once per worktree before the first test run (takes ~30-40s).
 - `HttpTestingController.expectOne(url)` can be called twice for the same URL when only one matching request was fired and it hasn't been flushed yet — the request stays in the "open" list until `flush()`/`error()` resolves it, so a first `expectOne` to assert `.request.method` followed by a second `expectOne` + `.flush()` on the same URL both succeed (no need for the workaround of splitting into two separate calls). Confirmed with Angular's Karma/Jasmine harness in this repo (frontend, Chrome 149).
 
 ## Flow Editor (Stufe 3b) — Frontend

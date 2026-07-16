@@ -80,3 +80,4 @@ com.household.manager/
 - [entitystate-facade.md](entitystate-facade.md) - EntityState mirror layer: facade/writer split, REQUIRES_NEW rationale, upsert/event semantics, 15-task rollout status
 - [flowengine-stage3a.md](flowengine-stage3a.md) - Flow engine: NodeHandler/TriggerNodeHandler contracts, NodeContext.state() concurrency tradeoff, 13-task rollout complete + post-review hardening (dedicated scheduler, debug-buffer cleanup on undeploy)
 - [waste-collection-clock.md](waste-collection-clock.md) - injected Clock bean must pin Europe/Berlin explicitly; backend container has no TZ set, systemDefaultZone() silently becomes UTC
+- [response-status-exception-handler.md](response-status-exception-handler.md) - GlobalExceptionHandler's Exception.class catch-all swallows ResponseStatusException into a 500 unless a dedicated @ExceptionHandler(ResponseStatusException.class) exists

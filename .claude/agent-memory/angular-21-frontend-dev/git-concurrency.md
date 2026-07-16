@@ -38,3 +38,23 @@ explicitly created for the task.
 - If a task instructs "leave other files untouched/unstaged," a post-commit
   `git status --short` check confirming only your intended files are gone from
   the unstaged list (and nothing else changed) is a fast sanity check.
+
+Second occurrence (2026-07-16, branch `feature/muellabfuhr-kalender`, worktree
+`muellabfuhr-kalender`): mid-task, not just around commit. After editing an
+import path in `node-config-panel.component.ts` and successfully running build +
+tests, a system-reminder fired claiming the file had been "modified, either by
+the user or by a linter," showing my edit reverted back to the old import. A
+subsequent `Read` showed the file back with my correct edit in place — net
+effect was a transient flicker, not a real revert, but it also made a follow-up
+`Edit` call fail with "File has been modified since read" (harness's own
+staleness guard tripping on the concurrent write). Also saw `git mv` immediately
+followed by `Edit` on the moved file leave `git status` showing the old path as
+an *unstaged* delete and the new path as a *staged* add (i.e. not shown as `R`)
+even though both halves were genuinely staged — re-running `git add <old> <new>`
+right before commit fixed the rename detection display. **How to apply:** if a
+file you just edited appears reverted in a tool result or system-reminder,
+don't assume your edit was lost — re-`Read` it before retrying `Edit`/`Write`;
+it may just be a stale snapshot from a concurrent writer. Always re-`git add`
+both the old and new paths of a `git mv` right before committing if any content
+edits happened on the new path afterward, so `git show --stat HEAD` reports
+clean renames instead of add+delete pairs.
