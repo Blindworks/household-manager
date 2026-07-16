@@ -1294,6 +1294,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
+import java.time.ZoneId;
 
 /**
  * Stellt eine {@link Clock} als Bean bereit, damit zeitabhaengige Services testbar sind,
@@ -1302,14 +1303,30 @@ import java.time.Clock;
 @Configuration
 public class ClockConfig {
 
+    /**
+     * Zone bewusst festgenagelt statt {@code systemDefaultZone()}: Das Backend-Image
+     * (eclipse-temurin:21-jre) setzt kein TZ, und docker-compose gibt es nur zigbee2mqtt
+     * mit, nicht dem Backend — im Container liefe die Uhr also auf UTC. Fuer einen Haushalt
+     * in Deutschland heisst das: "heute" kippt zwei Stunden zu frueh, und die Abend-Durchsage
+     * um 19:00 kaeme erst um 21:00 Ortszeit.
+     */
     @Bean
     public Clock clock() {
-        return Clock.systemDefaultZone();
+        return Clock.system(ZoneId.of("Europe/Berlin"));
     }
 }
 ```
 
 Falls bereits ein `Clock`-Bean existiert, diesen Schritt überspringen.
+
+**Warum nicht stattdessen `TZ: Europe/Berlin` in die docker-compose eintragen?** Das wäre der
+größere Hebel — und genau deshalb hier falsch. Es änderte die Default-Zone der *gesamten*
+Anwendung; jedes bestehende `LocalDateTime.now()` (Wetter-, Tasmota-, Shelly-,
+Luftqualitäts-Messwerte, alle `@PrePersist`-Zeitstempel) schriebe ab dann zwei Stunden
+versetzt zu allem, was schon in der Datenbank steht, und verböge stillschweigend die
+Zeitachse bestehender Diagramme. Das mag mittelfristig richtig sein, ist aber eine bewusste
+Migrationsentscheidung des Projekteigners — kein Nebeneffekt dieses Tasks. Das `Clock`-Bean
+festzunageln betrifft dagegen nur Code, der `Clock` injiziert: heute exakt dieses Feature.
 
 - [ ] **Step 6: Test laufen lassen — muss grün sein**
 
