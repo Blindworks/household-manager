@@ -8,7 +8,8 @@ import { AlexaDevice } from '../../models/alexa.model';
   selector: 'app-alexa-device-picker',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './alexa-device-picker.component.html'
+  templateUrl: './alexa-device-picker.component.html',
+  styleUrl: './alexa-device-picker.component.scss'
 })
 export class AlexaDevicePickerComponent implements OnInit {
   private readonly alexaService = inject(AlexaService);

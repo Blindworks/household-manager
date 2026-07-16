@@ -41,7 +41,8 @@ export class HeaderComponent {
       children: [
         { path: '/air-quality', label: 'Luftqualitaet' },
         { path: '/weather', label: 'Wetter' },
-        { path: '/temperatures', label: 'Temperaturen' }
+        { path: '/temperatures', label: 'Temperaturen' },
+        { path: '/waste-collection', label: 'Muellabfuhr' }
       ]
     },
     {

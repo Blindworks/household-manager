@@ -138,6 +138,11 @@ export const routes: Routes = [
     title: 'Wiederkehrende - Household Manager'
   },
   {
+    path: 'waste-collection',
+    loadComponent: () => import('./pages/waste-collection/waste-collection.component').then(m => m.WasteCollectionComponent),
+    title: 'Muellabfuhr - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'

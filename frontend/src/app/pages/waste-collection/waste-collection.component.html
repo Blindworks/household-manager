@@ -1,0 +1,218 @@
+<div class="waste-collection-page">
+  <div class="container">
+
+    <!-- Seitentitel -->
+    <header class="waste-collection-page__header">
+      <div>
+        <p class="waste-collection-page__eyebrow">Kalender-Abo</p>
+        <h1 class="waste-collection-page__title">Müllabfuhr</h1>
+        <p class="waste-collection-page__subtitle">
+          Abgleich eines Google-Kalenders mit den Abholterminen. Die naechsten Termine werden
+          auf dem Dashboard angezeigt und optional am Vorabend per Alexa angesagt.
+        </p>
+      </div>
+    </header>
+
+    <!-- Naechste Termine -->
+    <section class="events-section">
+      <div class="events-section__card">
+        <h2 class="events-section__title">Naechste Termine</h2>
+
+        @if (events.length) {
+          <ul class="events-section__list">
+            @for (event of events; track trackByEvent($index, event)) {
+              <li class="events-section__item">
+                <span class="events-section__date">{{ event.date | date:'EEEE, d. MMMM y':'':'de-DE' }}</span>
+                <span class="events-section__label">{{ event.label }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="events-section__empty">
+            Noch keine Termine bekannt. Kalender-URL unten eintragen und auf
+            "Jetzt abrufen" klicken.
+          </p>
+        }
+      </div>
+    </section>
+
+    <!-- Einstellungen-Karte -->
+    @if (settings) {
+      <section class="settings-section">
+        <div class="settings-section__card">
+          <h2 class="settings-section__title">Einstellungen</h2>
+
+          <div class="settings-section__body">
+
+            <!-- Aktivierung -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="enabled-input">Aktiv</label>
+                <span class="settings-section__hint">Aktiviert oder deaktiviert den Kalenderabgleich</span>
+              </div>
+              <input
+                id="enabled-input"
+                type="checkbox"
+                name="enabled"
+                [(ngModel)]="settings.enabled">
+            </div>
+
+            <!-- Kalender-URL -->
+            <div class="settings-section__field settings-section__field--stacked">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="ics-url-input">Kalender-URL</label>
+                <span class="settings-section__hint">
+                  Google Kalender: Einstellungen → Privatadresse im iCal-Format
+                </span>
+              </div>
+              <input
+                id="ics-url-input"
+                class="settings-section__text"
+                type="text"
+                name="icsUrl"
+                [(ngModel)]="settings.icsUrl"
+                placeholder="https://calendar.google.com/calendar/ical/...">
+            </div>
+
+            <!-- Vorschau-Fenster -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="lookahead-input">Vorschau-Fenster</label>
+                <span class="settings-section__hint">Wie viele Tage im Voraus auf dem Dashboard angezeigt werden</span>
+              </div>
+              <div class="settings-section__input-group">
+                <input
+                  id="lookahead-input"
+                  class="settings-section__number"
+                  type="number"
+                  name="lookaheadDays"
+                  [(ngModel)]="settings.lookaheadDays"
+                  min="1"
+                  step="1">
+                <span class="settings-section__unit">Tage</span>
+              </div>
+            </div>
+
+            <!-- Erinnerung aktiv -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="reminder-enabled-input">Alexa-Erinnerung</label>
+                <span class="settings-section__hint">Ansage am Vorabend eines Abholtermins</span>
+              </div>
+              <input
+                id="reminder-enabled-input"
+                type="checkbox"
+                name="reminderEnabled"
+                [(ngModel)]="settings.reminderEnabled">
+            </div>
+
+            <!-- Erinnerungszeit -->
+            <div class="settings-section__field">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label" for="reminder-time-input">Erinnerungszeit</label>
+                <span class="settings-section__hint">Uhrzeit der Ansage am Vorabend</span>
+              </div>
+              <input
+                id="reminder-time-input"
+                class="settings-section__time"
+                type="time"
+                name="reminderTime"
+                [(ngModel)]="settings.reminderTime">
+            </div>
+
+            <!-- Alexa-Geraete -->
+            <div class="settings-section__field settings-section__field--stacked">
+              <div class="settings-section__field-header">
+                <label class="settings-section__label">Alexa-Geraete</label>
+                <span class="settings-section__hint">Geraete, auf denen die Erinnerung angesagt wird</span>
+              </div>
+              <app-alexa-device-picker
+                [value]="settings.reminderAlexaSerials"
+                (valueChange)="onSerialsChange($event)">
+              </app-alexa-device-picker>
+            </div>
+
+            <!-- Speichern -->
+            <div class="settings-section__actions">
+              <button
+                class="btn btn--primary settings-section__btn"
+                type="button"
+                [disabled]="isSaving"
+                (click)="saveSettings()">
+                @if (isSaving) {
+                  <span class="settings-section__spinner"></span>
+                  Wird gespeichert...
+                } @else {
+                  Speichern
+                }
+              </button>
+            </div>
+
+            @if (saveSuccess) {
+              <p class="settings-section__feedback settings-section__feedback--success">
+                Einstellungen erfolgreich gespeichert.
+              </p>
+            }
+            @if (saveError) {
+              <p class="settings-section__feedback settings-section__feedback--error">
+                {{ saveError }}
+              </p>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Abruf-Status -->
+    @if (status) {
+      <section class="status-section">
+        <div class="status-section__card">
+          <h2 class="status-section__title">Abruf</h2>
+
+          <div class="status-section__stats">
+            <div class="status-section__stat">
+              <span class="status-section__stat-label">Zeitplan</span>
+              <span class="status-section__stat-value">{{ status.schedule }}</span>
+            </div>
+            <div class="status-section__stat">
+              <span class="status-section__stat-label">Letzter Abruf</span>
+              <span class="status-section__stat-value">
+                {{ status.lastPollTime ? (status.lastPollTime | date:'dd.MM.yyyy HH:mm':'':'de-DE') : 'noch nie' }}
+              </span>
+            </div>
+            <div class="status-section__stat">
+              <span class="status-section__stat-label">Bekannte Termine</span>
+              <span class="status-section__stat-value">{{ status.knownEventCount }}</span>
+            </div>
+          </div>
+
+          @if (status.lastError) {
+            <p class="status-section__error">{{ status.lastError }}</p>
+          }
+
+          <div class="status-section__actions">
+            <button
+              class="btn status-section__btn"
+              type="button"
+              [disabled]="isTriggering"
+              (click)="triggerPoll()">
+              @if (isTriggering) {
+                <span class="settings-section__spinner"></span>
+                Wird abgerufen...
+              } @else {
+                Jetzt abrufen
+              }
+            </button>
+          </div>
+
+          @if (triggerError) {
+            <p class="settings-section__feedback settings-section__feedback--error">
+              {{ triggerError }}
+            </p>
+          }
+        </div>
+      </section>
+    }
+
+  </div>
+</div>
