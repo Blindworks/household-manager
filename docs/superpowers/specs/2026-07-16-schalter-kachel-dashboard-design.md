@@ -63,7 +63,15 @@ Neue Bausteine:
 - `EntityUsageRepository` in `com.household.manager.repository` (JpaConfig-Scan).
 - `EntityUsageService.recordToggle(entityId)` — Upsert: existiert kein Eintrag,
   wird er mit `toggle_count = 1` angelegt, sonst inkrementiert und
-  `last_toggled_at` gesetzt. Konkurrenzsicher über den Unique-Key.
+  `last_toggled_at` gesetzt.
+  <br>**Bewusst kein atomares Upsert:** Read-Modify-Write, der Unique-Key
+  verhindert nur doppelte Zeilen. Zwei exakt gleichzeitige Toggles derselben
+  Entität könnten einen Zähler verlieren (bzw. beim allerersten Toggle eine
+  Unique-Verletzung auslösen). Für ein Einzelinstanz-Wand-Dashboard mit
+  menschgetriebenen Klicks — die das Frontend je Schalter zusätzlich über
+  `pendingIds` serialisiert — ist das praktisch ausgeschlossen, und der
+  Schaden wäre eine minimal verschobene Anzeigereihenfolge. Bei
+  Mehrinstanz-Betrieb wäre ein `INSERT … ON DUPLICATE KEY UPDATE` nötig.
 - `EntityUsageService.usageFor(Collection<String> entityIds)` → Map für die
   Listen-Anreicherung.
 
@@ -201,7 +209,8 @@ Schaltern.
 - Unbekannte `entityId` → 404.
 - Nicht-schaltbare Domain → 400.
 - Nutzung wird **nur bei erfolgreichem** Toggle gezählt.
-- Upsert des Zählers konkurrenzsicher über Unique-`entity_id`.
+- Unique-`entity_id` verhindert doppelte Zählerzeilen; zur bewusst nicht
+  atomaren Zählung siehe „Nutzungs-Tracking".
 
 ## Tests
 
