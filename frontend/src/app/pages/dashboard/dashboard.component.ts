@@ -248,6 +248,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     this.switchDialogOpen = false;
     this.allSwitches = [];
+    this.switchError = null;
     this.loadTopSwitches();
   }
 
@@ -420,7 +421,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         startWith(0),
         switchMap(() => this.topSwitchRequest())
       )
-      .subscribe(switches => (this.topSwitches = switches));
+      .subscribe(switches => {
+        this.topSwitches = switches;
+        // Der Hinweis gehoert zum letzten Schaltversuch: mit frischen Daten ist er ueberholt.
+        this.switchError = null;
+      });
   }
 
   private loadTopSwitches(): void {

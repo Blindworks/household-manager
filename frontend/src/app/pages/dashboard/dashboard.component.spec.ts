@@ -124,4 +124,37 @@ describe('DashboardComponent (Schalter)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('loescht einen alten Fehler, sobald frische Daten ankommen', fakeAsync(() => {
+    switchServiceSpy.toggle.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleSwitch(entity({ state: 'off' }));
+    tick();
+    expect(fixture.componentInstance.switchError).not.toBeNull();
+
+    tick(30000);
+
+    expect(fixture.componentInstance.switchError).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('traegt einen Fehler aus dem Dialog nicht auf die Kachel', fakeAsync(() => {
+    switchServiceSpy.toggle.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openSwitchDialog();
+    tick();
+    fixture.componentInstance.toggleSwitch(entity({ state: 'off' }));
+    tick();
+    expect(fixture.componentInstance.switchError).not.toBeNull();
+
+    fixture.componentInstance.closeSwitchDialog();
+    tick();
+
+    expect(fixture.componentInstance.switchError).toBeNull();
+
+    discardPeriodicTasks();
+  }));
 });

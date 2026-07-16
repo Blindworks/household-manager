@@ -313,6 +313,12 @@
   color: #fca5a5;
 }
 
+// Der Dialog ist hell: der Fehlerton der dunklen Kachel waere dort zu blass.
+.lumina__switch-error--dialog {
+  margin-top: 12px;
+  color: #b91c1c;
+}
+
 .lumina__climate-outdoor {
   display: flex;
   flex-direction: column;

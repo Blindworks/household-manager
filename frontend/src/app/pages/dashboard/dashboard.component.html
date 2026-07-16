@@ -329,6 +329,9 @@
           variant="dialog"
           (toggled)="toggleSwitch($event)"
         ></app-switch-list>
+        <p *ngIf="switchError" class="lumina__switch-error lumina__switch-error--dialog">
+          {{ switchError }}
+        </p>
       </div>
     </div>
   </div>
