@@ -1,9 +1,9 @@
 import { Component, EventEmitter, OnInit, Output, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AlexaService } from '../../../services/alexa.service';
-import { AlexaDevice } from '../../../models/alexa.model';
+import { AlexaService } from '../../services/alexa.service';
+import { AlexaDevice } from '../../models/alexa.model';
 
-/** Mehrfachauswahl für Alexa-Geräte (Feldtyp ALEXA_DEVICE_LIST). Wert = string[] von serialNumbers. */
+/** Mehrfachauswahl für Alexa-Geräte. Wert = string[] von serialNumbers. */
 @Component({
   selector: 'app-alexa-device-picker',
   standalone: true,

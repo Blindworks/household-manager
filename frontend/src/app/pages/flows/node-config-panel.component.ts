@@ -5,7 +5,7 @@ import { NodeType, NodeFieldDescriptor } from '../../models/flow.model';
 import { CanvasNode } from './flow-graph.mapper';
 import { EntityPickerComponent } from './pickers/entity-picker.component';
 import { DevicePickerComponent } from './pickers/device-picker.component';
-import { AlexaDevicePickerComponent } from './pickers/alexa-device-picker.component';
+import { AlexaDevicePickerComponent } from '../../components/alexa-device-picker/alexa-device-picker.component';
 
 /** Schema-getriebenes Konfig-Formular der ausgewählten Node. */
 @Component({
