@@ -723,6 +723,12 @@ git commit -m "feat(waste): HTTP-Client fuer die ICS-URL"
 - Create: `backend/src/main/java/com/household/manager/dto/WasteCollectionSettings.java`
 - Create: `backend/src/main/java/com/household/manager/service/WasteCollectionSettingsService.java`
 - Test: `backend/src/test/java/com/household/manager/service/WasteCollectionSettingsServiceTest.java`
+- Test: `backend/src/test/java/com/household/manager/service/ApplicationSettingsServiceTest.java` — deckt **nur** `getString` ab
+
+Der Test für `getString` ist nicht optional: Auf seinem Verhalten (fehlender Schlüssel →
+Default des Aufrufers) ruht die gesamte Seed-Entscheidung aus Task 1, nach der `ics_url`,
+`reminder_alexa_serials` und `last_announced_date` bewusst **nicht** in der Datenbank stehen.
+Diese Logik nur durch einen Mock ihrer selbst zu prüfen, beweist nichts.
 
 - [ ] **Step 1: `getString` im Bestand ergänzen**
 
@@ -925,7 +931,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Uebersetzt zwischen dem typisierten {@link WasteCollectionSettings} und den String-Werten
@@ -965,19 +973,25 @@ public class WasteCollectionSettingsService {
                 .build();
     }
 
-    /** Schreibt die vom Nutzer pflegbaren Werte; {@code last_announced_date} bleibt unberuehrt. */
+    /**
+     * Schreibt die vom Nutzer pflegbaren Werte; {@code last_announced_date} bleibt unberuehrt.
+     *
+     * <p>Bewusst ein einziger Aufruf der Sammel-Methode statt sechs Einzelaufrufe: Nur so
+     * laufen alle Schluessel in einer Transaktion. Sechs Einzelaufrufe waeren sechs
+     * Transaktionen, und ein Fehler beim vierten liesse die Konfiguration halb geschrieben
+     * zurueck. `AnkerSolixAutoControlService` haelt es genauso.
+     */
     public void saveSettings(WasteCollectionSettings settings) {
-        settingsService.saveSetting(CATEGORY, KEY_ENABLED, String.valueOf(settings.isEnabled()));
-        settingsService.saveSetting(CATEGORY, KEY_ICS_URL, nullToEmpty(settings.getIcsUrl()));
-        settingsService.saveSetting(CATEGORY, KEY_LOOKAHEAD_DAYS,
-                String.valueOf(settings.getLookaheadDays()));
-        settingsService.saveSetting(CATEGORY, KEY_REMINDER_ENABLED,
-                String.valueOf(settings.isReminderEnabled()));
-        settingsService.saveSetting(CATEGORY, KEY_REMINDER_TIME,
-                nullToEmpty(settings.getReminderTime()));
-        settingsService.saveSetting(CATEGORY, KEY_REMINDER_SERIALS,
-                settings.getReminderAlexaSerials() == null
-                        ? "" : String.join(",", settings.getReminderAlexaSerials()));
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put(KEY_ENABLED, String.valueOf(settings.isEnabled()));
+        values.put(KEY_ICS_URL, nullToEmpty(settings.getIcsUrl()));
+        values.put(KEY_LOOKAHEAD_DAYS, String.valueOf(settings.getLookaheadDays()));
+        values.put(KEY_REMINDER_ENABLED, String.valueOf(settings.isReminderEnabled()));
+        values.put(KEY_REMINDER_TIME, nullToEmpty(settings.getReminderTime()));
+        values.put(KEY_REMINDER_SERIALS, settings.getReminderAlexaSerials() == null
+                ? "" : String.join(",", settings.getReminderAlexaSerials()));
+
+        settingsService.saveSettings(CATEGORY, values);
         log.info("Muellabfuhr-Einstellungen gespeichert");
     }
 
@@ -993,9 +1007,23 @@ public class WasteCollectionSettingsService {
         return settingsService.getString(CATEGORY, KEY_ICS_URL, "");
     }
 
-    /** Nie kleiner als 1 — ein Fenster von 0 Tagen wuerde die Kachel dauerhaft leeren. */
+    /**
+     * Nie kleiner als 1 — ein Fenster von 0 Tagen wuerde die Kachel dauerhaft leeren.
+     *
+     * <p>Der try/catch ist kein Zierrat: {@code getInt} ruft ungeschuetzt
+     * {@code Integer.parseInt}, ein nicht-numerischer Wert in der DB flaege also als
+     * {@link NumberFormatException} bis in den minuetlichen Scheduler durch. Bewusst hier
+     * abgefangen und nicht in {@code ApplicationSettingsService.getInt} — dessen Verhalten
+     * fuer alle Bestandsaufrufer zu aendern waere eine eigene Entscheidung.
+     */
     public int getLookaheadDays() {
-        return Math.max(1, settingsService.getInt(CATEGORY, KEY_LOOKAHEAD_DAYS, DEFAULT_LOOKAHEAD_DAYS));
+        try {
+            return Math.max(1, settingsService.getInt(
+                    CATEGORY, KEY_LOOKAHEAD_DAYS, DEFAULT_LOOKAHEAD_DAYS));
+        } catch (NumberFormatException ex) {
+            log.warn("Ungueltiges Vorschaufenster, nutze {} Tage", DEFAULT_LOOKAHEAD_DAYS);
+            return DEFAULT_LOOKAHEAD_DAYS;
+        }
     }
 
     /** Faellt bei unparsbarem Wert auf 19:00 zurueck, statt den Scheduler scheitern zu lassen. */
