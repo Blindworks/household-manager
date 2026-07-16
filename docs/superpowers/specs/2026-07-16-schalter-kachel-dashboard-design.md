@@ -88,13 +88,18 @@ EntityState toggle(String entityId):
 ```
 
 Hinweise:
-- Für `SWITCH` aktualisiert sich der gespiegelte Entity-State erst über das
-  Geräte-Polling/den Mapper (`reportState`). Die synchrone Antwort kann daher
-  noch den alten State zeigen — das Frontend schaltet optimistisch um.
+- `SmartDeviceService.turnOn/turnOff` meldet den neuen Zustand bereits selbst
+  über `reportEntityState(device)` an die Entity-Schicht. Ein Neuladen der
+  Entität nach dem Befehl liefert daher den **aktuellen** Zustand — die Antwort
+  ist ohne Zusatzaufwand korrekt.
 - `unavailable` (Gerät offline): Toggle wird anhand des zuletzt bekannten States
   versucht (`unavailable` → Behandlung wie „nicht on" → `turnOn`). Schlägt der
   Geräte-Call fehl, propagiert der Fehler (502) und Nutzung wird **nicht**
   gezählt.
+- Nur `SmartDeviceEntityMapper` erzeugt überhaupt `SWITCH`-Entitäten (Zigbee und
+  Shelly liefern `SENSOR`/`BINARY_SENSOR`). Die Quellen-Prüfung hält Liste und
+  Toggle dennoch konsistent: `SwitchableEntities` ist die **eine** Regel, die
+  beide nutzen, damit nie ein Schalter erscheint, den der Toggle ablehnt.
 
 ### 3. Endpoints — `SwitchController` unter `/api/v1/switches`
 
@@ -126,44 +131,66 @@ Hinweise:
   - `getSwitches(limit?: number): Observable<SwitchEntity[]>`
   - `toggle(entityId: string): Observable<SwitchEntity>`
 
-### 5. Komponente `app-switch-tile`
+### 5. Präsentationskomponente `app-switch-list`
 
-Eigenständige Einheit (Kachel **und** Dialog gekapselt), platziert im
-`lumina__rooms`-Grid an Stelle der bisherigen Küche-Kachel.
+Die Toggle-Zeile (Icon + Name + Zustand + Umschalter) wird **einmal** als
+präsentationale Komponente gebaut und von Kachel **und** Dialog verwendet.
 
-**Kachel:**
-- Kopf: Icon `toggle_on` + Titel „Schalter" + Button „Alle Schalter"
-  (Icon `apps` / `expand_content`), der den Dialog öffnet.
-- Körper: bis zu **4** Schalter (`getSwitches(4)`), je Zeile Name + Umschalter.
-- Tippen auf den Umschalter → **optimistisches** Umschalten des Zustands +
-  `toggle(entityId)`. Bei Fehler: Zustand zurücksetzen + dezenter Hinweis.
-- Leerzustand: „Keine Schalter" wenn die Liste leer ist.
-- Aktualisierung: Intervall ~30–60 s (Angleichung an das Dashboard-Muster) und
-  nach jedem eigenen Toggle.
+- `@Input() switches: SwitchEntity[]`
+- `@Input() pendingIds: ReadonlySet<string>` — Zeilen mit laufendem Schaltbefehl
+  (verhindert Doppelklicks).
+- `@Input() variant: 'tile' | 'dialog'` — die Kachel ist dunkles Glas, der Dialog
+  hell; die Zeile bringt beide Tonalitäten als Host-Klasse mit.
+- `@Output() toggled = EventEmitter<SwitchEntity>`
+- Enthält **keine** Service-Aufrufe und keinen eigenen Zustand.
 
-**Dialog:**
-- Folgt dem bestehenden `lumina__dialog`-Backdrop-Muster (wie der
-  Energiefluss-Dialog): Backdrop-Klick + Escape schließen, `role="dialog"`.
-- Zeigt **alle** Schalter (`getSwitches()`), gleiche Toggle-Zeile.
-- Nach Schließen aktualisiert die Kachel ihre (nutzungsbasierte) Reihenfolge.
+### 6. Dashboard: Kachel, Dialog und Zustand
 
-**Wiederverwendung:** Die Toggle-Zeile (Name + Umschalter + Zustand/Verfügbarkeit)
-ist ein gemeinsames Template/Teil-Element für Kachel und Dialog.
+**Warum nicht in einer gekapselten Kachel-Komponente:** `.lumina-card` setzt
+`backdrop-filter` und `.lumina__fade` endet per `forwards` auf
+`transform: translateY(0)`. Beides erzeugt einen Containing Block für
+`position: fixed`-Nachfahren — ein Dialog innerhalb der Kachel wäre auf die
+Kachel eingesperrt statt bildschirmfüllend. `@angular/cdk` (Overlay/Portal) ist
+nicht im Projekt. Das Dashboard besitzt bereits exakt dieses Muster für den
+Energiefluss-Dialog (Dialog auf oberster Ebene, Zustand im Dashboard,
+Inhalt als Kind-Komponente `app-energy-flow`) — dem folgen wir.
 
-### 6. Dashboard-Anpassung
+**Kachel** (inline im Dashboard-Template, wie die Klima-Kachel; nutzt die
+vorhandenen `lumina__room*`-Klassen):
+- Ersetzt den `rooms[0]`-Eintrag „Küche"; dieser wird aus dem `rooms`-Array
+  entfernt, der Schlafzimmer-Platzhalter bleibt.
+- Kopf: Icon `toggle_on` + Button „Alle Schalter" (Icon `expand_content`), der
+  den Dialog öffnet.
+- Titel „Schalter", darunter `<app-switch-list variant="tile">` mit den Top-4.
+- Leerzustand: „Keine Schalter".
+- `.lumina__switch-tile` neutralisiert `cursor`/Hover-`transform` von
+  `.lumina__room` (die Kachel ist kein einzelnes Klickziel mehr).
 
-- `rooms[0]` („Küche") aus dem `rooms`-Array in `dashboard.component.ts`
-  entfernen.
-- `<app-switch-tile>` im `lumina__rooms`-Grid an erster Position einsetzen
-  (vor dem Schlafzimmer-Platzhalter, nach der Klima-Kachel).
-- Import der neuen Komponente in `DashboardComponent`.
+**Dialog** (inline im Dashboard-Template, gleiche `lumina__dialog-*`-Hülle wie
+der Energiefluss-Dialog): Backdrop-Klick + Escape schließen, `role="dialog"`,
+Titel „Alle Schalter", Körper `<app-switch-list variant="dialog">` mit allen
+Schaltern.
+
+**Zustand im `DashboardComponent`** (wie bereits für `energyLive`/`ankerLive`/
+`flowDialogOpen`):
+- `topSwitches`, `allSwitches`, `pendingSwitchIds`, `switchDialogOpen`,
+  `switchError`.
+- Laden der Top-4 per Intervall (30 s) + `startWith(0)`, analog zu
+  `startClimateRefresh()`.
+- `toggleSwitch(entity)`: optimistisches Umschalten in beiden Listen (Zuordnung
+  über `entityId`, nicht über Objektreferenz), dann `SwitchService.toggle`;
+  bei Fehler Zustand zurücksetzen + Hinweis.
+- `openSwitchDialog()` lädt alle Schalter; `closeSwitchDialog()` lädt die Top-4
+  neu (die nutzungsbasierte Reihenfolge kann sich geändert haben).
 
 ## Datenfluss
 
-1. Kachel-Init → `getSwitches(4)` → Render Top-4.
-2. Toggle tippen → optimistischer State-Flip → `toggle(entityId)` →
-   Erfolg: Liste neu laden (Reihenfolge kann sich ändern) / Fehler: Flip zurück.
+1. Dashboard-Init → `getSwitches(4)` → Kachel rendert Top-4.
+2. Toggle tippen → optimistischer State-Flip (in beiden Listen über `entityId`)
+   → `toggle(entityId)` → Erfolg: Zustand aus der Antwort übernehmen /
+   Fehler: Flip zurück + Hinweis.
 3. Dialog öffnen → `getSwitches()` (alle) → Render; Toggles gleicher Pfad.
+   Schließen → Top-4 neu laden (Reihenfolge kann sich geändert haben).
 4. Geräte-Polling hält den gespiegelten State aktuell; die nutzungsbasierte
    Reihenfolge verschiebt sich mit steigenden Zählern.
 
@@ -187,8 +214,10 @@ ist ein gemeinsames Template/Teil-Element für Kachel und Dialog.
 
 **Frontend:**
 - `SwitchService`: HTTP-Aufrufe (GET mit/ohne `limit`, POST toggle).
-- `switch-tile`: rendert Top-N, Toggle ruft Service + optimistischer Flip,
-  Fehler-Rücksetzung, Dialog öffnen/schließen, Leerzustand.
+- `switch-list`: rendert Zeilen, Klick emittiert `toggled`, `pendingIds`
+  deaktiviert die Zeile, `unavailable` wird als solches angezeigt.
+- `dashboard`: lädt Top-4, optimistischer Flip + Rücksetzung bei Fehler,
+  Dialog öffnen/schließen (inkl. Neuladen der Top-4), Leerzustand.
 
 ## Offene Defaults (bei Bedarf trivial änderbar)
 
