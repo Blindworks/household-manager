@@ -4,14 +4,15 @@ import com.household.manager.dto.WasteCollectionSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -21,13 +22,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class WasteCollectionSettingsServiceTest {
 
     private static final String CATEGORY = "WASTE_COLLECTION";
 
     @Mock
     private ApplicationSettingsService settingsService;
+
+    @Captor
+    private ArgumentCaptor<Map<String, String>> settingsMapCaptor;
 
     private WasteCollectionSettingsService service;
 
@@ -63,7 +66,7 @@ class WasteCollectionSettingsServiceTest {
     }
 
     @Test
-    void schreibtSettingsOhneDenInternenMerkerAnzutasten() {
+    void schreibtSettingsAtomarUndOhneDenInternenMerkerAnzutasten() {
         service.saveSettings(WasteCollectionSettings.builder()
                 .enabled(true)
                 .icsUrl("https://x/cal.ics")
@@ -73,14 +76,21 @@ class WasteCollectionSettingsServiceTest {
                 .reminderAlexaSerials(List.of("DSN1", "DSN2"))
                 .build());
 
-        verify(settingsService).saveSetting(CATEGORY, "enabled", "true");
-        verify(settingsService).saveSetting(CATEGORY, "ics_url", "https://x/cal.ics");
-        verify(settingsService).saveSetting(CATEGORY, "lookahead_days", "4");
-        verify(settingsService).saveSetting(CATEGORY, "reminder_enabled", "false");
-        verify(settingsService).saveSetting(CATEGORY, "reminder_time", "20:15");
-        verify(settingsService).saveSetting(CATEGORY, "reminder_alexa_serials", "DSN1,DSN2");
-        verify(settingsService, never())
-                .saveSetting(eq(CATEGORY), eq("last_announced_date"), anyString());
+        verify(settingsService).saveSettings(eq(CATEGORY), settingsMapCaptor.capture());
+        Map<String, String> saved = settingsMapCaptor.getValue();
+
+        assertThat(saved)
+                .containsEntry("enabled", "true")
+                .containsEntry("ics_url", "https://x/cal.ics")
+                .containsEntry("lookahead_days", "4")
+                .containsEntry("reminder_enabled", "false")
+                .containsEntry("reminder_time", "20:15")
+                .containsEntry("reminder_alexa_serials", "DSN1,DSN2")
+                .doesNotContainKey("last_announced_date");
+
+        // Der einzelne Speicherpfad darf gar nicht erst benutzt werden -
+        // sonst waere die Atomaritaetsgarantie der Bulk-Speicherung wertlos.
+        verify(settingsService, never()).saveSetting(anyString(), anyString(), anyString());
     }
 
     @Test
@@ -95,6 +105,14 @@ class WasteCollectionSettingsServiceTest {
         when(settingsService.getInt(CATEGORY, "lookahead_days", 3)).thenReturn(0);
 
         assertThat(service.getLookaheadDays()).isEqualTo(1);
+    }
+
+    @Test
+    void faelltBeiNichtNumerischemVorschaufensterAufDenDefaultZurueck() {
+        when(settingsService.getInt(CATEGORY, "lookahead_days", 3))
+                .thenThrow(new NumberFormatException("nicht numerisch"));
+
+        assertThat(service.getLookaheadDays()).isEqualTo(3);
     }
 
     @Test

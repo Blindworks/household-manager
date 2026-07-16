@@ -9,7 +9,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Uebersetzt zwischen dem typisierten {@link WasteCollectionSettings} und den String-Werten
@@ -49,19 +51,23 @@ public class WasteCollectionSettingsService {
                 .build();
     }
 
-    /** Schreibt die vom Nutzer pflegbaren Werte; {@code last_announced_date} bleibt unberuehrt. */
+    /**
+     * Schreibt die vom Nutzer pflegbaren Werte in einer einzigen Transaktion;
+     * {@code last_announced_date} bleibt unberuehrt. Ein einzelner {@code saveSettings}-Aufruf
+     * verhindert, dass ein Fehler mitten in mehreren Einzel-Writes die Konfiguration
+     * halb aktualisiert zuruecklaesst.
+     */
     public void saveSettings(WasteCollectionSettings settings) {
-        settingsService.saveSetting(CATEGORY, KEY_ENABLED, String.valueOf(settings.isEnabled()));
-        settingsService.saveSetting(CATEGORY, KEY_ICS_URL, nullToEmpty(settings.getIcsUrl()));
-        settingsService.saveSetting(CATEGORY, KEY_LOOKAHEAD_DAYS,
-                String.valueOf(settings.getLookaheadDays()));
-        settingsService.saveSetting(CATEGORY, KEY_REMINDER_ENABLED,
-                String.valueOf(settings.isReminderEnabled()));
-        settingsService.saveSetting(CATEGORY, KEY_REMINDER_TIME,
-                nullToEmpty(settings.getReminderTime()));
-        settingsService.saveSetting(CATEGORY, KEY_REMINDER_SERIALS,
-                settings.getReminderAlexaSerials() == null
-                        ? "" : String.join(",", settings.getReminderAlexaSerials()));
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put(KEY_ENABLED, String.valueOf(settings.isEnabled()));
+        values.put(KEY_ICS_URL, nullToEmpty(settings.getIcsUrl()));
+        values.put(KEY_LOOKAHEAD_DAYS, String.valueOf(settings.getLookaheadDays()));
+        values.put(KEY_REMINDER_ENABLED, String.valueOf(settings.isReminderEnabled()));
+        values.put(KEY_REMINDER_TIME, nullToEmpty(settings.getReminderTime()));
+        values.put(KEY_REMINDER_SERIALS, settings.getReminderAlexaSerials() == null
+                ? "" : String.join(",", settings.getReminderAlexaSerials()));
+
+        settingsService.saveSettings(CATEGORY, values);
         log.info("Muellabfuhr-Einstellungen gespeichert");
     }
 
@@ -77,9 +83,19 @@ public class WasteCollectionSettingsService {
         return settingsService.getString(CATEGORY, KEY_ICS_URL, "");
     }
 
-    /** Nie kleiner als 1 — ein Fenster von 0 Tagen wuerde die Kachel dauerhaft leeren. */
+    /**
+     * Nie kleiner als 1 — ein Fenster von 0 Tagen wuerde die Kachel dauerhaft leeren.
+     * Faellt bei einem nicht-numerischen Wert auf den Default zurueck, statt den
+     * (minuetlich laufenden) Scheduler mit einer {@link NumberFormatException} abstuerzen zu lassen.
+     */
     public int getLookaheadDays() {
-        return Math.max(1, settingsService.getInt(CATEGORY, KEY_LOOKAHEAD_DAYS, DEFAULT_LOOKAHEAD_DAYS));
+        try {
+            return Math.max(1,
+                    settingsService.getInt(CATEGORY, KEY_LOOKAHEAD_DAYS, DEFAULT_LOOKAHEAD_DAYS));
+        } catch (NumberFormatException ex) {
+            log.warn("Ungueltiges Vorschaufenster, nutze {} Tage", DEFAULT_LOOKAHEAD_DAYS);
+            return DEFAULT_LOOKAHEAD_DAYS;
+        }
     }
 
     /** Faellt bei unparsbarem Wert auf 19:00 zurueck, statt den Scheduler scheitern zu lassen. */
