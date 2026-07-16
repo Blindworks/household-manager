@@ -40,9 +40,14 @@ class WasteReminderServiceTest {
 
     private final WasteAnnouncementTextBuilder textBuilder = new WasteAnnouncementTextBuilder();
 
-    /** Baut den Service mit einer auf {@code time} fixierten Uhr. */
+    /** Baut den Service mit einer auf {@code TODAY} und {@code time} fixierten Uhr. */
     private WasteReminderService serviceAt(LocalTime time) {
-        Clock clock = Clock.fixed(TODAY.atTime(time).atZone(ZONE).toInstant(), ZONE);
+        return serviceAt(TODAY, time);
+    }
+
+    /** Baut den Service mit einer auf {@code date} und {@code time} fixierten Uhr. */
+    private WasteReminderService serviceAt(LocalDate date, LocalTime time) {
+        Clock clock = Clock.fixed(date.atTime(time).atZone(ZONE).toInstant(), ZONE);
         return new WasteReminderService(
                 collectionService, settingsService, announcementService, textBuilder, clock);
     }
@@ -160,5 +165,29 @@ class WasteReminderServiceTest {
 
         // Ohne Merker versucht es der naechste Lauf innerhalb des Fensters erneut.
         verify(settingsService, never()).markAnnounced(any());
+    }
+
+    @Test
+    void sagtBeiSpaeterAnsagezeitInnerhalbDesGekuerztenFenstersAn() {
+        givenReadyToAnnounce();
+        when(settingsService.getReminderTime()).thenReturn(LocalTime.of(23, 30));
+
+        serviceAt(LocalTime.of(23, 45)).checkAndAnnounce();
+
+        verify(announcementService).announce(anyString(), anyList(), any());
+    }
+
+    @Test
+    void sagtNachMitternachtNichtMehrAnAuchWennDasUngekapptFensterNochOffenWaere() {
+        givenReadyToAnnounce();
+        when(settingsService.getReminderTime()).thenReturn(LocalTime.of(23, 30));
+        LocalDate tomorrow = TODAY.plusDays(1);
+        when(collectionService.today()).thenReturn(tomorrow);
+
+        // Ohne die Mitternachts-Kappung waere das rechnerische Fenster (23:30-00:30) hier noch
+        // offen und wuerde faelschlich morgen (= D+2) ansagen.
+        serviceAt(tomorrow, LocalTime.of(0, 5)).checkAndAnnounce();
+
+        verifyNoInteractions(announcementService);
     }
 }

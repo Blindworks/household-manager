@@ -87,10 +87,13 @@ public class WasteReminderService {
         LocalTime start = settingsService.getReminderTime();
         LocalTime end = start.plus(ANNOUNCE_WINDOW);
 
-        if (end.isAfter(start)) {
-            return !now.isBefore(start) && now.isBefore(end);
+        // Das Fenster darf nie ueber Mitternacht laufen: Die Ansage sagt woertlich "Morgen wird
+        // abgeholt" - nach dem Datumswechsel meinte "morgen" einen anderen Tag, die Aussage waere
+        // also schlicht falsch. Bei einer spaeten Ansagezeit wird das Fenster daher gekuerzt statt
+        // umgebrochen (23:30 ergibt 23:30 bis Tagesende, nicht bis 00:30).
+        if (end.isBefore(start)) {
+            end = LocalTime.MAX;
         }
-        // Fenster laeuft ueber Mitternacht (z. B. Ansagezeit 23:30).
-        return !now.isBefore(start) || now.isBefore(end);
+        return !now.isBefore(start) && now.isBefore(end);
     }
 }
