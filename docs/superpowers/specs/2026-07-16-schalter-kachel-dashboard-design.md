@@ -15,8 +15,10 @@ Umschalter schaltet das Gerät **sofort**; ein separater Button im Kachel-Kopf
 
 Betroffen ist die erste Raum-Kachel im `lumina__rooms`-Grid von
 `frontend/src/app/pages/dashboard/dashboard.component.html` (aktuell der
-`rooms[0]`-Eintrag „Küche"). Sie wird durch eine eigenständige Komponente
-`app-switch-tile` ersetzt, die Kachel **und** Dialog kapselt.
+`rooms[0]`-Eintrag „Küche"). Kachel und Dialog liegen inline im Dashboard; nur
+die Toggle-Zeilen werden als präsentationale Komponente `app-switch-list`
+ausgelagert und von beiden genutzt. Die Begründung für diesen Schnitt steht in
+Abschnitt 6.
 
 **Schalter-Quellen (bewusst gewählt):**
 - **SmartDevices** (`SWITCH`-Domain, Source `KASA`/`TAPO`/`MEROSS`) — bereits als
