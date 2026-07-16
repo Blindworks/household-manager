@@ -156,6 +156,11 @@ public class WasteCalendarPollingService {
                             .thenComparing(ParsedWasteEvent::label))
                     .orElse(null);
 
+            // next ist ueber den aktuellen Aufrufpfad nie null (safePoll kehrt bei leerem
+            // parsed vorher zurueck, und der Parser filtert bereits auf >= from). Der Zweig
+            // bleibt trotzdem: Diese Unerreichbarkeit ruht auf einem klassenuebergreifenden
+            // Vertrag, den kein Typ erzwingt - verschiebt der Parser einmal seine Grenze,
+            // soll hier "unknown" gemeldet werden statt eine Exception zu fliegen.
             String state = next == null ? "unknown" : next.date().toString();
             Map<String, Object> attributes = next == null ? Map.of() : Map.of(
                     "label", next.label(),
