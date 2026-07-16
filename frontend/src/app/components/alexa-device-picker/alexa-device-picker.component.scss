@@ -1,0 +1,28 @@
+// Portiert aus node-config-panel.component.scss, wo diese Regeln lagen, den Picker wegen
+// Angulars View-Kapselung aber nie erreichten.
+//
+// Bewusst OHNE den dortigen `select, input`-Block: Dieser Picker rendert ausschliesslich
+// <input type="checkbox">, kein <select>. Im Flow-Editor war der input-Zweig tot (die
+// Geschwister-Picker nutzen <select>); hier wuerde er greifen und die nativen Checkboxen
+// mit Padding und Rahmen entstellen.
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.picker__missing {
+  font-size: 0.75rem;
+  color: #b71c1c;
+}
+
+.picker--multi {
+  gap: 0.15rem;
+}
+
+.picker__check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}

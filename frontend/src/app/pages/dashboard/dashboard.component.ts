@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval, of, startWith, switchMap } from 'rxjs';
@@ -15,6 +15,7 @@ import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
 import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.util';
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
+import { WasteCollectionTileComponent } from '../../components/waste-collection-tile/waste-collection-tile.component';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -28,7 +29,7 @@ import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.co
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, EnergyFlowComponent],
+  imports: [CommonModule, RouterLink, EnergyFlowComponent, WasteCollectionTileComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })

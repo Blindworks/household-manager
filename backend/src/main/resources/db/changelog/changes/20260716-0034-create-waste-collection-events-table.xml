@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260716-0034" author="household-manager">
+        <comment>Create waste_collection_events table and seed WASTE_COLLECTION settings.</comment>
+
+        <createTable tableName="waste_collection_events">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="collection_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="label" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="waste_collection_events"
+                columnNames="collection_date, label"
+                constraintName="uq_waste_collection_date_label"/>
+
+        <createIndex indexName="idx_waste_collection_events_date" tableName="waste_collection_events">
+            <column name="collection_date"/>
+        </createIndex>
+
+        <insert tableName="application_settings">
+            <column name="category" value="WASTE_COLLECTION"/>
+            <column name="setting_key" value="enabled"/>
+            <column name="setting_value" value="false"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="WASTE_COLLECTION"/>
+            <column name="setting_key" value="lookahead_days"/>
+            <column name="setting_value" value="3"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="WASTE_COLLECTION"/>
+            <column name="setting_key" value="reminder_enabled"/>
+            <column name="setting_value" value="true"/>
+        </insert>
+        <insert tableName="application_settings">
+            <column name="category" value="WASTE_COLLECTION"/>
+            <column name="setting_key" value="reminder_time"/>
+            <column name="setting_value" value="19:00"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="application_settings">
+                <where>category = 'WASTE_COLLECTION'</where>
+            </delete>
+            <dropTable tableName="waste_collection_events"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
