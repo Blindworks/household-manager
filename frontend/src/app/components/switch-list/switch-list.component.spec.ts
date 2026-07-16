@@ -74,4 +74,20 @@ describe('SwitchListComponent', () => {
 
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('button').length).toBe(0);
   });
+
+  it('setzt die Variant-Klasse fuer den Dialog', () => {
+    const fixture = render([entity()]);
+    fixture.componentRef.setInput('variant', 'dialog');
+    fixture.detectChanges();
+
+    const list = (fixture.nativeElement as HTMLElement).querySelector('.switch-list')!;
+    expect(list.classList).toContain('switch-list--dialog');
+  });
+
+  it('spiegelt den Zustand in aria-pressed', () => {
+    const fixture = render([entity({ state: 'off' })]);
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
 });
