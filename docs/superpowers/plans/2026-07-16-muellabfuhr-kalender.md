@@ -1298,8 +1298,23 @@ git commit -m "feat(waste): Leseseite der Abholtermine mit injizierter Clock"
 **Files:**
 - Modify: `backend/src/main/java/com/household/manager/entitystate/EntitySource.java`
 - Create: `backend/src/main/java/com/household/manager/dto/WastePollingStatusResponse.java`
+- Create: `backend/src/main/java/com/household/manager/service/WasteCollectionResyncService.java`
 - Create: `backend/src/main/java/com/household/manager/service/WasteCalendarPollingService.java`
+- Test: `backend/src/test/java/com/household/manager/service/WasteCollectionResyncServiceTest.java`
 - Test: `backend/src/test/java/com/household/manager/service/WasteCalendarPollingServiceTest.java`
+
+**Warum der Resync eine eigene Bean ist — bitte nicht „vereinfachen":**
+
+`deleteByCollectionDateGreaterThanEqual` ist eine abgeleitete Delete-Query und braucht zur
+Laufzeit zwingend eine aktive Transaktion. `@Transactional` wirkt aber nur über den
+Spring-Proxy — bei einem Selbstaufruf innerhalb derselben Bean (`this.resync(...)`) greift
+die Annotation **nicht**, und der Delete scheitert zur Laufzeit. Deshalb liegt der Resync in
+einer eigenen Bean, die der Polling-Service injiziert aufruft: So geht der Aufruf über den
+Proxy und die Transaktion existiert wirklich.
+
+Der zweite Grund ist genauso wichtig: Die Transaktion umschließt so **nur** Delete und
+Insert. Läge sie auf `scheduledPoll`, hielte der bis zu 10 Sekunden dauernde HTTP-Abruf eine
+Datenbankverbindung offen.
 
 - [ ] **Step 1: EntitySource erweitern**
 
@@ -1348,7 +1363,160 @@ public class WastePollingStatusResponse {
 }
 ```
 
-- [ ] **Step 3: Failing test schreiben**
+- [ ] **Step 3: Resync-Bean per TDD — Test zuerst**
+
+Create `backend/src/test/java/com/household/manager/service/WasteCollectionResyncServiceTest.java`:
+
+```java
+package com.household.manager.service;
+
+import com.household.manager.model.entity.WasteCollectionEvent;
+import com.household.manager.repository.WasteCollectionEventRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
+
+@ExtendWith(MockitoExtension.class)
+class WasteCollectionResyncServiceTest {
+
+    private static final LocalDate TODAY = LocalDate.of(2026, 7, 16);
+
+    @Mock
+    private WasteCollectionEventRepository repository;
+
+    private WasteCollectionResyncService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new WasteCollectionResyncService(repository);
+    }
+
+    @Test
+    void loeschtDasZukunftsfensterUndSchreibtDieNeuenTermine() {
+        service.resync(TODAY, List.of(
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 24), "Restmuell")));
+
+        // Reihenfolge ist wesentlich: erst raeumen, dann schreiben.
+        InOrder inOrder = inOrder(repository);
+        inOrder.verify(repository).deleteByCollectionDateGreaterThanEqual(TODAY);
+        inOrder.verify(repository).saveAll(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void bildetDieTermineKorrektAufEntitaetenAb() {
+        service.resync(TODAY, List.of(
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne")));
+
+        ArgumentCaptor<List<WasteCollectionEvent>> captor = ArgumentCaptor.forClass(List.class);
+        verify(repository).saveAll(captor.capture());
+
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().get(0).getCollectionDate()).isEqualTo(LocalDate.of(2026, 7, 17));
+        assertThat(captor.getValue().get(0).getLabel()).isEqualTo("Biotonne");
+    }
+
+    @Test
+    void entferntDuplikateAusDemIcs() {
+        service.resync(TODAY, List.of(
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne")));
+
+        // Der Unique-Constraint (collection_date, label) wuerde bei Dubletten brechen.
+        ArgumentCaptor<List<WasteCollectionEvent>> captor = ArgumentCaptor.forClass(List.class);
+        verify(repository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+    }
+
+    @Test
+    void behaeltMehrereTonnenAmSelbenTag() {
+        service.resync(TODAY, List.of(
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Restmuell")));
+
+        ArgumentCaptor<List<WasteCollectionEvent>> captor = ArgumentCaptor.forClass(List.class);
+        verify(repository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(2);
+    }
+}
+```
+
+Run: `cd backend && mvn test -Dtest=WasteCollectionResyncServiceTest`
+Expected: FAIL — `WasteCollectionResyncService` existiert nicht.
+
+- [ ] **Step 4: Resync-Bean implementieren**
+
+Create `backend/src/main/java/com/household/manager/service/WasteCollectionResyncService.java`:
+
+```java
+package com.household.manager.service;
+
+import com.household.manager.model.entity.WasteCollectionEvent;
+import com.household.manager.repository.WasteCollectionEventRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+/**
+ * Ersetzt das Zukunftsfenster der Abholtermine in einer Transaktion.
+ *
+ * <p>Bewusst eine eigene Bean und nicht eine Methode des Polling-Service: Der abgeleitete
+ * Delete braucht eine aktive Transaktion, und {@code @Transactional} wirkt nur ueber den
+ * Spring-Proxy — bei einem Selbstaufruf innerhalb derselben Bean bliebe die Annotation
+ * wirkungslos. Zudem umschliesst die Transaktion so nur Delete und Insert, waehrend der
+ * HTTP-Abruf ausserhalb bleibt und keine Verbindung blockiert.
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class WasteCollectionResyncService {
+
+    private final WasteCollectionEventRepository repository;
+
+    /**
+     * Loescht alle Termine ab {@code from} und schreibt {@code parsed} neu. Vergangenes bleibt
+     * als Historie stehen.
+     */
+    @Transactional
+    public void resync(LocalDate from, List<ParsedWasteEvent> parsed) {
+        repository.deleteByCollectionDateGreaterThanEqual(from);
+        List<WasteCollectionEvent> entities = deduplicate(parsed).stream()
+                .map(event -> WasteCollectionEvent.builder()
+                        .collectionDate(event.date())
+                        .label(event.label())
+                        .build())
+                .toList();
+        repository.saveAll(entities);
+        log.debug("Resync ab {}: {} Termine geschrieben", from, entities.size());
+    }
+
+    /** Der Unique-Constraint (collection_date, label) duldet keine Dubletten aus dem ICS. */
+    private List<ParsedWasteEvent> deduplicate(List<ParsedWasteEvent> parsed) {
+        return List.copyOf(new LinkedHashSet<>(parsed));
+    }
+}
+```
+
+Run: `cd backend && mvn test -Dtest=WasteCollectionResyncServiceTest`
+Expected: PASS, 4 Tests.
+
+- [ ] **Step 5: Failing test für den Polling-Service schreiben**
 
 Create `backend/src/test/java/com/household/manager/service/WasteCalendarPollingServiceTest.java`:
 
@@ -1356,12 +1524,10 @@ Create `backend/src/test/java/com/household/manager/service/WasteCalendarPolling
 package com.household.manager.service;
 
 import com.household.manager.entitystate.EntityStateService;
-import com.household.manager.model.entity.WasteCollectionEvent;
 import com.household.manager.repository.WasteCollectionEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.scheduling.TaskScheduler;
@@ -1375,7 +1541,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -1383,6 +1548,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class WasteCalendarPollingServiceTest {
 
+    private static final LocalDate TODAY = LocalDate.of(2026, 7, 16);
     private static final Clock CLOCK =
             Clock.fixed(Instant.parse("2026-07-16T08:00:00Z"), ZoneId.of("Europe/Berlin"));
 
@@ -1390,6 +1556,8 @@ class WasteCalendarPollingServiceTest {
     private WasteCalendarIcsClient icsClient;
     @Mock
     private WasteCalendarIcsParser icsParser;
+    @Mock
+    private WasteCollectionResyncService resyncService;
     @Mock
     private WasteCollectionEventRepository repository;
     @Mock
@@ -1404,7 +1572,7 @@ class WasteCalendarPollingServiceTest {
     @BeforeEach
     void setUp() {
         service = new WasteCalendarPollingService(
-                icsClient, icsParser, repository, settingsService,
+                icsClient, icsParser, resyncService, repository, settingsService,
                 entityStateService, taskScheduler, CLOCK);
     }
 
@@ -1415,7 +1583,7 @@ class WasteCalendarPollingServiceTest {
         service.scheduledPoll();
 
         verifyNoInteractions(icsClient);
-        verify(repository, never()).deleteByCollectionDateGreaterThanEqual(any());
+        verifyNoInteractions(resyncService);
     }
 
     @Test
@@ -1426,10 +1594,11 @@ class WasteCalendarPollingServiceTest {
         service.scheduledPoll();
 
         verifyNoInteractions(icsClient);
+        verifyNoInteractions(resyncService);
     }
 
     @Test
-    void setztLastErrorUndLoeschtNichtsWennDerAbrufScheitert() {
+    void setztLastErrorUndResynchedNichtWennDerAbrufScheitert() {
         when(settingsService.isEnabled()).thenReturn(true);
         when(settingsService.getIcsUrl()).thenReturn("https://x/cal.ics");
         when(icsClient.fetch(anyString()))
@@ -1438,11 +1607,12 @@ class WasteCalendarPollingServiceTest {
         service.scheduledPoll();
 
         assertThat(service.getStatus().getLastError()).contains("nicht erreichbar");
-        verify(repository, never()).deleteByCollectionDateGreaterThanEqual(any());
+        // Entscheidend: Ein Ausfall der Quelle darf die Tabelle nicht anfassen.
+        verifyNoInteractions(resyncService);
     }
 
     @Test
-    void loeschtNichtsWennDasParsenKeineTermineLiefert() {
+    void resynchedNichtWennDasParsenKeineTermineLiefert() {
         when(settingsService.isEnabled()).thenReturn(true);
         when(settingsService.getIcsUrl()).thenReturn("https://x/cal.ics");
         when(icsClient.fetch(anyString())).thenReturn("BEGIN:VCALENDAR\nEND:VCALENDAR");
@@ -1450,54 +1620,35 @@ class WasteCalendarPollingServiceTest {
 
         service.scheduledPoll();
 
-        verify(repository, never()).deleteByCollectionDateGreaterThanEqual(any());
-        verify(repository, never()).saveAll(any());
+        verifyNoInteractions(resyncService);
         assertThat(service.getStatus().getLastError()).isNull();
     }
 
     @Test
-    void ersetztDasZukunftsfensterBeiErfolgreichemAbruf() {
+    void resynchedBeiErfolgreichemAbruf() {
+        List<ParsedWasteEvent> parsed = List.of(
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
+                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Restmuell"));
         when(settingsService.isEnabled()).thenReturn(true);
         when(settingsService.getIcsUrl()).thenReturn("https://x/cal.ics");
         when(icsClient.fetch(anyString())).thenReturn("ics");
-        when(icsParser.parse(anyString(), any(), any())).thenReturn(List.of(
-                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
-                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Restmuell")));
+        when(icsParser.parse(anyString(), any(), any())).thenReturn(parsed);
 
         service.scheduledPoll();
 
-        verify(repository).deleteByCollectionDateGreaterThanEqual(LocalDate.of(2026, 7, 16));
-        verify(repository).saveAll(any());
+        verify(resyncService).resync(TODAY, parsed);
         assertThat(service.getStatus().getLastError()).isNull();
         assertThat(service.getStatus().getLastPollTime()).isNotNull();
-    }
-
-    @Test
-    void entferntDuplikateAusDemIcsVorDemSpeichern() {
-        when(settingsService.isEnabled()).thenReturn(true);
-        when(settingsService.getIcsUrl()).thenReturn("https://x/cal.ics");
-        when(icsClient.fetch(anyString())).thenReturn("ics");
-        when(icsParser.parse(anyString(), any(), any())).thenReturn(List.of(
-                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
-                new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne")));
-
-        service.scheduledPoll();
-
-        // Der Unique-Constraint (collection_date, label) wuerde bei Dubletten brechen.
-        ArgumentCaptor<List<WasteCollectionEvent>> captor = ArgumentCaptor.forClass(List.class);
-        verify(repository).saveAll(captor.capture());
-        assertThat(captor.getValue()).hasSize(1);
-        assertThat(captor.getValue().get(0).getLabel()).isEqualTo("Biotonne");
     }
 }
 ```
 
-- [ ] **Step 4: Test laufen lassen — muss fehlschlagen**
+- [ ] **Step 6: Test laufen lassen — muss fehlschlagen**
 
 Run: `cd backend && mvn test -Dtest=WasteCalendarPollingServiceTest`
 Expected: FAIL — `WasteCalendarPollingService` existiert nicht.
 
-- [ ] **Step 5: Polling-Service implementieren**
+- [ ] **Step 7: Polling-Service implementieren**
 
 Create `backend/src/main/java/com/household/manager/service/WasteCalendarPollingService.java`:
 
@@ -1516,14 +1667,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -1531,8 +1680,9 @@ import java.util.Map;
  * Spiegelt den ICS-Kalender taeglich in die Tabelle {@code waste_collection_events}.
  *
  * <p>Resync-Strategie: Bei Erfolg wird das Zukunftsfenster (ab heute) geloescht und neu
- * geschrieben. Das bildet verschobene und abgesagte Termine korrekt ab, ohne sich auf
- * instabile ICS-UIDs zu stuetzen. Bei jedem Fehler bleibt die Tabelle unangetastet, damit
+ * geschrieben — das uebernimmt {@link WasteCollectionResyncService} in einer eigenen
+ * Transaktion. Verschobene und abgesagte Termine bilden sich dadurch korrekt ab, ohne sich
+ * auf instabile ICS-UIDs zu stuetzen. Bei jedem Fehler bleibt die Tabelle unangetastet, damit
  * ein Ausfall der Quelle nicht die Dashboard-Kachel leert.
  */
 @Service
@@ -1545,6 +1695,7 @@ public class WasteCalendarPollingService {
 
     private final WasteCalendarIcsClient icsClient;
     private final WasteCalendarIcsParser icsParser;
+    private final WasteCollectionResyncService resyncService;
     private final WasteCollectionEventRepository repository;
     private final WasteCollectionSettingsService settingsService;
     private final EntityStateService entityStateService;
@@ -1553,6 +1704,7 @@ public class WasteCalendarPollingService {
 
     public WasteCalendarPollingService(WasteCalendarIcsClient icsClient,
                                        WasteCalendarIcsParser icsParser,
+                                       WasteCollectionResyncService resyncService,
                                        WasteCollectionEventRepository repository,
                                        WasteCollectionSettingsService settingsService,
                                        EntityStateService entityStateService,
@@ -1560,6 +1712,7 @@ public class WasteCalendarPollingService {
                                        Clock clock) {
         this.icsClient = icsClient;
         this.icsParser = icsParser;
+        this.resyncService = resyncService;
         this.repository = repository;
         this.settingsService = settingsService;
         this.entityStateService = entityStateService;
@@ -1617,7 +1770,7 @@ public class WasteCalendarPollingService {
                 return;
             }
 
-            resync(from, parsed);
+            resyncService.resync(from, parsed);
             reportNextCollection();
             lastError = null;
             log.info("Muellabfuhr-Kalender aktualisiert: {} Termine", parsed.size());
@@ -1625,23 +1778,6 @@ public class WasteCalendarPollingService {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Muellabfuhr-Kalender konnte nicht abgerufen werden", ex);
         }
-    }
-
-    /** Ersetzt das Zukunftsfenster in einer Transaktion; Vergangenes bleibt als Historie stehen. */
-    @Transactional
-    protected void resync(LocalDate from, List<ParsedWasteEvent> parsed) {
-        repository.deleteByCollectionDateGreaterThanEqual(from);
-        repository.saveAll(deduplicate(parsed).stream()
-                .map(event -> WasteCollectionEvent.builder()
-                        .collectionDate(event.date())
-                        .label(event.label())
-                        .build())
-                .toList());
-    }
-
-    /** Der Unique-Constraint (collection_date, label) duldet keine Dubletten aus dem ICS. */
-    private List<ParsedWasteEvent> deduplicate(List<ParsedWasteEvent> parsed) {
-        return List.copyOf(new LinkedHashSet<>(parsed));
     }
 
     private void reportNextCollection() {
@@ -1688,15 +1824,15 @@ public class WasteCalendarPollingService {
 }
 ```
 
-- [ ] **Step 6: Test laufen lassen — muss grün sein**
+- [ ] **Step 8: Beide Tests laufen lassen — müssen grün sein**
 
-Run: `cd backend && mvn test -Dtest=WasteCalendarPollingServiceTest`
-Expected: PASS, 6 Tests.
+Run: `cd backend && mvn test -Dtest='WasteCollectionResyncServiceTest,WasteCalendarPollingServiceTest'`
+Expected: PASS, 4 + 5 = 9 Tests.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add backend/src/main/java/com/household/manager/entitystate/EntitySource.java backend/src/main/java/com/household/manager/dto/WastePollingStatusResponse.java backend/src/main/java/com/household/manager/service/WasteCalendarPollingService.java backend/src/test/java/com/household/manager/service/WasteCalendarPollingServiceTest.java
+git add backend/src/main/java/com/household/manager/entitystate/EntitySource.java backend/src/main/java/com/household/manager/dto/WastePollingStatusResponse.java backend/src/main/java/com/household/manager/service/WasteCollectionResyncService.java backend/src/main/java/com/household/manager/service/WasteCalendarPollingService.java backend/src/test/java/com/household/manager/service/WasteCollectionResyncServiceTest.java backend/src/test/java/com/household/manager/service/WasteCalendarPollingServiceTest.java
 git commit -m "feat(waste): taeglicher Kalenderabruf mit Resync und Entity-State"
 ```
 
@@ -3653,8 +3789,9 @@ git status
   `biweekly.util.com.google.ical.compat.javautil.DateIterator`. Weicht die API von 0.6.8 ab,
   ist die Signatur gegen die Javadocs zu prüfen — die Tests aus Task 3 sind der Schiedsrichter,
   sie dürfen nicht aufgeweicht werden.
-- **`@Transactional` auf `protected` Methode:** `WasteCalendarPollingService.resync` wird
-  intern aufgerufen; Spring-AOP greift bei Selbstaufrufen nicht, die Annotation ist dort also
-  wirkungslos. Für den Resync ist das hinnehmbar (Löschen und Einfügen laufen unmittelbar
-  hintereinander), aber falls Atomarität strikt gefordert wird, gehört der Resync in eine
-  eigene Bean. Beim Umsetzen bewusst entscheiden und den Kommentar entsprechend anpassen.
+- **Transaktion des Resyncs — erledigt, nicht mehr offen.** Ein früherer Entwurf hatte
+  `@Transactional` auf einer `protected` Methode des Polling-Service. Das wäre wirkungslos
+  gewesen (Spring-AOP greift bei Selbstaufrufen nicht) und hätte den abgeleiteten Delete zur
+  Laufzeit scheitern lassen — er benötigt zwingend eine aktive Transaktion. Task 7 zieht den
+  Resync deshalb in die eigene Bean `WasteCollectionResyncService`. Diese Aufteilung bitte
+  nicht wieder zusammenführen.
