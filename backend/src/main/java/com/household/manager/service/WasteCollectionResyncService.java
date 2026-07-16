@@ -14,8 +14,8 @@ import java.util.List;
 /**
  * Ersetzt das Zukunftsfenster der Abholtermine in einer Transaktion.
  *
- * <p>Bewusst eine eigene Bean und nicht eine Methode des Polling-Service: Der abgeleitete
- * Delete braucht eine aktive Transaktion, und {@code @Transactional} wirkt nur ueber den
+ * <p>Bewusst eine eigene Bean und nicht eine Methode des Polling-Service: Der Bulk-Delete
+ * braucht eine aktive Transaktion, und {@code @Transactional} wirkt nur ueber den
  * Spring-Proxy — bei einem Selbstaufruf innerhalb derselben Bean bliebe die Annotation
  * wirkungslos. Zudem umschliesst die Transaktion so nur Delete und Insert, waehrend der
  * HTTP-Abruf ausserhalb bleibt und keine Verbindung blockiert.
@@ -33,7 +33,7 @@ public class WasteCollectionResyncService {
      */
     @Transactional
     public void resync(LocalDate from, List<ParsedWasteEvent> parsed) {
-        repository.deleteByCollectionDateGreaterThanEqual(from);
+        repository.deleteFromDateOnwards(from);
         List<WasteCollectionEvent> entities = deduplicate(parsed).stream()
                 .map(event -> WasteCollectionEvent.builder()
                         .collectionDate(event.date())

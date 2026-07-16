@@ -39,9 +39,12 @@ class WasteCollectionResyncServiceTest {
                 new ParsedWasteEvent(LocalDate.of(2026, 7, 17), "Biotonne"),
                 new ParsedWasteEvent(LocalDate.of(2026, 7, 24), "Restmuell")));
 
-        // Reihenfolge ist wesentlich: erst raeumen, dann schreiben.
+        // Achtung, begrenzte Aussagekraft: Dieser Mock belegt nur die Aufrufreihenfolge in Java,
+        // nicht die Reihenfolge der SQL-Anweisungen. Dass der Delete die DB auch wirklich vor den
+        // Inserts erreicht, haengt an Hibernates Flush-Semantik und kann erst ein Test gegen eine
+        // echte DB zeigen (ein abgeleiteter Delete war hier gruen und in der Praxis trotzdem kaputt).
         InOrder inOrder = inOrder(repository);
-        inOrder.verify(repository).deleteByCollectionDateGreaterThanEqual(TODAY);
+        inOrder.verify(repository).deleteFromDateOnwards(TODAY);
         inOrder.verify(repository).saveAll(any());
     }
 
