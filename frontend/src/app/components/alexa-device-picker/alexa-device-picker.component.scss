@@ -1,0 +1,28 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  select, input {
+    padding: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+}
+
+.picker__missing {
+  font-size: 0.75rem;
+  color: #b71c1c;
+}
+
+.picker--multi {
+  gap: 0.15rem;
+}
+
+.picker__check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
