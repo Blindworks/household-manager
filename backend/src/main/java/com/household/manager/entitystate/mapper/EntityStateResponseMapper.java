@@ -39,7 +39,7 @@ public class EntityStateResponseMapper {
     }
 
     /** Effektiver Anzeigename: Kurzname, falls gesetzt, sonst der Integrationsname. */
-    private String displayName(EntityState entity) {
+    public String displayName(EntityState entity) {
         String custom = entity.getCustomName();
         return custom != null && !custom.isBlank() ? custom : entity.getFriendlyName();
     }
