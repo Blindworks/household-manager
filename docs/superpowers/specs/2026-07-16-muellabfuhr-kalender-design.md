@@ -86,7 +86,8 @@ geplanter Abruf einer externen Quelle mit Persistenz und Entity-State:
 |---|---|---|
 | `WasteCalendarIcsClient` | Lädt den ICS-Text von der URL (HTTP-Timeout 10 s). Sonst nichts. | HTTP-Client |
 | `WasteCalendarIcsParser` | ICS-Text → `List<ParsedWasteEvent(date, label)>`. Rein funktional, kein Netz, keine DB. Löst Serientermine (RRULE) über das Fenster heute bis +12 Monate auf, liest `DTSTART` (Ganztagestermin → `LocalDate`) und `SUMMARY`. Filtert Vergangenes. | biweekly |
-| `WasteCalendarPollingService` | Orchestriert: Settings → Client → Parser → Resync. `@Scheduled`, `getStatus()`, `triggerOnce()`, `safePoll()` mit Catch-all. Meldet den Entity-State. | die obigen, Repository, `ApplicationSettingsService`, `EntityStateService`, `TaskScheduler` |
+| `WasteCalendarPollingService` | Orchestriert: Settings → Client → Parser → Resync. `@Scheduled`, `getStatus()`, `triggerOnce()`, `safePoll()` mit Catch-all. Meldet den Entity-State. | die obigen, `WasteCollectionResyncService`, Repository, `ApplicationSettingsService`, `EntityStateService`, `TaskScheduler` |
+| `WasteCollectionResyncService` | Ersetzt das Zukunftsfenster (Delete ab heute + Insert) in **einer eigenen Transaktion**, dedupliziert vorher. Eigene Bean, weil der abgeleitete Delete eine aktive Transaktion braucht und `@Transactional` bei einem Selbstaufruf innerhalb derselben Bean wirkungslos bliebe. So bleibt zudem der HTTP-Abruf ausserhalb der Transaktion. | Repository |
 | `WasteCollectionService` | Leseseite: Termine im Fenster, Termine für ein Datum. Genutzt von Controller und Erinnerung. | Repository, `Clock` |
 | `WasteReminderService` | Prüft minütlich die Ansage-Bedingungen und löst die Durchsage aus. | `WasteCollectionService`, `ApplicationSettingsService`, `AlexaAnnouncementService`, `WasteAnnouncementTextBuilder`, `Clock` |
 | `WasteAnnouncementTextBuilder` | Labels → Ansagetext. Rein funktional. | — |
