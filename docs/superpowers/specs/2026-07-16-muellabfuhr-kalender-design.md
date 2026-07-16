@@ -73,21 +73,33 @@ der Resync würde ein solches Flag wegräumen.
 
 ## Komponenten (Backend)
 
-Package `com.household.manager.waste`, mit Ausnahme des Repositories: JPA-Repositories
-müssen laut `JpaConfig` in `com.household.manager.repository` liegen.
+Paketaufteilung wie beim nächstverwandten Feature (Wetter), das dieselbe Form hat —
+geplanter Abruf einer externen Quelle mit Persistenz und Entity-State:
+
+- Services → `com.household.manager.service`
+- Entity → `com.household.manager.model.entity`
+- Repository → `com.household.manager.repository` (zwingend: `JpaConfig` scannt nur dort)
+- DTOs → `com.household.manager.dto`
+- Controller → `com.household.manager.controller`
 
 | Klasse | Aufgabe | Abhängigkeiten |
 |---|---|---|
 | `WasteCalendarIcsClient` | Lädt den ICS-Text von der URL (HTTP-Timeout 10 s). Sonst nichts. | HTTP-Client |
-| `WasteCalendarIcsParser` | ICS-Text → `List<ParsedWasteEvent(date, label)>`. Rein funktional, kein Netz, keine DB. Löst Serientermine (RRULE) über das Fenster heute bis +12 Monate auf, liest `DTSTART` (Ganztagestermin → `LocalDate`) und `SUMMARY`. Filtert Vergangenes. | ical4j |
+| `WasteCalendarIcsParser` | ICS-Text → `List<ParsedWasteEvent(date, label)>`. Rein funktional, kein Netz, keine DB. Löst Serientermine (RRULE) über das Fenster heute bis +12 Monate auf, liest `DTSTART` (Ganztagestermin → `LocalDate`) und `SUMMARY`. Filtert Vergangenes. | biweekly |
 | `WasteCalendarPollingService` | Orchestriert: Settings → Client → Parser → Resync. `@Scheduled`, `getStatus()`, `triggerOnce()`, `safePoll()` mit Catch-all. Meldet den Entity-State. | die obigen, Repository, `ApplicationSettingsService`, `EntityStateService`, `TaskScheduler` |
 | `WasteCollectionService` | Leseseite: Termine im Fenster, Termine für ein Datum. Genutzt von Controller und Erinnerung. | Repository, `Clock` |
 | `WasteReminderService` | Prüft minütlich die Ansage-Bedingungen und löst die Durchsage aus. | `WasteCollectionService`, `ApplicationSettingsService`, `AlexaAnnouncementService`, `WasteAnnouncementTextBuilder`, `Clock` |
 | `WasteAnnouncementTextBuilder` | Labels → Ansagetext. Rein funktional. | — |
 | `WasteCollectionRepository` | JPA, in `com.household.manager.repository`. | — |
 
-**Neue Maven-Abhängigkeit:** `org.mnode.ical4j:ical4j` (4.x). Version beim Umsetzen auf die
-aktuelle stabile 4er-Release pinnen.
+**Neue Maven-Abhängigkeit:** `net.sf.biweekly:biweekly:0.6.8` (Java-Package `biweekly`).
+
+Gewählt statt ical4j, weil `VEvent.getDateIterator(timezone)` Serien- **und** Einzeltermine
+über denselben Codepfad liefert (bei einem Einzeltermin genau ein Datum) und die API über
+die 3.x/4.x-Umbauten von ical4j hinweg stabiler dokumentiert ist. Der Iterator einer
+Serie ohne `UNTIL`/`COUNT` ist unendlich — er wird über `advanceTo(from)` positioniert, beim
+Überschreiten des Fensterendes abgebrochen und zusätzlich durch eine Iterationsobergrenze
+abgesichert.
 
 **Ergänzung am Bestand:** `ApplicationSettingsService` bekommt
 `getString(category, key, default)` — vorhanden sind bislang nur `getBoolean`/`getInt`/`getLong`.
@@ -168,7 +180,7 @@ genau so hält (`/v1/admin/weather-polling`).
 
 `WasteCollectionController` für die ersten drei (Muster: `AnkerSolixController` exponiert
 seine Settings selbst, es gibt keinen zentralen Settings-Controller),
-`WasteCalendarPollingAdminController` für die beiden Polling-Endpoints (Muster:
+`WastePollingAdminController` für die beiden Polling-Endpoints (Muster:
 `WeatherPollingAdminController`). Der Trigger-Endpoint erlaubt es, den Abruf nach dem
 Eintragen der URL sofort anzustoßen, statt bis zum nächsten Tageslauf zu warten.
 
