@@ -95,6 +95,15 @@ class SwitchQueryServiceTest {
     }
 
     @Test
+    void sortiert_alphabetisch_ohne_ruecksicht_auf_gross_kleinschreibung() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(device("a", "Zebra"), device("b", "ampel")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+
+        assertThat(namesOf(service.listSwitches(null))).containsExactly("ampel", "Zebra");
+    }
+
+    @Test
     void begrenzt_die_liste_auf_das_limit() {
         when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
                 .thenReturn(List.of(device("a", "Eins"), device("b", "Zwei"), device("c", "Drei")));
