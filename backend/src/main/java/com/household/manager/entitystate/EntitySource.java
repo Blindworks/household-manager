@@ -14,6 +14,8 @@ public enum EntitySource {
     ALEXA,
     WEATHER,
     ANKER_SOLIX,
+    /** Muellabfuhr-Termine aus dem Kalender-Abo. */
+    WASTE,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }
