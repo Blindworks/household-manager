@@ -26,9 +26,9 @@ festes Feature), ICS-Live-Abruf ohne DB (fragil bei Ausfall, umständliche Dedup
 
 ### Tabelle `waste_collection_events`
 
-Liquibase-Changeset `20260716-0033-create-waste-collection-events-table.xml`. Die laufende
-Nummer `0033` schließt an `20260715-0032` an — beim Umsetzen prüfen, ob parallele Arbeit
-inzwischen eine `0033` belegt hat, und gegebenenfalls hochzählen.
+Liquibase-Changeset `20260716-0034-create-waste-collection-events-table.xml`, eingebunden in
+`db.changelog-master.xml`. (`0033` ist bereits durch `create-entity-usage-table` aus dem
+parallel entwickelten Schalter-Feature belegt.)
 
 | Spalte | Typ | Zweck |
 |---|---|---|
@@ -152,13 +152,19 @@ kommen wortwörtlich aus dem Kalender, Genus und Artikel sind daher unbekannt (�
 
 ## API
 
+Die Anwendung nutzt `server.servlet.context-path=/api`; Controller mappen daher auf `/v1/...`
+und die effektiven URLs lauten `/api/v1/...`.
+
 | Endpoint | Zweck |
 |---|---|
-| `GET /api/waste-collection/upcoming?days=N` | Termine als `WasteCollectionEventResponse` (`date`, `label`, `daysUntil`). Ohne `days` gilt `lookahead_days` aus den Settings (so ruft das Dashboard auf); die Einstellungsseite ruft mit `days=60` auf, um einen längeren Ausblick zu zeigen. |
-| `GET /api/waste-collection/settings` | Konfiguration lesen |
-| `PUT /api/waste-collection/settings` | Konfiguration schreiben; `last_announced_date` ist nicht überschreibbar (interner Zustand) |
-| `GET /api/waste-collection/polling/status` | `lastPollTime`, `lastError`, `schedule`, Anzahl bekannter Termine |
-| `POST /api/waste-collection/polling/trigger` | Abruf sofort auslösen |
+| `GET /api/v1/waste-collection/upcoming?days=N` | Termine als `WasteCollectionEventResponse` (`date`, `label`, `daysUntil`). Ohne `days` gilt `lookahead_days` aus den Settings (so ruft das Dashboard auf); die Einstellungsseite ruft mit `days=60` auf, um einen längeren Ausblick zu zeigen. |
+| `GET /api/v1/waste-collection/settings` | Konfiguration lesen |
+| `PUT /api/v1/waste-collection/settings` | Konfiguration schreiben; `last_announced_date` ist nicht überschreibbar (interner Zustand) |
+| `GET /api/v1/admin/waste-polling` | `lastPollTime`, `lastError`, `schedule`, Anzahl bekannter Termine |
+| `POST /api/v1/admin/waste-polling/trigger` | Abruf sofort auslösen |
+
+Die Polling-Endpoints liegen unter `/v1/admin/...`, weil `WeatherPollingAdminController` es
+genau so hält (`/v1/admin/weather-polling`).
 
 `WasteCollectionController` für die ersten drei (Muster: `AnkerSolixController` exponiert
 seine Settings selbst, es gibt keinen zentralen Settings-Controller),
