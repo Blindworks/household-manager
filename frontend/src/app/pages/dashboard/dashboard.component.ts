@@ -1,7 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription, interval, of, startWith, switchMap } from 'rxjs';
+import { Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
@@ -15,7 +15,8 @@ import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
 import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.util';
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
-import { WasteCollectionTileComponent } from '../../components/waste-collection-tile/waste-collection-tile.component';
+import { WasteCollectionService } from '../../services/waste-collection.service';
+import { buildWasteInsight } from '../../shared/waste-insight.util';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
@@ -32,7 +33,7 @@ import { SwitchListComponent } from '../../components/switch-list/switch-list.co
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, EnergyFlowComponent, WasteCollectionTileComponent, SwitchListComponent],
+  imports: [CommonModule, RouterLink, EnergyFlowComponent, SwitchListComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
@@ -42,6 +43,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly temperatureService = inject(TemperatureService);
   private readonly switchService = inject(SwitchService);
+  private readonly wasteService = inject(WasteCollectionService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -53,6 +55,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private temperatureSubscription?: Subscription;
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
+  private wasteSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -68,6 +71,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly SWITCH_TILE_LIMIT = 4;
   /** Aktualisierungsintervall der Schalter-Kachel (30 s). */
   private static readonly SWITCH_REFRESH_MS = 30000;
+  /** Haelt die Muell-Meldung ueber den Tag hinweg aktuell (z. B. bei geaenderten Einstellungen). */
+  private static readonly WASTE_REFRESH_MS = 3600000;
+  private static readonly DAY_MS = 86400000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -107,8 +113,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     { label: 'Lesen', active: false }
   ];
 
-  /** Intelligence-Hub-Hinweise (Platzhalter). */
-  readonly insights: IntelligenceItem[] = [
+  /**
+   * Hinweise des Intelligence Hub: die Muellabfuhr voran (sofern etwas ansteht),
+   * dahinter die Platzhalter. Wird von {@link startWasteRefresh} neu gesetzt.
+   */
+  insights: IntelligenceItem[] = [];
+
+  /** Noch nicht angebundene Hub-Hinweise (Platzhalter). */
+  private static readonly PLACEHOLDER_INSIGHTS: IntelligenceItem[] = [
     {
       icon: 'lightbulb',
       tone: 'primary',
@@ -138,11 +150,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
     this.startClock();
     this.loadWeather();
     this.startLiveStream();
     this.startClimateRefresh();
     this.startSwitchRefresh();
+    this.startWasteRefresh();
   }
 
   ngOnDestroy(): void {
@@ -152,6 +166,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription?.unsubscribe();
     this.temperatureSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
+    this.wasteSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -429,6 +444,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Haelt die Muell-Meldung im Hub aktuell. Neben dem stuendlichen Takt zusaetzlich kurz
+   * nach Mitternacht: `daysUntil` wird serverseitig zum Abrufzeitpunkt berechnet, ein rein
+   * stuendlicher Takt liesse "Morgen" also bis zu eine Stunde ueber den Tageswechsel
+   * hinaus stehen bleiben.
+   */
+  private startWasteRefresh(): void {
+    this.wasteSubscription = merge(
+      interval(DashboardComponent.WASTE_REFRESH_MS),
+      timer(this.msUntilNextMidnight(), DashboardComponent.DAY_MS)
+    )
+      .pipe(
+        startWith(0),
+        switchMap(() => this.wasteService.getUpcoming().pipe(catchError(() => of([]))))
+      )
+      .subscribe(events => {
+        const insight = buildWasteInsight(events);
+        this.insights = insight
+          ? [insight, ...DashboardComponent.PLACEHOLDER_INSIGHTS]
+          : [...DashboardComponent.PLACEHOLDER_INSIGHTS];
+      });
+  }
+
+  /**
+   * Millisekunden bis kurz nach dem naechsten lokalen Mitternachtswechsel.
+   * Der kleine Versatz (5s) ist bewusst: bei exakt 00:00:00 koennte der Server bei
+   * minimal abweichender Uhr noch "gestern" liefern.
+   */
+  private msUntilNextMidnight(): number {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    return midnight.getTime() - now.getTime();
+  }
+
   private loadTopSwitches(): void {
     this.topSwitchRequest().subscribe(switches => (this.topSwitches = switches));
   }
@@ -489,7 +538,7 @@ interface SceneButton {
 /** Hinweis-Karte im Intelligence Hub. */
 interface IntelligenceItem {
   readonly icon: string;
-  readonly tone: 'primary' | 'secondary' | 'muted';
+  readonly tone: 'primary' | 'secondary' | 'muted' | 'tertiary' | 'error';
   readonly title: string;
   readonly text: string;
 }

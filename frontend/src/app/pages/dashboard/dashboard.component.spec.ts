@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -9,6 +9,7 @@ import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { TemperatureService } from '../../services/temperature.service';
+import { WasteCollectionService } from '../../services/waste-collection.service';
 import { SwitchEntity } from '../../models/switch.model';
 
 describe('DashboardComponent (Schalter)', () => {
@@ -50,8 +51,8 @@ describe('DashboardComponent (Schalter)', () => {
       providers: [
         // Das Dashboard nutzt routerLink (Klima-Kachel) und braucht daher einen Router.
         provideRouter([]),
-        // Die Muellabfuhr-Kachel bringt ihren eigenen Service mit, der HttpClient
-        // injiziert. Hier wird er gegen das Test-Backend gelegt, statt ihn zu stubben:
+        // Das Dashboard zieht fuer die Hub-Meldung den WasteCollectionService, der
+        // HttpClient injiziert. Hier gegen das Test-Backend gelegt statt gestubbt:
         // diese Specs pruefen die Schalter, nicht die Muellabfuhr.
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -161,6 +162,116 @@ describe('DashboardComponent (Schalter)', () => {
     tick();
 
     expect(fixture.componentInstance.switchError).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
+  let wasteServiceSpy: jasmine.SpyObj<WasteCollectionService>;
+
+  /** Der Hub rendert jede Meldung als .lumina__insight — inklusive der Muellabfuhr. */
+  function insightTexts(fixture: ComponentFixture<DashboardComponent>): string[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__insight')
+    ).map(element => (element.textContent ?? '').replace(/\s+/g, ' ').trim());
+  }
+
+  beforeEach(async () => {
+    wasteServiceSpy = jasmine.createSpyObj('WasteCollectionService', ['getUpcoming']);
+    wasteServiceSpy.getUpcoming.and.returnValue(of([
+      { date: '2026-07-17', label: 'Hausmüll', daysUntil: 1 }
+    ]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WasteCollectionService, useValue: wasteServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('zeigt die Termine als Meldung im Hub, noch vor den Platzhaltern', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture)[0]).toContain('Müllabfuhr');
+    expect(insightTexts(fixture)[0]).toContain('Morgen: Hausmüll');
+
+    discardPeriodicTasks();
+  }));
+
+  it('ruft getUpcoming ohne days auf, damit das konfigurierte Fenster gilt', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(wasteServiceSpy.getUpcoming).toHaveBeenCalledWith();
+
+    discardPeriodicTasks();
+  }));
+
+  it('laesst den Hub ohne anstehende Termine bei den Platzhaltern', fakeAsync(() => {
+    wasteServiceSpy.getUpcoming.and.returnValue(of([]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture).join(' ')).not.toContain('Müllabfuhr');
+    expect(insightTexts(fixture)[0]).toContain('Energie-Optimierung');
+
+    discardPeriodicTasks();
+  }));
+
+  it('verschweigt die Meldung bei einem API-Fehler, statt das Dashboard zu stoeren', fakeAsync(() => {
+    wasteServiceSpy.getUpcoming.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture).join(' ')).not.toContain('Müllabfuhr');
+    expect(insightTexts(fixture).length).toBe(3);
+
+    discardPeriodicTasks();
+  }));
+
+  it('aktualisiert die Meldung kurz nach Mitternacht, damit "Morgen" nicht stehen bleibt', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    wasteServiceSpy.getUpcoming.calls.reset();
+    wasteServiceSpy.getUpcoming.and.returnValue(of([
+      { date: '2026-07-17', label: 'Hausmüll', daysUntil: 0 }
+    ]));
+
+    // Bis kurz nach dem naechsten Mitternachtswechsel, aber vor dem stuendlichen Takt.
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    tick(midnight.getTime() - now.getTime());
+    fixture.detectChanges();
+
+    expect(wasteServiceSpy.getUpcoming).toHaveBeenCalled();
+    expect(insightTexts(fixture)[0]).toContain('Heute: Hausmüll');
 
     discardPeriodicTasks();
   }));

@@ -627,6 +627,23 @@
     }
   }
 
+  // Dringlichkeitsstufen der Muellabfuhr: morgen rot, uebermorgen gelb (sonst --primary).
+  &--error {
+    border-left: 4px solid var(--error);
+
+    .lumina__insight-icon {
+      color: var(--error);
+    }
+  }
+
+  &--tertiary {
+    border-left: 4px solid var(--tertiary);
+
+    .lumina__insight-icon {
+      color: var(--tertiary);
+    }
+  }
+
   &--muted {
     .lumina__insight-icon {
       color: rgba(192, 198, 214, 0.6);
