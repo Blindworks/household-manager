@@ -77,4 +77,7 @@
     <!-- Editierbarer Kurzname für Entitäten -->
     <include file="db/changelog/changes/20260715-0032-add-custom-name-to-entity-states.xml"/>
 
+    <!-- Muellabfuhr-Termine aus dem Google-Kalender -->
+    <include file="db/changelog/changes/20260716-0034-create-waste-collection-events-table.xml"/>
+
 </databaseChangeLog>
