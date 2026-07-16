@@ -669,18 +669,22 @@ public class WasteCalendarIcsClient {
     /**
      * @param icsUrl vollstaendige http(s)-URL des Kalenders
      * @return roher ICS-Text
-     * @throws WasteCalendarException bei Netzfehler, Timeout oder Status != 2xx
+     * @throws WasteCalendarException bei ungueltiger URL, Netzfehler, Timeout oder Status != 2xx
      */
     public String fetch(String icsUrl) {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(icsUrl))
-                .timeout(TIMEOUT)
-                .GET()
-                .build();
-
         HttpResponse<String> response;
         try {
+            // Der Request-Bau steht bewusst im try: URI.create wirft bei einer vertippten
+            // URL eine IllegalArgumentException, die sonst am Vertrag dieser Klasse
+            // vorbeilaufen wuerde ("jeder Fehler wird zur WasteCalendarException").
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(icsUrl))
+                    .timeout(TIMEOUT)
+                    .GET()
+                    .build();
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new WasteCalendarException("Ungueltige Kalender-URL: " + icsUrl, ex);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new WasteCalendarException("Kalender-Abruf wurde unterbrochen.", ex);
