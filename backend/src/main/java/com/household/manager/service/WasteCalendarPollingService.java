@@ -6,7 +6,6 @@ import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
-import com.household.manager.model.entity.WasteCollectionEvent;
 import com.household.manager.repository.WasteCollectionEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.TaskScheduler;
@@ -18,8 +17,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Spiegelt den ICS-Kalender taeglich in die Tabelle {@code waste_collection_events}.
@@ -67,6 +68,13 @@ public class WasteCalendarPollingService {
 
     private volatile LocalDateTime lastPollTime;
     private volatile String lastError;
+    /**
+     * Verhindert, dass ein manueller Trigger (spaeterer "Jetzt abrufen"-Button) einen
+     * laufenden Scheduler-Durchlauf ueberlappt: Beide landen auf demselben
+     * {@code ThreadPoolTaskScheduler} (siehe SchedulingConfig) und wuerden sonst zwei
+     * gleichzeitige Delete-dann-Insert-Resyncs ueber demselben Datumsfenster ausloesen.
+     */
+    private final AtomicBoolean pollInProgress = new AtomicBoolean(false);
 
     public WastePollingStatusResponse getStatus() {
         return WastePollingStatusResponse.builder()
@@ -95,7 +103,15 @@ public class WasteCalendarPollingService {
             log.info("Muellabfuhr-Abruf uebersprungen: keine Kalender-URL hinterlegt");
             return;
         }
-        safePoll(icsUrl);
+        if (!pollInProgress.compareAndSet(false, true)) {
+            log.info("Muellabfuhr-Abruf laeuft bereits; dieser Lauf wird uebersprungen");
+            return;
+        }
+        try {
+            safePoll(icsUrl);
+        } finally {
+            pollInProgress.set(false);
+        }
     }
 
     private void safePoll(String icsUrl) {
@@ -116,7 +132,7 @@ public class WasteCalendarPollingService {
             }
 
             resyncService.resync(from, parsed);
-            reportNextCollection();
+            reportNextCollection(parsed, from);
             lastError = null;
             log.info("Muellabfuhr-Kalender aktualisiert: {} Termine", parsed.size());
         } catch (Exception ex) {
@@ -125,22 +141,25 @@ public class WasteCalendarPollingService {
         }
     }
 
-    private void reportNextCollection() {
+    /**
+     * Leitet den naechsten Termin aus {@code parsed} ab, statt die soeben von
+     * {@link WasteCollectionResyncService} geschriebenen Zeilen erneut abzufragen: Eine
+     * Re-Query wuere nicht nur eine unnoetige Zusatzabfrage, sondern koennte bei einem
+     * interleavenden zweiten Resync eine Zeile aus einer anderen Sync-Generation als der
+     * dieses Durchlaufs melden.
+     */
+    private void reportNextCollection(List<ParsedWasteEvent> parsed, LocalDate today) {
         try {
-            LocalDate today = LocalDate.now(clock);
-            List<WasteCollectionEvent> upcoming =
-                    repository.findByCollectionDateBetweenOrderByCollectionDateAscLabelAsc(
-                            today, today.plusMonths(SYNC_WINDOW_MONTHS));
+            ParsedWasteEvent next = parsed.stream()
+                    .filter(event -> !event.date().isBefore(today))
+                    .min(Comparator.comparing(ParsedWasteEvent::date)
+                            .thenComparing(ParsedWasteEvent::label))
+                    .orElse(null);
 
-            String state = "unknown";
-            Map<String, Object> attributes = Map.of();
-            if (!upcoming.isEmpty()) {
-                WasteCollectionEvent next = upcoming.get(0);
-                state = next.getCollectionDate().toString();
-                attributes = Map.of(
-                        "label", next.getLabel(),
-                        "daysUntil", ChronoUnit.DAYS.between(today, next.getCollectionDate()));
-            }
+            String state = next == null ? "unknown" : next.date().toString();
+            Map<String, Object> attributes = next == null ? Map.of() : Map.of(
+                    "label", next.label(),
+                    "daysUntil", ChronoUnit.DAYS.between(today, next.date()));
 
             entityStateService.reportState(EntityStateUpdate.builder()
                     .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.WASTE,
