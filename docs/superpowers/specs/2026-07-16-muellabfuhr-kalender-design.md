@@ -16,6 +16,7 @@ Dashboard anzeigen und am Vorabend per Alexa-Durchsage darauf aufmerksam machen.
 | Art der Erinnerung | **Dashboard-Kachel *und* Alexa-Durchsage** | Die Kachel informiert passiv über die nächsten Tage, die Durchsage ist der aktive Hinweis am Vorabend. |
 | Architektur | **Eigenes Modul mit DB-Persistenz** | Robust gegen ICS-Ausfälle, saubere Deduplizierung der Durchsage, folgt dem bestehenden Polling-Muster. |
 | Entity-State | **Ja**, nächste Abholung als Sensor melden | Konsistent mit `WeatherPollingService`; macht die Abholung später als Flow-Trigger nutzbar. |
+| Konfiguration | **Eigene Einstellungsseite** im Frontend | Die ICS-URL und die Alexa-Geräte sollen ohne `curl` pflegbar sein. |
 
 Verworfen: Google Calendar API mit OAuth2 (unverhältnismäßiger Aufwand für reines Lesen),
 Auslösung über die Flow-Engine (bräuchte einen Zeit-Trigger, zu viel Indirektion für ein
@@ -25,7 +26,9 @@ festes Feature), ICS-Live-Abruf ohne DB (fragil bei Ausfall, umständliche Dedup
 
 ### Tabelle `waste_collection_events`
 
-Liquibase-Changeset `20260716-0033-create-waste-collection-events-table.xml`.
+Liquibase-Changeset `20260716-0033-create-waste-collection-events-table.xml`. Die laufende
+Nummer `0033` schließt an `20260715-0032` an — beim Umsetzen prüfen, ob parallele Arbeit
+inzwischen eine `0033` belegt hat, und gegebenenfalls hochzählen.
 
 | Spalte | Typ | Zweck |
 |---|---|---|
@@ -151,7 +154,7 @@ kommen wortwörtlich aus dem Kalender, Genus und Artikel sind daher unbekannt (�
 
 | Endpoint | Zweck |
 |---|---|
-| `GET /api/waste-collection/upcoming` | Termine im Fenster `lookahead_days` als `WasteCollectionEventResponse` (`date`, `label`, `daysUntil`) |
+| `GET /api/waste-collection/upcoming?days=N` | Termine als `WasteCollectionEventResponse` (`date`, `label`, `daysUntil`). Ohne `days` gilt `lookahead_days` aus den Settings (so ruft das Dashboard auf); die Einstellungsseite ruft mit `days=60` auf, um einen längeren Ausblick zu zeigen. |
 | `GET /api/waste-collection/settings` | Konfiguration lesen |
 | `PUT /api/waste-collection/settings` | Konfiguration schreiben; `last_announced_date` ist nicht überschreibbar (interner Zustand) |
 | `GET /api/waste-collection/polling/status` | `lastPollTime`, `lastError`, `schedule`, Anzahl bekannter Termine |
@@ -161,14 +164,52 @@ kommen wortwörtlich aus dem Kalender, Genus und Artikel sind daher unbekannt (�
 seine Settings selbst, es gibt keinen zentralen Settings-Controller),
 `WasteCalendarPollingAdminController` für die beiden Polling-Endpoints (Muster:
 `WeatherPollingAdminController`). Der Trigger-Endpoint erlaubt es, den Abruf nach dem
-Eintragen der URL sofort anzustoßen.
+Eintragen der URL sofort anzustoßen, statt bis zum nächsten Tageslauf zu warten.
+
+### Settings-DTO
+
+Die Settings werden als **typisiertes DTO** übertragen, nicht als rohe `Map<String,String>` —
+so hält es `AnkerSolixController` mit `AnkerSolixAutoControlSettings`, und die Seite bekommt
+dadurch echte Typen statt String-Hantiererei:
+
+```
+WasteCollectionSettings {
+  enabled: boolean
+  icsUrl: string                  // leer erlaubt
+  lookaheadDays: number           // >= 1
+  reminderEnabled: boolean
+  reminderTime: string            // "HH:mm"
+  reminderAlexaSerials: string[]  // in der DB kommasepariert abgelegt
+}
+```
+
+Der Service übersetzt zwischen DTO und den String-Werten in `application_settings`.
+
+**Validierung** beim `PUT`, mit 400 und verständlicher Meldung bei Verstoß:
+
+- `icsUrl` ist leer oder eine gültige `http(s)`-URL,
+- `lookaheadDays >= 1`,
+- `reminderTime` ist als `HH:mm` parsebar.
+
+Die Validierung sitzt am Endpoint. Die defensive Fallback-Logik im Scheduler (siehe
+Fehlerbehandlung) bleibt als zweite Verteidigungslinie trotzdem bestehen — für Werte, die
+per Seed oder direktem DB-Zugriff an dieser Prüfung vorbei in die Tabelle gelangen.
+
+Die ICS-URL ist ein Geheimnis, wird von `GET` aber im Klartext zurückgegeben — sonst ließe
+sie sich auf der Seite nicht bearbeiten. Das entspricht dem Zuschnitt der Anwendung als
+unauthentifizierte Heimnetz-Anwendung, in der auch andere Zugangsdaten so gehandhabt werden.
 
 ## Frontend
 
-- `models/waste-collection.model.ts` — Interface `WasteCollectionEvent`.
-- `services/waste-collection.service.ts` — `getUpcoming()`.
+- `models/waste-collection.model.ts` — Interfaces `WasteCollectionEvent`,
+  `WasteCollectionSettings`, `WasteCollectionPollingStatus`.
+- `services/waste-collection.service.ts` — `getUpcoming(days?)`, `getSettings()`,
+  `updateSettings()`, `getPollingStatus()`, `triggerPoll()`.
 - `components/waste-collection-tile/waste-collection-tile.component.{ts,html,scss}` —
   standalone, TS/HTML/SCSS getrennt.
+- `pages/waste-collection/waste-collection.component.{ts,html,scss}` — die Einstellungsseite.
+
+### Dashboard-Kachel
 
 Die Kachel sitzt im `lumina__rooms`-Grid neben der Klima-Kachel und folgt dem
 `lumina-card`-Stil. Sie lädt selbst stündlich nach
@@ -187,6 +228,36 @@ Zwei bewusste UI-Entscheidungen:
   Tage vorher erscheinen — eine dauerhafte „Keine Abholung"-Kachel wäre nur Rauschen.
 - **Die „Morgen"-Zeile wird farblich hervorgehoben** — was abends angesagt wird, sticht auch
   visuell heraus.
+
+### Einstellungsseite
+
+Route `waste-collection` → `WasteCollectionComponent`, lazy geladen wie alle übrigen Seiten,
+Titel `'Muellabfuhr - Household Manager'` (ASCII-Transliteration wie im Bestand). Der
+Navigationseintrag kommt in `navLinks` der `HeaderComponent` unter die Gruppe **Umwelt**
+(zu Luftqualitaet/Wetter/Temperaturen) als `{ path: '/waste-collection', label: 'Muellabfuhr' }`.
+
+Aufbau nach dem Vorbild von `battery-control` (`FormsModule`, `[(ngModel)]`, Laden im
+`ngOnInit`, Speichern mit `isSaving`/`saveSuccess`/`saveError`), drei Abschnitte:
+
+1. **Nächste Termine** — Liste aus `getUpcoming(60)`, rein informativ. Sie ist die
+   Erfolgskontrolle: Nach dem Eintragen der URL siehst du sofort, ob der Kalender passt.
+2. **Einstellungen** — `enabled` (Checkbox), `icsUrl` (Textfeld), `lookaheadDays` (Zahl),
+   `reminderEnabled` (Checkbox), `reminderTime` (`<input type="time">`), Ziel-Geräte
+   (Geräte-Picker, siehe unten). Dazu ein Speichern-Button.
+3. **Abruf-Status** — `lastPollTime`, `lastError`, Anzahl bekannter Termine, plus Button
+   „Jetzt abrufen" (`triggerPoll()`), der anschließend Status und Terminliste neu lädt.
+
+**Wiederverwendung statt Neubau:** Für die Alexa-Zielgeräte gibt es bereits
+`AlexaDevicePickerComponent` — eine standalone Mehrfachauswahl, deren Wert exakt ein
+`string[]` von `serialNumbers` ist, also genau unser Feld. Sie hängt nur an `AlexaService`
+und `AlexaDevice`, enthält nichts Flow-Spezifisches. Statt Seriennummern abtippen zu lassen,
+nutzen wir sie.
+
+Sie liegt allerdings unter `pages/flows/pickers/`. Mit dieser Seite bekommt sie ihren
+**zweiten Konsumenten außerhalb der Flows**, deshalb wandert sie nach
+`components/alexa-device-picker/`; der Import im Flow-Editor und die relativen Service-Pfade
+werden mitgezogen, der Doc-Kommentar wird vom Flow-Feldtyp `ALEXA_DEVICE_LIST` gelöst. Das
+ist ein kleiner, gezielter Umzug im Dienst dieser Aufgabe — keine Gelegenheits-Refaktorierung.
 
 ## Fehlerbehandlung
 
@@ -217,6 +288,8 @@ Ansage-Fenster nicht deterministisch testbar. AAA-Muster, beschreibende Testname
 | `WasteCalendarPollingServiceTest` | überspringt bei `enabled=false`; setzt `lastError` bei Fetch-Fehler; löscht nichts bei leerem Parse |
 | `WasteCollectionServiceTest` | Fenster-Abfrage mit fixer `Clock` |
 | `waste-collection-tile.component.spec.ts` | Kachel versteckt bei leerer Liste; „Morgen"-Zeile hervorgehoben; korrekte relative Tageslabels |
+| `waste-collection.component.spec.ts` | Settings werden geladen und angezeigt; Speichern sendet das DTO; Fehler beim Speichern setzt `saveError`; „Jetzt abrufen" lädt Status und Termine neu |
+| `WasteCollectionControllerTest` | `PUT` weist ungültige `icsUrl`, `lookaheadDays < 1` und unparsebare `reminderTime` mit 400 ab; `last_announced_date` bleibt unangetastet; `upcoming` ohne `days` nutzt `lookahead_days` |
 
 Hinweis zum Ausführen: Für den Backend-Build muss `JAVA_HOME` auf das JDK 21 zeigen.
 
@@ -225,6 +298,6 @@ Hinweis zum Ausführen: Für den Backend-Build muss `JAVA_HOME` auf das JDK 21 z
 - Schreibzugriff auf den Kalender
 - Mehrere Kalenderquellen
 - Push-/Mobile-Benachrichtigungen
-- Eigene Verwaltungsseite im Frontend — die Konfiguration läuft vorerst über die
-  Settings-Endpoints
 - Historien-Auswertung („wie oft wurde die Biotonne geleert")
+- Manuelles Anlegen oder Bearbeiten einzelner Termine auf der Einstellungsseite — die
+  Termine sind eine Spiegelung des Kalenders, die Quelle der Wahrheit bleibt Google
