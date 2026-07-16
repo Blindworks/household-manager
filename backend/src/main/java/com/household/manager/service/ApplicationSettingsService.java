@@ -67,6 +67,17 @@ public class ApplicationSettingsService {
     }
 
     /**
+     * Returns a string setting with a default fallback. Blank values count as absent.
+     */
+    @Transactional(readOnly = true)
+    public String getString(String category, String key, String defaultValue) {
+        return repository.findByCategoryAndSettingKey(category, key)
+                .map(ApplicationSetting::getSettingValue)
+                .filter(value -> !value.isBlank())
+                .orElse(defaultValue);
+    }
+
+    /**
      * Returns an integer setting with a default fallback.
      */
     @Transactional(readOnly = true)
