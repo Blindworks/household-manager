@@ -150,6 +150,15 @@ Nach erfolgreicher Ansage wird `last_announced_date` auf heute gesetzt; schlägt
 fehl, bleibt der Merker unverändert und der nächste Lauf versucht es innerhalb des Fensters
 erneut.
 
+**Das Fenster läuft nie über Mitternacht.** Bei einer späten Ansagezeit wird es gekürzt statt
+umgebrochen: 23:30 ergibt „23:30 bis Tagesende", nicht „23:30 bis 00:30". Der Grund liegt
+nicht in der Deduplizierung, sondern im Text. Die Ansage sagt wörtlich „**Morgen** wird
+abgeholt" — nach dem Datumswechsel meint „morgen" einen anderen Tag, die Aussage wäre also
+schlicht falsch. Zusätzlich spränge der Scheduler ein zweites Mal an, weil `today()` inzwischen
+weitergerückt ist und der Merker vom Vortag nicht mehr greift: zwei Durchsagen im Abstand einer
+halben Stunde, die zweite über den falschen Tag. Ein umgebrochenes Fenster kann daher gar nicht
+richtig sein, gleich wie sauber man dedupliziert.
+
 Ausgabe über `AlexaAnnouncementService` im Modus `ANNOUNCE` (mit Signalton).
 
 ### Ansagetext
