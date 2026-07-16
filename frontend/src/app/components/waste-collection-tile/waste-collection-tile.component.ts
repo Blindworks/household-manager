@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, interval, of, startWith, switchMap } from 'rxjs';
+import { Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { WasteCollectionEvent } from '../../models/waste-collection.model';
@@ -19,15 +19,22 @@ import { WasteCollectionEvent } from '../../models/waste-collection.model';
 export class WasteCollectionTileComponent implements OnInit, OnDestroy {
   private readonly wasteService = inject(WasteCollectionService);
 
-  /** Die Termine aendern sich hoechstens taeglich; stuendlich nachladen genuegt. */
+  /** Haelt die Termine ueber den Tag hinweg aktuell (z. B. bei geaenderten Einstellungen). */
   private static readonly REFRESH_MS = 3600000;
+  private static readonly DAY_MS = 86400000;
 
   private subscription?: Subscription;
 
   events: WasteCollectionEvent[] = [];
 
   ngOnInit(): void {
-    this.subscription = interval(WasteCollectionTileComponent.REFRESH_MS)
+    this.subscription = merge(
+      interval(WasteCollectionTileComponent.REFRESH_MS),
+      // Zusaetzlich kurz nach Mitternacht: daysUntil wird serverseitig zum Abrufzeitpunkt
+      // berechnet, ein rein stuendlicher Takt liesse "Morgen" also bis zu eine Stunde
+      // ueber den Tageswechsel hinaus stehen bleiben.
+      timer(this.msUntilNextMidnight(), WasteCollectionTileComponent.DAY_MS)
+    )
       .pipe(
         startWith(0),
         switchMap(() => this.wasteService.getUpcoming().pipe(catchError(() => of([]))))
@@ -37,6 +44,17 @@ export class WasteCollectionTileComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+  }
+
+  /**
+   * Millisekunden bis kurz nach dem naechsten lokalen Mitternachtswechsel.
+   * Der kleine Versatz (5s) ist bewusst: bei exakt 00:00:00 koennte der Server bei
+   * minimal abweichender Uhr noch "gestern" liefern.
+   */
+  private msUntilNextMidnight(): number {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    return midnight.getTime() - now.getTime();
   }
 
   /** "Heute"/"Morgen"/"Übermorgen", darueber hinaus der Wochentag. */
