@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,7 +71,10 @@ class WasteCollectionServiceTest {
 
         service.getUpcoming(0);
 
-        // Ein Fenster von 0 Tagen wuerde sonst ein leeres Intervall abfragen.
+        // Ein Fenster von 0 Tagen wuerde sonst ein leeres/invertiertes Intervall abfragen
+        // (from > to); der explizite verify beweist, dass stattdessen auf 1 Tag angehoben wurde.
+        verify(repository).findByCollectionDateBetweenOrderByCollectionDateAscLabelAsc(
+                LocalDate.of(2026, 7, 16), LocalDate.of(2026, 7, 16));
     }
 
     @Test
