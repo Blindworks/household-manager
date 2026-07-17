@@ -39,7 +39,8 @@ describe('buildWasteInsight', () => {
     expect(insight?.text).toBe(`${erwartet}: Altpapier`);
   });
 
-  it('faerbt den Indikator rot, wenn morgen etwas ansteht', () => {
+  it('faerbt den Indikator rot, wenn heute oder morgen etwas ansteht', () => {
+    expect(buildWasteInsight([event(0, 'Hausmüll')])?.tone).toBe('error');
     expect(buildWasteInsight([event(1, 'Hausmüll')])?.tone).toBe('error');
   });
 
@@ -47,8 +48,7 @@ describe('buildWasteInsight', () => {
     expect(buildWasteInsight([event(2, 'Hausmüll')])?.tone).toBe('tertiary');
   });
 
-  it('bleibt sonst blau', () => {
-    expect(buildWasteInsight([event(0, 'Hausmüll')])?.tone).toBe('primary');
+  it('bleibt bei spaeteren Terminen blau', () => {
     expect(buildWasteInsight([event(3, 'Hausmüll')])?.tone).toBe('primary');
   });
 

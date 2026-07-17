@@ -13,6 +13,11 @@ export interface WasteInsight {
   readonly text: string;
 }
 
+/** Bis einschliesslich morgen ist der Termin dringlich — der Indikator wird rot. */
+const URGENT_DAYS_UNTIL = 1;
+/** Uebermorgen kuendigt sich der Termin an — der Indikator wird gelb. */
+const SOON_DAYS_UNTIL = 2;
+
 /**
  * Fasst die anstehenden Termine zu einer einzigen Hub-Meldung zusammen, z. B.
  * "Morgen: Biotonne · Übermorgen: Gelbe Tonne".
@@ -32,7 +37,8 @@ export function buildWasteInsight(events: WasteCollectionEvent[]): WasteInsight 
 }
 
 /**
- * Faerbt den Indikator nach der Dringlichkeit: morgen rot, uebermorgen gelb, sonst blau.
+ * Faerbt den Indikator nach der Dringlichkeit: heute und morgen rot, uebermorgen gelb,
+ * alles Weitere blau.
  *
  * <p>Bei mehreren Terminen zaehlt der naechstliegende — die Meldung fasst sie zu einer
  * Zeile zusammen, und ein "Morgen: Biotonne" darf nicht dadurch verblassen, dass
@@ -40,11 +46,10 @@ export function buildWasteInsight(events: WasteCollectionEvent[]): WasteInsight 
  */
 function toneFor(events: WasteCollectionEvent[]): WasteInsight['tone'] {
   const daysUntil = Math.min(...events.map(event => event.daysUntil));
-  switch (daysUntil) {
-    case 1: return 'error';
-    case 2: return 'tertiary';
-    default: return 'primary';
+  if (daysUntil <= URGENT_DAYS_UNTIL) {
+    return 'error';
   }
+  return daysUntil === SOON_DAYS_UNTIL ? 'tertiary' : 'primary';
 }
 
 function describe(event: WasteCollectionEvent): string {
