@@ -250,18 +250,24 @@
       </div>
     </div>
 
-    <div class="lumina__modes">
-      <button
-        *ngFor="let mode of modes"
-        type="button"
-        class="lumina-card lumina__mode"
-        [ngClass]="'lumina__mode--' + mode.tone"
-      >
-        <span class="lumina__mode-icon">
-          <span class="material-symbols-outlined">{{ mode.icon }}</span>
-        </span>
-        <span class="lumina__mode-label">{{ mode.label }}</span>
-      </button>
+    <div class="lumina__modes-area">
+      <div class="lumina__modes">
+        <button
+          *ngFor="let mode of modes; let i = index"
+          type="button"
+          class="lumina-card lumina__mode"
+          [ngClass]="'lumina__mode--' + modeTone(i)"
+          [class.lumina__mode--active]="mode.state === 'on'"
+          [class.lumina__mode--pending]="pendingModeIds.has(mode.entityId)"
+          (click)="toggleMode(mode)"
+        >
+          <span class="lumina__mode-icon">
+            <span class="material-symbols-outlined">{{ mode.icon }}</span>
+          </span>
+          <span class="lumina__mode-label">{{ mode.displayName }}</span>
+        </button>
+      </div>
+      <p *ngIf="modeError" class="lumina__mode-error">{{ modeError }}</p>
     </div>
   </footer>
 

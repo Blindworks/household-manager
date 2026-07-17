@@ -10,7 +10,9 @@ import { EnergyLiveService } from '../../services/energy-live.service';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { WasteCollectionService } from '../../services/waste-collection.service';
+import { ModeService } from '../../services/mode.service';
 import { SwitchEntity } from '../../models/switch.model';
+import { ModeEntity } from '../../models/mode.model';
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -272,6 +274,117 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
 
     expect(wasteServiceSpy.getUpcoming).toHaveBeenCalled();
     expect(insightTexts(fixture)[0]).toContain('Heute: Hausmüll');
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Modus-Leiste)', () => {
+  let modeServiceSpy: jasmine.SpyObj<ModeService>;
+
+  const mode = (overrides: Partial<ModeEntity> = {}): ModeEntity => ({
+    entityId: 'input_boolean.manual_nachtmodus',
+    displayName: 'Nachtmodus',
+    icon: 'nights_stay',
+    state: 'off',
+    ...overrides
+  });
+
+  beforeEach(async () => {
+    modeServiceSpy = jasmine.createSpyObj('ModeService', ['getModes', 'toggle']);
+    modeServiceSpy.getModes.and.returnValue(of([mode()]));
+    modeServiceSpy.toggle.and.returnValue(of(mode({ state: 'on' })));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ModeService, useValue: modeServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('laedt die Modi und rendert sie als Knoepfe', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(modeServiceSpy.getModes).toHaveBeenCalled();
+    const button = (fixture.nativeElement as HTMLElement).querySelector('.lumina__mode');
+    expect(button?.textContent).toContain('Nachtmodus');
+
+    discardPeriodicTasks();
+  }));
+
+  it('markiert einen aktiven Modus', fakeAsync(() => {
+    modeServiceSpy.getModes.and.returnValue(of([mode({ state: 'on' })]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('.lumina__mode');
+    expect(button?.classList).toContain('lumina__mode--active');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet optimistisch und uebernimmt den Zustand aus der Antwort', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_nachtmodus');
+    expect(fixture.componentInstance.modes[0].state).toBe('on');
+
+    discardPeriodicTasks();
+  }));
+
+  it('setzt den Zustand bei einem Schaltfehler zurueck und meldet ihn', fakeAsync(() => {
+    modeServiceSpy.toggle.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(fixture.componentInstance.modes[0].state).toBe('off');
+    expect(fixture.componentInstance.modeError).toContain('Nachtmodus');
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaelt beim Ladefehler die zuletzt bekannten Modi', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.modes.length).toBe(1);
+    modeServiceSpy.getModes.and.returnValue(throwError(() => new Error('kaputt')));
+
+    tick(30000);
+
+    expect(fixture.componentInstance.modes.length).toBe(1);
 
     discardPeriodicTasks();
   }));

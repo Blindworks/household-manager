@@ -843,10 +843,23 @@
   color: rgba(192, 198, 214, 0.7);
 }
 
+.lumina__modes-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .lumina__modes {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.lumina__mode-error {
+  margin: 0;
+  font-size: 12px;
+  color: #fca5a5;
 }
 
 .lumina__mode {
@@ -888,11 +901,18 @@
   transition: color 0.3s ease;
 }
 
-// Modus-Farbvarianten
+// Waehrend ein Schaltbefehl laeuft, keine weiteren Klicks annehmen.
+.lumina__mode--pending {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+// Modus-Farbvarianten (aktiv = Hover-Optik dauerhaft)
 .lumina__mode--primary {
   border-color: rgba(170, 199, 255, 0.2);
   .lumina__mode-icon { background: rgba(170, 199, 255, 0.1); color: var(--primary); }
-  &:hover {
+  &:hover,
+  &.lumina__mode--active {
     border-color: rgba(170, 199, 255, 0.5);
     .lumina__mode-icon { background: var(--primary); color: var(--on-primary); }
     .lumina__mode-label { color: var(--primary); }
@@ -902,7 +922,8 @@
 .lumina__mode--tertiary {
   border-color: rgba(233, 196, 0, 0.2);
   .lumina__mode-icon { background: rgba(233, 196, 0, 0.1); color: var(--tertiary); }
-  &:hover {
+  &:hover,
+  &.lumina__mode--active {
     border-color: rgba(233, 196, 0, 0.5);
     .lumina__mode-icon { background: var(--tertiary); color: var(--on-tertiary); }
     .lumina__mode-label { color: var(--tertiary); }
@@ -911,7 +932,8 @@
 
 .lumina__mode--neutral {
   .lumina__mode-icon { background: rgba(255, 255, 255, 0.05); color: var(--on-surface); }
-  &:hover {
+  &:hover,
+  &.lumina__mode--active {
     border-color: rgba(255, 255, 255, 0.4);
     .lumina__mode-icon { background: #fff; color: #131315; }
     .lumina__mode-label { color: #fff; }
@@ -921,7 +943,8 @@
 .lumina__mode--error {
   border-color: rgba(255, 180, 171, 0.2);
   .lumina__mode-icon { background: rgba(255, 180, 171, 0.1); color: var(--error); }
-  &:hover {
+  &:hover,
+  &.lumina__mode--active {
     border-color: rgba(255, 180, 171, 0.5);
     .lumina__mode-icon { background: var(--error); color: var(--on-error); }
     .lumina__mode-label { color: var(--error); }
@@ -1003,6 +1026,10 @@
   .lumina__footer {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .lumina__modes-area {
+    align-items: center;
   }
 
   .lumina__modes {
