@@ -19,6 +19,8 @@ import { WasteCollectionService } from '../../services/waste-collection.service'
 import { buildWasteInsight } from '../../shared/waste-insight.util';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
+import { ModeService } from '../../services/mode.service';
+import { ModeEntity } from '../../models/mode.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
 
 /**
@@ -43,6 +45,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly temperatureService = inject(TemperatureService);
   private readonly switchService = inject(SwitchService);
+  private readonly modeService = inject(ModeService);
   private readonly wasteService = inject(WasteCollectionService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
@@ -55,6 +58,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private temperatureSubscription?: Subscription;
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
+  private modeSubscription?: Subscription;
   private wasteSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
@@ -71,6 +75,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly SWITCH_TILE_LIMIT = 4;
   /** Aktualisierungsintervall der Schalter-Kachel (30 s). */
   private static readonly SWITCH_REFRESH_MS = 30000;
+  /** Aktualisierungsintervall der Modus-Leiste (30 s; Flows schalten Modi auch von aussen). */
+  private static readonly MODE_REFRESH_MS = 30000;
+  /** Farbton je Modus-Position (bestehende lumina__mode-Varianten). */
+  private static readonly MODE_TONES = ['primary', 'tertiary', 'neutral', 'error'] as const;
   /** Haelt die Muell-Meldung ueber den Tag hinweg aktuell (z. B. bei geaenderten Einstellungen). */
   private static readonly WASTE_REFRESH_MS = 3600000;
   private static readonly DAY_MS = 86400000;
@@ -141,13 +149,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   ];
 
-  /** Modus-Schnellaktionen (Platzhalter, aktuell ohne Funktion). */
-  readonly modes: ModeButton[] = [
-    { label: 'Abwesend', icon: 'exit_to_app', tone: 'primary' },
-    { label: 'Party', icon: 'celebration', tone: 'tertiary' },
-    { label: 'Gute Nacht', icon: 'nights_stay', tone: 'neutral' },
-    { label: 'Ausschalten', icon: 'power_settings_new', tone: 'error' }
-  ];
+  /** Haus-Modi der Fussleiste, vom Backend geladen. */
+  modes: ModeEntity[] = [];
+  /** Entity-IDs mit laufendem Modus-Schaltbefehl (verhindert Doppelklicks). */
+  readonly pendingModeIds = new Set<string>();
+  modeError: string | null = null;
 
   ngOnInit(): void {
     this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
@@ -156,6 +162,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startLiveStream();
     this.startClimateRefresh();
     this.startSwitchRefresh();
+    this.startModeRefresh();
     this.startWasteRefresh();
   }
 
@@ -166,6 +173,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription?.unsubscribe();
     this.temperatureSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
+    this.modeSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
@@ -242,6 +250,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
       if (match) {
         match.state = state;
       }
+    }
+  }
+
+  /** Farbton eines Modus-Knopfs anhand seiner Position; ueberzaehlige werden neutral. */
+  modeTone(index: number): string {
+    return DashboardComponent.MODE_TONES[index] ?? 'neutral';
+  }
+
+  /**
+   * Schaltet einen Haus-Modus. Der Zustand wird optimistisch umgeschaltet und
+   * bei einem Fehler zurueckgesetzt (gleiches Muster wie {@link toggleSwitch}).
+   */
+  toggleMode(mode: ModeEntity): void {
+    if (this.pendingModeIds.has(mode.entityId)) {
+      return;
+    }
+    const previousState = mode.state;
+    this.pendingModeIds.add(mode.entityId);
+    this.modeError = null;
+    this.applyModeState(mode.entityId, previousState === 'on' ? 'off' : 'on');
+
+    this.modeService.toggle(mode.entityId).subscribe({
+      next: updated => {
+        this.pendingModeIds.delete(mode.entityId);
+        this.applyModeState(updated.entityId, updated.state);
+      },
+      error: () => {
+        this.pendingModeIds.delete(mode.entityId);
+        this.applyModeState(mode.entityId, previousState);
+        this.modeError = `${mode.displayName} konnte nicht geschaltet werden.`;
+      }
+    });
+  }
+
+  private applyModeState(entityId: string, state: string): void {
+    const match = this.modes.find(item => item.entityId === entityId);
+    if (match) {
+      match.state = state;
     }
   }
 
@@ -444,6 +490,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  private startModeRefresh(): void {
+    this.modeSubscription = interval(DashboardComponent.MODE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        // Ladefehler behalten die zuletzt bekannten Modi (null = kein Update).
+        switchMap(() => this.modeService.getModes().pipe(catchError(() => of<ModeEntity[] | null>(null))))
+      )
+      .subscribe(modes => {
+        if (modes) {
+          this.modes = modes;
+          this.modeError = null;
+        }
+      });
+  }
+
   /**
    * Haelt die Muell-Meldung im Hub aktuell. Neben dem stuendlichen Takt zusaetzlich kurz
    * nach Mitternacht: `daysUntil` wird serverseitig zum Abrufzeitpunkt berechnet, ein rein
@@ -554,9 +615,3 @@ interface EnergyGauge {
   readonly offset: number;
 }
 
-/** Modus-Schnellaktion in der Fussleiste. */
-interface ModeButton {
-  readonly label: string;
-  readonly icon: string;
-  readonly tone: 'primary' | 'tertiary' | 'neutral' | 'error';
-}

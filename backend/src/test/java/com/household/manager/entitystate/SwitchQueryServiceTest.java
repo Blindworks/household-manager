@@ -34,8 +34,9 @@ class SwitchQueryServiceTest {
 
     @BeforeEach
     void setUp() {
+        EntityStateResponseMapper entityMapper = new EntityStateResponseMapper(new ObjectMapper());
         service = new SwitchQueryService(entityStateRepository, entityUsageService,
-                new SwitchResponseMapper(new EntityStateResponseMapper(new ObjectMapper())));
+                new SwitchResponseMapper(entityMapper), entityMapper);
     }
 
     private EntityState device(String ref, String name) {
@@ -138,5 +139,35 @@ class SwitchQueryServiceTest {
         when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
 
         assertThat(namesOf(service.listSwitches(null))).containsExactly("Steckdose");
+    }
+
+    @Test
+    void filtert_haus_modi_heraus_behaelt_gewoehnliche_helfer() {
+        EntityState mode = EntityState.builder()
+                .entityId("input_boolean.manual_nachtmodus")
+                .domain(EntityDomain.INPUT_BOOLEAN)
+                .source(EntitySource.MANUAL)
+                .sourceRef("nachtmodus")
+                .friendlyName("Nachtmodus")
+                .state("off")
+                .attributes("{\"icon\":\"nights_stay\",\"mode\":true}")
+                .lastChanged(LocalDateTime.now())
+                .lastUpdated(LocalDateTime.now())
+                .build();
+        EntityState helper = EntityState.builder()
+                .entityId("input_boolean.manual_urlaub")
+                .domain(EntityDomain.INPUT_BOOLEAN)
+                .source(EntitySource.MANUAL)
+                .sourceRef("urlaub")
+                .friendlyName("Urlaub")
+                .state("off")
+                .lastChanged(LocalDateTime.now())
+                .lastUpdated(LocalDateTime.now())
+                .build();
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(mode, helper));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+
+        assertThat(namesOf(service.listSwitches(null))).containsExactly("Urlaub");
     }
 }
