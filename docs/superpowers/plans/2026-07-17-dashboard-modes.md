@@ -42,7 +42,7 @@
 - Create: `backend/src/main/java/com/household/manager/entitystate/HouseModeInitializer.java`
 - Test: `backend/src/test/java/com/household/manager/entitystate/HouseModeInitializerTest.java`
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 ```java
 package com.household.manager.entitystate;
@@ -161,14 +161,14 @@ class HouseModeInitializerTest {
 }
 ```
 
-- [ ] **Step 2: Test laufen lassen — muss fehlschlagen (Klassen existieren nicht)**
+- [x] **Step 2: Test laufen lassen — muss fehlschlagen (Klassen existieren nicht)**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=HouseModeInitializerTest
 ```
 Erwartet: Compile-Fehler (`HouseModes`/`HouseModeInitializer` unbekannt).
 
-- [ ] **Step 3: `HouseModes.java` implementieren**
+- [x] **Step 3: `HouseModes.java` implementieren**
 
 ```java
 package com.household.manager.entitystate;
@@ -214,7 +214,7 @@ public final class HouseModes {
 }
 ```
 
-- [ ] **Step 4: `HouseModeInitializer.java` implementieren**
+- [x] **Step 4: `HouseModeInitializer.java` implementieren**
 
 ```java
 package com.household.manager.entitystate;
@@ -297,14 +297,14 @@ public class HouseModeInitializer {
 }
 ```
 
-- [ ] **Step 5: Test laufen lassen — muss grün sein**
+- [x] **Step 5: Test laufen lassen — muss grün sein**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=HouseModeInitializerTest
 ```
 Erwartet: 4 Tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/main/java/com/household/manager/entitystate/HouseModes.java \
@@ -324,7 +324,7 @@ git commit -m "feat(modes): Haus-Modi beim Start idempotent anlegen"
 - Create: `backend/src/main/java/com/household/manager/controller/ModeController.java`
 - Test: `backend/src/test/java/com/household/manager/entitystate/HouseModeQueryServiceTest.java`
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 ```java
 package com.household.manager.entitystate;
@@ -411,14 +411,14 @@ class HouseModeQueryServiceTest {
 }
 ```
 
-- [ ] **Step 2: Test laufen lassen — muss fehlschlagen**
+- [x] **Step 2: Test laufen lassen — muss fehlschlagen**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=HouseModeQueryServiceTest
 ```
 Erwartet: Compile-Fehler (Klassen existieren nicht).
 
-- [ ] **Step 3: `ModeResponse.java` implementieren**
+- [x] **Step 3: `ModeResponse.java` implementieren**
 
 ```java
 package com.household.manager.dto;
@@ -436,7 +436,7 @@ public record ModeResponse(
 }
 ```
 
-- [ ] **Step 4: `ModeResponseMapper.java` implementieren**
+- [x] **Step 4: `ModeResponseMapper.java` implementieren**
 
 ```java
 package com.household.manager.entitystate.mapper;
@@ -468,7 +468,7 @@ public class ModeResponseMapper {
 }
 ```
 
-- [ ] **Step 5: `HouseModeQueryService.java` implementieren**
+- [x] **Step 5: `HouseModeQueryService.java` implementieren**
 
 ```java
 package com.household.manager.entitystate;
@@ -521,7 +521,7 @@ public class HouseModeQueryService {
 }
 ```
 
-- [ ] **Step 6: `ModeController.java` implementieren**
+- [x] **Step 6: `ModeController.java` implementieren**
 
 ```java
 package com.household.manager.controller;
@@ -565,14 +565,14 @@ public class ModeController {
 }
 ```
 
-- [ ] **Step 7: Test laufen lassen — muss grün sein**
+- [x] **Step 7: Test laufen lassen — muss grün sein**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=HouseModeQueryServiceTest
 ```
 Erwartet: 2 Tests PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/src/main/java/com/household/manager/dto/ModeResponse.java \
@@ -591,7 +591,7 @@ git commit -m "feat(modes): REST-API fuer Haus-Modi (Liste + Toggle)"
 - Modify: `backend/src/main/java/com/household/manager/entitystate/SwitchQueryService.java`
 - Test: `backend/src/test/java/com/household/manager/entitystate/SwitchQueryServiceTest.java`
 
-- [ ] **Step 1: Failing Test ergänzen** (in der bestehenden Testklasse; zusätzlich `setUp` anpassen, weil der Service einen weiteren Konstruktor-Parameter bekommt)
+- [x] **Step 1: Failing Test ergänzen** (in der bestehenden Testklasse; zusätzlich `setUp` anpassen, weil der Service einen weiteren Konstruktor-Parameter bekommt)
 
 `setUp` neu:
 
@@ -638,14 +638,14 @@ Neuer Test (ans Ende der Klasse):
     }
 ```
 
-- [ ] **Step 2: Test laufen lassen — muss fehlschlagen**
+- [x] **Step 2: Test laufen lassen — muss fehlschlagen**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=SwitchQueryServiceTest
 ```
 Erwartet: Compile-Fehler im `setUp` (Konstruktor hat noch 3 Parameter) bzw. nach Signatur-Fix FAIL des neuen Tests.
 
-- [ ] **Step 3: `SwitchQueryService` anpassen** — Feld + Filter:
+- [x] **Step 3: `SwitchQueryService` anpassen** — Feld + Filter:
 
 ```java
     private final EntityStateRepository entityStateRepository;
@@ -668,14 +668,14 @@ In `listSwitches` den Stream erweitern (Haus-Modi haben eine eigene Leiste und A
                 .toList();
 ```
 
-- [ ] **Step 4: Tests laufen lassen — alle grün**
+- [x] **Step 4: Tests laufen lassen — alle grün**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=SwitchQueryServiceTest
 ```
 Erwartet: 8 Tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/household/manager/entitystate/SwitchQueryService.java \
@@ -692,7 +692,7 @@ git commit -m "feat(modes): Haus-Modi aus der Schalter-API ausblenden"
 - Create: `frontend/src/app/services/mode.service.ts`
 - Test: `frontend/src/app/services/mode.service.spec.ts`
 
-- [ ] **Step 1: Failing Spec schreiben**
+- [x] **Step 1: Failing Spec schreiben**
 
 ```typescript
 import { TestBed } from '@angular/core/testing';
@@ -750,7 +750,7 @@ describe('ModeService', () => {
 });
 ```
 
-- [ ] **Step 2: `mode.model.ts` + `mode.service.ts` implementieren**
+- [x] **Step 2: `mode.model.ts` + `mode.service.ts` implementieren**
 
 `frontend/src/app/models/mode.model.ts`:
 
@@ -800,14 +800,14 @@ export class ModeService {
 }
 ```
 
-- [ ] **Step 3: Spec laufen lassen — muss grün sein**
+- [x] **Step 3: Spec laufen lassen — muss grün sein**
 
 ```bash
 cd frontend && npx ng test --watch=false --browsers=ChromeHeadless --include='**/mode.service.spec.ts'
 ```
 Erwartet: 3 Specs PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/src/app/models/mode.model.ts \
@@ -826,7 +826,7 @@ git commit -m "feat(modes): ModeService fuer die Haus-Modi-API"
 - Modify: `frontend/src/app/pages/dashboard/dashboard.component.scss` (Aktiv-/Pending-Zustand, Fehlerhinweis)
 - Test: `frontend/src/app/pages/dashboard/dashboard.component.spec.ts` (neuer describe-Block)
 
-- [ ] **Step 1: Failing Specs schreiben** — neuer describe-Block am Dateiende; Import ergänzen: `import { ModeService } from '../../services/mode.service';` und `import { ModeEntity } from '../../models/mode.model';`
+- [x] **Step 1: Failing Specs schreiben** — neuer describe-Block am Dateiende; Import ergänzen: `import { ModeService } from '../../services/mode.service';` und `import { ModeEntity } from '../../models/mode.model';`
 
 ```typescript
 describe('DashboardComponent (Modus-Leiste)', () => {
@@ -941,14 +941,14 @@ describe('DashboardComponent (Modus-Leiste)', () => {
 });
 ```
 
-- [ ] **Step 2: Specs laufen lassen — müssen fehlschlagen** (`toggleMode`/`modes`/`modeError` existieren noch nicht)
+- [x] **Step 2: Specs laufen lassen — müssen fehlschlagen** (`toggleMode`/`modes`/`modeError` existieren noch nicht)
 
 ```bash
 cd frontend && npx ng test --watch=false --browsers=ChromeHeadless --include='**/dashboard.component.spec.ts'
 ```
 Erwartet: Compile-Fehler bzw. FAIL.
 
-- [ ] **Step 3: `dashboard.component.ts` anpassen**
+- [x] **Step 3: `dashboard.component.ts` anpassen**
 
 Imports ergänzen:
 
@@ -1037,7 +1037,7 @@ Neue private Methode (bei den anderen `start*`-Methoden; Flows können Modi auch
   }
 ```
 
-- [ ] **Step 4: `dashboard.component.html` anpassen** — den `lumina__modes`-Block im Footer ersetzen durch:
+- [x] **Step 4: `dashboard.component.html` anpassen** — den `lumina__modes`-Block im Footer ersetzen durch:
 
 ```html
     <div class="lumina__modes-area">
@@ -1061,7 +1061,7 @@ Neue private Methode (bei den anderen `start*`-Methoden; Flows können Modi auch
     </div>
 ```
 
-- [ ] **Step 5: `dashboard.component.scss` anpassen**
+- [x] **Step 5: `dashboard.component.scss` anpassen**
 
 Nach `.lumina__modes { ... }` (Z. 846-850) den Wrapper und Fehlerhinweis ergänzen:
 
@@ -1144,14 +1144,14 @@ Im Responsive-Block (Z. 1003-1011) zusätzlich zentrieren:
   }
 ```
 
-- [ ] **Step 6: Specs laufen lassen — alle grün**
+- [x] **Step 6: Specs laufen lassen — alle grün**
 
 ```bash
 cd frontend && npx ng test --watch=false --browsers=ChromeHeadless --include='**/dashboard.component.spec.ts'
 ```
 Erwartet: alle Dashboard-Specs PASS (alte Blöcke stellen keinen ModeService bereit — die echten HTTP-Aufrufe laufen dort ins Test-Backend und bleiben folgenlos offen).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend/src/app/pages/dashboard/dashboard.component.ts \
@@ -1165,7 +1165,7 @@ git commit -m "feat(dashboard): Modus-Leiste an Haus-Modi anbinden"
 
 ### Task 6: Gesamtverifikation
 
-- [ ] **Step 1: Backend-Gesamtbuild + relevante Tests**
+- [x] **Step 1: Backend-Gesamtbuild + relevante Tests**
 
 ```bash
 cd backend && export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && \
@@ -1173,16 +1173,16 @@ mvn test -Dtest='HouseModeInitializerTest,HouseModeQueryServiceTest,SwitchQueryS
 ```
 Erwartet: alle PASS. (Der volle `mvn test` schlägt lokal nur bei den bekannten DB-Integrationstests fehl.)
 
-- [ ] **Step 2: Frontend-Gesamttests**
+- [x] **Step 2: Frontend-Gesamttests**
 
 ```bash
 cd frontend && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 Erwartet: alle PASS.
 
-- [ ] **Step 3: End-to-End-Sichtprüfung** — Backend starten (`mvn spring-boot:run`), Frontend starten (`npm start`), Dashboard öffnen: vier Knöpfe „Abwesend / Toni allein / Nachtmodus / Ausschalten", Klick schaltet um (Knopf leuchtet), Modi fehlen in der Schalter-Kachel, `GET /api/v1/modes` liefert die vier Einträge.
+- [x] **Step 3: End-to-End-Sichtprüfung** — Backend starten (`mvn spring-boot:run`), Frontend starten (`npm start`), Dashboard öffnen: vier Knöpfe „Abwesend / Toni allein / Nachtmodus / Ausschalten", Klick schaltet um (Knopf leuchtet), Modi fehlen in der Schalter-Kachel, `GET /api/v1/modes` liefert die vier Einträge.
 
-- [ ] **Step 4: Plan-Checkboxen abhaken und committen**
+- [x] **Step 4: Plan-Checkboxen abhaken und committen**
 
 ```bash
 git add docs/superpowers/plans/2026-07-17-dashboard-modes.md
