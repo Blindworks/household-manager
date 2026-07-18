@@ -1,5 +1,6 @@
 package com.household.manager.tabletapp.presence
 
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
@@ -29,8 +30,20 @@ class FacePresenceDetector {
             return
         }
         val input = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        detector.process(input)
-            .addOnSuccessListener { faces -> onComplete(faces.isNotEmpty()) }
-            .addOnFailureListener { onComplete(false) }
+        try {
+            detector.process(input)
+                .addOnSuccessListener { faces -> onComplete(faces.isNotEmpty()) }
+                .addOnFailureListener { ex ->
+                    Log.w(TAG, "ML-Kit-Gesichtserkennung fehlgeschlagen", ex)
+                    onComplete(false)
+                }
+        } catch (ex: Exception) {
+            Log.w(TAG, "ML-Kit-Gesichtserkennung fehlgeschlagen", ex)
+            onComplete(false)
+        }
+    }
+
+    private companion object {
+        const val TAG = "FacePresenceDetector"
     }
 }

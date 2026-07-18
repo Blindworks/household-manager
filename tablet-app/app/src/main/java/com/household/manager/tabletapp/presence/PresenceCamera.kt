@@ -35,7 +35,10 @@ class PresenceCamera {
                     .build()
                 analysis.setAnalyzer(analysisExecutor, analyzer)
                 provider.unbindAll()
-                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_FRONT_CAMERA, analysis)
+                val camera = provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_FRONT_CAMERA, analysis)
+                camera.cameraInfo.cameraState.observe(lifecycleOwner) { state ->
+                    state.error?.let { onError(RuntimeException("Kamera-Fehler: ${it.code}")) }
+                }
                 Log.i(TAG, "Frontkamera für Präsenzerkennung gestartet")
             } catch (ex: Exception) {
                 onError(ex)

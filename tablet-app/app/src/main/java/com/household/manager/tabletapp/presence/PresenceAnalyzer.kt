@@ -1,6 +1,7 @@
 package com.household.manager.tabletapp.presence
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 
@@ -27,6 +28,10 @@ class PresenceAnalyzer(
     private var lastAnalyzedMs = 0L
     private var frameCount = 0L
 
+    init {
+        require(faceEveryNthFrame > 0) { "faceEveryNthFrame muss > 0 sein" }
+    }
+
     override fun analyze(image: ImageProxy) {
         val now = SystemClock.elapsedRealtime()
         if (now - lastAnalyzedMs < minIntervalMs) {
@@ -36,19 +41,24 @@ class PresenceAnalyzer(
         lastAnalyzedMs = now
         frameCount++
 
-        if (motionDetector.detect(extractLuma(image))) {
-            listener.onMotion()
-        }
+        try {
+            if (motionDetector.detect(extractLuma(image))) {
+                listener.onMotion()
+            }
 
-        if (frameCount % faceEveryNthFrame == 0L) {
-            faceDetector.process(image) { hasFace ->
-                if (hasFace) {
-                    listener.onFace()
+            if (frameCount % faceEveryNthFrame == 0L) {
+                faceDetector.process(image) { hasFace ->
+                    if (hasFace) {
+                        listener.onFace()
+                    }
+                    image.close()
                 }
+            } else {
                 image.close()
             }
-        } else {
-            image.close()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Frame-Analyse fehlgeschlagen", t)
+            image.close() // idempotent — doppeltes close ist erlaubt
         }
     }
 
@@ -66,5 +76,9 @@ class PresenceAnalyzer(
             }
         }
         return out
+    }
+
+    private companion object {
+        const val TAG = "PresenceAnalyzer"
     }
 }
