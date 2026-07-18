@@ -26,9 +26,9 @@ class SettingsActivity : AppCompatActivity() {
         motionThreshold.setText(settings.motionPixelThreshold.toString())
 
         findViewById<Button>(R.id.button_save).setOnClickListener {
-            settings.dashboardUrl = dashboardUrl.text.toString()
-            settings.backendBaseUrl = backendUrl.text.toString()
-            settings.tabletId = tabletId.text.toString()
+            settings.dashboardUrl = dashboardUrl.text.toString().ifBlank { settings.dashboardUrl }
+            settings.backendBaseUrl = backendUrl.text.toString().ifBlank { settings.backendBaseUrl }
+            settings.tabletId = tabletId.text.toString().ifBlank { settings.tabletId }
             settings.displayTimeoutSeconds = timeout.text.toString().toIntOrNull() ?: 60
             settings.motionPixelThreshold = motionThreshold.text.toString().toIntOrNull() ?: 25
             finish()

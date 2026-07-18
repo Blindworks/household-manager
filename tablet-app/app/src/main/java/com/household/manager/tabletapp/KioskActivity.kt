@@ -44,8 +44,12 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
 
     private val scope = MainScope()
     private val handler = Handler(Looper.getMainLooper())
+    private val retryRunnable = Runnable { loadDashboard() }
     private var loadedDashboardUrl: String? = null
     private var lastAppliedState: DisplayState? = null
+    private val presenceCamera = PresenceCamera()
+    private var cameraStarted = false
+    private var startedMotionThreshold = 0
 
     /** Fail-safe: bei Kameraproblemen wird die Abschalt-Logik deaktiviert. */
     private var cameraFailed = false
@@ -95,11 +99,16 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
             SystemClock.elapsedRealtime()
         )
         applyDisplayState(DisplayState.ON)
+        if (cameraStarted && settings.motionPixelThreshold != startedMotionThreshold) {
+            startPresenceDetection()
+        }
     }
 
     override fun onDestroy() {
         handler.removeCallbacks(tickRunnable)
+        handler.removeCallbacks(retryRunnable)
         scope.cancel()
+        webView.destroy()
         super.onDestroy()
     }
 
@@ -142,9 +151,11 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
     }
 
     private fun startPresenceDetection() {
+        cameraStarted = true
+        startedMotionThreshold = settings.motionPixelThreshold
         val motionDetector = MotionDetector(pixelThreshold = settings.motionPixelThreshold)
         val analyzer = PresenceAnalyzer(motionDetector, FacePresenceDetector(), this)
-        PresenceCamera().start(this, this, analyzer) { ex ->
+        presenceCamera.start(this, this, analyzer) { ex ->
             runOnUiThread { onCameraFailure(ex.message ?: "unbekannter Kamera-Fehler") }
         }
     }
@@ -170,8 +181,9 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
             ) {
                 if (request.isForMainFrame) {
                     Log.w(TAG, "Dashboard nicht erreichbar, neuer Versuch in 10 s")
-                    view.loadData(ERROR_PAGE, "text/html", "utf-8")
-                    handler.postDelayed({ loadDashboard() }, 10_000)
+                    view.loadDataWithBaseURL(null, ERROR_PAGE, "text/html", "utf-8", null)
+                    handler.removeCallbacks(retryRunnable)
+                    handler.postDelayed(retryRunnable, 10_000)
                 }
             }
         }
@@ -179,6 +191,7 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
     }
 
     private fun loadDashboard() {
+        handler.removeCallbacks(retryRunnable)
         loadedDashboardUrl = settings.dashboardUrl
         webView.loadUrl(settings.dashboardUrl)
     }
