@@ -164,6 +164,56 @@ class EntityStateWriterTest {
         assertEquals("Küche", captor.getValue().getCustomName());
     }
 
+    private EntityStateUpdate eventUpdate(String action) {
+        return EntityStateUpdate.builder()
+                .entityId("event.zigbee_flur_taster_action")
+                .domain(EntityDomain.EVENT)
+                .source(EntitySource.ZIGBEE)
+                .sourceRef("Flur-Taster")
+                .friendlyName("Flur-Taster Taster")
+                .state(action)
+                .attributes(Map.of("deviceClass", "button"))
+                .build();
+    }
+
+    @Test
+    void upsertEventCreatesEntityOnFirstPress() {
+        when(repository.findByEntityId("event.zigbee_flur_taster_action")).thenReturn(Optional.empty());
+
+        EntityEventFired event = writer.upsertEvent(eventUpdate("double"));
+
+        assertEquals("double", event.action());
+        assertEquals("event.zigbee_flur_taster_action", event.entityId());
+        ArgumentCaptor<EntityState> captor = ArgumentCaptor.forClass(EntityState.class);
+        verify(repository).save(captor.capture());
+        assertEquals("double", captor.getValue().getState());
+        assertEquals(EntityDomain.EVENT, captor.getValue().getDomain());
+        assertNotNull(captor.getValue().getLastChanged());
+    }
+
+    @Test
+    void upsertEventAlwaysFiresAndBumpsLastChangedEvenWhenActionUnchanged() {
+        LocalDateTime earlier = LocalDateTime.now().minusHours(1);
+        EntityState existing = EntityState.builder()
+                .id(2L)
+                .entityId("event.zigbee_flur_taster_action")
+                .domain(EntityDomain.EVENT)
+                .source(EntitySource.ZIGBEE)
+                .sourceRef("Flur-Taster")
+                .friendlyName("Flur-Taster Taster")
+                .state("single")
+                .lastChanged(earlier)
+                .lastUpdated(earlier)
+                .build();
+        when(repository.findByEntityId("event.zigbee_flur_taster_action")).thenReturn(Optional.of(existing));
+
+        EntityEventFired event = writer.upsertEvent(eventUpdate("single"));
+
+        assertEquals("single", event.action());
+        assertTrue(existing.getLastChanged().isAfter(earlier));
+        assertTrue(existing.getLastUpdated().isAfter(earlier));
+    }
+
     private EntityState existingEntity(String state, LocalDateTime timestamps) {
         return EntityState.builder()
                 .id(1L)

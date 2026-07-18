@@ -7,6 +7,8 @@ public enum EntityDomain {
     SWITCH,
     SENSOR,
     BINARY_SENSOR,
+    /** Zustandsloses Ereignis (z. B. Zigbee-Taster); State = letzte Aktion. */
+    EVENT,
     /** Vom Benutzer angelegter, manuell schaltbarer Boolean-Helfer (z. B. "Nachtmodus"). */
     INPUT_BOOLEAN,
     /** Vom Benutzer angelegter numerischer Helfer (optional mit min/max/step/unit). */

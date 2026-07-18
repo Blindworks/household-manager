@@ -71,6 +71,41 @@ public class EntityStateWriter {
                 update.entityId(), oldState, newState, update.attributes(), now));
     }
 
+    /**
+     * Upsert für Ereignis-Entitäten (Domain EVENT): setzt den State auf die Aktion
+     * und lastChanged bei JEDEM Ereignis (auch bei gleicher Aktion), damit der
+     * Zeitpunkt des letzten Tastendrucks sichtbar bleibt.
+     *
+     * @return Event für jeden Aufruf — Ereignisse sind nie "unverändert"
+     */
+    // Muss public bleiben: Springs proxy-basiertes @Transactional ignoriert
+    // nicht-public Methoden stillschweigend (REQUIRES_NEW wäre lautlos weg).
+    // Nur über EntityStateService.reportState aufrufen (Fehlerkapselung).
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public EntityEventFired upsertEvent(EntityStateUpdate update) {
+        LocalDateTime now = LocalDateTime.now();
+        String action = update.state() != null ? update.state() : STATE_UNKNOWN;
+
+        EntityState entity = repository.findByEntityId(update.entityId())
+                .orElseGet(() -> EntityState.builder()
+                        .entityId(update.entityId())
+                        .domain(update.domain())
+                        .source(update.source())
+                        .sourceRef(update.sourceRef())
+                        .state(STATE_UNKNOWN)
+                        .lastChanged(now)
+                        .build());
+
+        entity.setFriendlyName(update.friendlyName());
+        entity.setAttributes(serializeAttributes(update.attributes()));
+        entity.setState(action);
+        entity.setLastChanged(now);
+        entity.setLastUpdated(now);
+        repository.save(entity);
+
+        return new EntityEventFired(update.entityId(), action, update.attributes(), now);
+    }
+
     private String serializeAttributes(Map<String, Object> attributes) {
         if (attributes == null || attributes.isEmpty()) {
             return null;
