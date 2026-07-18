@@ -92,7 +92,7 @@ public class ZigbeeMqttConfig {
         try {
             String topic = publish.getTopic().toString();
             String payload = new String(publish.getPayloadAsBytes(), StandardCharsets.UTF_8);
-            Optional<ParsedZigbeeMessage> parsed = parser.parse(topic, payload);
+            Optional<ParsedZigbeeMessage> parsed = parser.parse(topic, payload, publish.isRetain());
             parsed.ifPresent(msg -> {
                 var events = readingService.record(msg);
                 events.forEach(liveService::broadcast);
@@ -106,6 +106,7 @@ public class ZigbeeMqttConfig {
     private void reportEntityStates(ParsedZigbeeMessage message) {
         try {
             zigbeeEntityMapper.map(message).forEach(entityStateService::reportState);
+            zigbeeEntityMapper.mapAction(message).ifPresent(entityStateService::reportEvent);
         } catch (Exception ex) {
             log.warn("Failed to report zigbee entity states for {}: {}",
                     message.friendlyName(), ex.getMessage());
