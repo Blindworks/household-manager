@@ -80,7 +80,7 @@ public class EntityStateWriter {
      */
     // Muss public bleiben: Springs proxy-basiertes @Transactional ignoriert
     // nicht-public Methoden stillschweigend (REQUIRES_NEW wäre lautlos weg).
-    // Nur über EntityStateService.reportState aufrufen (Fehlerkapselung).
+    // Nur über EntityStateService.reportEvent aufrufen (Fehlerkapselung).
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public EntityEventFired upsertEvent(EntityStateUpdate update) {
         LocalDateTime now = LocalDateTime.now();

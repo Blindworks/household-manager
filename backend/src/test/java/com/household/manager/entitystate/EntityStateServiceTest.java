@@ -91,6 +91,34 @@ class EntityStateServiceTest {
     }
 
     @Test
+    void reportEventAlwaysPublishes() {
+        EntityEventFired event = new EntityEventFired(
+                "event.zigbee_flur_taster_action", "single", Map.of(), LocalDateTime.now());
+        when(writer.upsertEvent(any())).thenReturn(event);
+
+        service.reportEvent(update());
+
+        verify(eventPublisher).publishEvent(event);
+    }
+
+    @Test
+    void reportEventSwallowsWriterExceptionsSoCallerIsNeverBroken() {
+        when(writer.upsertEvent(any())).thenThrow(new RuntimeException("DB down"));
+
+        assertDoesNotThrow(() -> service.reportEvent(update()));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void reportEventSwallowsPublisherExceptions() {
+        when(writer.upsertEvent(any())).thenReturn(new EntityEventFired(
+                "event.zigbee_flur_taster_action", "single", Map.of(), LocalDateTime.now()));
+        doThrow(new RuntimeException("listener broken")).when(eventPublisher).publishEvent(any(Object.class));
+
+        assertDoesNotThrow(() -> service.reportEvent(update()));
+    }
+
+    @Test
     void setCustomNameTrimsAndPersists() {
         EntityStateService svc = new EntityStateService(writer, repository, eventPublisher);
         EntityState entity = EntityState.builder().entityId("sensor.x").friendlyName("Langer Name").build();

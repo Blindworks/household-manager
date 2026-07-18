@@ -40,11 +40,25 @@ public class EntityStateService {
         }
     }
 
-    private void publishSafely(EntityStateChangedEvent event) {
+    /**
+     * Meldet ein Ereignis einer EVENT-Entität (z. B. Zigbee-Tastendruck).
+     * Publiziert bei JEDEM Aufruf ein {@link EntityEventFired} — auch bei
+     * wiederholt gleicher Aktion. Gleiche Fehlertoleranz wie {@link #reportState}.
+     */
+    public void reportEvent(EntityStateUpdate update) {
+        try {
+            EntityEventFired event = writer.upsertEvent(update);
+            publishSafely(event);
+        } catch (Exception ex) {
+            log.warn("Failed to report entity event for {}: {}", update.entityId(), ex.getMessage());
+        }
+    }
+
+    private void publishSafely(Object event) {
         try {
             eventPublisher.publishEvent(event);
         } catch (Exception ex) {
-            log.warn("Entity state event listener failed for {}: {}", event.entityId(), ex.getMessage());
+            log.warn("Entity event listener failed: {}", ex.getMessage());
         }
     }
 
