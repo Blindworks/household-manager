@@ -38,7 +38,8 @@ class ZigbeeReadingServiceTest {
     void setUp() {
         climateMessage = new ParsedZigbeeMessage(
                 "Wohnzimmer-Klima", 90, 120,
-                List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")));
+                List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")),
+                null);
     }
 
     @Test

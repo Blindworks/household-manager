@@ -21,7 +21,8 @@ class ZigbeeEntityMapperTest {
     void mapsNumericMeasurementToSensorEntity() {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Wohnzimmer Sensor", 87, 120,
-                List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")));
+                List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")),
+                null);
 
         List<EntityStateUpdate> updates = mapper.map(message);
 
@@ -43,7 +44,8 @@ class ZigbeeEntityMapperTest {
         // HA-Konvention fuer binary_sensor.door: off = geschlossen.
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
-                List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ONE, "")));
+                List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ONE, "")),
+                null);
 
         List<EntityStateUpdate> updates = mapper.map(message);
 
@@ -61,7 +63,8 @@ class ZigbeeEntityMapperTest {
         // HA-Konvention: on = offen.
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
-                List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ZERO, "")));
+                List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ZERO, "")),
+                null);
 
         assertEquals("on", mapper.map(message).get(0).state());
     }
@@ -70,7 +73,8 @@ class ZigbeeEntityMapperTest {
     void mapsZeroBinaryValueToOff() {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
-                List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ZERO, "")));
+                List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ZERO, "")),
+                null);
 
         assertEquals("off", mapper.map(message).get(0).state());
     }
@@ -79,7 +83,8 @@ class ZigbeeEntityMapperTest {
     void mapsOccupancyDetectedToOn() {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Flur", null, null,
-                List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ONE, "")));
+                List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ONE, "")),
+                null);
 
         assertEquals("on", mapper.map(message).get(0).state());
     }
@@ -90,7 +95,8 @@ class ZigbeeEntityMapperTest {
                 "Bad", 50, 100,
                 List.of(
                         new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("22.0"), "°C"),
-                        new ZigbeeMeasurementValue(MeasurementType.HUMIDITY, new BigDecimal("55"), "%")));
+                        new ZigbeeMeasurementValue(MeasurementType.HUMIDITY, new BigDecimal("55"), "%")),
+                null);
 
         assertEquals(2, mapper.map(message).size());
     }

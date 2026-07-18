@@ -44,6 +44,14 @@ public class ZigbeeMessageParser {
     private final ObjectMapper objectMapper;
 
     public Optional<ParsedZigbeeMessage> parse(String topic, String payload) {
+        return parse(topic, payload, false);
+    }
+
+    /**
+     * @param retained MQTT-Retained-Flag; Aktionen aus retained Nachrichten werden
+     *                 verworfen, damit ein Reconnect keinen alten Tastendruck nachfeuert
+     */
+    public Optional<ParsedZigbeeMessage> parse(String topic, String payload, boolean retained) {
         if (!isDeviceTopic(topic)) {
             return Optional.empty();
         }
@@ -62,6 +70,7 @@ public class ZigbeeMessageParser {
 
         Integer battery = intOrNull(root, "battery");
         Integer linkQuality = intOrNull(root, "linkquality");
+        String action = retained ? null : actionOrNull(root);
 
         List<ZigbeeMeasurementValue> measurements = new ArrayList<>();
         for (Map.Entry<String, MeasurementType> entry : FIELD_TYPES.entrySet()) {
@@ -78,10 +87,10 @@ public class ZigbeeMessageParser {
             measurements.add(new ZigbeeMeasurementValue(type, value, type.getDefaultUnit()));
         }
 
-        if (measurements.isEmpty() && battery == null && linkQuality == null) {
+        if (measurements.isEmpty() && battery == null && linkQuality == null && action == null) {
             return Optional.empty();
         }
-        return Optional.of(new ParsedZigbeeMessage(friendlyName, battery, linkQuality, measurements));
+        return Optional.of(new ParsedZigbeeMessage(friendlyName, battery, linkQuality, measurements, action));
     }
 
     private boolean isDeviceTopic(String topic) {
@@ -108,5 +117,10 @@ public class ZigbeeMessageParser {
     private Integer intOrNull(JsonNode root, String field) {
         JsonNode node = root.get(field);
         return (node != null && node.isNumber()) ? node.asInt() : null;
+    }
+
+    private String actionOrNull(JsonNode root) {
+        JsonNode node = root.get("action");
+        return (node != null && node.isTextual() && !node.asText().isBlank()) ? node.asText() : null;
     }
 }

@@ -112,4 +112,54 @@ class ZigbeeMessageParserTest {
         assertThat(illuminanceCount).isEqualTo(1);
         assertThat(valueOf(result.get(), MeasurementType.ILLUMINANCE)).isEqualByComparingTo("12");
     }
+
+    @Test
+    void parsesActionFromButtonMessage() {
+        String payload = "{\"action\":\"single\",\"battery\":100,\"linkquality\":90}";
+
+        Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Flur-Taster", payload);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().action()).isEqualTo("single");
+        assertThat(result.get().friendlyName()).isEqualTo("Flur-Taster");
+    }
+
+    @Test
+    void messageWithOnlyActionIsValid() {
+        Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Flur-Taster", "{\"action\":\"double\"}");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().action()).isEqualTo("double");
+        assertThat(result.get().measurements()).isEmpty();
+    }
+
+    @Test
+    void ignoresEmptyLegacyActionReset() {
+        // zigbee2mqtt-Legacy-Verhalten: nach der Aktion folgt {"action": ""} als Reset.
+        Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Flur-Taster", "{\"action\":\"\"}");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void discardsActionFromRetainedMessage() {
+        // Retained-Nachrichten sind alte Zustände vom Broker — ein Backend-Neustart
+        // darf den letzten Tastendruck nicht "nachfeuern".
+        String payload = "{\"action\":\"single\",\"battery\":100,\"linkquality\":90}";
+
+        Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Flur-Taster", payload, true);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().action()).isNull();
+    }
+
+    @Test
+    void nonButtonMessageHasNullAction() {
+        String payload = "{\"battery\":100,\"contact\":false,\"linkquality\":80}";
+
+        Optional<ParsedZigbeeMessage> result = parser.parse("zigbee2mqtt/Haustuer", payload);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().action()).isNull();
+    }
 }
