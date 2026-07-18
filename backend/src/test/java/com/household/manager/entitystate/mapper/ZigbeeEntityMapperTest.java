@@ -119,6 +119,13 @@ class ZigbeeEntityMapperTest {
     }
 
     @Test
+    void mapActionTransliteratesUmlautsInEntityId() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Küchen-Taster", null, null, List.of(), "hold");
+
+        assertEquals("event.zigbee_kuechen_taster_action", mapper.mapAction(message).orElseThrow().entityId());
+    }
+
+    @Test
     void mapActionIsEmptyWithoutAction() {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage("Haustür", null, null, List.of(), null);
 

@@ -17,7 +17,8 @@ import java.util.Set;
 
 /**
  * Übersetzt eine geparste zigbee2mqtt-Nachricht in Sensor-/Binärsensor-Entitäten
- * (eine Entität pro Messgröße).
+ * (eine Entität pro Messgröße) sowie — über {@link #mapAction} — in EVENT-Entitäten
+ * für Taster-Aktionen.
  * <p>
  * Identität: Entitäten werden — wie die bestehende Zigbee-Integration selbst
  * (ZigbeeDevice.findByFriendlyName) — über den zigbee2mqtt-friendlyName gebildet.
@@ -67,12 +68,7 @@ public class ZigbeeEntityMapper {
             }
             attributes.put("deviceClass",
                     HA_DEVICE_CLASSES.getOrDefault(value.type(), value.type().name().toLowerCase(java.util.Locale.ROOT)));
-            if (message.batteryPercent() != null) {
-                attributes.put("batteryPercent", message.batteryPercent());
-            }
-            if (message.linkQuality() != null) {
-                attributes.put("linkQuality", message.linkQuality());
-            }
+            addCommonAttributes(attributes, message);
 
             String state = binary ? toOnOff(value.type(), value.value()) : value.value().toPlainString();
             String suffix = value.type().name().toLowerCase(java.util.Locale.ROOT);
@@ -101,12 +97,7 @@ public class ZigbeeEntityMapper {
         }
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("deviceClass", "button");
-        if (message.batteryPercent() != null) {
-            attributes.put("batteryPercent", message.batteryPercent());
-        }
-        if (message.linkQuality() != null) {
-            attributes.put("linkQuality", message.linkQuality());
-        }
+        addCommonAttributes(attributes, message);
         return Optional.of(EntityStateUpdate.builder()
                 .entityId(EntityIds.build(EntityDomain.EVENT, EntitySource.ZIGBEE, message.friendlyName(), "action"))
                 .domain(EntityDomain.EVENT)
@@ -116,6 +107,15 @@ public class ZigbeeEntityMapper {
                 .state(message.action())
                 .attributes(attributes)
                 .build());
+    }
+
+    private void addCommonAttributes(Map<String, Object> attributes, ParsedZigbeeMessage message) {
+        if (message.batteryPercent() != null) {
+            attributes.put("batteryPercent", message.batteryPercent());
+        }
+        if (message.linkQuality() != null) {
+            attributes.put("linkQuality", message.linkQuality());
+        }
     }
 
     private String toOnOff(MeasurementType type, BigDecimal value) {
