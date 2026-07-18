@@ -53,6 +53,7 @@ household-manager/
 │       ├── application.properties  # Application configuration
 │       └── db/changelog/           # Liquibase migration files
 ├── scripts/                       # Helper scripts (test data, etc.)
+├── tablet-app/                    # Android-Kiosk-App für das Wandtablet
 └── docker-compose.yml            # Docker deployment configuration
 ```
 
@@ -261,6 +262,11 @@ docker-compose down
 - Backend polls every 5 minutes (`AlexaAirQualityPollingService`), stores readings in `alexa_air_quality_readings`, reports entity states (`EntitySource.ALEXA`) usable as flow triggers
 - Sensors: IAQ score, PM2.5, VOC, CO, temperature, humidity; device identity via the stable hardware serial (`applianceId`)
 - Frontend: indoor section on the air quality page (`alexa-air-quality-section.component`)
+
+### Wandtablet (Präsenzerkennung)
+- Eigene Android-Kiosk-App in `tablet-app/` (Kotlin, minSdk 29): Dashboard im Vollbild-WebView, Anwesenheitserkennung per Frontkamera (CameraX: Bewegung weckt, ML-Kit-Gesicht hält wach), Soft-Off via schwarzem Overlay + Helligkeit 0
+- Präsenz-Meldung an `POST /v1/tablet-presence/{tabletId}`; Spiegelung als `binary_sensor.tablet_<id>_presence` (`EntitySource.TABLET`) im Entity-State-Layer, nutzbar als Flow-Trigger; ausbleibender Heartbeat → `unavailable`
+- Backend-Implementierung in `backend/src/main/java/com/household/manager/tablet/`
 
 ## Code Quality Standards
 
