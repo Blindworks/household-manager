@@ -34,7 +34,7 @@ public class EntityStateService {
     public void reportState(EntityStateUpdate update) {
         try {
             Optional<EntityStateChangedEvent> event = writer.upsert(update);
-            event.ifPresent(this::publishSafely);
+            event.ifPresent(e -> publishSafely(e, update.entityId()));
         } catch (Exception ex) {
             log.warn("Failed to report entity state for {}: {}", update.entityId(), ex.getMessage());
         }
@@ -48,17 +48,17 @@ public class EntityStateService {
     public void reportEvent(EntityStateUpdate update) {
         try {
             EntityEventFired event = writer.upsertEvent(update);
-            publishSafely(event);
+            publishSafely(event, update.entityId());
         } catch (Exception ex) {
             log.warn("Failed to report entity event for {}: {}", update.entityId(), ex.getMessage());
         }
     }
 
-    private void publishSafely(Object event) {
+    private void publishSafely(Object event, String entityId) {
         try {
             eventPublisher.publishEvent(event);
         } catch (Exception ex) {
-            log.warn("Entity event listener failed: {}", ex.getMessage());
+            log.warn("Entity event listener failed for {}: {}", entityId, ex.getMessage());
         }
     }
 
