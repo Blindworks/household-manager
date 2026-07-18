@@ -1,5 +1,6 @@
 package com.household.manager.flowengine;
 
+import com.household.manager.entitystate.EntityEventFired;
 import com.household.manager.entitystate.EntityStateChangedEvent;
 import com.household.manager.flowengine.model.NodeConfig;
 
@@ -15,6 +16,14 @@ public interface TriggerNodeHandler extends NodeHandler {
 
     /** Reaktion auf ein Entity-Event (nur für den Trigger relevanter Entitäten aufgerufen). */
     default void onEntityEvent(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx) {
+    }
+
+    /**
+     * Reaktion auf ein Ereignis einer EVENT-Entität. Wird — anders als
+     * {@link #onEntityEvent} — bei JEDEM Ereignis aufgerufen, auch bei
+     * wiederholt gleicher Aktion.
+     */
+    default void onEntityEventFired(EntityEventFired event, NodeConfig config, NodeContext ctx) {
     }
 
     /**

@@ -28,6 +28,16 @@ class NodeCatalogFieldsTest {
     }
 
     @Test
+    void entityEventTriggerFieldsAndPorts() {
+        var h = new EntityEventTriggerHandler();
+        var fields = h.fields();
+        assertEquals(NodeFieldType.ENTITY_REF, field(fields, "entityId").type());
+        assertTrue(field(fields, "entityId").required());
+        assertFalse(field(fields, "action").required());
+        assertEquals(List.of("Ausgang"), h.portLabels());
+    }
+
+    @Test
     void entityConditionHasTruthyFalsyPortLabels() {
         var h = new EntityConditionHandler(null);
         assertEquals(List.of("wahr", "falsch"), h.portLabels());
