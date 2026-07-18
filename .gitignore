@@ -4,3 +4,8 @@
 # Personal bank statement exports (never commit)
 backend/*.CSV
 backend/*.csv
+
+tablet-app/local.properties
+tablet-app/.gradle/
+tablet-app/app/build/
+tablet-app/build/
