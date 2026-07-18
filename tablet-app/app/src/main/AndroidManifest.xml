@@ -8,6 +8,7 @@
     <!-- usesCleartextTraffic: Backend/Frontend laufen im LAN ohne HTTPS -->
     <application
         android:label="Household Tablet"
+        android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
 
