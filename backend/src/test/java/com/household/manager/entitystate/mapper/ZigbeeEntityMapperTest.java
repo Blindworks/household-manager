@@ -12,6 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ZigbeeEntityMapperTest {
 
@@ -99,5 +100,28 @@ class ZigbeeEntityMapperTest {
                 null);
 
         assertEquals(2, mapper.map(message).size());
+    }
+
+    @Test
+    void mapsActionToEventEntity() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Flur-Taster", 100, 90, List.of(), "single");
+
+        EntityStateUpdate update = mapper.mapAction(message).orElseThrow();
+
+        assertEquals("event.zigbee_flur_taster_action", update.entityId());
+        assertEquals(EntityDomain.EVENT, update.domain());
+        assertEquals("single", update.state());
+        assertEquals("button", update.attributes().get("deviceClass"));
+        assertEquals(100, update.attributes().get("batteryPercent"));
+        assertEquals(90, update.attributes().get("linkQuality"));
+        assertEquals("Flur-Taster Taster", update.friendlyName());
+        assertEquals("Flur-Taster", update.sourceRef());
+    }
+
+    @Test
+    void mapActionIsEmptyWithoutAction() {
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Haustür", null, null, List.of(), null);
+
+        assertTrue(mapper.mapAction(message).isEmpty());
     }
 }

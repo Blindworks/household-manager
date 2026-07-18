@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -87,6 +88,34 @@ public class ZigbeeEntityMapper {
                     .build());
         }
         return updates;
+    }
+
+    /**
+     * Erzeugt aus einer Taster-Aktion eine EVENT-Entität ("<Name> Taster").
+     * Leer, wenn die Nachricht keine Aktion enthält. Konsumenten melden das
+     * Ergebnis über {@code EntityStateService.reportEvent} (nicht reportState).
+     */
+    public Optional<EntityStateUpdate> mapAction(ParsedZigbeeMessage message) {
+        if (message.action() == null) {
+            return Optional.empty();
+        }
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("deviceClass", "button");
+        if (message.batteryPercent() != null) {
+            attributes.put("batteryPercent", message.batteryPercent());
+        }
+        if (message.linkQuality() != null) {
+            attributes.put("linkQuality", message.linkQuality());
+        }
+        return Optional.of(EntityStateUpdate.builder()
+                .entityId(EntityIds.build(EntityDomain.EVENT, EntitySource.ZIGBEE, message.friendlyName(), "action"))
+                .domain(EntityDomain.EVENT)
+                .source(EntitySource.ZIGBEE)
+                .sourceRef(message.friendlyName())
+                .friendlyName(message.friendlyName() + " Taster")
+                .state(message.action())
+                .attributes(attributes)
+                .build());
     }
 
     private String toOnOff(MeasurementType type, BigDecimal value) {
