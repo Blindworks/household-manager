@@ -13,6 +13,7 @@ const ACTION_TYPES = new Set(['alexa-announce', 'switch-device']);
 /** Menschenlesbare Beschriftungen je Node-Typ. */
 const LABELS: Record<string, string> = {
   'entity-state-trigger': 'Entity-Trigger',
+  'entity-event-trigger': 'Taster-Trigger',
   'schedule-trigger': 'Zeitplan',
   'entity-condition': 'Bedingung',
   'delay': 'Verzögerung',

@@ -16,7 +16,7 @@ export interface EntityState {
 }
 
 export type EntityDomain =
-  | 'SWITCH' | 'SENSOR' | 'BINARY_SENSOR'
+  | 'SWITCH' | 'SENSOR' | 'BINARY_SENSOR' | 'EVENT'
   | 'INPUT_BOOLEAN' | 'INPUT_NUMBER' | 'INPUT_TEXT' | 'INPUT_SELECT';
 
 /** Vom Benutzer anlegbare Helfer-Typen. */
