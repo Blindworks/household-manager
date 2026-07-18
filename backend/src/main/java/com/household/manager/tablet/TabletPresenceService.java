@@ -5,8 +5,8 @@ import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * "unavailable".
  */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class TabletPresenceService {
 
@@ -38,19 +39,12 @@ public class TabletPresenceService {
     private final Clock clock;
     private final Map<String, TabletPresence> tablets = new ConcurrentHashMap<>();
 
-    @Autowired
-    public TabletPresenceService(EntityStateService entityStateService) {
-        this(entityStateService, Clock.systemDefaultZone());
-    }
-
-    TabletPresenceService(EntityStateService entityStateService, Clock clock) {
-        this.entityStateService = entityStateService;
-        this.clock = clock;
-    }
-
     public void reportPresence(String tabletId, boolean present) {
+        String state = present ? STATE_ON : STATE_OFF;
+        // schlägt bei ungültiger tabletId fehl, bevor die Map verändert wird
+        String entityId = presenceEntityId(tabletId);
         tablets.put(tabletId, new TabletPresence(present, clock.instant(), false));
-        reportEntityState(tabletId, present ? STATE_ON : STATE_OFF);
+        reportEntityState(entityId, tabletId, state);
     }
 
     @Scheduled(fixedDelayString = "${tablet.presence.offline-check-ms:60000}")
@@ -60,14 +54,18 @@ public class TabletPresenceService {
             if (!presence.unavailable() && presence.lastSeen().isBefore(threshold)) {
                 tablets.put(tabletId, new TabletPresence(presence.present(), presence.lastSeen(), true));
                 log.warn("Tablet '{}' sendet keinen Heartbeat mehr, Entität geht auf unavailable", tabletId);
-                reportEntityState(tabletId, STATE_UNAVAILABLE);
+                reportEntityState(presenceEntityId(tabletId), tabletId, STATE_UNAVAILABLE);
             }
         });
     }
 
-    private void reportEntityState(String tabletId, String state) {
+    private String presenceEntityId(String tabletId) {
+        return EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.TABLET, tabletId, "presence");
+    }
+
+    private void reportEntityState(String entityId, String tabletId, String state) {
         entityStateService.reportState(EntityStateUpdate.builder()
-                .entityId(EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.TABLET, tabletId, "presence"))
+                .entityId(entityId)
                 .domain(EntityDomain.BINARY_SENSOR)
                 .source(EntitySource.TABLET)
                 .sourceRef(tabletId)

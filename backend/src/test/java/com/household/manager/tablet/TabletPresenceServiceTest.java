@@ -15,6 +15,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -110,6 +111,18 @@ class TabletPresenceServiceTest {
         service.markStaleTabletsUnavailable();
 
         verify(entityStateService, times(2)).reportState(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void invalidTabletIdDoesNotPoisonTheSweep() {
+        assertThrows(IllegalArgumentException.class, () -> service.reportPresence("!!!", true));
+
+        service.reportPresence("wandtablet", true);
+        clock.advanceSeconds(181);
+
+        service.markStaleTabletsUnavailable();
+
+        assertEquals("unavailable", lastReportedUpdate(2).state());
     }
 
     @Test
