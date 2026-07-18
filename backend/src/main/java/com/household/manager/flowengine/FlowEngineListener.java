@@ -1,7 +1,9 @@
 package com.household.manager.flowengine;
 
+import com.household.manager.entitystate.EntityEventFired;
 import com.household.manager.entitystate.EntityStateChangedEvent;
 import com.household.manager.flowengine.model.FlowNode;
+import com.household.manager.flowengine.model.NodeConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
@@ -29,7 +31,16 @@ public class FlowEngineListener {
 
     @EventListener
     public void onEntityStateChanged(EntityStateChangedEvent event) {
-        for (FlowRegistry.TriggerRef ref : registry.triggersFor(event.entityId())) {
+        dispatch(event.entityId(), (trigger, config, ctx) -> trigger.onEntityEvent(event, config, ctx));
+    }
+
+    @EventListener
+    public void onEntityEventFired(EntityEventFired event) {
+        dispatch(event.entityId(), (trigger, config, ctx) -> trigger.onEntityEventFired(event, config, ctx));
+    }
+
+    private void dispatch(String entityId, TriggerInvocation invocation) {
+        for (FlowRegistry.TriggerRef ref : registry.triggersFor(entityId)) {
             executor.execute(() -> {
                 try {
                     FlowGraph graph = registry.graph(ref.flowId()).orElse(null);
@@ -42,12 +53,17 @@ public class FlowEngineListener {
                         return;
                     }
                     if (registry.handler(node.type()) instanceof TriggerNodeHandler trigger) {
-                        trigger.onEntityEvent(event, node.config(), ctx);
+                        invocation.invoke(trigger, node.config(), ctx);
                     }
                 } catch (Exception ex) {
                     log.warn("Flow {} trigger {} failed: {}", ref.flowId(), ref.nodeId(), ex.getMessage());
                 }
             });
         }
+    }
+
+    @FunctionalInterface
+    private interface TriggerInvocation {
+        void invoke(TriggerNodeHandler trigger, NodeConfig config, NodeContext ctx);
     }
 }
