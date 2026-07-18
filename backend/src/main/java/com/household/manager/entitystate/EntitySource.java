@@ -16,6 +16,8 @@ public enum EntitySource {
     ANKER_SOLIX,
     /** Muellabfuhr-Termine aus dem Kalender-Abo. */
     WASTE,
+    /** Wandtablet-App (Präsenzerkennung per Frontkamera). */
+    TABLET,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }
