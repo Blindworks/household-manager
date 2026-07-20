@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -63,7 +64,7 @@ class SwitchControllerTest {
 
     @Test
     void liefert_die_schalterliste() throws Exception {
-        when(switchQueryService.listSwitches(isNull()))
+        when(switchQueryService.listSwitches(isNull(), eq(false)))
                 .thenReturn(List.of(response("switch.kasa_abc", "Stehlampe", "on")));
 
         mockMvc.perform(get("/v1/switches"))
@@ -77,9 +78,17 @@ class SwitchControllerTest {
 
     @Test
     void reicht_das_limit_an_den_service_durch() throws Exception {
-        when(switchQueryService.listSwitches(4)).thenReturn(List.of());
+        when(switchQueryService.listSwitches(4, false)).thenReturn(List.of());
 
         mockMvc.perform(get("/v1/switches").param("limit", "4"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void view_tile_aktiviert_die_kachel_sicht() throws Exception {
+        when(switchQueryService.listSwitches(4, true)).thenReturn(List.of());
+
+        mockMvc.perform(get("/v1/switches").param("limit", "4").param("view", "tile"))
                 .andExpect(status().isOk());
     }
 

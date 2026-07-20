@@ -23,10 +23,13 @@ public class SwitchController {
 
     /**
      * @param limit optionale Obergrenze; ohne Angabe werden alle Schalter geliefert
+     * @param view  "tile" wendet die Kachel-Sichtbarkeitsregeln an; Standard "all"
      */
     @GetMapping
-    public List<SwitchResponse> getSwitches(@RequestParam(required = false) Integer limit) {
-        return switchQueryService.listSwitches(limit);
+    public List<SwitchResponse> getSwitches(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false, defaultValue = "all") String view) {
+        return switchQueryService.listSwitches(limit, "tile".equals(view));
     }
 
     @PostMapping("/{entityId}/toggle")
