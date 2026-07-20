@@ -54,6 +54,7 @@ household-manager/
 │       └── db/changelog/           # Liquibase migration files
 ├── scripts/                       # Helper scripts (test data, etc.)
 ├── tablet-app/                    # Android-Kiosk-App für das Wandtablet
+├── flow-mcp-server/               # MCP-Server: KI-Schnittstelle zur Flow-Engine
 └── docker-compose.yml            # Docker deployment configuration
 ```
 
@@ -262,6 +263,13 @@ docker-compose down
 - Backend polls every 5 minutes (`AlexaAirQualityPollingService`), stores readings in `alexa_air_quality_readings`, reports entity states (`EntitySource.ALEXA`) usable as flow triggers
 - Sensors: IAQ score, PM2.5, VOC, CO, temperature, humidity; device identity via the stable hardware serial (`applianceId`)
 - Frontend: indoor section on the air quality page (`alexa-air-quality-section.component`)
+
+### Flow-Engine: KI-Autoring via MCP
+- Flows werden primär durch eine KI erstellt und gepflegt (Entscheidung 2026-07-20); der visuelle Editor bleibt als Viewer/Debug-Werkzeug, wird aber nicht weiter ausgebaut
+- `flow-mcp-server/` (Node ≥20, stdio) wrappt die REST-API `/api/v1/flows` als MCP-Tools; Registrierung für Claude Code in `.mcp.json` (Server-Name `household-flows`), Setup: `cd flow-mcp-server && npm install`
+- Tools: `flow_list/get/create/update/deploy/set_enabled/delete`, `flow_node_types` (Katalog), `flow_inject` + `flow_debug_entries` (Testen), Lookups `flow_list_entities` (entityId), `flow_list_switch_devices` (deviceId), `flow_list_alexa_devices` (deviceSerials)
+- Typischer Ablauf: `flow_node_types` + Lookups → `flow_create` (entsteht deaktiviert, nicht deployt) → `flow_deploy` (liefert ValidationResult; 400 wird als fachliches Ergebnis durchgereicht) → `flow_set_enabled`
+- Flow-JSON-Format: `docs/flows/flow-import-format.md`; Design: `docs/superpowers/specs/2026-07-20-flow-mcp-server-design.md`
 
 ### Wandtablet (Präsenzerkennung)
 - Eigene Android-Kiosk-App in `tablet-app/` (Kotlin, minSdk 29): Dashboard im Vollbild-WebView, Anwesenheitserkennung per Frontkamera (CameraX: Bewegung weckt, ML-Kit-Gesicht hält wach), Soft-Off via schwarzem Overlay + Helligkeit 0
