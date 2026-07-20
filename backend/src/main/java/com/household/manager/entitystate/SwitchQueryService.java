@@ -16,42 +16,86 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Liefert die schaltbaren Entitäten, meistgenutzte zuerst.
+ * Liefert die schaltbaren Entitäten für Schalter-Kachel und -Dialog.
+ * <p>
+ * Die Dialog-Sicht zeigt alle Schalter nutzungsbasiert sortiert. Die
+ * Kachel-Sicht wendet zusätzlich die benutzergepflegten Sichtbarkeitsregeln
+ * an: NEVER und inaktive WHEN_ON werden gefiltert, sortiert wird in Gruppen
+ * (aktive WHEN_ON, dann ALWAYS, dann Rest) — innerhalb jeder Gruppe nach Nutzung.
  */
 @Service
 @RequiredArgsConstructor
 public class SwitchQueryService {
 
+    private static final String STATE_ON = "on";
+
     private final EntityStateRepository entityStateRepository;
     private final EntityUsageService entityUsageService;
+    private final EntityTileVisibilityService tileVisibilityService;
     private final SwitchResponseMapper switchResponseMapper;
     private final EntityStateResponseMapper entityStateResponseMapper;
 
-    /**
-     * @param limit maximale Anzahl Einträge; null oder <= 0 liefert alle
-     */
+    /** Dialog-Sicht ohne Sichtbarkeitsregeln (Kompatibilitäts-Überladung). */
     @Transactional(readOnly = true)
     public List<SwitchResponse> listSwitches(Integer limit) {
+        return listSwitches(limit, false);
+    }
+
+    /**
+     * @param limit    maximale Anzahl Einträge; null oder <= 0 liefert alle
+     * @param tileView true wendet die Kachel-Sichtbarkeitsregeln an
+     */
+    @Transactional(readOnly = true)
+    public List<SwitchResponse> listSwitches(Integer limit, boolean tileView) {
+        Map<String, TileVisibility> rules = tileView
+                ? tileVisibilityService.tileRules(DashboardTiles.SWITCHES)
+                : Map.of();
+
         List<EntityState> switchable = entityStateRepository
                 .findByDomainInOrderByEntityIdAsc(SwitchableEntities.SWITCHABLE_DOMAINS).stream()
                 .filter(SwitchableEntities::isSwitchable)
                 // Haus-Modi haben eine eigene Leiste im Dashboard und die Modus-API.
                 .filter(entity -> !HouseModes.isMode(
                         entityStateResponseMapper.parseAttributes(entity.getAttributes())))
+                .filter(entity -> !tileView || visibleOnTile(entity, rules))
                 .toList();
 
         Map<String, EntityUsage> usage = entityUsageService.usageFor(
                 switchable.stream().map(EntityState::getEntityId).toList());
 
+        record Ranked(SwitchResponse response, int rank) {
+        }
         List<SwitchResponse> switches = switchable.stream()
-                .map(entity -> switchResponseMapper.toResponse(entity, usage.get(entity.getEntityId())))
-                .sorted(byUsage())
+                .map(entity -> new Ranked(
+                        switchResponseMapper.toResponse(entity, usage.get(entity.getEntityId())),
+                        tileRank(entity, rules)))
+                .sorted(Comparator.comparingInt(Ranked::rank)
+                        .thenComparing(Ranked::response, byUsage()))
+                .map(Ranked::response)
                 .toList();
 
         if (limit != null && limit > 0 && limit < switches.size()) {
             return List.copyOf(switches.subList(0, limit));
         }
         return switches;
+    }
+
+    /** Kachel-Filter: NEVER nie, WHEN_ON nur solange der Zustand "on" ist. */
+    private boolean visibleOnTile(EntityState entity, Map<String, TileVisibility> rules) {
+        return switch (rules.getOrDefault(entity.getEntityId(), TileVisibility.AUTO)) {
+            case NEVER -> false;
+            case WHEN_ON -> STATE_ON.equals(entity.getState());
+            case ALWAYS, AUTO -> true;
+        };
+    }
+
+    /** Gruppen-Rang der Kachel: aktive WHEN_ON (0) vor ALWAYS (1) vor Rest (2). */
+    private int tileRank(EntityState entity, Map<String, TileVisibility> rules) {
+        return switch (rules.getOrDefault(entity.getEntityId(), TileVisibility.AUTO)) {
+            case WHEN_ON -> 0;
+            case ALWAYS -> 1;
+            case AUTO, NEVER -> 2;
+        };
     }
 
     /** Meistgenutzt zuerst; bei Gleichstand zuletzt geschaltet, dann alphabetisch. */

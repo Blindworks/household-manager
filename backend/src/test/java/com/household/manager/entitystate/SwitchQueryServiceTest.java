@@ -29,6 +29,8 @@ class SwitchQueryServiceTest {
     private EntityStateRepository entityStateRepository;
     @Mock
     private EntityUsageService entityUsageService;
+    @Mock
+    private EntityTileVisibilityService tileVisibilityService;
 
     private SwitchQueryService service;
 
@@ -36,7 +38,7 @@ class SwitchQueryServiceTest {
     void setUp() {
         EntityStateResponseMapper entityMapper = new EntityStateResponseMapper(new ObjectMapper());
         service = new SwitchQueryService(entityStateRepository, entityUsageService,
-                new SwitchResponseMapper(entityMapper), entityMapper);
+                tileVisibilityService, new SwitchResponseMapper(entityMapper), entityMapper);
     }
 
     private EntityState device(String ref, String name) {
@@ -47,6 +49,19 @@ class SwitchQueryServiceTest {
                 .sourceRef(ref)
                 .friendlyName(name)
                 .state("on")
+                .lastChanged(LocalDateTime.now())
+                .lastUpdated(LocalDateTime.now())
+                .build();
+    }
+
+    private EntityState deviceWithState(String ref, String name, String state) {
+        return EntityState.builder()
+                .entityId("switch.kasa_" + ref)
+                .domain(EntityDomain.SWITCH)
+                .source(EntitySource.KASA)
+                .sourceRef(ref)
+                .friendlyName(name)
+                .state(state)
                 .lastChanged(LocalDateTime.now())
                 .lastUpdated(LocalDateTime.now())
                 .build();
@@ -169,5 +184,94 @@ class SwitchQueryServiceTest {
         when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
 
         assertThat(namesOf(service.listSwitches(null))).containsExactly("Urlaub");
+    }
+
+    @Test
+    void kachel_sicht_filtert_never_heraus() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(device("a", "Sichtbar"), device("b", "Versteckt")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES))
+                .thenReturn(Map.of("switch.kasa_b", TileVisibility.NEVER));
+
+        assertThat(namesOf(service.listSwitches(null, true))).containsExactly("Sichtbar");
+    }
+
+    @Test
+    void kachel_sicht_filtert_inaktive_when_on_heraus() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(
+                        deviceWithState("wm", "Waschmaschine", "off"),
+                        device("a", "Stehlampe")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES))
+                .thenReturn(Map.of("switch.kasa_wm", TileVisibility.WHEN_ON));
+
+        assertThat(namesOf(service.listSwitches(null, true))).containsExactly("Stehlampe");
+    }
+
+    @Test
+    void kachel_sicht_sortiert_aktive_when_on_vor_gepinnte_vor_rest() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(
+                        device("oft", "Oft genutzt"),
+                        device("pin", "Gepinnt"),
+                        deviceWithState("wm", "Waschmaschine", "on")));
+        // "Oft genutzt" hat die meisten Toggles und stuende rein nutzungsbasiert vorn.
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of(
+                "switch.kasa_oft", usage("switch.kasa_oft", 99, LocalDateTime.of(2026, 7, 19, 10, 0))
+        ));
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES)).thenReturn(Map.of(
+                "switch.kasa_wm", TileVisibility.WHEN_ON,
+                "switch.kasa_pin", TileVisibility.ALWAYS
+        ));
+
+        assertThat(namesOf(service.listSwitches(null, true)))
+                .containsExactly("Waschmaschine", "Gepinnt", "Oft genutzt");
+    }
+
+    @Test
+    void kachel_sicht_sortiert_innerhalb_der_gruppen_nach_nutzung() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(device("pin1", "Pin selten"), device("pin2", "Pin oft")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of(
+                "switch.kasa_pin1", usage("switch.kasa_pin1", 1, LocalDateTime.of(2026, 7, 19, 10, 0)),
+                "switch.kasa_pin2", usage("switch.kasa_pin2", 8, LocalDateTime.of(2026, 7, 19, 10, 0))
+        ));
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES)).thenReturn(Map.of(
+                "switch.kasa_pin1", TileVisibility.ALWAYS,
+                "switch.kasa_pin2", TileVisibility.ALWAYS
+        ));
+
+        assertThat(namesOf(service.listSwitches(null, true)))
+                .containsExactly("Pin oft", "Pin selten");
+    }
+
+    @Test
+    void kachel_sicht_wendet_das_limit_nach_filter_und_sortierung_an() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(
+                        device("a", "Eins"), device("b", "Zwei"),
+                        deviceWithState("wm", "Waschmaschine", "on")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES))
+                .thenReturn(Map.of("switch.kasa_wm", TileVisibility.WHEN_ON));
+
+        List<SwitchResponse> result = service.listSwitches(2, true);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).displayName()).isEqualTo("Waschmaschine");
+    }
+
+    @Test
+    void dialog_sicht_zeigt_alle_und_ignoriert_die_regeln() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(
+                        deviceWithState("wm", "Waschmaschine", "off"),
+                        device("b", "Versteckt")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+
+        assertThat(namesOf(service.listSwitches(null, false)))
+                .containsExactlyInAnyOrder("Waschmaschine", "Versteckt");
     }
 }
