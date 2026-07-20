@@ -4,6 +4,7 @@ import com.household.manager.meross.config.MerossProperties;
 import com.household.manager.meross.dto.MerossCloudDevice;
 import com.household.manager.meross.dto.MerossCloudDevicesResponse;
 import com.household.manager.meross.dto.MerossCloudLoginResponse;
+import com.household.manager.meross.dto.MerossElectricityReading;
 import com.household.manager.meross.dto.MerossPlugResponse;
 import com.household.manager.meross.exception.MerossException;
 import com.household.manager.meross.lib.*;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -62,6 +64,38 @@ public class MerossDeviceService {
             log.info("Meross device switched off (deviceId={})", deviceId);
         } catch (Throwable ex) {
             throw new MerossException("Meross-Steckdose konnte nicht ausgeschaltet werden: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Liest die Momentanwerte (Leistung/Spannung/Strom) einer Steckdose mit
+     * Energiemessung über MQTT. Verbindung wird pro Messung auf- und abgebaut
+     * (gleiches Muster wie beim Schalten).
+     *
+     * @throws MerossException wenn das Gerät nicht erreichbar ist, die Fähigkeit
+     *                         fehlt oder die Antwort keinen Leistungswert enthält
+     */
+    public MerossElectricityReading readElectricity(String deviceId) {
+        validateConfiguration();
+        MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
+        MerossCloudDevicesResponse devices = merossCloudAuthService.listDevicesWithConfiguredCredentials();
+        MerossCloudDevice cloudDevice = devices.devices().stream()
+                .filter(device -> deviceId.equals(device.uuid()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Meross-Geraet nicht gefunden: " + deviceId));
+
+        MerossDevice device = buildMqttDevice(cloudDevice, login);
+        try {
+            Map payload = device.readElectricity();
+            return MerossElectricityReading.fromPayload(deviceId, cloudDevice.devName(), payload)
+                    .orElseThrow(() -> new MerossException(
+                            "Meross-Elektrizitaetsantwort ohne Leistungswert (deviceId=" + deviceId + ")"));
+        } catch (MerossException ex) {
+            throw ex;
+        } catch (Throwable ex) {
+            throw new MerossException("Meross-Verbrauch konnte nicht gelesen werden: " + ex.getMessage(), ex);
+        } finally {
+            device.disconnect();
         }
     }
 

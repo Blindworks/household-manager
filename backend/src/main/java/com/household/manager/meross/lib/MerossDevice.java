@@ -171,6 +171,27 @@ public class MerossDevice {
         } else return null;
     }
 
+    /**
+     * Liest die aktuellen Elektrizitätswerte (Appliance.Control.Electricity) synchron:
+     * Kommando senden, dann blockierend auf die Geräteantwort warten (gleiches Muster
+     * wie getSysData/getAbilities — executecmd selbst liefert immer null).
+     *
+     * @return Antwort-Payload, z. B. { "electricity": { "channel", "current" (mA),
+     *         "voltage" (0,1 V), "power" (mW) } }, oder null wenn das Gerät die
+     *         Fähigkeit nicht unterstützt
+     */
+    public Map readElectricity() throws MQTTException {
+        if (!getAbilities().contains(Abilities.ELECTRICITY.getNamespace())) {
+            return null;
+        }
+        connection.executecmd("GET", Abilities.ELECTRICITY.getNamespace(), ImmutableMap.of(), clientRequestTopic);
+        try {
+            return connection.receiveMessage();
+        } catch (Exception e) {
+            throw new MQTTException("error retrieving electricity: " + e.getMessage());
+        }
+    }
+
     protected void handleNamespacePayload(Map payload) throws MQTTException {
         if (getAbilities().contains(TOGGLE.getNamespace())) {
             final Map<String, ?> toggle = (Map<String, ?>) payload.get("toggle");
