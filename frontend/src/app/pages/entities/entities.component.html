@@ -83,6 +83,19 @@
         @if (expandedEntityId() === entity.entityId) {
           <tr class="entities-table__details">
             <td colspan="6">
+              @if (isSwitchTileConfigurable(entity)) {
+                <div class="entities-table__tile-visibility">
+                  <label>Schalter-Kachel:</label>
+                  <select
+                    [ngModel]="tileVisibilityOf(entity)"
+                    (ngModelChange)="setTileVisibility(entity, $event)"
+                    (click)="$event.stopPropagation()">
+                    @for (option of tileVisibilityOptions; track option.value) {
+                      <option [value]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                </div>
+              }
               <dl class="entities-table__attributes">
                 @for (attr of attributeEntries(entity); track attr.key) {
                   <dt>{{ attr.key }}</dt>

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, startWith, switchMap } from 'rxjs';
 import { EntityStateService } from '../../services/entity-state.service';
-import { EntityState, EntityDomain } from '../../models/entity-state.model';
+import { EntityState, EntityDomain, TileVisibility, SWITCH_TILE_KEY } from '../../models/entity-state.model';
 
 const REFRESH_INTERVAL_MS = 10000;
 
@@ -88,6 +88,37 @@ export class EntitiesComponent implements OnInit {
             list.map(e => e.entityId === updated.entityId ? updated : e));
           this.editingEntityId.set(null);
         },
+        error: err => this.error.set(err.message)
+      });
+  }
+
+  /** Auswahloptionen der Kachel-Sichtbarkeit fuer das Template. */
+  readonly tileVisibilityOptions: { value: TileVisibility; label: string }[] = [
+    { value: 'AUTO', label: 'Automatisch' },
+    { value: 'ALWAYS', label: 'Immer' },
+    { value: 'WHEN_ON', label: 'Nur wenn an' },
+    { value: 'NEVER', label: 'Nie' }
+  ];
+
+  /**
+   * Nur schaltbare Entitaeten (Schalter-Kachel-Kandidaten) bekommen die
+   * Einstellung; Haus-Modi haben eine eigene Leiste im Dashboard.
+   */
+  isSwitchTileConfigurable(entity: EntityState): boolean {
+    const switchable = entity.domain === 'SWITCH' || entity.domain === 'INPUT_BOOLEAN';
+    return switchable && !entity.attributes?.['mode'];
+  }
+
+  /** Aktuelle Regel fuer die Schalter-Kachel; fehlender Eintrag = AUTO. */
+  tileVisibilityOf(entity: EntityState): TileVisibility {
+    return entity.tileVisibility?.[SWITCH_TILE_KEY] ?? 'AUTO';
+  }
+
+  setTileVisibility(entity: EntityState, visibility: TileVisibility): void {
+    this.entityStateService.setTileVisibility(entity.entityId, SWITCH_TILE_KEY, visibility)
+      .subscribe({
+        next: updated => this.entities.update(list =>
+          list.map(e => e.entityId === updated.entityId ? updated : e)),
         error: err => this.error.set(err.message)
       });
   }
