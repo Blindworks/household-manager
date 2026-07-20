@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * REST-API für die generische Entity-/State-Schicht.
@@ -79,15 +78,14 @@ public class EntityStateController {
             @PathVariable String tileKey,
             @Valid @RequestBody UpdateTileVisibilityRequest request) {
         if (!DashboardTiles.isKnown(tileKey)) {
-            return ResponseEntity.badRequest().build();
+            throw new IllegalArgumentException("Unknown tile key: " + tileKey);
         }
-        Optional<TileVisibility> visibility = TileVisibility.parse(request.getVisibility());
-        if (visibility.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
+        TileVisibility visibility = TileVisibility.parse(request.getVisibility())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown visibility: " + request.getVisibility()));
         return entityStateService.getByEntityId(entityId)
                 .map(entity -> {
-                    tileVisibilityService.setVisibility(entityId, tileKey, visibility.get());
+                    tileVisibilityService.setVisibility(entityId, tileKey, visibility);
                     return ResponseEntity.ok(toResponseWithVisibility(entity));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
