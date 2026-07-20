@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
  * benutzerinitiiert geschrieben, nie vom Polling-Upsert der Integrationen.
  */
 @Entity
-@Table(name = "entity_tile_visibility")
+@Table(name = "entity_tile_visibility",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_entity_tile_visibility",
+                columnNames = {"entity_id", "tile_key"}))
 @Getter
 @Setter
 @Builder
