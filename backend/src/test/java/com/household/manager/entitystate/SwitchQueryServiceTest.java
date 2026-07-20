@@ -274,4 +274,31 @@ class SwitchQueryServiceTest {
         assertThat(namesOf(service.listSwitches(null, false)))
                 .containsExactlyInAnyOrder("Waschmaschine", "Versteckt");
     }
+
+    @Test
+    void kachel_sicht_filtert_when_on_mit_unavailable_heraus() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(
+                        deviceWithState("wm", "Waschmaschine", "unavailable"),
+                        device("a", "Stehlampe")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES))
+                .thenReturn(Map.of("switch.kasa_wm", TileVisibility.WHEN_ON));
+
+        assertThat(namesOf(service.listSwitches(null, true))).containsExactly("Stehlampe");
+    }
+
+    @Test
+    void kachel_sicht_zeigt_gepinnte_auch_wenn_unavailable() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(
+                        device("a", "Stehlampe"),
+                        deviceWithState("pin", "Gepinnt", "unavailable")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+        when(tileVisibilityService.tileRules(DashboardTiles.SWITCHES))
+                .thenReturn(Map.of("switch.kasa_pin", TileVisibility.ALWAYS));
+
+        assertThat(namesOf(service.listSwitches(null, true)))
+                .containsExactly("Gepinnt", "Stehlampe");
+    }
 }
