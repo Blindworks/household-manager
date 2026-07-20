@@ -83,4 +83,7 @@
     <!-- Muellabfuhr-Termine aus dem Google-Kalender -->
     <include file="db/changelog/changes/20260716-0034-create-waste-collection-events-table.xml"/>
 
+    <!-- Kachel-Sichtbarkeit fuer Entitaeten -->
+    <include file="db/changelog/changes/20260720-0035-create-entity-tile-visibility-table.xml"/>
+
 </databaseChangeLog>
