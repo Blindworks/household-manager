@@ -6,6 +6,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.entitystate.EntityTileVisibilityService;
+import com.household.manager.entitystate.TileVisibility;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.exception.GlobalExceptionHandler;
 import com.household.manager.model.entity.EntityState;
@@ -21,8 +23,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -35,6 +40,9 @@ class EntityStateControllerTest {
     @Mock
     private EntityStateService entityStateService;
 
+    @Mock
+    private EntityTileVisibilityService tileVisibilityService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -44,7 +52,8 @@ class EntityStateControllerTest {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         EntityStateResponseMapper responseMapper = new EntityStateResponseMapper(objectMapper);
-        mockMvc = MockMvcBuilders.standaloneSetup(new EntityStateController(entityStateService, responseMapper))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new EntityStateController(entityStateService, tileVisibilityService, responseMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
@@ -183,5 +192,59 @@ class EntityStateControllerTest {
                         .content("{\"customName\":null}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("Wohnzimmer Temperatur"));
+    }
+
+    @Test
+    void setztTileVisibilityUndLiefertDieEntitaet() throws Exception {
+        when(entityStateService.getByEntityId("sensor.zigbee_wohnzimmer_temperature"))
+                .thenReturn(Optional.of(sensor()));
+        when(tileVisibilityService.visibilityByEntity(List.of("sensor.zigbee_wohnzimmer_temperature")))
+                .thenReturn(Map.of("sensor.zigbee_wohnzimmer_temperature", Map.of("switches", "WHEN_ON")));
+
+        mockMvc.perform(put("/v1/entities/sensor.zigbee_wohnzimmer_temperature/tiles/switches")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"visibility\":\"WHEN_ON\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tileVisibility.switches").value("WHEN_ON"));
+
+        verify(tileVisibilityService).setVisibility(
+                "sensor.zigbee_wohnzimmer_temperature", "switches", TileVisibility.WHEN_ON);
+    }
+
+    @Test
+    void tileVisibilityFuerUnbekannteEntitaetLiefert404() throws Exception {
+        when(entityStateService.getByEntityId("switch.weg")).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/v1/entities/switch.weg/tiles/switches")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"visibility\":\"WHEN_ON\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void unbekannterTileKeyLiefert400() throws Exception {
+        mockMvc.perform(put("/v1/entities/sensor.zigbee_wohnzimmer_temperature/tiles/unbekannt")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"visibility\":\"WHEN_ON\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unbekannterVisibilityWertLiefert400() throws Exception {
+        mockMvc.perform(put("/v1/entities/sensor.zigbee_wohnzimmer_temperature/tiles/switches")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"visibility\":\"MANCHMAL\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listeEnthaeltTileVisibilityDerEntitaeten() throws Exception {
+        when(entityStateService.find(null, null)).thenReturn(List.of(sensor()));
+        when(tileVisibilityService.visibilityByEntity(anyCollection()))
+                .thenReturn(Map.of("sensor.zigbee_wohnzimmer_temperature", Map.of("switches", "NEVER")));
+
+        mockMvc.perform(get("/v1/entities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tileVisibility.switches").value("NEVER"));
     }
 }

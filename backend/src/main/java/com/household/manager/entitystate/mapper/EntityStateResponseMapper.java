@@ -23,6 +23,11 @@ public class EntityStateResponseMapper {
     private final ObjectMapper objectMapper;
 
     public EntityStateResponse toResponse(EntityState entity) {
+        return toResponse(entity, Map.of());
+    }
+
+    /** @param tileVisibility explizite Kachel-Regeln der Entität (tileKey → visibility) */
+    public EntityStateResponse toResponse(EntityState entity, Map<String, String> tileVisibility) {
         return EntityStateResponse.builder()
                 .entityId(entity.getEntityId())
                 .domain(entity.getDomain().name())
@@ -33,6 +38,7 @@ public class EntityStateResponseMapper {
                 .displayName(displayName(entity))
                 .state(entity.getState())
                 .attributes(parseAttributes(entity.getAttributes()))
+                .tileVisibility(tileVisibility)
                 .lastChanged(entity.getLastChanged())
                 .lastUpdated(entity.getLastUpdated())
                 .build();
