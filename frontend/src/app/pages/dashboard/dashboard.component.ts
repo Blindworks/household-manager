@@ -544,7 +544,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private topSwitchRequest() {
-    return this.switchService.getSwitches(DashboardComponent.SWITCH_TILE_LIMIT).pipe(
+    return this.switchService.getSwitches(DashboardComponent.SWITCH_TILE_LIMIT, 'tile').pipe(
       catchError(() => of<SwitchEntity[]>([]))
     );
   }
