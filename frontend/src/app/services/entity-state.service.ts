@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import {
   EntityState,
   EntityDomain,
+  TileVisibility,
   CreateManualEntityRequest,
   RenameManualEntityRequest
 } from '../models/entity-state.model';
@@ -36,6 +37,13 @@ export class EntityStateService {
   /** Setzt oder löscht (null) den Kurznamen einer Entität. Gilt für alle Quellen. */
   setCustomName(entityId: string, customName: string | null): Observable<EntityState> {
     return this.http.put<EntityState>(`${this.baseUrl}/${entityId}/custom-name`, { customName }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Setzt die Kachel-Sichtbarkeit einer Entität; 'AUTO' entfernt die Regel. */
+  setTileVisibility(entityId: string, tileKey: string, visibility: TileVisibility): Observable<EntityState> {
+    return this.http.put<EntityState>(`${this.baseUrl}/${entityId}/tiles/${tileKey}`, { visibility }).pipe(
       catchError(this.handleError)
     );
   }

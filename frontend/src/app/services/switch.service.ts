@@ -12,11 +12,17 @@ export class SwitchService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1/switches';
 
-  /** Schaltbare Entitäten, meistgenutzte zuerst. */
-  getSwitches(limit?: number): Observable<SwitchEntity[]> {
+  /**
+   * Schaltbare Entitäten, meistgenutzte zuerst.
+   * @param view 'tile' wendet die Kachel-Sichtbarkeitsregeln an; Standard alle
+   */
+  getSwitches(limit?: number, view?: 'tile' | 'all'): Observable<SwitchEntity[]> {
     let params = new HttpParams();
     if (limit != null) {
       params = params.set('limit', limit);
+    }
+    if (view) {
+      params = params.set('view', view);
     }
     return this.http.get<SwitchEntity[]>(this.baseUrl, { params }).pipe(
       catchError(this.handleError)
