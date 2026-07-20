@@ -166,6 +166,9 @@ The application uses Liquibase for database migrations. Migration files are loca
 - **Airrohr Readings**: Air quality sensor data
   - PM2.5, PM10, temperature, humidity measurements
   - Sensor identification and timestamps
+- **Entity Tile Visibility**: Per-entity visibility rules for dashboard tiles
+  - Tile key (currently `switches`), visibility (ALWAYS / WHEN_ON / NEVER; no row = AUTO)
+  - Controls which switches appear on the dashboard switch tile and in which order
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items
