@@ -7,7 +7,7 @@ COPY package.json ./
 RUN npm install --omit=dev
 
 # Copy the application source.
-COPY server.js ./
+COPY server.js smarthome.js ./
 
 # Persisted cookie/registration lives here; mount a volume to survive restarts.
 ENV COOKIE_PATH=/app/data/alexa-cookie.json
