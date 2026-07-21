@@ -1,6 +1,7 @@
 package com.household.manager.nuki;
 
 import lombok.Data;
+import lombok.ToString;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,7 +11,8 @@ import org.springframework.context.annotation.Configuration;
 public class NukiProperties {
 
     private boolean enabled = true;
-    /** Persönlicher API-Token von https://web.nuki.io (Smartlock lesen + bedienen). */
+    /** Persönlicher API-Token von https://web.nuki.io (Smartlock lesen + bedienen); nie loggen. */
+    @ToString.Exclude
     private String apiToken = "";
     private String baseUrl = "https://api.nuki.io";
     private long pollIntervalMs = 30000;
