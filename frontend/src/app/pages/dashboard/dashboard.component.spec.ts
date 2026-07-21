@@ -224,6 +224,28 @@ describe('DashboardComponent (Schalter)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('bestaetigungspflichtiger schalter im schalter-dialog oeffnet den bestaetigungsdialog darueber', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openSwitchDialog();
+    tick();
+    const guarded = entity({ confirmRequired: true });
+
+    fixture.componentInstance.toggleSwitch(guarded);
+    expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.switchDialogOpen).toBeTrue();
+    expect(fixture.componentInstance.confirmSwitch?.entityId).toBe('switch.kasa_abc');
+
+    fixture.componentInstance.confirmToggle(guarded);
+    tick();
+
+    expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
+    expect(fixture.componentInstance.switchDialogOpen).toBeTrue();
+
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
