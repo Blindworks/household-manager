@@ -1136,6 +1136,33 @@
   overflow-y: auto;
 }
 
+.lumina__dialog--confirm {
+  max-width: 26rem;
+}
+
+.lumina__confirm-hint {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.lumina__confirm-cancel {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 0.75rem;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(15, 23, 42, 0.05);
+  }
+}
+
 @keyframes lumina-dialog-fade {
   from { opacity: 0; }
   to   { opacity: 1; }

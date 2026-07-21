@@ -168,6 +168,62 @@ describe('DashboardComponent (Schalter)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('oeffnet bei Bestaetigungspflicht den Dialog statt zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true }));
+    tick();
+
+    expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.confirmSwitch?.entityId).toBe('switch.kasa_abc');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet nach Bestaetigung im Dialog und schliesst ihn', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const guarded = entity({ confirmRequired: true });
+    fixture.componentInstance.toggleSwitch(guarded);
+
+    fixture.componentInstance.confirmToggle(guarded);
+    tick();
+
+    expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
+    expect(fixture.componentInstance.topSwitches[0].state).toBe('on');
+
+    discardPeriodicTasks();
+  }));
+
+  it('abbrechen schliesst den Bestaetigungsdialog ohne zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true }));
+
+    fixture.componentInstance.closeConfirmDialog();
+    tick();
+
+    expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('schalter ohne bestaetigungspflicht schalten weiterhin direkt', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleSwitch(entity({ state: 'off' }));
+    tick();
+
+    expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
+
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {

@@ -108,6 +108,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Entity-IDs mit laufendem Schaltbefehl (verhindert Doppelklicks). */
   readonly pendingSwitchIds = new Set<string>();
   switchError: string | null = null;
+  /** Entität, deren Schalten gerade auf Bestätigung wartet (null = Dialog zu). */
+  confirmSwitch: SwitchEntity | null = null;
 
   /** Raum-Kacheln (Platzhalter, spaeter aus Entitaeten befuellbar). */
   readonly rooms: RoomTile[] = [
@@ -200,6 +202,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   onEscape(): void {
     this.closeFlowDialog();
     this.closeSwitchDialog();
+    this.closeConfirmDialog();
   }
 
   /** Schliesst den Dialog und trennt den nur dafuer benoetigten Anker-Live-Stream. */
@@ -215,13 +218,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Schaltet einen Schalter direkt. Der Zustand wird optimistisch umgeschaltet und
-   * bei einem Fehler zurueckgesetzt, damit die Kachel sofort reagiert.
+   * Schaltet einen Schalter. Bestätigungspflichtige Schalter werden nicht direkt
+   * geschaltet, sondern öffnen den Bestätigungsdialog; erst der Klick auf den
+   * Schalter im Dialog führt den Toggle aus.
    */
   toggleSwitch(entity: SwitchEntity): void {
     if (this.pendingSwitchIds.has(entity.entityId)) {
       return;
     }
+    if (entity.confirmRequired) {
+      this.confirmSwitch = entity;
+      return;
+    }
+    this.executeToggle(entity);
+  }
+
+  /** Bestätigung im Dialog: schließt ihn und führt den eigentlichen Toggle aus. */
+  confirmToggle(entity: SwitchEntity): void {
+    this.closeConfirmDialog();
+    this.executeToggle(entity);
+  }
+
+  closeConfirmDialog(): void {
+    this.confirmSwitch = null;
+  }
+
+  /** Liste mit genau dem zu bestätigenden Schalter für app-switch-list. */
+  get confirmSwitchList(): SwitchEntity[] {
+    return this.confirmSwitch ? [this.confirmSwitch] : [];
+  }
+
+  /**
+   * Führt den Schaltbefehl aus. Der Zustand wird optimistisch umgeschaltet und
+   * bei einem Fehler zurueckgesetzt, damit die Kachel sofort reagiert.
+   */
+  private executeToggle(entity: SwitchEntity): void {
     const previousState = entity.state;
     this.pendingSwitchIds.add(entity.entityId);
     this.switchError = null;
