@@ -76,4 +76,14 @@ class NodeCatalogFieldsTest {
         assertEquals(NodeFieldType.DEVICE_REF, field(fields, "deviceId").type());
         assertEquals(List.of("on", "off"), field(fields, "action").options());
     }
+
+    @Test
+    void nukiLockActionFields() {
+        var fields = new NukiLockActionNodeHandler(null).fields();
+        assertEquals(NodeFieldType.STRING, field(fields, "smartlockId").type());
+        assertTrue(field(fields, "smartlockId").required());
+        assertEquals(NodeFieldType.ENUM, field(fields, "action").type());
+        assertTrue(field(fields, "action").required());
+        assertEquals(List.of("lock", "unlock", "unlatch"), field(fields, "action").options());
+    }
 }

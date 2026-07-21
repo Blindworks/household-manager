@@ -269,6 +269,14 @@ docker-compose down
 - Sensors: IAQ score, PM2.5, VOC, CO, temperature, humidity; device identity via the stable hardware serial (`applianceId`)
 - Frontend: indoor section on the air quality page (`alexa-air-quality-section.component`)
 
+### Nuki Smart Lock (Web API)
+- Nuki Smart Lock Pro über die Cloud-API `https://api.nuki.io` (Bearer-Token von web.nuki.io, env `NUKI_API_TOKEN`); bewusste Entscheidung gegen lokales MQTT
+- Polling alle 30 s (`NukiPollingService`); Zustände als `lock.nuki_<smartlockId>` (locked/unlocked/unlatched/jammed/…) und optional `binary_sensor.nuki_<smartlockId>_door` (on = offen); Cloud-Ausfall → `unavailable`
+- Aktionen: verriegeln/entsperren/Tür öffnen via `POST /v1/nuki/locks/{smartlockId}/actions`; nach jeder Aktion sofortiges Nachpollen
+- Flow-Engine: Zustands-Trigger über den Entity-State-Layer, Aktions-Node `nuki-lock-action` (smartlockId als String!)
+- Dashboard: Türschloss-Kachel im Footer (ersetzt die statische „System gesichert“-Karte); Verriegeln direkt, Entsperren/Tür öffnen mit Bestätigungsdialog
+- Implementierung in `backend/src/main/java/com/household/manager/nuki/`
+
 ### Flow-Engine: KI-Autoring via MCP
 - Flows werden primär durch eine KI erstellt und gepflegt (Entscheidung 2026-07-20); der visuelle Editor bleibt als Viewer/Debug-Werkzeug, wird aber nicht weiter ausgebaut
 - `flow-mcp-server/` (Node ≥20, stdio) wrappt die REST-API `/api/v1/flows` als MCP-Tools; Registrierung für Claude Code in `.mcp.json` (Server-Name `household-flows`), Setup: `cd flow-mcp-server && npm install`
