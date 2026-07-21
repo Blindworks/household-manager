@@ -110,6 +110,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   switchError: string | null = null;
   /** Entität, deren Schalten gerade auf Bestätigung wartet (null = Dialog zu). */
   confirmSwitch: SwitchEntity | null = null;
+  /** Liste mit genau dem zu bestätigenden Schalter für app-switch-list. */
+  confirmSwitchList: SwitchEntity[] = [];
 
   /** Raum-Kacheln (Platzhalter, spaeter aus Entitaeten befuellbar). */
   readonly rooms: RoomTile[] = [
@@ -228,6 +230,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     if (entity.confirmRequired) {
       this.confirmSwitch = entity;
+      this.confirmSwitchList = [entity];
       return;
     }
     this.executeToggle(entity);
@@ -241,11 +244,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   closeConfirmDialog(): void {
     this.confirmSwitch = null;
-  }
-
-  /** Liste mit genau dem zu bestätigenden Schalter für app-switch-list. */
-  get confirmSwitchList(): SwitchEntity[] {
-    return this.confirmSwitch ? [this.confirmSwitch] : [];
+    this.confirmSwitchList = [];
   }
 
   /**
