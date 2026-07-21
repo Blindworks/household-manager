@@ -18,6 +18,8 @@ public enum EntitySource {
     WASTE,
     /** Wandtablet-App (Präsenzerkennung per Frontkamera). */
     TABLET,
+    /** Nuki Smart Lock (Web API). */
+    NUKI,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }
