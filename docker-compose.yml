@@ -29,11 +29,13 @@ services:
       SHELLY_1_IP: ${SHELLY_1_IP:-192.168.1.130}
       SHELLY_2_IP: ${SHELLY_2_IP:-192.168.1.131}
 
-      # Zigbee MQTT
-      ZIGBEE_MQTT_HOST: mosquitto
-      ZIGBEE_MQTT_PORT: 1883
-      ZIGBEE_MQTT_USER: household
-      ZIGBEE_MQTT_PASSWORD: change-me-zigbee
+      # Zigbee MQTT: Quelle ist der Mosquitto des HA-Zigbee2MQTT-Add-ons,
+      # NICHT der lokale mosquitto-Container (der ist fuer das kuenftige
+      # "HA abloesen"-Szenario reserviert).
+      ZIGBEE_MQTT_HOST: ${ZIGBEE_MQTT_HOST:-192.168.1.150}
+      ZIGBEE_MQTT_PORT: ${ZIGBEE_MQTT_PORT:-1883}
+      ZIGBEE_MQTT_USER: ${ZIGBEE_MQTT_USER:-addons}
+      ZIGBEE_MQTT_PASSWORD: ${ZIGBEE_MQTT_PASSWORD:-}
 
       # Alexa (alexa-remote2 Sidecar)
       ALEXA_SIDECAR_URL: http://alexa-sidecar:3456
