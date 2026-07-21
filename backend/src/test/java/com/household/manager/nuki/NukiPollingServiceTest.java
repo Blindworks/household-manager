@@ -79,6 +79,24 @@ class NukiPollingServiceTest {
     }
 
     @Test
+    void pollFailureWithUnexpectedErrorMarksUnavailable() {
+        NukiSmartlockDto dto = new NukiSmartlockDto(1L, "Haustür", null);
+        when(apiClient.listSmartlocks())
+                .thenReturn(List.of(dto))
+                .thenThrow(new RuntimeException("boom"));
+        when(mapper.map(dto)).thenReturn(List.of(LOCK_UPDATE));
+
+        service.poll();
+        assertDoesNotThrow(() -> service.poll());
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, times(2)).reportState(captor.capture());
+        EntityStateUpdate unavailable = captor.getAllValues().get(1);
+        assertEquals("lock.nuki_1", unavailable.entityId());
+        assertEquals("unavailable", unavailable.state());
+    }
+
+    @Test
     void doesNothingWithoutToken() {
         properties.setApiToken("");
         service.poll();

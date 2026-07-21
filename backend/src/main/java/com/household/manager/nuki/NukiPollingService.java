@@ -31,7 +31,7 @@ public class NukiPollingService {
 
     @Scheduled(fixedDelayString = "${nuki.poll-interval-ms:30000}",
             initialDelayString = "${nuki.initial-delay-ms:15000}")
-    public void poll() {
+    public synchronized void poll() {
         if (!properties.isConfigured()) {
             return;
         }
@@ -46,7 +46,7 @@ public class NukiPollingService {
             }
             updates.forEach(entityStateService::reportState);
             lastUpdates = List.copyOf(updates);
-        } catch (NukiException ex) {
+        } catch (Exception ex) {
             log.warn("Nuki polling failed: {}", ex.getMessage());
             markUnavailable();
         }
