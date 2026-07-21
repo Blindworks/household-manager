@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -170,6 +171,30 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Method argument type mismatch: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Handle unreadable request bodies (malformed JSON or invalid enum values in
+     * {@code @RequestBody} DTOs, e.g. an unknown Nuki lock action).
+     *
+     * @param ex      The message-not-readable exception
+     * @param request The web request
+     * @return Error response with 400 status
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message("Request body is invalid or malformed.")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Unreadable request body: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(errorResponse);
     }
 

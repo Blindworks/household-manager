@@ -5,6 +5,7 @@ import com.household.manager.nuki.dto.NukiSmartlockDto;
 import com.household.manager.nuki.dto.NukiSmartlockStateDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -58,8 +59,18 @@ class NukiLockServiceTest {
     void executeActionSendsCodeAndRefreshesState() {
         service.executeAction(42L, NukiLockAction.LOCK);
 
-        verify(apiClient).sendAction(42L, 2);
-        verify(pollingService).poll();
+        InOrder inOrder = inOrder(apiClient, pollingService);
+        inOrder.verify(apiClient).sendAction(42L, 2);
+        inOrder.verify(pollingService).poll();
+    }
+
+    @Test
+    void executeActionSkipsPollWhenSendFails() {
+        doThrow(new NukiException("down", null)).when(apiClient).sendAction(42L, 2);
+
+        assertThrows(NukiException.class, () -> service.executeAction(42L, NukiLockAction.LOCK));
+
+        verifyNoInteractions(pollingService);
     }
 
     @Test
