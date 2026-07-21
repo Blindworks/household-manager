@@ -111,6 +111,21 @@ public class EntityStateService {
         });
     }
 
+    /**
+     * Setzt die Bestätigungspflicht eines Schalters (reiner UI-Schutz im Dashboard;
+     * Flows und API schalten weiterhin direkt). Benutzerinitiierter Schreibpfad
+     * wie {@link #setCustomName}.
+     *
+     * @return aktualisierte Entität, oder leer wenn die entityId unbekannt ist
+     */
+    @Transactional
+    public Optional<EntityState> setConfirmRequired(String entityId, boolean confirmRequired) {
+        return repository.findByEntityId(entityId).map(entity -> {
+            entity.setConfirmRequired(confirmRequired);
+            return repository.save(entity);
+        });
+    }
+
     private String normalizeCustomName(String customName) {
         if (customName == null) {
             return null;

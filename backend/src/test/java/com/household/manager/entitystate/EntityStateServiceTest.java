@@ -154,4 +154,41 @@ class EntityStateServiceTest {
 
         assertFalse(result.isPresent());
     }
+
+    @Test
+    void setConfirmRequiredPersists() {
+        EntityStateService svc = new EntityStateService(writer, repository, eventPublisher);
+        EntityState entity = EntityState.builder().entityId("switch.kasa_x").friendlyName("Pumpe").build();
+        when(repository.findByEntityId("switch.kasa_x")).thenReturn(Optional.of(entity));
+        when(repository.save(any(EntityState.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Optional<EntityState> result = svc.setConfirmRequired("switch.kasa_x", true);
+
+        assertTrue(result.isPresent());
+        assertTrue(result.get().isConfirmRequired());
+    }
+
+    @Test
+    void setConfirmRequiredCanBeCleared() {
+        EntityStateService svc = new EntityStateService(writer, repository, eventPublisher);
+        EntityState entity = EntityState.builder()
+                .entityId("switch.kasa_x").friendlyName("Pumpe").confirmRequired(true).build();
+        when(repository.findByEntityId("switch.kasa_x")).thenReturn(Optional.of(entity));
+        when(repository.save(any(EntityState.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Optional<EntityState> result = svc.setConfirmRequired("switch.kasa_x", false);
+
+        assertTrue(result.isPresent());
+        assertFalse(result.get().isConfirmRequired());
+    }
+
+    @Test
+    void setConfirmRequiredReturnsEmptyForUnknownEntity() {
+        EntityStateService svc = new EntityStateService(writer, repository, eventPublisher);
+        when(repository.findByEntityId("switch.unknown")).thenReturn(Optional.empty());
+
+        Optional<EntityState> result = svc.setConfirmRequired("switch.unknown", true);
+
+        assertFalse(result.isPresent());
+    }
 }
