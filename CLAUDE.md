@@ -169,6 +169,8 @@ The application uses Liquibase for database migrations. Migration files are loca
 - **Entity Tile Visibility**: Per-entity visibility rules for dashboard tiles
   - Tile key (currently `switches`), visibility (ALWAYS / WHEN_ON / NEVER; no row = AUTO)
   - Controls which switches appear on the dashboard switch tile and in which order
+- **Switch Confirmation**: `confirm_required` flag on `entity_states`
+  - UI-only guard: the dashboard shows a confirmation dialog (with the real switch row) before toggling; flows and the API keep switching directly
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items
