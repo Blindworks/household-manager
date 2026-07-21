@@ -37,6 +37,9 @@ services:
 
       # Alexa (alexa-remote2 Sidecar)
       ALEXA_SIDECAR_URL: http://alexa-sidecar:3456
+
+      # Nuki
+      NUKI_API_TOKEN: ${NUKI_API_TOKEN:-}
     depends_on:
       - mosquitto
       - alexa-sidecar
