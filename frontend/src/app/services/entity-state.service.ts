@@ -48,6 +48,13 @@ export class EntityStateService {
     );
   }
 
+  /** Setzt die Bestätigungspflicht eines Schalters (reiner UI-Schutz). */
+  setConfirmRequired(entityId: string, confirmRequired: boolean): Observable<EntityState> {
+    return this.http.put<EntityState>(`${this.baseUrl}/${entityId}/confirm-required`, { confirmRequired }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   /** Legt eine vom Benutzer definierte Boolean-Entität an (z. B. "Nachtmodus"). */
   createManualEntity(request: CreateManualEntityRequest): Observable<EntityState> {
     return this.http.post<EntityState>(this.manualUrl, request).pipe(

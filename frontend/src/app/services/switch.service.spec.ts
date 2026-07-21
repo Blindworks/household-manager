@@ -16,6 +16,7 @@ describe('SwitchService', () => {
     state: 'on',
     available: true,
     icon: 'toggle_on',
+    confirmRequired: false,
     toggleCount: 3,
     lastToggledAt: '2026-07-15T20:00:00'
   };

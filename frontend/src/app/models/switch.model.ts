@@ -12,6 +12,8 @@ export interface SwitchEntity {
   available: boolean;
   /** Material-Symbols-Name. */
   icon: string;
+  /** Erfordert im Dashboard eine Bestätigung vor dem Schalten. */
+  confirmRequired: boolean;
   toggleCount: number;
   lastToggledAt: string | null;
 }

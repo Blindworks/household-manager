@@ -13,6 +13,8 @@ export interface EntityState {
   attributes: Record<string, unknown>;
   /** Explizite Kachel-Regeln (tileKey → Regel); fehlender Eintrag = AUTO. */
   tileVisibility?: Record<string, TileVisibility>;
+  /** Bestätigungspflicht beim Schalten (reiner UI-Schutz im Dashboard). */
+  confirmRequired?: boolean;
   lastChanged: string;
   lastUpdated: string;
 }

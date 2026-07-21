@@ -11,6 +11,7 @@ describe('SwitchListComponent', () => {
     state: 'on',
     available: true,
     icon: 'toggle_on',
+    confirmRequired: false,
     toggleCount: 3,
     lastToggledAt: null,
     ...overrides
