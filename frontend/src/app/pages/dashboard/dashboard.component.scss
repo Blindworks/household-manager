@@ -843,6 +843,66 @@
   color: rgba(192, 198, 214, 0.7);
 }
 
+.lumina__secured--open .lumina__secured-icon {
+  color: var(--tertiary);
+}
+
+.lumina__lock-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.lumina__lock-battery-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  color: #fca5a5;
+
+  .material-symbols-outlined {
+    font-size: 14px;
+  }
+}
+
+.lumina__lock-error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+.lumina__lock-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.lumina__lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(192, 198, 214, 0.25);
+  border-radius: var(--radius-full);
+  background: rgba(192, 198, 214, 0.08);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(192, 198, 214, 0.18);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .material-symbols-outlined {
+    font-size: 20px;
+  }
+}
+
 .lumina__modes-area {
   display: flex;
   flex-direction: column;
@@ -1160,6 +1220,23 @@
 
   &:hover {
     background: rgba(15, 23, 42, 0.05);
+  }
+}
+
+.lumina__confirm-go {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.7rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: #dc2626;
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #b91c1c;
   }
 }
 

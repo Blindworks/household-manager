@@ -22,6 +22,8 @@ import { SwitchEntity } from '../../models/switch.model';
 import { ModeService } from '../../services/mode.service';
 import { ModeEntity } from '../../models/mode.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
+import { NukiService } from '../../services/nuki.service';
+import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -47,6 +49,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly switchService = inject(SwitchService);
   private readonly modeService = inject(ModeService);
   private readonly wasteService = inject(WasteCollectionService);
+  private readonly nukiService = inject(NukiService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -60,6 +63,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
   private wasteSubscription?: Subscription;
+  private nukiSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -82,6 +86,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Haelt die Muell-Meldung ueber den Tag hinweg aktuell (z. B. bei geaenderten Einstellungen). */
   private static readonly WASTE_REFRESH_MS = 3600000;
   private static readonly DAY_MS = 86400000;
+  /** Aktualisierungsintervall der Türschloss-Kachel (30 s). */
+  private static readonly NUKI_REFRESH_MS = 30000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -159,6 +165,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly pendingModeIds = new Set<string>();
   modeError: string | null = null;
 
+  /** Nuki-Schlösser für die Türschloss-Kachel. */
+  nukiLocks: NukiLock[] = [];
+  /** True, solange noch keine Nuki-Antwort vorliegt (unterscheidet "lädt" von "keine Schlösser"). */
+  nukiLoading = true;
+  nukiError: string | null = null;
+  /** Smartlock-IDs mit laufender Aktion (verhindert Doppelklicks). */
+  readonly pendingNukiIds = new Set<number>();
+  /** Zu bestätigende Aktion (Entsperren/Tür öffnen); null = kein Dialog offen. */
+  nukiConfirm: { lock: NukiLock; action: NukiLockActionType } | null = null;
+
   ngOnInit(): void {
     this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
     this.startClock();
@@ -168,6 +184,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startSwitchRefresh();
     this.startModeRefresh();
     this.startWasteRefresh();
+    this.startNukiRefresh();
   }
 
   ngOnDestroy(): void {
@@ -179,6 +196,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
+    this.nukiSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -205,6 +223,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeFlowDialog();
     this.closeSwitchDialog();
     this.closeConfirmDialog();
+    this.nukiConfirm = null;
   }
 
   /** Schliesst den Dialog und trennt den nur dafuer benoetigten Anker-Live-Stream. */
@@ -342,6 +361,86 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.allSwitches = [];
     this.switchError = null;
     this.loadTopSwitches();
+  }
+
+  /**
+   * Verriegeln läuft ohne Rückfrage; Entsperren/Tür öffnen erst nach Bestätigung.
+   */
+  onNukiAction(lock: NukiLock, action: NukiLockActionType): void {
+    if (this.pendingNukiIds.has(lock.smartlockId)) {
+      return;
+    }
+    if (action === 'LOCK') {
+      this.executeNukiAction(lock, action);
+    } else {
+      this.nukiConfirm = { lock, action };
+    }
+  }
+
+  confirmNukiAction(): void {
+    if (!this.nukiConfirm) {
+      return;
+    }
+    const { lock, action } = this.nukiConfirm;
+    this.nukiConfirm = null;
+    this.executeNukiAction(lock, action);
+  }
+
+  cancelNukiAction(): void {
+    this.nukiConfirm = null;
+  }
+
+  /** Anzeigetext des Schlosszustands. */
+  nukiStateLabel(lock: NukiLock): string {
+    switch (lock.state) {
+      case 'locked':
+        return 'Verriegelt';
+      case 'unlocked':
+        return 'Aufgesperrt';
+      case 'unlatched':
+        return 'Tür geöffnet';
+      case 'locking':
+        return 'Verriegelt…';
+      case 'unlocking':
+        return 'Sperrt auf…';
+      case 'unlatching':
+        return 'Öffnet…';
+      case 'jammed':
+        return 'Blockiert!';
+      case 'uncalibrated':
+        return 'Nicht kalibriert';
+      case 'unavailable':
+        return 'Nicht erreichbar';
+      default:
+        return 'Unbekannt';
+    }
+  }
+
+  /** Material-Symbol zum Schlosszustand. */
+  nukiStateIcon(lock: NukiLock): string {
+    switch (lock.state) {
+      case 'locked':
+        return 'lock';
+      case 'jammed':
+        return 'lock_reset';
+      case 'unavailable':
+        return 'lock_clock';
+      default:
+        return 'lock_open';
+    }
+  }
+
+  /** True, wenn Aktionen für dieses Schloss möglich sind. */
+  nukiActionable(lock: NukiLock): boolean {
+    return lock.state !== 'unavailable' && !this.pendingNukiIds.has(lock.smartlockId);
+  }
+
+  /** Beschriftung der zu bestätigenden Aktion im Dialog. */
+  get nukiConfirmLabel(): string {
+    if (!this.nukiConfirm) {
+      return '';
+    }
+    return this.nukiConfirm.action === 'UNLATCH' ? 'Tür öffnen' : 'Aufsperren';
   }
 
   /** Uhrzeit im Format HH:MM (24h). */
@@ -567,6 +666,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const now = new Date();
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     return midnight.getTime() - now.getTime();
+  }
+
+  private startNukiRefresh(): void {
+    this.nukiSubscription = interval(DashboardComponent.NUKI_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        // Ladefehler behalten die zuletzt bekannten Schlösser (null = kein Update).
+        switchMap(() => this.nukiService.getLocks().pipe(catchError(() => of<NukiLock[] | null>(null))))
+      )
+      .subscribe(locks => {
+        this.nukiLoading = false;
+        if (locks) {
+          this.nukiLocks = locks;
+          this.nukiError = null;
+        } else if (this.nukiLocks.length === 0) {
+          this.nukiError = 'Schloss nicht erreichbar.';
+        }
+      });
+  }
+
+  private executeNukiAction(lock: NukiLock, action: NukiLockActionType): void {
+    this.pendingNukiIds.add(lock.smartlockId);
+    this.nukiError = null;
+    this.nukiService.sendAction(lock.smartlockId, action).subscribe({
+      next: () => {
+        this.pendingNukiIds.delete(lock.smartlockId);
+        this.refreshNukiLocks();
+      },
+      error: () => {
+        this.pendingNukiIds.delete(lock.smartlockId);
+        this.nukiError = `${lock.name}: Aktion fehlgeschlagen.`;
+      }
+    });
+  }
+
+  private refreshNukiLocks(): void {
+    this.nukiService.getLocks().pipe(catchError(() => of<NukiLock[]>([]))).subscribe(locks => {
+      if (locks.length > 0) {
+        this.nukiLocks = locks;
+      }
+    });
   }
 
   private loadTopSwitches(): void {

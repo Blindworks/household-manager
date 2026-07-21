@@ -239,14 +239,40 @@
 
   <!-- Status & Modi -->
   <footer class="lumina__footer lumina__fade" style="--delay: 0.7s">
-    <div class="lumina-card lumina__secured">
+    <div class="lumina-card lumina__secured" [class.lumina__secured--open]="nukiLocks[0] && nukiLocks[0].state !== 'locked' && nukiLocks[0].state !== 'unavailable'">
       <div class="lumina__secured-icon">
         <span class="lumina__pulse-ring"></span>
-        <span class="material-symbols-outlined">security</span>
+        <span class="material-symbols-outlined">{{ nukiLocks[0] ? nukiStateIcon(nukiLocks[0]) : 'security' }}</span>
       </div>
-      <div>
-        <h4 class="lumina__label lumina__label--secondary">System gesichert</h4>
-        <p class="lumina__secured-detail">8 Zugänge verriegelt • 4 Zonen aktiv</p>
+      <div class="lumina__lock-info">
+        <ng-container *ngIf="nukiLocks[0] as lock; else nukiEmpty">
+          <h4 class="lumina__label lumina__label--secondary">{{ lock.name }}</h4>
+          <p class="lumina__secured-detail">
+            {{ nukiStateLabel(lock) }}<ng-container *ngIf="lock.doorState"> • Tür {{ lock.doorState === 'on' ? 'offen' : 'zu' }}</ng-container>
+            <span *ngIf="lock.batteryCritical" class="lumina__lock-battery-warn">
+              <span class="material-symbols-outlined">battery_alert</span>{{ lock.batteryCharge }}%
+            </span>
+          </p>
+          <p *ngIf="nukiError" class="lumina__lock-error">{{ nukiError }}</p>
+        </ng-container>
+        <ng-template #nukiEmpty>
+          <h4 class="lumina__label lumina__label--secondary">Türschloss</h4>
+          <p class="lumina__secured-detail">{{ nukiLoading ? 'Lädt…' : (nukiError ?? 'Kein Schloss gefunden') }}</p>
+        </ng-template>
+      </div>
+      <div *ngIf="nukiLocks[0] as lock" class="lumina__lock-actions">
+        <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)"
+                (click)="onNukiAction(lock, 'LOCK')" aria-label="Verriegeln">
+          <span class="material-symbols-outlined">lock</span>
+        </button>
+        <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)"
+                (click)="onNukiAction(lock, 'UNLOCK')" aria-label="Aufsperren">
+          <span class="material-symbols-outlined">lock_open</span>
+        </button>
+        <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)"
+                (click)="onNukiAction(lock, 'UNLATCH')" aria-label="Tür öffnen">
+          <span class="material-symbols-outlined">door_open</span>
+        </button>
       </div>
     </div>
 
@@ -377,6 +403,44 @@
           (toggled)="confirmToggle($event)"
         ></app-switch-list>
         <button type="button" class="lumina__confirm-cancel" (click)="closeConfirmDialog()">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nuki-Bestaetigungsdialog (Entsperren/Tuer oeffnen erst nach Rueckfrage) -->
+  <div
+    *ngIf="nukiConfirm"
+    class="lumina__dialog-backdrop"
+    (click)="cancelNukiAction()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--confirm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Schloss-Aktion bestätigen"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">{{ nukiConfirmLabel }}?</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="cancelNukiAction()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <p class="lumina__confirm-hint">
+          {{ nukiConfirm.lock.name }} wirklich {{ nukiConfirmLabel === 'Tür öffnen' ? 'öffnen' : 'aufsperren' }}?
+        </p>
+        <button type="button" class="lumina__confirm-go" (click)="confirmNukiAction()">
+          {{ nukiConfirmLabel }}
+        </button>
+        <button type="button" class="lumina__confirm-cancel" (click)="cancelNukiAction()">
           Abbrechen
         </button>
       </div>
