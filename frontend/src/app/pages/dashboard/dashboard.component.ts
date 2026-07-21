@@ -682,6 +682,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.nukiError = null;
         } else if (this.nukiLocks.length === 0) {
           this.nukiError = 'Schloss nicht erreichbar.';
+        } else {
+          // Alte Schlossdaten bleiben sichtbar, aber als evtl. veraltet gekennzeichnet.
+          this.nukiError = 'Verbindung unterbrochen – Anzeige evtl. veraltet.';
         }
       });
   }

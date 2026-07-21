@@ -11,8 +11,10 @@ import { AnkerSolixService } from '../../services/ankersolix.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { ModeService } from '../../services/mode.service';
+import { NukiService } from '../../services/nuki.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeEntity } from '../../models/mode.model';
+import { NukiLock } from '../../models/nuki.model';
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -464,6 +466,155 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     tick(30000);
 
     expect(fixture.componentInstance.modes.length).toBe(1);
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Nuki-Tuerschloss)', () => {
+  let nukiServiceSpy: jasmine.SpyObj<NukiService>;
+
+  const lock = (overrides: Partial<NukiLock> = {}): NukiLock => ({
+    smartlockId: 1,
+    name: 'Haustür',
+    state: 'locked',
+    doorState: 'off',
+    batteryCharge: 90,
+    batteryCritical: false,
+    ...overrides
+  });
+
+  beforeEach(async () => {
+    nukiServiceSpy = jasmine.createSpyObj('NukiService', ['getLocks', 'sendAction']);
+    nukiServiceSpy.getLocks.and.returnValue(of([lock()]));
+    nukiServiceSpy.sendAction.and.returnValue(of(void 0));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NukiService, useValue: nukiServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('LOCK schaltet sofort, ohne den Bestaetigungsdialog zu oeffnen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const target = lock();
+
+    fixture.componentInstance.onNukiAction(target, 'LOCK');
+    tick();
+
+    expect(nukiServiceSpy.sendAction).toHaveBeenCalledWith(1, 'LOCK');
+    expect(fixture.componentInstance.nukiConfirm).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('UNLOCK oeffnet den Bestaetigungsdialog, statt sofort zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const target = lock();
+
+    fixture.componentInstance.onNukiAction(target, 'UNLOCK');
+
+    expect(nukiServiceSpy.sendAction).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.nukiConfirm).toEqual({ lock: target, action: 'UNLOCK' });
+
+    discardPeriodicTasks();
+  }));
+
+  it('UNLATCH oeffnet den Bestaetigungsdialog, statt sofort zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const target = lock();
+
+    fixture.componentInstance.onNukiAction(target, 'UNLATCH');
+
+    expect(nukiServiceSpy.sendAction).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.nukiConfirm).toEqual({ lock: target, action: 'UNLATCH' });
+
+    discardPeriodicTasks();
+  }));
+
+  it('confirmNukiAction fuehrt die gemerkte Aktion aus und schliesst den Dialog', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const target = lock();
+    fixture.componentInstance.onNukiAction(target, 'UNLOCK');
+
+    fixture.componentInstance.confirmNukiAction();
+    tick();
+
+    expect(nukiServiceSpy.sendAction).toHaveBeenCalledWith(1, 'UNLOCK');
+    expect(fixture.componentInstance.nukiConfirm).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('cancelNukiAction schliesst den Dialog, ohne zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const target = lock();
+    fixture.componentInstance.onNukiAction(target, 'UNLOCK');
+
+    fixture.componentInstance.cancelNukiAction();
+
+    expect(nukiServiceSpy.sendAction).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.nukiConfirm).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('ignoriert onNukiAction, solange fuer das Schloss schon eine Aktion laeuft', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const target = lock();
+    fixture.componentInstance.pendingNukiIds.add(target.smartlockId);
+
+    fixture.componentInstance.onNukiAction(target, 'LOCK');
+    tick();
+
+    expect(nukiServiceSpy.sendAction).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.nukiConfirm).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('markiert veraltete Daten bei einem Pollfehler, statt sie stillschweigend stehen zu lassen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.nukiLocks.length).toBe(1);
+
+    nukiServiceSpy.getLocks.and.returnValue(throwError(() => new Error('kaputt')));
+    tick(30000);
+
+    expect(fixture.componentInstance.nukiLocks.length).toBe(1);
+    expect(fixture.componentInstance.nukiError).toBe('Verbindung unterbrochen – Anzeige evtl. veraltet.');
 
     discardPeriodicTasks();
   }));
