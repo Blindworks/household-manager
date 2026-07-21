@@ -86,4 +86,7 @@
     <!-- Kachel-Sichtbarkeit fuer Entitaeten -->
     <include file="db/changelog/changes/20260720-0035-create-entity-tile-visibility-table.xml"/>
 
+    <!-- Bestaetigungspflicht fuer Schalter -->
+    <include file="db/changelog/changes/20260721-0036-add-confirm-required-to-entity-states.xml"/>
+
 </databaseChangeLog>

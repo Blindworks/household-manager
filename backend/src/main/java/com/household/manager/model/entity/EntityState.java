@@ -40,6 +40,13 @@ public class EntityState {
     @Column(name = "custom_name", length = 255)
     private String customName;
 
+    /**
+     * Bestätigungspflicht beim Schalten (reiner UI-Schutz im Dashboard).
+     * Benutzergepflegt wie {@link #customName}; wird vom Polling-Upsert nie überschrieben.
+     */
+    @Column(name = "confirm_required", nullable = false)
+    private boolean confirmRequired;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
     private EntitySource source;
