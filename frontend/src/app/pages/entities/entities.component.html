@@ -95,6 +95,15 @@
                     }
                   </select>
                 </div>
+                <div class="entities-table__confirm-required">
+                  <label (click)="$event.stopPropagation()">
+                    <input
+                      type="checkbox"
+                      [ngModel]="entity.confirmRequired ?? false"
+                      (ngModelChange)="setConfirmRequired(entity, $event)" />
+                    Bestätigung erforderlich
+                  </label>
+                </div>
               }
               <dl class="entities-table__attributes">
                 @for (attr of attributeEntries(entity); track attr.key) {

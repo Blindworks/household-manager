@@ -22,7 +22,7 @@ describe('EntitiesComponent', () => {
   });
 
   beforeEach(async () => {
-    service = jasmine.createSpyObj('EntityStateService', ['getEntities', 'setTileVisibility']);
+    service = jasmine.createSpyObj('EntityStateService', ['getEntities', 'setTileVisibility', 'setConfirmRequired']);
     service.getEntities.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -63,5 +63,17 @@ describe('EntitiesComponent', () => {
 
     expect(service.setTileVisibility).toHaveBeenCalledWith('switch.kasa_wm', 'switches', 'WHEN_ON');
     expect(component.entities()[0].tileVisibility?.['switches']).toBe('WHEN_ON');
+  });
+
+  it('speichert die Bestaetigungspflicht und uebernimmt die aktualisierte Entitaet', () => {
+    const updated = entity({ confirmRequired: true });
+    service.setConfirmRequired.and.returnValue(of(updated));
+    const component = createComponent();
+    component.entities.set([entity({})]);
+
+    component.setConfirmRequired(entity({}), true);
+
+    expect(service.setConfirmRequired).toHaveBeenCalledWith('switch.kasa_wm', true);
+    expect(component.entities()[0].confirmRequired).toBeTrue();
   });
 });

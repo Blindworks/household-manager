@@ -123,6 +123,15 @@ export class EntitiesComponent implements OnInit {
       });
   }
 
+  setConfirmRequired(entity: EntityState, confirmRequired: boolean): void {
+    this.entityStateService.setConfirmRequired(entity.entityId, confirmRequired)
+      .subscribe({
+        next: updated => this.entities.update(list =>
+          list.map(e => e.entityId === updated.entityId ? updated : e)),
+        error: err => this.error.set(err.message)
+      });
+  }
+
   attributeEntries(entity: EntityState): { key: string; value: unknown }[] {
     return Object.entries(entity.attributes ?? {}).map(([key, value]) => ({ key, value }));
   }

@@ -107,6 +107,17 @@
       font-size: 0.9rem;
     }
   }
+
+  &__confirm-required {
+    margin-bottom: 0.75rem;
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+  }
 }
 
 .state-badge {
