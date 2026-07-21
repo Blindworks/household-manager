@@ -16,6 +16,7 @@ public record SwitchResponse(
         String state,
         boolean available,
         String icon,
+        boolean confirmRequired,
         long toggleCount,
         LocalDateTime lastToggledAt
 ) {

@@ -30,6 +30,7 @@ public class SwitchResponseMapper {
                 .state(entity.getState())
                 .available(!STATE_UNAVAILABLE.equals(entity.getState()))
                 .icon(icon(entity))
+                .confirmRequired(entity.isConfirmRequired())
                 .toggleCount(usage != null ? usage.getToggleCount() : 0L)
                 .lastToggledAt(usage != null ? usage.getLastToggledAt() : null)
                 .build();

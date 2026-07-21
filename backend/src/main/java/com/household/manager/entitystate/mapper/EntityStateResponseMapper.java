@@ -39,6 +39,7 @@ public class EntityStateResponseMapper {
                 .state(entity.getState())
                 .attributes(parseAttributes(entity.getAttributes()))
                 .tileVisibility(tileVisibility)
+                .confirmRequired(entity.isConfirmRequired())
                 .lastChanged(entity.getLastChanged())
                 .lastUpdated(entity.getLastUpdated())
                 .build();

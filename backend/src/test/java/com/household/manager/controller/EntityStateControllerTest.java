@@ -247,4 +247,28 @@ class EntityStateControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].tileVisibility.switches").value("NEVER"));
     }
+
+    @Test
+    void setztConfirmRequiredUndLiefertDieEntitaet() throws Exception {
+        EntityState entity = sensor();
+        entity.setConfirmRequired(true);
+        when(entityStateService.setConfirmRequired("sensor.zigbee_wohnzimmer_temperature", true))
+                .thenReturn(Optional.of(entity));
+
+        mockMvc.perform(put("/v1/entities/sensor.zigbee_wohnzimmer_temperature/confirm-required")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmRequired\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmRequired").value(true));
+    }
+
+    @Test
+    void confirmRequiredFuerUnbekannteEntitaetLiefert404() throws Exception {
+        when(entityStateService.setConfirmRequired("switch.weg", true)).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/v1/entities/switch.weg/confirm-required")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmRequired\":true}"))
+                .andExpect(status().isNotFound());
+    }
 }

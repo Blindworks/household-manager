@@ -301,4 +301,15 @@ class SwitchQueryServiceTest {
         assertThat(namesOf(service.listSwitches(null, true)))
                 .containsExactly("Gepinnt", "Stehlampe");
     }
+
+    @Test
+    void uebernimmt_die_bestaetigungspflicht_in_die_antwort() {
+        EntityState pumpe = device("a", "Pumpe");
+        pumpe.setConfirmRequired(true);
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(pumpe));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+
+        assertThat(service.listSwitches(null).get(0).confirmRequired()).isTrue();
+    }
 }

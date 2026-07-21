@@ -20,6 +20,7 @@ public record EntityStateResponse(
         String state,
         Map<String, Object> attributes,
         Map<String, String> tileVisibility,
+        boolean confirmRequired,
         LocalDateTime lastChanged,
         LocalDateTime lastUpdated
 ) {

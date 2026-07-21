@@ -1,6 +1,7 @@
 package com.household.manager.controller;
 
 import com.household.manager.dto.EntityStateResponse;
+import com.household.manager.dto.UpdateConfirmRequiredRequest;
 import com.household.manager.dto.UpdateEntityCustomNameRequest;
 import com.household.manager.dto.UpdateTileVisibilityRequest;
 import com.household.manager.entitystate.DashboardTiles;
@@ -64,6 +65,19 @@ public class EntityStateController {
             @PathVariable String entityId,
             @Valid @RequestBody UpdateEntityCustomNameRequest request) {
         return entityStateService.setCustomName(entityId, request.getCustomName())
+                .map(entity -> ResponseEntity.ok(toResponseWithVisibility(entity)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Setzt die Bestätigungspflicht eines Schalters. Reiner UI-Schutz:
+     * das Dashboard fragt vor dem Schalten nach; die API erzwingt nichts.
+     */
+    @PutMapping("/{entityId}/confirm-required")
+    public ResponseEntity<EntityStateResponse> setConfirmRequired(
+            @PathVariable String entityId,
+            @Valid @RequestBody UpdateConfirmRequiredRequest request) {
+        return entityStateService.setConfirmRequired(entityId, request.getConfirmRequired())
                 .map(entity -> ResponseEntity.ok(toResponseWithVisibility(entity)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
