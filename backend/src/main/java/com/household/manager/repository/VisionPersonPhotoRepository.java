@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface VisionPersonPhotoRepository extends JpaRepository<VisionPersonPhoto, Long> {
     List<VisionPersonPhoto> findByPersonId(Long personId);
+    long countByPersonId(Long personId);
     void deleteByPersonId(Long personId);
 }

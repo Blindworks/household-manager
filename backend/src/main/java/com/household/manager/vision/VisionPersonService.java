@@ -39,6 +39,12 @@ public class VisionPersonService {
         return photoRepository.findByPersonId(personId);
     }
 
+    /** Fotoanzahl ohne die Foto-Blobs zu laden (fuer Listen-Ansichten wie {@code getAll()}). */
+    @Transactional(readOnly = true)
+    public long countPhotos(Long personId) {
+        return photoRepository.countByPersonId(personId);
+    }
+
     @Transactional
     public VisionPerson createPerson(String name) {
         VisionPerson person = personRepository.save(
