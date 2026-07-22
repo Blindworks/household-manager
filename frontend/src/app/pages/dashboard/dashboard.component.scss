@@ -205,24 +205,31 @@
 }
 
 .lumina__main {
-  grid-column: span 8;
+  // Explizite Spaltenlinien statt Auto-Placement: die Hauptspalte belegt
+  // garantiert die Spalten 1–8 und kann nie in die Seitenspalte laufen.
+  grid-column: 1 / span 8;
   display: flex;
   flex-direction: column;
   gap: var(--gutter);
+  // min-width: 0 erlaubt dem Grid-Kind zu schrumpfen; ohne dies blaehen
+  // nicht-schrumpfbare Inhalte die Spalte auf und ueberlappen den Nachbarn.
+  min-width: 0;
 }
 
 .lumina__side {
-  grid-column: span 4;
+  grid-column: 9 / span 4;
   display: flex;
   flex-direction: column;
   gap: var(--gutter);
+  min-width: 0;
 }
 
 // ---- Raum-Kacheln --------------------------------------------------------
 .lumina__rooms {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--gutter);
+  min-width: 0;
 }
 
 .lumina__room {
@@ -231,6 +238,7 @@
   justify-content: space-between;
   gap: 24px;
   aspect-ratio: 1 / 1;
+  min-width: 0;
   padding: 32px;
   text-align: left;
   color: inherit;
@@ -760,8 +768,9 @@
 
 .lumina__gauges {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .lumina__gauge {
@@ -769,6 +778,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 
   // Farbton je Kennzahl: PV gruen, Verbrauch blau, Bezug rot, Einspeisung gruen.
   &--pv {
@@ -790,8 +800,9 @@
 
 .lumina__gauge-ring {
   position: relative;
-  width: 5.5rem;
-  height: 5.5rem;
+  width: min(5.5rem, 100%);
+  aspect-ratio: 1 / 1;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
