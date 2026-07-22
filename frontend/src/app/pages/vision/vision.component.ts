@@ -20,13 +20,19 @@ export class VisionComponent implements OnInit {
   recognitions: VisionRecognition[] = [];
   photosByPerson: Record<number, VisionPhoto[]> = {};
   expandedPersonId: number | null = null;
+  editingPersonId: number | null = null;
 
   newPersonName = '';
+  editName = '';
   loginUsername = '';
   loginPassword = '';
   verifyCode = '';
   loginPending = false;
+  /** Rueckmeldung zu einer vom Nutzer ausgeloesten Aktion (Banner oben). */
   errorMessage = '';
+  /** Fehler der Hintergrund-Ladevorgaenge - bewusst je Abschnitt statt im Banner. */
+  personsLoadError = '';
+  recognitionsLoadError = '';
 
   ngOnInit(): void {
     this.reloadStatus();
@@ -51,11 +57,17 @@ export class VisionComponent implements OnInit {
   }
 
   reloadPersons(): void {
-    this.visionService.getPersons().subscribe(persons => this.persons = persons);
+    this.visionService.getPersons().subscribe({
+      next: persons => { this.persons = persons; this.personsLoadError = ''; },
+      error: err => this.personsLoadError = err.message
+    });
   }
 
   reloadRecognitions(): void {
-    this.visionService.getRecognitions().subscribe(recognitions => this.recognitions = recognitions);
+    this.visionService.getRecognitions().subscribe({
+      next: recognitions => { this.recognitions = recognitions; this.recognitionsLoadError = ''; },
+      error: err => this.recognitionsLoadError = err.message
+    });
   }
 
   login(): void {
@@ -85,9 +97,44 @@ export class VisionComponent implements OnInit {
     if (!name) {
       return;
     }
-    this.visionService.createPerson(name).subscribe(() => {
-      this.newPersonName = '';
-      this.reloadPersons();
+    this.errorMessage = '';
+    this.visionService.createPerson(name).subscribe({
+      next: () => { this.newPersonName = ''; this.reloadPersons(); },
+      error: err => this.errorMessage = err.message
+    });
+  }
+
+  startRename(person: VisionPerson): void {
+    this.editingPersonId = person.id;
+    this.editName = person.name;
+  }
+
+  cancelRename(): void {
+    this.editingPersonId = null;
+    this.editName = '';
+  }
+
+  saveRename(person: VisionPerson): void {
+    const name = this.editName.trim();
+    if (!name || name === person.name) {
+      this.cancelRename();
+      return;
+    }
+    this.errorMessage = '';
+    this.visionService.updatePerson(person.id, name, person.active).subscribe({
+      // Bei einem Fehler bleibt die Zeile im Bearbeitungsmodus, damit der Nutzer
+      // den Namen korrigieren kann statt seine Eingabe zu verlieren.
+      next: () => { this.cancelRename(); this.reloadPersons(); },
+      error: err => this.errorMessage = err.message
+    });
+  }
+
+  /** Inaktive Personen bleiben samt Fotos erhalten, werden aber nicht mehr erkannt. */
+  toggleActive(person: VisionPerson): void {
+    this.errorMessage = '';
+    this.visionService.updatePerson(person.id, person.name, !person.active).subscribe({
+      next: () => this.reloadPersons(),
+      error: err => this.errorMessage = err.message
     });
   }
 
@@ -95,7 +142,11 @@ export class VisionComponent implements OnInit {
     if (!confirm(`Person "${person.name}" samt Fotos löschen?`)) {
       return;
     }
-    this.visionService.deletePerson(person.id).subscribe(() => this.reloadPersons());
+    this.errorMessage = '';
+    this.visionService.deletePerson(person.id).subscribe({
+      next: () => this.reloadPersons(),
+      error: err => this.errorMessage = err.message
+    });
   }
 
   togglePhotos(person: VisionPerson): void {
@@ -121,14 +172,19 @@ export class VisionComponent implements OnInit {
   }
 
   deletePhoto(person: VisionPerson, photo: VisionPhoto): void {
-    this.visionService.deletePhoto(person.id, photo.id).subscribe(() => {
-      this.reloadPersons();
-      this.reloadPhotos(person);
+    this.errorMessage = '';
+    this.visionService.deletePhoto(person.id, photo.id).subscribe({
+      next: () => { this.reloadPersons(); this.reloadPhotos(person); },
+      error: err => this.errorMessage = err.message
     });
   }
 
+  /** Nur nach einer Nutzeraktion aufgerufen (Fotoliste oeffnen, Upload/Loeschen)
+   * -> Fehler gehoert deshalb ins Aktions-Banner. */
   private reloadPhotos(person: VisionPerson): void {
-    this.visionService.getPhotos(person.id)
-      .subscribe(photos => this.photosByPerson[person.id] = photos);
+    this.visionService.getPhotos(person.id).subscribe({
+      next: photos => this.photosByPerson[person.id] = photos,
+      error: err => this.errorMessage = err.message
+    });
   }
 }

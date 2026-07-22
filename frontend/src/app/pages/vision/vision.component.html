@@ -32,17 +32,31 @@
       <input type="text" placeholder="Name" [(ngModel)]="newPersonName">
       <button type="button" (click)="createPerson()">Anlegen</button>
     </div>
-    <div class="vision__person" *ngFor="let person of persons">
-      <div class="vision__person-row">
+    <p class="vision__status vision__status--error" *ngIf="personsLoadError">{{ personsLoadError }}</p>
+    <div class="vision__person" *ngFor="let person of persons" [class.vision__person--inactive]="!person.active">
+      <div class="vision__person-row" *ngIf="editingPersonId !== person.id; else renameRow">
         <strong>{{ person.name }}</strong>
+        <span class="vision__badge" *ngIf="!person.active">inaktiv</span>
         <span>{{ person.photoCount }} Foto(s)</span>
         <button type="button" (click)="togglePhotos(person)">Fotos</button>
         <label class="vision__upload">
           Foto hochladen
           <input type="file" accept="image/jpeg,image/png" (change)="uploadPhoto(person, $event)">
         </label>
+        <button type="button" class="vision__rename" (click)="startRename(person)">Umbenennen</button>
+        <button type="button" class="vision__toggle-active" (click)="toggleActive(person)">
+          {{ person.active ? 'Deaktivieren' : 'Aktivieren' }}
+        </button>
         <button type="button" class="vision__delete" (click)="deletePerson(person)">Löschen</button>
       </div>
+      <ng-template #renameRow>
+        <div class="vision__person-row">
+          <input class="vision__rename-input" type="text" aria-label="Neuer Name"
+                 [(ngModel)]="editName" (keyup.enter)="saveRename(person)">
+          <button type="button" class="vision__rename-save" (click)="saveRename(person)">Speichern</button>
+          <button type="button" (click)="cancelRename()">Abbrechen</button>
+        </div>
+      </ng-template>
       <div class="vision__photos" *ngIf="expandedPersonId === person.id">
         <figure *ngFor="let photo of photosByPerson[person.id]">
           <img [src]="'data:image/jpeg;base64,' + photo.photoBase64" alt="Referenzfoto von {{ person.name }}">
@@ -51,10 +65,12 @@
       </div>
     </div>
     <p class="vision__hint">Empfehlung: 3–5 frontale, gut beleuchtete Fotos pro Person.</p>
+    <p class="vision__hint">Inaktive Personen bleiben samt Fotos erhalten, werden aber nicht mehr erkannt.</p>
   </section>
 
   <section class="vision__section">
     <h2>Letzte Erkennungen</h2>
+    <p class="vision__status vision__status--error" *ngIf="recognitionsLoadError">{{ recognitionsLoadError }}</p>
     <table class="vision__recognitions" *ngIf="recognitions.length; else noRecognitions">
       <tr>
         <th>Zeitpunkt</th><th>Person</th><th>Konfidenz</th><th>Unbekannte</th><th>Bild</th>
