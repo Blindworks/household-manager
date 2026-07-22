@@ -436,6 +436,16 @@
 }
 
 // ---- Verbraucher-Kachel & -Dialog (Top-4-Stromverbraucher) ---------------
+.lumina__consumer-tile {
+  // Reine Anzeige: nur der Aufklapp-Knopf reagiert, die Kachel selbst nicht.
+  cursor: default;
+
+  &:hover,
+  &:active {
+    transform: none;
+  }
+}
+
 .lumina__consumer-rows {
   display: flex;
   flex-direction: column;
@@ -523,35 +533,11 @@
   color: var(--on-primary);
 }
 
-.lumina__badge {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 0.25rem;
-  color: rgba(192, 198, 214, 0.4);
-  background: rgba(255, 255, 255, 0.05);
-
-  &--active {
-    color: var(--secondary);
-    background: rgba(83, 225, 111, 0.1);
-    animation: lumina-status-pulse 2s infinite ease-in-out;
-  }
-}
-
 .lumina__room-name {
   margin: 0 0 4px;
   font-size: 24px;
   font-weight: 500;
   color: var(--on-surface);
-}
-
-.lumina__room-detail {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(192, 198, 214, 0.7);
 }
 
 // ---- Aktive Szene --------------------------------------------------------
@@ -1164,8 +1150,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lumina__fade,
   .lumina__ring-svg,
-  .lumina__pulse-ring,
-  .lumina__badge--active {
+  .lumina__pulse-ring {
     animation: none;
   }
 
