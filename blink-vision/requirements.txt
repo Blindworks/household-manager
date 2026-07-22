@@ -3,3 +3,11 @@
 # Versionen abweichen, wurde NICHT geprueft - daher der konservative Pin auf 0.25.x.
 blinkpy>=0.25.9,<0.26
 aiohttp
+fastapi
+uvicorn[standard]
+httpx
+insightface
+onnxruntime
+opencv-python-headless
+numpy
+pytest
