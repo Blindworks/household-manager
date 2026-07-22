@@ -10,6 +10,7 @@ der seit dem OAuth-v2-Umbau ueber eine Exception statt ueber ein Flag laeuft.
 import asyncio
 import getpass
 import json
+import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
@@ -108,4 +109,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    # blinkpy meldet Login- und Manifest-Details auf INFO; ohne Handler waeren
+    # sie bei der Fehlersuche unsichtbar.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     asyncio.run(main())
