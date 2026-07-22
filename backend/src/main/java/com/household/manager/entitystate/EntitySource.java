@@ -20,6 +20,8 @@ public enum EntitySource {
     TABLET,
     /** Nuki Smart Lock (Web API). */
     NUKI,
+    /** Blink-Gesichtserkennung (blink-vision-Sidecar). */
+    VISION,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }
