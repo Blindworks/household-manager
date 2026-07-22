@@ -1,4 +1,5 @@
-# blinkpy hat mit 0.25 auf OAuth v2 umgestellt und dabei die 2FA-API geaendert
-# (siehe BLINKPY-API.md). probe.py setzt die 0.25er-Oberflaeche voraus.
+# Verifiziert wurde ausschliesslich 0.25.9 (siehe BLINKPY-API.md): 2FA laeuft dort
+# ueber BlinkTwoFARequiredError statt ueber ein Flag. Ob und ab wann aeltere
+# Versionen abweichen, wurde NICHT geprueft - daher der konservative Pin auf 0.25.x.
 blinkpy>=0.25.9,<0.26
 aiohttp
