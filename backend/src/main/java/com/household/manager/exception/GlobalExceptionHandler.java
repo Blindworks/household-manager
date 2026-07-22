@@ -7,6 +7,7 @@ import com.household.manager.meross.exception.MerossException;
 import com.household.manager.nuki.NukiException;
 import com.household.manager.shelly.ShellyException;
 import com.household.manager.tapo.TapoException;
+import com.household.manager.vision.VisionException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
@@ -322,6 +323,30 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Alexa communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    /**
+     * Handle Vision integration errors (blink-vision-Sidecar nicht erreichbar,
+     * Login-/Foto-Probleme bei der Gesichtserkennung).
+     *
+     * @param ex      The vision exception
+     * @param request The web request
+     * @return Error response with 502 status carrying the original message
+     */
+    @ExceptionHandler(VisionException.class)
+    public ResponseEntity<ErrorResponse> handleVisionException(
+            VisionException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Vision communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 
