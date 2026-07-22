@@ -11,6 +11,7 @@
   >
     <span class="material-symbols-outlined switch-list__icon">{{ item.icon }}</span>
     <span class="switch-list__name">{{ item.displayName }}</span>
+    <span *ngIf="powerLabel(item)" class="switch-list__power">{{ powerLabel(item) }}</span>
     <span class="switch-list__state">{{ stateLabel(item) }}</span>
     <span class="switch-list__toggle" aria-hidden="true">
       <span class="switch-list__knob"></span>

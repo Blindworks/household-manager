@@ -91,4 +91,23 @@ describe('SwitchListComponent', () => {
     const button = (fixture.nativeElement as HTMLElement).querySelector('button')!;
     expect(button.getAttribute('aria-pressed')).toBe('false');
   });
+
+  it('zeigt die leistung eines eingeschalteten schalters an', () => {
+    const fixture = render([entity({ powerWatts: 1240.5 })]);
+
+    const power = (fixture.nativeElement as HTMLElement).querySelector('.switch-list__power');
+    expect(power?.textContent).toContain('1.241 W');
+  });
+
+  it('zeigt ohne messwert keine leistung an', () => {
+    const fixture = render([entity()]);
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.switch-list__power')).toBeNull();
+  });
+
+  it('zeigt bei ausgeschaltetem schalter keine leistung an', () => {
+    const fixture = render([entity({ state: 'off', powerWatts: 3 })]);
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.switch-list__power')).toBeNull();
+  });
 });

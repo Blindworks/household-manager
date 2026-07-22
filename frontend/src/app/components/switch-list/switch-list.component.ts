@@ -40,4 +40,12 @@ export class SwitchListComponent {
     }
     return this.isOn(entity) ? 'An' : 'Aus';
   }
+
+  /** Formatierte Leistungsanzeige, z. B. "1.240 W"; null wenn nichts anzuzeigen ist. */
+  powerLabel(entity: SwitchEntity): string | null {
+    if (!entity.available || !this.isOn(entity) || entity.powerWatts == null) {
+      return null;
+    }
+    return `${Math.round(entity.powerWatts).toLocaleString('de-DE')} W`;
+  }
 }
