@@ -143,6 +143,11 @@ export const routes: Routes = [
     title: 'Muellabfuhr - Household Manager'
   },
   {
+    path: 'vision',
+    loadComponent: () => import('./pages/vision/vision.component').then(m => m.VisionComponent),
+    title: 'Gesichtserkennung - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'

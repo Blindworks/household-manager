@@ -1,0 +1,72 @@
+<div class="vision">
+  <h1>Gesichtserkennung</h1>
+
+  <p class="vision__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <section class="vision__section">
+    <h2>Blink-Konto</h2>
+    <ng-container *ngIf="status; else statusUnavailable">
+      <p *ngIf="status.loggedIn" class="vision__status vision__status--ok">
+        Angemeldet — Kamera: {{ status.cameraName ?? 'keine gefunden' }}
+        <span *ngIf="status.lastPollAt">(letzter Abruf: {{ status.lastPollAt | date:'short' }})</span>
+      </p>
+      <div *ngIf="!status.loggedIn" class="vision__login">
+        <p>Nicht angemeldet. Anmeldung mit dem Amazon-/Blink-Konto (nur das Sitzungs-Token wird gespeichert):</p>
+        <input type="email" placeholder="E-Mail" [(ngModel)]="loginUsername">
+        <input type="password" placeholder="Passwort" [(ngModel)]="loginPassword">
+        <button type="button" (click)="login()">Anmelden</button>
+        <div *ngIf="loginPending" class="vision__verify">
+          <input type="text" placeholder="2FA-PIN" [(ngModel)]="verifyCode">
+          <button type="button" (click)="verify()">Bestätigen</button>
+        </div>
+      </div>
+    </ng-container>
+    <ng-template #statusUnavailable>
+      <p class="vision__status vision__status--error">blink-vision-Dienst nicht erreichbar.</p>
+    </ng-template>
+  </section>
+
+  <section class="vision__section">
+    <h2>Personen</h2>
+    <div class="vision__new-person">
+      <input type="text" placeholder="Name" [(ngModel)]="newPersonName">
+      <button type="button" (click)="createPerson()">Anlegen</button>
+    </div>
+    <div class="vision__person" *ngFor="let person of persons">
+      <div class="vision__person-row">
+        <strong>{{ person.name }}</strong>
+        <span>{{ person.photoCount }} Foto(s)</span>
+        <button type="button" (click)="togglePhotos(person)">Fotos</button>
+        <label class="vision__upload">
+          Foto hochladen
+          <input type="file" accept="image/jpeg,image/png" (change)="uploadPhoto(person, $event)">
+        </label>
+        <button type="button" class="vision__delete" (click)="deletePerson(person)">Löschen</button>
+      </div>
+      <div class="vision__photos" *ngIf="expandedPersonId === person.id">
+        <figure *ngFor="let photo of photosByPerson[person.id]">
+          <img [src]="'data:image/jpeg;base64,' + photo.photoBase64" alt="Referenzfoto von {{ person.name }}">
+          <button type="button" (click)="deletePhoto(person, photo)">Entfernen</button>
+        </figure>
+      </div>
+    </div>
+    <p class="vision__hint">Empfehlung: 3–5 frontale, gut beleuchtete Fotos pro Person.</p>
+  </section>
+
+  <section class="vision__section">
+    <h2>Letzte Erkennungen</h2>
+    <table class="vision__recognitions" *ngIf="recognitions.length; else noRecognitions">
+      <tr>
+        <th>Zeitpunkt</th><th>Person</th><th>Konfidenz</th><th>Unbekannte</th><th>Bild</th>
+      </tr>
+      <tr *ngFor="let r of recognitions">
+        <td>{{ r.recognizedAt | date:'short' }}</td>
+        <td>{{ r.personName ?? 'Unbekannt' }}</td>
+        <td>{{ r.confidence !== null ? (r.confidence | percent:'1.0-1') : '—' }}</td>
+        <td>{{ r.unknownFaces }}</td>
+        <td><img *ngIf="r.thumbnailBase64" [src]="'data:image/jpeg;base64,' + r.thumbnailBase64" alt="Erkennungsbild"></td>
+      </tr>
+    </table>
+    <ng-template #noRecognitions><p>Noch keine Erkennungen.</p></ng-template>
+  </section>
+</div>
