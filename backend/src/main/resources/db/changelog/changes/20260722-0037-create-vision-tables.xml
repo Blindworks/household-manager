@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260722-0037" author="household-manager">
+        <comment>Create vision_person, vision_person_photo and vision_recognition tables</comment>
+
+        <createTable tableName="vision_person">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="vision_person_photo">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_vision_photo_person"
+                             references="vision_person(id)"/>
+            </column>
+            <column name="photo" type="MEDIUMBLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="embedding" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="vision_recognition">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="recognized_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="person_id" type="BIGINT"/>
+            <column name="person_name" type="VARCHAR(255)"/>
+            <column name="confidence" type="DECIMAL(5,4)"/>
+            <column name="unknown_faces" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="thumbnail" type="MEDIUMBLOB"/>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="vision_recognition"/>
+            <dropTable tableName="vision_person_photo"/>
+            <dropTable tableName="vision_person"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
