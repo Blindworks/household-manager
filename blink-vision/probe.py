@@ -2,9 +2,9 @@
 
 Aufruf:  .venv/Scripts/python probe.py   (fragt Zugangsdaten interaktiv ab)
 
-Geschrieben gegen blinkpy 0.25.9. Abweichungen zu aelteren blinkpy-Versionen
-(0.23/0.24) sind in BLINKPY-API.md dokumentiert - insbesondere der 2FA-Ablauf,
-der seit dem OAuth-v2-Umbau ueber eine Exception statt ueber ein Flag laeuft.
+Geschrieben und verifiziert gegen blinkpy 0.25.9; die gepruefte API-Oberflaeche
+steht in BLINKPY-API.md. Der 2FA-Ablauf laeuft dort ueber eine Exception statt
+ueber ein Flag. Aeltere blinkpy-Versionen wurden nicht geprueft.
 """
 
 import asyncio

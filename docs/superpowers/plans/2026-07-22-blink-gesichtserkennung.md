@@ -1596,8 +1596,10 @@ git commit -m "feat(vision): REST-API fuer Personen, Erkennungen, Login und Side
 
 - [ ] **Step 1: `requirements.txt` erweitern**
 
+**ACHTUNG:** Den in Task 1 gesetzten blinkpy-Pin `blinkpy>=0.25.9,<0.26` samt Begruendungs-Kommentar NICHT ueberschreiben — nur die neuen Zeilen ergaenzen. Die API-Verifikation aus Task 1 gilt genau fuer 0.25.x.
+
 ```
-blinkpy>=0.23
+blinkpy>=0.25.9,<0.26
 aiohttp
 fastapi
 uvicorn[standard]
@@ -1953,16 +1955,22 @@ Erwartet: ImportError.
 
 ```python
 """Duenner Wrapper um blinkpy: Login (2FA), Kamera-Auswahl, neue Local-Storage-Clips.
-Alle blinkpy-Spezifika leben HIER — verifiziert durch probe.py (Task 1)."""
+Alle blinkpy-Spezifika leben HIER — verifiziert gegen blinkpy 0.25.9 (Task 1,
+siehe blink-vision/BLINKPY-API.md)."""
 import json
 import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
 from blinkpy.blinkpy import Blink
-from blinkpy.auth import Auth
+from blinkpy.auth import Auth, BlinkTwoFARequiredError
 
 log = logging.getLogger(__name__)
+
+# blink.save() wuerde das Klartext-Passwort mitschreiben (Auth.login_attributes
+# liefert das komplette data-Dict inkl. username/password). Wir schreiben die
+# Session deshalb selbst und filtern beide Schluessel heraus.
+SECRET_KEYS = ("username", "password")
 
 
 class BlinkClient:
@@ -1991,31 +1999,41 @@ class BlinkClient:
             self._blink.auth = Auth(json.loads(self._creds.read_text()),
                                     no_prompt=True, session=self._session)
             await self._blink.start()
-            return not self._blink.key_required
+            self._pending_2fa = False
+            return True
+        except BlinkTwoFARequiredError:
+            # Token abgelaufen: der Nutzer muss sich neu anmelden (inkl. 2FA).
+            log.warning("Gespeicherte Blink-Session verlangt erneute 2FA-Anmeldung")
+            await self._close()
+            return False
         except Exception as ex:
             log.warning("Blink-Session-Restore fehlgeschlagen: %s", ex)
             await self._close()
             return False
 
     async def login(self, username: str, password: str) -> None:
-        """Start des Logins; bei 2FA bleibt der Client in pending_2fa."""
+        """Start des Logins. blinkpy signalisiert 2FA per BlinkTwoFARequiredError
+        (es gibt KEIN blink.key_required); der Client bleibt dann in pending_2fa."""
         await self._close()
         self._session = ClientSession()
         self._blink = Blink(session=self._session)
         self._blink.auth = Auth({"username": username, "password": password},
                                 no_prompt=True, session=self._session)
-        await self._blink.start()
-        self._pending_2fa = bool(self._blink.key_required)
-        if not self._pending_2fa:
-            await self._blink.save(str(self._creds))
+        try:
+            await self._blink.start()
+            self._pending_2fa = False
+            self._save_session()
+        except BlinkTwoFARequiredError:
+            self._pending_2fa = True
 
     async def verify(self, code: str) -> None:
+        """Schliesst den Login ab. send_2fa_code ruft intern complete_2fa_login
+        UND setup_post_verify — ein separater setup_post_verify-Aufruf waere doppelt."""
         if self._blink is None:
             raise RuntimeError("Kein Login-Vorgang aktiv.")
-        await self._blink.auth.send_auth_key(self._blink, code)
-        await self._blink.setup_post_verify()
+        await self._blink.send_2fa_code(code)
         self._pending_2fa = False
-        await self._blink.save(str(self._creds))  # nur Token, keine Passwoerter
+        self._save_session()
 
     def camera_name(self) -> str | None:
         if self._blink is None or not self._blink.cameras:
@@ -2025,8 +2043,8 @@ class BlinkClient:
         return next(iter(self._blink.cameras))
 
     async def fetch_new_clips(self, is_new, download_dir: str) -> list[tuple[str, str]]:
-        """Liefert [(clip_id, lokaler_pfad)] fuer alle neuen Clips der Zielkamera.
-        is_new: Callable[[str], bool] — Dedupe-Check des Aufrufers."""
+        """Liefert [(clip_id, lokaler_pfad)] fuer alle neuen Clips der Zielkamera,
+        neueste zuerst. is_new: Callable[[str], bool] — Dedupe-Check des Aufrufers."""
         results: list[tuple[str, str]] = []
         if self._blink is None:
             return results
@@ -2036,7 +2054,10 @@ class BlinkClient:
                 continue
             await sync.refresh()
             manifest = getattr(sync, "_local_storage", {}).get("manifest", [])
-            for item in manifest:
+            # Das Manifest ist ein SortedSet, AUFSTEIGEND nach created_at —
+            # manifest[0] ist der AELTESTE Clip. Fuer eine Tueroeffnung zaehlt
+            # der neueste, also rueckwaerts iterieren (wie blinkpy selbst).
+            for item in reversed(manifest):
                 clip_id = str(item.id)
                 if camera and item.name != camera:
                     continue
@@ -2044,9 +2065,20 @@ class BlinkClient:
                     continue
                 path = str(Path(download_dir) / f"clip-{clip_id}.mp4")
                 await item.prepare_download(self._blink)
-                await item.download_video(self._blink, path)
+                if not await item.download_video(self._blink, path):
+                    log.warning("Clip %s konnte nicht heruntergeladen werden", clip_id)
+                    continue
                 results.append((clip_id, path))
         return results
+
+    def _save_session(self) -> None:
+        """Persistiert die Session OHNE Zugangsdaten (siehe SECRET_KEYS)."""
+        if self._blink is None:
+            return
+        attributes = self._blink.auth.login_attributes
+        safe = {k: v for k, v in attributes.items() if k not in SECRET_KEYS}
+        self._creds.parent.mkdir(parents=True, exist_ok=True)
+        self._creds.write_text(json.dumps(safe), encoding="utf-8")
 
     async def _close(self):
         self._blink = None
@@ -2055,6 +2087,17 @@ class BlinkClient:
             await self._session.close()
             self._session = None
 ```
+
+**Verifizierte blinkpy-Besonderheiten (Task-1-Spike, blinkpy 0.25.9) — NICHT auf die Paket-README verlassen, die ist veraltet:**
+
+| Erwartet (urspruenglicher Plan) | Tatsaechlich in 0.25.9 |
+|---|---|
+| `blink.key_required` | existiert nicht — 2FA kommt als `BlinkTwoFARequiredError` aus `blink.start()` |
+| `auth.send_auth_key(blink, code)` + `setup_post_verify()` | `blink.send_2fa_code(code)` (ruft beides intern) |
+| `manifest[0]` = neuester Clip | `manifest` ist aufsteigend sortiert → `[0]` ist der **aelteste**; `reversed(manifest)` fuer neueste zuerst |
+| `blink.save()` schreibt nur Token | schreibt **auch username/password im Klartext** → eigenes `_save_session()` mit Filter |
+
+Zusaetzlich: `item.created_at` ist ein `datetime` (kein String), `item.download_video()` gibt `bool` zurueck.
 
 - [ ] **Step 4: `backend_client.py`**
 
