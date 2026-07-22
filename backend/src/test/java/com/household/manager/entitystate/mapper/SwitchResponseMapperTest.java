@@ -101,4 +101,60 @@ class SwitchResponseMapperTest {
 
         assertThat(response.icon()).isEqualTo("toggle_on");
     }
+
+    private EntityState.EntityStateBuilder powerSensor() {
+        return EntityState.builder()
+                .entityId("sensor.kasa_abc_power")
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.KASA)
+                .sourceRef("abc")
+                .friendlyName("Stehlampe Leistung")
+                .state("1240.5")
+                .lastChanged(LocalDateTime.now())
+                .lastUpdated(LocalDateTime.now());
+    }
+
+    @Test
+    void liefert_die_leistung_eines_frischen_power_sensors() {
+        SwitchResponse response = mapper.toResponse(entity().build(), null, powerSensor().build());
+
+        assertThat(response.powerWatts()).isEqualTo(1240.5);
+    }
+
+    @Test
+    void ohne_power_sensor_bleibt_die_leistung_leer() {
+        SwitchResponse response = mapper.toResponse(entity().build(), null);
+
+        assertThat(response.powerWatts()).isNull();
+    }
+
+    @Test
+    void ausgeschaltete_schalter_haben_keine_leistungsanzeige() {
+        SwitchResponse response = mapper.toResponse(entity().state("off").build(), null, powerSensor().build());
+
+        assertThat(response.powerWatts()).isNull();
+    }
+
+    @Test
+    void veraltete_sensorwerte_werden_verworfen() {
+        EntityState stale = powerSensor().lastUpdated(LocalDateTime.now().minusMinutes(10)).build();
+
+        SwitchResponse response = mapper.toResponse(entity().build(), null, stale);
+
+        assertThat(response.powerWatts()).isNull();
+    }
+
+    @Test
+    void nicht_verfuegbare_sensoren_werden_verworfen() {
+        SwitchResponse response = mapper.toResponse(entity().build(), null, powerSensor().state("unavailable").build());
+
+        assertThat(response.powerWatts()).isNull();
+    }
+
+    @Test
+    void nicht_numerische_sensorwerte_werden_verworfen() {
+        SwitchResponse response = mapper.toResponse(entity().build(), null, powerSensor().state("unknown").build());
+
+        assertThat(response.powerWatts()).isNull();
+    }
 }
