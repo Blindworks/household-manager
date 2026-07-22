@@ -435,6 +435,80 @@
   white-space: nowrap;
 }
 
+// ---- Verbraucher-Kachel & -Dialog (Top-4-Stromverbraucher) ---------------
+.lumina__consumer-tile {
+  // Reine Anzeige: nur der Aufklapp-Knopf reagiert, die Kachel selbst nicht.
+  cursor: default;
+
+  &:hover,
+  &:active {
+    transform: none;
+  }
+}
+
+.lumina__consumer-rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+}
+
+.lumina__consumer-empty {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: rgba(192, 198, 214, 0.5);
+}
+
+.lumina__consumer-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+  &--unavailable {
+    opacity: 0.45;
+  }
+}
+
+.lumina__consumer-name {
+  font-size: 15px;
+  color: rgba(192, 198, 214, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lumina__consumer-value {
+  margin-left: auto;
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--on-surface);
+  white-space: nowrap;
+}
+
+// Der Dialog ist hell: dunkle Texte statt der Kachel-Farben.
+.lumina__consumer-row--dialog {
+  border-top-color: rgba(15, 23, 42, 0.1);
+
+  .lumina__consumer-name {
+    color: rgba(15, 23, 42, 0.75);
+  }
+
+  .lumina__consumer-value {
+    color: #0f172a;
+  }
+}
+
+.lumina__consumer-empty--dialog {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+// Trennlinien-Logik: erste Zeile ohne Linie – gilt fuer Kachel und Dialog gleichermassen.
+.lumina__consumer-row:first-of-type {
+  border-top: none;
+}
+
 .lumina__room-top {
   display: flex;
   align-items: flex-start;
@@ -459,35 +533,11 @@
   color: var(--on-primary);
 }
 
-.lumina__badge {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 0.25rem;
-  color: rgba(192, 198, 214, 0.4);
-  background: rgba(255, 255, 255, 0.05);
-
-  &--active {
-    color: var(--secondary);
-    background: rgba(83, 225, 111, 0.1);
-    animation: lumina-status-pulse 2s infinite ease-in-out;
-  }
-}
-
 .lumina__room-name {
   margin: 0 0 4px;
   font-size: 24px;
   font-weight: 500;
   color: var(--on-surface);
-}
-
-.lumina__room-detail {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(192, 198, 214, 0.7);
 }
 
 // ---- Aktive Szene --------------------------------------------------------
@@ -1100,8 +1150,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lumina__fade,
   .lumina__ring-svg,
-  .lumina__pulse-ring,
-  .lumina__badge--active {
+  .lumina__pulse-ring {
     animation: none;
   }
 
