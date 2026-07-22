@@ -5,8 +5,11 @@
 
 ## Ziel
 
-Steckdosen, die ihren Stromverbrauch messen (heute Meross und Shelly), zeigen die
-aktuelle Leistung direkt in der Schalter-Zeile des Dashboards an. Zweck: Auf einen
+Steckdosen, die ihren Stromverbrauch messen, zeigen die aktuelle Leistung direkt
+in der Schalter-Zeile des Dashboards an. Heute betrifft das effektiv Meross:
+Shelly meldet zwar Power-Sensoren, ist aber eine reine Sensor-Integration ohne
+Schalter-Entities — sollte Shelly (oder eine andere Quelle) später schaltbar
+werden, greift die Anzeige dort automatisch. Zweck: Auf einen
 Blick erkennen, dass ein Gerät (z. B. die Waschmaschine) gerade läuft, damit man es
 nicht versehentlich ausschaltet. Reine Anzeige — keine Schwellwert- oder
 Schutzlogik.

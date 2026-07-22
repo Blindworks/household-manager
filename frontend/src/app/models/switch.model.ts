@@ -14,6 +14,8 @@ export interface SwitchEntity {
   icon: string;
   /** Erfordert im Dashboard eine Bestätigung vor dem Schalten. */
   confirmRequired: boolean;
+  /** Aktuelle Leistung in Watt; null/fehlend wenn keine frische Messung vorliegt. */
+  powerWatts?: number | null;
   toggleCount: number;
   lastToggledAt: string | null;
 }

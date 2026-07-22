@@ -171,6 +171,9 @@ The application uses Liquibase for database migrations. Migration files are loca
   - Controls which switches appear on the dashboard switch tile and in which order
 - **Switch Confirmation**: `confirm_required` flag on `entity_states`
   - UI-only guard: the dashboard shows a confirmation dialog (with the real switch row) before toggling; flows and the API keep switching directly
+- **Switch Power Display**: switch rows show live wattage (no schema change)
+  - `GET /api/v1/switches` enriches each switch with `powerWatts` from the matching `sensor.<source>_<ref>_power` entity (same source + sourceRef)
+  - Only shown while the switch is on and the reading is fresh (<5 min); display-only, no threshold logic; today effectively Meross (Shelly has no switch entities)
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items

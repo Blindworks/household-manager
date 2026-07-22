@@ -55,6 +55,15 @@
   opacity: 0.6;
 }
 
+.switch-list__power {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary, #53e16f);
+  opacity: 0.85;
+}
+
 // Umschalter (rein dekorativ; die ganze Zeile ist das Klickziel)
 .switch-list__toggle {
   flex: none;
@@ -109,6 +118,10 @@
 
   .switch-list__knob {
     background: #ffffff;
+  }
+
+  .switch-list__power {
+    color: #15803d;
   }
 
   .switch-list__row--on {

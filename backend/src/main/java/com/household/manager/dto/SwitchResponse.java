@@ -17,6 +17,8 @@ public record SwitchResponse(
         boolean available,
         String icon,
         boolean confirmRequired,
+        /** Aktuelle Leistung in Watt; null wenn keine (frische) Messung vorliegt. */
+        Double powerWatts,
         long toggleCount,
         LocalDateTime lastToggledAt
 ) {

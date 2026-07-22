@@ -11,9 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Liefert die schaltbaren Entitäten für Schalter-Kachel und -Dialog.
@@ -63,11 +66,14 @@ public class SwitchQueryService {
         Map<String, EntityUsage> usage = entityUsageService.usageFor(
                 switchable.stream().map(EntityState::getEntityId).toList());
 
+        Map<String, EntityState> powerSensors = powerSensorsBySwitchId(switchable);
+
         record Ranked(SwitchResponse response, int rank) {
         }
         List<SwitchResponse> switches = switchable.stream()
                 .map(entity -> new Ranked(
-                        switchResponseMapper.toResponse(entity, usage.get(entity.getEntityId())),
+                        switchResponseMapper.toResponse(entity, usage.get(entity.getEntityId()),
+                                powerSensors.get(entity.getEntityId())),
                         tileRank(entity, rules)))
                 .sorted(Comparator.comparingInt(Ranked::rank)
                         .thenComparing(Ranked::response, byUsage()))
@@ -78,6 +84,32 @@ public class SwitchQueryService {
             return List.copyOf(switches.subList(0, limit));
         }
         return switches;
+    }
+
+    /**
+     * Lädt zu jedem Schalter den Power-Sensor gleicher Quelle über die
+     * entityId-Konvention {@code sensor.<source>_<slug(ref)>_power} — ein Query für alle.
+     */
+    private Map<String, EntityState> powerSensorsBySwitchId(List<EntityState> switches) {
+        if (switches.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> sensorIdBySwitchId = new HashMap<>();
+        for (EntityState sw : switches) {
+            sensorIdBySwitchId.put(sw.getEntityId(),
+                    EntityIds.build(EntityDomain.SENSOR, sw.getSource(), sw.getSourceRef(), "power"));
+        }
+        Map<String, EntityState> sensorsById = entityStateRepository
+                .findByEntityIdIn(sensorIdBySwitchId.values()).stream()
+                .collect(Collectors.toMap(EntityState::getEntityId, Function.identity()));
+        Map<String, EntityState> bySwitchId = new HashMap<>();
+        sensorIdBySwitchId.forEach((switchId, sensorId) -> {
+            EntityState sensor = sensorsById.get(sensorId);
+            if (sensor != null) {
+                bySwitchId.put(switchId, sensor);
+            }
+        });
+        return bySwitchId;
     }
 
     /** Kachel-Filter: NEVER nie, WHEN_ON nur solange der Zustand "on" ist. */
