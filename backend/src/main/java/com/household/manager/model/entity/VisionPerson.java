@@ -22,9 +22,14 @@ public class VisionPerson {
     @Column(name = "name", nullable = false, unique = true, length = 255)
     private String name;
 
-    /** Inaktive Personen bleiben erhalten, werden aber nicht mehr erkannt. */
+    /**
+     * Inaktive Personen bleiben erhalten, werden aber nicht mehr erkannt.
+     * Builder-Default true: Hibernate schreibt die Spalte immer mit, der
+     * DB-Default greift also nie — ohne ihn entstuenden inaktive Personen.
+     */
+    @Builder.Default
     @Column(name = "active", nullable = false)
-    private boolean active;
+    private boolean active = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -22,8 +22,11 @@ public class VisionPersonPhoto {
     @Column(name = "person_id", nullable = false)
     private Long personId;
 
+    // columnDefinition explizit: Hibernate rendert @Lob byte[] auf MariaDB als
+    // longblob, die Liquibase-Spalte ist MEDIUMBLOB — ohne diese Angabe scheitert
+    // die Schema-Validierung (spring.jpa.hibernate.ddl-auto=validate) beim Start.
     @Lob
-    @Column(name = "photo", nullable = false)
+    @Column(name = "photo", nullable = false, columnDefinition = "MEDIUMBLOB")
     private byte[] photo;
 
     /** Gesichts-Embedding als JSON-Array (z. B. "[0.01, -0.2, ...]"), Quelle: Sidecar. */

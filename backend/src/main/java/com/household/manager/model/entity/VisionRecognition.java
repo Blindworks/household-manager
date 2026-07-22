@@ -36,7 +36,8 @@ public class VisionRecognition {
     @Column(name = "unknown_faces", nullable = false)
     private int unknownFaces;
 
+    // columnDefinition explizit — siehe VisionPersonPhoto.photo (longblob vs. MEDIUMBLOB).
     @Lob
-    @Column(name = "thumbnail")
+    @Column(name = "thumbnail", columnDefinition = "MEDIUMBLOB")
     private byte[] thumbnail;
 }
