@@ -23,5 +23,7 @@ public interface EntityStateRepository extends JpaRepository<EntityState, Long> 
 
     List<EntityState> findByDomainInOrderByEntityIdAsc(Collection<EntityDomain> domains);
 
+    List<EntityState> findByEntityIdIn(Collection<String> entityIds);
+
     void deleteByEntityId(String entityId);
 }
