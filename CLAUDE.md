@@ -174,6 +174,8 @@ The application uses Liquibase for database migrations. Migration files are loca
 - **Switch Power Display**: switch rows show live wattage (no schema change)
   - `GET /api/v1/switches` enriches each switch with `powerWatts` from the matching `sensor.<source>_<ref>_power` entity (same source + sourceRef)
   - Only shown while the switch is on and the reading is fresh (<5 min); display-only, no threshold logic; today effectively Meross (Shelly has no switch entities)
+- **Power Consumer Tile**: `GET /api/v1/power-consumers` lists all `deviceClass: power` sensors, biggest first (no schema change)
+  - Excluded via `NON_CONSUMER_SOURCES`: `TASMOTA` and `ANKER_SOLIX` (house balance, not single devices) and `SHELLY` (attached to the balcony solar plants — it measures generation, not consumption)
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items

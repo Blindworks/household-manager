@@ -16,16 +16,18 @@ Kachel ersetzt, die die aktuellen Stromverbraucher im Haus mit ihrer Live-Leistu
 - Leistungswerte einzelner Verbraucher existieren bereits in der Entity-State-Schicht
   als `SENSOR`-Entitäten mit Attribut `deviceClass = "power"` (Einheit W):
   - Meross-Steckdosen: `sensor.meross_<uuid>_power` (z. B. Waschmaschine)
-  - Shelly-Geräte: `sensor.shelly_<name>_power`
-- Ebenfalls als Power-Sensoren vorhanden, aber **keine Einzelverbraucher** (Haus-Bilanz):
-  - Tasmota: `sensor.tasmota_main_power` (Gesamt-Hausverbrauch)
-  - Anker Solix: PV-/Akku-/Netz-/Hausleistung
+- Ebenfalls als Power-Sensoren vorhanden, aber **keine Einzelverbraucher**:
+  - Tasmota: `sensor.tasmota_main_power` (Gesamt-Hausverbrauch) — Haus-Bilanz
+  - Anker Solix: PV-/Akku-/Netz-/Hausleistung — Haus-Bilanz
+  - Shelly: `sensor.shelly_<name>_power` — hängt an den Balkonkraftwerken und
+    misst **Erzeugung**, nicht Verbrauch
 
 ## Entscheidungen
 
 1. **Datenquelle:** Alle Power-Sensoren automatisch (keine kuratierte Liste).
-   Haus-Bilanz-Quellen werden per `EntitySource` ausgeschlossen (`TASMOTA`,
-   `ANKER_SOLIX`). Neue Steckdosen-Quellen erscheinen ohne Konfiguration.
+   Nicht-Verbraucher werden per `EntitySource` ausgeschlossen: Haus-Bilanz
+   (`TASMOTA`, `ANKER_SOLIX`) und Erzeugung (`SHELLY`). Neue Steckdosen-Quellen
+   erscheinen ohne Konfiguration.
 2. **Anzeige:** Pro Gerät Name + Live-Leistung in W, absteigend nach Verbrauch
    sortiert. Geräte mit 0 W bleiben sichtbar (rutschen nach unten).
 3. **Kapazität:** Kachel zeigt die Top 4; ein Expand-Button öffnet einen Dialog mit
@@ -39,8 +41,9 @@ Kachel ersetzt, die die aktuellen Stromverbraucher im Haus mit ihrer Live-Leistu
 
 - Liest `SENSOR`-Entitäten über den `EntityStateService`.
 - Filter: Attribut `deviceClass == "power"`.
-- Ausschluss: `EntitySource.TASMOTA` und `EntitySource.ANKER_SOLIX` (Haus-Bilanz,
-  keine Einzelverbraucher).
+- Ausschluss (`NON_CONSUMER_SOURCES`): `EntitySource.TASMOTA` und
+  `EntitySource.ANKER_SOLIX` (Haus-Bilanz) sowie `EntitySource.SHELLY`
+  (Balkonkraftwerke = Erzeuger).
 - Sortierung: absteigend nach Watt; `unavailable`-Geräte ans Ende.
 - Optionales `limit` kappt die Liste nach der Sortierung.
 

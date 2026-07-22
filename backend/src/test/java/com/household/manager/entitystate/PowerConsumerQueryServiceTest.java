@@ -73,10 +73,19 @@ class PowerConsumerQueryServiceTest {
     }
 
     @Test
+    void schliesst_erzeuger_aus() {
+        when(entityStateRepository.findByDomainOrderByEntityIdAsc(EntityDomain.SENSOR)).thenReturn(List.of(
+                sensor(EntitySource.MEROSS, "wm", "Waschmaschine Leistung", "1200", POWER_ATTRIBUTES),
+                sensor(EntitySource.SHELLY, "bkw", "Balkonkraftwerk-Alt Leistung", "450", POWER_ATTRIBUTES)));
+
+        assertThat(namesOf(service.listConsumers(null))).containsExactly("Waschmaschine Leistung");
+    }
+
+    @Test
     void sortiert_absteigend_nach_leistung() {
         when(entityStateRepository.findByDomainOrderByEntityIdAsc(EntityDomain.SENSOR)).thenReturn(List.of(
                 sensor(EntitySource.MEROSS, "a", "Klein", "5.5", POWER_ATTRIBUTES),
-                sensor(EntitySource.SHELLY, "b", "Gross", "1450", POWER_ATTRIBUTES),
+                sensor(EntitySource.TAPO, "b", "Gross", "1450", POWER_ATTRIBUTES),
                 sensor(EntitySource.MEROSS, "c", "Mittel", "230", POWER_ATTRIBUTES)));
 
         assertThat(namesOf(service.listConsumers(null))).containsExactly("Gross", "Mittel", "Klein");
@@ -86,7 +95,7 @@ class PowerConsumerQueryServiceTest {
     void nicht_numerische_states_gelten_als_unavailable_und_stehen_hinten() {
         when(entityStateRepository.findByDomainOrderByEntityIdAsc(EntityDomain.SENSOR)).thenReturn(List.of(
                 sensor(EntitySource.MEROSS, "a", "Offline", "unavailable", POWER_ATTRIBUTES),
-                sensor(EntitySource.SHELLY, "b", "Aktiv", "42", POWER_ATTRIBUTES)));
+                sensor(EntitySource.TAPO, "b", "Aktiv", "42", POWER_ATTRIBUTES)));
 
         List<PowerConsumerResponse> consumers = service.listConsumers(null);
 
@@ -100,7 +109,7 @@ class PowerConsumerQueryServiceTest {
     void limit_kappt_die_liste_nach_der_sortierung() {
         when(entityStateRepository.findByDomainOrderByEntityIdAsc(EntityDomain.SENSOR)).thenReturn(List.of(
                 sensor(EntitySource.MEROSS, "a", "Klein", "5", POWER_ATTRIBUTES),
-                sensor(EntitySource.SHELLY, "b", "Gross", "1450", POWER_ATTRIBUTES)));
+                sensor(EntitySource.TAPO, "b", "Gross", "1450", POWER_ATTRIBUTES)));
 
         assertThat(namesOf(service.listConsumers(1))).containsExactly("Gross");
     }
