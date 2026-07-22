@@ -119,26 +119,42 @@
           </div>
         </div>
 
-        <!-- Raum-Kacheln (Platzhalter) -->
-        <button
-          *ngFor="let room of rooms; let i = index"
-          type="button"
-          class="lumina-card lumina__room lumina__fade"
-          [style.--delay]="(0.2 + i * 0.1) + 's'"
+        <!-- Verbraucher-Kachel: Stromverbraucher, groesster zuerst -->
+        <div
+          class="lumina-card lumina__room lumina__consumer-tile lumina__fade"
+          style="--delay: 0.3s"
         >
           <div class="lumina__room-top">
             <div class="lumina__room-icon">
-              <span class="material-symbols-outlined">{{ room.icon }}</span>
+              <span class="material-symbols-outlined">bolt</span>
             </div>
-            <span class="lumina__badge" [class.lumina__badge--active]="room.tone === 'active'">
-              {{ room.status }}
-            </span>
+            <button
+              type="button"
+              class="lumina__switch-all"
+              (click)="openConsumerDialog()"
+              title="Alle Verbraucher anzeigen"
+              aria-label="Alle Verbraucher anzeigen"
+            >
+              <span class="material-symbols-outlined">expand_content</span>
+            </button>
           </div>
           <div class="lumina__room-body">
-            <h3 class="lumina__room-name">{{ room.name }}</h3>
-            <p class="lumina__room-detail">{{ room.detail }}</p>
+            <h3 class="lumina__room-name">Verbraucher</h3>
+            <div class="lumina__consumer-rows">
+              <p *ngIf="topConsumers.length === 0" class="lumina__consumer-empty">
+                Keine Verbraucher
+              </p>
+              <div
+                *ngFor="let consumer of topConsumers"
+                class="lumina__consumer-row"
+                [class.lumina__consumer-row--unavailable]="consumer.unavailable"
+              >
+                <span class="lumina__consumer-name">{{ consumer.displayName }}</span>
+                <span class="lumina__consumer-value">{{ powerLabel(consumer) }}</span>
+              </div>
+            </div>
           </div>
-        </button>
+        </div>
       </div>
 
       <div class="lumina-card lumina__scene lumina__fade" style="--delay: 0.4s">
@@ -364,6 +380,46 @@
         <p *ngIf="switchError" class="lumina__switch-error lumina__switch-error--dialog">
           {{ switchError }}
         </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verbraucher-Dialog (oeffnet sich ueber den Button in der Verbraucher-Kachel) -->
+  <div
+    *ngIf="consumerDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeConsumerDialog()"
+  >
+    <div
+      class="lumina__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Alle Verbraucher"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">Alle Verbraucher</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeConsumerDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <p *ngIf="allConsumers.length === 0" class="lumina__consumer-empty lumina__consumer-empty--dialog">
+          Keine Verbraucher
+        </p>
+        <div
+          *ngFor="let consumer of allConsumers"
+          class="lumina__consumer-row lumina__consumer-row--dialog"
+          [class.lumina__consumer-row--unavailable]="consumer.unavailable"
+        >
+          <span class="lumina__consumer-name">{{ consumer.displayName }}</span>
+          <span class="lumina__consumer-value">{{ powerLabel(consumer) }}</span>
+        </div>
       </div>
     </div>
   </div>

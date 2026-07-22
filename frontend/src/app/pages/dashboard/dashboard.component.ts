@@ -24,15 +24,17 @@ import { ModeEntity } from '../../models/mode.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
 import { NukiService } from '../../services/nuki.service';
 import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
+import { PowerConsumerService } from '../../services/power-consumer.service';
+import { PowerConsumer } from '../../models/power-consumer.model';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
  * Vollflaechige Kommandozentrale im Kiosk-Stil: grosse Uhr, Wetter, Raum-Kacheln,
  * Szenen, Intelligence Hub, Live-Energie-Ring und Modus-Schnellaktionen.
  *
- * Echte Daten: Uhr, Wetter (WeatherService), Live-Energie (EnergyLiveService).
- * Raeume, Szenen, Intelligence-Hinweise, Sicherheit und Modi sind aktuell statische
- * Platzhalter, aber als typisierte Datenstrukturen fuer eine spaetere Anbindung angelegt.
+ * Echte Daten: Uhr, Wetter (WeatherService), Live-Energie (EnergyLiveService),
+ * Klima, Schalter, Verbraucher, Modi, Müllabfuhr und Türschloss.
+ * Szenen und Intelligence-Hinweise sind aktuell statische Platzhalter.
  */
 @Component({
   selector: 'app-dashboard',
@@ -50,6 +52,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly modeService = inject(ModeService);
   private readonly wasteService = inject(WasteCollectionService);
   private readonly nukiService = inject(NukiService);
+  private readonly powerConsumerService = inject(PowerConsumerService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -64,6 +67,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private modeSubscription?: Subscription;
   private wasteSubscription?: Subscription;
   private nukiSubscription?: Subscription;
+  private consumerSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -88,6 +92,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly DAY_MS = 86400000;
   /** Aktualisierungsintervall der Türschloss-Kachel (30 s). */
   private static readonly NUKI_REFRESH_MS = 30000;
+  /** Anzahl der Verbraucher auf der Kachel; alle weiteren stehen im Dialog. */
+  private static readonly CONSUMER_TILE_LIMIT = 4;
+  /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
+  private static readonly CONSUMER_REFRESH_MS = 30000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -119,10 +127,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Liste mit genau dem zu bestätigenden Schalter für app-switch-list. */
   confirmSwitchList: SwitchEntity[] = [];
 
-  /** Raum-Kacheln (Platzhalter, spaeter aus Entitaeten befuellbar). */
-  readonly rooms: RoomTile[] = [
-    { name: 'Schlafzimmer', icon: 'bed', status: 'Ruhe', tone: 'idle', detail: 'Luftreiniger: An • Rollo: Zu' }
-  ];
+  /** Größte Stromverbraucher für die Kachel. */
+  topConsumers: PowerConsumer[] = [];
+  /** Alle Verbraucher; nur gefüllt, solange der Verbraucher-Dialog offen ist. */
+  allConsumers: PowerConsumer[] = [];
+  /** True, wenn der Verbraucher-Dialog geöffnet ist. */
+  consumerDialogOpen = false;
 
   /** Aktive Szene und Schnellwahl-Szenen (Platzhalter). */
   activeScene = 'Dynamisches Abendlicht';
@@ -182,6 +192,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startLiveStream();
     this.startClimateRefresh();
     this.startSwitchRefresh();
+    this.startConsumerRefresh();
     this.startModeRefresh();
     this.startWasteRefresh();
     this.startNukiRefresh();
@@ -197,6 +208,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.modeSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
     this.nukiSubscription?.unsubscribe();
+    this.consumerSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -223,6 +235,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeFlowDialog();
     this.closeSwitchDialog();
     this.closeConfirmDialog();
+    this.closeConsumerDialog();
     this.nukiConfirm = null;
   }
 
@@ -361,6 +374,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.allSwitches = [];
     this.switchError = null;
     this.loadTopSwitches();
+  }
+
+  /** Öffnet den Verbraucher-Dialog und lädt dafür die vollständige Liste. */
+  openConsumerDialog(): void {
+    if (this.consumerDialogOpen) {
+      return;
+    }
+    this.consumerDialogOpen = true;
+    this.loadAllConsumers();
+  }
+
+  closeConsumerDialog(): void {
+    if (!this.consumerDialogOpen) {
+      return;
+    }
+    this.consumerDialogOpen = false;
+    this.allConsumers = [];
+  }
+
+  /** Leistung als "1.250 W"; unavailable-Geräte zeigen einen Strich. */
+  powerLabel(consumer: PowerConsumer): string {
+    if (consumer.powerWatts == null) {
+      return '–';
+    }
+    return `${Math.round(consumer.powerWatts).toLocaleString('de-DE')} W`;
   }
 
   /**
@@ -619,6 +657,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  private startConsumerRefresh(): void {
+    this.consumerSubscription = interval(DashboardComponent.CONSUMER_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        // Ladefehler behalten die zuletzt bekannte Liste (null = kein Update).
+        switchMap(() => this.powerConsumerService
+          .getConsumers(DashboardComponent.CONSUMER_TILE_LIMIT)
+          .pipe(catchError(() => of<PowerConsumer[] | null>(null))))
+      )
+      .subscribe(consumers => {
+        if (consumers) {
+          this.topConsumers = consumers;
+        }
+        // Der offene Dialog soll dieselbe Aktualität haben wie die Kachel.
+        if (this.consumerDialogOpen) {
+          this.loadAllConsumers();
+        }
+      });
+  }
+
+  private loadAllConsumers(): void {
+    this.powerConsumerService.getConsumers()
+      .pipe(catchError(() => of<PowerConsumer[] | null>(null)))
+      .subscribe(consumers => {
+        if (consumers) {
+          this.allConsumers = consumers;
+        }
+      });
+  }
+
   private startModeRefresh(): void {
     this.modeSubscription = interval(DashboardComponent.MODE_REFRESH_MS)
       .pipe(
@@ -752,15 +820,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'device_thermostat';
     }
   }
-}
-
-/** Raum-Kachel im Dashboard. */
-interface RoomTile {
-  readonly name: string;
-  readonly icon: string;
-  readonly status: string;
-  readonly tone: 'active' | 'idle';
-  readonly detail: string;
 }
 
 /** Szenen-Schnellwahl-Button. */

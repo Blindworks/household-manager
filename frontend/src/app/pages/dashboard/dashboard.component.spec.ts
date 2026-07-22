@@ -15,6 +15,8 @@ import { NukiService } from '../../services/nuki.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeEntity } from '../../models/mode.model';
 import { NukiLock } from '../../models/nuki.model';
+import { PowerConsumerService } from '../../services/power-consumer.service';
+import { PowerConsumer } from '../../models/power-consumer.model';
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -615,6 +617,141 @@ describe('DashboardComponent (Nuki-Tuerschloss)', () => {
 
     expect(fixture.componentInstance.nukiLocks.length).toBe(1);
     expect(fixture.componentInstance.nukiError).toBe('Verbindung unterbrochen – Anzeige evtl. veraltet.');
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Verbraucher-Kachel)', () => {
+  let consumerServiceSpy: jasmine.SpyObj<PowerConsumerService>;
+
+  const consumer = (overrides: Partial<PowerConsumer> = {}): PowerConsumer => ({
+    entityId: 'sensor.meross_wm_power',
+    displayName: 'Waschmaschine',
+    powerWatts: 1250,
+    unavailable: false,
+    ...overrides
+  });
+
+  beforeEach(async () => {
+    consumerServiceSpy = jasmine.createSpyObj('PowerConsumerService', ['getConsumers']);
+    consumerServiceSpy.getConsumers.and.returnValue(of([consumer()]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PowerConsumerService, useValue: consumerServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('laedt die groessten Verbraucher fuer die Kachel', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(4);
+    expect(fixture.componentInstance.topConsumers.length).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Waschmaschine');
+
+    discardPeriodicTasks();
+  }));
+
+  it('formatiert die Leistung deutsch und ganzzahlig', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.powerLabel(consumer({ powerWatts: 1250.4 })))
+      .toBe('1.250 W');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt fuer unavailable-Verbraucher einen Strich', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.powerLabel(
+      consumer({ powerWatts: null, unavailable: true }))).toBe('–');
+
+    discardPeriodicTasks();
+  }));
+
+  it('oeffnet den Dialog und laedt dafuer alle Verbraucher', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    consumerServiceSpy.getConsumers.calls.reset();
+
+    fixture.componentInstance.openConsumerDialog();
+    tick();
+
+    expect(fixture.componentInstance.consumerDialogOpen).toBeTrue();
+    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith();
+
+    discardPeriodicTasks();
+  }));
+
+  it('aktualisiert die Dialogliste im Poll-Takt mit', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openConsumerDialog();
+    tick();
+    consumerServiceSpy.getConsumers.calls.reset();
+
+    tick(30000);
+
+    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(4);
+    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith();
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaelt beim Ladefehler die zuletzt bekannte Liste', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.topConsumers.length).toBe(1);
+    consumerServiceSpy.getConsumers.and.returnValue(throwError(() => new Error('kaputt')));
+
+    tick(30000);
+
+    expect(fixture.componentInstance.topConsumers.length).toBe(1);
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliessen leert die Dialogliste', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openConsumerDialog();
+    tick();
+
+    fixture.componentInstance.closeConsumerDialog();
+
+    expect(fixture.componentInstance.consumerDialogOpen).toBeFalse();
+    expect(fixture.componentInstance.allConsumers.length).toBe(0);
 
     discardPeriodicTasks();
   }));
