@@ -341,4 +341,31 @@ class SwitchQueryServiceTest {
 
         assertThat(service.listSwitches(null).get(0).powerWatts()).isNull();
     }
+
+    @Test
+    void ordnet_jedem_schalter_nur_seinen_eigenen_power_sensor_zu() {
+        when(entityStateRepository.findByDomainInOrderByEntityIdAsc(any()))
+                .thenReturn(List.of(device("abc", "Waschmaschine"), device("xyz", "Stehlampe")));
+        when(entityUsageService.usageFor(anyCollection())).thenReturn(Map.of());
+        EntityState sensor = EntityState.builder()
+                .entityId("sensor.kasa_abc_power")
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.KASA)
+                .sourceRef("abc")
+                .friendlyName("Waschmaschine Leistung")
+                .state("875")
+                .lastChanged(LocalDateTime.now())
+                .lastUpdated(LocalDateTime.now())
+                .build();
+        when(entityStateRepository.findByEntityIdIn(anyCollection())).thenReturn(List.of(sensor));
+
+        List<SwitchResponse> switches = service.listSwitches(null);
+        SwitchResponse waschmaschine = switches.stream()
+                .filter(s -> s.displayName().equals("Waschmaschine")).findFirst().orElseThrow();
+        SwitchResponse stehlampe = switches.stream()
+                .filter(s -> s.displayName().equals("Stehlampe")).findFirst().orElseThrow();
+
+        assertThat(waschmaschine.powerWatts()).isEqualTo(875.0);
+        assertThat(stehlampe.powerWatts()).isNull();
+    }
 }
