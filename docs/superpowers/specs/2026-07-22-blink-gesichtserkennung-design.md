@@ -101,7 +101,7 @@ Repositories liegen in `com.household.manager.repository` (JpaConfig-Einschränk
 
 - Neue Source **`VISION`** in `EntitySource`; Domain **`EVENT`** wird wiederverwendet
   (wie bei den Zigbee-Tastern).
-- `event.blink_door_person`: jede Erkennung feuert ein `EntityEventFired` mit Payload
+- `event.vision_blink_door_person`: jede Erkennung feuert ein `EntityEventFired` mit Payload
   `{ person: "<name>", personId: <id>, confidence: <0..1>, unknownFaces: <n> }`.
   Auch „nur unbekannte Gesichter" feuert ein Event (`person: null`) – nutzbar für
   spätere Benachrichtigungs-Flows.
@@ -123,14 +123,26 @@ Repositories liegen in `com.household.manager.repository` (JpaConfig-Einschränk
 
 ## Flow „Haustür-Auto-Unlock“ (Schritt 2, per Flow-MCP angelegt)
 
-- **Trigger:** `entity-event-trigger` auf `event.blink_door_person`
-- **Condition:** `person` ∈ Menge der freigeschalteten Bewohner (die Konfidenz-Schwelle
-  setzt bereits der Sidecar durch; die Condition prüft nur die Person)
-- **Aktionen:** `nuki-lock-action` mit `action = unlatch` (smartlockId als String!),
-  danach optional Alexa-Ansage „Willkommen zuhause, <Name>"
-- **Vorgehen wie beim Waschmaschinen-Flow:** Flow wird erstellt und deployt, aber
-  **deaktiviert**. Scharfschaltung erst manuell, nachdem die Erkennungshistorie über
-  einige Tage zuverlässige Ergebnisse zeigt (keine False Positives bei Fremden).
+Umgesetzt als Flow **#6**, deployt und **deaktiviert**.
+
+Abweichung vom ursprünglichen Entwurf: Es gibt keinen Node, der die Nutzlast des
+auslösenden Ereignisses prüft — die vorhandene `entity-condition` vergleicht den
+*Zustand einer Entität*, nicht das Event. Der `entity-event-trigger` hat aber ein
+optionales Feld `action` (leer = jedes Ereignis), und bei EVENT-Entitäten ist die
+Aktion genau der State — also der Personenname. Die Personenprüfung passiert damit
+schon im Trigger, ganz ohne Condition-Node. Das ist nicht nur einfacher, sondern auch
+sicherer: ein `unknown`-Ereignis erreicht den Schloss-Node nie.
+
+- **Trigger:** `entity-event-trigger` auf `event.vision_blink_door_person` mit
+  `action = "<Personenname>"` — pro Bewohner ein eigener Trigger im selben Flow.
+  Der Name muss **zeichengenau** dem `vision_person.name` entsprechen.
+  `action` NIE leer lassen: das würde auch bei `unknown` auslösen.
+- **Rate-Limit:** 60 s als zweite Sicherung neben dem 2-Minuten-Cooldown im Sidecar.
+- **Aktion:** `nuki-lock-action` mit `action = unlatch` und `smartlockId` als String
+  (`"18241688572"`); optional danach eine Alexa-Ansage „Willkommen zuhause".
+- **Vorgehen wie beim Waschmaschinen-Flow:** Scharfschaltung erst manuell, nachdem die
+  Erkennungshistorie über einige Tage zuverlässige Ergebnisse zeigt (keine False
+  Positives bei Fremden).
 
 ## Deployment
 
