@@ -32,7 +32,21 @@ public class VisionSidecarClient {
     public VisionSidecarClient(VisionProperties properties, ObjectMapper mapper) {
         this.properties = properties;
         this.mapper = mapper;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        this.httpClient = createHttpClient();
+    }
+
+    /**
+     * Der Client MUSS auf HTTP/1.1 festgelegt sein: Der Default HTTP_2 versucht bei
+     * http://-URLs ein h2c-Upgrade und schickt die Anfrage dabei OHNE Body. uvicorn
+     * lehnt das Upgrade ab, verarbeitet die Anfrage aber trotzdem — und sieht einen
+     * leeren Body (HTTP 422 "Field required"). Der Alexa-Sidecar ist nicht betroffen,
+     * weil Nodes HTTP-Server den Upgrade-Header ignoriert und den Body normal liest.
+     */
+    static HttpClient createHttpClient() {
+        return HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
     }
 
     /** Login-/Kamerastatus laut Sidecar. */

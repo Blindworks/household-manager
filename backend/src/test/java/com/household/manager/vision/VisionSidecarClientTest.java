@@ -11,6 +11,17 @@ class VisionSidecarClientTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
+    /**
+     * Regressionsschutz: Mit dem Default HTTP_2 versucht der JDK-Client bei http://-URLs
+     * ein h2c-Upgrade und schickt die Anfrage OHNE Body — uvicorn antwortet dann mit
+     * HTTP 422 "Field required". Der Foto-Upload war dadurch komplett kaputt.
+     */
+    @Test
+    void httpClientIsPinnedToHttp11() {
+        assertThat(VisionSidecarClient.createHttpClient().version())
+                .isEqualTo(java.net.http.HttpClient.Version.HTTP_1_1);
+    }
+
     @Test
     void parsesEmbeddingResponse() throws Exception {
         var json = mapper.readTree("{\"embedding\":[0.5,-0.25,0.0],\"faces\":1,\"ignoredField\":true}");
