@@ -29,8 +29,9 @@ import { PowerConsumer } from '../../models/power-consumer.model';
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
- * Vollflaechige Kommandozentrale im Kiosk-Stil: grosse Uhr, Wetter, Raum-Kacheln,
- * Szenen, Intelligence Hub, Live-Energie-Ring und Modus-Schnellaktionen.
+ * Vollflaechige Kommandozentrale im Kiosk-Stil: grosse Uhr, Wetter, Kacheln fuer
+ * Klima, Schalter und Verbraucher, Szenen, Intelligence Hub, Live-Energie-Ring
+ * und Modus-Schnellaktionen.
  *
  * Echte Daten: Uhr, Wetter (WeatherService), Live-Energie (EnergyLiveService),
  * Klima, Schalter, Verbraucher, Modi, Müllabfuhr und Türschloss.

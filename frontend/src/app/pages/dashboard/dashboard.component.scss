@@ -435,6 +435,70 @@
   white-space: nowrap;
 }
 
+// ---- Verbraucher-Kachel & -Dialog (Top-4-Stromverbraucher) ---------------
+.lumina__consumer-rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+}
+
+.lumina__consumer-empty {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: rgba(192, 198, 214, 0.5);
+}
+
+.lumina__consumer-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+  &--unavailable {
+    opacity: 0.45;
+  }
+}
+
+.lumina__consumer-name {
+  font-size: 15px;
+  color: rgba(192, 198, 214, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lumina__consumer-value {
+  margin-left: auto;
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--on-surface);
+  white-space: nowrap;
+}
+
+// Der Dialog ist hell: dunkle Texte statt der Kachel-Farben.
+.lumina__consumer-row--dialog {
+  border-top-color: rgba(15, 23, 42, 0.1);
+
+  .lumina__consumer-name {
+    color: rgba(15, 23, 42, 0.75);
+  }
+
+  .lumina__consumer-value {
+    color: #0f172a;
+  }
+}
+
+.lumina__consumer-empty--dialog {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+// Trennlinien-Logik: erste Zeile ohne Linie – gilt fuer Kachel und Dialog gleichermassen.
+.lumina__consumer-row:first-of-type {
+  border-top: none;
+}
+
 .lumina__room-top {
   display: flex;
   align-items: flex-start;
