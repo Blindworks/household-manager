@@ -1,0 +1,13 @@
+# Verifiziert wurde ausschliesslich 0.25.9 (siehe BLINKPY-API.md): 2FA laeuft dort
+# ueber BlinkTwoFARequiredError statt ueber ein Flag. Ob und ab wann aeltere
+# Versionen abweichen, wurde NICHT geprueft - daher der konservative Pin auf 0.25.x.
+blinkpy>=0.25.9,<0.26
+aiohttp
+fastapi
+uvicorn[standard]
+httpx
+insightface
+onnxruntime
+opencv-python-headless
+numpy
+pytest

@@ -61,7 +61,8 @@ export class HeaderComponent {
       children: [
         { path: '/admin', label: 'Uebersicht', exact: true },
         { path: '/flows', label: 'Automatisierungen' },
-        { path: '/announcements', label: 'Ansagen' }
+        { path: '/announcements', label: 'Ansagen' },
+        { path: '/vision', label: 'Gesichtserkennung' }
       ]
     },
     {

@@ -1,0 +1,80 @@
+.vision {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+
+  &__section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+
+  &__error { padding: .5rem; background: #fee; border-radius: 4px; color: #c0392b; }
+
+  &__status {
+    &--ok { color: #27ae60; }
+    &--error { color: #c0392b; }
+  }
+
+  &__login,
+  &__new-person {
+    input { margin-right: .5rem; }
+  }
+
+  &__verify { margin-top: .75rem; }
+
+  &__person {
+    border-bottom: 1px solid #eee;
+    padding: .5rem 0;
+
+    &:last-of-type { border-bottom: none; }
+
+    &--inactive strong { color: #888; text-decoration: line-through; }
+  }
+
+  &__badge {
+    padding: .1rem .4rem;
+    border-radius: 4px;
+    background: #eee;
+    color: #666;
+    font-size: .8rem;
+  }
+
+  &__rename-input { min-width: 12rem; }
+
+  &__person-row {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__upload {
+    cursor: pointer;
+    text-decoration: underline;
+
+    input[type="file"] { display: none; }
+  }
+
+  &__delete { color: #c0392b; }
+
+  &__photos {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-top: .5rem;
+
+    img { max-width: 120px; border-radius: 4px; }
+  }
+
+  &__recognitions {
+    border-collapse: collapse;
+    width: 100%;
+
+    th, td { text-align: left; padding: .35rem .75rem .35rem 0; }
+    img { max-width: 100px; border-radius: 4px; }
+  }
+
+  &__hint { color: #888; font-size: .9rem; }
+}

@@ -280,6 +280,18 @@ docker-compose down
 - Dashboard: Türschloss-Kachel im Footer (ersetzt die statische „System gesichert“-Karte); Verriegeln direkt, Entsperren/Tür öffnen mit Bestätigungsdialog
 - Implementierung in `backend/src/main/java/com/household/manager/nuki/`
 
+### Blink-Gesichtserkennung (blink-vision-Sidecar)
+- Python-Sidecar `blink-vision/` (FastAPI + blinkpy + InsightFace `buffalo_s` auf CPU): pollt Local-Storage-Clips der Blink-Türkamera (Sync Module 2 + USB; der Abruf läuft trotzdem über die Blink-Cloud, Latenz 15–45 s), erkennt Gesichter und meldet Ergebnisse per Webhook ans Backend
+- Login als In-App-Flow (E-Mail/Passwort + 2FA-PIN); persistiert wird nur das Session-Token im Volume, **nie** Zugangsdaten — `blink.save()` würde das Klartext-Passwort mitschreiben, deshalb eigenes `_save_session()` mit Filter
+- **Alle blinkpy-Spezifika leben ausschließlich in `blink-vision/app/blink_client.py`.** Verifiziert gegen blinkpy 0.25.9 (`blink-vision/BLINKPY-API.md`); die Paket-README ist veraltet. Fallstricke: kein `key_required` (2FA kommt als `BlinkTwoFARequiredError`), `send_2fa_code()` statt `send_auth_key()`, Manifest ist aufsteigend sortiert (`reversed()` für den neuesten Clip), und `start()`/`send_2fa_code()` melden Login-Fehler per `return False` statt per Exception
+- Backend `vision/`: Personen + Referenzfotos führend in der DB (`vision_person`, `vision_person_photo`, `vision_recognition`); Embeddings werden an den Sidecar gepusht, der sie beim Start zusätzlich über `GET /v1/vision/embeddings` zieht
+- Jede Erkennung feuert `EntityEventFired` auf `event.vision_blink_door_person` — State = Personenname oder `unknown`, Attribute `personId`/`confidence`/`unknownFaces`; ausbleibender Heartbeat → `unavailable`
+- Auto-Unlock-Flow (#6): `entity-event-trigger` filtert über `action` = Personenname (so kann `unknown` die Tür nie öffnen) → `rate-limit` 60 s → `nuki-lock-action` unlatch. Ist deployt, aber bewusst **deaktiviert**; pro weiterem Bewohner einen zusätzlichen Trigger mit dessen exaktem Namen ergänzen
+- **Kopplung beachten:** Wird eine Person umbenannt, greift Flow #6 für sie nicht mehr — der Trigger filtert auf den exakten `vision_person.name`. Nach jedem Umbenennen den Flow nachziehen
+- Das Foto-Spoofing-Risiko (2D-Kamera kann keine Lebenderkennung) ist dokumentiert und vom Nutzer bewusst akzeptiert
+- Frontend-Seite „Gesichtserkennung" (`pages/vision/`): Blink-Login, Personenverwaltung mit Foto-Upload, Erkennungshistorie
+- Der Sidecar hat **keine Authentifizierung** und ist deshalb absichtlich nicht ins LAN gemappt (nur `app_net`)
+
 ### Flow-Engine: KI-Autoring via MCP
 - Flows werden primär durch eine KI erstellt und gepflegt (Entscheidung 2026-07-20); der visuelle Editor bleibt als Viewer/Debug-Werkzeug, wird aber nicht weiter ausgebaut
 - `flow-mcp-server/` (Node ≥20, stdio) wrappt die REST-API `/api/v1/flows` als MCP-Tools; Registrierung für Claude Code in `.mcp.json` (Server-Name `household-flows`), Setup: `cd flow-mcp-server && npm install`
