@@ -42,6 +42,9 @@ services:
 
       # Nuki
       NUKI_API_TOKEN: ${NUKI_API_TOKEN:-}
+
+      # Blink-Gesichtserkennung (blink-vision-Sidecar)
+      VISION_SIDECAR_URL: http://blink-vision:8090
     depends_on:
       - mosquitto
       - alexa-sidecar
@@ -78,6 +81,22 @@ services:
     ports:
       - "3456:3456"
       - "3457:3457"
+    networks:
+      - app_net
+
+  blink-vision:
+    build:
+      context: ./blink-vision
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8080
+      BLINK_CAMERA_NAME: ${BLINK_CAMERA_NAME:-}
+      CONFIDENCE_THRESHOLD: ${VISION_CONFIDENCE_THRESHOLD:-0.5}
+      POLL_SECONDS: "10"
+    volumes:
+      - blink_vision_data:/data
+    ports:
+      - "8090:8090"
     networks:
       - app_net
 
@@ -119,3 +138,4 @@ volumes:
   mosquitto_log:
   zigbee2mqtt_data:
   alexa_sidecar_data:
+  blink_vision_data:
