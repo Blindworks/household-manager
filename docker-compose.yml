@@ -95,8 +95,10 @@ services:
       POLL_SECONDS: "10"
     volumes:
       - blink_vision_data:/data
-    ports:
-      - "8090:8090"
+    # Bewusst KEIN Port-Mapping: der Sidecar hat keine Authentifizierung und
+    # nimmt unter /auth/login die Amazon-Zugangsdaten entgegen. Das Backend
+    # erreicht ihn ueber app_net; zum Debuggen bei Bedarf temporaer
+    # "127.0.0.1:8090:8090" ergaenzen (nur lokal, nicht im LAN).
     networks:
       - app_net
 
