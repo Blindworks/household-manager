@@ -284,6 +284,7 @@ docker-compose down
 - Backend `vision/`: Personen + Referenzfotos führend in der DB (`vision_person`, `vision_person_photo`, `vision_recognition`); Embeddings werden an den Sidecar gepusht, der sie beim Start zusätzlich über `GET /v1/vision/embeddings` zieht
 - Jede Erkennung feuert `EntityEventFired` auf `event.vision_blink_door_person` — State = Personenname oder `unknown`, Attribute `personId`/`confidence`/`unknownFaces`; ausbleibender Heartbeat → `unavailable`
 - Auto-Unlock-Flow (#6): `entity-event-trigger` filtert über `action` = Personenname (so kann `unknown` die Tür nie öffnen) → `rate-limit` 60 s → `nuki-lock-action` unlatch. Ist deployt, aber bewusst **deaktiviert**; pro weiterem Bewohner einen zusätzlichen Trigger mit dessen exaktem Namen ergänzen
+- **Kopplung beachten:** Wird eine Person umbenannt, greift Flow #6 für sie nicht mehr — der Trigger filtert auf den exakten `vision_person.name`. Nach jedem Umbenennen den Flow nachziehen
 - Das Foto-Spoofing-Risiko (2D-Kamera kann keine Lebenderkennung) ist dokumentiert und vom Nutzer bewusst akzeptiert
 - Frontend-Seite „Gesichtserkennung" (`pages/vision/`): Blink-Login, Personenverwaltung mit Foto-Upload, Erkennungshistorie
 - Der Sidecar hat **keine Authentifizierung** und ist deshalb absichtlich nicht ins LAN gemappt (nur `app_net`)
