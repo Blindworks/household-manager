@@ -13,9 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,13 @@ public class MerossDeviceService {
 
     private final MerossProperties merossProperties;
     private final MerossCloudAuthService merossCloudAuthService;
+
+    /**
+     * Geräte, die nachweislich keine Energiemessung können (MQTT-Antwort ohne die
+     * Fähigkeit). Sie werden beim Sammellauf übersprungen, damit nicht für jedes
+     * Licht und jede einfache Steckdose pro Zyklus eine MQTT-Verbindung entsteht.
+     */
+    private final Set<String> deviceIdsWithoutElectricity = ConcurrentHashMap.newKeySet();
 
     public List<MerossPlugResponse> discoverPlugs() {
         MerossCloudDevicesResponse response = merossCloudAuthService.listDevicesWithConfiguredCredentials();
@@ -96,6 +107,64 @@ public class MerossDeviceService {
             throw new MerossException("Meross-Verbrauch konnte nicht gelesen werden: " + ex.getMessage(), ex);
         } finally {
             device.disconnect();
+        }
+    }
+
+    /**
+     * Liest den Momentanverbrauch aller messfähigen Steckdosen des Kontos.
+     * <p>
+     * Login und Geräteliste werden einmal geholt statt einmal pro Gerät — die
+     * Cloud-Geräteliste ist ein ungecachter HTTP-Aufruf und würde sonst mit jedem
+     * Poll-Zyklus vervielfacht. Offline-Geräte werden übersprungen (sie können
+     * nicht antworten und würden nur in den MQTT-Timeout laufen), ebenso Geräte
+     * ohne Energiemessung. Ein Fehler bei einem Gerät stoppt die übrigen nicht.
+     */
+    public List<MerossElectricityReading> readElectricityOfAllPlugs() {
+        validateConfiguration();
+        MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
+        MerossCloudDevicesResponse devices = merossCloudAuthService.listDevicesWithConfiguredCredentials();
+
+        List<MerossElectricityReading> readings = new ArrayList<>();
+        for (MerossCloudDevice cloudDevice : devices.devices()) {
+            if (!"online".equals(toOnlineStatus(cloudDevice.onlineStatus()))) {
+                log.debug("Meross electricity skipped, device offline (deviceId={})", cloudDevice.uuid());
+                continue;
+            }
+            if (deviceIdsWithoutElectricity.contains(cloudDevice.uuid())) {
+                continue;
+            }
+            readElectricityQuietly(cloudDevice, login).ifPresent(readings::add);
+        }
+        return readings;
+    }
+
+    /**
+     * @return leer, wenn das Gerät keine Energiemessung hat oder die Messung
+     *         fehlschlägt; beides darf den Sammellauf nicht abbrechen
+     */
+    private Optional<MerossElectricityReading> readElectricityQuietly(
+            MerossCloudDevice cloudDevice, MerossCloudLoginResponse login) {
+        MerossDevice device = null;
+        try {
+            device = buildMqttDevice(cloudDevice, login);
+            Map payload = device.readElectricity();
+            if (payload == null) {
+                // Kein Fehler, sondern eine endgültige Auskunft: dem Gerät fehlt die
+                // Fähigkeit Appliance.Control.Electricity. Merken, damit nicht jeder
+                // Zyklus erneut eine MQTT-Verbindung dafür aufbaut.
+                deviceIdsWithoutElectricity.add(cloudDevice.uuid());
+                log.info("Meross device has no electricity metering, skipping from now on (deviceId={}, name={})",
+                        cloudDevice.uuid(), cloudDevice.devName());
+                return Optional.empty();
+            }
+            return MerossElectricityReading.fromPayload(cloudDevice.uuid(), cloudDevice.devName(), payload);
+        } catch (Throwable ex) {
+            log.warn("Meross electricity read failed (deviceId={}): {}", cloudDevice.uuid(), ex.getMessage());
+            return Optional.empty();
+        } finally {
+            if (device != null) {
+                device.disconnect();
+            }
         }
     }
 

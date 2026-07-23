@@ -13,12 +13,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Pollt den Momentanverbrauch konfigurierter Meross-Steckdosen und spiegelt ihn
- * als {@code sensor.meross_<uuid>_power} in die Entity-State-Schicht (Basis für
- * Flow-Trigger wie „Waschmaschine fertig").
+ * Pollt den Momentanverbrauch aller messfähigen Meross-Steckdosen und spiegelt ihn
+ * als {@code sensor.meross_<uuid>_power} in die Entity-State-Schicht (Basis für die
+ * Verbraucher-Kachel, die Watt-Anzeige der Schalter und Flow-Trigger wie
+ * „Waschmaschine fertig"). Neue Steckdosen erscheinen ohne Konfiguration.
  */
 @Service
 @RequiredArgsConstructor
@@ -32,21 +34,22 @@ public class MerossElectricityPollingService {
     @Scheduled(fixedDelayString = "${meross.electricity.polling.interval-ms:60000}",
             initialDelayString = "${meross.electricity.polling.initial-delay-ms:20000}")
     public void poll() {
-        if (!properties.isEnabled() || properties.getDeviceIds().isEmpty()) {
+        if (!properties.isEnabled()) {
             return;
         }
-        for (String deviceId : properties.getDeviceIds()) {
-            pollDevice(deviceId);
+        for (MerossElectricityReading reading : readAllQuietly()) {
+            reportPowerState(reading);
         }
     }
 
-    private void pollDevice(String deviceId) {
+    private List<MerossElectricityReading> readAllQuietly() {
         try {
-            reportPowerState(merossDeviceService.readElectricity(deviceId));
+            return merossDeviceService.readElectricityOfAllPlugs();
         } catch (Exception ex) {
             // Bewusst kein 'unavailable'-Report: ein transienter Lesefehler soll keinen
             // Zustandsübergang erzeugen, sonst feuern flankengetriggerte Flows fehl.
-            log.warn("Meross electricity poll failed (deviceId={}): {}", deviceId, ex.getMessage());
+            log.warn("Meross electricity poll failed: {}", ex.getMessage());
+            return List.of();
         }
     }
 

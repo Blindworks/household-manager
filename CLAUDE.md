@@ -174,6 +174,9 @@ The application uses Liquibase for database migrations. Migration files are loca
 - **Switch Power Display**: switch rows show live wattage (no schema change)
   - `GET /api/v1/switches` enriches each switch with `powerWatts` from the matching `sensor.<source>_<ref>_power` entity (same source + sourceRef)
   - Only shown while the switch is on and the reading is fresh (<5 min); display-only, no threshold logic; today effectively Meross (Shelly has no switch entities)
+- **Meross Electricity Polling**: polls *all* metering plugs of the account, no curated device list
+  - One cloud login + one device-list call per cycle (the list call is uncached — never fetch it per device)
+  - Offline devices are skipped; devices whose MQTT answer shows no `Appliance.Control.Electricity` ability are remembered and skipped from then on, so only real metering plugs cost an MQTT connect per cycle
 - **Power Consumer Tile**: `GET /api/v1/power-consumers` lists all `deviceClass: power` sensors, biggest first (no schema change)
   - Excluded via `NON_CONSUMER_SOURCES`: `TASMOTA` and `ANKER_SOLIX` (house balance, not single devices) and `SHELLY` (attached to the balcony solar plants — it measures generation, not consumption)
 

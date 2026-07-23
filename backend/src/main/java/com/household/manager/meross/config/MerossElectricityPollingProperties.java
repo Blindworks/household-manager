@@ -5,12 +5,9 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Konfiguration des Meross-Verbrauchs-Pollings. Ohne konfigurierte
- * device-ids ist das Polling ein No-op.
+ * Konfiguration des Meross-Verbrauchs-Pollings. Gepollt werden immer alle
+ * messfähigen Steckdosen des Kontos; es gibt keine kuratierte Geräteliste.
  */
 @Component
 @ConfigurationProperties(prefix = "meross.electricity.polling")
@@ -19,7 +16,4 @@ import java.util.List;
 public class MerossElectricityPollingProperties {
 
     private boolean enabled = true;
-
-    /** Meross-Geräte-UUIDs, deren Verbrauch gespiegelt werden soll. */
-    private List<String> deviceIds = new ArrayList<>();
 }
