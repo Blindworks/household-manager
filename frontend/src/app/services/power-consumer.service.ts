@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { PowerConsumer } from '../models/power-consumer.model';
+import { PowerConsumer, PowerHistory, PowerRange } from '../models/power-consumer.model';
 
 /**
  * REST-Service für die Verbraucher-Kachel (Stromverbraucher, größter zuerst).
@@ -19,6 +19,14 @@ export class PowerConsumerService {
       params = params.set('limit', limit);
     }
     return this.http.get<PowerConsumer[]>(this.baseUrl, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Leistungsverlauf eines Verbrauchers im gewählten Zeitraum. */
+  getHistory(entityId: string, range: PowerRange): Observable<PowerHistory> {
+    const params = new HttpParams().set('range', range);
+    return this.http.get<PowerHistory>(`${this.baseUrl}/${entityId}/history`, { params }).pipe(
       catchError(this.handleError)
     );
   }
