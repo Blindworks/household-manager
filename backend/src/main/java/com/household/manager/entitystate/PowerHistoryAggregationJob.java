@@ -40,9 +40,17 @@ public class PowerHistoryAggregationJob {
     public void aggregate() {
         LocalDateTime now = LocalDateTime.now();
 
-        int minutes = compact(now.minusDays(MINUTE_RESOLUTION_DAYS), now.minusMinutes(RAW_MINUTES),
+        // Obere Fenstergrenze auf die Ziel-Einheit abrunden: so gelangt ein Bucket erst dann
+        // ins Fenster, wenn ALLE seine Punkte die Schwelle bereits ueberschritten haben. Ohne
+        // das Abrunden wuerde derselbe Stunden-/Minuten-Bucket ueber mehrere Laeufe hinweg
+        // immer wieder neu verdichtet werden (bereits gemittelter Punkt + naechster Rohpunkt),
+        // wobei der gemittelte Punkt nur mit Gewicht 1 einginge und aeltere Werte nach vielen
+        // Durchlaeufen praktisch verschwinden wuerden.
+        int minutes = compact(now.minusDays(MINUTE_RESOLUTION_DAYS),
+                now.minusMinutes(RAW_MINUTES).truncatedTo(ChronoUnit.MINUTES),
                 ChronoUnit.MINUTES);
-        int hours = compact(now.minusDays(RETENTION_DAYS), now.minusDays(MINUTE_RESOLUTION_DAYS),
+        int hours = compact(now.minusDays(RETENTION_DAYS),
+                now.minusDays(MINUTE_RESOLUTION_DAYS).truncatedTo(ChronoUnit.HOURS),
                 ChronoUnit.HOURS);
 
         repository.deleteByMeasuredAtBefore(now.minusDays(RETENTION_DAYS));

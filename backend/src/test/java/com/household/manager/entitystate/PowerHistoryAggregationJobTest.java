@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -130,5 +131,49 @@ class PowerHistoryAggregationJobTest {
         ArgumentCaptor<LocalDateTime> captor = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(repository).deleteByMeasuredAtBefore(captor.capture());
         assertThat(captor.getValue()).isBefore(LocalDateTime.now().minusDays(29));
+    }
+
+    @Test
+    void bereits_verdichteter_stunden_punkt_wird_im_naechsten_lauf_nicht_erneut_gemittelt() {
+        LocalDateTime hour = LocalDateTime.of(2026, 7, 20, 8, 0);
+        EntityPowerHistory raw1 = point(10L, hour.plusMinutes(3), 100.0);
+        EntityPowerHistory raw2 = point(11L, hour.plusMinutes(35), 300.0);
+        EntityPowerHistory alreadyCompacted = point(20L, hour, 200.0);
+
+        when(repository.findByMeasuredAtBetween(any(), any()))
+                .thenReturn(List.of())                     // Lauf 1, Minuten-Zweig: nichts zu tun
+                .thenReturn(List.of(raw1, raw2))            // Lauf 1, Stunden-Zweig: Bucket-Groesse 2 -> wird verdichtet
+                .thenReturn(List.of())                      // Lauf 2, Minuten-Zweig: nichts zu tun
+                .thenReturn(List.of(alreadyCompacted));     // Lauf 2, Stunden-Zweig: bereits verdichteter Punkt allein im Bucket
+
+        job.aggregate();
+        job.aggregate();
+
+        // Genau eine Verdichtung ueber beide Laeufe hinweg: der bereits gemittelte Punkt
+        // darf im zweiten Lauf nicht nochmal (mit Gewicht 1 statt 2) in einen neuen
+        // Mittelwert eingehen - sonst konvergiert der Job nie.
+        verify(repository, times(1)).save(any());
+        verify(repository, times(1)).deleteAllByIdIn(anyList());
+    }
+
+    @Test
+    void obere_fenstergrenzen_sind_auf_volle_minute_bzw_volle_stunde_abgerundet() {
+        when(repository.findByMeasuredAtBetween(any(), any())).thenReturn(List.of());
+
+        job.aggregate();
+
+        ArgumentCaptor<LocalDateTime> toCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(repository, times(2)).findByMeasuredAtBetween(any(), toCaptor.capture());
+
+        List<LocalDateTime> upperBounds = toCaptor.getAllValues();
+        LocalDateTime minuteBranchTo = upperBounds.get(0);
+        LocalDateTime hourBranchTo = upperBounds.get(1);
+
+        assertThat(minuteBranchTo.getSecond()).isZero();
+        assertThat(minuteBranchTo.getNano()).isZero();
+
+        assertThat(hourBranchTo.getMinute()).isZero();
+        assertThat(hourBranchTo.getSecond()).isZero();
+        assertThat(hourBranchTo.getNano()).isZero();
     }
 }
