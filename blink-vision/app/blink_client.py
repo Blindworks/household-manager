@@ -15,6 +15,9 @@ log = logging.getLogger(__name__)
 # Session deshalb selbst und filtern beide Schluessel heraus.
 SECRET_KEYS = ("username", "password")
 
+# camera_type der Blink-Tuerklingel; Innenraumkameras melden hier einen leeren Wert.
+DOORBELL_TYPE = "doorbell"
+
 
 class BlinkLoginError(RuntimeError):
     """Login/2FA von der Blink-Cloud abgelehnt."""
@@ -94,11 +97,52 @@ class BlinkClient:
         self._save_session()
 
     def camera_name(self) -> str | None:
+        """Waehlt die Tuerkamera aus.
+
+        Reihenfolge: konfigurierter Name, sonst eine Kamera vom Typ 'doorbell',
+        sonst - nur wenn es genau eine gibt - diese eine.
+
+        Bei mehreren Kameras ohne Tuerklingel wird bewusst KEINE geraten: einfach
+        die erste zu nehmen hiesse, womoeglich eine Innenraumkamera per
+        Gesichtserkennung auszuwerten und die Haustuer an deren Bilder zu haengen.
+        """
         if self._blink is None or not self._blink.cameras:
             return None
-        if self._camera_name and self._camera_name in self._blink.cameras:
+
+        if self._camera_name:
+            match = self._match_configured_name()
+            if match is not None:
+                return match
+            log.warning("Konfigurierte Kamera %r existiert nicht. Vorhanden: %s",
+                        self._camera_name, sorted(self._blink.cameras))
+
+        doorbells = [name for name, cam in self._blink.cameras.items()
+                     if str(getattr(cam, "camera_type", "")).lower() == DOORBELL_TYPE]
+        if len(doorbells) == 1:
+            return doorbells[0]
+        if len(doorbells) > 1:
+            log.warning("Mehrere Tuerklingel-Kameras gefunden (%s). Bitte BLINK_CAMERA_NAME setzen.",
+                        sorted(doorbells))
+            return None
+
+        if len(self._blink.cameras) == 1:
+            return next(iter(self._blink.cameras))
+
+        log.warning("Mehrere Kameras (%s), aber keine vom Typ '%s'. Ohne BLINK_CAMERA_NAME "
+                    "wird keine ausgewertet - bitte die Tuerkamera explizit konfigurieren.",
+                    sorted(self._blink.cameras), DOORBELL_TYPE)
+        return None
+
+    def _match_configured_name(self) -> str | None:
+        """Exakter Treffer, sonst ein Treffer ohne Ruecksicht auf Rand-Leerzeichen.
+        Blink-Kameranamen enthalten in der Praxis gern ein angehaengtes Leerzeichen."""
+        if self._camera_name in self._blink.cameras:
             return self._camera_name
-        return next(iter(self._blink.cameras))
+        wanted = self._camera_name.strip()
+        for name in self._blink.cameras:
+            if name.strip() == wanted:
+                return name
+        return None
 
     async def fetch_new_clips(self, is_new, download_dir: str) -> list[tuple[str, str]]:
         """Liefert [(clip_id, lokaler_pfad)] fuer alle neuen Clips der Zielkamera,
@@ -107,6 +151,12 @@ class BlinkClient:
         if self._blink is None:
             return results
         camera = self.camera_name()
+        if camera is None:
+            # Lieber gar nichts auswerten als die falsche Kamera: ohne eindeutige
+            # Tuerkamera duerfen keine Clips (z. B. einer Innenraumkamera) durch
+            # die Gesichtserkennung laufen und die Haustuer ausloesen.
+            log.warning("Keine eindeutige Tuerkamera bestimmbar - es werden keine Clips ausgewertet.")
+            return results
         for sync in self._blink.sync.values():
             if not sync.local_storage:
                 continue
@@ -117,7 +167,7 @@ class BlinkClient:
             # der neueste, also rueckwaerts iterieren (wie blinkpy selbst).
             for item in reversed(manifest):
                 clip_id = str(item.id)
-                if camera and item.name != camera:
+                if item.name != camera:
                     continue
                 if not is_new(clip_id):
                     continue

@@ -296,6 +296,8 @@ docker-compose down
 - Das Foto-Spoofing-Risiko (2D-Kamera kann keine Lebenderkennung) ist dokumentiert und vom Nutzer bewusst akzeptiert
 - Frontend-Seite „Gesichtserkennung" (`pages/vision/`): Blink-Login, Personenverwaltung mit Foto-Upload, Erkennungshistorie
 - Der Sidecar hat **keine Authentifizierung** und ist deshalb absichtlich nicht ins LAN gemappt (nur `app_net`)
+- Kameraauswahl: `BLINK_CAMERA_NAME` gewinnt (Rand-Leerzeichen werden toleriert — Blink-Namen wie `'Wohnzimmer '` haben oft eins), sonst die Kamera mit `camera_type == doorbell`, sonst die einzige vorhandene. Ist die Wahl mehrdeutig, wird **nichts** ausgewertet statt geraten — sonst liefe eine Innenraumkamera durch die Gesichtserkennung und könnte die Haustür auslösen
+- Die Backend-URLs im Sidecar brauchen den Kontextpfad `/api` (`server.servlet.context-path`); ohne ihn antwortet das Backend mit 404 und die Richtung Sidecar → Backend ist still tot
 
 ### Flow-Engine: KI-Autoring via MCP
 - Flows werden primär durch eine KI erstellt und gepflegt (Entscheidung 2026-07-20); der visuelle Editor bleibt als Viewer/Debug-Werkzeug, wird aber nicht weiter ausgebaut

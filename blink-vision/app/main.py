@@ -47,6 +47,10 @@ async def _run_sidecar() -> None:
     except Exception as ex:
         log.warning("Embeddings vom Backend nicht ladbar (kommt per Push): %s", ex)
     await blink.try_restore_session()
+    if blink.logged_in:
+        # Sichtbar machen, WELCHE Kamera ausgewertet wird - eine stille Fehlauswahl
+        # sieht sonst genauso aus wie "es passiert einfach nichts".
+        log.info("Ausgewertete Tuerkamera: %r", blink.camera_name())
     analyzer = await asyncio.to_thread(FaceAnalyzer)
     poller = Poller(blink, analyzer, persons)
     await poller.run_forever()
