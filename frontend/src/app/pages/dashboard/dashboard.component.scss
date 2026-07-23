@@ -471,7 +471,18 @@
   align-items: baseline;
   gap: 10px;
   padding: 11px 0;
+  width: 100%;
+  background: none;
+  border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
 
   &--unavailable {
     opacity: 0.45;
@@ -498,6 +509,10 @@
 // Der Dialog ist hell: dunkle Texte statt der Kachel-Farben.
 .lumina__consumer-row--dialog {
   border-top-color: rgba(15, 23, 42, 0.1);
+
+  &:hover {
+    background: rgba(15, 23, 42, 0.04);
+  }
 
   .lumina__consumer-name {
     color: rgba(15, 23, 42, 0.75);
@@ -1308,4 +1323,44 @@
 @keyframes lumina-dialog-rise {
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.lumina__dialog--history {
+  width: min(760px, 92vw);
+}
+
+.lumina__history-ranges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.lumina__history-range {
+  padding: 7px 14px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: var(--radius-full);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.7);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+  &--active {
+    border-color: transparent;
+    background: #0f172a;
+    color: #f8fafc;
+  }
+}
+
+.lumina__history-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.lumina__history-message {
+  margin: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(15, 23, 42, 0.55);
 }
