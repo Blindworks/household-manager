@@ -123,4 +123,39 @@ class PowerConsumerQueryServiceTest {
 
         assertThat(namesOf(service.listConsumers(null))).containsExactly("Waschmaschine");
     }
+
+    @Test
+    void findet_einen_verbraucher_ueber_seine_entity_id() {
+        EntityState entity = sensor(EntitySource.MEROSS, "wm", "Waschmaschine", "10", POWER_ATTRIBUTES);
+        when(entityStateRepository.findByEntityId("sensor.meross_wm_power"))
+                .thenReturn(java.util.Optional.of(entity));
+
+        assertThat(service.findConsumer("sensor.meross_wm_power")).containsSame(entity);
+    }
+
+    @Test
+    void findet_keinen_verbraucher_fuer_einen_temperatursensor() {
+        when(entityStateRepository.findByEntityId("sensor.zigbee_wz_temperature"))
+                .thenReturn(java.util.Optional.of(
+                        sensor(EntitySource.ZIGBEE, "wz", "Wohnzimmer", "21.5", TEMPERATURE_ATTRIBUTES)));
+
+        assertThat(service.findConsumer("sensor.zigbee_wz_temperature")).isEmpty();
+    }
+
+    @Test
+    void findet_keinen_verbraucher_fuer_eine_haus_bilanz_quelle() {
+        when(entityStateRepository.findByEntityId("sensor.tasmota_main_power"))
+                .thenReturn(java.util.Optional.of(
+                        sensor(EntitySource.TASMOTA, "main", "Hausverbrauch", "3400", POWER_ATTRIBUTES)));
+
+        assertThat(service.findConsumer("sensor.tasmota_main_power")).isEmpty();
+    }
+
+    @Test
+    void findet_keinen_verbraucher_fuer_eine_unbekannte_entity_id() {
+        when(entityStateRepository.findByEntityId("sensor.gibt_es_nicht"))
+                .thenReturn(java.util.Optional.empty());
+
+        assertThat(service.findConsumer("sensor.gibt_es_nicht")).isEmpty();
+    }
 }
