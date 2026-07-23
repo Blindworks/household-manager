@@ -179,6 +179,13 @@ The application uses Liquibase for database migrations. Migration files are loca
   - Offline devices are skipped; devices whose MQTT answer shows no `Appliance.Control.Electricity` ability are remembered and skipped from then on, so only real metering plugs cost an MQTT connect per cycle
 - **Power Consumer Tile**: `GET /api/v1/power-consumers` lists all `deviceClass: power` sensors, biggest first (no schema change)
   - Excluded via `NON_CONSUMER_SOURCES`: `TASMOTA` and `ANKER_SOLIX` (house balance, not single devices) and `SHELLY` (attached to the balcony solar plants — it measures generation, not consumption)
+  - `PowerConsumerQueryService.findConsumer(entityId)` is the single definition of "counts as a consumer" — the tile list and the history endpoint both ask it, so they can never drift apart
+- **Power Consumption History**: `entity_power_history` stores the power curve of every power sensor
+  - Written by `PowerHistoryRecorder`, an `@EventListener` on `EntityStateChangedEvent` — source-agnostic, so any integration reporting `deviceClass: power` gets a history without its own code; the event only fires on value changes, so an idle device costs nothing
+  - `power_watts = NULL` deliberately marks a measurement gap (sensor `unavailable`); the chart breaks the line there (`connectNulls: false`) instead of faking continuity
+  - `PowerHistoryAggregationJob` compacts to minute averages after 10 min, to hour averages after 2 days, and deletes after 30 days. It only compacts **completed** buckets (upper window bound rounded down via `truncatedTo`) — otherwise an already-compacted point would keep getting re-averaged with each newly-aged raw point and the "average" would degrade into the last value
+  - `GET /api/v1/power-consumers/{entityId}/history?range=DAY|WEEK|MONTH` returns the series; clicking a consumer row on the dashboard opens the chart dialog
+  - The chart is empty right after deployment and fills over time — there is no retroactive data
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items
