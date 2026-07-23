@@ -69,6 +69,14 @@ class PowerHistoryRecorderTest {
         verify(repository, never()).save(any());
     }
 
+    /** Attribute koennen null sein, nicht nur leer: ManualEntityService speichert leere Maps als null. */
+    @Test
+    void ignoriert_events_mit_null_attributen() {
+        recorder.onStateChanged(event("on", null));
+
+        verify(repository, never()).save(any());
+    }
+
     @Test
     void schreibt_luecke_wenn_der_sensor_nicht_erreichbar_ist() {
         recorder.onStateChanged(event("unavailable", Map.of("deviceClass", "power")));
