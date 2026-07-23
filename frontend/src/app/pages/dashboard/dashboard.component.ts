@@ -451,18 +451,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!consumer) {
       return;
     }
+    const requestedRange = this.historyRange;
     this.historyError = null;
     this.historyEmpty = false;
-    this.powerConsumerService.getHistory(consumer.entityId, this.historyRange).subscribe({
+    this.powerConsumerService.getHistory(consumer.entityId, requestedRange).subscribe({
       next: history => {
-        // Ein zwischenzeitlich geschlossener oder gewechselter Dialog darf nicht überschrieben werden.
-        if (this.historyConsumer?.entityId !== history.entityId) {
+        // Verworfen, wenn der Dialog inzwischen geschlossen, gewechselt oder auf einen
+        // anderen Zeitraum gestellt wurde: sonst gewinnt eine spaet eintreffende Antwort.
+        if (this.historyConsumer?.entityId !== history.entityId
+            || this.historyRange !== requestedRange) {
           return;
         }
         this.historyEmpty = history.points.length === 0;
         this.historyOptions = this.buildHistoryOptions(history);
       },
       error: () => {
+        // Derselbe Schutz: ein fehlgeschlagener alter Request darf nicht die Fehlermeldung
+        // ueber einen inzwischen erfolgreich geladenen neuen Verlauf legen.
+        if (this.historyConsumer?.entityId !== consumer.entityId
+            || this.historyRange !== requestedRange) {
+          return;
+        }
         this.historyOptions = null;
         this.historyError = 'Verlauf konnte nicht geladen werden.';
       }

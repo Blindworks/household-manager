@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
+import { delay } from 'rxjs/operators';
 import { DashboardComponent } from './dashboard.component';
 import { SwitchService } from '../../services/switch.service';
 import { WeatherService } from '../../services/weather.service';
@@ -858,6 +859,55 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
     fixture.componentInstance.closeHistoryDialog();
 
     expect(fixture.componentInstance.consumerDialogOpen).toBeTrue();
+
+    discardPeriodicTasks();
+  }));
+
+  it('laesst die Linie bei einer Messluecke abreissen', fakeAsync(() => {
+    consumerServiceSpy.getHistory.and.returnValue(of({
+      entityId: 'sensor.meross_wm_power',
+      displayName: 'Waschmaschine',
+      points: [
+        { time: '2026-07-23T10:00:00', value: 1200 },
+        { time: '2026-07-23T10:01:00', value: null },
+        { time: '2026-07-23T10:02:00', value: 900 }
+      ]
+    }));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+
+    const series = (fixture.componentInstance.historyOptions as any)['series'][0];
+    expect(series.connectNulls).toBeFalse();
+    expect(series.data[1][1]).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('laesst beim schnellen Zeitraumwechsel den zuletzt gewaehlten Zeitraum gewinnen, auch wenn die aeltere Antwort spaeter eintrifft', fakeAsync(() => {
+    consumerServiceSpy.getHistory.and.callFake((entityId: string, range: string) => {
+      // DAY (die zuerst angefragte, dann verlassene Range) antwortet bewusst langsamer
+      // als WEEK, damit die veraltete Antwort nach der aktuellen eintrifft.
+      const delayMs = range === 'DAY' ? 100 : 10;
+      return of({
+        entityId,
+        displayName: 'Waschmaschine',
+        points: [{ time: '2026-07-23T10:00:00', value: range === 'DAY' ? 111 : 222 }]
+      }).pipe(delay(delayMs));
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openHistoryDialog(consumer());
+    fixture.componentInstance.setHistoryRange('WEEK');
+    tick(10);
+    tick(100);
+
+    expect(fixture.componentInstance.historyRange).toBe('WEEK');
+    const series = (fixture.componentInstance.historyOptions as any)['series'][0];
+    expect(series.data[0][1]).toBe(222);
 
     discardPeriodicTasks();
   }));
