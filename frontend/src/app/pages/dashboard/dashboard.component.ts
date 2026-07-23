@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
 import { AnkerSolixService } from '../../services/ankersolix.service';
@@ -25,7 +30,9 @@ import { SwitchListComponent } from '../../components/switch-list/switch-list.co
 import { NukiService } from '../../services/nuki.service';
 import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
 import { PowerConsumerService } from '../../services/power-consumer.service';
-import { PowerConsumer } from '../../models/power-consumer.model';
+import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
+
+echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -40,7 +47,8 @@ import { PowerConsumer } from '../../models/power-consumer.model';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, EnergyFlowComponent, SwitchListComponent],
+  imports: [CommonModule, RouterLink, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective],
+  providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
@@ -134,6 +142,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   allConsumers: PowerConsumer[] = [];
   /** True, wenn der Verbraucher-Dialog geöffnet ist. */
   consumerDialogOpen = false;
+
+  /** Verbraucher, dessen Verlauf gerade angezeigt wird (null = Dialog zu). */
+  historyConsumer: PowerConsumer | null = null;
+  /** Gewählter Zeitraum des Verlaufs. */
+  historyRange: PowerRange = 'DAY';
+  /** ECharts-Optionen des Verlaufs. */
+  historyOptions: Record<string, unknown> | null = null;
+  /** True, wenn für den Zeitraum noch keine Messpunkte vorliegen. */
+  historyEmpty = false;
+  historyError: string | null = null;
+
+  /** Auswählbare Zeiträume des Verlaufs. */
+  readonly historyRanges: { value: PowerRange; label: string }[] = [
+    { value: 'DAY', label: '24 Stunden' },
+    { value: 'WEEK', label: '7 Tage' },
+    { value: 'MONTH', label: '30 Tage' }
+  ];
 
   /** Aktive Szene und Schnellwahl-Szenen (Platzhalter). */
   activeScene = 'Dynamisches Abendlicht';
@@ -233,6 +258,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Schliesst die geoeffneten Dialoge per Escape-Taste. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.historyConsumer) {
+      this.closeHistoryDialog();
+      return;
+    }
     this.closeFlowDialog();
     this.closeSwitchDialog();
     this.closeConfirmDialog();
@@ -392,6 +421,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     this.consumerDialogOpen = false;
     this.allConsumers = [];
+  }
+
+  /** Öffnet den Verlaufs-Dialog für einen Verbraucher (immer mit 24-Stunden-Sicht). */
+  openHistoryDialog(consumer: PowerConsumer): void {
+    this.historyConsumer = consumer;
+    this.historyRange = 'DAY';
+    this.loadHistory();
+  }
+
+  closeHistoryDialog(): void {
+    this.historyConsumer = null;
+    this.historyRange = 'DAY';
+    this.historyOptions = null;
+    this.historyEmpty = false;
+    this.historyError = null;
+  }
+
+  setHistoryRange(range: PowerRange): void {
+    if (range === this.historyRange) {
+      return;
+    }
+    this.historyRange = range;
+    this.loadHistory();
+  }
+
+  private loadHistory(): void {
+    const consumer = this.historyConsumer;
+    if (!consumer) {
+      return;
+    }
+    this.historyError = null;
+    this.historyEmpty = false;
+    this.powerConsumerService.getHistory(consumer.entityId, this.historyRange).subscribe({
+      next: history => {
+        // Ein zwischenzeitlich geschlossener oder gewechselter Dialog darf nicht überschrieben werden.
+        if (this.historyConsumer?.entityId !== history.entityId) {
+          return;
+        }
+        this.historyEmpty = history.points.length === 0;
+        this.historyOptions = this.buildHistoryOptions(history);
+      },
+      error: () => {
+        this.historyOptions = null;
+        this.historyError = 'Verlauf konnte nicht geladen werden.';
+      }
+    });
+  }
+
+  /** Liniendiagramm des Leistungsverlaufs; null-Werte lassen die Linie bewusst abreißen. */
+  private buildHistoryOptions(history: PowerHistory): Record<string, unknown> {
+    return {
+      grid: { left: 56, right: 16, top: 24, bottom: 32, containLabel: false },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'time',
+        axisLabel: { color: '#94a3b8', fontSize: 11 }
+      },
+      yAxis: {
+        type: 'value',
+        scale: true,
+        axisLabel: { color: '#94a3b8', formatter: '{value} W' },
+        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }
+      },
+      series: [
+        {
+          name: 'Leistung',
+          type: 'line',
+          smooth: true,
+          showSymbol: false,
+          connectNulls: false,
+          data: history.points.map(point => [point.time, point.value]),
+          lineStyle: { width: 2.5, color: '#f59e0b' },
+          itemStyle: { color: '#f59e0b' },
+          areaStyle: { color: 'rgba(245, 158, 11, 0.15)' }
+        }
+      ]
+    };
   }
 
   /** Leistung als "1.250 W"; unavailable-Geräte zeigen einen Strich. */

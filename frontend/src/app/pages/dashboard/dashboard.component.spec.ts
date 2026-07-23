@@ -634,8 +634,13 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
   });
 
   beforeEach(async () => {
-    consumerServiceSpy = jasmine.createSpyObj('PowerConsumerService', ['getConsumers']);
+    consumerServiceSpy = jasmine.createSpyObj('PowerConsumerService', ['getConsumers', 'getHistory']);
     consumerServiceSpy.getConsumers.and.returnValue(of([consumer()]));
+    consumerServiceSpy.getHistory.and.returnValue(of({
+      entityId: 'sensor.meross_wm_power',
+      displayName: 'Waschmaschine',
+      points: [{ time: '2026-07-23T10:00:00', value: 1200 }]
+    }));
 
     const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
     switchSpy.getSwitches.and.returnValue(of([]));
@@ -752,6 +757,107 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
 
     expect(fixture.componentInstance.consumerDialogOpen).toBeFalse();
     expect(fixture.componentInstance.allConsumers.length).toBe(0);
+
+    discardPeriodicTasks();
+  }));
+
+  it('oeffnet den Graph-Dialog fuer den geklickten Verbraucher', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+
+    expect(fixture.componentInstance.historyConsumer?.entityId).toBe('sensor.meross_wm_power');
+    expect(consumerServiceSpy.getHistory).toHaveBeenCalledWith('sensor.meross_wm_power', 'DAY');
+
+    discardPeriodicTasks();
+  }));
+
+  it('laedt beim Zeitraumwechsel neu', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+    consumerServiceSpy.getHistory.calls.reset();
+
+    fixture.componentInstance.setHistoryRange('WEEK');
+    tick();
+
+    expect(consumerServiceSpy.getHistory).toHaveBeenCalledWith('sensor.meross_wm_power', 'WEEK');
+    expect(fixture.componentInstance.historyRange).toBe('WEEK');
+
+    discardPeriodicTasks();
+  }));
+
+  it('laedt bei erneuter Wahl desselben Zeitraums nicht noch einmal', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+    consumerServiceSpy.getHistory.calls.reset();
+
+    fixture.componentInstance.setHistoryRange('DAY');
+    tick();
+
+    expect(consumerServiceSpy.getHistory).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt den Leerzustand, solange nichts aufgezeichnet wurde', fakeAsync(() => {
+    consumerServiceSpy.getHistory.and.returnValue(of({
+      entityId: 'sensor.meross_wm_power', displayName: 'Waschmaschine', points: []
+    }));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+
+    expect(fixture.componentInstance.historyEmpty).toBeTrue();
+
+    discardPeriodicTasks();
+  }));
+
+  it('meldet einen Ladefehler im Dialog', fakeAsync(() => {
+    consumerServiceSpy.getHistory.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+
+    expect(fixture.componentInstance.historyError).toBe('Verlauf konnte nicht geladen werden.');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliessen setzt den Dialog zurueck', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+
+    fixture.componentInstance.closeHistoryDialog();
+
+    expect(fixture.componentInstance.historyConsumer).toBeNull();
+    expect(fixture.componentInstance.historyRange).toBe('DAY');
+
+    discardPeriodicTasks();
+  }));
+
+  it('laesst den Verbraucher-Dialog offen, wenn der Graph darueber schliesst', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openConsumerDialog();
+    tick();
+    fixture.componentInstance.openHistoryDialog(consumer());
+    tick();
+
+    fixture.componentInstance.closeHistoryDialog();
+
+    expect(fixture.componentInstance.consumerDialogOpen).toBeTrue();
 
     discardPeriodicTasks();
   }));

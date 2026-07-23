@@ -144,14 +144,17 @@
               <p *ngIf="topConsumers.length === 0" class="lumina__consumer-empty">
                 Keine Verbraucher
               </p>
-              <div
+              <button
                 *ngFor="let consumer of topConsumers"
+                type="button"
                 class="lumina__consumer-row"
                 [class.lumina__consumer-row--unavailable]="consumer.unavailable"
+                (click)="openHistoryDialog(consumer)"
+                [attr.aria-label]="'Verlauf von ' + consumer.displayName + ' anzeigen'"
               >
                 <span class="lumina__consumer-name">{{ consumer.displayName }}</span>
                 <span class="lumina__consumer-value">{{ powerLabel(consumer) }}</span>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -412,14 +415,67 @@
         <p *ngIf="allConsumers.length === 0" class="lumina__consumer-empty lumina__consumer-empty--dialog">
           Keine Verbraucher
         </p>
-        <div
+        <button
           *ngFor="let consumer of allConsumers"
+          type="button"
           class="lumina__consumer-row lumina__consumer-row--dialog"
           [class.lumina__consumer-row--unavailable]="consumer.unavailable"
+          (click)="openHistoryDialog(consumer)"
+          [attr.aria-label]="'Verlauf von ' + consumer.displayName + ' anzeigen'"
         >
           <span class="lumina__consumer-name">{{ consumer.displayName }}</span>
           <span class="lumina__consumer-value">{{ powerLabel(consumer) }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verbrauchsgraph (oeffnet sich beim Klick auf einen Verbraucher) -->
+  <div
+    *ngIf="historyConsumer"
+    class="lumina__dialog-backdrop"
+    (click)="closeHistoryDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--history"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'Verlauf ' + historyConsumer.displayName"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">{{ historyConsumer.displayName }}</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeHistoryDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <div class="lumina__history-ranges" role="group" aria-label="Zeitraum">
+          <button
+            *ngFor="let range of historyRanges"
+            type="button"
+            class="lumina__history-range"
+            [class.lumina__history-range--active]="range.value === historyRange"
+            (click)="setHistoryRange(range.value)"
+          >
+            {{ range.label }}
+          </button>
         </div>
+        <p *ngIf="historyError" class="lumina__history-message">{{ historyError }}</p>
+        <p *ngIf="historyEmpty && !historyError" class="lumina__history-message">
+          Noch keine Daten aufgezeichnet
+        </p>
+        <div
+          *ngIf="historyOptions && !historyEmpty && !historyError"
+          echarts
+          class="lumina__history-chart"
+          [options]="historyOptions"
+        ></div>
       </div>
     </div>
   </div>
