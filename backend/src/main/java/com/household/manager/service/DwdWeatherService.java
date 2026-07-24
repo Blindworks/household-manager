@@ -61,13 +61,13 @@ public class DwdWeatherService {
         if (json == null || json.isBlank()) {
             throw new IllegalStateException("DWD returned an empty response.");
         }
-        WeatherOverviewResponse overview = parseOverview(json, stationId);
+        WeatherOverviewResponse overview = parseOverview(json, stationId, Instant.now());
         cached = overview;
         cachedAtMs = now;
         return overview;
     }
 
-    WeatherOverviewResponse parseOverview(String json, String station) {
+    WeatherOverviewResponse parseOverview(String json, String station, Instant now) {
         try {
             JsonNode root = objectMapper.readTree(json);
             JsonNode stationNode = root.path(station);
@@ -81,10 +81,14 @@ public class DwdWeatherService {
             }
             long start = forecast1.path("start").asLong(stationNode.path("forecastStart").asLong());
             long step = forecast1.path("timeStep").asLong(3600000L);
+            if (step <= 0) {
+                step = 3600000L;
+            }
+            int currentIndex = currentHourIndex(start, step, now, forecast1.path("temperature").size());
 
-            List<WeatherForecastHour> hours = buildHourly(forecast1, start, step);
+            List<WeatherForecastHour> hours = buildHourly(forecast1, start, step, currentIndex);
             WeatherConditions current = hours.isEmpty() ? null
-                    : toCurrent(forecast1, stationNode.path("days"), hours.get(0));
+                    : toCurrent(forecast1, stationNode.path("days"), hours.get(0), currentIndex);
             LocalDateTime nextRain = findNextRain(hours);
             List<WeatherWarning> warnings = buildWarnings(stationNode.path("warnings"));
 
@@ -102,14 +106,23 @@ public class DwdWeatherService {
         }
     }
 
-    private List<WeatherForecastHour> buildHourly(JsonNode forecast1, long start, long step) {
+    /** Die Forecast-Serie beginnt in der Vergangenheit (meist 00:00 Uhr); auf [0, size-1] geklemmt. */
+    private int currentHourIndex(long start, long step, Instant now, int size) {
+        if (size <= 0) {
+            return 0;
+        }
+        long index = (now.toEpochMilli() - start) / step;
+        return (int) Math.max(0, Math.min(index, size - 1L));
+    }
+
+    private List<WeatherForecastHour> buildHourly(JsonNode forecast1, long start, long step, int fromIndex) {
         JsonNode temps = forecast1.path("temperature");
         JsonNode precip = forecast1.path("precipitationTotal");
         JsonNode icons = forecast1.path("icon1h");
-        int count = Math.min(temps.size(), FORECAST_HOURS);
+        int count = Math.min(temps.size(), fromIndex + FORECAST_HOURS);
 
         List<WeatherForecastHour> hours = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
+        for (int i = fromIndex; i < count; i++) {
             hours.add(WeatherForecastHour.builder()
                     .time(toLocal(start + (long) i * step))
                     .temperature(scaleTenth(temps.path(i)))
@@ -120,7 +133,8 @@ public class DwdWeatherService {
         return hours;
     }
 
-    private WeatherConditions toCurrent(JsonNode forecast1, JsonNode days, WeatherForecastHour first) {
+    private WeatherConditions toCurrent(JsonNode forecast1, JsonNode days, WeatherForecastHour first,
+                                        int currentIndex) {
         JsonNode today = days.path(0);
         return WeatherConditions.builder()
                 .time(first.getTime())
@@ -128,8 +142,8 @@ public class DwdWeatherService {
                 .precipitation(first.getPrecipitation())
                 .windSpeed(scaleTenth(today.path("windSpeed")))
                 .windDirection(directionDegrees(today.path("windDirection")))
-                .humidity(scaleTenthToInt(forecast1.path("humidity").path(0)))
-                .pressure(scaleTenth(forecast1.path("surfacePressure").path(0)))
+                .humidity(scaleTenthToInt(forecast1.path("humidity").path(currentIndex)))
+                .pressure(scaleTenth(forecast1.path("surfacePressure").path(currentIndex)))
                 .icon(first.getIcon())
                 .build();
     }
