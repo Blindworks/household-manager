@@ -293,6 +293,15 @@ docker-compose down
 - Dashboard: Türschloss-Kachel im Footer (ersetzt die statische „System gesichert“-Karte); Verriegeln direkt, Entsperren/Tür öffnen mit Bestätigungsdialog
 - Implementierung in `backend/src/main/java/com/household/manager/nuki/`
 
+### Telegram-KI-Assistent
+- Telegram-Bot direkt im Spring-Backend (`backend/src/main/java/com/household/manager/telegram/`); Long-Polling gegen die Bot-API — keine Portfreigabe nötig
+- Sprachverständnis über die Anthropic Messages API mit Tool-Use (`TELEGRAM_AGENT_MODEL`, Default Haiku); Tools sind dünne Wrapper um bestehende Services (Schalter, Entity-States, Verbraucher, Zähler, Modi, Nuki)
+- **Sicherheit:** Allowlist über `TELEGRAM_ALLOWED_CHAT_IDS` (fremde Chats werden komplett ignoriert); das Nuki-Tool kann ausschließlich verriegeln — unlock/unlatch existiert im Tool-Vertrag nicht (Code-Garantie, kein Prompt-Schutz)
+- Secrets nur per Env: `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`; ohne vollständige Konfiguration startet das Polling nicht
+- Gesprächskontext pro Chat in-memory (TTL 30 Min); keine DB-Änderung, kein Frontend
+- Push-Richtung: Flow-Node `telegram-send` (Nachricht an alle erlaubten oder einen bestimmten Chat), Platzhalter wie beim Alexa-Node
+- Bot-Setup: Bot bei @BotFather anlegen → Token als `TELEGRAM_BOT_TOKEN`; eigene Chat-ID z. B. über @userinfobot ermitteln → `TELEGRAM_ALLOWED_CHAT_IDS`
+
 ### Blink-Gesichtserkennung (blink-vision-Sidecar)
 - Python-Sidecar `blink-vision/` (FastAPI + blinkpy + InsightFace `buffalo_s` auf CPU): pollt Local-Storage-Clips der Blink-Türkamera (Sync Module 2 + USB; der Abruf läuft trotzdem über die Blink-Cloud, Latenz 15–45 s), erkennt Gesichter und meldet Ergebnisse per Webhook ans Backend
 - Login als In-App-Flow (E-Mail/Passwort + 2FA-PIN); persistiert wird nur das Session-Token im Volume, **nie** Zugangsdaten — `blink.save()` würde das Klartext-Passwort mitschreiben, deshalb eigenes `_save_session()` mit Filter
