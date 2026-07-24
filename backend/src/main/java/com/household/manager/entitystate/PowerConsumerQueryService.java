@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -53,6 +54,20 @@ public class PowerConsumerQueryService {
             return List.copyOf(consumers.subList(0, limit));
         }
         return consumers;
+    }
+
+    /**
+     * Sucht eine Entitaet, die als Verbraucher gilt (Power-Sensor, keine
+     * Haus-Bilanz-/Erzeuger-Quelle). Einzige Definitionsstelle — die Kachel-Liste
+     * und der Historie-Endpoint fragen beide hier.
+     *
+     * @return die Entitaet, oder leer wenn unbekannt oder kein Verbraucher
+     */
+    @Transactional(readOnly = true)
+    public Optional<EntityState> findConsumer(String entityId) {
+        return entityStateRepository.findByEntityId(entityId)
+                .filter(entity -> !NON_CONSUMER_SOURCES.contains(entity.getSource()))
+                .filter(this::isPowerSensor);
     }
 
     private boolean isPowerSensor(EntityState entity) {

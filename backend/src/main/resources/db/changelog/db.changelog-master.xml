@@ -92,4 +92,7 @@
     <!-- Blink-Gesichtserkennung -->
     <include file="db/changelog/changes/20260722-0037-create-vision-tables.xml"/>
 
+    <!-- Verbrauchshistorie der Power-Sensoren -->
+    <include file="db/changelog/changes/20260723-0038-create-entity-power-history-table.xml"/>
+
 </databaseChangeLog>
