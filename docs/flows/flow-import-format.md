@@ -120,6 +120,14 @@ Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
 | `deviceId` | ja | numerische SmartDevice-ID (Kasa/Tapo/Meross) |
 | `action` | ja | `on` oder `off` |
 
+### `telegram-send` — Telegram-Nachricht (1 Ausgang)
+Telegram-Nachricht an die erlaubten Chats oder einen bestimmten Chat senden. Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `message` | ja | Nachrichtentext (mit optionalen Platzhaltern) |
+| `chatId` | nein | numerische Chat-ID; leer = an alle erlaubten Chats (`TELEGRAM_ALLOWED_CHAT_IDS`) |
+
 > Referenzen müssen zu deiner Umgebung passen. Ist eine **`entityId`** beim Deploy noch
 > unbekannt, meldet der Validator eine **Warnung** (kein Fehler) — der Flow greift, sobald
 > die Entität existiert. **`deviceId`** und **`deviceSerials`** werden beim Deploy dagegen
