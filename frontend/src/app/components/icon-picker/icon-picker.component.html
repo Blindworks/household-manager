@@ -1,0 +1,46 @@
+<button
+  type="button"
+  class="icon-picker__trigger"
+  [class.icon-picker__trigger--empty]="!value()"
+  aria-label="Icon auswählen"
+  [attr.aria-expanded]="open()"
+  (click)="toggle()">
+  @if (value()) {
+    <span class="material-symbols-outlined">{{ value() }}</span>
+  } @else {
+    <span class="material-symbols-outlined icon-picker__placeholder">add_reaction</span>
+  }
+</button>
+
+@if (open()) {
+  <div class="icon-picker__pop" role="dialog" aria-label="Icon-Auswahl">
+    <div class="icon-picker__grid">
+      @for (icon of icons; track icon) {
+        <button
+          type="button"
+          class="icon-picker__option"
+          [class.icon-picker__option--active]="icon === value()"
+          [attr.title]="icon"
+          [attr.aria-label]="icon"
+          (click)="select(icon)">
+          <span class="material-symbols-outlined">{{ icon }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="icon-picker__footer">
+      <input
+        class="icon-picker__custom"
+        type="text"
+        placeholder="Eigener Symbolname…"
+        aria-label="Eigener Material-Symbol-Name"
+        [ngModel]="value()"
+        (ngModelChange)="value.set($event)" />
+      @if (value()) {
+        <button type="button" class="icon-picker__clear" (click)="clear()">
+          <span class="material-symbols-outlined">backspace</span>
+        </button>
+      }
+    </div>
+  </div>
+}

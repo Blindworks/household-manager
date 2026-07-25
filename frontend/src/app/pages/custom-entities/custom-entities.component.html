@@ -1,56 +1,61 @@
 <div class="custom-entities">
-  <h1>Eigene Helfer</h1>
-  <p class="custom-entities__subtitle">
-    Lege eigene Entitäten an – Schalter wie „Nachtmodus", Zahlen wie eine
-    „Zieltemperatur", Freitext oder eine Auswahl – und steuere sie direkt hier.
-  </p>
+  <header class="custom-entities__head">
+    <h1>Eigene Helfer</h1>
+    <p class="custom-entities__subtitle">
+      Lege eigene Entitäten an – Schalter wie „Nachtmodus", Zahlen wie eine
+      „Zieltemperatur", Freitext oder eine Auswahl – und steuere sie direkt hier.
+    </p>
+  </header>
 
   @if (error()) {
-    <div class="custom-entities__error">{{ error() }}</div>
+    <div class="custom-entities__error">
+      <span class="material-symbols-outlined">error</span>
+      {{ error() }}
+    </div>
   }
 
-  <form class="custom-entities__create" (ngSubmit)="create()">
-    <div class="custom-entities__row">
-      <select
-        class="custom-entities__type-select"
-        aria-label="Typ"
-        [ngModel]="newType()"
-        (ngModelChange)="newType.set($event)"
-        name="newType">
-        @for (type of typeOptions; track type.value) {
-          <option [value]="type.value">{{ type.label }}</option>
-        }
-      </select>
+  <form class="create-panel" (ngSubmit)="create()">
+    <div class="create-panel__main">
+      <label class="create-panel__field create-panel__field--type">
+        <span class="create-panel__label">Typ</span>
+        <select
+          aria-label="Typ"
+          [ngModel]="newType()"
+          (ngModelChange)="newType.set($event)"
+          name="newType">
+          @for (type of typeOptions; track type.value) {
+            <option [value]="type.value">{{ type.label }}</option>
+          }
+        </select>
+      </label>
 
-      <input
-        class="custom-entities__icon-input"
-        type="text"
-        maxlength="4"
-        placeholder="Icon"
-        aria-label="Icon (optional)"
-        [ngModel]="newIcon()"
-        (ngModelChange)="newIcon.set($event)"
-        name="newIcon" />
+      <div class="create-panel__field create-panel__field--icon">
+        <span class="create-panel__label">Icon</span>
+        <app-icon-picker [value]="newIcon()" (valueChange)="newIcon.set($event)" />
+      </div>
 
-      <input
-        class="custom-entities__name-input"
-        type="text"
-        placeholder="Name (z. B. Nachtmodus)"
-        aria-label="Name"
-        [ngModel]="newName()"
-        (ngModelChange)="newName.set($event)"
-        name="newName" />
+      <label class="create-panel__field create-panel__field--name">
+        <span class="create-panel__label">Name</span>
+        <input
+          type="text"
+          placeholder="z. B. Nachtmodus"
+          aria-label="Name"
+          [ngModel]="newName()"
+          (ngModelChange)="newName.set($event)"
+          name="newName" />
+      </label>
 
       <button
-        class="custom-entities__add-btn"
+        class="create-panel__submit"
         type="submit"
         [disabled]="!newName().trim() || saving()">
+        <span class="material-symbols-outlined">add</span>
         Anlegen
       </button>
     </div>
 
     @if (newType() === 'INPUT_NUMBER') {
-      <div class="custom-entities__row custom-entities__config">
+      <div class="create-panel__extra">
         <input type="number" placeholder="Min" aria-label="Minimum"
                [ngModel]="newMin()" (ngModelChange)="newMin.set($event)" name="newMin" />
         <input type="number" placeholder="Max" aria-label="Maximum"
@@ -63,9 +68,9 @@
     }
 
     @if (newType() === 'INPUT_SELECT') {
-      <div class="custom-entities__row">
+      <div class="create-panel__extra">
         <textarea
-          class="custom-entities__options"
+          class="create-panel__options"
           rows="3"
           placeholder="Optionen – eine pro Zeile (z. B. Zuhause / Urlaub / Abwesend)"
           aria-label="Optionen"
@@ -78,51 +83,50 @@
 
   <div class="custom-entities__grid">
     @for (entity of entities(); track entity.entityId) {
-      <div class="mode-card" [class.mode-card--on]="isBoolean(entity) && isOn(entity)">
+      <article class="helper-card" [class.helper-card--on]="isBoolean(entity) && isOn(entity)">
         @if (editingId() === entity.entityId) {
-          <div class="mode-card__edit">
-            <input
-              class="custom-entities__icon-input"
-              type="text"
-              maxlength="4"
-              placeholder="Icon"
-              aria-label="Icon"
-              [ngModel]="editIcon()"
-              (ngModelChange)="editIcon.set($event)" />
-            <input
-              class="custom-entities__name-input"
-              type="text"
-              aria-label="Name"
-              [ngModel]="editName()"
-              (ngModelChange)="editName.set($event)" />
-            <div class="mode-card__edit-actions">
-              <button type="button" class="mode-card__btn" (click)="saveEdit(entity)">Speichern</button>
-              <button type="button" class="mode-card__btn mode-card__btn--ghost" (click)="cancelEdit()">Abbrechen</button>
+          <div class="helper-card__edit">
+            <div class="helper-card__edit-row">
+              <app-icon-picker [value]="editIcon()" (valueChange)="editIcon.set($event)" />
+              <input
+                class="helper-card__edit-name"
+                type="text"
+                aria-label="Name"
+                [ngModel]="editName()"
+                (ngModelChange)="editName.set($event)" />
+            </div>
+            <div class="helper-card__edit-actions">
+              <button type="button" class="helper-card__btn helper-card__btn--primary" (click)="saveEdit(entity)">Speichern</button>
+              <button type="button" class="helper-card__btn" (click)="cancelEdit()">Abbrechen</button>
             </div>
           </div>
         } @else {
-          <div class="mode-card__header">
-            <span class="mode-card__icon">{{ iconOf(entity) || '💡' }}</span>
-            <span class="mode-card__name">{{ entity.friendlyName }}</span>
-            <span class="mode-card__type">{{ typeLabel(entity) }}</span>
-          </div>
+          <header class="helper-card__header">
+            <span class="helper-card__icon">
+              <span class="material-symbols-outlined">{{ iconOf(entity) || 'widgets' }}</span>
+            </span>
+            <div class="helper-card__titles">
+              <span class="helper-card__name">{{ entity.friendlyName }}</span>
+              <span class="helper-card__type">{{ typeLabel(entity) }}</span>
+            </div>
+          </header>
 
-          <div class="mode-card__control">
+          <div class="helper-card__control">
             @if (isBoolean(entity)) {
               <button
                 type="button"
-                class="mode-card__toggle"
+                class="helper-card__toggle"
                 role="switch"
                 [attr.aria-checked]="isOn(entity)"
-                [class.mode-card__toggle--on]="isOn(entity)"
+                [class.helper-card__toggle--on]="isOn(entity)"
                 (click)="toggle(entity)">
-                <span class="mode-card__toggle-track">
-                  <span class="mode-card__toggle-thumb"></span>
+                <span class="helper-card__toggle-track">
+                  <span class="helper-card__toggle-thumb"></span>
                 </span>
-                <span class="mode-card__toggle-label">{{ isOn(entity) ? 'An' : 'Aus' }}</span>
+                <span class="helper-card__toggle-label">{{ isOn(entity) ? 'An' : 'Aus' }}</span>
               </button>
             } @else if (isNumber(entity)) {
-              <div class="mode-card__number">
+              <div class="helper-card__number">
                 <input
                   type="number"
                   [value]="entity.state"
@@ -131,11 +135,11 @@
                   [attr.step]="numberAttr(entity, 'step')"
                   (change)="setValue(entity, $event)" />
                 @if (unitOf(entity)) {
-                  <span class="mode-card__unit">{{ unitOf(entity) }}</span>
+                  <span class="helper-card__unit">{{ unitOf(entity) }}</span>
                 }
               </div>
             } @else if (isSelect(entity)) {
-              <select [value]="entity.state" (change)="setValue(entity, $event)">
+              <select class="helper-card__select" [value]="entity.state" (change)="setValue(entity, $event)">
                 @for (option of optionsOf(entity); track option) {
                   <option [value]="option">{{ option }}</option>
                 }
@@ -143,23 +147,33 @@
             } @else {
               <input
                 type="text"
-                class="mode-card__text"
+                class="helper-card__text"
                 [value]="entity.state"
                 placeholder="Text eingeben…"
                 (change)="setValue(entity, $event)" />
             }
           </div>
 
-          <div class="mode-card__actions">
-            <button type="button" class="mode-card__btn mode-card__btn--ghost" (click)="startEdit(entity)">Umbenennen</button>
-            <button type="button" class="mode-card__btn mode-card__btn--danger" (click)="remove(entity)">Löschen</button>
-          </div>
-
-          <code class="mode-card__id">{{ entity.entityId }}</code>
+          <footer class="helper-card__footer">
+            <div class="helper-card__actions">
+              <button type="button" class="helper-card__btn" (click)="startEdit(entity)">
+                <span class="material-symbols-outlined">edit</span>
+                Umbenennen
+              </button>
+              <button type="button" class="helper-card__btn helper-card__btn--danger" (click)="remove(entity)">
+                <span class="material-symbols-outlined">delete</span>
+                Löschen
+              </button>
+            </div>
+            <code class="helper-card__id">{{ entity.entityId }}</code>
+          </footer>
         }
-      </div>
+      </article>
     } @empty {
-      <p class="custom-entities__empty">Noch keine eigenen Helfer angelegt.</p>
+      <div class="custom-entities__empty">
+        <span class="material-symbols-outlined">widgets</span>
+        <p>Noch keine eigenen Helfer angelegt.</p>
+      </div>
     }
   </div>
 </div>

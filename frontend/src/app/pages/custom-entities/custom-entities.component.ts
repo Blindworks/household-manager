@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, startWith, switchMap } from 'rxjs';
 import { EntityStateService } from '../../services/entity-state.service';
+import { IconPickerComponent } from '../../components/icon-picker/icon-picker.component';
 import {
   EntityState,
   CreateManualEntityRequest,
@@ -27,7 +28,7 @@ interface HelperTypeOption {
 @Component({
   selector: 'app-custom-entities',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconPickerComponent],
   templateUrl: './custom-entities.component.html',
   styleUrl: './custom-entities.component.scss'
 })
