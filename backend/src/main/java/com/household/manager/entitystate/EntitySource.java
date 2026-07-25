@@ -22,6 +22,8 @@ public enum EntitySource {
     NUKI,
     /** Blink-Gesichtserkennung (blink-vision-Sidecar). */
     VISION,
+    /** Haushaltskalender (interne Termine, event.calendar_reminder). */
+    CALENDAR,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }

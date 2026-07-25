@@ -148,6 +148,11 @@ export const routes: Routes = [
     title: 'Gesichtserkennung - Household Manager'
   },
   {
+    path: 'calendar',
+    loadComponent: () => import('./pages/calendar/calendar.component').then(m => m.CalendarComponent),
+    title: 'Kalender - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'

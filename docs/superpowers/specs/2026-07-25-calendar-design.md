@@ -169,3 +169,16 @@ neuen Node-Typ):
   laufen über Flows)
 - Frei pflegbare Kategorien
 - Zeitzonen-Unterstützung
+
+**Bewusste v1-Kompromisse (Umsetzung, nicht ursprünglich geplant):** `getOccurrences`
+lädt per `findAll()` alle Kalenderzeilen und filtert in Java, statt die Abfrage
+DB-seitig auf das Fenster einzuschränken — eine solche Einschränkung wäre bei Serien
+nicht zuverlässig, weil deren `startDate` beliebig weit in der Vergangenheit liegen
+kann und trotzdem Vorkommen im angefragten Fenster erzeugt. `getUpcoming` expandiert
+deshalb ein volles Jahresfenster und kürzt erst danach auf `limit`. Bei
+Haushaltsgrößen unkritisch, aber die erste Stelle zum Nachziehen, falls die Tabelle
+groß wird — es gibt keinen Aufräumjob für alte Termine. Bibliothekswahl
+**`org.dmfs:lib-recur`** statt des bereits vorhandenen `biweekly`: Letzteres
+verankert Ganztagestermine beim Parsen fest in der JVM-Zeitzone und ist auf
+`VEvent`-Objekte zugeschnitten; für reine `LocalDate`-Arithmetik hätten wir
+synthetische Events bauen müssen.

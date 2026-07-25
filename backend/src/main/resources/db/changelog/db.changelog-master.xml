@@ -95,4 +95,7 @@
     <!-- Verbrauchshistorie der Power-Sensoren -->
     <include file="db/changelog/changes/20260723-0038-create-entity-power-history-table.xml"/>
 
+    <!-- Haushaltskalender -->
+    <include file="db/changelog/changes/20260725-0039-create-calendar-events-table.xml"/>
+
 </databaseChangeLog>

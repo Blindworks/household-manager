@@ -1,0 +1,233 @@
+<div class="calendar container">
+  <header class="calendar__header">
+    <h1 class="calendar__title">Kalender</h1>
+    <div class="calendar__nav">
+      <button type="button" class="calendar__nav-btn" (click)="previousMonth()"
+              aria-label="Voriger Monat">‹</button>
+      <span class="calendar__month">{{ monthLabel }}</span>
+      <button type="button" class="calendar__nav-btn" (click)="nextMonth()"
+              aria-label="Naechster Monat">›</button>
+      <button type="button" class="calendar__today-btn" (click)="goToToday()">Heute</button>
+    </div>
+  </header>
+
+  @if (loadError) {
+    <p class="calendar__error">{{ loadError }}</p>
+  }
+
+  <div class="calendar__grid" role="grid">
+    @for (label of weekdayLabels; track label) {
+      <div class="calendar__weekday">{{ label }}</div>
+    }
+
+    @for (week of grid; track $index) {
+      @for (day of week; track day.isoDate) {
+        <div class="calendar__day"
+             [class.calendar__day--outside]="!day.inMonth"
+             [class.calendar__day--today]="day.isToday"
+             [attr.data-date]="day.isoDate"
+             (click)="openCreate(day)">
+          <span class="calendar__day-number">{{ day.dayOfMonth }}</span>
+          <div class="calendar__chips">
+            @for (occ of chipsFor(day).slice(0, dayChipLimit); track occ.eventId + '-' + occ.occurrenceDate) {
+              <button type="button"
+                      class="calendar__chip"
+                      [style.--chip-color]="colorFor(occ)"
+                      (click)="openEdit(occ, $event)">
+                @if (!occ.allDay && occ.startTime) {
+                  <span class="calendar__chip-time">{{ occ.startTime }}</span>
+                }
+                {{ occ.title }}
+              </button>
+            }
+            @if (overflowCount(day) > 0) {
+              <span class="calendar__more">+{{ overflowCount(day) }} weitere</span>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Termindialog -->
+  @if (dialogOpen) {
+    <div class="calendar__overlay" (click)="closeDialog()">
+      <div class="calendar__dialog" role="dialog" aria-modal="true"
+           aria-labelledby="calendarDialogTitle" (click)="$event.stopPropagation()">
+        <h2 class="calendar__dialog-title" id="calendarDialogTitle">
+          {{ editing ? 'Termin bearbeiten' : 'Neuer Termin' }}
+        </h2>
+
+        @if (dialogError) {
+          <p class="calendar__error">{{ dialogError }}</p>
+        }
+
+        <label class="calendar__field">
+          <span>Titel</span>
+          <input type="text" [(ngModel)]="form.title" name="title" maxlength="200">
+        </label>
+
+        <label class="calendar__field">
+          <span>Kategorie</span>
+          <select [(ngModel)]="form.category" name="category">
+            @for (cat of categories; track cat) {
+              <option [value]="cat">{{ categoryMeta[cat].label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="calendar__field calendar__field--inline">
+          <input type="checkbox" [(ngModel)]="form.allDay" name="allDay">
+          <span>Ganztägig</span>
+        </label>
+
+        <div class="calendar__field-row">
+          <label class="calendar__field">
+            <span>Datum</span>
+            <input type="date" [(ngModel)]="form.startDate" name="startDate">
+          </label>
+          @if (form.allDay) {
+            <label class="calendar__field">
+              <span>Enddatum (optional)</span>
+              <input type="date" [(ngModel)]="form.endDate" name="endDate">
+            </label>
+          }
+          @if (!form.allDay) {
+            <label class="calendar__field">
+              <span>Von</span>
+              <input type="time" [(ngModel)]="form.startTime" name="startTime">
+            </label>
+            <label class="calendar__field">
+              <span>Bis (optional)</span>
+              <input type="time" [(ngModel)]="form.endTime" name="endTime">
+            </label>
+          }
+        </div>
+
+        <label class="calendar__field">
+          <span>Notizen</span>
+          <textarea [(ngModel)]="form.notes" name="notes" rows="2"></textarea>
+        </label>
+
+        <!-- Wiederholung -->
+        <fieldset class="calendar__recurrence">
+          <legend>Wiederholung</legend>
+
+          @if (!advancedMode) {
+            <div>
+              <label class="calendar__field">
+                <span>Häufigkeit</span>
+                <select [(ngModel)]="recurrence.freq" name="freq">
+                  @for (opt of frequencyOptions; track opt.code) {
+                    <option [value]="opt.code">{{ opt.label }}</option>
+                  }
+                </select>
+              </label>
+
+              @if (recurrence.freq !== 'NONE') {
+                <label class="calendar__field">
+                  <span>Intervall (alle n)</span>
+                  <input type="number" min="1" [(ngModel)]="recurrence.interval" name="interval">
+                </label>
+
+                @if (recurrence.freq === 'WEEKLY') {
+                  <div class="calendar__weekday-picker">
+                    @for (day of weekdayOptions; track day.code) {
+                      <button type="button"
+                              class="calendar__weekday-btn"
+                              [class.calendar__weekday-btn--active]="recurrence.weekdays.includes(day.code)"
+                              (click)="toggleWeekday(day.code)">
+                        {{ day.label }}
+                      </button>
+                    }
+                  </div>
+                }
+
+                @if (recurrence.freq === 'MONTHLY') {
+                  <label class="calendar__field">
+                    <span>Monatlich am</span>
+                    <select [(ngModel)]="recurrence.monthlyMode" name="monthlyMode">
+                      <option value="DAY_OF_MONTH">gleichen Monatstag</option>
+                      <option value="NTH_WEEKDAY">gleichen Wochentag wie im Startdatum</option>
+                    </select>
+                  </label>
+                }
+
+                <label class="calendar__field">
+                  <span>Ende</span>
+                  <select [(ngModel)]="recurrence.endType" name="endType">
+                    <option value="NEVER">Nie</option>
+                    <option value="UNTIL">Am Datum</option>
+                    <option value="COUNT">Nach Anzahl</option>
+                  </select>
+                </label>
+
+                @if (recurrence.endType === 'UNTIL') {
+                  <label class="calendar__field">
+                    <span>Bis einschließlich</span>
+                    <input type="date" [(ngModel)]="recurrence.untilDate" name="untilDate">
+                  </label>
+                }
+                @if (recurrence.endType === 'COUNT') {
+                  <label class="calendar__field">
+                    <span>Anzahl Termine</span>
+                    <input type="number" min="1" [(ngModel)]="recurrence.count" name="count">
+                  </label>
+                }
+              }
+            </div>
+          }
+
+          @if (advancedMode) {
+            <label class="calendar__field">
+              <span>RRULE (Expertenmodus)</span>
+              <input type="text" [(ngModel)]="rawRrule" name="rawRrule"
+                     placeholder="z. B. FREQ=MONTHLY;BYDAY=-1FR">
+            </label>
+          }
+
+          <button type="button" class="calendar__link-btn" (click)="advancedMode = !advancedMode">
+            {{ advancedMode ? 'Zum einfachen Modus' : 'Erweitert (RRULE direkt eingeben)' }}
+          </button>
+        </fieldset>
+
+        <div class="calendar__dialog-actions">
+          @if (editing) {
+            <button type="button" class="calendar__btn calendar__btn--danger"
+                    [disabled]="saving" (click)="onDeleteClicked()">
+              Löschen
+            </button>
+          }
+          <span class="calendar__spacer"></span>
+          <button type="button" class="calendar__btn" (click)="closeDialog()">Abbrechen</button>
+          <button type="button" class="calendar__btn calendar__btn--primary"
+                  [disabled]="saving" (click)="onSaveClicked()">
+            Speichern
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Scope-Frage bei Serien -->
+  @if (scopeQuestion) {
+    <div class="calendar__overlay calendar__overlay--top" (click)="scopeQuestion = null">
+      <div class="calendar__dialog calendar__dialog--small" role="dialog" aria-modal="true"
+           aria-labelledby="calendarScopeTitle" (click)="$event.stopPropagation()">
+        <h3 class="calendar__dialog-title" id="calendarScopeTitle">
+          {{ scopeQuestion === 'delete' ? 'Serientermin löschen' : 'Serientermin ändern' }}
+        </h3>
+        <p>Soll die Änderung nur dieses Vorkommen oder die ganze Serie betreffen?</p>
+        <div class="calendar__dialog-actions">
+          <button type="button" class="calendar__btn" (click)="answerScope('occurrence')">
+            Nur diesen Termin
+          </button>
+          <button type="button" class="calendar__btn calendar__btn--primary"
+                  (click)="answerScope('series')">
+            Ganze Serie
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

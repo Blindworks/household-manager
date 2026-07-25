@@ -1,0 +1,301 @@
+.calendar {
+  padding: var(--spacing-md) 0 var(--spacing-xl);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: 1.25rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.6rem;
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+  }
+
+  &__month {
+    min-width: 11rem;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  &__nav-btn,
+  &__today-btn {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: transparent;
+    border-radius: var(--radius-md);
+    padding: 0.35rem 0.75rem;
+    font-size: 1rem;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  &__error {
+    color: var(--color-error);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  &__weekday {
+    background: rgba(0, 0, 0, 0.04);
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  &__day {
+    background: var(--color-white);
+    min-height: 7rem;
+    padding: 0.35rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    &--outside {
+      background: rgba(0, 0, 0, 0.02);
+
+      .calendar__day-number {
+        opacity: 0.4;
+      }
+    }
+
+    &--today .calendar__day-number {
+      background: var(--color-primary);
+      color: var(--color-white);
+      border-radius: 50%;
+    }
+  }
+
+  &__day-number {
+    width: 1.6rem;
+    height: 1.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  &__chips {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow: hidden;
+  }
+
+  &__chip {
+    --chip-color: #64b5f6;
+    display: flex;
+    gap: 0.3rem;
+    align-items: baseline;
+    border: none;
+    border-left: 3px solid var(--chip-color);
+    background: color-mix(in srgb, var(--chip-color) 18%, transparent);
+    border-radius: 0.3rem;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__chip-time {
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  &__more {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    padding-left: 0.4rem;
+  }
+
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+
+    &--top {
+      z-index: 110;
+    }
+  }
+
+  &__dialog {
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    width: min(34rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    &--small {
+      width: min(26rem, calc(100vw - 2rem));
+    }
+  }
+
+  &__dialog-title {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: var(--font-size-sm);
+
+    input,
+    select,
+    textarea {
+      padding: 0.4rem 0.5rem;
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      border-radius: 0.4rem;
+      font: inherit;
+    }
+
+    &--inline {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+
+  &__field-row {
+    display: flex;
+    gap: 0.75rem;
+
+    .calendar__field {
+      flex: 1;
+    }
+  }
+
+  &__recurrence {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+
+    legend {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      padding: 0 0.3rem;
+    }
+
+    // Zahlenfelder (Intervall, Anzahl) sind Touch-Ziele auf einem wandmontierten Tablet -
+    // die generische .calendar__field-Groesse (0.4rem/0.5rem) ist dafuer zu knapp bemessen.
+    input[type='number'] {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: var(--font-size-base);
+      min-width: 4rem;
+    }
+  }
+
+  &__weekday-picker {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+
+  &__weekday-btn {
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    background: transparent;
+    border-radius: var(--radius-md);
+    // War 0.3rem/0.5rem mit 0.8rem Schrift - auf dem wandmontierten Touch-Tablet
+    // (der Haupt-Einsatzzweck dieses Projekts) eine zu kleine Trefferflaeche.
+    padding: var(--spacing-xs) var(--spacing-sm);
+    cursor: pointer;
+    font-size: var(--font-size-base);
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+
+    &--active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-white);
+    }
+  }
+
+  &__link-btn {
+    align-self: flex-start;
+    border: none;
+    background: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.8rem;
+    text-decoration: underline;
+  }
+
+  &__dialog-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__btn {
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    background: transparent;
+    border-radius: var(--radius-md);
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    font: inherit;
+
+    &--primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-white);
+    }
+
+    &--danger {
+      border-color: var(--color-error);
+      color: var(--color-error);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+}

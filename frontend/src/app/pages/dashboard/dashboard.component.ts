@@ -22,6 +22,9 @@ import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { buildWasteInsight } from '../../shared/waste-insight.util';
+import { CalendarService } from '../../services/calendar.service';
+import { buildCalendarInsights } from '../../shared/calendar-insight.util';
+import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeService } from '../../services/mode.service';
@@ -60,6 +63,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly switchService = inject(SwitchService);
   private readonly modeService = inject(ModeService);
   private readonly wasteService = inject(WasteCollectionService);
+  private readonly calendarService = inject(CalendarService);
   private readonly nukiService = inject(NukiService);
   private readonly powerConsumerService = inject(PowerConsumerService);
 
@@ -75,6 +79,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
   private wasteSubscription?: Subscription;
+  private calendarSubscription?: Subscription;
   private nukiSubscription?: Subscription;
   private consumerSubscription?: Subscription;
 
@@ -98,6 +103,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly MODE_TONES = ['primary', 'tertiary', 'neutral', 'error'] as const;
   /** Haelt die Muell-Meldung ueber den Tag hinweg aktuell (z. B. bei geaenderten Einstellungen). */
   private static readonly WASTE_REFRESH_MS = 3600000;
+  /** Kalender-Hub-Eintraege alle 5 Minuten auffrischen (Termine aendern sich haeufiger als Muell). */
+  private static readonly CALENDAR_REFRESH_MS = 300000;
   private static readonly DAY_MS = 86400000;
   /** Aktualisierungsintervall der Türschloss-Kachel (30 s). */
   private static readonly NUKI_REFRESH_MS = 30000;
@@ -173,6 +180,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   insights: IntelligenceItem[] = [];
 
+  /** Zuletzt gebaute Muell-Meldung; null = nichts ansteht. */
+  private wasteInsight: HubInsight | null = null;
+  /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
+  private calendarInsights: HubInsight[] = [];
+
   /** Noch nicht angebundene Hub-Hinweise (Platzhalter). */
   private static readonly PLACEHOLDER_INSIGHTS: IntelligenceItem[] = [
     {
@@ -221,6 +233,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startConsumerRefresh();
     this.startModeRefresh();
     this.startWasteRefresh();
+    this.startCalendarRefresh();
     this.startNukiRefresh();
   }
 
@@ -233,6 +246,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
+    this.calendarSubscription?.unsubscribe();
     this.nukiSubscription?.unsubscribe();
     this.consumerSubscription?.unsubscribe();
     this.closeFlowDialog();
@@ -834,11 +848,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
         switchMap(() => this.wasteService.getUpcoming().pipe(catchError(() => of([]))))
       )
       .subscribe(events => {
-        const insight = buildWasteInsight(events);
-        this.insights = insight
-          ? [insight, ...DashboardComponent.PLACEHOLDER_INSIGHTS]
-          : [...DashboardComponent.PLACEHOLDER_INSIGHTS];
+        this.wasteInsight = buildWasteInsight(events);
+        this.rebuildInsights();
       });
+  }
+
+  /** Haelt die Termin-Eintraege im Hub aktuell (gleiches Mitternachts-Muster wie der Muell). */
+  private startCalendarRefresh(): void {
+    this.calendarSubscription = merge(
+      interval(DashboardComponent.CALENDAR_REFRESH_MS),
+      timer(this.msUntilNextMidnight(), DashboardComponent.DAY_MS)
+    )
+      .pipe(
+        startWith(0),
+        switchMap(() => this.calendarService.getUpcoming(3).pipe(catchError(() => of([]))))
+      )
+      .subscribe(occurrences => {
+        this.calendarInsights = buildCalendarInsights(occurrences);
+        this.rebuildInsights();
+      });
+  }
+
+  /** Komponiert den Hub: Muell voran, dann Termine, dahinter die Platzhalter. */
+  private rebuildInsights(): void {
+    this.insights = [
+      ...(this.wasteInsight ? [this.wasteInsight] : []),
+      ...this.calendarInsights,
+      ...DashboardComponent.PLACEHOLDER_INSIGHTS
+    ];
   }
 
   /**
