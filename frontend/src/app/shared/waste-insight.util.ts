@@ -1,17 +1,9 @@
 import { WasteCollectionEvent } from '../models/waste-collection.model';
+import { HubInsight } from './hub-insight.model';
+import { relativeDayLabel } from './relative-day.util';
 
-/**
- * Ein fertiger Hinweis fuer den Intelligence Hub. Strukturgleich zum dortigen
- * `IntelligenceItem`: Das Dashboard rendert die Meldung selbst, weil die Styles der
- * Hub-Eintraege in seinem eigenen SCSS liegen und Angulars Style-Kapselung sie nicht
- * an eine Kind-Komponente weiterreicht.
- */
-export interface WasteInsight {
-  readonly icon: string;
-  readonly tone: 'primary' | 'secondary' | 'muted' | 'tertiary' | 'error';
-  readonly title: string;
-  readonly text: string;
-}
+/** @deprecated Alias — neue Aufrufer nutzen HubInsight direkt. */
+export type WasteInsight = HubInsight;
 
 /** Bis einschliesslich morgen ist der Termin dringlich — der Indikator wird rot. */
 const URGENT_DAYS_UNTIL = 1;
@@ -53,26 +45,5 @@ function toneFor(events: WasteCollectionEvent[]): WasteInsight['tone'] {
 }
 
 function describe(event: WasteCollectionEvent): string {
-  return `${relativeDayLabel(event)}: ${event.label}`;
-}
-
-/** "Heute"/"Morgen"/"Übermorgen", darueber hinaus der Wochentag. */
-function relativeDayLabel(event: WasteCollectionEvent): string {
-  switch (event.daysUntil) {
-    case 0: return 'Heute';
-    case 1: return 'Morgen';
-    case 2: return 'Übermorgen';
-    default: return weekdayOf(event.date);
-  }
-}
-
-/**
- * Wochentag zu einem ISO-Datum. Bewusst aus den Datumsteilen gebaut statt via
- * `new Date('2026-07-20')`: Diese Kurzform parst als UTC-Mitternacht und wuerde bei
- * negativem UTC-Offset den Vortag anzeigen.
- */
-function weekdayOf(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-').map(Number);
-  return new Date(year, month - 1, day)
-    .toLocaleDateString('de-DE', { weekday: 'long' });
+  return `${relativeDayLabel(event.daysUntil, event.date)}: ${event.label}`;
 }
