@@ -187,6 +187,44 @@ public class CalendarEventService {
         repository.delete(event);
     }
 
+    /**
+     * Loescht nur dieses Vorkommen: bei Einzelterminen die ganze Zeile, bei Serien
+     * EXDATE am Master plus Entfernen eines eventuellen Overrides.
+     */
+    @Transactional
+    public void deleteOccurrence(Long id, LocalDate occurrenceDate) {
+        CalendarEvent event = findOrThrow(id);
+        if (!event.isRecurring()) {
+            repository.delete(event);
+            return;
+        }
+        repository.findByRecurringParentIdAndRecurrenceDate(id, occurrenceDate)
+                .ifPresent(repository::delete);
+        event.addExdate(occurrenceDate);
+        repository.save(event);
+    }
+
+    /** Aendert nur dieses Vorkommen: legt eine Override-Zeile an bzw. aktualisiert sie. */
+    @Transactional
+    public CalendarEventResponse updateOccurrence(Long id, LocalDate occurrenceDate,
+                                                  CalendarEventRequest request) {
+        CalendarEvent master = findOrThrow(id);
+        if (!master.isRecurring()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Nur Serien haben einzelne Vorkommen — Einzeltermine direkt bearbeiten.");
+        }
+        validate(request);
+        CalendarEvent override = repository
+                .findByRecurringParentIdAndRecurrenceDate(id, occurrenceDate)
+                .orElseGet(() -> CalendarEvent.builder()
+                        .recurringParentId(id)
+                        .recurrenceDate(occurrenceDate)
+                        .build());
+        applyRequest(request, override);
+        override.setRrule(null); // Overrides sind nie selbst Serien
+        return toResponse(repository.save(override));
+    }
+
     private CalendarEvent findOrThrow(Long id) {
         return repository.findById(id).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Termin %d existiert nicht.".formatted(id)));
