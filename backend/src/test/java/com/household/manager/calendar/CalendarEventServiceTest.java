@@ -2,6 +2,7 @@ package com.household.manager.calendar;
 
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
+import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.model.entity.CalendarCategory;
 import com.household.manager.model.entity.CalendarEvent;
 import com.household.manager.repository.CalendarEventRepository;
@@ -462,11 +463,14 @@ class CalendarEventServiceTest {
                 .rrule("FREQ=WEEKLY") // muss ignoriert werden — Overrides sind nie Serien
                 .build();
 
-        CalendarEventResponse response =
+        CalendarOccurrenceResponse response =
                 service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
 
         assertThat(response.getTitle()).isEqualTo("Sport (verschoben)");
-        assertThat(response.getRrule()).isNull();
+        // Vertrag mit dem Frontend: eventId zeigt auf die Serie (Master), nicht auf die
+        // eigene Override-Zeilen-Id; recurrenceDate ist das ersetzte Vorkommen.
+        assertThat(response.getEventId()).isEqualTo(2L);
+        assertThat(response.getRecurrenceDate()).isEqualTo(LocalDate.of(2026, 7, 13));
     }
 
     @Test
@@ -562,11 +566,13 @@ class CalendarEventServiceTest {
                 .allDay(true).startDate(LocalDate.of(2026, 7, 15))
                 .build();
 
-        CalendarEventResponse response =
+        CalendarOccurrenceResponse response =
                 service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
 
         assertThat(response.getTitle()).isEqualTo("Sport (neu verschoben)");
         assertThat(existingOverride.getTitle()).isEqualTo("Sport (neu verschoben)");
+        assertThat(response.getEventId()).isEqualTo(2L);
+        assertThat(response.getRecurrenceDate()).isEqualTo(LocalDate.of(2026, 7, 13));
         verify(repository).save(existingOverride);
     }
 
@@ -584,11 +590,12 @@ class CalendarEventServiceTest {
                 .rrule("FREQ=BANANA") // ungueltig, muss aber ignoriert werden
                 .build();
 
-        CalendarEventResponse response =
+        CalendarOccurrenceResponse response =
                 service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
 
         assertThat(response.getTitle()).isEqualTo("Sport (verschoben)");
-        assertThat(response.getRrule()).isNull();
+        assertThat(response.getEventId()).isEqualTo(2L);
+        assertThat(response.getRecurrenceDate()).isEqualTo(LocalDate.of(2026, 7, 13));
     }
 
     @Test

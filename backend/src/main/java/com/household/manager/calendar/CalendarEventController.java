@@ -79,7 +79,7 @@ public class CalendarEventController {
 
     /** Nur dieses Vorkommen aendern (Override anlegen/aktualisieren). */
     @PutMapping("/events/{id}/occurrences/{date}")
-    public ResponseEntity<CalendarEventResponse> updateOccurrence(@PathVariable Long id,
+    public ResponseEntity<CalendarOccurrenceResponse> updateOccurrence(@PathVariable Long id,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody CalendarEventRequest request) {
         return ResponseEntity.ok(service.updateOccurrence(id, date, request));

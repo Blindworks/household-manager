@@ -238,7 +238,7 @@ public class CalendarEventService {
      * geaendert sein.
      */
     @Transactional
-    public CalendarEventResponse updateOccurrence(Long id, LocalDate occurrenceDate,
+    public CalendarOccurrenceResponse updateOccurrence(Long id, LocalDate occurrenceDate,
                                                   CalendarEventRequest request) {
         CalendarEvent master = findOrThrow(id);
         if (!master.isRecurring()) {
@@ -262,7 +262,7 @@ public class CalendarEventService {
         override.setRrule(null); // Overrides sind nie selbst Serien
         master.removeExdate(occurrenceDate);
         repository.save(master);
-        return toResponse(repository.save(override));
+        return toOccurrence(repository.save(override), occurrenceDate, today());
     }
 
     private CalendarEvent findOrThrow(Long id) {

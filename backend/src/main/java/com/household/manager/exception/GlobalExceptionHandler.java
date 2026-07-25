@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -172,6 +173,30 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Method argument type mismatch: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Handle missing required request parameters (e.g. a {@code from}/{@code to}
+     * query parameter left off a date-range endpoint).
+     *
+     * @param ex      The missing-parameter exception
+     * @param request The web request
+     * @return Error response with 400 status
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+            MissingServletRequestParameterException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message("Required parameter '%s' is missing".formatted(ex.getParameterName()))
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Missing request parameter: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(errorResponse);
     }
 

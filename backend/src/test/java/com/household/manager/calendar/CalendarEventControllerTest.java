@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -130,7 +132,7 @@ class CalendarEventControllerTest {
 
         ArgumentCaptor<LocalDate> dateCaptor = ArgumentCaptor.forClass(LocalDate.class);
         verify(service).deleteOccurrence(eq(1L), dateCaptor.capture());
-        org.assertj.core.api.Assertions.assertThat(dateCaptor.getValue()).isEqualTo(LocalDate.of(2026, 7, 27));
+        assertThat(dateCaptor.getValue()).isEqualTo(LocalDate.of(2026, 7, 27));
     }
 
     @Test
@@ -143,5 +145,87 @@ class CalendarEventControllerTest {
         mockMvc.perform(get("/v1/calendar/events").param("from", "2026-07-01").param("to", "2020-01-01"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Das Enddatum darf nicht vor dem Startdatum liegen."));
+    }
+
+    @Test
+    void getEventLiefertDieStammdaten() throws Exception {
+        when(service.getEvent(1L)).thenReturn(eventResponse());
+
+        mockMvc.perform(get("/v1/calendar/events/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").value("Zahnarzt"));
+    }
+
+    @Test
+    void putEventReichtIdUndRequestDurch() throws Exception {
+        when(service.update(eq(1L), any(CalendarEventRequest.class))).thenReturn(eventResponse());
+
+        mockMvc.perform(put("/v1/calendar/events/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Zahnarzt","category":"HEALTH","allDay":false,
+                                 "startDate":"2026-07-27"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Zahnarzt"));
+
+        ArgumentCaptor<CalendarEventRequest> requestCaptor = ArgumentCaptor.forClass(CalendarEventRequest.class);
+        verify(service).update(eq(1L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getTitle()).isEqualTo("Zahnarzt");
+    }
+
+    @Test
+    void putOccurrenceReichtIdUndDatumDurchUndLiefertDenOccurrenceTyp() throws Exception {
+        // Vertrag mit dem Frontend (siehe Quality-Review): eventId zeigt auf die Serie, nicht
+        // auf die eigene Id der Override-Zeile.
+        CalendarOccurrenceResponse updated = CalendarOccurrenceResponse.builder()
+                .eventId(1L)
+                .recurrenceDate(LocalDate.of(2026, 7, 27))
+                .title("Zahnarzt (verschoben)")
+                .category(CalendarCategory.HEALTH)
+                .allDay(false)
+                .recurring(true)
+                .daysUntil(2)
+                .build();
+        when(service.updateOccurrence(eq(1L), eq(LocalDate.of(2026, 7, 27)), any(CalendarEventRequest.class)))
+                .thenReturn(updated);
+
+        mockMvc.perform(put("/v1/calendar/events/1/occurrences/2026-07-27")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Zahnarzt (verschoben)","category":"HEALTH","allDay":false,
+                                 "startDate":"2026-07-27"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventId").value(1))
+                .andExpect(jsonPath("$.recurrenceDate").value("2026-07-27"))
+                .andExpect(jsonPath("$.title").value("Zahnarzt (verschoben)"));
+
+        ArgumentCaptor<LocalDate> dateCaptor = ArgumentCaptor.forClass(LocalDate.class);
+        verify(service).updateOccurrence(eq(1L), dateCaptor.capture(), any(CalendarEventRequest.class));
+        assertThat(dateCaptor.getValue()).isEqualTo(LocalDate.of(2026, 7, 27));
+    }
+
+    @Test
+    void serviceNotFoundAls404KommtBeimClientAn() throws Exception {
+        when(service.getEvent(99L)).thenThrow(
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Termin nicht gefunden."));
+
+        mockMvc.perform(get("/v1/calendar/events/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Termin nicht gefunden."));
+    }
+
+    @Test
+    void ungueltigesDatumImOccurrencePfadLiefert400() throws Exception {
+        mockMvc.perform(delete("/v1/calendar/events/1/occurrences/not-a-date"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getOccurrencesOhneParameterLiefert400() throws Exception {
+        mockMvc.perform(get("/v1/calendar/events"))
+                .andExpect(status().isBadRequest());
     }
 }
