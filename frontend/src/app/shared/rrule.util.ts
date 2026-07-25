@@ -51,6 +51,12 @@ export function buildRrule(options: RecurrenceOptions, startDate: string): strin
       // muss dem Nutzer verstaendlich im Dialog angezeigt werden koennen (siehe Aufrufer).
       throw new Error('Bitte ein Enddatum fuer die Wiederholung angeben.');
     }
+    // ISO-Datumsstrings (YYYY-MM-DD) sind lexikografisch vergleichbar - kein Parsing noetig.
+    // Ohne diese Pruefung wuerde eine Serie entstehen, die nie ein Vorkommen hat (das
+    // Backend lehnt das zwar auch ab, aber erst nach dem Klick auf Speichern).
+    if (options.untilDate < startDate) {
+      throw new Error('Das Ende der Wiederholung darf nicht vor dem Startdatum liegen.');
+    }
     parts.push(`UNTIL=${options.untilDate.replaceAll('-', '')}`);
   }
   if (options.endType === 'COUNT') {

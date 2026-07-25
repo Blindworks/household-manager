@@ -33,6 +33,26 @@ public class RecurrenceExpansionService {
     }
 
     /**
+     * Ob die Regel ab dem Seriendatum ueberhaupt jemals ein Vorkommen erzeugt.
+     *
+     * <p>Fragt bewusst nur den Iterator nach seinem ersten Treffer, statt ein festes
+     * Zeitfenster (z.B. ein Jahr) zu expandieren: eine gueltige Regel kann einen spaeten
+     * ersten Treffer haben (z.B. "jaehrlich am 29. Februar" ab einem Nicht-Schaltjahr —
+     * der erste Treffer liegt erst zwei Jahre spaeter) und waere bei einer Fensterpruefung
+     * faelschlich als "kein Vorkommen" erkannt worden.
+     */
+    public boolean hasAnyOccurrence(String rrule, LocalDate seriesStart) {
+        RecurrenceRule rule = parse(rrule);
+        try {
+            return rule.iterator(toDateTime(seriesStart)).hasNext();
+        } catch (IllegalArgumentException ex) {
+            // Syntaktisch gueltige Regel, die aber nie ein Vorkommen erzeugen kann
+            // (z.B. 30. Februar) - lib-recur wirft das bereits bei der Iterator-Konstruktion.
+            return false;
+        }
+    }
+
+    /**
      * Expandiert die Regel ab Serienstart und liefert alle Vorkommen-Daten im Fenster
      * [from, to] (einschliesslich), gekappt bei {@link #MAX_OCCURRENCES}.
      */

@@ -106,6 +106,28 @@ class CalendarEventServiceTest {
     }
 
     @Test
+    void wiederholungsendeVorStartdatumWirdAbgelehnt() {
+        // validRequest() startet am 03.08.2026 - UNTIL liegt vorher, die Serie haette
+        // also nie ein Vorkommen.
+        assertThatThrownBy(() -> service.create(
+                validRequest().rrule("FREQ=WEEKLY;UNTIL=20260701").build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Ende der Wiederholung");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void gueltigeSerieMitWiederholungsendeNachStartdatumWirdAngenommen() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventResponse response = service.create(
+                validRequest().rrule("FREQ=WEEKLY;UNTIL=20261231").build());
+
+        assertThat(response.isRecurring()).isTrue();
+        verify(repository).save(any(CalendarEvent.class));
+    }
+
+    @Test
     void zuLangerTitelWirdAbgelehnt() {
         String titelMit201Zeichen = "A".repeat(201);
         assertThatThrownBy(() -> service.create(validRequest().title(titelMit201Zeichen).build()))

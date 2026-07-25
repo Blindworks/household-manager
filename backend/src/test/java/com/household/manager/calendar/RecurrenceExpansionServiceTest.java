@@ -87,4 +87,28 @@ class RecurrenceExpansionServiceTest {
                 LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 5));
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void untilVorStartdatumHatKeinVorkommen() {
+        // Woechentliche Serie ab 03.08.2026, aber UNTIL liegt schon am 01.07.2026 -
+        // die Serie kann nie ein Vorkommen erzeugen.
+        boolean result = service.hasAnyOccurrence("FREQ=WEEKLY;UNTIL=20260701",
+                LocalDate.of(2026, 8, 3));
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void normaleSerieHatEinVorkommen() {
+        boolean result = service.hasAnyOccurrence("FREQ=WEEKLY", LocalDate.of(2026, 8, 3));
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void jaehrlicheSerieMitSpaetemErstenTrefferGiltNichtFaelschlichAlsLeer() {
+        // 29. Februar ab einem Nicht-Schaltjahr: der erste Treffer liegt erst 2028,
+        // die Regel ist trotzdem gueltig und hat ein Vorkommen.
+        boolean result = service.hasAnyOccurrence("FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29",
+                LocalDate.of(2026, 1, 1));
+        assertThat(result).isTrue();
+    }
 }

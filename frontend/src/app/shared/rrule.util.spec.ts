@@ -50,6 +50,16 @@ describe('buildRrule', () => {
   it('wirft bei fehlendem untilDate, statt eine unendlich laufende Regel zu erzeugen', () => {
     expect(() => buildRrule(options({ endType: 'UNTIL', untilDate: '' }), '2026-07-07')).toThrow();
   });
+
+  it('wirft bei UNTIL vor dem Startdatum, statt eine Serie ohne Vorkommen zu erzeugen', () => {
+    expect(() => buildRrule(options({ endType: 'UNTIL', untilDate: '2026-07-01' }), '2026-08-03'))
+      .toThrow();
+  });
+
+  it('akzeptiert UNTIL am Startdatum selbst (genau ein Vorkommen)', () => {
+    expect(buildRrule(options({ endType: 'UNTIL', untilDate: '2026-08-03' }), '2026-08-03'))
+      .toBe('FREQ=WEEKLY;UNTIL=20260803');
+  });
 });
 
 describe('parseRrule', () => {

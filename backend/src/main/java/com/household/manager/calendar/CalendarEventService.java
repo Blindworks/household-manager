@@ -319,6 +319,10 @@ public class CalendarEventService {
         }
         if (request.getRrule() != null && !request.getRrule().isBlank()) {
             expansionService.validate(request.getRrule());
+            if (!expansionService.hasAnyOccurrence(request.getRrule(), request.getStartDate())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Das Ende der Wiederholung darf nicht vor dem Startdatum liegen.");
+            }
         }
     }
 
