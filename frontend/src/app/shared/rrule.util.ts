@@ -46,7 +46,10 @@ export function buildRrule(options: RecurrenceOptions, startDate: string): strin
   }
   if (options.endType === 'UNTIL') {
     if (!options.untilDate) {
-      throw new Error('RecurrenceOptions.untilDate fehlt fuer endType UNTIL.');
+      // Nutzertext statt einer technischen Meldung: dieser Fehler ist ueber ganz normale
+      // Bedienschritte erreichbar (Dialog waehlt "Ende: Am Datum", Feld ist noch leer) und
+      // muss dem Nutzer verstaendlich im Dialog angezeigt werden koennen (siehe Aufrufer).
+      throw new Error('Bitte ein Enddatum fuer die Wiederholung angeben.');
     }
     parts.push(`UNTIL=${options.untilDate.replaceAll('-', '')}`);
   }
@@ -54,7 +57,7 @@ export function buildRrule(options: RecurrenceOptions, startDate: string): strin
     if (options.count === null || options.count < 1) {
       // Truthiness wuerde count=0 (und negative Werte) stillschweigend verwerfen — die
       // Regel liefe dann unendlich statt "null mal". Lieber laut scheitern als das.
-      throw new Error('RecurrenceOptions.count muss >= 1 sein fuer endType COUNT.');
+      throw new Error('Bitte eine Anzahl von mindestens 1 fuer die Wiederholung angeben.');
     }
     parts.push(`COUNT=${options.count}`);
   }

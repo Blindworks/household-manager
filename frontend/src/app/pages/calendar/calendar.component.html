@@ -52,8 +52,9 @@
   <!-- Termindialog -->
   @if (dialogOpen) {
     <div class="calendar__overlay" (click)="closeDialog()">
-      <div class="calendar__dialog" (click)="$event.stopPropagation()">
-        <h2 class="calendar__dialog-title">
+      <div class="calendar__dialog" role="dialog" aria-modal="true"
+           aria-labelledby="calendarDialogTitle" (click)="$event.stopPropagation()">
+        <h2 class="calendar__dialog-title" id="calendarDialogTitle">
           {{ editing ? 'Termin bearbeiten' : 'Neuer Termin' }}
         </h2>
 
@@ -211,8 +212,9 @@
   <!-- Scope-Frage bei Serien -->
   @if (scopeQuestion) {
     <div class="calendar__overlay calendar__overlay--top" (click)="scopeQuestion = null">
-      <div class="calendar__dialog calendar__dialog--small" (click)="$event.stopPropagation()">
-        <h3 class="calendar__dialog-title">
+      <div class="calendar__dialog calendar__dialog--small" role="dialog" aria-modal="true"
+           aria-labelledby="calendarScopeTitle" (click)="$event.stopPropagation()">
+        <h3 class="calendar__dialog-title" id="calendarScopeTitle">
           {{ scopeQuestion === 'delete' ? 'Serientermin löschen' : 'Serientermin ändern' }}
         </h3>
         <p>Soll die Änderung nur dieses Vorkommen oder die ganze Serie betreffen?</p>

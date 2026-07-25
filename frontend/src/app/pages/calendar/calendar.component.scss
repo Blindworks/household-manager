@@ -1,12 +1,12 @@
 .calendar {
-  padding: 1.5rem 0 3rem;
+  padding: var(--spacing-md) 0 var(--spacing-xl);
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: var(--spacing-sm);
     margin-bottom: 1.25rem;
   }
 
@@ -18,7 +18,7 @@
   &__nav {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--spacing-xs);
   }
 
   &__month {
@@ -31,7 +31,7 @@
   &__today-btn {
     border: 1px solid rgba(0, 0, 0, 0.15);
     background: transparent;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     padding: 0.35rem 0.75rem;
     font-size: 1rem;
     cursor: pointer;
@@ -42,8 +42,8 @@
   }
 
   &__error {
-    color: #c62828;
-    margin-bottom: 1rem;
+    color: var(--color-error);
+    margin-bottom: var(--spacing-sm);
   }
 
   &__grid {
@@ -52,7 +52,7 @@
     gap: 1px;
     background: rgba(0, 0, 0, 0.12);
     border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 0.75rem;
+    border-radius: var(--radius-lg);
     overflow: hidden;
   }
 
@@ -66,7 +66,7 @@
   }
 
   &__day {
-    background: #fff;
+    background: var(--color-white);
     min-height: 7rem;
     padding: 0.35rem;
     cursor: pointer;
@@ -87,8 +87,8 @@
     }
 
     &--today .calendar__day-number {
-      background: #1976d2;
-      color: #fff;
+      background: var(--color-primary);
+      color: var(--color-white);
       border-radius: 50%;
     }
   }
@@ -154,9 +154,9 @@
   }
 
   &__dialog {
-    background: #fff;
-    border-radius: 0.75rem;
-    padding: 1.5rem;
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
     width: min(34rem, calc(100vw - 2rem));
     max-height: calc(100vh - 4rem);
     overflow-y: auto;
@@ -178,7 +178,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
 
     input,
     select,
@@ -207,36 +207,49 @@
 
   &__recurrence {
     border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     padding: 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
 
     legend {
-      font-size: 0.85rem;
+      font-size: var(--font-size-sm);
       font-weight: 600;
       padding: 0 0.3rem;
+    }
+
+    // Zahlenfelder (Intervall, Anzahl) sind Touch-Ziele auf einem wandmontierten Tablet -
+    // die generische .calendar__field-Groesse (0.4rem/0.5rem) ist dafuer zu knapp bemessen.
+    input[type='number'] {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: var(--font-size-base);
+      min-width: 4rem;
     }
   }
 
   &__weekday-picker {
     display: flex;
     gap: 0.3rem;
+    flex-wrap: wrap;
   }
 
   &__weekday-btn {
     border: 1px solid rgba(0, 0, 0, 0.25);
     background: transparent;
-    border-radius: 0.4rem;
-    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius-md);
+    // War 0.3rem/0.5rem mit 0.8rem Schrift - auf dem wandmontierten Touch-Tablet
+    // (der Haupt-Einsatzzweck dieses Projekts) eine zu kleine Trefferflaeche.
+    padding: var(--spacing-xs) var(--spacing-sm);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: var(--font-size-base);
+    min-width: 2.75rem;
+    min-height: 2.75rem;
 
     &--active {
-      background: #1976d2;
-      border-color: #1976d2;
-      color: #fff;
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-white);
     }
   }
 
@@ -244,7 +257,7 @@
     align-self: flex-start;
     border: none;
     background: none;
-    color: #1976d2;
+    color: var(--color-primary);
     cursor: pointer;
     padding: 0;
     font-size: 0.8rem;
@@ -264,20 +277,20 @@
   &__btn {
     border: 1px solid rgba(0, 0, 0, 0.25);
     background: transparent;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     padding: 0.45rem 0.9rem;
     cursor: pointer;
     font: inherit;
 
     &--primary {
-      background: #1976d2;
-      border-color: #1976d2;
-      color: #fff;
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-white);
     }
 
     &--danger {
-      border-color: #c62828;
-      color: #c62828;
+      border-color: var(--color-error);
+      color: var(--color-error);
     }
 
     &:disabled {

@@ -309,4 +309,206 @@ describe('CalendarComponent', () => {
 
     expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
   });
+
+  // --- Regressionstests aus dem Quality-Review (Vorkommen-Datum, ungueltige Wiederholung,
+  // hangender Speichern-Zustand) -------------------------------------------------------
+
+  /** Findet einen Button ueber seinen sichtbaren Text - wirft klar, statt undefined zu liefern. */
+  function findButton(label: string): HTMLButtonElement {
+    const btn = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .find(b => b.textContent?.trim() === label);
+    if (!btn) {
+      throw new Error(`Button "${label}" nicht gefunden.`);
+    }
+    return btn as HTMLButtonElement;
+  }
+
+  function setInputValue(selector: string, value: string): void {
+    const input = requireElement<HTMLInputElement>(selector);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  it('Speichern mit "Ende: Nach Anzahl" und leerem Zahlenfeld zeigt eine Fehlermeldung im Dialog', () => {
+    loadInitial([]);
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    // Genau der Zustand direkt nach der Auswahl "Ende: Nach Anzahl" - das Zahlenfeld ist
+    // noch leer (count bleibt null, siehe defaultRecurrence()).
+    component.recurrence.freq = 'DAILY';
+    component.recurrence.endType = 'COUNT';
+    fixture.detectChanges();
+
+    findButton('Speichern').click();
+    fixture.detectChanges();
+
+    expect(component.dialogOpen).toBeTrue();
+    const errorText = (fixture.nativeElement as HTMLElement)
+      .querySelector('.calendar__error')?.textContent ?? '';
+    expect(errorText.trim().length).toBeGreaterThan(0);
+    // httpMock.verify() im afterEach bestaetigt zusaetzlich, dass gar kein Request feuerte.
+  });
+
+  it('"Nur diesen Termin" sendet im Request-Body das Datum des angeklickten Vorkommens, nicht den Serienstart', () => {
+    loadInitial([RECURRING_OCCURRENCE]);
+    clickChip('2026-08-12');
+    httpMock.expectOne('/api/v1/calendar/events/2').flush(RECURRING_EVENT); // startDate '2026-01-07'
+    fixture.detectChanges();
+
+    // Vorbelegung: das Datumsfeld zeigt das Vorkommen, nicht den Serienstart.
+    expect(fixture.componentInstance.form.startDate).toBe('2026-08-12');
+
+    findButton('Speichern').click();
+    fixture.detectChanges();
+    findButton('Nur diesen Termin').click();
+
+    const put = httpMock.expectOne('/api/v1/calendar/events/2/occurrences/2026-08-12');
+    expect(put.request.body.startDate).toBe('2026-08-12');
+    put.flush(RECURRING_OCCURRENCE);
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('"Ganze Serie" ohne Aenderung am Datumsfeld sendet weiterhin den urspruenglichen Serienstart', () => {
+    loadInitial([RECURRING_OCCURRENCE]);
+    clickChip('2026-08-12');
+    httpMock.expectOne('/api/v1/calendar/events/2').flush(RECURRING_EVENT); // startDate '2026-01-07'
+    fixture.detectChanges();
+
+    findButton('Speichern').click();
+    fixture.detectChanges();
+    findButton('Ganze Serie').click();
+
+    const put = httpMock.expectOne('/api/v1/calendar/events/2');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body.startDate).toBe('2026-01-07');
+    put.flush(RECURRING_EVENT);
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('eine ueber die Oberflaeche zusammengeklickte Wiederholung landet als erwartete RRULE im Request', () => {
+    loadInitial([]);
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    setInputValue('input[name="title"]', 'Muell rausbringen');
+
+    const freqSelect = requireElement<HTMLSelectElement>('select[name="freq"]');
+    freqSelect.value = 'WEEKLY';
+    freqSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const mondayButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__weekday-btn')
+    ).find(b => b.textContent?.trim() === 'Mo') as HTMLButtonElement;
+    mondayButton.click();
+    fixture.detectChanges();
+
+    findButton('Speichern').click();
+
+    const post = httpMock.expectOne('/api/v1/calendar/events');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body.rrule).toBe('FREQ=WEEKLY;BYDAY=MO');
+    post.flush({ ...SINGLE_EVENT, id: 42, rrule: 'FREQ=WEEKLY;BYDAY=MO', recurring: true });
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('Expertenmodus: eine roh eingegebene RRULE landet unveraendert im Request', () => {
+    loadInitial([]);
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    setInputValue('input[name="title"]', 'Sonderregel');
+    findButton('Erweitert (RRULE direkt eingeben)').click();
+    fixture.detectChanges();
+
+    setInputValue('input[name="rawRrule"]', 'FREQ=MONTHLY;BYDAY=-1FR');
+    fixture.detectChanges();
+
+    findButton('Speichern').click();
+
+    const post = httpMock.expectOne('/api/v1/calendar/events');
+    expect(post.request.body.rrule).toBe('FREQ=MONTHLY;BYDAY=-1FR');
+    post.flush({ ...SINGLE_EVENT, id: 43, rrule: 'FREQ=MONTHLY;BYDAY=-1FR', recurring: true });
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('Dialog schliessen und neu oeffnen setzt Fehlertext und Expertenmodus zurueck', () => {
+    loadInitial([]);
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.advancedMode = true;
+    component.rawRrule = 'FREQ=DAILY';
+    component.dialogError = 'Irgendein vorheriger Fehler';
+    fixture.detectChanges();
+
+    findButton('Abbrechen').click();
+    fixture.detectChanges();
+    expect(component.dialogOpen).toBeFalse();
+
+    dayCell('2026-08-11').click();
+    fixture.detectChanges();
+
+    expect(component.dialogOpen).toBeTrue();
+    expect(component.dialogError).toBeNull();
+    expect(component.advancedMode).toBeFalse();
+    expect(component.rawRrule).toBe('');
+    const errorEl = (fixture.nativeElement as HTMLElement).querySelector('.calendar__error');
+    expect(errorEl).toBeFalsy();
+  });
+
+  it('zeigt die "+n weitere"-Anzeige ab dem vierten Termin eines Tages', () => {
+    const fourOnSameDay: CalendarOccurrence[] = [1, 2, 3, 4].map(n => ({
+      ...SINGLE_OCCURRENCE,
+      eventId: 100 + n,
+      occurrenceDate: '2026-08-10',
+      title: `Termin ${n}`
+    }));
+    loadInitial(fourOnSameDay);
+
+    expect(dayCell('2026-08-10').textContent).toContain('+1 weitere');
+  });
+
+  it('eine veraltete Speichern-Antwort schliesst keinen inzwischen neu geoeffneten Dialog und ueberschreibt dessen Fehler nicht', () => {
+    loadInitial([]);
+    // Dialog A oeffnen und Speichern anstossen (Request bleibt zunaechst offen).
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+    setInputValue('input[name="title"]', 'Termin A');
+    findButton('Speichern').click();
+    const staleCreate = httpMock.expectOne('/api/v1/calendar/events');
+
+    // Waehrend die Antwort noch aussteht: Dialog A verlassen und Dialog B oeffnen.
+    findButton('Abbrechen').click();
+    fixture.detectChanges();
+    dayCell('2026-08-11').click();
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.saving).toBeFalse();
+
+    // Jetzt trifft die veraltete Antwort auf A ein.
+    staleCreate.flush({ ...SINGLE_EVENT, id: 77 });
+
+    // Dialog B muss weiterhin offen und unveraendert sein - insbesondere darf saving nicht
+    // erneut angefasst und der Dialog nicht geschlossen worden sein.
+    expect(component.dialogOpen).toBeTrue();
+    expect(component.form.startDate).toBe('2026-08-11');
+
+    // Das Raster wird trotzdem aktualisiert (die Mutation war serverseitig erfolgreich).
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+    fixture.detectChanges();
+
+    findButton('Abbrechen').click();
+  });
 });

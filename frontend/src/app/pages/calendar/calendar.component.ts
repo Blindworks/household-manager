@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -76,10 +76,26 @@ export class CalendarComponent implements OnInit {
   dialogOpen = false;
   /** Beim Bearbeiten gesetzt; null = Anlegen. */
   editing: { event: CalendarEvent; occurrence: CalendarOccurrence } | null = null;
+  /**
+   * Der echte Serienstart (aus der Serie/Master-Zeile), getrennt von form.startDate.
+   * form.startDate wird beim Bearbeiten bewusst mit dem Datum des angeklickten VORKOMMENS
+   * vorbelegt (siehe openEdit) - fuer den Scope "Ganze Serie" braucht buildRequest()
+   * trotzdem den urspruenglichen Serienstart, siehe resolveStartDate().
+   */
+  originalSeriesStartDate: string | null = null;
   /** Offene Scope-Frage bei Serien ('save' | 'delete'); null = keine. */
   scopeQuestion: 'save' | 'delete' | null = null;
   dialogError: string | null = null;
   saving = false;
+  /**
+   * Zaehlt hoch bei jedem Oeffnen/Schliessen eines Dialogs. save()/performDelete() merken
+   * sich den Stand bei Anfrage-Start; trifft die Antwort ein, waehrend der Stand sich
+   * schon geaendert hat (Dialog inzwischen geschlossen oder ein neuer geoeffnet), gilt die
+   * Antwort als veraltet: sie darf keinen inzwischen anderen Dialog mehr schliessen oder
+   * dessen dialogError/saving ueberschreiben. Das Raster wird trotzdem aktualisiert, die
+   * Mutation ist ja serverseitig durch.
+   */
+  private dialogGeneration = 0;
 
   readonly weekdayOptions: { code: Weekday; label: string }[] = [
     { code: 'MO', label: 'Mo' }, { code: 'TU', label: 'Di' }, { code: 'WE', label: 'Mi' },
@@ -129,31 +145,53 @@ export class CalendarComponent implements OnInit {
   }
 
   openCreate(day: MonthDay): void {
+    this.dialogGeneration++;
     this.editing = null;
+    this.originalSeriesStartDate = null;
     this.form = this.emptyForm();
     this.form.startDate = day.isoDate;
     this.recurrence = CalendarComponent.defaultRecurrence();
     this.advancedMode = false;
     this.rawRrule = '';
+    this.scopeQuestion = null;
     this.dialogError = null;
+    this.saving = false;
     this.dialogOpen = true;
   }
 
-  /** Laedt die Stammdaten (bei Serien die Master-Zeile) und oeffnet den Dialog. */
+  /**
+   * Laedt die Stammdaten (bei Serien die Master-Zeile - fuer Wiederholungsregel und das
+   * recurring-Kennzeichen) und oeffnet den Dialog.
+   */
   openEdit(occurrence: CalendarOccurrence, clickEvent: Event): void {
     clickEvent.stopPropagation();
+    // Vor dem asynchronen Aufruf hochzaehlen: klickt der Nutzer waehrend der Anfrage einen
+    // anderen Termin (oder schliesst den Dialog), ist diese Generation beim Eintreffen der
+    // Antwort schon veraltet und wird unten verworfen (siehe dialogGeneration-Kommentar).
+    const generation = ++this.dialogGeneration;
     this.calendarService.getEvent(occurrence.eventId).subscribe({
       next: event => {
+        if (generation !== this.dialogGeneration) {
+          return;
+        }
         this.editing = { event, occurrence };
+        this.originalSeriesStartDate = event.startDate;
+        // Formularwerte kommen aus dem VORKOMMEN, nicht aus der Serie: bei einem bereits
+        // ueberschriebenen Vorkommen (Override-Zeile) haelt die Serie noch die alten Werte,
+        // occurrence traegt bereits die tatsaechlich angezeigten (siehe getOccurrences()).
+        // startDate wird bewusst mit dem Datum DIESES Vorkommens vorbelegt statt mit dem
+        // Serienstart - der Nutzer hat genau diesen Tag angeklickt und erwartet ihn im
+        // Dialog. Der echte Serienstart bleibt in originalSeriesStartDate gemerkt und
+        // kommt nur bei Scope "Ganze Serie" zum Zug, siehe resolveStartDate().
         this.form = {
-          title: event.title,
-          notes: event.notes ?? '',
-          category: event.category,
-          allDay: event.allDay,
-          startDate: event.startDate,
-          startTime: event.startTime ?? '',
-          endTime: event.endTime ?? '',
-          endDate: event.endDate ?? ''
+          title: occurrence.title,
+          notes: occurrence.notes ?? '',
+          category: occurrence.category,
+          allDay: occurrence.allDay,
+          startDate: occurrence.occurrenceDate,
+          startTime: occurrence.startTime ?? '',
+          endTime: occurrence.endTime ?? '',
+          endDate: occurrence.endDate ?? ''
         };
         const parsed = event.rrule ? parseRrule(event.rrule) : null;
         if (event.rrule && !parsed) {
@@ -166,17 +204,37 @@ export class CalendarComponent implements OnInit {
           this.rawRrule = event.rrule ?? '';
           this.recurrence = parsed ? { ...parsed } : CalendarComponent.defaultRecurrence();
         }
+        this.scopeQuestion = null;
         this.dialogError = null;
+        this.saving = false;
         this.dialogOpen = true;
       },
-      error: (err: Error) => (this.loadError = err.message)
+      error: (err: Error) => {
+        if (generation !== this.dialogGeneration) {
+          return;
+        }
+        this.loadError = err.message;
+      }
     });
   }
 
   closeDialog(): void {
+    this.dialogGeneration++;
     this.dialogOpen = false;
     this.scopeQuestion = null;
     this.editing = null;
+  }
+
+  /** Schliesst zuerst die Scope-Rueckfrage, sonst den Termindialog (Muster wie im Dashboard). */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.scopeQuestion) {
+      this.scopeQuestion = null;
+      return;
+    }
+    if (this.dialogOpen) {
+      this.closeDialog();
+    }
   }
 
   toggleWeekday(code: Weekday): void {
@@ -260,14 +318,24 @@ export class CalendarComponent implements OnInit {
       call = this.calendarService.updateOccurrence(this.editing.event.id, recurrenceDate, request)
         .pipe(map(() => undefined));
     }
+    // Vor dem Request merken: trifft die Antwort ein, nachdem der Nutzer diesen Dialog
+    // schon geschlossen oder einen anderen geoeffnet hat, ist sie veraltet (siehe
+    // dialogGeneration-Kommentar an der Feld-Deklaration).
+    const generation = this.dialogGeneration;
     this.saving = true;
     call.subscribe({
       next: () => {
+        this.rebuildGrid();
+        if (generation !== this.dialogGeneration) {
+          return;
+        }
         this.saving = false;
         this.closeDialog();
-        this.rebuildGrid();
       },
       error: (err: Error) => {
+        if (generation !== this.dialogGeneration) {
+          return;
+        }
         this.saving = false;
         this.dialogError = err.message;
       }
@@ -289,14 +357,21 @@ export class CalendarComponent implements OnInit {
       }
       call = this.calendarService.deleteOccurrence(this.editing.event.id, recurrenceDate);
     }
+    const generation = this.dialogGeneration;
     this.saving = true;
     call.subscribe({
       next: () => {
+        this.rebuildGrid();
+        if (generation !== this.dialogGeneration) {
+          return;
+        }
         this.saving = false;
         this.closeDialog();
-        this.rebuildGrid();
       },
       error: (err: Error) => {
+        if (generation !== this.dialogGeneration) {
+          return;
+        }
         this.saving = false;
         this.dialogError = err.message;
       }
@@ -317,14 +392,27 @@ export class CalendarComponent implements OnInit {
       this.dialogError = 'Ein Termin mit Uhrzeit braucht eine Start-Uhrzeit.';
       return null;
     }
-    // "Nur dieser Termin" traegt nie eine RRULE - das Vorkommen bleibt Teil der Serie
-    const rrule = scope === 'occurrence' ? null : this.currentRrule();
+    const startDate = this.resolveStartDate(scope);
+    let rrule: string | null;
+    try {
+      // "Nur dieser Termin" traegt nie eine RRULE - das Vorkommen bleibt Teil der Serie
+      rrule = scope === 'occurrence' ? null : this.currentRrule(startDate);
+    } catch (err) {
+      // buildRrule wirft, wenn eine gewaehlte Endbedingung noch nicht ausgefuellt ist -
+      // z. B. direkt nachdem der Nutzer "Ende: Nach Anzahl" oder "Ende: Am Datum"
+      // ausgewaehlt hat, die Felder aber noch leer sind. Ohne dieses Auffangen wuerde die
+      // Exception ungefangen durchfliegen, bevor dialogError je gesetzt wird - der Klick
+      // auf "Speichern" waere dann scheinbar wirkungslos (Dialog bleibt offen, keine
+      // Fehlermeldung). buildRrule liefert dafuer bereits nutzerverstaendliche Texte.
+      this.dialogError = err instanceof Error ? err.message : 'Die Wiederholungsregel ist ungueltig.';
+      return null;
+    }
     return {
       title: this.form.title.trim(),
       notes: this.form.notes.trim() || null,
       category: this.form.category,
       allDay: this.form.allDay,
-      startDate: this.form.startDate,
+      startDate,
       startTime: this.form.allDay ? null : this.form.startTime || null,
       endTime: this.form.allDay ? null : this.form.endTime || null,
       endDate: this.form.endDate || null,
@@ -332,7 +420,30 @@ export class CalendarComponent implements OnInit {
     };
   }
 
-  private currentRrule(): string | null {
+  /**
+   * Ermittelt das im Request zu sendende Startdatum.
+   *
+   * Beim Bearbeiten ist form.startDate mit dem Datum des angeklickten VORKOMMENS vorbelegt
+   * (nicht dem Serienstart, siehe openEdit). Bei Scope "occurrence" ist das genau richtig:
+   * das Feld beschreibt dann, wohin dieses eine Vorkommen verschoben wird, also gilt immer
+   * form.startDate.
+   *
+   * Bei Scope "series" waere ein unveraendertes form.startDate aber der angeklickte Tag des
+   * Vorkommens, nicht der echte Serienbeginn - wuerde man den ungeprueft senden, verschoebe
+   * sich der Serienstart bei jeder Bearbeitung heimlich auf das gerade angeklickte
+   * Vorkommen. Deshalb gilt: nur wenn der Nutzer das Datumsfeld sichtbar veraendert hat (es
+   * weicht vom vorbelegten Vorkommen-Datum ab), ist das eine bewusste Verschiebung des
+   * Serienstarts - sonst wird der urspruengliche, gemerkte Serienstart gesendet.
+   */
+  private resolveStartDate(scope: 'occurrence' | 'series'): string {
+    if (scope === 'series' && this.editing && this.originalSeriesStartDate !== null
+        && this.form.startDate === this.editing.occurrence.occurrenceDate) {
+      return this.originalSeriesStartDate;
+    }
+    return this.form.startDate;
+  }
+
+  private currentRrule(startDate: string): string | null {
     if (this.advancedMode) {
       return this.rawRrule.trim() || null;
     }
@@ -344,7 +455,7 @@ export class CalendarComponent implements OnInit {
       return null;
     }
     const options: RecurrenceOptions = { freq, ...rest };
-    return buildRrule(options, this.form.startDate);
+    return buildRrule(options, startDate);
   }
 
   private shiftMonth(delta: number): void {
