@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260725-0039" author="household-manager">
+        <comment>Create calendar_events table (Haushaltskalender: Serien via RRULE, Ausnahmen via EXDATE/Override).</comment>
+
+        <createTable tableName="calendar_events">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="category" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="all_day" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_time" type="TIME"/>
+            <column name="end_time" type="TIME"/>
+            <column name="end_date" type="DATE"/>
+            <column name="rrule" type="VARCHAR(500)"/>
+            <column name="exdates" type="TEXT"/>
+            <column name="recurring_parent_id" type="BIGINT"/>
+            <column name="recurrence_date" type="DATE"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="calendar_events" baseColumnNames="recurring_parent_id"
+                referencedTableName="calendar_events" referencedColumnNames="id"
+                constraintName="fk_calendar_events_parent" onDelete="CASCADE"/>
+
+        <createIndex indexName="idx_calendar_events_start_date" tableName="calendar_events">
+            <column name="start_date"/>
+        </createIndex>
+        <createIndex indexName="idx_calendar_events_parent" tableName="calendar_events">
+            <column name="recurring_parent_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="calendar_events"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
