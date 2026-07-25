@@ -1,8 +1,13 @@
 package com.household.manager.tractive;
 
+import com.household.manager.tractive.dto.TractiveHardwareDto;
+import com.household.manager.tractive.dto.TractivePositionDto;
 import com.household.manager.tractive.dto.TractiveTokenDto;
+import com.household.manager.tractive.dto.TractiveTrackableDto;
+import com.household.manager.tractive.dto.TractiveTrackableRefDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -13,6 +18,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,10 +64,61 @@ public class TractiveApiClient {
         }
     }
 
+    public List<TractiveTrackableRefDto> listTrackableObjects(String token, String userId) {
+        return getList("/user/" + userId + "/trackable_objects", token, userId,
+                new ParameterizedTypeReference<List<TractiveTrackableRefDto>>() {
+                });
+    }
+
+    public TractiveTrackableDto getTrackable(String token, String userId, String trackableId) {
+        return get("/trackable_object/" + trackableId, token, userId, TractiveTrackableDto.class);
+    }
+
+    public TractivePositionDto getPosition(String token, String userId, String trackerId) {
+        return get("/device_pos_report/" + trackerId, token, userId, TractivePositionDto.class);
+    }
+
+    public TractiveHardwareDto getHardware(String token, String userId, String trackerId) {
+        // Der abschliessende Slash ist von der API vorgegeben.
+        return get("/device_hw_report/" + trackerId + "/", token, userId, TractiveHardwareDto.class);
+    }
+
+    private <T> T get(String path, String token, String userId, Class<T> type) {
+        try {
+            var response = restTemplate.exchange(properties.getBaseUrl() + path, HttpMethod.GET,
+                    new HttpEntity<>(authHeaders(token, userId)), type);
+            T body = response.getBody();
+            if (body == null) {
+                throw new TractiveException("Leere Antwort von " + path);
+            }
+            return body;
+        } catch (RestClientException ex) {
+            throw new TractiveException("Tractive-Abruf " + path + " fehlgeschlagen: " + ex.getMessage(), ex);
+        }
+    }
+
+    private <T> List<T> getList(String path, String token, String userId,
+                                ParameterizedTypeReference<List<T>> type) {
+        try {
+            var response = restTemplate.exchange(properties.getBaseUrl() + path, HttpMethod.GET,
+                    new HttpEntity<>(authHeaders(token, userId)), type);
+            return response.getBody() != null ? response.getBody() : List.of();
+        } catch (RestClientException ex) {
+            throw new TractiveException("Tractive-Abruf " + path + " fehlgeschlagen: " + ex.getMessage(), ex);
+        }
+    }
+
+    private HttpHeaders authHeaders(String token, String userId) {
+        HttpHeaders headers = baseHeaders();
+        headers.setBearerAuth(token);
+        headers.set("x-tractive-user", userId);
+        return headers;
+    }
+
     private HttpHeaders baseHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-tractive-client", properties.getClientId());
-        headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         return headers;
     }
 

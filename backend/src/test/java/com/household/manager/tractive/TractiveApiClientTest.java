@@ -64,4 +64,67 @@ class TractiveApiClientTest {
                 () -> client.login("a@b.de", "geheim"));
         assertFalse(ex instanceof TractiveAuthException);
     }
+
+    @Test
+    void listTrackableObjectsSendsAuthHeaders() {
+        server.expect(requestTo("https://graph.tractive.com/4/user/u-1/trackable_objects"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", "Bearer tok-1"))
+                .andExpect(header("x-tractive-user", "u-1"))
+                .andExpect(header("x-tractive-client", "625e533dc3c3b41c28a669f0"))
+                .andRespond(withSuccess("""
+                        [{"_id": "trk-1"}, {"_id": "trk-2"}]
+                        """, MediaType.APPLICATION_JSON));
+
+        var refs = client.listTrackableObjects("tok-1", "u-1");
+
+        assertEquals(2, refs.size());
+        assertEquals("trk-1", refs.get(0).id());
+        server.verify();
+    }
+
+    @Test
+    void trackableDetailsParseNameAndDeviceId() {
+        server.expect(requestTo("https://graph.tractive.com/4/trackable_object/trk-1"))
+                .andRespond(withSuccess("""
+                        {"_id": "trk-1", "device_id": "dev-9",
+                         "details": {"name": "Bello", "pet_type": "DOG"}, "extra": 1}
+                        """, MediaType.APPLICATION_JSON));
+
+        var trackable = client.getTrackable("tok-1", "u-1", "trk-1");
+
+        assertEquals("dev-9", trackable.deviceId());
+        assertEquals("Bello", trackable.details().name());
+        server.verify();
+    }
+
+    @Test
+    void positionReportParsesLatLong() {
+        server.expect(requestTo("https://graph.tractive.com/4/device_pos_report/dev-9"))
+                .andRespond(withSuccess("""
+                        {"latlong": [48.2082, 16.3738], "accuracy": 12,
+                         "sensor_used": "GPS", "time": 1800000000, "extra": true}
+                        """, MediaType.APPLICATION_JSON));
+
+        var position = client.getPosition("tok-1", "u-1", "dev-9");
+
+        assertEquals(48.2082, position.latitude());
+        assertEquals(16.3738, position.longitude());
+        assertEquals("GPS", position.sensorUsed());
+        server.verify();
+    }
+
+    @Test
+    void hardwareReportParsesBatteryAndCharging() {
+        server.expect(requestTo("https://graph.tractive.com/4/device_hw_report/dev-9/"))
+                .andRespond(withSuccess("""
+                        {"battery_level": 87, "charging_state": "CHARGING", "time": 1800000000}
+                        """, MediaType.APPLICATION_JSON));
+
+        var hardware = client.getHardware("tok-1", "u-1", "dev-9");
+
+        assertEquals(87, hardware.batteryLevel());
+        assertTrue(hardware.isCharging());
+        server.verify();
+    }
 }
