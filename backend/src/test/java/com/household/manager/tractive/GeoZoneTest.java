@@ -14,16 +14,32 @@ class GeoZoneTest {
         assertTrue(zone.contains(48.2082, 16.3738));
     }
 
+    /** Ein Grad Breite entspricht bei R = 6.371 km rund 111.195 m. */
+    private static final double DEGREES_PER_METER = 1 / 111_194.93;
+
     @Test
-    void pointJustInsideRadiusIsInside() {
-        // rund 50 m noerdlich (1 Breitengrad entspricht ca. 111.320 m)
-        assertTrue(zone.contains(48.2082 + 0.00045, 16.3738));
+    void pointWellInsideRadiusIsInside() {
+        assertTrue(zone.contains(48.2082 + 50 * DEGREES_PER_METER, 16.3738));
     }
 
     @Test
-    void pointOutsideRadiusIsOutside() {
-        // rund 550 m noerdlich
-        assertFalse(zone.contains(48.2082 + 0.005, 16.3738));
+    void pointJustInsideRadiusIsInside() {
+        assertTrue(zone.contains(48.2082 + 99.9 * DEGREES_PER_METER, 16.3738));
+    }
+
+    @Test
+    void pointJustOutsideRadiusIsOutside() {
+        assertFalse(zone.contains(48.2082 + 100.1 * DEGREES_PER_METER, 16.3738));
+    }
+
+    /** Genau auf dem Rand: der Radius ist exakt die gemessene Distanz. */
+    @Test
+    void pointExactlyOnTheBoundaryIsInside() {
+        double latitude = 48.2090;
+        double distance = GeoZone.distanceMeters(48.2082, 16.3738, latitude, 16.3738);
+        GeoZone exact = new GeoZone("Rand", 48.2082, 16.3738, distance);
+
+        assertTrue(exact.contains(latitude, 16.3738));
     }
 
     @Test

@@ -9,6 +9,7 @@ public record GeoZone(String name, double latitude, double longitude, double rad
 
     private static final double EARTH_RADIUS_METERS = 6_371_000d;
 
+    /** Der Rand zaehlt als innerhalb. */
     public boolean contains(double pointLatitude, double pointLongitude) {
         return distanceMeters(latitude, longitude, pointLatitude, pointLongitude) <= radiusMeters;
     }
