@@ -9,7 +9,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.time.LocalDateTime;
 
@@ -35,7 +34,7 @@ public class TractiveAuth {
     @Id
     private Long id;
 
-    @ToString.Exclude
+    /** Nie in Logs oder toString ausgeben. */
     @Column(name = "access_token", nullable = false, length = 1024)
     private String accessToken;
 
