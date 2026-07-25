@@ -1,0 +1,50 @@
+<div class="calendar container">
+  <header class="calendar__header">
+    <h1 class="calendar__title">Kalender</h1>
+    <div class="calendar__nav">
+      <button type="button" class="calendar__nav-btn" (click)="previousMonth()"
+              aria-label="Voriger Monat">‹</button>
+      <span class="calendar__month">{{ monthLabel }}</span>
+      <button type="button" class="calendar__nav-btn" (click)="nextMonth()"
+              aria-label="Naechster Monat">›</button>
+      <button type="button" class="calendar__today-btn" (click)="goToToday()">Heute</button>
+    </div>
+  </header>
+
+  @if (loadError) {
+    <p class="calendar__error">{{ loadError }}</p>
+  }
+
+  <div class="calendar__grid" role="grid">
+    @for (label of weekdayLabels; track label) {
+      <div class="calendar__weekday">{{ label }}</div>
+    }
+
+    @for (week of grid; track $index) {
+      @for (day of week; track day.isoDate) {
+        <div class="calendar__day"
+             [class.calendar__day--outside]="!day.inMonth"
+             [class.calendar__day--today]="day.isToday"
+             (click)="openCreate(day)">
+          <span class="calendar__day-number">{{ day.dayOfMonth }}</span>
+          <div class="calendar__chips">
+            @for (occ of chipsFor(day).slice(0, dayChipLimit); track occ.eventId + '-' + occ.occurrenceDate) {
+              <button type="button"
+                      class="calendar__chip"
+                      [style.--chip-color]="colorFor(occ)"
+                      (click)="openEdit(occ, $event)">
+                @if (!occ.allDay && occ.startTime) {
+                  <span class="calendar__chip-time">{{ occ.startTime }}</span>
+                }
+                {{ occ.title }}
+              </button>
+            }
+            @if (overflowCount(day) > 0) {
+              <span class="calendar__more">+{{ overflowCount(day) }} weitere</span>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

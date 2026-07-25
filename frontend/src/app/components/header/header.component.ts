@@ -26,6 +26,7 @@ export class HeaderComponent {
     { path: '/', label: 'Home', exact: true },
     { path: '/meter-readings', label: 'Zaehlerstaende' },
     { path: '/consumption', label: 'Verbrauch' },
+    { path: '/calendar', label: 'Kalender' },
     {
       path: '/energy',
       label: 'Energie',
