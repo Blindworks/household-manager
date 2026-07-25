@@ -18,6 +18,8 @@ import { ModeEntity } from '../../models/mode.model';
 import { NukiLock } from '../../models/nuki.model';
 import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer } from '../../models/power-consumer.model';
+import { CalendarService } from '../../services/calendar.service';
+import { CalendarOccurrence } from '../../models/calendar-event.model';
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -358,6 +360,122 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
 
     expect(wasteServiceSpy.getUpcoming).toHaveBeenCalled();
     expect(insightTexts(fixture)[0]).toContain('Heute: Hausmüll');
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {
+  let calendarServiceSpy: jasmine.SpyObj<CalendarService>;
+  let wasteServiceSpy: jasmine.SpyObj<WasteCollectionService>;
+
+  const occurrence = (overrides: Partial<CalendarOccurrence> = {}): CalendarOccurrence => ({
+    eventId: 1,
+    occurrenceDate: '2026-07-26',
+    recurrenceDate: null,
+    title: 'Zahnarzt',
+    notes: null,
+    category: 'HEALTH',
+    allDay: false,
+    startTime: '09:00',
+    endTime: '09:30',
+    endDate: null,
+    recurring: false,
+    daysUntil: 1,
+    ...overrides
+  });
+
+  /** Der Hub rendert jede Meldung als .lumina__insight — inklusive Muell und Terminen. */
+  function insightTexts(fixture: ComponentFixture<DashboardComponent>): string[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__insight')
+    ).map(element => (element.textContent ?? '').replace(/\s+/g, ' ').trim());
+  }
+
+  beforeEach(async () => {
+    calendarServiceSpy = jasmine.createSpyObj('CalendarService', ['getUpcoming']);
+    calendarServiceSpy.getUpcoming.and.returnValue(of([]));
+
+    wasteServiceSpy = jasmine.createSpyObj('WasteCollectionService', ['getUpcoming']);
+    wasteServiceSpy.getUpcoming.and.returnValue(of([]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CalendarService, useValue: calendarServiceSpy },
+        { provide: WasteCollectionService, useValue: wasteServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('zeigt Kalendertermine als Meldungen im Hub', fakeAsync(() => {
+    calendarServiceSpy.getUpcoming.and.returnValue(of([occurrence()]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture)[0]).toContain('Zahnarzt');
+    expect(insightTexts(fixture)[0]).toContain('Morgen, 09:00 Uhr');
+
+    discardPeriodicTasks();
+  }));
+
+  it('ordnet Muell vor Terminen vor den Platzhaltern ein', fakeAsync(() => {
+    wasteServiceSpy.getUpcoming.and.returnValue(of([
+      { date: '2026-07-26', label: 'Hausmüll', daysUntil: 1 }
+    ]));
+    calendarServiceSpy.getUpcoming.and.returnValue(of([occurrence()]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const texts = insightTexts(fixture);
+    expect(texts[0]).toContain('Müllabfuhr');
+    expect(texts[1]).toContain('Zahnarzt');
+    expect(texts[2]).toContain('Energie-Optimierung');
+
+    discardPeriodicTasks();
+  }));
+
+  it('verschweigt Termine bei einem API-Fehler, statt das Dashboard zu stoeren', fakeAsync(() => {
+    calendarServiceSpy.getUpcoming.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture).join(' ')).not.toContain('Zahnarzt');
+    expect(insightTexts(fixture).length).toBe(3);
+
+    discardPeriodicTasks();
+  }));
+
+  it('laesst den Hub ohne anstehende Termine bei den Platzhaltern', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture)[0]).toContain('Energie-Optimierung');
+    expect(insightTexts(fixture).length).toBe(3);
 
     discardPeriodicTasks();
   }));

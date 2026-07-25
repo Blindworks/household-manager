@@ -31,4 +31,22 @@ describe('buildMonthGrid', () => {
       }
     }
   });
+
+  it('braucht keine Randtage, wenn der Monat an einem Montag beginnt und einem Sonntag endet', () => {
+    // Februar 2027 beginnt an einem Montag und endet (28.) an einem Sonntag -> genau 4 Wochen.
+    const grid = buildMonthGrid(2027, 2, new Date(2027, 1, 15));
+    expect(grid.length).toBe(4);
+    expect(grid[0][0].isoDate).toBe('2027-02-01');
+    expect(grid[0][0].inMonth).toBeTrue();
+    expect(grid[3][6].isoDate).toBe('2027-02-28');
+    expect(grid[3][6].inMonth).toBeTrue();
+    expect(grid.flat().filter(d => d.inMonth).length).toBe(28);
+  });
+
+  it('erfasst den 29. Februar in einem Schaltjahr', () => {
+    const grid = buildMonthGrid(2028, 2, new Date(2028, 1, 15));
+    expect(grid.flat().filter(d => d.inMonth).length).toBe(29);
+    const leapDay = grid.flat().find(d => d.isoDate === '2028-02-29');
+    expect(leapDay?.inMonth).toBeTrue();
+  });
 });

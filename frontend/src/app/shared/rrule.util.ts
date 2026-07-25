@@ -37,13 +37,25 @@ export function buildRrule(options: RecurrenceOptions, startDate: string): strin
     } else {
       const nth = Math.floor((day - 1) / 7) + 1;
       const weekday = WEEKDAY_CODES[new Date(year, month - 1, day).getDay()];
-      parts.push(`BYDAY=${nth}${weekday}`);
+      // Ein "5." Vorkommen (Tage 29.-31.) gibt es in den meisten Monaten nicht — die Regel
+      // wuerde dann fast immer ausfallen. Die iCal-Negativform "letzter Wochentag" trifft
+      // dagegen in jedem Monat; fuer 1.-4. bleibt die Zaehlung "der n-te" wie gewaehlt.
+      const ordinal = nth === 5 ? '-1' : `${nth}`;
+      parts.push(`BYDAY=${ordinal}${weekday}`);
     }
   }
-  if (options.endType === 'UNTIL' && options.untilDate) {
+  if (options.endType === 'UNTIL') {
+    if (!options.untilDate) {
+      throw new Error('RecurrenceOptions.untilDate fehlt fuer endType UNTIL.');
+    }
     parts.push(`UNTIL=${options.untilDate.replaceAll('-', '')}`);
   }
-  if (options.endType === 'COUNT' && options.count) {
+  if (options.endType === 'COUNT') {
+    if (options.count === null || options.count < 1) {
+      // Truthiness wuerde count=0 (und negative Werte) stillschweigend verwerfen — die
+      // Regel liefe dann unendlich statt "null mal". Lieber laut scheitern als das.
+      throw new Error('RecurrenceOptions.count muss >= 1 sein fuer endType COUNT.');
+    }
     parts.push(`COUNT=${options.count}`);
   }
   return parts.join(';');
@@ -69,7 +81,11 @@ export function parseRrule(rrule: string): RecurrenceOptions | null {
   if (!freq || !['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(freq)) {
     return null;
   }
-  const supported = new Set(['FREQ', 'INTERVAL', 'BYDAY', 'BYMONTHDAY', 'UNTIL', 'COUNT']);
+  // WKST (Wochenstart) taucht bei praktisch jedem von Google/Outlook exportierten
+  // Weekly-Termin auf; es aendert die Bedeutung nur bei INTERVAL>1 mit mehreren
+  // Wochentagen, fuer alles vom Baukasten Erzeugte ist es folgenlos — daher nur
+  // akzeptieren und ignorieren, statt die ganze Regel deswegen abzulehnen.
+  const supported = new Set(['FREQ', 'INTERVAL', 'BYDAY', 'BYMONTHDAY', 'UNTIL', 'COUNT', 'WKST']);
   if ([...entries.keys()].some(key => !supported.has(key))) {
     return null;
   }
@@ -95,7 +111,7 @@ export function parseRrule(rrule: string): RecurrenceOptions | null {
         return null;
       }
       result.weekdays = days as Weekday[];
-    } else if (freq === 'MONTHLY' && /^[1-5](MO|TU|WE|TH|FR|SA|SU)$/.test(byday)) {
+    } else if (freq === 'MONTHLY' && /^(-1|[1-5])(MO|TU|WE|TH|FR|SA|SU)$/.test(byday)) {
       result.monthlyMode = 'NTH_WEEKDAY';
     } else {
       return null;

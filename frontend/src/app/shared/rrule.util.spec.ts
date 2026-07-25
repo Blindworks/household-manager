@@ -35,6 +35,21 @@ describe('buildRrule', () => {
     expect(buildRrule(options({ endType: 'COUNT', count: 10 }), '2026-07-07'))
       .toBe('FREQ=WEEKLY;COUNT=10');
   });
+
+  it('baut die Negativform fuer ein "5." Vorkommen am Monatsende', () => {
+    // 29.09.2026 ist ein Dienstag; ein fuenfter Dienstag existiert in den meisten
+    // Monaten nicht, "letzter Dienstag" (BYDAY=-1TU) trifft dagegen immer.
+    expect(buildRrule(options({ freq: 'MONTHLY', monthlyMode: 'NTH_WEEKDAY' }), '2026-09-29'))
+      .toBe('FREQ=MONTHLY;BYDAY=-1TU');
+  });
+
+  it('wirft bei COUNT=0, statt eine unendlich laufende Regel zu erzeugen', () => {
+    expect(() => buildRrule(options({ endType: 'COUNT', count: 0 }), '2026-07-07')).toThrow();
+  });
+
+  it('wirft bei fehlendem untilDate, statt eine unendlich laufende Regel zu erzeugen', () => {
+    expect(() => buildRrule(options({ endType: 'UNTIL', untilDate: '' }), '2026-07-07')).toThrow();
+  });
 });
 
 describe('parseRrule', () => {
@@ -55,5 +70,17 @@ describe('parseRrule', () => {
   it('liefert null fuer Regeln, die der Builder nicht abbildet', () => {
     expect(parseRrule('FREQ=MONTHLY;BYDAY=MO,TU;BYSETPOS=-1')).toBeNull();
     expect(parseRrule('FREQ=HOURLY')).toBeNull();
+  });
+
+  it('erkennt die Negativform "letzter Wochentag" als n-ten Wochentag', () => {
+    expect(parseRrule('FREQ=MONTHLY;BYDAY=-1TU')).toEqual(jasmine.objectContaining({
+      freq: 'MONTHLY', monthlyMode: 'NTH_WEEKDAY'
+    }));
+  });
+
+  it('akzeptiert WKST und ignoriert den Wert (harmlos ohne INTERVAL>1 mit mehreren Wochentagen)', () => {
+    expect(parseRrule('FREQ=WEEKLY;BYDAY=MO;WKST=SU')).toEqual(jasmine.objectContaining({
+      freq: 'WEEKLY', weekdays: ['MO']
+    }));
   });
 });
