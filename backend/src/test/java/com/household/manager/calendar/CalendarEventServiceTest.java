@@ -481,4 +481,132 @@ class CalendarEventServiceTest {
                 validRequest().build()))
                 .isInstanceOf(ResponseStatusException.class);
     }
+
+    @Test
+    void deleteOccurrenceUeberOverrideIdSetztExdateAmMasterUndLoeschtOverride() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        CalendarEvent override = CalendarEvent.builder()
+                .id(3L).recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
+                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .build();
+        when(repository.findById(3L)).thenReturn(Optional.of(override));
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.deleteOccurrence(3L, LocalDate.of(2026, 7, 13));
+
+        verify(repository).delete(override);
+        verify(repository).save(weekly);
+        assertThat(weekly.exdateSet()).contains(LocalDate.of(2026, 7, 13));
+    }
+
+    @Test
+    void deleteOccurrenceBeiEinzelterminMitFalschemDatumWirdAbgelehnt() {
+        CalendarEvent single = CalendarEvent.builder()
+                .id(1L).title("Einmalig").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 8, 3))
+                .build();
+        when(repository.findById(1L)).thenReturn(Optional.of(single));
+
+        assertThatThrownBy(() -> service.deleteOccurrence(1L, LocalDate.of(2026, 8, 4)))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void updateOccurrenceMitDatumAusserhalbDerSerieWirdAbgelehnt() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+
+        // 2026-07-10 ist ein Freitag, die woechentliche Serie trifft nur Montage.
+        assertThatThrownBy(() -> service.updateOccurrence(2L, LocalDate.of(2026, 7, 10),
+                validRequest().build()))
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void updateOccurrenceAufZuvorPerExdateGeloeschtemDatumEntferntDasExdate() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        weekly.addExdate(LocalDate.of(2026, 7, 13));
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventRequest request = CalendarEventRequest.builder()
+                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .build();
+
+        service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
+
+        assertThat(weekly.exdateSet()).doesNotContain(LocalDate.of(2026, 7, 13));
+    }
+
+    @Test
+    void updateOccurrenceAufBestehendemOverrideAktualisiertIhnStattEinenZweitenAnzulegen() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        CalendarEvent existingOverride = CalendarEvent.builder()
+                .id(3L).recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
+                .title("Sport (fruehere Aenderung)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 13))
+                .build();
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
+                .thenReturn(Optional.of(existingOverride));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventRequest request = CalendarEventRequest.builder()
+                .title("Sport (neu verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 15))
+                .build();
+
+        CalendarEventResponse response =
+                service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
+
+        assertThat(response.getTitle()).isEqualTo("Sport (neu verschoben)");
+        assertThat(existingOverride.getTitle()).isEqualTo("Sport (neu verschoben)");
+        verify(repository).save(existingOverride);
+    }
+
+    @Test
+    void updateOccurrenceMitUngueltigerRruleImRequestFunktioniertTrotzdem() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventRequest request = CalendarEventRequest.builder()
+                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .rrule("FREQ=BANANA") // ungueltig, muss aber ignoriert werden
+                .build();
+
+        CalendarEventResponse response =
+                service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
+
+        assertThat(response.getTitle()).isEqualTo("Sport (verschoben)");
+        assertThat(response.getRrule()).isNull();
+    }
+
+    @Test
+    void overrideWirdBeimAendernDerSeriesRruleUeberUpdateEntfernt() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventRequest overrideRequest = CalendarEventRequest.builder()
+                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .build();
+        service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), overrideRequest);
+
+        service.update(2L, validRequest().rrule("FREQ=MONTHLY").build());
+
+        verify(repository).deleteByRecurringParentId(2L);
+    }
 }

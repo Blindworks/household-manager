@@ -97,4 +97,49 @@ class CalendarEventTest {
                 LocalDate.of(2026, 2, 8),
                 LocalDate.of(2026, 2, 15));
     }
+
+    @Test
+    void removeExdateEntferntEinVorhandenesDatum() {
+        CalendarEvent event = event();
+        event.addExdate(LocalDate.of(2026, 4, 1));
+        event.addExdate(LocalDate.of(2026, 4, 8));
+
+        event.removeExdate(LocalDate.of(2026, 4, 1));
+
+        assertThat(event.exdateSet()).containsExactly(LocalDate.of(2026, 4, 8));
+    }
+
+    @Test
+    void removeExdateLaesstAndereDatenStehen() {
+        CalendarEvent event = event();
+        event.addExdate(LocalDate.of(2026, 4, 1));
+        event.addExdate(LocalDate.of(2026, 4, 8));
+        event.addExdate(LocalDate.of(2026, 4, 15));
+
+        event.removeExdate(LocalDate.of(2026, 4, 8));
+
+        assertThat(event.exdateSet()).containsExactlyInAnyOrder(
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 15));
+    }
+
+    @Test
+    void removeExdateIstWirkungslosWennDasDatumNichtEnthaltenIst() {
+        CalendarEvent event = event();
+        event.addExdate(LocalDate.of(2026, 4, 1));
+
+        event.removeExdate(LocalDate.of(2026, 5, 1));
+
+        assertThat(event.exdateSet()).containsExactly(LocalDate.of(2026, 4, 1));
+    }
+
+    @Test
+    void removeExdateSetztExdatesAufNullWennNichtsUebrigBleibt() {
+        CalendarEvent event = event();
+        event.addExdate(LocalDate.of(2026, 4, 1));
+
+        event.removeExdate(LocalDate.of(2026, 4, 1));
+
+        assertThat(event.getExdates()).isNull();
+        assertThat(event.exdateSet()).isEmpty();
+    }
 }

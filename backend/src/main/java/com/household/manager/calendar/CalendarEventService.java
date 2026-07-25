@@ -190,11 +190,31 @@ public class CalendarEventService {
     /**
      * Loescht nur dieses Vorkommen: bei Einzelterminen die ganze Zeile, bei Serien
      * EXDATE am Master plus Entfernen eines eventuellen Overrides.
+     *
+     * <p>Wird die Id einer Override-Zeile selbst uebergeben, muss das trotzdem als
+     * "Vorkommen loeschen" behandelt werden: {@code isRecurring()} ist fuer eine
+     * Override-Zeile immer false (ihre RRULE wird von {@link #updateOccurrence} bewusst
+     * genullt), sodass sie sonst in den Einzeltermin-Zweig liefe - die Zeile wuerde
+     * geloescht, aber ohne EXDATE am Master erschiene das unbearbeitete Original der
+     * Serie an diesem Tag wieder. Bei einem echten Einzeltermin muss das uebergebene
+     * Datum zum Startdatum passen, sonst waere ein falsches/veraltetes Client-Datum eine
+     * stille Komplett-Loeschung.
      */
     @Transactional
     public void deleteOccurrence(Long id, LocalDate occurrenceDate) {
         CalendarEvent event = findOrThrow(id);
+        if (event.isOverride()) {
+            CalendarEvent master = findOrThrow(event.getRecurringParentId());
+            master.addExdate(event.getRecurrenceDate());
+            repository.save(master);
+            repository.delete(event);
+            return;
+        }
         if (!event.isRecurring()) {
+            if (!event.getStartDate().equals(occurrenceDate)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Das Datum %s entspricht nicht dem Termin.".formatted(occurrenceDate));
+            }
             repository.delete(event);
             return;
         }
@@ -204,7 +224,19 @@ public class CalendarEventService {
         repository.save(event);
     }
 
-    /** Aendert nur dieses Vorkommen: legt eine Override-Zeile an bzw. aktualisiert sie. */
+    /**
+     * Aendert nur dieses Vorkommen: legt eine Override-Zeile an bzw. aktualisiert sie.
+     *
+     * <p>Das Datum muss ein echtes Vorkommen der Serie sein - sonst entstuende eine
+     * Override-Zeile, die dauerhaft (unabhaengig vom Master) in jeder Fensterabfrage
+     * auftaucht, obwohl die Serie das Datum nie erzeugt haette. Die RRULE des Requests
+     * wird vor der Validierung neutralisiert, weil sie ohnehin verworfen wird (Overrides
+     * sind nie selbst Serien) - sonst koennte eine versehentlich mitgeschickte
+     * Master-RRULE das Speichern an einer nie benutzten Regel scheitern lassen. Ein
+     * bestehendes EXDATE fuer dieses Datum wird entfernt: der Override gewinnt gegenueber
+     * einer frueheren Loeschung, ein Datum darf nicht gleichzeitig geloescht und
+     * geaendert sein.
+     */
     @Transactional
     public CalendarEventResponse updateOccurrence(Long id, LocalDate occurrenceDate,
                                                   CalendarEventRequest request) {
@@ -213,6 +245,12 @@ public class CalendarEventService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Nur Serien haben einzelne Vorkommen — Einzeltermine direkt bearbeiten.");
         }
+        if (expansionService.expand(master.getRrule(), master.getStartDate(), occurrenceDate, occurrenceDate)
+                .isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Das Datum %s ist kein Vorkommen dieser Serie.".formatted(occurrenceDate));
+        }
+        request.setRrule(null);
         validate(request);
         CalendarEvent override = repository
                 .findByRecurringParentIdAndRecurrenceDate(id, occurrenceDate)
@@ -222,6 +260,8 @@ public class CalendarEventService {
                         .build());
         applyRequest(request, override);
         override.setRrule(null); // Overrides sind nie selbst Serien
+        master.removeExdate(occurrenceDate);
+        repository.save(master);
         return toResponse(repository.save(override));
     }
 

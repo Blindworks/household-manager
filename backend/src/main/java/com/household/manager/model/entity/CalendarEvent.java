@@ -124,4 +124,16 @@ public class CalendarEvent {
         all.add(date);
         exdates = all.stream().map(LocalDate::toString).collect(Collectors.joining(","));
     }
+
+    /**
+     * Entfernt ein EXDATE (z.B. wenn ein Override dasselbe Datum uebernimmt - der
+     * Override gewinnt, ein Datum darf nie gleichzeitig geloescht und geaendert sein).
+     * Wirkungslos, wenn das Datum nicht enthalten ist; bleibt nichts mehr uebrig, wird
+     * {@link #exdates} auf null gesetzt statt auf einen leeren String.
+     */
+    public void removeExdate(LocalDate date) {
+        Set<LocalDate> all = new TreeSet<>(exdateSet());
+        all.remove(date);
+        exdates = all.isEmpty() ? null : all.stream().map(LocalDate::toString).collect(Collectors.joining(","));
+    }
 }
