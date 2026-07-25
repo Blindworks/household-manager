@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Nachtrag zu 20260725-0039: Die Constraint gehoert fachlich in die Tabellendefinition,
+        wird aber bewusst hier nachgezogen, weil 0039 zu diesem Zeitpunkt bereits auf einer
+        Datenbank gelaufen war. Ein bereits angewendetes Changeset nachtraeglich zu aendern
+        bricht dessen Pruefsumme und damit jeden weiteren Start.
+
+        Fachlich: CalendarEventService.updateOccurrence setzt voraus, dass es je Serie und
+        ersetztem Vorkommen hoechstens EINE Override-Zeile gibt. Ohne DB-Constraint koennten
+        zwei gleichzeitige Anfragen beide am Existenz-Check vorbeilaufen und den Termin
+        doppelt anzeigen.
+    -->
+    <changeSet id="20260725-0040" author="household-manager">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists indexName="uq_calendar_events_parent_recurrence"
+                             tableName="calendar_events"/>
+            </not>
+        </preConditions>
+
+        <comment>Unique constraint on (recurring_parent_id, recurrence_date) for calendar overrides.</comment>
+
+        <addUniqueConstraint
+                tableName="calendar_events"
+                columnNames="recurring_parent_id, recurrence_date"
+                constraintName="uq_calendar_events_parent_recurrence"/>
+
+        <rollback>
+            <dropUniqueConstraint
+                    tableName="calendar_events"
+                    constraintName="uq_calendar_events_parent_recurrence"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

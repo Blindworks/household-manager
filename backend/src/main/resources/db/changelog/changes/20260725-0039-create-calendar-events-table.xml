@@ -6,12 +6,6 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="20260725-0039" author="household-manager">
-        <preConditions onFail="MARK_RAN">
-            <not>
-                <tableExists tableName="calendar_events"/>
-            </not>
-        </preConditions>
-
         <comment>Create calendar_events table (Haushaltskalender: Serien via RRULE, Ausnahmen via EXDATE/Override).</comment>
 
         <createTable tableName="calendar_events">
@@ -50,11 +44,6 @@
                 baseTableName="calendar_events" baseColumnNames="recurring_parent_id"
                 referencedTableName="calendar_events" referencedColumnNames="id"
                 constraintName="fk_calendar_events_parent" onDelete="CASCADE"/>
-
-        <addUniqueConstraint
-                tableName="calendar_events"
-                columnNames="recurring_parent_id, recurrence_date"
-                constraintName="uq_calendar_events_parent_recurrence"/>
 
         <createIndex indexName="idx_calendar_events_start_date" tableName="calendar_events">
             <column name="start_date"/>
