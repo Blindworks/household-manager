@@ -73,4 +73,18 @@ class RecurrenceExpansionServiceTest {
         assertThatThrownBy(() -> service.validate("FREQ=BANANA"))
                 .isInstanceOf(ResponseStatusException.class);
     }
+
+    @Test
+    void leereOderFehlendeRegelWirdMitBadRequestAbgelehnt() {
+        assertThatThrownBy(() -> service.validate(null)).isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> service.validate("")).isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> service.validate("   ")).isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void fensterEndeVorFensterstartIstLeer() {
+        List<LocalDate> result = service.expand("FREQ=DAILY", LocalDate.of(2026, 7, 1),
+                LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 5));
+        assertThat(result).isEmpty();
+    }
 }

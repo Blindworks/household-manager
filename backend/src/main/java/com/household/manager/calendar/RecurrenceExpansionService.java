@@ -1,5 +1,6 @@
 package com.household.manager.calendar;
 
+import lombok.extern.slf4j.Slf4j;
 import org.dmfs.rfc5545.DateTime;
 import org.dmfs.rfc5545.recur.InvalidRecurrenceRuleException;
 import org.dmfs.rfc5545.recur.RecurrenceRule;
@@ -20,6 +21,7 @@ import java.util.List;
  * passiert ausschliesslich in {@link #toDateTime}/{@link #toLocalDate}.
  */
 @Service
+@Slf4j
 public class RecurrenceExpansionService {
 
     /** Harte Kappe pro Abfrage — eine pathologische Regel darf nichts festfahren. */
@@ -48,6 +50,11 @@ public class RecurrenceExpansionService {
             if (!occurrence.isBefore(from)) {
                 occurrences.add(occurrence);
             }
+        }
+        if (occurrences.size() == MAX_OCCURRENCES && iterator.hasNext()) {
+            log.warn("RRULE '{}' hat die Expansionsgrenze von {} Vorkommen erreicht; "
+                            + "Serie wird im Fenster {} bis {} abgeschnitten",
+                    rrule, MAX_OCCURRENCES, from, to);
         }
         return occurrences;
     }
