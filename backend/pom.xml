@@ -136,6 +136,13 @@
             <artifactId>biweekly</artifactId>
             <version>0.6.8</version>
         </dependency>
+
+        <!-- RRULE-Expansion fuer den Haushaltskalender (einzige Nutzerin: RecurrenceExpansionService) -->
+        <dependency>
+            <groupId>org.dmfs</groupId>
+            <artifactId>lib-recur</artifactId>
+            <version>0.17.1</version>
+        </dependency>
     </dependencies>
 
     <build>
