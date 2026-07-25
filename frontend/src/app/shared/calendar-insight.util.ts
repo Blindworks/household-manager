@@ -21,6 +21,13 @@ export function buildCalendarInsights(
   }));
 }
 
+/**
+ * Negative `daysUntil` (Termin liegt in der Vergangenheit) liefert das Backend laut
+ * Spec nicht, der Typ schliesst es aber nicht aus. `<= URGENT_DAYS_UNTIL` faengt diesen
+ * Fall bewusst mit auf und faerbt ihn "dringend" statt eines eigenen Zweigs — ein
+ * Vergangenheits-Termin im Hub waere ohnehin ein Datenfehler, den soll die Farbe nicht
+ * kaschieren, indem sie ihn als "spaeter" (blau) einordnet.
+ */
 function toneFor(occ: CalendarOccurrence): HubInsight['tone'] {
   if (occ.daysUntil <= URGENT_DAYS_UNTIL) {
     return 'error';

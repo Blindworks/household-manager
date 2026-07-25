@@ -2,9 +2,6 @@ import { WasteCollectionEvent } from '../models/waste-collection.model';
 import { HubInsight } from './hub-insight.model';
 import { relativeDayLabel } from './relative-day.util';
 
-/** @deprecated Alias — neue Aufrufer nutzen HubInsight direkt. */
-export type WasteInsight = HubInsight;
-
 /** Bis einschliesslich morgen ist der Termin dringlich — der Indikator wird rot. */
 const URGENT_DAYS_UNTIL = 1;
 /** Uebermorgen kuendigt sich der Termin an — der Indikator wird gelb. */
@@ -16,7 +13,7 @@ const SOON_DAYS_UNTIL = 2;
  *
  * @returns `null`, wenn nichts ansteht — dann erscheint im Hub kein Muell-Eintrag.
  */
-export function buildWasteInsight(events: WasteCollectionEvent[]): WasteInsight | null {
+export function buildWasteInsight(events: WasteCollectionEvent[]): HubInsight | null {
   if (events.length === 0) {
     return null;
   }
@@ -36,7 +33,7 @@ export function buildWasteInsight(events: WasteCollectionEvent[]): WasteInsight 
  * Zeile zusammen, und ein "Morgen: Biotonne" darf nicht dadurch verblassen, dass
  * uebermorgen noch etwas folgt.
  */
-function toneFor(events: WasteCollectionEvent[]): WasteInsight['tone'] {
+function toneFor(events: WasteCollectionEvent[]): HubInsight['tone'] {
   const daysUntil = Math.min(...events.map(event => event.daysUntil));
   if (daysUntil <= URGENT_DAYS_UNTIL) {
     return 'error';
