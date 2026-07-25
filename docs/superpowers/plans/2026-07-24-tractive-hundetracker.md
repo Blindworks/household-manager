@@ -498,11 +498,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -515,21 +514,22 @@ class TractiveAuthServiceTest {
     @InjectMocks
     private TractiveAuthService service;
 
-    private TractiveAuth storedToken(Instant expiresAt) {
+    private TractiveAuth storedToken(LocalDateTime expiresAt) {
         return TractiveAuth.builder()
                 .id(TractiveAuth.SINGLETON_ID)
                 .accessToken("tok")
                 .userId("u-1")
                 .email("halter@example.com")
                 .expiresAt(expiresAt)
-                .updatedAt(Instant.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
     @Test
     void loginPersistsOnlyTheToken() {
         when(apiClient.login("halter@example.com", "geheim"))
-                .thenReturn(new TractiveTokenDto("u-1", "tok", Instant.now().plusSeconds(86400).getEpochSecond()));
+                .thenReturn(new TractiveTokenDto("u-1", "tok",
+                        java.time.Instant.now().plusSeconds(86400).getEpochSecond()));
 
         service.login("halter@example.com", "geheim");
 
@@ -543,7 +543,7 @@ class TractiveAuthServiceTest {
     @Test
     void validTokenIsReturned() {
         when(repository.findById(TractiveAuth.SINGLETON_ID))
-                .thenReturn(Optional.of(storedToken(Instant.now().plusSeconds(86400))));
+                .thenReturn(Optional.of(storedToken(LocalDateTime.now().plusDays(1))));
 
         assertTrue(service.getValidToken().isPresent());
         assertEquals("tok", service.getValidToken().get().getAccessToken());
@@ -552,7 +552,7 @@ class TractiveAuthServiceTest {
     @Test
     void tokenExpiringWithinAnHourCountsAsInvalid() {
         when(repository.findById(TractiveAuth.SINGLETON_ID))
-                .thenReturn(Optional.of(storedToken(Instant.now().plusSeconds(600))));
+                .thenReturn(Optional.of(storedToken(LocalDateTime.now().plusMinutes(10))));
 
         assertTrue(service.getValidToken().isEmpty());
     }
@@ -585,10 +585,10 @@ Erwartung: Kompilierfehler – `TractiveAuthService` existiert nicht.
 ```java
 package com.household.manager.tractive.dto;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 /** Anmeldezustand fuer das Frontend. */
-public record TractiveAuthStatusDto(boolean authenticated, String email, Instant expiresAt) {
+public record TractiveAuthStatusDto(boolean authenticated, String email, LocalDateTime expiresAt) {
 }
 ```
 
@@ -607,6 +607,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 /**
@@ -627,14 +629,17 @@ public class TractiveAuthService {
     @Transactional
     public TractiveAuthStatusDto login(String email, String password) {
         TractiveTokenDto token = apiClient.login(email, password);
-        Instant expiresAt = Instant.ofEpochSecond(token.expiresAt());
+        // Tractive liefert eine Unix-Sekunde; hier auf lokale Zeit gebracht, damit die
+        // Speicherung zu allen anderen Zeitstempeln dieses Schemas passt.
+        LocalDateTime expiresAt = LocalDateTime.ofInstant(
+                Instant.ofEpochSecond(token.expiresAt()), ZoneId.systemDefault());
         repository.save(TractiveAuth.builder()
                 .id(TractiveAuth.SINGLETON_ID)
                 .accessToken(token.accessToken())
                 .userId(token.userId())
                 .email(email)
                 .expiresAt(expiresAt)
-                .updatedAt(Instant.now())
+                .updatedAt(LocalDateTime.now())
                 .build());
         log.info("Tractive-Login erfolgreich, Token gueltig bis {}", expiresAt);
         return new TractiveAuthStatusDto(true, email, expiresAt);
@@ -644,17 +649,20 @@ public class TractiveAuthService {
     @Transactional(readOnly = true)
     public Optional<TractiveAuth> getValidToken() {
         return repository.findById(TractiveAuth.SINGLETON_ID)
-                .filter(auth -> auth.getExpiresAt().isAfter(Instant.now().plus(EXPIRY_MARGIN)));
+                .filter(this::isUsable);
     }
 
     @Transactional(readOnly = true)
     public TractiveAuthStatusDto status() {
         return repository.findById(TractiveAuth.SINGLETON_ID)
                 .map(auth -> new TractiveAuthStatusDto(
-                        auth.getExpiresAt().isAfter(Instant.now().plus(EXPIRY_MARGIN)),
-                        auth.getEmail(),
-                        auth.getExpiresAt()))
+                        isUsable(auth), auth.getEmail(), auth.getExpiresAt()))
                 .orElse(new TractiveAuthStatusDto(false, null, null));
+    }
+
+    /** Token gilt nur als brauchbar, solange es den Sicherheitsabstand ueberdauert. */
+    private boolean isUsable(TractiveAuth auth) {
+        return auth.getExpiresAt().isAfter(LocalDateTime.now().plus(EXPIRY_MARGIN));
     }
 
     @Transactional
@@ -702,7 +710,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.mockito.Mockito.*;
@@ -723,7 +731,7 @@ class TractiveAuthControllerTest {
 
     @Test
     void loginReturnsStatus() throws Exception {
-        Instant expiry = Instant.parse("2026-09-01T00:00:00Z");
+        LocalDateTime expiry = LocalDateTime.parse("2026-09-01T00:00:00");
         when(authService.login("halter@example.com", "geheim"))
                 .thenReturn(new TractiveAuthStatusDto(true, "halter@example.com", expiry));
 
