@@ -76,14 +76,16 @@ class CalendarEventServiceTest {
     @Test
     void uhrzeitTerminOhneStartzeitWirdAbgelehnt() {
         assertThatThrownBy(() -> service.create(validRequest().startTime(null).build()))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Start-Uhrzeit");
     }
 
     @Test
     void endeVorStartWirdAbgelehnt() {
         assertThatThrownBy(() -> service.create(
                 validRequest().endTime(LocalTime.of(13, 0)).build()))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Ende");
     }
 
     @Test
@@ -91,13 +93,24 @@ class CalendarEventServiceTest {
         assertThatThrownBy(() -> service.create(
                 validRequest().allDay(true).startTime(null)
                         .endDate(LocalDate.of(2026, 8, 1)).build()))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Enddatum");
     }
 
     @Test
     void ungueltigeRruleWirdAbgelehnt() {
         assertThatThrownBy(() -> service.create(validRequest().rrule("FREQ=BANANA").build()))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Wiederholungsregel");
+    }
+
+    @Test
+    void zuLangerTitelWirdAbgelehnt() {
+        String titelMit201Zeichen = "A".repeat(201);
+        assertThatThrownBy(() -> service.create(validRequest().title(titelMit201Zeichen).build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("200 Zeichen");
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -109,6 +122,39 @@ class CalendarEventServiceTest {
 
         assertThat(response.getStartTime()).isNull();
         assertThat(response.getEndTime()).isNull();
+    }
+
+    @Test
+    void endDateWirdBeiUhrzeitTerminVerworfen() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventResponse response = service.create(
+                validRequest().endDate(LocalDate.of(2026, 8, 5)).build());
+
+        assertThat(response.getEndDate()).isNull();
+    }
+
+    @Test
+    void getEventLiefertStammdatenEinesExistierendenTermins() {
+        CalendarEvent event = CalendarEvent.builder()
+                .id(4L).title("Zahnarzt").category(CalendarCategory.HEALTH)
+                .allDay(false).startDate(LocalDate.of(2026, 8, 3))
+                .startTime(LocalTime.of(14, 30))
+                .build();
+        when(repository.findById(4L)).thenReturn(Optional.of(event));
+
+        CalendarEventResponse response = service.getEvent(4L);
+
+        assertThat(response.getId()).isEqualTo(4L);
+        assertThat(response.getTitle()).isEqualTo("Zahnarzt");
+    }
+
+    @Test
+    void getEventMitUnbekannterIdWirft404() {
+        when(repository.findById(123L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getEvent(123L))
+                .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
@@ -127,5 +173,72 @@ class CalendarEventServiceTest {
         when(repository.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.update(99L, validRequest().build()))
                 .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void updatePersistiertGeaenderteFelderUndLiefertSieZurueck() {
+        CalendarEvent existing = CalendarEvent.builder()
+                .id(3L).title("Alt").category(CalendarCategory.HEALTH)
+                .allDay(false).startDate(LocalDate.of(2026, 8, 3))
+                .startTime(LocalTime.of(14, 30))
+                .build();
+        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CalendarEventResponse response = service.update(3L, validRequest().title("Neu").build());
+
+        assertThat(response.getTitle()).isEqualTo("Neu");
+        assertThat(existing.getTitle()).isEqualTo("Neu");
+    }
+
+    @Test
+    void updateMitUnveraenderterRruleLaesstExdatesUndOverridesInRuhe() {
+        CalendarEvent existing = CalendarEvent.builder()
+                .id(5L).title("Serie").category(CalendarCategory.HEALTH)
+                .allDay(false).startDate(LocalDate.of(2026, 8, 3))
+                .startTime(LocalTime.of(14, 30))
+                .rrule("FREQ=DAILY").exdates("2026-08-05")
+                .build();
+        when(repository.findById(5L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.update(5L, validRequest().rrule("FREQ=DAILY").build());
+
+        verify(repository, never()).deleteByRecurringParentId(any());
+        assertThat(existing.getExdates()).isEqualTo("2026-08-05");
+    }
+
+    @Test
+    void updateMitGeaenderterRruleLoeschtOverridesUndSetztExdatesAufNull() {
+        CalendarEvent existing = CalendarEvent.builder()
+                .id(5L).title("Serie").category(CalendarCategory.HEALTH)
+                .allDay(false).startDate(LocalDate.of(2026, 8, 3))
+                .startTime(LocalTime.of(14, 30))
+                .rrule("FREQ=DAILY").exdates("2026-08-05")
+                .build();
+        when(repository.findById(5L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.update(5L, validRequest().rrule("FREQ=WEEKLY").build());
+
+        verify(repository).deleteByRecurringParentId(5L);
+        assertThat(existing.getExdates()).isNull();
+    }
+
+    @Test
+    void updateDasRruleEntferntLoeschtEbenfallsOverridesUndExdates() {
+        CalendarEvent existing = CalendarEvent.builder()
+                .id(5L).title("Serie").category(CalendarCategory.HEALTH)
+                .allDay(false).startDate(LocalDate.of(2026, 8, 3))
+                .startTime(LocalTime.of(14, 30))
+                .rrule("FREQ=DAILY").exdates("2026-08-05")
+                .build();
+        when(repository.findById(5L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.update(5L, validRequest().build());
+
+        verify(repository).deleteByRecurringParentId(5L);
+        assertThat(existing.getExdates()).isNull();
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Objects;
 
 /**
  * CRUD und Occurrence-Aufloesung des Haushaltskalenders. Die {@link Clock} ist
@@ -51,12 +52,26 @@ public class CalendarEventService {
     @Transactional
     public CalendarEventResponse update(Long id, CalendarEventRequest request) {
         validate(request);
-        return toResponse(repository.save(applyRequest(request, findOrThrow(id))));
+        CalendarEvent event = findOrThrow(id);
+        String oldRrule = event.getRrule();
+        String newRrule = normalizeRrule(request.getRrule());
+        applyRequest(request, event);
+        if (!Objects.equals(oldRrule, newRrule)) {
+            // Eine geaenderte (auch entfernte oder neu gesetzte) RRULE definiert die Serie neu:
+            // bestehende Einzelausnahmen (Overrides, EXDATEs) sind an die alte Regel gebunden
+            // und liessen sich der neuen nicht mehr sinnvoll zuordnen (wie in gaengigen
+            // Kalender-Apps). Bleibt die RRULE unveraendert, bleiben Ausnahmen erhalten.
+            event.setExdates(null);
+            repository.deleteByRecurringParentId(id);
+        }
+        return toResponse(repository.save(event));
     }
 
     @Transactional
     public void delete(Long id) {
         CalendarEvent event = findOrThrow(id);
+        // DB hat ON DELETE CASCADE fuer recurring_parent_id; der explizite Aufruf hier ist
+        // bewusste Absicherung (z.B. falls der Fremdschluessel je gelockert wird), kein toter Code.
         repository.deleteByRecurringParentId(id);
         repository.delete(event);
     }
@@ -74,16 +89,25 @@ public class CalendarEventService {
         event.setStartDate(request.getStartDate());
         event.setStartTime(request.isAllDay() ? null : request.getStartTime());
         event.setEndTime(request.isAllDay() ? null : request.getEndTime());
-        event.setEndDate(request.getEndDate());
-        event.setRrule(request.getRrule() != null && !request.getRrule().isBlank()
-                ? request.getRrule() : null);
+        // end_date ist laut Entity/Spec nur fuer mehrtaegige Ganztags-Termine gedacht.
+        event.setEndDate(request.isAllDay() ? request.getEndDate() : null);
+        event.setRrule(normalizeRrule(request.getRrule()));
         return event;
+    }
+
+    /** null/leer wird einheitlich zu null; sonst der unveraenderte RRULE-String. */
+    private String normalizeRrule(String rrule) {
+        return rrule != null && !rrule.isBlank() ? rrule : null;
     }
 
     private void validate(CalendarEventRequest request) {
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Der Titel darf nicht leer sein.");
+        }
+        if (request.getTitle().trim().length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Der Titel darf hoechstens 200 Zeichen lang sein.");
         }
         if (request.getCategory() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Die Kategorie fehlt.");
