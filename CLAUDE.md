@@ -328,6 +328,21 @@ docker-compose down
 - Präsenz-Meldung an `POST /v1/tablet-presence/{tabletId}`; Spiegelung als `binary_sensor.tablet_<id>_presence` (`EntitySource.TABLET`) im Entity-State-Layer, nutzbar als Flow-Trigger; ausbleibender Heartbeat → `unavailable`
 - Backend-Implementierung in `backend/src/main/java/com/household/manager/tablet/`
 
+### Haushaltskalender
+- Pflegbarer Kalender (Seite `pages/calendar/`, Route `calendar`): Monatsraster + Termindialog mit Wiederholungs-Builder; volle RRULE-Mächtigkeit über den „Erweitert"-Modus (Roh-RRULE)
+- Eine DB-Zeile pro Termin/Serie (`calendar_events`); Serien werden on-the-fly expandiert (`RecurrenceExpansionService`, einzige `org.dmfs:lib-recur`-Stelle; Achtung: dmfs-`DateTime` zählt Monate 0-basiert). Einzelvorkommen löschen = EXDATE, ändern = Override-Zeile (`recurring_parent_id` + `recurrence_date`)
+- **`org.dmfs:lib-recur` statt des bereits vorhandenen `biweekly`:** Letzteres verankert Ganztagestermine beim Parsen fest in der JVM-Zeitzone und ist auf `VEvent`-Objekte zugeschnitten; für reine `LocalDate`-Arithmetik müssten synthetische Events gebaut werden
+- **Ändert sich beim Bearbeiten einer Serie die RRULE**, werden Ausnahmen dieser Serie (EXDATEs und Override-Zeilen) verworfen — sie wären der neuen Regel nicht mehr zuzuordnen. Bleibt die RRULE gleich (z. B. nur der Titel ändert sich), bleiben Ausnahmen erhalten
+- Ein Einzelvorkommen ändern gewinnt gegenüber einer früheren Löschung: `updateOccurrence` entfernt ein vorhandenes EXDATE für dieses Datum, damit ein Datum nie gleichzeitig gelöscht und geändert ist. `updateOccurrence` prüft außerdem, ob das Datum überhaupt ein Vorkommen der Serie ist — sonst entstünde eine Override-Zeile, die dauerhaft unabhängig vom Master im Kalender auftaucht
+- API `/api/v1/calendar`: `events?from&to` (expandierte Vorkommen), `upcoming?limit`, CRUD unter `events/{id}`, Occurrence-Endpoints `events/{id}/occurrences/{date}`; Fenster ≤ 1 Jahr, Expansion ≤ 1000 Vorkommen
+- Intelligence Hub zeigt die nächsten bis zu 3 Termine als eigene Einträge (Muster Müllabfuhr; `calendar-insight.util.ts`)
+- **Bewusste v1-Kompromisse:** `getOccurrences` lädt per `findAll()` alle Kalenderzeilen und filtert in Java — eine repository-seitige Einschränkung ginge bei Serien nicht zuverlässig, weil deren `startDate` beliebig weit in der Vergangenheit liegen kann und trotzdem Vorkommen im Fenster erzeugt. `getUpcoming` expandiert dafür ein Jahresfenster und kürzt erst danach auf `limit`. Bei Haushaltsgrößen unkritisch; wird die Tabelle je groß, ist das die erste Stelle zum Nachziehen (es gibt keinen Aufräumjob für alte Termine)
+- Flow-Anbindung: `CalendarReminderScheduler` (minütlich) feuert `event.calendar_reminder` — Uhrzeit-Termine zum Start, ganztägige um 08:00 (Konstante); `action` = Kategorie kleingeschrieben, Attribute `title`/`date`/`time`/`allDay`/`eventId`. Nach Neustart werden verpasste Erinnerungen bewusst nicht nachgefeuert
+- **Hochwassermarke des Schedulers ist ein `Instant`, keine lokale Wandzeit:** Bei der Zeitumstellung im Oktober würde eine Wandzeit-Marke zurückspringen und die wiederholte Stunde ein zweites Mal auslösen
+- `buildRrule` (Frontend) erzeugt bei „monatlich am selben Wochentag" mit Startdatum am Monatsende die iCal-Negativform (`BYDAY=-1TU` = letzter Dienstag), weil ein „fünfter Dienstag" in den meisten Monaten nicht existiert und der Termin sonst ausfiele
+- Beim Bearbeiten eines Serien-Vorkommens ist das Datumsfeld im Dialog mit dem Datum des angeklickten Vorkommens vorbelegt; wählt der Nutzer „Ganze Serie", ohne das Feld anzufassen, bleibt der ursprüngliche Serienstart erhalten
+- Zeiten sind lokale Haushaltszeit (Europe/Berlin), kein TZID-Handling
+
 ## Code Quality Standards
 
 This project follows **Clean Code** principles across both frontend and backend:
