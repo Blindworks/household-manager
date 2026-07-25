@@ -6,13 +6,13 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="20260725-0039" author="household-manager">
-        <comment>Create calendar_events table (Haushaltskalender: Serien via RRULE, Ausnahmen via EXDATE/Override).</comment>
-
         <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="calendar_events"/>
             </not>
         </preConditions>
+
+        <comment>Create calendar_events table (Haushaltskalender: Serien via RRULE, Ausnahmen via EXDATE/Override).</comment>
 
         <createTable tableName="calendar_events">
             <column name="id" type="BIGINT" autoIncrement="true">
