@@ -1,13 +1,21 @@
 package com.household.manager.tractive;
 
+import com.household.manager.tractive.dto.TractiveGeofenceDto;
 import com.household.manager.tractive.dto.TractiveTokenDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
@@ -146,16 +154,31 @@ class TractiveApiClientTest {
         server.verify();
     }
 
-    @Test
-    void inactiveOrNonCircularGeofencesAreIgnored() {
-        var inactive = new com.household.manager.tractive.dto.TractiveGeofenceDto(
-                "Aus", false, new com.household.manager.tractive.dto.TractiveGeofenceDto.Shape(
-                        "circle", java.util.List.of(48.0, 16.0), 100.0));
-        var withoutRadius = new com.household.manager.tractive.dto.TractiveGeofenceDto(
-                "Polygon", true, new com.household.manager.tractive.dto.TractiveGeofenceDto.Shape(
-                        "polygon", java.util.List.of(48.0, 16.0), null));
+    private static Stream<Arguments> unusableGeofences() {
+        var validShape = new TractiveGeofenceDto.Shape("circle", List.of(48.0, 16.0), 100.0);
+        return Stream.of(
+                Arguments.of("inaktiv",
+                        new TractiveGeofenceDto("Aus", false, validShape)),
+                Arguments.of("ohne Form",
+                        new TractiveGeofenceDto("Ohne", true, null)),
+                Arguments.of("ohne Radius",
+                        new TractiveGeofenceDto("Polygon", true,
+                                new TractiveGeofenceDto.Shape("polygon", List.of(48.0, 16.0), null))),
+                Arguments.of("ohne Mittelpunkt",
+                        new TractiveGeofenceDto("Leer", true,
+                                new TractiveGeofenceDto.Shape("circle", null, 100.0))),
+                Arguments.of("Mittelpunkt zu kurz",
+                        new TractiveGeofenceDto("Kurz", true,
+                                new TractiveGeofenceDto.Shape("circle", List.of(48.0), 100.0))),
+                Arguments.of("Mittelpunkt enthaelt null",
+                        new TractiveGeofenceDto("Null", true,
+                                new TractiveGeofenceDto.Shape("circle",
+                                        Arrays.asList(48.0, (Double) null), 100.0))));
+    }
 
-        assertTrue(inactive.toZone().isEmpty());
-        assertTrue(withoutRadius.toZone().isEmpty());
+    @ParameterizedTest(name = "{0} wird ignoriert")
+    @MethodSource("unusableGeofences")
+    void unusableGeofencesAreIgnored(String beschreibung, TractiveGeofenceDto geofence) {
+        assertTrue(geofence.toZone().isEmpty());
     }
 }
