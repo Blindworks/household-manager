@@ -241,4 +241,97 @@ class CalendarEventServiceTest {
         verify(repository).deleteByRecurringParentId(5L);
         assertThat(existing.getExdates()).isNull();
     }
+
+    private CalendarEvent series(Long id, String title, LocalDate start, String rrule) {
+        return CalendarEvent.builder()
+                .id(id).title(title).category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(start).rrule(rrule)
+                .build();
+    }
+
+    @Test
+    void einzelterminErscheintImFenster() {
+        CalendarEvent single = CalendarEvent.builder()
+                .id(1L).title("Zahnarzt").category(CalendarCategory.HEALTH)
+                .allDay(false).startDate(LocalDate.of(2026, 8, 3))
+                .startTime(LocalTime.of(14, 30))
+                .build();
+        when(repository.findAll()).thenReturn(List.of(single));
+
+        var result = service.getOccurrences(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEventId()).isEqualTo(1L);
+        assertThat(result.get(0).getRecurrenceDate()).isNull();
+        assertThat(result.get(0).getDaysUntil()).isEqualTo(9);
+    }
+
+    @Test
+    void serieWirdExpandiertUndExdateGefiltert() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        weekly.addExdate(LocalDate.of(2026, 7, 13));
+        when(repository.findAll()).thenReturn(List.of(weekly));
+
+        var result = service.getOccurrences(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+
+        assertThat(result).extracting(o -> o.getOccurrenceDate()).containsExactly(
+                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 20), LocalDate.of(2026, 7, 27));
+        assertThat(result).allMatch(o -> o.isRecurring());
+        assertThat(result.get(0).getRecurrenceDate()).isEqualTo(LocalDate.of(2026, 7, 6));
+    }
+
+    @Test
+    void overrideErsetztDasBerechneteVorkommen() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        CalendarEvent override = CalendarEvent.builder()
+                .id(3L).title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
+                .build();
+        when(repository.findAll()).thenReturn(List.of(weekly, override));
+
+        var result = service.getOccurrences(LocalDate.of(2026, 7, 12), LocalDate.of(2026, 7, 18));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTitle()).isEqualTo("Sport (verschoben)");
+        assertThat(result.get(0).getOccurrenceDate()).isEqualTo(LocalDate.of(2026, 7, 14));
+        // eventId zeigt auf die Serie, recurrenceDate auf das ersetzte Vorkommen
+        assertThat(result.get(0).getEventId()).isEqualTo(2L);
+        assertThat(result.get(0).getRecurrenceDate()).isEqualTo(LocalDate.of(2026, 7, 13));
+    }
+
+    @Test
+    void upcomingFiltertHeuteBereitsVergangeneUhrzeitTermine() {
+        // CLOCK steht auf 25.07.2026 12:00
+        CalendarEvent past = CalendarEvent.builder()
+                .id(4L).title("Vorbei").category(CalendarCategory.GENERAL)
+                .allDay(false).startDate(LocalDate.of(2026, 7, 25))
+                .startTime(LocalTime.of(9, 0))
+                .build();
+        CalendarEvent later = CalendarEvent.builder()
+                .id(5L).title("Kommt noch").category(CalendarCategory.GENERAL)
+                .allDay(false).startDate(LocalDate.of(2026, 7, 25))
+                .startTime(LocalTime.of(18, 0))
+                .build();
+        when(repository.findAll()).thenReturn(List.of(past, later));
+
+        var result = service.getUpcoming(3);
+
+        assertThat(result).extracting(o -> o.getTitle()).containsExactly("Kommt noch");
+    }
+
+    @Test
+    void upcomingRespektiertDasLimit() {
+        CalendarEvent daily = series(6L, "Taeglich", LocalDate.of(2026, 7, 20), "FREQ=DAILY");
+        when(repository.findAll()).thenReturn(List.of(daily));
+
+        assertThat(service.getUpcoming(3)).hasSize(3);
+    }
+
+    @Test
+    void fensterUeberEinemJahrWirdAbgelehnt() {
+        assertThatThrownBy(() -> service.getOccurrences(
+                LocalDate.of(2026, 1, 1), LocalDate.of(2027, 6, 1)))
+                .isInstanceOf(ResponseStatusException.class);
+    }
 }

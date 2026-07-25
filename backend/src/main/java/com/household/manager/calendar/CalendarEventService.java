@@ -2,6 +2,7 @@ package com.household.manager.calendar;
 
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
+import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.model.entity.CalendarEvent;
 import com.household.manager.repository.CalendarEventRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,16 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * CRUD und Occurrence-Aufloesung des Haushaltskalenders. Die {@link Clock} ist
@@ -36,6 +46,98 @@ public class CalendarEventService {
 
     LocalDate today() {
         return LocalDate.now(clock);
+    }
+
+    /** Maximale Fenstergroesse einer Occurrence-Abfrage (deckt sich mit der Expansions-Kappe). */
+    private static final long MAX_WINDOW_DAYS = 366;
+
+    /**
+     * Alle Vorkommen im Fenster [from, to]: Serien expandiert, EXDATEs gefiltert,
+     * Overrides eingerechnet. Mehrtaegige Termine erscheinen an ihrem Starttag
+     * (endDate ist Metadatum, kein Spanning im Raster — bewusste v1-Entscheidung).
+     */
+    @Transactional(readOnly = true)
+    public List<CalendarOccurrenceResponse> getOccurrences(LocalDate from, LocalDate to) {
+        validateWindow(from, to);
+        List<CalendarEvent> all = repository.findAll();
+        Map<Long, Set<LocalDate>> overriddenDates = all.stream()
+                .filter(CalendarEvent::isOverride)
+                .collect(Collectors.groupingBy(CalendarEvent::getRecurringParentId,
+                        Collectors.mapping(CalendarEvent::getRecurrenceDate, Collectors.toSet())));
+
+        List<CalendarOccurrenceResponse> occurrences = new ArrayList<>();
+        for (CalendarEvent event : all) {
+            if (event.isOverride() || !event.isRecurring()) {
+                if (!event.getStartDate().isBefore(from) && !event.getStartDate().isAfter(to)) {
+                    occurrences.add(toOccurrence(event, event.getStartDate()));
+                }
+                continue;
+            }
+            Set<LocalDate> skip = new HashSet<>(event.exdateSet());
+            skip.addAll(overriddenDates.getOrDefault(event.getId(), Set.of()));
+            for (LocalDate date : expansionService.expand(
+                    event.getRrule(), event.getStartDate(), from, to)) {
+                if (!skip.contains(date)) {
+                    occurrences.add(toOccurrence(event, date));
+                }
+            }
+        }
+        occurrences.sort(Comparator
+                .comparing(CalendarOccurrenceResponse::getOccurrenceDate)
+                .thenComparing(o -> o.getStartTime() != null ? o.getStartTime() : LocalTime.MIN));
+        return occurrences;
+    }
+
+    /** Die naechsten Vorkommen ab jetzt; heute bereits beendete Uhrzeit-Termine fallen raus. */
+    @Transactional(readOnly = true)
+    public List<CalendarOccurrenceResponse> getUpcoming(int limit) {
+        LocalDate today = today();
+        LocalTime now = LocalTime.now(clock);
+        return getOccurrences(today, today.plusDays(MAX_WINDOW_DAYS - 1)).stream()
+                .filter(occ -> !isAlreadyOver(occ, today, now))
+                .limit(Math.max(1, limit))
+                .toList();
+    }
+
+    /** Heutige Uhrzeit-Termine gelten ab ihrem Ende (bzw. Start, wenn kein Ende) als vorbei. */
+    private boolean isAlreadyOver(CalendarOccurrenceResponse occ, LocalDate today, LocalTime now) {
+        if (!occ.getOccurrenceDate().equals(today) || occ.isAllDay()) {
+            return false;
+        }
+        LocalTime end = occ.getEndTime() != null ? occ.getEndTime() : occ.getStartTime();
+        return end.isBefore(now);
+    }
+
+    private void validateWindow(LocalDate from, LocalDate to) {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Der Zeitraum ist ungueltig (from muss vor to liegen).");
+        }
+        if (ChronoUnit.DAYS.between(from, to) >= MAX_WINDOW_DAYS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Der Zeitraum darf hoechstens ein Jahr umfassen.");
+        }
+    }
+
+    private CalendarOccurrenceResponse toOccurrence(CalendarEvent event, LocalDate date) {
+        boolean override = event.isOverride();
+        long durationDays = event.getEndDate() != null
+                ? ChronoUnit.DAYS.between(event.getStartDate(), event.getEndDate()) : 0;
+        return CalendarOccurrenceResponse.builder()
+                .eventId(override ? event.getRecurringParentId() : event.getId())
+                .occurrenceDate(date)
+                .recurrenceDate(override ? event.getRecurrenceDate()
+                        : (event.isRecurring() ? date : null))
+                .title(event.getTitle())
+                .notes(event.getNotes())
+                .category(event.getCategory())
+                .allDay(event.isAllDay())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
+                .endDate(event.getEndDate() != null ? date.plusDays(durationDays) : null)
+                .recurring(event.isRecurring() || override)
+                .daysUntil(ChronoUnit.DAYS.between(today(), date))
+                .build();
     }
 
     @Transactional(readOnly = true)
