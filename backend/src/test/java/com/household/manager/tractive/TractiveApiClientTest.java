@@ -52,6 +52,16 @@ class TractiveApiClientTest {
         server.expect(requestTo("https://graph.tractive.com/4/auth/token"))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
-        assertThrows(TractiveException.class, () -> client.login("a@b.de", "falsch"));
+        assertThrows(TractiveAuthException.class, () -> client.login("a@b.de", "falsch"));
+    }
+
+    @Test
+    void serverErrorIsNotTreatedAsBadCredentials() {
+        server.expect(requestTo("https://graph.tractive.com/4/auth/token"))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        TractiveException ex = assertThrows(TractiveException.class,
+                () -> client.login("a@b.de", "geheim"));
+        assertFalse(ex instanceof TractiveAuthException);
     }
 }

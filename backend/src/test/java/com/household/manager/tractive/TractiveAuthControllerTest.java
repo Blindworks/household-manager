@@ -25,7 +25,7 @@ class TractiveAuthControllerTest {
 
     private MockMvc mockMvc() {
         return MockMvcBuilders.standaloneSetup(new TractiveAuthController(authService))
-                .setControllerAdvice(new TractiveAuthController.TractiveAuthExceptionHandler())
+                .setControllerAdvice(new com.household.manager.exception.GlobalExceptionHandler())
                 .build();
     }
 
@@ -47,7 +47,7 @@ class TractiveAuthControllerTest {
     @Test
     void failedLoginReturns401() throws Exception {
         when(authService.login(anyString(), anyString()))
-                .thenThrow(new TractiveException("falsche Zugangsdaten"));
+                .thenThrow(new TractiveAuthException("Anmeldung bei Tractive fehlgeschlagen."));
 
         mockMvc().perform(post("/v1/tractive/login")
                         .contentType(MediaType.APPLICATION_JSON)

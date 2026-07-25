@@ -7,6 +7,8 @@ import com.household.manager.meross.exception.MerossException;
 import com.household.manager.nuki.NukiException;
 import com.household.manager.shelly.ShellyException;
 import com.household.manager.tapo.TapoException;
+import com.household.manager.tractive.TractiveAuthException;
+import com.household.manager.tractive.TractiveException;
 import com.household.manager.vision.VisionException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
@@ -324,6 +326,38 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Nuki communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    @ExceptionHandler(TractiveAuthException.class)
+    public ResponseEntity<ErrorResponse> handleTractiveAuthException(
+            TractiveAuthException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Unauthorized")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Tractive auth error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(TractiveException.class)
+    public ResponseEntity<ErrorResponse> handleTractiveException(
+            TractiveException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Tractive communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 

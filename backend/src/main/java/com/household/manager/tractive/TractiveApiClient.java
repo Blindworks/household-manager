@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -48,6 +49,9 @@ public class TractiveApiClient {
                 throw new TractiveException("Tractive-Login lieferte kein Token");
             }
             return token;
+        } catch (HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden ex) {
+            // Bewusst ohne Zugangsdaten im Log.
+            throw new TractiveAuthException("Anmeldung bei Tractive fehlgeschlagen.");
         } catch (RestClientException ex) {
             // Bewusst ohne Zugangsdaten im Log.
             throw new TractiveException("Tractive-Login fehlgeschlagen: " + ex.getMessage(), ex);
