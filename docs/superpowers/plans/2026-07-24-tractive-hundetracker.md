@@ -693,6 +693,8 @@ git commit -m "feat(tractive): Token-Verwaltung mit Ablaufpruefung"
 **Files:**
 - Create: `backend/src/main/java/com/household/manager/tractive/dto/TractiveLoginRequest.java`
 - Create: `backend/src/main/java/com/household/manager/tractive/TractiveAuthController.java`
+- Create: `backend/src/main/java/com/household/manager/tractive/TractiveAuthException.java`
+- Modify: `backend/src/main/java/com/household/manager/exception/GlobalExceptionHandler.java`
 - Test: `backend/src/test/java/com/household/manager/tractive/TractiveAuthControllerTest.java`
 
 - [ ] **Step 1: Test schreiben**
@@ -831,18 +833,23 @@ public class TractiveAuthController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Fehlgeschlagene Anmeldung bzw. Cloud-Fehler als 401 melden. */
-    @RestControllerAdvice(assignableTypes = TractiveAuthController.class)
-    public static class TractiveAuthExceptionHandler {
-
-        @ExceptionHandler(TractiveException.class)
-        public ResponseEntity<Map<String, String>> handle(TractiveException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Anmeldung bei Tractive fehlgeschlagen."));
-        }
-    }
 }
 ```
+
+> **Korrektur während der Umsetzung:** Ursprünglich war hier eine controller-lokale
+> `@RestControllerAdvice` geplant. Das war falsch: `GlobalExceptionHandler` ist eine
+> ungescopte Advice **mit** `@ExceptionHandler(Exception.class)`-Catch-all, und da keine
+> der beiden Advices ein `@Order` trägt, hätte die Reihenfolge (und damit 401 vs. 500)
+> von der Bean-Registrierungsreihenfolge abgehangen. Ausserdem mappt dieses Projekt
+> **alle** Integrations-Exceptions zentral (Kasa, Meross, Shelly, Tapo, Nuki, Alexa).
+>
+> Umgesetzt wurde deshalb das Meross-Vorbild:
+> - Neue `TractiveAuthException extends TractiveException` für abgelehnte Zugangsdaten
+> - `TractiveApiClient.login` wirft `TractiveAuthException` bei 401/403, sonst `TractiveException`
+> - In `GlobalExceptionHandler`: `TractiveAuthException` → 401, `TractiveException` → 502
+>
+> Das behebt zugleich einen echten Fehler: vorher hätte eine nicht erreichbare Cloud dem
+> Nutzer „Zugangsdaten prüfen" gemeldet.
 
 - [ ] **Step 5: Test laufen lassen**
 
