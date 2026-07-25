@@ -59,6 +59,7 @@ public class CalendarEventService {
     @Transactional(readOnly = true)
     public List<CalendarOccurrenceResponse> getOccurrences(LocalDate from, LocalDate to) {
         validateWindow(from, to);
+        LocalDate today = today();
         List<CalendarEvent> all = repository.findAll();
         Map<Long, Set<LocalDate>> overriddenDates = all.stream()
                 .filter(CalendarEvent::isOverride)
@@ -69,7 +70,7 @@ public class CalendarEventService {
         for (CalendarEvent event : all) {
             if (event.isOverride() || !event.isRecurring()) {
                 if (!event.getStartDate().isBefore(from) && !event.getStartDate().isAfter(to)) {
-                    occurrences.add(toOccurrence(event, event.getStartDate()));
+                    occurrences.add(toOccurrence(event, event.getStartDate(), today));
                 }
                 continue;
             }
@@ -78,7 +79,7 @@ public class CalendarEventService {
             for (LocalDate date : expansionService.expand(
                     event.getRrule(), event.getStartDate(), from, to)) {
                 if (!skip.contains(date)) {
-                    occurrences.add(toOccurrence(event, date));
+                    occurrences.add(toOccurrence(event, date, today));
                 }
             }
         }
@@ -91,21 +92,29 @@ public class CalendarEventService {
     /** Die naechsten Vorkommen ab jetzt; heute bereits beendete Uhrzeit-Termine fallen raus. */
     @Transactional(readOnly = true)
     public List<CalendarOccurrenceResponse> getUpcoming(int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
         LocalDate today = today();
         LocalTime now = LocalTime.now(clock);
         return getOccurrences(today, today.plusDays(MAX_WINDOW_DAYS - 1)).stream()
                 .filter(occ -> !isAlreadyOver(occ, today, now))
-                .limit(Math.max(1, limit))
+                .limit(limit)
                 .toList();
     }
 
-    /** Heutige Uhrzeit-Termine gelten ab ihrem Ende (bzw. Start, wenn kein Ende) als vorbei. */
+    /**
+     * Heutige Uhrzeit-Termine gelten ab ihrem Ende (bzw. Start, wenn kein Ende) als vorbei.
+     * Fehlt sowohl Ende als auch Start (fehlerhafte Altdaten), gilt der Termin defensiv
+     * als nicht vorbei — dieser Pfad wird ab Task 8 minuetlich vom Erinnerungs-Scheduler
+     * aufgerufen und darf nie eine NullPointerException werfen.
+     */
     private boolean isAlreadyOver(CalendarOccurrenceResponse occ, LocalDate today, LocalTime now) {
         if (!occ.getOccurrenceDate().equals(today) || occ.isAllDay()) {
             return false;
         }
         LocalTime end = occ.getEndTime() != null ? occ.getEndTime() : occ.getStartTime();
-        return end.isBefore(now);
+        return end != null && end.isBefore(now);
     }
 
     private void validateWindow(LocalDate from, LocalDate to) {
@@ -119,7 +128,7 @@ public class CalendarEventService {
         }
     }
 
-    private CalendarOccurrenceResponse toOccurrence(CalendarEvent event, LocalDate date) {
+    private CalendarOccurrenceResponse toOccurrence(CalendarEvent event, LocalDate date, LocalDate today) {
         boolean override = event.isOverride();
         long durationDays = event.getEndDate() != null
                 ? ChronoUnit.DAYS.between(event.getStartDate(), event.getEndDate()) : 0;
@@ -136,7 +145,7 @@ public class CalendarEventService {
                 .endTime(event.getEndTime())
                 .endDate(event.getEndDate() != null ? date.plusDays(durationDays) : null)
                 .recurring(event.isRecurring() || override)
-                .daysUntil(ChronoUnit.DAYS.between(today(), date))
+                .daysUntil(ChronoUnit.DAYS.between(today, date))
                 .build();
     }
 

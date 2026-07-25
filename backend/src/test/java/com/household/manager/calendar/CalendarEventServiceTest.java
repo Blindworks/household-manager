@@ -334,4 +334,84 @@ class CalendarEventServiceTest {
                 LocalDate.of(2026, 1, 1), LocalDate.of(2027, 6, 1)))
                 .isInstanceOf(ResponseStatusException.class);
     }
+
+    @Test
+    void fensterMitToVorFromWirdAbgelehnt() {
+        assertThatThrownBy(() -> service.getOccurrences(
+                LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 1)))
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void overrideAusserhalbDesFenstersLaesstEineLueckeOffen() {
+        CalendarEvent weekly = series(10L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        // Verschoben auf einen Termin weit ausserhalb des unten abgefragten Fensters.
+        CalendarEvent override = CalendarEvent.builder()
+                .id(11L).title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 8, 1))
+                .recurringParentId(10L).recurrenceDate(LocalDate.of(2026, 7, 13))
+                .build();
+        when(repository.findAll()).thenReturn(List.of(weekly, override));
+
+        // Enthaelt genau das per Override ersetzte Vorkommen (07-13) und sonst nichts.
+        var result = service.getOccurrences(LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 16));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void exdateUndOverrideAufDerselbenSerieWirkenUnabhaengigVoneinander() {
+        CalendarEvent weekly = series(12L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        weekly.addExdate(LocalDate.of(2026, 7, 6));
+        CalendarEvent override = CalendarEvent.builder()
+                .id(13L).title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 15))
+                .recurringParentId(12L).recurrenceDate(LocalDate.of(2026, 7, 13))
+                .build();
+        when(repository.findAll()).thenReturn(List.of(weekly, override));
+
+        var result = service.getOccurrences(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+
+        assertThat(result).extracting(o -> o.getOccurrenceDate()).containsExactly(
+                LocalDate.of(2026, 7, 15), LocalDate.of(2026, 7, 20), LocalDate.of(2026, 7, 27));
+        assertThat(result).extracting(o -> o.getTitle()).containsExactly(
+                "Sport (verschoben)", "Sport", "Sport");
+    }
+
+    @Test
+    void mehrtaegigeTermineZeigenNurDenStarttagMitPassendemEnddatum() {
+        CalendarEvent trip = CalendarEvent.builder()
+                .id(20L).title("Urlaub").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 8, 10))
+                .endDate(LocalDate.of(2026, 8, 12))
+                .build();
+        CalendarEvent weekendSeries = CalendarEvent.builder()
+                .id(21L).title("Wochenendtrip").category(CalendarCategory.GENERAL)
+                .allDay(true).startDate(LocalDate.of(2026, 8, 1))
+                .endDate(LocalDate.of(2026, 8, 2)).rrule("FREQ=WEEKLY")
+                .build();
+        when(repository.findAll()).thenReturn(List.of(trip, weekendSeries));
+
+        var result = service.getOccurrences(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 15));
+
+        var urlaub = result.stream().filter(o -> o.getTitle().equals("Urlaub")).findFirst().orElseThrow();
+        assertThat(urlaub.getOccurrenceDate()).isEqualTo(LocalDate.of(2026, 8, 10));
+        assertThat(urlaub.getEndDate()).isEqualTo(LocalDate.of(2026, 8, 12));
+
+        var wochenendtrips = result.stream()
+                .filter(o -> o.getTitle().equals("Wochenendtrip")).toList();
+        assertThat(wochenendtrips).extracting(o -> o.getOccurrenceDate()).containsExactly(
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 8), LocalDate.of(2026, 8, 15));
+        // Die Dauer (1 Tag) wandert relativ zum jeweiligen Vorkommen-Datum mit.
+        assertThat(wochenendtrips).extracting(o -> o.getEndDate()).containsExactly(
+                LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 9), LocalDate.of(2026, 8, 16));
+        // Kein Spanning ueber mehrere Tage im Raster: pro Termin genau ein Eintrag.
+        assertThat(result).hasSize(4);
+    }
+
+    @Test
+    void upcomingMitNichtPositivemLimitLiefertLeereListe() {
+        assertThat(service.getUpcoming(0)).isEmpty();
+        assertThat(service.getUpcoming(-1)).isEmpty();
+    }
 }
