@@ -1,5 +1,6 @@
 package com.household.manager.tractive;
 
+import com.household.manager.tractive.dto.TractiveGeofenceDto;
 import com.household.manager.tractive.dto.TractiveHardwareDto;
 import com.household.manager.tractive.dto.TractivePositionDto;
 import com.household.manager.tractive.dto.TractiveTokenDto;
@@ -81,6 +82,21 @@ public class TractiveApiClient {
     public TractiveHardwareDto getHardware(String token, String userId, String trackerId) {
         // Der abschliessende Slash ist von der API vorgegeben.
         return get("/device_hw_report/" + trackerId + "/", token, userId, TractiveHardwareDto.class);
+    }
+
+    /**
+     * Virtual Fences des Trackers. Fehler werden geschluckt: die Zonen sind
+     * eine Verbesserung, ihr Fehlen darf den Poll-Zyklus nicht kippen.
+     */
+    public List<TractiveGeofenceDto> listGeofences(String token, String userId, String trackerId) {
+        try {
+            return getList("/tracker/" + trackerId + "/geofences", token, userId,
+                    new ParameterizedTypeReference<List<TractiveGeofenceDto>>() {
+                    });
+        } catch (TractiveException ex) {
+            log.debug("Tractive-Geofences nicht lesbar ({}), es gilt die Home-Zone", ex.getMessage());
+            return List.of();
+        }
     }
 
     private <T> T get(String path, String token, String userId, Class<T> type) {

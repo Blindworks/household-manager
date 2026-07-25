@@ -127,4 +127,35 @@ class TractiveApiClientTest {
         assertTrue(hardware.isCharging());
         server.verify();
     }
+
+    @Test
+    void geofencesAreParsedIntoZones() {
+        server.expect(requestTo("https://graph.tractive.com/4/tracker/dev-9/geofences"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [{"name": "Garten", "active": true,
+                          "shape": {"type": "circle", "center": [48.2082, 16.3738], "radius": 120}}]
+                        """, MediaType.APPLICATION_JSON));
+
+        var fences = client.listGeofences("tok-1", "u-1", "dev-9");
+
+        assertEquals(1, fences.size());
+        var zone = fences.get(0).toZone().orElseThrow();
+        assertEquals("Garten", zone.name());
+        assertEquals(120, zone.radiusMeters());
+        server.verify();
+    }
+
+    @Test
+    void inactiveOrNonCircularGeofencesAreIgnored() {
+        var inactive = new com.household.manager.tractive.dto.TractiveGeofenceDto(
+                "Aus", false, new com.household.manager.tractive.dto.TractiveGeofenceDto.Shape(
+                        "circle", java.util.List.of(48.0, 16.0), 100.0));
+        var withoutRadius = new com.household.manager.tractive.dto.TractiveGeofenceDto(
+                "Polygon", true, new com.household.manager.tractive.dto.TractiveGeofenceDto.Shape(
+                        "polygon", java.util.List.of(48.0, 16.0), null));
+
+        assertTrue(inactive.toZone().isEmpty());
+        assertTrue(withoutRadius.toZone().isEmpty());
+    }
 }
