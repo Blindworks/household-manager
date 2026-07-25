@@ -114,6 +114,7 @@ public class CalendarEvent {
         }
         return Arrays.stream(exdates.split(","))
                 .map(String::trim)
+                .filter(token -> !token.isEmpty())
                 .map(LocalDate::parse)
                 .collect(Collectors.toSet());
     }
