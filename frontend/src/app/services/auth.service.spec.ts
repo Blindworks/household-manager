@@ -8,7 +8,9 @@ describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
 
-  const user: CurrentUser = { username: 'bene', displayName: 'Benedikt', role: 'ADMIN' };
+  const user: CurrentUser = {
+    username: 'bene', displayName: 'Benedikt', role: 'ADMIN', mustChangePassword: false
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -53,6 +55,29 @@ describe('AuthService', () => {
     httpMock.expectOne('/api/v1/auth/login')
       .flush('nein', { status: 401, statusText: 'Unauthorized' });
     expect(message).toBe('Benutzername oder Passwort falsch.');
+  });
+
+  it('uebernimmt den Nutzer aus der Passwortwechsel-Antwort', () => {
+    const forced: CurrentUser = { ...user, username: 'admin', mustChangePassword: true };
+    service.login({ username: 'admin', password: 'changeit' }).subscribe();
+    httpMock.expectOne('/api/v1/auth/login').flush(forced);
+    expect(service.currentUser()?.mustChangePassword).toBeTrue();
+
+    service.changePassword('changeit', 'neuesPasswort1').subscribe();
+    const req = httpMock.expectOne('/api/v1/auth/password');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ currentPassword: 'changeit', newPassword: 'neuesPasswort1' });
+    req.flush({ ...forced, mustChangePassword: false });
+    expect(service.currentUser()?.mustChangePassword).toBeFalse();
+  });
+
+  it('meldet ein falsches aktuelles Passwort verstaendlich', () => {
+    let message = '';
+    service.changePassword('falsch', 'neuesPasswort1')
+      .subscribe({ error: (e: Error) => (message = e.message) });
+    httpMock.expectOne('/api/v1/auth/password').flush(
+      { message: 'Aktuelles Passwort ist falsch.' }, { status: 400, statusText: 'Bad Request' });
+    expect(message).toBe('Aktuelles Passwort ist falsch.');
   });
 
   it('leert den Nutzer nach Logout', () => {

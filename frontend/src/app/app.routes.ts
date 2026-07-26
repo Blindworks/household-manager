@@ -212,6 +212,12 @@ export const routes: Routes = [
     title: 'Anmelden - Household Manager'
   },
   {
+    path: 'change-password',
+    loadComponent: () => import('./pages/change-password/change-password.component').then(m => m.ChangePasswordComponent),
+    canActivate: [authGuard],
+    title: 'Passwort ändern - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'

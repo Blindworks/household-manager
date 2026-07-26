@@ -41,6 +41,15 @@ export class AuthService {
     );
   }
 
+  /** Selbst-Passwortwechsel; das Backend liefert den aktualisierten Nutzer (Flag geloescht). */
+  changePassword(currentPassword: string, newPassword: string): Observable<CurrentUser> {
+    return this.http.post<CurrentUser>(`${this.baseUrl}/password`, { currentPassword, newPassword }).pipe(
+      tap(user => this.user.set(user)),
+      catchError((error: HttpErrorResponse) => throwError(() => new Error(
+        error.error?.message ?? 'Passwortwechsel fehlgeschlagen.')))
+    );
+  }
+
   logout(): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/logout`, {}).pipe(
       tap(() => this.user.set(null))

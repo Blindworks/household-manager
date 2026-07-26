@@ -4,6 +4,8 @@ export interface CurrentUser {
   username: string;
   displayName: string;
   role: UserRole;
+  /** true = Passwortwechsel erzwungen (z. B. Bootstrap-Admin mit "changeit") */
+  mustChangePassword: boolean;
 }
 
 export interface LoginRequest {

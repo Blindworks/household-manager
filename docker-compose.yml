@@ -12,7 +12,6 @@ services:
       CORS_ALLOWED_ORIGINS: http://192.168.1.100:4200
 
       # Benutzerverwaltung & API-Sicherheit
-      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
       REMEMBER_ME_KEY: ${REMEMBER_ME_KEY:-}
 
       # AnkerSolix

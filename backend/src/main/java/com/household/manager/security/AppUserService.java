@@ -9,19 +9,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 
 /** Verwaltung der Nutzerkonten (Admin-API + Bootstrap des ersten Admins). */
 @Service
 @RequiredArgsConstructor
 public class AppUserService {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
+    /** Bekanntes Bootstrap-Passwort; must_change_password erzwingt den Wechsel beim ersten Login. */
+    static final String BOOTSTRAP_PASSWORD = "changeit";
 
     private final AppUserRepository repository;
     private final PasswordEncoder passwordEncoder;
@@ -71,23 +68,39 @@ public class AppUserService {
     }
 
     /**
-     * Legt beim ersten Start einen Admin an. Liefert das generierte
-     * Zufallspasswort, falls keines konfiguriert war (fuer die Log-Ausgabe).
+     * Legt beim ersten Start einen Admin mit dem bekannten Passwort
+     * "changeit" an; must_change_password erzwingt den Wechsel beim ersten
+     * Login. Liefert true, wenn der Admin angelegt wurde (fuer die Log-Ausgabe).
      */
     @Transactional
-    public Optional<String> bootstrapAdmin(String configuredPassword) {
+    public boolean bootstrapAdmin() {
         if (repository.count() > 0) {
-            return Optional.empty();
+            return false;
         }
-        boolean generate = !StringUtils.hasText(configuredPassword);
-        String password = generate ? generatePassword() : configuredPassword;
         repository.save(AppUser.builder()
                 .username("admin")
                 .displayName("Administrator")
-                .passwordHash(passwordEncoder.encode(password))
+                .passwordHash(passwordEncoder.encode(BOOTSTRAP_PASSWORD))
                 .role(UserRole.ADMIN)
+                .mustChangePassword(true)
                 .build());
-        return generate ? Optional.of(password) : Optional.empty();
+        return true;
+    }
+
+    /**
+     * Selbst-Passwortwechsel des angemeldeten Nutzers; verlangt das aktuelle
+     * Passwort und loescht das must_change_password-Flag.
+     */
+    @Transactional
+    public void changeOwnPassword(String username, String currentPassword, String newPassword) {
+        AppUser user = repository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Nutzer nicht gefunden: " + username));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Aktuelles Passwort ist falsch.");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        repository.save(user);
     }
 
     private AppUser getOrThrow(Long id) {
@@ -107,11 +120,5 @@ public class AppUserService {
                 .filter(u -> u.getRole() == UserRole.ADMIN && u.isEnabled()
                         && !u.getId().equals(excluded.getId()))
                 .count();
-    }
-
-    private String generatePassword() {
-        byte[] bytes = new byte[9];
-        RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

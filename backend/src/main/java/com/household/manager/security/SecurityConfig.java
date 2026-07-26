@@ -145,7 +145,8 @@ public class SecurityConfig {
                         // KIOSK-Whitelist: Dashboard lesen + Schalter/Modi/Nuki
                         // (LOCK-only fuer KIOSK erzwingt der NukiController)
                         .requestMatchers(HttpMethod.POST, "/v1/switches/*/toggle",
-                                "/v1/modes/*/toggle", "/v1/nuki/locks/*/actions").hasRole("KIOSK")
+                                "/v1/modes/*/toggle", "/v1/nuki/locks/*/actions",
+                                "/v1/auth/password").hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
                         // Alles Uebrige (Geraete schalten, Kalender/Zaehler pflegen, Ansagen ...)
