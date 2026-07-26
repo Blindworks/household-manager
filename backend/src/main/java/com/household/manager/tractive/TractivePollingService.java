@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +38,8 @@ public class TractivePollingService {
     private volatile List<EntityStateUpdate> lastUpdates = List.of();
     /** Letzter erfolgreicher Poll-Stand fuer die Frontend-Seite. */
     private volatile List<TractivePetSnapshot> lastSnapshots = List.of();
+    /** Bewertungszeitpunkt des letzten erfolgreichen Polls; Basis fuer die Haustier-API. */
+    private volatile Instant lastPolledAt;
 
     @Scheduled(fixedDelayString = "${tractive.poll-interval-ms:60000}",
             initialDelayString = "${tractive.initial-delay-ms:20000}")
@@ -52,6 +55,7 @@ public class TractivePollingService {
         String token = auth.get().getAccessToken();
         String userId = auth.get().getUserId();
         try {
+            Instant now = Instant.now();
             List<TractivePetSnapshot> snapshots = new ArrayList<>();
             for (var ref : apiClient.listTrackableObjects(token, userId)) {
                 collectPet(token, userId, ref.id()).ifPresent(snapshots::add);
@@ -59,7 +63,7 @@ public class TractivePollingService {
             List<EntityStateUpdate> updates = new ArrayList<>();
             for (TractivePetSnapshot snapshot : snapshots) {
                 try {
-                    updates.addAll(mapper.map(snapshot));
+                    updates.addAll(mapper.map(snapshot, now));
                 } catch (Exception ex) {
                     log.warn("Tractive-Mapping fuer {} fehlgeschlagen: {}",
                             snapshot.trackerId(), ex.getMessage());
@@ -68,6 +72,7 @@ public class TractivePollingService {
             updates.forEach(entityStateService::reportState);
             lastUpdates = List.copyOf(updates);
             lastSnapshots = List.copyOf(snapshots);
+            lastPolledAt = now;
         } catch (Exception ex) {
             log.warn("Tractive-Polling fehlgeschlagen: {}", ex.getMessage());
             markUnavailable();
@@ -102,8 +107,20 @@ public class TractivePollingService {
         return lastSnapshots;
     }
 
+    /** {@code null}, solange noch kein Poll erfolgreich war. */
+    public Instant lastPolledAt() {
+        return lastPolledAt;
+    }
+
+    /**
+     * Die Home-Entitaet ist bewusst ausgenommen: Sie behaelt ihren letzten Wert, weil der
+     * Tracker zu Hause absichtlich aus ist und "keine Daten" dort der Normalfall ist.
+     */
     private void markUnavailable() {
         for (EntityStateUpdate update : lastUpdates) {
+            if (mapper.isHomeEntity(update)) {
+                continue;
+            }
             entityStateService.reportState(EntityStateUpdate.builder()
                     .entityId(update.entityId())
                     .domain(update.domain())

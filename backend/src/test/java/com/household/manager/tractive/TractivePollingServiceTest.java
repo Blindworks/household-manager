@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,16 @@ class TractivePollingServiceTest {
             .sourceRef("dev-9")
             .friendlyName("Bello")
             .state("Garten")
+            .attributes(Map.of())
+            .build();
+
+    private static final EntityStateUpdate HOME_UPDATE = EntityStateUpdate.builder()
+            .entityId("binary_sensor.tractive_dev_9_home")
+            .domain(EntityDomain.BINARY_SENSOR)
+            .source(EntitySource.TRACTIVE)
+            .sourceRef("dev-9")
+            .friendlyName("Bello zu Hause")
+            .state("on")
             .attributes(Map.of())
             .build();
 
@@ -84,7 +95,7 @@ class TractivePollingServiceTest {
     void pollReportsMappedStates() {
         givenAuthenticated();
         givenOnePet();
-        when(mapper.map(any())).thenReturn(List.of(LOCATION_UPDATE));
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
 
         service.poll();
 
@@ -107,7 +118,7 @@ class TractivePollingServiceTest {
         // 1. Zyklus: erfolgreich, fuellt den Cache
         givenAuthenticated();
         givenOnePet();
-        when(mapper.map(any())).thenReturn(List.of(LOCATION_UPDATE));
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
         service.poll();
         reset(entityStateService);
 
@@ -136,7 +147,7 @@ class TractivePollingServiceTest {
     void cloudFailureMarksLastKnownEntitiesUnavailable() {
         givenAuthenticated();
         givenOnePet();
-        when(mapper.map(any())).thenReturn(List.of(LOCATION_UPDATE));
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
 
         service.poll();
         reset(apiClient);
@@ -150,6 +161,29 @@ class TractivePollingServiceTest {
         EntityStateUpdate unavailable = captor.getAllValues().get(1);
         assertEquals("sensor.tractive_dev_9_location", unavailable.entityId());
         assertEquals("unavailable", unavailable.state());
+    }
+
+    /**
+     * Die Haustier-API muss denselben Zeitpunkt sehen wie der letzte erfolgreiche Poll –
+     * ein Ausfall darf lastPolledAt nicht veraendern, sonst wuerde ein eingefrorener
+     * Snapshot mit einem neuen Zeitpunkt neu bewertet.
+     */
+    @Test
+    void lastPolledAtIsSetOnSuccessAndUnchangedAfterAFailure() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        service.poll();
+        Instant firstPolledAt = service.lastPolledAt();
+        assertNotNull(firstPolledAt);
+
+        reset(apiClient);
+        when(apiClient.listTrackableObjects("tok", "u-1"))
+                .thenThrow(new TractiveException("cloud down"));
+        assertDoesNotThrow(() -> service.poll());
+
+        assertEquals(firstPolledAt, service.lastPolledAt());
     }
 
     @Test
@@ -167,10 +201,38 @@ class TractivePollingServiceTest {
         when(apiClient.getHardware("tok", "u-1", "dev-9"))
                 .thenReturn(new TractiveHardwareDto(87, "NOT_CHARGING"));
         when(apiClient.listGeofences("tok", "u-1", "dev-9")).thenReturn(List.of());
-        when(mapper.map(any())).thenReturn(List.of(LOCATION_UPDATE));
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
 
         assertDoesNotThrow(() -> service.poll());
 
         verify(entityStateService).reportState(LOCATION_UPDATE);
+    }
+
+    /**
+     * Die Home-Entitaet darf bei einem Ausfall nicht 'unavailable' werden – der Tracker
+     * ist zu Hause bewusst aus, und der letzte Wert ist genau die gewuenschte Aussage.
+     */
+    @Test
+    void cloudFailureLeavesTheHomeEntityUntouched() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE, HOME_UPDATE));
+        when(mapper.isHomeEntity(LOCATION_UPDATE)).thenReturn(false);
+        when(mapper.isHomeEntity(HOME_UPDATE)).thenReturn(true);
+
+        service.poll();
+        reset(entityStateService);
+        when(apiClient.listTrackableObjects("tok", "u-1"))
+                .thenThrow(new TractiveException("cloud down"));
+
+        assertDoesNotThrow(() -> service.poll());
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, atLeastOnce()).reportState(captor.capture());
+        assertTrue(captor.getAllValues().stream()
+                .noneMatch(update -> update.entityId().endsWith("_home")));
+        assertTrue(captor.getAllValues().stream()
+                .anyMatch(update -> update.entityId().endsWith("_location")
+                        && "unavailable".equals(update.state())));
     }
 }

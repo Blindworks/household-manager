@@ -91,3 +91,4 @@ com.household.manager/
 - [response-status-exception-handler.md](response-status-exception-handler.md) - GlobalExceptionHandler's Exception.class catch-all swallows ResponseStatusException into a 500 unless a dedicated @ExceptionHandler(ResponseStatusException.class) exists
 - [vision-integration.md](vision-integration.md) - Blink-Gesichtserkennung: Vision*Service-Architektur, wann Hook-Pattern-Orchestrierung bewusst OHNE @Transactional bleibt, verstellbare-Clock-Testmuster statt Zweit-Service-Objekt
 - [haushaltskalender.md](haushaltskalender.md) - CalendarEvent/lib-recur 0.17.1 (API-verifiziert); Lesson: delimiter-joined TEXT-Felder hinter public Setter immer defensiv parsen (leere Tokens filtern)
+- [tractive-home-resolver-fix.md](tractive-home-resolver-fix.md) - "single source of truth" resolver called with independent Instant.now() per caller silently diverges; fix = one Instant per cycle, store + reuse it (lastPolledAt pattern)

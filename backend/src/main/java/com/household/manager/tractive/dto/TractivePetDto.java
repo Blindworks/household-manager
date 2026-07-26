@@ -16,6 +16,8 @@ public record TractivePetDto(
         Instant lastSeen,
         Integer batteryPercent,
         Boolean charging,
-        String zone
+        String zone,
+        /** {@code null}, wenn keine Aussage moeglich ist – dann zeigt die UI nichts an. */
+        Boolean atHome
 ) {
 }

@@ -928,6 +928,33 @@
   flex: 1;
 }
 
+.lumina__pets {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-radius: var(--radius-full);
+}
+
+.lumina__pets-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.lumina__pets-info .lumina__secured-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+}
+
+.lumina__pet--away {
+  color: var(--tertiary);
+}
+
 .lumina__lock-battery-warn {
   display: inline-flex;
   align-items: center;

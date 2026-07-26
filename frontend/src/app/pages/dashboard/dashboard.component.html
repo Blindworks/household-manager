@@ -295,6 +295,22 @@
       </div>
     </div>
 
+    <div class="lumina-card lumina__pets" *ngIf="petsWithVerdict.length > 0">
+      <div class="lumina__secured-icon">
+        <span class="material-symbols-outlined">pets</span>
+      </div>
+      <div class="lumina__pets-info">
+        <h4 class="lumina__label lumina__label--secondary">
+          {{ petsWithVerdict.length > 1 ? 'Haustiere' : 'Hund' }}
+        </h4>
+        <p class="lumina__secured-detail" *ngFor="let pet of petsWithVerdict"
+           [class.lumina__pet--away]="!pet.atHome">
+          <span class="material-symbols-outlined">{{ petStatusIcon(pet) }}</span>
+          {{ pet.name }} • {{ petStatusLabel(pet) }}
+        </p>
+      </div>
+    </div>
+
     <div class="lumina__modes-area">
       <div class="lumina__modes">
         <button

@@ -18,4 +18,6 @@ export interface TractivePet {
   charging?: boolean;
   /** Zonenname, 'away' ausserhalb aller Zonen oder 'unknown' ohne Position. */
   zone: string;
+  /** undefined, wenn keine Aussage moeglich ist – dann wird kein Badge gezeigt. */
+  atHome?: boolean;
 }
