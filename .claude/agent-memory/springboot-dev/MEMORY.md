@@ -72,7 +72,15 @@ com.household.manager/
 5. Comprehensive logging with SLF4J
 6. Health check endpoints: `/v1/health`, `/management/health`
 
+## Usermanagement (Tasks 1-3, foundation)
+- Spring Security dependency added (`spring-boot-starter-security` + `spring-security-test`); from this point on all endpoints default to 401 until a later task adds SecurityConfig
+- Tables `app_user`, `service_token`, `audit_log` (Liquibase `20260725-0042` — NOT `-0041`, see below)
+- Entities `AppUser`, `ServiceToken`, `AuditLog`, enums `UserRole` (ADMIN/MEMBER/KIOSK), `AuditActorType` (USER/SERVICE/SYSTEM/TELEGRAM) in `model/entity/`; repositories in `repository/` per convention
+
 ## Links to Detailed Notes
+- [usermanagement-tasks-10-12.md](usermanagement-tasks-10-12.md) - AppUserService/Bootstrap, Nuki KIOSK-lock-only rule, Admin-REST-API; strict-Mockito lenient() fix for plan test template
+- [usermanagement-tasks-13-14.md](usermanagement-tasks-13-14.md) - Audit-Verdrahtung (Chokepoints, Telegram-ThreadLocal, FLOW-Aktor); WebMvc-Slice-Fallstricke: DisabledUserSessionFilter braucht AppUserRepository-Stub, GlobalExceptionHandler verschluckt NoResourceFoundException zu 500
+- [liquibase-changeset-id-planning.md](liquibase-changeset-id-planning.md) - always re-check the changelog directory for the actual next free date-ID before creating a changeset; plan docs can go stale between writing and execution
 - [bounded-discovery-queries.md](bounded-discovery-queries.md) - discovery/distinct queries over append-only history tables must be time-bounded, not full scans
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
 - [api-design.md](api-design.md) - REST API design standards
@@ -82,3 +90,4 @@ com.household.manager/
 - [waste-collection-clock.md](waste-collection-clock.md) - injected Clock bean must pin Europe/Berlin explicitly; backend container has no TZ set, systemDefaultZone() silently becomes UTC
 - [response-status-exception-handler.md](response-status-exception-handler.md) - GlobalExceptionHandler's Exception.class catch-all swallows ResponseStatusException into a 500 unless a dedicated @ExceptionHandler(ResponseStatusException.class) exists
 - [vision-integration.md](vision-integration.md) - Blink-Gesichtserkennung: Vision*Service-Architektur, wann Hook-Pattern-Orchestrierung bewusst OHNE @Transactional bleibt, verstellbare-Clock-Testmuster statt Zweit-Service-Objekt
+- [haushaltskalender.md](haushaltskalender.md) - CalendarEvent/lib-recur 0.17.1 (API-verifiziert); Lesson: delimiter-joined TEXT-Felder hinter public Setter immer defensiv parsen (leere Tokens filtern)

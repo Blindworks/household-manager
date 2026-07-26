@@ -3,6 +3,9 @@
 ## Git Safety
 - [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
 
+## Usermanagement Feature (WP7, Task 17+18)
+- [Usermanagement Frontend](usermanagement-frontend.md) — Header role-filtered nav (visibleNavLinks), admin pages for users/tokens/audit-log; header.component.spec.ts fix (provideRouter([]) + HTTP providers) dropped baseline fails 4→3.
+
 ## Project Structure
 - **Location**: `C:\Users\bened\IdeaProjects\Household-Manager\frontend\src\app`
 - **Architecture**: Angular 21 standalone components (no NgModules)
