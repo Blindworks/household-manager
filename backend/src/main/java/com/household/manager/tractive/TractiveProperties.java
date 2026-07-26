@@ -22,4 +22,24 @@ public class TractiveProperties {
     private Double homeLongitude;
     private double homeRadiusMeters = 100;
     private String homeZoneName = "Zuhause";
+
+    /**
+     * Weiter Radius um den Home-Punkt fuer die Ausschalt-Heuristik. Der letzte
+     * Positionsbericht vor dem Ausschalten stammt oft noch von unterwegs, deshalb
+     * grosszuegiger als {@link #homeRadiusMeters}.
+     */
+    private double homeArrivalRadiusMeters = 500;
+
+    /**
+     * Ab wann ein ausbleibender Positionsbericht als "Tracker ausgeschaltet" gilt.
+     * Konservativ gewaehlt: das reale Melde-Intervall im Tractive-Sparmodus ist
+     * nicht verifiziert.
+     */
+    private long poweredOffAfterMinutes = 60;
+
+    /**
+     * Mindest-Akkustand, ab dem Stille als bewusstes Ausschalten gilt. Darunter ist
+     * "Akku unterwegs leergelaufen" die wahrscheinlichere Erklaerung.
+     */
+    private int poweredOffMinBatteryPercent = 15;
 }
