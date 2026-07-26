@@ -34,6 +34,8 @@ import { NukiService } from '../../services/nuki.service';
 import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
 import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
+import { TractiveService } from '../../services/tractive.service';
+import { TractivePet } from '../../models/tractive.model';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -66,6 +68,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly calendarService = inject(CalendarService);
   private readonly nukiService = inject(NukiService);
   private readonly powerConsumerService = inject(PowerConsumerService);
+  private readonly tractiveService = inject(TractiveService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -82,6 +85,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private calendarSubscription?: Subscription;
   private nukiSubscription?: Subscription;
   private consumerSubscription?: Subscription;
+  private petSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -112,6 +116,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly CONSUMER_TILE_LIMIT = 4;
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
   private static readonly CONSUMER_REFRESH_MS = 30000;
+  private static readonly PETS_REFRESH_MS = 60000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -223,6 +228,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Zu bestätigende Aktion (Entsperren/Tür öffnen); null = kein Dialog offen. */
   nukiConfirm: { lock: NukiLock; action: NukiLockActionType } | null = null;
 
+  /** Haustiere fuer die Zu-Hause-Kachel; leer = Kachel wird nicht gerendert. */
+  pets: TractivePet[] = [];
+
   ngOnInit(): void {
     this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
     this.startClock();
@@ -235,6 +243,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startWasteRefresh();
     this.startCalendarRefresh();
     this.startNukiRefresh();
+    this.startPetRefresh();
   }
 
   ngOnDestroy(): void {
@@ -249,6 +258,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.calendarSubscription?.unsubscribe();
     this.nukiSubscription?.unsubscribe();
     this.consumerSubscription?.unsubscribe();
+    this.petSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -908,6 +918,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.nukiError = 'Verbindung unterbrochen – Anzeige evtl. veraltet.';
         }
       });
+  }
+
+  private startPetRefresh(): void {
+    this.petSubscription = interval(DashboardComponent.PETS_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        // Ladefehler behalten die zuletzt bekannten Tiere (null = kein Update).
+        switchMap(() => this.tractiveService.getPets().pipe(catchError(() => of<TractivePet[] | null>(null))))
+      )
+      .subscribe(pets => {
+        if (pets) {
+          this.pets = pets;
+        }
+      });
+  }
+
+  /** Nur Tiere mit einer Aussage; ohne sie bleibt die Kachel leer statt zu raten. */
+  get petsWithVerdict(): TractivePet[] {
+    return this.pets.filter(pet => pet.atHome != null);
+  }
+
+  petStatusLabel(pet: TractivePet): string {
+    return pet.atHome ? 'Zu Hause' : 'Unterwegs';
+  }
+
+  petStatusIcon(pet: TractivePet): string {
+    return pet.atHome ? 'home' : 'pets';
   }
 
   private executeNukiAction(lock: NukiLock, action: NukiLockActionType): void {
