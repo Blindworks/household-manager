@@ -135,7 +135,7 @@ public class SecurityConfig {
                         .requestMatchers("/v1/tablet-presence/**").hasAuthority(SERVICE_AUTHORITY)
                         // Admin-Bereiche (inkl. bestehender /v1/admin/*-Polling-Controller)
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
-                                "/v1/alexa/auth/**").hasRole("ADMIN")
+                                "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet

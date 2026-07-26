@@ -39,6 +39,11 @@ public class AuthController {
             Authentication authentication = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(
                             loginRequest.username(), loginRequest.password()));
+            // Session-Fixation verhindern: beim Controller-Login laeuft keine
+            // SessionAuthenticationStrategy, die ID muss manuell rotiert werden
+            if (request.getSession(false) != null) {
+                request.changeSessionId();
+            }
             SecurityContext context = SecurityContextHolder.createEmptyContext();
             context.setAuthentication(authentication);
             SecurityContextHolder.setContext(context);
