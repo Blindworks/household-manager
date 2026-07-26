@@ -173,12 +173,32 @@ class TractiveApiClientTest {
                 Arguments.of("Mittelpunkt enthaelt null",
                         new TractiveGeofenceDto("Null", true,
                                 new TractiveGeofenceDto.Shape("circle",
-                                        Arrays.asList(48.0, (Double) null), 100.0))));
+                                        Arrays.asList(48.0, (Double) null), 100.0))),
+                Arguments.of("Polygon mit Radius",
+                        new TractiveGeofenceDto("Polygon mit Radius", true,
+                                new TractiveGeofenceDto.Shape("polygon", List.of(48.0, 16.0), 120.0))),
+                Arguments.of("Radius null",
+                        new TractiveGeofenceDto("Radius null", true,
+                                new TractiveGeofenceDto.Shape("circle", List.of(48.0, 16.0), 0.0))),
+                Arguments.of("Radius negativ",
+                        new TractiveGeofenceDto("Radius negativ", true,
+                                new TractiveGeofenceDto.Shape("circle", List.of(48.0, 16.0), -50.0))),
+                Arguments.of("Breitengrad unmoeglich",
+                        new TractiveGeofenceDto("Breitengrad unmoeglich", true,
+                                new TractiveGeofenceDto.Shape("circle", List.of(95.0, 16.0), 100.0))));
     }
 
     @ParameterizedTest(name = "{0} wird ignoriert")
     @MethodSource("unusableGeofences")
     void unusableGeofencesAreIgnored(String beschreibung, TractiveGeofenceDto geofence) {
         assertTrue(geofence.toZone().isEmpty());
+    }
+
+    @Test
+    void geofenceWithoutTypeIsStillAccepted() {
+        var geofence = new TractiveGeofenceDto("Garten", true,
+                new TractiveGeofenceDto.Shape(null, List.of(48.2082, 16.3738), 120.0));
+
+        assertTrue(geofence.toZone().isPresent());
     }
 }

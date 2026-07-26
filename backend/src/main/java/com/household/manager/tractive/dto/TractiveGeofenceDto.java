@@ -27,11 +27,25 @@ public record TractiveGeofenceDto(
         if (Boolean.FALSE.equals(active) || shape == null || shape.radius() == null) {
             return Optional.empty();
         }
+        // Fehlender Typ wird akzeptiert: die echte Antwortform ist unbestaetigt, ein
+        // unbekanntes Feld darf die Zonen nicht komplett abschalten.
+        String type = shape.type();
+        if (type != null && !"circle".equalsIgnoreCase(type)) {
+            return Optional.empty();
+        }
         List<Double> center = shape.center();
         if (center == null || center.size() < 2 || center.get(0) == null || center.get(1) == null) {
             return Optional.empty();
         }
+        double radius = shape.radius();
+        double latitude = center.get(0);
+        double longitude = center.get(1);
+        if (!Double.isFinite(radius) || radius <= 0
+                || !Double.isFinite(latitude) || !Double.isFinite(longitude)
+                || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+            return Optional.empty();
+        }
         String zoneName = name != null && !name.isBlank() ? name : "Zone";
-        return Optional.of(new GeoZone(zoneName, center.get(0), center.get(1), shape.radius()));
+        return Optional.of(new GeoZone(zoneName, latitude, longitude, radius));
     }
 }

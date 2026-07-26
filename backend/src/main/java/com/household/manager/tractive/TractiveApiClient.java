@@ -94,7 +94,7 @@ public class TractiveApiClient {
                     new ParameterizedTypeReference<List<TractiveGeofenceDto>>() {
                     });
         } catch (TractiveException ex) {
-            log.debug("Tractive-Geofences nicht lesbar ({}), es gilt die Home-Zone", ex.getMessage());
+            log.warn("Tractive-Geofences nicht lesbar ({}), es gilt die Home-Zone", ex.getMessage());
             return List.of();
         }
     }
