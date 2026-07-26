@@ -43,6 +43,13 @@ public class AppUserService {
                 .build());
     }
 
+    /**
+     * Bewusster Trade-off: ein Admin darf sich selbst degradieren oder
+     * deaktivieren, solange ein anderer aktiver Admin existiert — das ist
+     * beabsichtigt. Die eigene Session verliert die Berechtigung dann ueber
+     * den DisabledUserSessionFilter (deaktiviert) bzw. beim naechsten
+     * Request ueber die neu geladene Rolle (degradiert), nicht sofort.
+     */
     @Transactional
     public AppUser update(Long id, String displayName, UserRole role, boolean enabled) {
         AppUser user = getOrThrow(id);
@@ -88,6 +95,13 @@ public class AppUserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Nutzer nicht gefunden: " + id));
     }
 
+    /**
+     * Bewusster Trade-off: dieser Zaehl-Check ist nicht race-frei — zwei
+     * parallele Degradierungen der letzten beiden aktiven Admins koennten
+     * beide diesen Check passieren, da keine Sperre (z. B. SELECT ... FOR
+     * UPDATE) verwendet wird. Bei Haushaltsgroesse (wenige Admins, seltene
+     * gleichzeitige Verwaltungsaktionen) unkritisch.
+     */
     private long countOtherActiveAdmins(AppUser excluded) {
         return repository.findAll().stream()
                 .filter(u -> u.getRole() == UserRole.ADMIN && u.isEnabled()
