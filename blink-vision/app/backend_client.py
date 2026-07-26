@@ -19,25 +19,30 @@ def url(path: str) -> str:
     return f"{config.BACKEND_URL.rstrip('/')}{API_PREFIX}{path}"
 
 
+def _headers() -> dict:
+    """X-API-Token fuer das Backend; leer konfiguriert -> kein Header (Dev ohne Auth)."""
+    return {"X-API-Token": config.API_TOKEN} if config.API_TOKEN else {}
+
+
 async def post_recognition(persons: list[dict], unknown_faces: int, thumbnail: bytes | None) -> None:
     payload = {
         "persons": persons,
         "unknownFaces": unknown_faces,
         "thumbnailBase64": base64.b64encode(thumbnail).decode() if thumbnail else None,
     }
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=30, headers=_headers()) as client:
         response = await client.post(url("/recognitions"), json=payload)
         response.raise_for_status()
 
 
 async def post_heartbeat() -> None:
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=10, headers=_headers()) as client:
         response = await client.post(url("/heartbeat"))
         response.raise_for_status()
 
 
 async def fetch_embeddings() -> list[dict]:
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=30, headers=_headers()) as client:
         response = await client.get(url("/embeddings"))
         response.raise_for_status()
         return response.json()

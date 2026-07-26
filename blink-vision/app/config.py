@@ -2,6 +2,7 @@
 import os
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
+API_TOKEN = os.environ.get("API_TOKEN", "")
 CAMERA_NAME = os.environ.get("BLINK_CAMERA_NAME", "")   # leer = erste gefundene Kamera
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "10"))
 HEARTBEAT_SECONDS = int(os.environ.get("HEARTBEAT_SECONDS", "60"))
