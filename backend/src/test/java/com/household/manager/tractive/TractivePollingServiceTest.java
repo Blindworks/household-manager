@@ -91,13 +91,36 @@ class TractivePollingServiceTest {
         verify(entityStateService).reportState(LOCATION_UPDATE);
     }
 
+    /** Frisch installiert, nie angemeldet: es duerfen keine Phantom-Entitaeten entstehen. */
     @Test
-    void doesNothingWithoutValidToken() {
+    void withoutAnyLoginNothingIsReported() {
         when(authService.getValidToken()).thenReturn(Optional.empty());
 
         service.poll();
 
         verifyNoInteractions(apiClient, entityStateService);
+    }
+
+    /** Nach Ablauf des Tokens gelten die zuletzt gemeldeten Entitaeten als nicht mehr bekannt. */
+    @Test
+    void expiredTokenMarksPreviouslyReportedEntitiesUnavailable() {
+        // 1. Zyklus: erfolgreich, fuellt den Cache
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any())).thenReturn(List.of(LOCATION_UPDATE));
+        service.poll();
+        reset(entityStateService);
+
+        // 2. Zyklus: Token abgelaufen
+        when(authService.getValidToken()).thenReturn(Optional.empty());
+        service.poll();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, atLeastOnce()).reportState(captor.capture());
+        assertTrue(captor.getAllValues().stream()
+                .allMatch(update -> "unavailable".equals(update.state())));
+        assertTrue(captor.getAllValues().stream()
+                .anyMatch(update -> update.entityId().contains("location")));
     }
 
     @Test
