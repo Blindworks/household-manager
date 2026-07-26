@@ -23,6 +23,11 @@ class AppSettings(context: Context) {
         get() = prefs.getString(KEY_TABLET_ID, "wandtablet")!!
         set(value) = prefs.edit().putString(KEY_TABLET_ID, value.trim()).apply()
 
+    /** Service-Token (X-API-Token) für die Maschinen-Endpunkte des Backends; leer = kein Header. */
+    var apiToken: String
+        get() = prefs.getString(KEY_API_TOKEN, "")!!
+        set(value) = prefs.edit().putString(KEY_API_TOKEN, value.trim()).apply()
+
     var displayTimeoutSeconds: Int
         get() = prefs.getInt(KEY_TIMEOUT_SECONDS, 60)
         set(value) = prefs.edit().putInt(KEY_TIMEOUT_SECONDS, value.coerceAtLeast(5)).apply()
@@ -36,6 +41,7 @@ class AppSettings(context: Context) {
         const val KEY_DASHBOARD_URL = "dashboardUrl"
         const val KEY_BACKEND_URL = "backendBaseUrl"
         const val KEY_TABLET_ID = "tabletId"
+        const val KEY_API_TOKEN = "api_token"
         const val KEY_TIMEOUT_SECONDS = "displayTimeoutSeconds"
         const val KEY_MOTION_THRESHOLD = "motionPixelThreshold"
     }

@@ -16,12 +16,14 @@ class SettingsActivity : AppCompatActivity() {
         val dashboardUrl = findViewById<EditText>(R.id.input_dashboard_url)
         val backendUrl = findViewById<EditText>(R.id.input_backend_url)
         val tabletId = findViewById<EditText>(R.id.input_tablet_id)
+        val apiToken = findViewById<EditText>(R.id.input_api_token)
         val timeout = findViewById<EditText>(R.id.input_timeout)
         val motionThreshold = findViewById<EditText>(R.id.input_motion_threshold)
 
         dashboardUrl.setText(settings.dashboardUrl)
         backendUrl.setText(settings.backendBaseUrl)
         tabletId.setText(settings.tabletId)
+        apiToken.setText(settings.apiToken)
         timeout.setText(settings.displayTimeoutSeconds.toString())
         motionThreshold.setText(settings.motionPixelThreshold.toString())
 
@@ -29,6 +31,7 @@ class SettingsActivity : AppCompatActivity() {
             settings.dashboardUrl = dashboardUrl.text.toString().ifBlank { settings.dashboardUrl }
             settings.backendBaseUrl = backendUrl.text.toString().ifBlank { settings.backendBaseUrl }
             settings.tabletId = tabletId.text.toString().ifBlank { settings.tabletId }
+            settings.apiToken = apiToken.text.toString()
             settings.displayTimeoutSeconds = timeout.text.toString().toIntOrNull() ?: 60
             settings.motionPixelThreshold = motionThreshold.text.toString().toIntOrNull() ?: 25
             finish()
