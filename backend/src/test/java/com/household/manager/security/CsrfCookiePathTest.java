@@ -47,4 +47,30 @@ class CsrfCookiePathTest {
         assertThat(cookie).isNotNull();
         assertThat(cookie.getPath()).isEqualTo("/");
     }
+
+    @Test
+    void doppeltesXsrfCookieWirdUeberLoeschCookieFuerDenAltpfadBereinigt() throws Exception {
+        // Browser mit Altcookie (Path=/api) UND neuem Cookie sendet beide Namen —
+        // der Server antwortet mit einem Loesch-Cookie fuer den Altpfad
+        Cookie[] cookies = mockMvc.perform(get("/v1/switches")
+                        .cookie(new Cookie("XSRF-TOKEN", "alt"), new Cookie("XSRF-TOKEN", "neu")))
+                .andReturn().getResponse().getCookies();
+        assertThat(cookies)
+                .anySatisfy(cookie -> {
+                    assertThat(cookie.getName()).isEqualTo("XSRF-TOKEN");
+                    assertThat(cookie.getPath()).isEqualTo("/api");
+                    assertThat(cookie.getMaxAge()).isZero();
+                });
+    }
+
+    @Test
+    void einzelnesXsrfCookieLoestKeineBereinigungAus() throws Exception {
+        Cookie[] cookies = mockMvc.perform(get("/v1/switches")
+                        .cookie(new Cookie("XSRF-TOKEN", "vorhanden")))
+                .andReturn().getResponse().getCookies();
+        assertThat(cookies).noneSatisfy(cookie -> {
+            assertThat(cookie.getName()).isEqualTo("XSRF-TOKEN");
+            assertThat(cookie.getPath()).isEqualTo("/api");
+        });
+    }
 }
