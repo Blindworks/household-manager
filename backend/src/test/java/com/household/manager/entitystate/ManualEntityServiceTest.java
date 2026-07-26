@@ -1,6 +1,7 @@
 package com.household.manager.entitystate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.audit.AuditService;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.exception.DuplicateEntityException;
 import com.household.manager.exception.ResourceNotFoundException;
@@ -26,12 +27,15 @@ class ManualEntityServiceTest {
 
     @Mock
     private EntityStateService entityStateService;
+    @Mock
+    private AuditService auditService;
 
     private ManualEntityService service;
 
     @BeforeEach
     void setUp() {
-        service = new ManualEntityService(entityStateService, new EntityStateResponseMapper(new ObjectMapper()));
+        service = new ManualEntityService(entityStateService,
+                new EntityStateResponseMapper(new ObjectMapper()), auditService);
     }
 
     private EntityState entity(String entityId, EntityDomain domain, String state, String attributesJson) {

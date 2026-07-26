@@ -1,5 +1,6 @@
 package com.household.manager.entitystate;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.exception.DuplicateEntityException;
 import com.household.manager.exception.ResourceNotFoundException;
@@ -40,6 +41,7 @@ public class ManualEntityService {
 
     private final EntityStateService entityStateService;
     private final EntityStateResponseMapper responseMapper;
+    private final AuditService auditService;
 
     /**
      * Legt eine neue manuelle Entität gemäß Definition an. Die Entity-ID wird aus
@@ -86,6 +88,7 @@ public class ManualEntityService {
             throw new IllegalArgumentException("Toggle is only supported for input_boolean entities");
         }
         report(entity, STATE_ON.equals(entity.getState()) ? STATE_OFF : STATE_ON);
+        auditService.record("entity.toggle", entityId);
         return reload(entityId);
     }
 

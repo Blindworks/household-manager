@@ -1,5 +1,6 @@
 package com.household.manager.calendar;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
@@ -35,13 +36,16 @@ public class CalendarEventService {
     private final CalendarEventRepository repository;
     private final RecurrenceExpansionService expansionService;
     private final Clock clock;
+    private final AuditService auditService;
 
     public CalendarEventService(CalendarEventRepository repository,
                                 RecurrenceExpansionService expansionService,
-                                Clock clock) {
+                                Clock clock,
+                                AuditService auditService) {
         this.repository = repository;
         this.expansionService = expansionService;
         this.clock = clock;
+        this.auditService = auditService;
     }
 
     LocalDate today() {
@@ -157,7 +161,9 @@ public class CalendarEventService {
     @Transactional
     public CalendarEventResponse create(CalendarEventRequest request) {
         validate(request);
-        return toResponse(repository.save(applyRequest(request, new CalendarEvent())));
+        CalendarEventResponse response = toResponse(repository.save(applyRequest(request, new CalendarEvent())));
+        auditService.record("calendar.create", request.getTitle());
+        return response;
     }
 
     @Transactional
@@ -175,7 +181,9 @@ public class CalendarEventService {
             event.setExdates(null);
             repository.deleteByRecurringParentId(id);
         }
-        return toResponse(repository.save(event));
+        CalendarEventResponse response = toResponse(repository.save(event));
+        auditService.record("calendar.update", request.getTitle());
+        return response;
     }
 
     @Transactional
@@ -185,6 +193,7 @@ public class CalendarEventService {
         // bewusste Absicherung (z.B. falls der Fremdschluessel je gelockert wird), kein toter Code.
         repository.deleteByRecurringParentId(id);
         repository.delete(event);
+        auditService.record("calendar.delete", "Termin " + id);
     }
 
     /**
@@ -202,6 +211,11 @@ public class CalendarEventService {
      */
     @Transactional
     public void deleteOccurrence(Long id, LocalDate occurrenceDate) {
+        applyOccurrenceDeletion(id, occurrenceDate);
+        auditService.record("calendar.delete-occurrence", "Termin " + id + " am " + occurrenceDate);
+    }
+
+    private void applyOccurrenceDeletion(Long id, LocalDate occurrenceDate) {
         CalendarEvent event = findOrThrow(id);
         if (event.isOverride()) {
             CalendarEvent master = findOrThrow(event.getRecurringParentId());
@@ -262,7 +276,9 @@ public class CalendarEventService {
         override.setRrule(null); // Overrides sind nie selbst Serien
         master.removeExdate(occurrenceDate);
         repository.save(master);
-        return toOccurrence(repository.save(override), occurrenceDate, today());
+        CalendarOccurrenceResponse response = toOccurrence(repository.save(override), occurrenceDate, today());
+        auditService.record("calendar.update-occurrence", "Termin " + id + " am " + occurrenceDate);
+        return response;
     }
 
     private CalendarEvent findOrThrow(Long id) {

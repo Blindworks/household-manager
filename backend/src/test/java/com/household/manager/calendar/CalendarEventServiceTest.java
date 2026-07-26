@@ -1,5 +1,6 @@
 package com.household.manager.calendar;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
@@ -38,12 +39,14 @@ class CalendarEventServiceTest {
 
     @Mock
     private CalendarEventRepository repository;
+    @Mock
+    private AuditService auditService;
 
     private CalendarEventService service;
 
     @BeforeEach
     void setUp() {
-        service = new CalendarEventService(repository, new RecurrenceExpansionService(), CLOCK);
+        service = new CalendarEventService(repository, new RecurrenceExpansionService(), CLOCK, auditService);
     }
 
     private CalendarEventRequest.CalendarEventRequestBuilder validRequest() {

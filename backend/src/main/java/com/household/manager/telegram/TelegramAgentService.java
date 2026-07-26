@@ -1,5 +1,7 @@
 package com.household.manager.telegram;
 
+import com.household.manager.audit.AuditActor;
+import com.household.manager.audit.AuditActorContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class TelegramAgentService {
     private final TelegramConversationStore conversationStore;
 
     public String handleUserMessage(long chatId, String text) {
+        AuditActorContext.set(AuditActor.telegram(chatId));
         try {
             List<AnthropicMessage> messages = new ArrayList<>(conversationStore.history(chatId));
             messages.add(AnthropicMessage.user(text));
@@ -65,6 +68,8 @@ public class TelegramAgentService {
         } catch (Exception ex) {
             log.error("Telegram-Agent fehlgeschlagen für Chat {}: {}", chatId, ex.getMessage(), ex);
             return ERROR_REPLY;
+        } finally {
+            AuditActorContext.clear();
         }
     }
 

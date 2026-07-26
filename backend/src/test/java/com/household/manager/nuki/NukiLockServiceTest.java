@@ -1,5 +1,6 @@
 package com.household.manager.nuki;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.nuki.dto.NukiLockResponse;
 import com.household.manager.nuki.dto.NukiSmartlockDto;
 import com.household.manager.nuki.dto.NukiSmartlockStateDto;
@@ -22,6 +23,8 @@ class NukiLockServiceTest {
     private NukiApiClient apiClient;
     @Mock
     private NukiPollingService pollingService;
+    @Mock
+    private AuditService auditService;
     @InjectMocks
     private NukiLockService service;
 

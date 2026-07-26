@@ -1,6 +1,7 @@
 package com.household.manager.flowengine;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.audit.AuditService;
 import com.household.manager.flowengine.model.FlowDefinitionParser;
 import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.model.entity.Flow;
@@ -37,6 +38,8 @@ class FlowServiceTest {
     private FlowRepository flowRepository;
     @Mock
     private FlowEngine engine;
+    @Mock
+    private AuditService auditService;
 
     private FlowRegistry registry;
     private FlowService service;
@@ -48,7 +51,7 @@ class FlowServiceTest {
         FlowDefinitionParser parser = new FlowDefinitionParser(new ObjectMapper());
         FlowValidator validator = new FlowValidator(List.of(new TestTriggerHandler()),
                 mock(com.household.manager.entitystate.EntityStateService.class));
-        service = new FlowService(flowRepository, parser, validator, registry, engine);
+        service = new FlowService(flowRepository, parser, validator, registry, engine, auditService);
         lenient().when(flowRepository.save(any(Flow.class))).thenAnswer(inv -> inv.getArgument(0));
         // undeploy() clears the flow's debug buffer via engine.debugBuffer() -- stub with a
         // real instance so FlowRegistry.undeploy doesn't NPE on the mocked FlowEngine.
