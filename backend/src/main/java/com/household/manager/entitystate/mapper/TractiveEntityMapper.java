@@ -37,7 +37,12 @@ public class TractiveEntityMapper {
     private final TractiveZoneResolver zoneResolver;
     private final TractiveHomeResolver homeResolver;
 
-    public List<EntityStateUpdate> map(TractivePetSnapshot snapshot) {
+    /**
+     * @param now Bewertungszeitpunkt, vom Aufrufer vorgegeben: die Haustier-API muss
+     *            denselben Snapshot zum selben Zeitpunkt bewerten wie die Entitaet,
+     *            sonst koennen Kachel und Flow-Trigger auseinanderlaufen.
+     */
+    public List<EntityStateUpdate> map(TractivePetSnapshot snapshot, Instant now) {
         List<EntityStateUpdate> updates = new ArrayList<>();
         String ref = snapshot.trackerId();
         String name = snapshot.name();
@@ -70,7 +75,7 @@ public class TractiveEntityMapper {
 
         // Ohne Urteil wird bewusst kein Update gemeldet: der Entity-State-Layer behaelt
         // dann den letzten Wert, statt einen Zustand zu raten.
-        homeResolver.resolve(snapshot, Instant.now())
+        homeResolver.resolve(snapshot, now)
                 .map(verdict -> homeUpdate(verdict, snapshot, ref, name))
                 .ifPresent(updates::add);
 

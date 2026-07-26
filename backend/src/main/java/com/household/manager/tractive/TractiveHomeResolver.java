@@ -33,6 +33,13 @@ public class TractiveHomeResolver {
     /** Die Warnung ueber fehlende Home-Koordinaten soll nicht jede Minute im Log stehen. */
     private final AtomicBoolean missingHomeWarned = new AtomicBoolean();
 
+    /**
+     * Die Warnung ueber einen Uhren-Versatz soll nicht mehrfach pro Minute und Tier im Log
+     * stehen – seit die Haustier-API denselben Resolver bei jedem REST-Aufruf befragt, koennte
+     * ein dauerhafter Versatz sonst mehrere WARN-Zeilen pro Minute pro Tier erzeugen.
+     */
+    private final AtomicBoolean clockSkewWarned = new AtomicBoolean();
+
     public Optional<HomeVerdict> resolve(TractivePetSnapshot snapshot, Instant now) {
         if (!hasHomeCoordinates()) {
             warnAboutMissingHomeOnce();
@@ -85,8 +92,10 @@ public class TractiveHomeResolver {
             // was fail-safe ist – aber ein dauerhafter Versatz wuerde Regel 4 unerreichbar
             // machen und einen zu Hause ausgeschalteten Tracker fuer immer als "unterwegs"
             // melden. Deshalb sichtbar machen statt still schlucken.
-            log.warn("Tractive-Positionsbericht liegt {} Minuten in der Zukunft – Uhren-Versatz?",
-                    -minutes);
+            if (clockSkewWarned.compareAndSet(false, true)) {
+                log.warn("Tractive-Positionsbericht liegt {} Minuten in der Zukunft – Uhren-Versatz?",
+                        -minutes);
+            }
             return 0L;
         }
         return minutes;

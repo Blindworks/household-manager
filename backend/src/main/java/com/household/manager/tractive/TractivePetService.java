@@ -19,11 +19,16 @@ public class TractivePetService {
     private final TractiveHomeResolver homeResolver;
 
     public List<TractivePetDto> listPets() {
-        // Ein gemeinsamer Zeitpunkt: sonst koennten zwei Tiere desselben Abrufs
-        // unterschiedliche Stille-Schwellen sehen.
-        Instant now = Instant.now();
+        // Bewusst der Zeitpunkt des letzten erfolgreichen Polls, nicht "jetzt": nur so
+        // urteilt die API ueber denselben Snapshot exakt wie die Entitaet. Mit "jetzt"
+        // koennte ein eingefrorener Snapshot waehrend eines Ausfalls ueber die
+        // Stille-Schwelle laufen, waehrend die Entitaet auf ihrem alten Wert steht.
+        Instant polledAt = pollingService.lastPolledAt();
+        if (polledAt == null) {
+            return List.of();
+        }
         return pollingService.latestSnapshots().stream()
-                .map(snapshot -> toDto(snapshot, now))
+                .map(snapshot -> toDto(snapshot, polledAt))
                 .toList();
     }
 

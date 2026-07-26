@@ -48,15 +48,17 @@ class TractiveEntityMapperTest {
                 .orElseThrow(() -> new AssertionError("Entitaet fehlt: " + entityId));
     }
 
+    private static final Instant NOW = Instant.parse("2026-07-26T12:00:00Z");
+
     @Test
     void positionInsideZoneBecomesZoneName() {
         var snapshot = new TractivePetSnapshot(bello(),
                 new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS",
-                        Instant.now().getEpochSecond()),
+                        NOW.getEpochSecond()),
                 new TractiveHardwareDto(87, "NOT_CHARGING"),
                 List.of(new GeoZone("Garten", 48.2082, 16.3738, 100)));
 
-        var location = byId(mapper.map(snapshot), "sensor.tractive_dev_9_location");
+        var location = byId(mapper.map(snapshot, NOW), "sensor.tractive_dev_9_location");
 
         assertEquals("Garten", location.state());
         assertEquals(EntitySource.TRACTIVE, location.source());
@@ -70,11 +72,11 @@ class TractiveEntityMapperTest {
     void positionOutsideAllZonesBecomesAway() {
         var snapshot = new TractivePetSnapshot(bello(),
                 new TractivePositionDto(List.of(48.3000, 16.3738), 12.0, "GPS",
-                        Instant.now().getEpochSecond()),
+                        NOW.getEpochSecond()),
                 null,
                 List.of(new GeoZone("Garten", 48.2082, 16.3738, 100)));
 
-        assertEquals("away", byId(mapper.map(snapshot), "sensor.tractive_dev_9_location").state());
+        assertEquals("away", byId(mapper.map(snapshot, NOW), "sensor.tractive_dev_9_location").state());
     }
 
     @Test
@@ -82,7 +84,7 @@ class TractiveEntityMapperTest {
         var snapshot = new TractivePetSnapshot(bello(),
                 new TractivePositionDto(null, null, null, null), null, List.of());
 
-        var location = byId(mapper.map(snapshot), "sensor.tractive_dev_9_location");
+        var location = byId(mapper.map(snapshot, NOW), "sensor.tractive_dev_9_location");
 
         assertEquals("unknown", location.state());
         assertFalse(location.attributes().containsKey("latitude"));
@@ -93,7 +95,7 @@ class TractiveEntityMapperTest {
         var snapshot = new TractivePetSnapshot(bello(), null,
                 new TractiveHardwareDto(87, "CHARGING"), List.of());
 
-        List<EntityStateUpdate> updates = mapper.map(snapshot);
+        List<EntityStateUpdate> updates = mapper.map(snapshot, NOW);
 
         assertEquals("87", byId(updates, "sensor.tractive_dev_9_battery").state());
         assertEquals("battery",
@@ -105,7 +107,7 @@ class TractiveEntityMapperTest {
     void withoutHardwareNoBatteryEntityIsReported() {
         var snapshot = new TractivePetSnapshot(bello(), null, null, List.of());
 
-        List<EntityStateUpdate> updates = mapper.map(snapshot);
+        List<EntityStateUpdate> updates = mapper.map(snapshot, NOW);
 
         assertTrue(updates.stream().noneMatch(u -> u.entityId().contains("battery")));
         assertTrue(updates.stream().noneMatch(u -> u.entityId().contains("charging")));
@@ -114,12 +116,11 @@ class TractiveEntityMapperTest {
     /** Ein frischer Bericht am Home-Punkt: die Entitaet steht auf 'on'. */
     @Test
     void homeEntityIsReportedForAFreshPositionAtHome() {
-        long nowSeconds = Instant.now().getEpochSecond();
         var snapshot = new TractivePetSnapshot(bello(),
-                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", nowSeconds),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", NOW.getEpochSecond()),
                 new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
 
-        var home = byId(mapper.map(snapshot), "binary_sensor.tractive_dev_9_home");
+        var home = byId(mapper.map(snapshot, NOW), "binary_sensor.tractive_dev_9_home");
 
         assertEquals("on", home.state());
         assertEquals("Bello zu Hause", home.friendlyName());
@@ -135,10 +136,10 @@ class TractiveEntityMapperTest {
     void chargingIsReportedAsAtHomeWithItsOwnBasis() {
         var snapshot = new TractivePetSnapshot(bello(),
                 new TractivePositionDto(List.of(48.3000, 16.5000), 12.0, "GPS",
-                        Instant.now().getEpochSecond()),
+                        NOW.getEpochSecond()),
                 new TractiveHardwareDto(50, "CHARGING"), List.of());
 
-        var home = byId(mapper.map(snapshot), "binary_sensor.tractive_dev_9_home");
+        var home = byId(mapper.map(snapshot, NOW), "binary_sensor.tractive_dev_9_home");
 
         assertEquals("on", home.state());
         assertEquals("charging", home.attributes().get("basis"));
@@ -150,18 +151,17 @@ class TractiveEntityMapperTest {
         var snapshot = new TractivePetSnapshot(bello(), null,
                 new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
 
-        List<EntityStateUpdate> updates = mapper.map(snapshot);
+        List<EntityStateUpdate> updates = mapper.map(snapshot, NOW);
 
         assertTrue(updates.stream().noneMatch(u -> u.entityId().endsWith("_home")));
     }
 
     @Test
     void isHomeEntityRecognisesOnlyTheHomeEntity() {
-        long nowSeconds = Instant.now().getEpochSecond();
         var snapshot = new TractivePetSnapshot(bello(),
-                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", nowSeconds),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", NOW.getEpochSecond()),
                 new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
-        List<EntityStateUpdate> updates = mapper.map(snapshot);
+        List<EntityStateUpdate> updates = mapper.map(snapshot, NOW);
 
         assertTrue(mapper.isHomeEntity(byId(updates, "binary_sensor.tractive_dev_9_home")));
         assertFalse(mapper.isHomeEntity(byId(updates, "sensor.tractive_dev_9_location")));
@@ -187,12 +187,12 @@ class TractiveEntityMapperTest {
     /** Stiller Bericht, gesunder Akku, Heimnaehe: Regel 4 traegt Basis, stale und Alter mit. */
     @Test
     void aStalePositionNearHomeIsReportedAsPoweredOff() {
-        long twoHoursAgo = Instant.now().minus(2, ChronoUnit.HOURS).getEpochSecond();
+        long twoHoursAgo = NOW.minus(2, ChronoUnit.HOURS).getEpochSecond();
         var snapshot = new TractivePetSnapshot(bello(),
                 new TractivePositionDto(List.of(48.2109, 16.3738), 12.0, "GPS", twoHoursAgo),
                 new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
 
-        var home = byId(mapper.map(snapshot), "binary_sensor.tractive_dev_9_home");
+        var home = byId(mapper.map(snapshot, NOW), "binary_sensor.tractive_dev_9_home");
 
         assertEquals("on", home.state());
         assertEquals("powered_off", home.attributes().get("basis"));
