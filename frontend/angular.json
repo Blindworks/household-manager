@@ -31,7 +31,12 @@
                 "input": "public"
               },
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "**/*",
+                "input": "node_modules/leaflet/dist/images",
+                "output": "assets/leaflet"
+              }
             ],
             "styles": [
               "node_modules/@foblex/flow/styles/default.scss",

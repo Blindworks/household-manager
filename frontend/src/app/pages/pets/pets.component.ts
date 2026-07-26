@@ -9,16 +9,17 @@ import { TractivePet } from '../../models/tractive.model';
 /**
  * Leaflet ermittelt die Standard-Marker-Icons ueber eine relative URL zum
  * aktuell ausgefuehrten Skript. Unter dem Angular-Bundler funktioniert diese
- * Ermittlung nicht - die Icons wuerden sonst schweigend fehlen. Deshalb die
- * Icon-URLs hier einmalig explizit setzen, bevor irgendeine Karte entsteht.
+ * Ermittlung nicht - die Icons wuerden sonst schweigend fehlen. Die Icons
+ * werden deshalb lokal aus den Angular-Assets ausgeliefert (nicht per CDN),
+ * damit das Dashboard auch ohne Internetzugang funktioniert.
  */
 function fixLeafletDefaultIcon(): void {
   const iconPrototype = L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: unknown };
   delete iconPrototype._getIconUrl;
   L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+    iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
+    iconUrl: 'assets/leaflet/marker-icon.png',
+    shadowUrl: 'assets/leaflet/marker-shadow.png'
   });
 }
 fixLeafletDefaultIcon();
