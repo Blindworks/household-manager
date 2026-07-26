@@ -3,6 +3,7 @@ package com.household.manager.entitystate.mapper;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.tractive.GeoZone;
+import com.household.manager.tractive.TractiveHomeResolver;
 import com.household.manager.tractive.TractivePetSnapshot;
 import com.household.manager.tractive.TractiveProperties;
 import com.household.manager.tractive.TractiveZoneResolver;
@@ -12,6 +13,7 @@ import com.household.manager.tractive.dto.TractiveTrackableDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +25,12 @@ class TractiveEntityMapperTest {
 
     @BeforeEach
     void setUp() {
-        mapper = new TractiveEntityMapper(new TractiveZoneResolver(new TractiveProperties()));
+        TractiveProperties properties = new TractiveProperties();
+        properties.setHomeLatitude(48.2082);
+        properties.setHomeLongitude(16.3738);
+        properties.setHomeRadiusMeters(100);
+        mapper = new TractiveEntityMapper(new TractiveZoneResolver(properties),
+                new TractiveHomeResolver(properties));
     }
 
     private TractiveTrackableDto bello() {
@@ -97,5 +104,61 @@ class TractiveEntityMapperTest {
 
         assertTrue(updates.stream().noneMatch(u -> u.entityId().contains("battery")));
         assertTrue(updates.stream().noneMatch(u -> u.entityId().contains("charging")));
+    }
+
+    /** Ein frischer Bericht am Home-Punkt: die Entitaet steht auf 'on'. */
+    @Test
+    void homeEntityIsReportedForAFreshPositionAtHome() {
+        long nowSeconds = Instant.now().getEpochSecond();
+        var snapshot = new TractivePetSnapshot(bello(),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", nowSeconds),
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+
+        var home = byId(mapper.map(snapshot), "binary_sensor.tractive_dev_9_home");
+
+        assertEquals("on", home.state());
+        assertEquals("Bello zu Hause", home.friendlyName());
+        assertEquals("presence", home.attributes().get("deviceClass"));
+        assertEquals("position", home.attributes().get("basis"));
+        assertEquals(false, home.attributes().get("stale"));
+        assertTrue(home.attributes().containsKey("distanceMeters"));
+        assertTrue(home.attributes().containsKey("positionTime"));
+    }
+
+    @Test
+    void chargingIsReportedAsAtHomeWithItsOwnBasis() {
+        var snapshot = new TractivePetSnapshot(bello(),
+                new TractivePositionDto(List.of(48.3000, 16.5000), 12.0, "GPS",
+                        Instant.now().getEpochSecond()),
+                new TractiveHardwareDto(50, "CHARGING"), List.of());
+
+        var home = byId(mapper.map(snapshot), "binary_sensor.tractive_dev_9_home");
+
+        assertEquals("on", home.state());
+        assertEquals("charging", home.attributes().get("basis"));
+    }
+
+    /** Ohne verwertbare Daten entsteht kein Update – der letzte Wert bleibt so stehen. */
+    @Test
+    void withoutAnyVerdictNoHomeEntityIsReported() {
+        var snapshot = new TractivePetSnapshot(bello(), null,
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+
+        List<EntityStateUpdate> updates = mapper.map(snapshot);
+
+        assertTrue(updates.stream().noneMatch(u -> u.entityId().endsWith("_home")));
+    }
+
+    @Test
+    void isHomeEntityRecognisesOnlyTheHomeEntity() {
+        long nowSeconds = Instant.now().getEpochSecond();
+        var snapshot = new TractivePetSnapshot(bello(),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", nowSeconds),
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+        List<EntityStateUpdate> updates = mapper.map(snapshot);
+
+        assertTrue(mapper.isHomeEntity(byId(updates, "binary_sensor.tractive_dev_9_home")));
+        assertFalse(mapper.isHomeEntity(byId(updates, "sensor.tractive_dev_9_location")));
+        assertFalse(mapper.isHomeEntity(byId(updates, "sensor.tractive_dev_9_battery")));
     }
 }
