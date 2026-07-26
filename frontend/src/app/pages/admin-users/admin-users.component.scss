@@ -5,8 +5,9 @@
     margin-bottom: var(--spacing-md);
     padding: var(--spacing-sm);
     border-radius: var(--radius-sm, 6px);
-    background: #fdecea;
-    color: #b3261e;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: var(--color-error);
   }
 
   &__form {
@@ -18,7 +19,7 @@
     input,
     select {
       padding: var(--spacing-xs) var(--spacing-sm);
-      border: 1px solid var(--color-border, #ccc);
+      border: 1px solid var(--color-light-gray);
       border-radius: var(--radius-sm, 6px);
     }
 
@@ -39,7 +40,7 @@
     th,
     td {
       padding: var(--spacing-sm);
-      border-bottom: 1px solid var(--color-border, #eee);
+      border-bottom: 1px solid var(--color-light-gray);
       text-align: left;
     }
   }

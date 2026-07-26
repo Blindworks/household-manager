@@ -2,7 +2,7 @@
   <h1>Nutzerverwaltung</h1>
 
   @if (errorMessage) {
-    <div class="admin-users__error">{{ errorMessage }}</div>
+    <div class="admin-users__error" role="alert">{{ errorMessage }}</div>
   }
 
   <form class="admin-users__form" (ngSubmit)="create()">

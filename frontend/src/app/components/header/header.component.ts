@@ -116,6 +116,7 @@ export class HeaderComponent {
   }
 
   logout(): void {
+    this.closeMobileMenu();
     this.auth.logout().subscribe(() => this.router.navigate(['/login']));
   }
 

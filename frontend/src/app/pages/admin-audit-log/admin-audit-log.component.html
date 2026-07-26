@@ -2,7 +2,7 @@
   <h1>Audit-Log</h1>
 
   @if (errorMessage) {
-    <div class="audit-log__error">{{ errorMessage }}</div>
+    <div class="audit-log__error" role="alert">{{ errorMessage }}</div>
   }
 
   <form class="audit-log__filter" (ngSubmit)="load()">
