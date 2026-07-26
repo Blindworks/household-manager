@@ -55,6 +55,22 @@
   }
 }
 
+.home-badge {
+  display: inline-block;
+  margin: 0 0 0.5rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #14532d;
+  background: #bbf7d0;
+
+  &--away {
+    color: #7c2d12;
+    background: #fed7aa;
+  }
+}
+
 .zone {
   font-weight: 600;
 

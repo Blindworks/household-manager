@@ -30,6 +30,10 @@
     <div class="pet-cards">
       <article class="pet-card" *ngFor="let pet of pets()">
         <h2>{{ pet.name }}</h2>
+        <p class="home-badge" *ngIf="pet.atHome != null"
+           [class.home-badge--away]="!pet.atHome">
+          {{ pet.atHome ? 'Zu Hause' : 'Unterwegs' }}
+        </p>
         <p class="zone" [class.away]="pet.zone === 'away'">{{ zoneLabel(pet) }}</p>
         <p *ngIf="pet.batteryPercent != null">
           Akku: {{ pet.batteryPercent }} %
