@@ -223,6 +223,18 @@ dem Heimkommen umspringt.
   fehlenden Daten (Regel 1/6) wird gar nichts gemeldet, und die Entität behält ihren alten
   Wert.
 - **Die 60-Minuten-Schwelle ist unverifiziert**, siehe Rollout-Abschnitt.
+- **Ein dauerhafter Cloud-Ausfall friert die Home-Entität unbegrenzt ein — bewusst akzeptiert (Entscheidung 2026-07-26).**
+  Tractive gibt kein Refresh-Token aus; ein abgelaufenes Token verlangt eine manuelle
+  Neuanmeldung. Bis dahin läuft der Poller jede Minute in den Ausfallpfad. `location`,
+  `battery` und `charging` werden dabei sichtbar `unavailable`, die Home-Entität per
+  Konstruktion nicht — sie behält ihren letzten Wert, ohne jedes Anzeichen, dass er alt
+  ist. Ein fünfminütiger Netzaussetzer und eine seit Wochen vergessene Anmeldung sind an
+  der Entität nicht unterscheidbar. **Konsequenz für Flows:** ein „Hund hat das Grundstück
+  verlassen"-Flow auf dieser Entität ist in genau diesem Zustand wirkungslos, weil sich der
+  Zustand gar nicht mehr ändert. Eine Zeitgrenze (nach N Stunden Ausfall auch die
+  Home-Entität `unavailable` melden) wurde erwogen und zugunsten der einfacheren Logik
+  verworfen. Wird später ein sicherheitsrelevanter Flow darauf gebaut, ist das die erste
+  Stelle zum Nachziehen
 - **Die gesamte Tractive-Integration ist noch nicht gegen einen echten Account getestet.**
   Insbesondere ist offen, ob `device_hw_report` bei ausgeschaltetem Tracker überhaupt noch
   einen Akkustand liefert. Liefert es `null`, greift Regel 4 fail-safe nie — dann muss der
