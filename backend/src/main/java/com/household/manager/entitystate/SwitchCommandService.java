@@ -1,5 +1,6 @@
 package com.household.manager.entitystate;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.dto.SwitchResponse;
 import com.household.manager.entitystate.mapper.SwitchResponseMapper;
 import com.household.manager.exception.ResourceNotFoundException;
@@ -31,6 +32,7 @@ public class SwitchCommandService {
     private final SmartDeviceRepository smartDeviceRepository;
     private final EntityUsageService entityUsageService;
     private final SwitchResponseMapper switchResponseMapper;
+    private final AuditService auditService;
 
     /**
      * Schaltet die Entität um und zählt den Vorgang.
@@ -52,6 +54,7 @@ public class SwitchCommandService {
         }
 
         EntityUsage usage = entityUsageService.recordToggle(entityId);
+        auditService.record("switch.toggle", entityId);
         return switchResponseMapper.toResponse(reload(entityId), usage);
     }
 

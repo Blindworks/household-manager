@@ -455,6 +455,46 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * AccessDeniedException aus Methoden-/Controller-Pruefungen (z. B. Nuki-KIOSK-Regel).
+     * Ohne diesen Handler wuerde der Catch-all unten daraus einen 500 machen.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            org.springframework.security.access.AccessDeniedException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Forbidden")
+                .message("Keine Berechtigung fuer diese Aktion.")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    /**
+     * Fehlgeschlagene Logins (AuthController wirft die AuthenticationException weiter).
+     * Bewusst unspezifische Meldung — kein User-Enumeration-Leak.
+     */
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Unauthorized")
+                .message("Benutzername oder Passwort falsch.")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Authentication failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
      * Handle all other unhandled exceptions.
      *
      * @param ex      The exception

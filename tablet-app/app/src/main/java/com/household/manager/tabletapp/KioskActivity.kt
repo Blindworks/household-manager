@@ -10,6 +10,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -104,6 +105,12 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Cookies sofort persistieren, damit der Login einen Neustart überlebt
+        CookieManager.getInstance().flush()
+    }
+
     override fun onDestroy() {
         handler.removeCallbacks(tickRunnable)
         handler.removeCallbacks(retryRunnable)
@@ -173,6 +180,10 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
     private fun setupWebView() {
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
+        // Session-/Remember-Me-Cookie muss App- und Geräteneustarts überleben —
+        // der einmalige Login am Tablet läuft über die Login-Seite im WebView.
+        CookieManager.getInstance().setAcceptCookie(true)
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         webView.webViewClient = object : WebViewClient() {
             override fun onReceivedError(
                 view: WebView,

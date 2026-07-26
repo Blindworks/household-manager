@@ -49,8 +49,12 @@ class PresenceReporter(
     private fun post(present: Boolean) {
         val url = "${settings.backendBaseUrl}/v1/tablet-presence/${settings.tabletId}"
         val body = """{"present":$present}""".toRequestBody("application/json".toMediaType())
+        val builder = Request.Builder().url(url).post(body)
+        if (settings.apiToken.isNotBlank()) {
+            builder.addHeader("X-API-Token", settings.apiToken)
+        }
         try {
-            client.newCall(Request.Builder().url(url).post(body).build()).execute().use { response ->
+            client.newCall(builder.build()).execute().use { response ->
                 if (!response.isSuccessful) {
                     Log.w(TAG, "Backend antwortete mit ${response.code} auf $url")
                 }

@@ -1,0 +1,28 @@
+<div class="audit-log">
+  <h1>Audit-Log</h1>
+
+  @if (errorMessage) {
+    <div class="audit-log__error" role="alert">{{ errorMessage }}</div>
+  }
+
+  <form class="audit-log__filter" (ngSubmit)="load()">
+    <input name="actor" placeholder="Aktor filtern (z. B. bene)" [(ngModel)]="actorFilter">
+    <button type="submit">Filtern</button>
+  </form>
+
+  <table class="audit-log__table">
+    <thead>
+      <tr><th>Zeitpunkt</th><th>Aktor</th><th>Aktion</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      @for (entry of entries; track entry.id) {
+        <tr>
+          <td>{{ entry.timestamp | date: 'dd.MM.yyyy HH:mm:ss' }}</td>
+          <td>{{ entry.actorType }} / {{ entry.actor }}</td>
+          <td>{{ entry.action }}</td>
+          <td>{{ entry.detail }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

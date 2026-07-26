@@ -1,5 +1,6 @@
 package com.household.manager.flowengine.nodes;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
@@ -24,6 +25,7 @@ import java.util.List;
 public class SwitchDeviceNodeHandler implements NodeHandler {
 
     private final SmartDeviceService smartDeviceService;
+    private final AuditService auditService;
 
     @Override
     public String type() {
@@ -57,6 +59,7 @@ public class SwitchDeviceNodeHandler implements NodeHandler {
         } else {
             smartDeviceService.turnOff(deviceId);
         }
+        auditService.record("switch.device", deviceId + " -> " + action);
         return NodeResult.single(message);
     }
 

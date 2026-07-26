@@ -356,6 +356,18 @@ docker-compose down
 - Beim Bearbeiten eines Serien-Vorkommens ist das Datumsfeld im Dialog mit dem Datum des angeklickten Vorkommens vorbelegt; wählt der Nutzer „Ganze Serie", ohne das Feld anzufassen, bleibt der ursprüngliche Serienstart erhalten
 - Zeiten sind lokale Haushaltszeit (Europe/Berlin), kein TZID-Handling
 
+### Benutzerverwaltung & API-Sicherheit
+- Spring Security mit Server-Sessions (HttpOnly-Cookie) + Remember-Me-Cookie (90 Tage, überlebt Backend-Neustarts nur mit gesetztem `REMEMBER_ME_KEY`); kein JWT — bewusste Entscheidung für LAN-only-Betrieb
+- **Remember-Me ist TokenBased (stateless, MD5-Signatur über Passwort+Key):** Logout löscht nur das Cookie im Browser — ein exfiltriertes Cookie bleibt bis zu 90 Tage gültig; serverseitiger Widerruf nur über Passwortänderung (pro Nutzer) oder Rotation von `REMEMBER_ME_KEY` (alle Nutzer). Bewusster LAN-only-Trade-off gegen eine zusätzliche Token-Tabelle
+- **3 feste Rollen** mit Hierarchie ADMIN > MEMBER > KIOSK: KIOSK (Wandtablet) darf lesen, Schalter/Modi schalten und Nuki nur **verriegeln** (Body-abhängige Prüfung im `NukiController`, nicht per URL-Regel); MEMBER zusätzlich Tür öffnen, Kalender/Zähler/Ansagen; ADMIN alles (Flows, Nutzer, Tokens, Audit, Preise, Vision, Alexa-Login; auch `/v1/tractive/login|logout` sind ADMIN — Credential-Endpunkte wie der Alexa-/Blink-Login). Autoritative Regelliste: `SecurityConfig.filterChain` — die Reihenfolge der Matcher ist relevant
+- **Service-Tokens** (Header `X-API-Token`, SHA-256-gehasht in `service_token`, einzeln widerrufbar): blink-vision (Env `API_TOKEN`), Tablet-Presence (App-Einstellung), flow-mcp-server (`HOUSEHOLD_API_TOKEN`). Die reinen Maschinen-Endpunkte (Vision-Webhook/Embeddings, tablet-presence) verlangen die SERVICE-Authority — eine Browser-Session kommt dort nicht ran. Nach dem Rotieren eines Tokens muss der flow-mcp-server-Prozess (bzw. die Claude-Code-Session) neu gestartet werden — die Env wird beim Prozessstart gelesen
+- **Audit-Log** (`audit_log`): Login/Logout, Schalter, Modi, Nuki, Flow-/Nutzer-/Token-/Kalender-Änderungen. Aktor-Auflösung: ThreadLocal-Override (Telegram: `TELEGRAM:<chatId>`, Flow-Läufe: `FLOW:<id>`, beides SYSTEM-Typ) > SecurityContext (USER/SERVICE) > SYSTEM (Scheduler/Polling ohne Override: `system`). `AuditService.record` wirft nie — Audit darf die Aktion nicht brechen
+- **Bootstrap:** Erster Start ohne Nutzer legt `admin` an (`INITIAL_ADMIN_PASSWORD` oder Zufallspasswort einmalig im Log). Der letzte aktive Admin kann nicht deaktiviert/degradiert werden
+- Deaktivierte Nutzer verlieren sofort den Zugang (`DisabledUserSessionFilter`, eine DB-Abfrage pro Session-Request — Haushaltsgröße)
+- **Rollout-Reihenfolge beachten:** Erst Tokens über die Admin-Seite „API-Tokens“ anlegen, dann Envs setzen (`VISION_API_TOKEN`, `HOUSEHOLD_API_TOKEN`, Tablet-Einstellung), dann Sidecars neu starten — sonst fallen Vision-Webhooks und Tablet-Presence **still** aus
+- Frontend: Login-Seite (`pages/login/`), 401-Interceptor, `authGuard`/`adminGuard`, Admin-Seiten `admin/users`, `admin/service-tokens`, `admin/audit-log`; Header filtert Menüpunkte nach Rolle
+- GlobalExceptionHandler hat explizite 401/403-Handler — ohne sie würde der Catch-all `AccessDeniedException` in 500 verwandeln
+
 ## Code Quality Standards
 
 This project follows **Clean Code** principles across both frontend and backend:

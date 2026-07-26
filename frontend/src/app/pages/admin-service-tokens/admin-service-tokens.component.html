@@ -1,0 +1,45 @@
+<div class="admin-tokens">
+  <h1>API-Tokens</h1>
+
+  @if (errorMessage) {
+    <div class="admin-tokens__error" role="alert">{{ errorMessage }}</div>
+  }
+
+  @if (createdToken) {
+    <div class="admin-tokens__created">
+      <strong>Token erstellt — jetzt kopieren, er wird nie wieder angezeigt:</strong>
+      <code>{{ createdToken }}</code>
+    </div>
+  }
+
+  <form class="admin-tokens__form" (ngSubmit)="create()">
+    <input name="name" placeholder="Name (z. B. wandtablet)" [(ngModel)]="name">
+    <select name="role" [(ngModel)]="role">
+      @for (r of roles; track r) {
+        <option [value]="r">{{ r }}</option>
+      }
+    </select>
+    <button type="submit">Erstellen</button>
+  </form>
+
+  <table class="admin-tokens__table">
+    <thead>
+      <tr><th>Name</th><th>Rolle</th><th>Status</th><th>Zuletzt benutzt</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (token of tokens; track token.id) {
+        <tr>
+          <td>{{ token.name }}</td>
+          <td>{{ token.role }}</td>
+          <td>{{ token.enabled ? 'aktiv' : 'widerrufen' }}</td>
+          <td>{{ token.lastUsedAt ? (token.lastUsedAt | date: 'dd.MM.yyyy HH:mm') : 'nie' }}</td>
+          <td>
+            @if (token.enabled) {
+              <button type="button" (click)="revoke(token)">Widerrufen</button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

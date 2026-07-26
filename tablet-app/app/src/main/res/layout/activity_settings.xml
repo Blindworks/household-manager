@@ -51,6 +51,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:text="API-Token"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/input_api_token"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="API-Token"
+            android:inputType="text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:text="Display-Timeout (Sekunden)"
             android:textStyle="bold" />
 

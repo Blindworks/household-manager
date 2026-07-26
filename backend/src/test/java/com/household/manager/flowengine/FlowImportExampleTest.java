@@ -49,7 +49,7 @@ class FlowImportExampleTest {
                 new RateLimitNodeHandler(),
                 new DebugNodeHandler(),
                 new AlexaAnnounceNodeHandler(mock(AlexaAnnouncementService.class)),
-                new SwitchDeviceNodeHandler(mock(SmartDeviceService.class)));
+                new SwitchDeviceNodeHandler(mock(SmartDeviceService.class), mock(com.household.manager.audit.AuditService.class)));
         return new FlowValidator(handlers, entityStateService);
     }
 

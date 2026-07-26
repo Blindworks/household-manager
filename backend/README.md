@@ -212,8 +212,6 @@ logging:
 ## Next Steps
 
 - Implement meter readings entities and API
-- Add authentication and authorization
-- Implement user management
 - Add API documentation with Swagger/OpenAPI
 - Implement caching strategy
 - Add comprehensive unit and integration tests

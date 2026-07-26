@@ -72,7 +72,7 @@ class NodeCatalogFieldsTest {
 
     @Test
     void switchDeviceFields() {
-        var fields = new SwitchDeviceNodeHandler(null).fields();
+        var fields = new SwitchDeviceNodeHandler(null, null).fields();
         assertEquals(NodeFieldType.DEVICE_REF, field(fields, "deviceId").type());
         assertEquals(List.of("on", "off"), field(fields, "action").options());
     }

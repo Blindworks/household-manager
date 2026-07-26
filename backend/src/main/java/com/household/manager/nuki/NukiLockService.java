@@ -1,5 +1,6 @@
 package com.household.manager.nuki;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.nuki.dto.NukiLockResponse;
 import com.household.manager.nuki.dto.NukiSmartlockDto;
 import com.household.manager.nuki.dto.NukiSmartlockStateDto;
@@ -21,6 +22,7 @@ public class NukiLockService {
 
     private final NukiApiClient apiClient;
     private final NukiPollingService pollingService;
+    private final AuditService auditService;
 
     public List<NukiLockResponse> listLocks() {
         return apiClient.listSmartlocks().stream()
@@ -31,6 +33,7 @@ public class NukiLockService {
     public void executeAction(long smartlockId, NukiLockAction action) {
         log.info("Nuki action {} for smartlock {}", action, smartlockId);
         apiClient.sendAction(smartlockId, action.getApiCode());
+        auditService.record("nuki." + action.name().toLowerCase(), String.valueOf(smartlockId));
         pollingService.poll();
     }
 

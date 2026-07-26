@@ -22,3 +22,13 @@ def test_url_uses_configured_backend(monkeypatch):
 def test_trailing_slash_in_backend_url_does_not_double_up(monkeypatch):
     monkeypatch.setattr(config, "BACKEND_URL", "http://backend:8080/")
     assert backend_client.url("/heartbeat") == "http://backend:8080/api/v1/vision/heartbeat"
+
+
+def test_headers_enthalten_token_wenn_konfiguriert(monkeypatch):
+    monkeypatch.setattr(config, "API_TOKEN", "hm_test")
+    assert backend_client._headers() == {"X-API-Token": "hm_test"}
+
+
+def test_headers_leer_ohne_token(monkeypatch):
+    monkeypatch.setattr(config, "API_TOKEN", "")
+    assert backend_client._headers() == {}

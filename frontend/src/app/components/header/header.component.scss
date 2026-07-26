@@ -251,6 +251,33 @@
     width: 28px;
     height: 28px;
   }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-left: auto;
+    padding-left: var(--spacing-md);
+  }
+
+  &__user-name {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+  }
+
+  &__logout {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+    background: transparent;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
 }
 
 /* Animations */

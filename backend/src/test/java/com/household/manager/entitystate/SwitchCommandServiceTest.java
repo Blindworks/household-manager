@@ -1,6 +1,7 @@
 package com.household.manager.entitystate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.audit.AuditService;
 import com.household.manager.dto.SwitchResponse;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.entitystate.mapper.SwitchResponseMapper;
@@ -38,6 +39,8 @@ class SwitchCommandServiceTest {
     private SmartDeviceRepository smartDeviceRepository;
     @Mock
     private EntityUsageService entityUsageService;
+    @Mock
+    private AuditService auditService;
 
     private SwitchCommandService service;
 
@@ -46,7 +49,7 @@ class SwitchCommandServiceTest {
         service = new SwitchCommandService(
                 entityStateService, manualEntityService, smartDeviceService,
                 smartDeviceRepository, entityUsageService,
-                new SwitchResponseMapper(new EntityStateResponseMapper(new ObjectMapper())));
+                new SwitchResponseMapper(new EntityStateResponseMapper(new ObjectMapper())), auditService);
     }
 
     private EntityState switchEntity(String state) {

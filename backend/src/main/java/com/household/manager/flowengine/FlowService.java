@@ -1,5 +1,6 @@
 package com.household.manager.flowengine;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.flowengine.model.FlowDefinition;
 import com.household.manager.flowengine.model.FlowDefinitionParser;
@@ -31,6 +32,7 @@ public class FlowService {
     private final FlowValidator validator;
     private final FlowRegistry registry;
     private final FlowEngine engine;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public List<Flow> getAll() {
@@ -46,7 +48,9 @@ public class FlowService {
     public Flow create(String name, String description) {
         Flow flow = Flow.builder().name(name).description(description).enabled(true)
                 .draftDefinition("{ \"nodes\": [], \"wires\": [] }").build();
-        return flowRepository.save(flow);
+        Flow saved = flowRepository.save(flow);
+        auditService.record("flow.create", name);
+        return saved;
     }
 
     @Transactional
@@ -62,7 +66,9 @@ public class FlowService {
             parser.parse(draftDefinition); // wirft IllegalArgumentException bei kaputtem JSON -> 400
             flow.setDraftDefinition(draftDefinition);
         }
-        return flowRepository.save(flow);
+        Flow saved = flowRepository.save(flow);
+        auditService.record("flow.update", "Flow " + id);
+        return saved;
     }
 
     /**
@@ -86,7 +92,9 @@ public class FlowService {
         Flow flow = Flow.builder()
                 .name(name).description(description).enabled(false)
                 .draftDefinition(definitionJson).build();
-        return flowRepository.save(flow);
+        Flow saved = flowRepository.save(flow);
+        auditService.record("flow.import", name);
+        return saved;
     }
 
     /**
@@ -107,6 +115,7 @@ public class FlowService {
         if (flow.isEnabled()) {
             registry.deploy(id, definition);
         }
+        auditService.record("flow.deploy", "Flow " + id);
         return result;
     }
 
@@ -120,6 +129,7 @@ public class FlowService {
         } else if (flow.getDeployedDefinition() != null) {
             registry.deploy(id, parser.parse(flow.getDeployedDefinition()));
         }
+        auditService.record(enabled ? "flow.enable" : "flow.disable", "Flow " + id);
         return flow;
     }
 
@@ -128,6 +138,7 @@ public class FlowService {
         require(id);
         registry.undeploy(id);
         flowRepository.deleteById(id);
+        auditService.record("flow.delete", "Flow " + id);
     }
 
     /** Feuert eine deployte Trigger-Node von Hand (Test-Inject). */

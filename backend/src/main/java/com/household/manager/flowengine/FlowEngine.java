@@ -1,5 +1,7 @@
 package com.household.manager.flowengine;
 
+import com.household.manager.audit.AuditActor;
+import com.household.manager.audit.AuditActorContext;
 import com.household.manager.flowengine.model.FlowNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -46,48 +48,59 @@ public class FlowEngine {
     /**
      * Traversiert ab dem Ausgangsport einer Node (typisch: gefeuerter Trigger).
      * Läuft im Aufrufer-Thread — Aufrufer legen dies auf den flowEngineExecutor.
+     *
+     * <p>Einziger Ausführungspfad jeder Node (siehe {@link #emitAsync}): jede
+     * Fortsetzung — auch verzögerte via Delay-Node oder ein weiterer Trigger —
+     * kommt als frischer {@code executor.execute}-Aufruf hier an. Deshalb setzt
+     * genau diese Methode den Audit-Aktor {@code FLOW:<id>} für die Dauer des
+     * Laufs, statt einzelne Node-Handler damit zu belasten.
      */
     public void runFrom(long flowId, String nodeId, int port, FlowMessage message) {
-        FlowGraph graph = registry.graph(flowId).orElse(null);
-        if (graph == null) {
-            return;
-        }
-        record Work(String nodeId, FlowMessage message) {
-        }
-        Deque<Work> queue = new ArrayDeque<>();
-        for (String target : graph.targetsOf(nodeId, port)) {
-            queue.add(new Work(target, message));
-        }
-
-        int hops = 0;
-        while (!queue.isEmpty()) {
-            if (++hops > HOP_LIMIT) {
-                log.warn("Flow {}: hop limit {} reached, aborting execution (cycle?)", flowId, HOP_LIMIT);
+        AuditActorContext.set(AuditActor.flow(flowId));
+        try {
+            FlowGraph graph = registry.graph(flowId).orElse(null);
+            if (graph == null) {
                 return;
             }
-            Work work = queue.poll();
-            FlowNode node = graph.node(work.nodeId());
-            if (node == null) {
-                continue;
+            record Work(String nodeId, FlowMessage message) {
             }
-            NodeHandler handler = registry.handler(node.type());
-            NodeContext ctx = registry.context(flowId, node.id());
-            if (handler == null || ctx == null) {
-                continue;
+            Deque<Work> queue = new ArrayDeque<>();
+            for (String target : graph.targetsOf(nodeId, port)) {
+                queue.add(new Work(target, message));
             }
-            try {
-                NodeResult result = handler.handle(work.message(), node.config(), ctx);
-                for (Map.Entry<Integer, List<FlowMessage>> output : result.outputs().entrySet()) {
-                    for (FlowMessage outMessage : output.getValue()) {
-                        for (String target : graph.targetsOf(node.id(), output.getKey())) {
-                            queue.add(new Work(target, outMessage));
+
+            int hops = 0;
+            while (!queue.isEmpty()) {
+                if (++hops > HOP_LIMIT) {
+                    log.warn("Flow {}: hop limit {} reached, aborting execution (cycle?)", flowId, HOP_LIMIT);
+                    return;
+                }
+                Work work = queue.poll();
+                FlowNode node = graph.node(work.nodeId());
+                if (node == null) {
+                    continue;
+                }
+                NodeHandler handler = registry.handler(node.type());
+                NodeContext ctx = registry.context(flowId, node.id());
+                if (handler == null || ctx == null) {
+                    continue;
+                }
+                try {
+                    NodeResult result = handler.handle(work.message(), node.config(), ctx);
+                    for (Map.Entry<Integer, List<FlowMessage>> output : result.outputs().entrySet()) {
+                        for (FlowMessage outMessage : output.getValue()) {
+                            for (String target : graph.targetsOf(node.id(), output.getKey())) {
+                                queue.add(new Work(target, outMessage));
+                            }
                         }
                     }
+                } catch (Exception ex) {
+                    log.warn("Flow {} node {} failed, aborting branch: {}", flowId, node.id(), ex.getMessage());
+                    debugBuffer.add(flowId, node.id(), "ERROR: " + ex.getMessage(), work.message());
                 }
-            } catch (Exception ex) {
-                log.warn("Flow {} node {} failed, aborting branch: {}", flowId, node.id(), ex.getMessage());
-                debugBuffer.add(flowId, node.id(), "ERROR: " + ex.getMessage(), work.message());
             }
+        } finally {
+            AuditActorContext.clear();
         }
     }
 

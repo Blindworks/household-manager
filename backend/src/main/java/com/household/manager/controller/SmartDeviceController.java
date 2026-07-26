@@ -1,5 +1,6 @@
 package com.household.manager.controller;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceScanRequest;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
@@ -27,6 +28,7 @@ import java.util.List;
 public class SmartDeviceController {
 
     private final SmartDeviceService smartDeviceService;
+    private final AuditService auditService;
 
     /**
      * Get all smart devices from the database.
@@ -124,6 +126,7 @@ public class SmartDeviceController {
     public ResponseEntity<Void> turnOn(@PathVariable Long id) {
         log.info("POST /api/devices/{}/on - Turning on device", id);
         smartDeviceService.turnOn(id);
+        auditService.record("device.on", String.valueOf(id));
         return ResponseEntity.noContent().build();
     }
 
@@ -137,6 +140,7 @@ public class SmartDeviceController {
     public ResponseEntity<Void> turnOff(@PathVariable Long id) {
         log.info("POST /api/devices/{}/off - Turning off device", id);
         smartDeviceService.turnOff(id);
+        auditService.record("device.off", String.valueOf(id));
         return ResponseEntity.noContent().build();
     }
 }

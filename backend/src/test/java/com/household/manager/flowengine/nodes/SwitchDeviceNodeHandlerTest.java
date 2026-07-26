@@ -1,5 +1,6 @@
 package com.household.manager.flowengine.nodes;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -19,9 +20,11 @@ class SwitchDeviceNodeHandlerTest {
 
     @Mock
     private SmartDeviceService smartDeviceService;
+    @Mock
+    private AuditService auditService;
 
     private SwitchDeviceNodeHandler handler() {
-        return new SwitchDeviceNodeHandler(smartDeviceService);
+        return new SwitchDeviceNodeHandler(smartDeviceService, auditService);
     }
 
     private final FlowMessage msg = FlowMessage.of(Map.of());
@@ -38,6 +41,12 @@ class SwitchDeviceNodeHandlerTest {
     void turnsOff() {
         handler().handle(msg, new NodeConfig(Map.of("deviceId", 42, "action", "off")), null);
         verify(smartDeviceService).turnOff(42L);
+    }
+
+    @Test
+    void auditiertErfolgreichesSchalten() {
+        handler().handle(msg, new NodeConfig(Map.of("deviceId", 42, "action", "on")), null);
+        verify(auditService).record("switch.device", "42 -> on");
     }
 
     @Test

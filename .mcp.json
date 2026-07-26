@@ -4,7 +4,8 @@
       "command": "node",
       "args": ["flow-mcp-server/src/index.js"],
       "env": {
-        "HOUSEHOLD_API_URL": "http://localhost:8080/api"
+        "HOUSEHOLD_API_URL": "http://localhost:8080/api",
+        "HOUSEHOLD_API_TOKEN": "${HOUSEHOLD_API_TOKEN}"
       }
     }
   }
