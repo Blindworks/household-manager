@@ -29,6 +29,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
@@ -122,6 +123,7 @@ public class SecurityConfig {
                 .rememberMe(remember -> remember.rememberMeServices(rememberMeServices))
                 .addFilterBefore(serviceTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(disabledUserSessionFilter, SecurityContextHolderFilter.class)
+                .addFilterBefore(new LegacyCsrfCookieCleanupFilter(), CsrfFilter.class)
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, ex) ->
                                 writeError(response, HttpStatus.UNAUTHORIZED, "Unauthorized",
