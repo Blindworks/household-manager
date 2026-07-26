@@ -111,6 +111,24 @@ export const routes: Routes = [
     title: 'Ansagen - Household Manager'
   },
   {
+    path: 'admin/users',
+    loadComponent: () => import('./pages/admin-users/admin-users.component').then(m => m.AdminUsersComponent),
+    canActivate: [adminGuard],
+    title: 'Nutzer - Household Manager'
+  },
+  {
+    path: 'admin/service-tokens',
+    loadComponent: () => import('./pages/admin-service-tokens/admin-service-tokens.component').then(m => m.AdminServiceTokensComponent),
+    canActivate: [adminGuard],
+    title: 'API-Tokens - Household Manager'
+  },
+  {
+    path: 'admin/audit-log',
+    loadComponent: () => import('./pages/admin-audit-log/admin-audit-log.component').then(m => m.AdminAuditLogComponent),
+    canActivate: [adminGuard],
+    title: 'Audit-Log - Household Manager'
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
     canActivate: [adminGuard],

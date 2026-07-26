@@ -1,0 +1,45 @@
+<div class="admin-users">
+  <h1>Nutzerverwaltung</h1>
+
+  @if (errorMessage) {
+    <div class="admin-users__error">{{ errorMessage }}</div>
+  }
+
+  <form class="admin-users__form" (ngSubmit)="create()">
+    <input name="username" placeholder="Benutzername" [(ngModel)]="form.username">
+    <input name="displayName" placeholder="Anzeigename" [(ngModel)]="form.displayName">
+    <input name="password" type="password" placeholder="Passwort (min. 8)" [(ngModel)]="form.password">
+    <select name="role" [(ngModel)]="form.role">
+      @for (role of roles; track role) {
+        <option [value]="role">{{ role }}</option>
+      }
+    </select>
+    <button type="submit">Anlegen</button>
+  </form>
+
+  <table class="admin-users__table">
+    <thead>
+      <tr><th>Benutzername</th><th>Anzeigename</th><th>Rolle</th><th>Aktiv</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (user of users; track user.id) {
+        <tr>
+          <td>{{ user.username }}</td>
+          <td><input [name]="'dn-' + user.id" [(ngModel)]="user.displayName"></td>
+          <td>
+            <select [name]="'role-' + user.id" [(ngModel)]="user.role">
+              @for (role of roles; track role) {
+                <option [value]="role">{{ role }}</option>
+              }
+            </select>
+          </td>
+          <td><input type="checkbox" [name]="'en-' + user.id" [(ngModel)]="user.enabled"></td>
+          <td>
+            <button type="button" (click)="save(user)">Speichern</button>
+            <button type="button" (click)="changePassword(user)">Passwort</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
