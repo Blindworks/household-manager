@@ -51,6 +51,7 @@ export class HeaderComponent {
       label: 'Smart Home',
       children: [
         { path: '/zigbee', label: 'Zigbee-Sensoren' },
+        { path: '/pets', label: 'Hundetracker' },
         { path: '/devices', label: 'Geraete' },
         { path: '/entities', label: 'Entitaeten' },
         { path: '/custom-entities', label: 'Eigene Helfer' }

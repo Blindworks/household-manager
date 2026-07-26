@@ -1,0 +1,52 @@
+<div class="pets-page">
+  <h1>Hundetracker</h1>
+
+  <p *ngIf="loading()">Wird geladen …</p>
+
+  <section class="login" *ngIf="!loading() && !authenticated()">
+    <h2>Bei Tractive anmelden</h2>
+    <p class="hint">
+      Die Zugangsdaten werden nur zur Anmeldung verwendet und nie gespeichert.
+      Da Tractive kein Erneuerungs-Token ausgibt, ist gelegentlich eine erneute
+      Anmeldung noetig.
+    </p>
+    <form (ngSubmit)="login()">
+      <label>
+        E-Mail
+        <input type="email" name="email" [(ngModel)]="email" required autocomplete="username">
+      </label>
+      <label>
+        Passwort
+        <input type="password" name="password" [(ngModel)]="password" required
+               autocomplete="current-password">
+      </label>
+      <button type="submit" [disabled]="!email || !password">Anmelden</button>
+    </form>
+  </section>
+
+  <section *ngIf="!loading() && authenticated()">
+    <div id="pet-map" class="map"></div>
+
+    <div class="pet-cards">
+      <article class="pet-card" *ngFor="let pet of pets()">
+        <h2>{{ pet.name }}</h2>
+        <p class="zone" [class.away]="pet.zone === 'away'">{{ zoneLabel(pet) }}</p>
+        <p *ngIf="pet.batteryPercent != null">
+          Akku: {{ pet.batteryPercent }} %
+          <span *ngIf="pet.charging"> (laedt)</span>
+        </p>
+        <p *ngIf="pet.lastSeen" class="muted">
+          Zuletzt gesehen: {{ pet.lastSeen | date:'short' }}
+        </p>
+      </article>
+    </div>
+
+    <p *ngIf="pets().length === 0" class="muted">
+      Noch keine Daten – der erste Abruf erfolgt kurz nach dem Start.
+    </p>
+
+    <button type="button" class="logout" (click)="logout()">Abmelden</button>
+  </section>
+
+  <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+</div>

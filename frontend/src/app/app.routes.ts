@@ -153,6 +153,11 @@ export const routes: Routes = [
     title: 'Kalender - Household Manager'
   },
   {
+    path: 'pets',
+    loadComponent: () => import('./pages/pets/pets.component').then(m => m.PetsComponent),
+    title: 'Hundetracker - Household Manager'
+  },
+  {
     path: '**',
     redirectTo: '',
     pathMatch: 'full'

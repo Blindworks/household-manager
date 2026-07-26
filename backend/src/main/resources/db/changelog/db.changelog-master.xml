@@ -99,4 +99,7 @@
     <include file="db/changelog/changes/20260725-0039-create-calendar-events-table.xml"/>
     <include file="db/changelog/changes/20260725-0040-add-calendar-override-unique-constraint.xml"/>
 
+    <!-- Tractive-Haustiertracker -->
+    <include file="db/changelog/changes/20260725-0041-create-tractive-auth-table.xml"/>
+
 </databaseChangeLog>
