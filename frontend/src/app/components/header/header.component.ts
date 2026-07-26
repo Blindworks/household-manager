@@ -1,12 +1,14 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+import { AuthService } from '../../services/auth.service';
 
 interface NavLink {
   path: string;
   label: string;
   exact?: boolean;
+  minRole?: 'MEMBER' | 'ADMIN';
   children?: NavLink[];
 }
 
@@ -61,15 +63,19 @@ export class HeaderComponent {
       path: '/admin',
       label: 'Admin',
       children: [
-        { path: '/admin', label: 'Uebersicht', exact: true },
-        { path: '/flows', label: 'Automatisierungen' },
+        { path: '/admin', label: 'Uebersicht', exact: true, minRole: 'ADMIN' },
+        { path: '/flows', label: 'Automatisierungen', minRole: 'ADMIN' },
         { path: '/announcements', label: 'Ansagen' },
-        { path: '/vision', label: 'Gesichtserkennung' }
+        { path: '/vision', label: 'Gesichtserkennung', minRole: 'ADMIN' },
+        { path: '/admin/users', label: 'Nutzer', minRole: 'ADMIN' },
+        { path: '/admin/service-tokens', label: 'API-Tokens', minRole: 'ADMIN' },
+        { path: '/admin/audit-log', label: 'Audit-Log', minRole: 'ADMIN' }
       ]
     },
     {
       path: '/finance',
       label: 'Ausgaben',
+      minRole: 'MEMBER',
       children: [
         { path: '/finance', label: 'Uebersicht', exact: true },
         { path: '/finance/transactions', label: 'Transaktionen' },
@@ -82,6 +88,18 @@ export class HeaderComponent {
     },
   ];
 
+  /** Public: das Template filtert die Navigation nach der aktuellen Rolle. */
+  readonly auth = inject(AuthService);
+
+  /** Navigationseintraege, gefiltert nach der aktuellen Rolle; leere Gruppen verschwinden. */
+  readonly visibleNavLinks = computed(() => this.navLinks
+    .map(link => ({
+      ...link,
+      children: link.children?.filter(child => this.allows(child.minRole ?? link.minRole))
+    }))
+    .filter(link => this.allows(link.minRole)
+      && (link.children === undefined || link.children.length > 0)));
+
   /** Signal to track mobile menu open/closed state */
   isMobileMenuOpen = signal<boolean>(false);
 
@@ -89,6 +107,17 @@ export class HeaderComponent {
   expandedMenu = signal<string | null>(null);
 
   constructor(private readonly router: Router) {}
+
+  private allows(minRole?: 'MEMBER' | 'ADMIN'): boolean {
+    if (!minRole) {
+      return true;
+    }
+    return minRole === 'ADMIN' ? this.auth.isAdmin() : this.auth.isMember();
+  }
+
+  logout(): void {
+    this.auth.logout().subscribe(() => this.router.navigate(['/login']));
+  }
 
   /**
    * Toggles the mobile menu visibility.

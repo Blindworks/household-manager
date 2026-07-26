@@ -28,7 +28,7 @@
     @if (isMobileMenuOpen()) {
       <nav class="header__nav header__nav--mobile">
         <ul class="header__nav-list">
-          @for (link of navLinks; track link.path) {
+          @for (link of visibleNavLinks(); track link.path) {
             <li class="header__nav-item">
               @if (link.children) {
                 <button
@@ -66,6 +66,12 @@
             </li>
           }
         </ul>
+        @if (auth.currentUser(); as user) {
+          <div class="header__user">
+            <span class="header__user-name">{{ user.displayName }}</span>
+            <button class="header__logout" type="button" (click)="logout()">Abmelden</button>
+          </div>
+        }
       </nav>
     }
   </div>
@@ -79,7 +85,7 @@
       />
     </a>
     <ul class="header__nav-list">
-      @for (link of navLinks; track link.path) {
+      @for (link of visibleNavLinks(); track link.path) {
         <li class="header__nav-item">
           @if (link.children) {
             <button
@@ -117,5 +123,11 @@
         </li>
       }
     </ul>
+    @if (auth.currentUser(); as user) {
+      <div class="header__user">
+        <span class="header__user-name">{{ user.displayName }}</span>
+        <button class="header__logout" type="button" (click)="logout()">Abmelden</button>
+      </div>
+    }
   </nav>
 </header>
