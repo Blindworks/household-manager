@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -20,6 +20,15 @@ export class LoginComponent {
   password = '';
   errorMessage: string | null = null;
   isLoading = false;
+
+  /**
+   * Holt vorab das XSRF-TOKEN-Cookie. Die Login-Route ist die einzige ohne
+   * Guard — ohne diesen GET gaebe es vor dem Login-POST kein Cookie und
+   * Spring lehnte ihn mit 403 ab.
+   */
+  ngOnInit(): void {
+    this.auth.primeCsrfToken().subscribe();
+  }
 
   submit(): void {
     if (!this.username || !this.password || this.isLoading) {
