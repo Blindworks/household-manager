@@ -366,6 +366,7 @@ docker-compose down
 - Deaktivierte Nutzer verlieren sofort den Zugang (`DisabledUserSessionFilter`, eine DB-Abfrage pro Session-Request — Haushaltsgröße)
 - **Rollout-Reihenfolge beachten:** Erst Tokens über die Admin-Seite „API-Tokens“ anlegen, dann Envs setzen (`VISION_API_TOKEN`, `HOUSEHOLD_API_TOKEN`, Tablet-Einstellung), dann Sidecars neu starten — sonst fallen Vision-Webhooks und Tablet-Presence **still** aus
 - Frontend: Login-Seite (`pages/login/`), 401-Interceptor, `authGuard`/`adminGuard`, Admin-Seiten `admin/users`, `admin/service-tokens`, `admin/audit-log`; Header filtert Menüpunkte nach Rolle
+- **CSRF-Fallstricke (beide real aufgetreten, kosten sonst Stunden):** (1) Das `XSRF-TOKEN`-Cookie muss `Path=/` haben — der Spring-Default wäre der Kontextpfad `/api`, den `document.cookie` der unter `/` laufenden SPA nie sieht (`SecurityConfig`; ein Altcookie mit `/api` räumt `LegacyCsrfCookieCleanupFilter` ab, weil der Browser sonst beide sendet und der Server das falsche liest). (2) Spring setzt das Cookie erst als **Antwort auf einen Request** — eine Route ohne Guard feuert vorher keinen GET, also fehlt das Cookie und jeder POST endet in 403. Die Login-Seite holt es deshalb in `ngOnInit` über `AuthService.primeCsrfToken()`. **Jede neue Route ohne Guard, die schreibend zugreift, braucht dasselbe.**
 - GlobalExceptionHandler hat explizite 401/403-Handler — ohne sie würde der Catch-all `AccessDeniedException` in 500 verwandeln
 
 ## Code Quality Standards
