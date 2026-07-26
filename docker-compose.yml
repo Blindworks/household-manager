@@ -46,6 +46,12 @@ services:
       # Nuki
       NUKI_API_TOKEN: ${NUKI_API_TOKEN:-}
 
+      # Tractive-Hundetracker: definiert, was "zu Hause" heisst.
+      # Ohne diese beiden Werte entsteht binary_sensor.tractive_<id>_home nicht
+      # (sichtbar nur an einer Warnung im Log, sonst passiert stillschweigend nichts).
+      TRACTIVE_HOME_LAT: ${TRACTIVE_HOME_LAT:-}
+      TRACTIVE_HOME_LON: ${TRACTIVE_HOME_LON:-}
+
       # Telegram-KI-Assistent
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
