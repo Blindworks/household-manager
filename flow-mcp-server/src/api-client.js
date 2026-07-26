@@ -23,11 +23,15 @@ export function createApiClient(baseUrl = process.env.HOUSEHOLD_API_URL || DEFAU
   const base = baseUrl.replace(/\/+$/, '');
 
   async function request(method, path, body) {
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (process.env.HOUSEHOLD_API_TOKEN) {
+      headers['X-API-Token'] = process.env.HOUSEHOLD_API_TOKEN;
+    }
     let response;
     try {
       response = await fetch(`${base}${path}`, {
         method,
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });

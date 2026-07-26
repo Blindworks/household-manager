@@ -26,6 +26,7 @@ nach `npm install` stehen die Tools in neuen Claude-Code-Sitzungen automatisch b
 | Variable | Default | Bedeutung |
 |----------|---------|-----------|
 | `HOUSEHOLD_API_URL` | `http://localhost:8080/api` | Basis-URL des Backends |
+| `HOUSEHOLD_API_TOKEN` | — | Service-Token mit Rolle ADMIN (über die Admin-Seite „API-Tokens" erstellen); wird als `X-API-Token`-Header mitgesendet. Ohne Token antwortet das Backend mit 401 |
 
 ## Tools
 
