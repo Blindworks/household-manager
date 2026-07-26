@@ -65,7 +65,7 @@ export class PetsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
-    this.map?.remove();
+    this.destroyMap();
   }
 
   login(): void {
@@ -94,6 +94,7 @@ export class PetsComponent implements OnInit, OnDestroy {
     this.tractiveService.logout().subscribe({
       next: () => {
         this.stopPolling();
+        this.destroyMap();
         this.authenticated.set(false);
         this.pets.set([]);
       }
@@ -126,11 +127,19 @@ export class PetsComponent implements OnInit, OnDestroy {
   private loadPets(): void {
     this.tractiveService.getPets().subscribe({
       next: pets => {
+        this.errorMessage.set(null);
         this.pets.set(pets);
         this.renderMap(pets);
       },
       error: () => this.errorMessage.set('Positionen konnten nicht geladen werden.')
     });
+  }
+
+  /** Karte samt Markern verwerfen; beim naechsten Login wird sie neu aufgebaut. */
+  private destroyMap(): void {
+    this.map?.remove();
+    this.map = undefined;
+    this.markers.clear();
   }
 
   /** Karte beim ersten Datensatz aufbauen und Marker aktualisieren. */
