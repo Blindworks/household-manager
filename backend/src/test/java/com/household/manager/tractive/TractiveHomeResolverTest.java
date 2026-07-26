@@ -258,4 +258,18 @@ class TractiveHomeResolverTest {
         assertThat(resolve(propertiesWithHome(),
                 snapshot(position, new TractiveHardwareDto(87, "NOT_CHARGING")))).isEmpty();
     }
+
+    // --- Uhren-Versatz: ein Bericht "aus der Zukunft" gilt als frisch --------------------
+
+    /** Uhren-Versatz zur Cloud: ein Bericht aus der Zukunft gilt als frisch, nie als still. */
+    @Test
+    void aFuturePositionTimestampIsClampedToFresh() {
+        var snapshot = snapshot(positionAgedMinutes(HOME_LAT, HOME_LON, -30),
+                new TractiveHardwareDto(87, "NOT_CHARGING"));
+
+        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+
+        assertThat(verdict.stale()).isFalse();
+        assertThat(verdict.positionAgeMinutes()).isEqualTo(0L);
+    }
 }

@@ -1,5 +1,6 @@
 package com.household.manager.entitystate.mapper;
 
+import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.tractive.GeoZone;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ class TractiveEntityMapperTest {
         properties.setHomeLatitude(48.2082);
         properties.setHomeLongitude(16.3738);
         properties.setHomeRadiusMeters(100);
+        // Home-Koordinaten sind zugleich die Fallback-Zone des TractiveZoneResolver.
         mapper = new TractiveEntityMapper(new TractiveZoneResolver(properties),
                 new TractiveHomeResolver(properties));
     }
@@ -48,7 +51,8 @@ class TractiveEntityMapperTest {
     @Test
     void positionInsideZoneBecomesZoneName() {
         var snapshot = new TractivePetSnapshot(bello(),
-                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", 1800000000L),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS",
+                        Instant.now().getEpochSecond()),
                 new TractiveHardwareDto(87, "NOT_CHARGING"),
                 List.of(new GeoZone("Garten", 48.2082, 16.3738, 100)));
 
@@ -65,7 +69,8 @@ class TractiveEntityMapperTest {
     @Test
     void positionOutsideAllZonesBecomesAway() {
         var snapshot = new TractivePetSnapshot(bello(),
-                new TractivePositionDto(List.of(48.3000, 16.3738), 12.0, "GPS", 1800000000L),
+                new TractivePositionDto(List.of(48.3000, 16.3738), 12.0, "GPS",
+                        Instant.now().getEpochSecond()),
                 null,
                 List.of(new GeoZone("Garten", 48.2082, 16.3738, 100)));
 
@@ -125,6 +130,7 @@ class TractiveEntityMapperTest {
         assertTrue(home.attributes().containsKey("positionTime"));
     }
 
+    /** Position bewusst weit weg: 'on' beweist, dass Laden die Position schlaegt. */
     @Test
     void chargingIsReportedAsAtHomeWithItsOwnBasis() {
         var snapshot = new TractivePetSnapshot(bello(),
@@ -160,5 +166,37 @@ class TractiveEntityMapperTest {
         assertTrue(mapper.isHomeEntity(byId(updates, "binary_sensor.tractive_dev_9_home")));
         assertFalse(mapper.isHomeEntity(byId(updates, "sensor.tractive_dev_9_location")));
         assertFalse(mapper.isHomeEntity(byId(updates, "sensor.tractive_dev_9_battery")));
+    }
+
+    /** Der Poller ruft das im Ausfallpfad auf – hier darf nie eine Exception entstehen. */
+    @Test
+    void isHomeEntityReturnsFalseForAnIncompleteUpdate() {
+        var incomplete = EntityStateUpdate.builder()
+                .entityId("binary_sensor.tractive__home")
+                .domain(EntityDomain.BINARY_SENSOR)
+                .source(EntitySource.TRACTIVE)
+                .sourceRef(null)
+                .friendlyName("kaputt")
+                .state("on")
+                .attributes(Map.of())
+                .build();
+
+        assertFalse(mapper.isHomeEntity(incomplete));
+    }
+
+    /** Stiller Bericht, gesunder Akku, Heimnaehe: Regel 4 traegt Basis, stale und Alter mit. */
+    @Test
+    void aStalePositionNearHomeIsReportedAsPoweredOff() {
+        long twoHoursAgo = Instant.now().minus(2, ChronoUnit.HOURS).getEpochSecond();
+        var snapshot = new TractivePetSnapshot(bello(),
+                new TractivePositionDto(List.of(48.2109, 16.3738), 12.0, "GPS", twoHoursAgo),
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+
+        var home = byId(mapper.map(snapshot), "binary_sensor.tractive_dev_9_home");
+
+        assertEquals("on", home.state());
+        assertEquals("powered_off", home.attributes().get("basis"));
+        assertEquals(true, home.attributes().get("stale"));
+        assertEquals(120L, home.attributes().get("positionAgeMinutes"));
     }
 }

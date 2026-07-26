@@ -79,9 +79,14 @@ public class TractiveEntityMapper {
 
     /** True fuer die Home-Entitaet dieser Quelle; der Poller nimmt sie davon aus, unavailable zu werden. */
     public boolean isHomeEntity(EntityStateUpdate update) {
-        return update.source() == EntitySource.TRACTIVE
-                && update.entityId().equals(EntityIds.build(EntityDomain.BINARY_SENSOR,
-                        EntitySource.TRACTIVE, update.sourceRef(), HOME_SUFFIX));
+        // Muss auch fuer unvollstaendige Updates antworten koennen: Der Poller ruft das im
+        // Ausfallpfad auf, und eine Exception wuerde aus der Scheduled-Methode entkommen.
+        if (update.source() != EntitySource.TRACTIVE
+                || update.sourceRef() == null || update.sourceRef().isBlank()) {
+            return false;
+        }
+        return update.entityId().equals(EntityIds.build(EntityDomain.BINARY_SENSOR,
+                EntitySource.TRACTIVE, update.sourceRef(), HOME_SUFFIX));
     }
 
     private EntityStateUpdate homeUpdate(HomeVerdict verdict, TractivePetSnapshot snapshot,
