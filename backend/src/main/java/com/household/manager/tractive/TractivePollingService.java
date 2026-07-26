@@ -102,8 +102,15 @@ public class TractivePollingService {
         return lastSnapshots;
     }
 
+    /**
+     * Die Home-Entitaet ist bewusst ausgenommen: Sie behaelt ihren letzten Wert, weil der
+     * Tracker zu Hause absichtlich aus ist und "keine Daten" dort der Normalfall ist.
+     */
     private void markUnavailable() {
         for (EntityStateUpdate update : lastUpdates) {
+            if (mapper.isHomeEntity(update)) {
+                continue;
+            }
             entityStateService.reportState(EntityStateUpdate.builder()
                     .entityId(update.entityId())
                     .domain(update.domain())
