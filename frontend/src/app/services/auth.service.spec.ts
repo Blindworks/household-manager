@@ -32,6 +32,25 @@ describe('AuthService', () => {
     expect(service.isAdmin()).toBeTrue();
   });
 
+  it('primeCsrfToken fragt den Server immer an, auch bei bekanntem Nutzer', () => {
+    // Die Login-Seite hat keinen Guard: ohne echten GET setzt Spring kein
+    // XSRF-Cookie und der Login-POST scheitert mit 403
+    service.ensureLoaded().subscribe();
+    httpMock.expectOne('/api/v1/auth/me').flush(user);
+
+    service.primeCsrfToken().subscribe();
+    const req = httpMock.expectOne('/api/v1/auth/me');
+    expect(req.request.method).toBe('GET');
+    req.flush(user);
+  });
+
+  it('primeCsrfToken schluckt den 401 auf der Login-Seite', () => {
+    let result: CurrentUser | null | undefined;
+    service.primeCsrfToken().subscribe(r => (result = r));
+    httpMock.expectOne('/api/v1/auth/me').flush('nein', { status: 401, statusText: 'Unauthorized' });
+    expect(result).toBeNull();
+  });
+
   it('behandelt 401 als nicht angemeldet', () => {
     let result: CurrentUser | null | undefined;
     service.ensureLoaded().subscribe(r => (result = r));

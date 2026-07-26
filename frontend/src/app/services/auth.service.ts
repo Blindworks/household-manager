@@ -20,9 +20,20 @@ export class AuthService {
   /** Laedt den Nutzer genau einmal; 401 wird zu null (nicht angemeldet). */
   ensureLoaded(): Observable<CurrentUser | null> {
     const known = this.user();
-    if (known !== undefined) {
-      return of(known);
-    }
+    return known !== undefined ? of(known) : this.fetchCurrentUser();
+  }
+
+  /**
+   * Fragt den Nutzer immer beim Server ab — auch wenn er schon bekannt ist.
+   * Die Login-Seite braucht das: Sie laeuft als einzige Route ohne Guard,
+   * ohne diesen GET setzt Spring nie das XSRF-TOKEN-Cookie, Angular sendet
+   * keinen X-XSRF-TOKEN-Header und der Login-POST scheitert mit 403.
+   */
+  primeCsrfToken(): Observable<CurrentUser | null> {
+    return this.fetchCurrentUser();
+  }
+
+  private fetchCurrentUser(): Observable<CurrentUser | null> {
     return this.http.get<CurrentUser>(`${this.baseUrl}/me`).pipe(
       tap(user => this.user.set(user)),
       map((user): CurrentUser | null => user),
