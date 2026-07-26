@@ -6,6 +6,7 @@ import com.household.manager.tractive.dto.TractivePositionDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 
 /** Baut den letzten bekannten Stand der Haustiere fuer die Kartenseite. */
@@ -15,12 +16,18 @@ public class TractivePetService {
 
     private final TractivePollingService pollingService;
     private final TractiveZoneResolver zoneResolver;
+    private final TractiveHomeResolver homeResolver;
 
     public List<TractivePetDto> listPets() {
-        return pollingService.latestSnapshots().stream().map(this::toDto).toList();
+        // Ein gemeinsamer Zeitpunkt: sonst koennten zwei Tiere desselben Abrufs
+        // unterschiedliche Stille-Schwellen sehen.
+        Instant now = Instant.now();
+        return pollingService.latestSnapshots().stream()
+                .map(snapshot -> toDto(snapshot, now))
+                .toList();
     }
 
-    private TractivePetDto toDto(TractivePetSnapshot snapshot) {
+    private TractivePetDto toDto(TractivePetSnapshot snapshot, Instant now) {
         TractivePositionDto position = snapshot.position();
         TractiveHardwareDto hardware = snapshot.hardware();
         boolean hasPosition = position != null && position.hasCoordinates();
@@ -37,6 +44,7 @@ public class TractivePetService {
                 hardware != null ? hardware.isCharging() : null,
                 hasPosition
                         ? zoneResolver.resolve(position.latitude(), position.longitude(), snapshot.zones())
-                        : TractiveZoneResolver.UNKNOWN);
+                        : TractiveZoneResolver.UNKNOWN,
+                homeResolver.resolve(snapshot, now).map(HomeVerdict::atHome).orElse(null));
     }
 }

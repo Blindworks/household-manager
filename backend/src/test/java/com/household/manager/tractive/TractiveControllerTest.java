@@ -24,7 +24,7 @@ class TractiveControllerTest {
     @Test
     void petsDelegatesToTheService() throws Exception {
         var pet = new TractivePetDto("dev-9", "Bello", 48.2082, 16.3738, 12.0, "GPS",
-                Instant.ofEpochSecond(1800000000L), 87, false, "Garten");
+                Instant.ofEpochSecond(1800000000L), 87, false, "Garten", true);
         when(petService.listPets()).thenReturn(List.of(pet));
 
         MockMvc mockMvc = MockMvcBuilders
@@ -37,6 +37,7 @@ class TractiveControllerTest {
                 .andExpect(jsonPath("$[0].latitude").value(48.2082))
                 .andExpect(jsonPath("$[0].batteryPercent").value(87))
                 .andExpect(jsonPath("$[0].charging").value(false))
-                .andExpect(jsonPath("$[0].zone").value("Garten"));
+                .andExpect(jsonPath("$[0].zone").value("Garten"))
+                .andExpect(jsonPath("$[0].atHome").value(true));
     }
 }

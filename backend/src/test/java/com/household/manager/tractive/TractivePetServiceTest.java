@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,18 +23,29 @@ class TractivePetServiceTest {
     @Mock
     private TractiveZoneResolver zoneResolver;
 
+    /** Bewusst die echte Klasse: der Test soll die reale Home-Definition pruefen. */
+    private TractiveHomeResolver homeResolver() {
+        TractiveProperties properties = new TractiveProperties();
+        properties.setHomeLatitude(48.2082);
+        properties.setHomeLongitude(16.3738);
+        properties.setHomeRadiusMeters(100);
+        return new TractiveHomeResolver(properties);
+    }
+
     @Test
     void petsAreReturnedForTheMap() {
         var snapshot = new TractivePetSnapshot(
                 new TractiveTrackableDto("trk-1", "dev-9",
                         new TractiveTrackableDto.Details("Bello", "DOG")),
-                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS", 1800000000L),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS",
+                        Instant.now().getEpochSecond()),
                 new TractiveHardwareDto(87, "NOT_CHARGING"),
                 List.of(new GeoZone("Garten", 48.2082, 16.3738, 100)));
         when(pollingService.latestSnapshots()).thenReturn(List.of(snapshot));
         when(zoneResolver.resolve(48.2082, 16.3738, snapshot.zones())).thenReturn("Garten");
 
-        List<TractivePetDto> pets = new TractivePetService(pollingService, zoneResolver).listPets();
+        List<TractivePetDto> pets =
+                new TractivePetService(pollingService, zoneResolver, homeResolver()).listPets();
 
         assertThat(pets).hasSize(1);
         TractivePetDto pet = pets.get(0);
@@ -43,6 +55,7 @@ class TractivePetServiceTest {
         assertThat(pet.batteryPercent()).isEqualTo(87);
         assertThat(pet.charging()).isFalse();
         assertThat(pet.zone()).isEqualTo("Garten");
+        assertThat(pet.atHome()).isTrue();
     }
 
     @Test
@@ -53,7 +66,8 @@ class TractivePetServiceTest {
                 null, null, List.of());
         when(pollingService.latestSnapshots()).thenReturn(List.of(snapshot));
 
-        List<TractivePetDto> pets = new TractivePetService(pollingService, zoneResolver).listPets();
+        List<TractivePetDto> pets =
+                new TractivePetService(pollingService, zoneResolver, homeResolver()).listPets();
 
         assertThat(pets).hasSize(1);
         TractivePetDto pet = pets.get(0);
@@ -66,8 +80,40 @@ class TractivePetServiceTest {
     void emptyCacheYieldsEmptyList() {
         when(pollingService.latestSnapshots()).thenReturn(List.of());
 
-        List<TractivePetDto> pets = new TractivePetService(pollingService, zoneResolver).listPets();
+        List<TractivePetDto> pets =
+                new TractivePetService(pollingService, zoneResolver, homeResolver()).listPets();
 
         assertThat(pets).isEmpty();
+    }
+
+    @Test
+    void withoutAnyVerdictAtHomeIsNull() {
+        var snapshot = new TractivePetSnapshot(
+                new TractiveTrackableDto("trk-1", "dev-9",
+                        new TractiveTrackableDto.Details("Bello", "DOG")),
+                null, null, List.of());
+        when(pollingService.latestSnapshots()).thenReturn(List.of(snapshot));
+
+        List<TractivePetDto> pets =
+                new TractivePetService(pollingService, zoneResolver, homeResolver()).listPets();
+
+        assertThat(pets.get(0).atHome()).isNull();
+    }
+
+    @Test
+    void aPetFarFromHomeIsNotAtHome() {
+        var snapshot = new TractivePetSnapshot(
+                new TractiveTrackableDto("trk-1", "dev-9",
+                        new TractiveTrackableDto.Details("Bello", "DOG")),
+                new TractivePositionDto(List.of(48.3000, 16.5000), 12.0, "GPS",
+                        Instant.now().getEpochSecond()),
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+        when(pollingService.latestSnapshots()).thenReturn(List.of(snapshot));
+        when(zoneResolver.resolve(48.3000, 16.5000, snapshot.zones())).thenReturn("away");
+
+        List<TractivePetDto> pets =
+                new TractivePetService(pollingService, zoneResolver, homeResolver()).listPets();
+
+        assertThat(pets.get(0).atHome()).isFalse();
     }
 }
