@@ -224,11 +224,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.Setter;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * Persistiertes Tractive-Zugangstoken. Es gibt hoechstens eine Zeile ({@link #SINGLETON_ID}).
@@ -237,7 +237,8 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "tractive_auth")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -248,7 +249,7 @@ public class TractiveAuth {
     @Id
     private Long id;
 
-    @ToString.Exclude
+    /** Nie in Logs oder toString ausgeben. */
     @Column(name = "access_token", nullable = false, length = 1024)
     private String accessToken;
 
@@ -259,12 +260,19 @@ public class TractiveAuth {
     private String email;
 
     @Column(name = "expires_at", nullable = false)
-    private Instant expiresAt;
+    private LocalDateTime expiresAt;
 
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 }
 ```
+
+> **Korrektur während der Umsetzung:** Ursprünglich standen hier `@Data` und `Instant`.
+> Beides war falsch: `model/entity/package-info.java` verbietet `@Data` auf Entities
+> ausdrücklich, und alle 30+ anderen Entities dieses Schemas speichern `LocalDateTime`
+> gegen `DATETIME`. `Instant` gegen `DATETIME` würde eine Zeitzonen-Umrechnung über die
+> JVM-Default-Zone einführen, die es sonst nirgends im Projekt gibt. Die Unix-Sekunde von
+> Tractive wird deshalb erst im `TractiveAuthService` umgerechnet.
 
 - [ ] **Step 4: Repository anlegen**
 
@@ -1798,7 +1806,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1844,8 +1852,8 @@ class TractivePollingServiceTest {
                 .accessToken("tok")
                 .userId("u-1")
                 .email("halter@example.com")
-                .expiresAt(Instant.now().plusSeconds(86400))
-                .updatedAt(Instant.now())
+                .expiresAt(LocalDateTime.now().plusDays(1))
+                .updatedAt(LocalDateTime.now())
                 .build()));
     }
 
