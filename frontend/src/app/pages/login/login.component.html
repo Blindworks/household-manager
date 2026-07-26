@@ -1,0 +1,22 @@
+<div class="login">
+  <form class="login__card" (ngSubmit)="submit()">
+    <h1 class="login__title">Household Manager</h1>
+    <p class="login__subtitle">Bitte anmelden</p>
+
+    @if (errorMessage) {
+      <div class="login__error">{{ errorMessage }}</div>
+    }
+
+    <label class="login__label" for="username">Benutzername</label>
+    <input class="login__input" id="username" name="username" type="text"
+           [(ngModel)]="username" autocomplete="username" autofocus>
+
+    <label class="login__label" for="password">Passwort</label>
+    <input class="login__input" id="password" name="password" type="password"
+           [(ngModel)]="password" autocomplete="current-password">
+
+    <button class="login__submit" type="submit" [disabled]="isLoading || !username || !password">
+      {{ isLoading ? 'Anmelden …' : 'Anmelden' }}
+    </button>
+  </form>
+</div>

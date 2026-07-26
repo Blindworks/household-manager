@@ -1,0 +1,25 @@
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { map } from 'rxjs/operators';
+import { AuthService } from '../services/auth.service';
+
+/** Nur mit Anmeldung; sonst Login mit Ruecksprung-URL. */
+export const authGuard: CanActivateFn = (route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.ensureLoaded().pipe(map(user => user
+    ? true
+    : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } })));
+};
+
+/** Nur fuer ADMIN; angemeldete Nicht-Admins landen auf dem Dashboard. */
+export const adminGuard: CanActivateFn = (route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.ensureLoaded().pipe(map(user => {
+    if (!user) {
+      return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+    }
+    return user.role === 'ADMIN' ? true : router.createUrlTree(['/']);
+  }));
+};
