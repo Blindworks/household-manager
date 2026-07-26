@@ -24,6 +24,18 @@ class CurrentUserResponseTest {
         assertThat(response.username()).isEqualTo("bene");
         assertThat(response.displayName()).isEqualTo("Benedikt");
         assertThat(response.role()).isEqualTo("ADMIN");
+        assertThat(response.mustChangePassword()).isFalse();
+    }
+
+    @Test
+    void pflichtwechselFlagWirdDurchgereicht() {
+        AppUserPrincipal principal = new AppUserPrincipal(AppUser.builder()
+                .username("admin").displayName("Administrator").passwordHash("x")
+                .role(UserRole.ADMIN).enabled(true).mustChangePassword(true).build());
+        var auth = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+
+        assertThat(CurrentUserResponse.from(auth).mustChangePassword()).isTrue();
     }
 
     @Test
@@ -36,5 +48,6 @@ class CurrentUserResponseTest {
         assertThat(response.username()).isEqualTo("tablet");
         assertThat(response.displayName()).isEqualTo("tablet");
         assertThat(response.role()).isEqualTo("KIOSK");
+        assertThat(response.mustChangePassword()).isFalse();
     }
 }

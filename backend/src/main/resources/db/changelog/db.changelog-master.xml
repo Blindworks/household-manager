@@ -104,5 +104,6 @@
 
     <!-- Benutzerverwaltung -->
     <include file="db/changelog/changes/20260725-0042-create-user-management-tables.xml"/>
+    <include file="db/changelog/changes/20260726-0043-add-must-change-password.xml"/>
 
 </databaseChangeLog>

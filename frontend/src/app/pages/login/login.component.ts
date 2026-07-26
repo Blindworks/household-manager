@@ -28,7 +28,11 @@ export class LoginComponent {
     this.isLoading = true;
     this.errorMessage = null;
     this.auth.login({ username: this.username, password: this.password }).subscribe({
-      next: () => {
+      next: user => {
+        if (user.mustChangePassword) {
+          this.router.navigate(['/change-password']);
+          return;
+        }
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/';
         this.router.navigateByUrl(returnUrl);
       },

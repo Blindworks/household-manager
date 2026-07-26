@@ -2,6 +2,7 @@ package com.household.manager.security;
 
 import com.household.manager.audit.AuditActor;
 import com.household.manager.audit.AuditService;
+import com.household.manager.security.dto.ChangePasswordRequest;
 import com.household.manager.security.dto.CurrentUserResponse;
 import com.household.manager.security.dto.LoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,8 @@ public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     private final TokenBasedRememberMeServices rememberMeServices;
     private final AuditService auditService;
+    private final AppUserService appUserService;
+    private final AppUserDetailsService appUserDetailsService;
 
     @PostMapping("/login")
     public CurrentUserResponse login(@Valid @RequestBody LoginRequest loginRequest,
@@ -71,5 +74,35 @@ public class AuthController {
     @GetMapping("/me")
     public CurrentUserResponse me(Authentication authentication) {
         return CurrentUserResponse.from(authentication);
+    }
+
+    /**
+     * Selbst-Passwortwechsel (u. a. der erzwungene Wechsel des
+     * Bootstrap-Admins). Session-Principal und Remember-Me-Cookie werden
+     * erneuert — sonst truege die Session weiter must_change_password=true
+     * und das Cookie waere durch den neuen Passwort-Hash ungueltig.
+     */
+    @PostMapping("/password")
+    public CurrentUserResponse changePassword(@Valid @RequestBody ChangePasswordRequest changeRequest,
+                                              Authentication authentication,
+                                              HttpServletRequest request, HttpServletResponse response) {
+        appUserService.changeOwnPassword(authentication.getName(),
+                changeRequest.currentPassword(), changeRequest.newPassword());
+        Authentication refreshed = refreshAuthentication(authentication.getName(), request, response);
+        auditService.record("auth.change-password", null);
+        return CurrentUserResponse.from(refreshed);
+    }
+
+    private Authentication refreshAuthentication(String username, HttpServletRequest request,
+                                                 HttpServletResponse response) {
+        var principal = appUserDetailsService.loadUserByUsername(username);
+        Authentication refreshed = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(refreshed);
+        SecurityContextHolder.setContext(context);
+        securityContextRepository.saveContext(context, request, response);
+        rememberMeServices.loginSuccess(request, response, refreshed);
+        return refreshed;
     }
 }

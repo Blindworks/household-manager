@@ -5,7 +5,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
 /** Der angemeldete Aktor, wie ihn das Frontend braucht. */
-public record CurrentUserResponse(String username, String displayName, String role) {
+public record CurrentUserResponse(String username, String displayName, String role,
+                                  boolean mustChangePassword) {
 
     public static CurrentUserResponse from(Authentication authentication) {
         String role = authentication.getAuthorities().stream()
@@ -14,9 +15,12 @@ public record CurrentUserResponse(String username, String displayName, String ro
                 .map(authority -> authority.substring("ROLE_".length()))
                 .findFirst()
                 .orElse("KIOSK");
-        String displayName = authentication.getPrincipal() instanceof AppUserPrincipal principal
-                ? principal.getDisplayName()
+        boolean isUser = authentication.getPrincipal() instanceof AppUserPrincipal;
+        String displayName = isUser
+                ? ((AppUserPrincipal) authentication.getPrincipal()).getDisplayName()
                 : authentication.getName();
-        return new CurrentUserResponse(authentication.getName(), displayName, role);
+        boolean mustChangePassword = isUser
+                && ((AppUserPrincipal) authentication.getPrincipal()).isMustChangePassword();
+        return new CurrentUserResponse(authentication.getName(), displayName, role, mustChangePassword);
     }
 }

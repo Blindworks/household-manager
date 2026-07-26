@@ -12,10 +12,12 @@ import java.util.List;
 public class AppUserPrincipal extends User {
 
     private final String displayName;
+    private final boolean mustChangePassword;
 
     public AppUserPrincipal(AppUser user) {
         super(user.getUsername(), user.getPasswordHash(), user.isEnabled(), true, true, true,
                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
         this.displayName = user.getDisplayName();
+        this.mustChangePassword = user.isMustChangePassword();
     }
 }

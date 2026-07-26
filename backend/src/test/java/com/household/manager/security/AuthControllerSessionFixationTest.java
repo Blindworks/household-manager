@@ -39,6 +39,12 @@ class AuthControllerSessionFixationTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private AppUserService appUserService;
+
+    @Mock
+    private AppUserDetailsService appUserDetailsService;
+
     @AfterEach
     void cleanup() {
         SecurityContextHolder.clearContext();
@@ -60,7 +66,8 @@ class AuthControllerSessionFixationTest {
                 new TokenBasedRememberMeServices("dummy-key", unusedUserDetailsService);
 
         AuthController controller = new AuthController(
-                authenticationManager, securityContextRepository, rememberMeServices, auditService);
+                authenticationManager, securityContextRepository, rememberMeServices, auditService,
+                appUserService, appUserDetailsService);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         String sessionIdBeforeLogin = request.getSession().getId();

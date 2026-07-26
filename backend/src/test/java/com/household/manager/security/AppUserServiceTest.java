@@ -7,6 +7,7 @@ import com.household.manager.repository.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -18,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,26 +70,53 @@ class AppUserServiceTest {
     }
 
     @Test
-    void bootstrapLegtAdminNurAufLeererTabelleAn() {
+    void bootstrapLegtAdminMitChangeitUndPflichtwechselAn() {
         when(repository.count()).thenReturn(0L);
+        ArgumentCaptor<AppUser> captor = ArgumentCaptor.forClass(AppUser.class);
 
-        Optional<String> generated = service.bootstrapAdmin("");
+        boolean created = service.bootstrapAdmin();
 
-        assertThat(generated).isPresent();
-        assertThat(generated.get()).hasSizeGreaterThanOrEqualTo(12);
-    }
-
-    @Test
-    void bootstrapMitKonfiguriertemPasswortLiefertKeinGeneriertes() {
-        when(repository.count()).thenReturn(0L);
-
-        assertThat(service.bootstrapAdmin("konfiguriert")).isEmpty();
+        assertThat(created).isTrue();
+        verify(repository).save(captor.capture());
+        AppUser admin = captor.getValue();
+        assertThat(admin.getUsername()).isEqualTo("admin");
+        assertThat(admin.isMustChangePassword()).isTrue();
+        assertThat(new BCryptPasswordEncoder().matches("changeit", admin.getPasswordHash())).isTrue();
     }
 
     @Test
     void bootstrapTutNichtsWennNutzerExistieren() {
         when(repository.count()).thenReturn(3L);
 
-        assertThat(service.bootstrapAdmin("egal")).isEmpty();
+        assertThat(service.bootstrapAdmin()).isFalse();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void changeOwnPasswordVerlangtDasAktuellePasswort() {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        AppUser user = AppUser.builder().id(1L).username("admin").displayName("Admin")
+                .passwordHash(encoder.encode("changeit")).role(UserRole.ADMIN)
+                .mustChangePassword(true).build();
+        when(repository.findByUsername("admin")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.changeOwnPassword("admin", "falsch", "neuesPasswort1"))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void changeOwnPasswordSetztNeuesPasswortUndLoeschtDasPflichtwechselFlag() {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        AppUser user = AppUser.builder().id(1L).username("admin").displayName("Admin")
+                .passwordHash(encoder.encode("changeit")).role(UserRole.ADMIN)
+                .mustChangePassword(true).build();
+        when(repository.findByUsername("admin")).thenReturn(Optional.of(user));
+
+        service.changeOwnPassword("admin", "changeit", "neuesPasswort1");
+
+        assertThat(user.isMustChangePassword()).isFalse();
+        assertThat(encoder.matches("neuesPasswort1", user.getPasswordHash())).isTrue();
+        verify(repository).save(user);
     }
 }
