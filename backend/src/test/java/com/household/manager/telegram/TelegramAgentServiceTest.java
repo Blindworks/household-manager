@@ -1,5 +1,7 @@
 package com.household.manager.telegram;
 
+import com.household.manager.audit.AuditActor;
+import com.household.manager.audit.AuditActorContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -94,6 +97,33 @@ class TelegramAgentServiceTest {
 
         assertFalse(answer.isBlank());
         assertFalse(answer.contains("kaputt"));
+    }
+
+    @Test
+    void setztDenTelegramAktorWaehrendDerToolAusfuehrungUndLoeschtIhnDanach() {
+        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+                .thenReturn(toolUse("tu_1", "list_switches"))
+                .thenReturn(endTurn("2 Lampen sind an."));
+        AtomicReference<AuditActor> actorDuringTool = new AtomicReference<>();
+        when(toolRegistry.execute(eq("list_switches"), anyMap())).thenAnswer(invocation -> {
+            actorDuringTool.set(AuditActorContext.get());
+            return ToolResult.ok("[...]");
+        });
+
+        service.handleUserMessage(7L, "Was ist an?");
+
+        assertEquals(AuditActor.telegram(7L), actorDuringTool.get());
+        assertNull(AuditActorContext.get());
+    }
+
+    @Test
+    void loeschtDenTelegramAktorAuchNachEinemFehler() {
+        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+                .thenThrow(new TelegramException("kaputt", null));
+
+        service.handleUserMessage(7L, "hi");
+
+        assertNull(AuditActorContext.get());
     }
 
     @Test
