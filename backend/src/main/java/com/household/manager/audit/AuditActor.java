@@ -20,4 +20,8 @@ public record AuditActor(AuditActorType type, String name) {
     public static AuditActor telegram(long chatId) {
         return new AuditActor(AuditActorType.TELEGRAM, "TELEGRAM:" + chatId);
     }
+
+    public static AuditActor flow(long flowId) {
+        return new AuditActor(AuditActorType.SYSTEM, "FLOW:" + flowId);
+    }
 }

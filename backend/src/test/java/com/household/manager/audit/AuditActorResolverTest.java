@@ -61,4 +61,12 @@ class AuditActorResolverTest {
         assertThat(resolver.currentActor())
                 .isEqualTo(new AuditActor(AuditActorType.TELEGRAM, "TELEGRAM:1234"));
     }
+
+    @Test
+    void flowAktorWirdAlsSystemMitFlowIdErkannt() {
+        AuditActorContext.set(AuditActor.flow(5L));
+
+        assertThat(resolver.currentActor())
+                .isEqualTo(new AuditActor(AuditActorType.SYSTEM, "FLOW:5"));
+    }
 }

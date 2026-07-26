@@ -1,6 +1,8 @@
 package com.household.manager.flowengine;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.audit.AuditActor;
+import com.household.manager.audit.AuditActorContext;
 import com.household.manager.flowengine.model.FlowDefinitionParser;
 import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.flowengine.nodes.DelayNodeHandler;
@@ -13,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,6 +55,18 @@ class FlowEngineTest {
         public List<String> validate(NodeConfig config) { return List.of(); }
         public NodeResult handle(FlowMessage m, NodeConfig c, NodeContext ctx) {
             throw new IllegalStateException("boom");
+        }
+    }
+
+    /** Erfasst den waehrend handle() aktiven Audit-Aktor (Muster wie TelegramAgentServiceTest). */
+    private static class ContextCapturingHandler implements NodeHandler {
+        final AtomicReference<AuditActor> capturedActor = new AtomicReference<>();
+        public String type() { return "context-capturing"; }
+        public int outputPorts() { return 1; }
+        public List<String> validate(NodeConfig config) { return List.of(); }
+        public NodeResult handle(FlowMessage m, NodeConfig c, NodeContext ctx) {
+            capturedActor.set(AuditActorContext.get());
+            return NodeResult.single(m);
         }
     }
 
@@ -210,5 +225,25 @@ class FlowEngineTest {
         reg.undeploy(2L);
 
         verify(future).cancel(false);
+    }
+
+    @Test
+    void nodeAusfuehrungLaeuftUnterFlowAktorUndWirdDanachGeleert() {
+        ContextCapturingHandler capturing = new ContextCapturingHandler();
+        FlowRegistry reg = new FlowRegistry(List.of(new TestTriggerHandler(), capturing));
+        FlowEngine capturingEngine = new FlowEngine(reg, Runnable::run,
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer());
+        reg.setEngine(capturingEngine);
+        reg.deploy(7L, parser.parse("""
+                { "nodes": [
+                    { "id": "t", "type": "test-trigger", "config": {} },
+                    { "id": "c", "type": "context-capturing", "config": {} } ],
+                  "wires": [ { "from": { "node": "t", "port": 0 }, "to": { "node": "c" } } ] }
+                """));
+
+        capturingEngine.runFrom(7L, "t", 0, FlowMessage.of(Map.of("v", "1")));
+
+        assertEquals(AuditActor.flow(7L), capturing.capturedActor.get());
+        assertNull(AuditActorContext.get());
     }
 }

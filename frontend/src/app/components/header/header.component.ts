@@ -65,7 +65,7 @@ export class HeaderComponent {
       children: [
         { path: '/admin', label: 'Uebersicht', exact: true, minRole: 'ADMIN' },
         { path: '/flows', label: 'Automatisierungen', minRole: 'ADMIN' },
-        { path: '/announcements', label: 'Ansagen' },
+        { path: '/announcements', label: 'Ansagen', minRole: 'MEMBER' },
         { path: '/vision', label: 'Gesichtserkennung', minRole: 'ADMIN' },
         { path: '/admin/users', label: 'Nutzer', minRole: 'ADMIN' },
         { path: '/admin/service-tokens', label: 'API-Tokens', minRole: 'ADMIN' },

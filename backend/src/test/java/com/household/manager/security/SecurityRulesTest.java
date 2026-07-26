@@ -97,6 +97,12 @@ class SecurityRulesTest {
     }
 
     @Test
+    void anonymDarfHealthAbfragen() throws Exception {
+        // Kein HealthController im Slice: 404 statt 401/403 belegt, dass /v1/health oeffentlich bleibt
+        mockMvc.perform(get("/v1/health")).andExpect(status().isNotFound());
+    }
+
+    @Test
     @WithMockUser(roles = "KIOSK")
     void kioskDarfSchalterLesenUndSchalten() throws Exception {
         when(switchQueryService.listSwitches(null, false)).thenReturn(List.of());

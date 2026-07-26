@@ -128,6 +128,8 @@ public class SecurityConfig {
                         // Login/Logout und Actuator-Health bleiben offen
                         .requestMatchers("/v1/auth/login", "/v1/auth/logout").permitAll()
                         .requestMatchers("/management/**").permitAll()
+                        // Dokumentierter oeffentlicher Monitoring-Endpunkt, siehe backend/README
+                        .requestMatchers("/v1/health/**").permitAll()
                         // Maschinen-Endpunkte: beliebiger gueltiger Service-Token
                         .requestMatchers(HttpMethod.POST,
                                 "/v1/vision/recognitions", "/v1/vision/heartbeat").hasAuthority(SERVICE_AUTHORITY)
