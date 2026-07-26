@@ -13,7 +13,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && !req.url.includes('/v1/auth/')) {
         auth.clearUser();
-        router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
+        // Bei parallelen Requests koennen mehrere 401 kurz hintereinander eintreffen;
+        // ohne diese Pruefung wuerde ein zweiter Handler die returnUrl mit '/login' ueberschreiben.
+        if (!router.url.startsWith('/login')) {
+          router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
+        }
       }
       return throwError(() => error);
     })

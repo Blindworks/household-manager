@@ -12,9 +12,9 @@
     width: 100%;
     max-width: 22rem;
     padding: var(--spacing-xl);
-    border-radius: var(--radius-lg, 12px);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    background: var(--color-surface, #fff);
+    background: var(--color-white);
   }
 
   &__title {
@@ -25,14 +25,15 @@
 
   &__subtitle {
     margin: 0 0 var(--spacing-sm);
-    color: var(--color-text-muted, #666);
+    color: var(--color-gray);
   }
 
   &__error {
     padding: var(--spacing-sm);
-    border-radius: var(--radius-sm, 6px);
-    background: #fdecea;
-    color: #b3261e;
+    border-radius: var(--radius-sm);
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: var(--color-error);
     font-size: var(--font-size-sm);
   }
 
@@ -43,19 +44,19 @@
 
   &__input {
     padding: var(--spacing-sm);
-    border: 1px solid var(--color-border, #ccc);
-    border-radius: var(--radius-sm, 6px);
-    font-size: var(--font-size-md, 1rem);
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
   }
 
   &__submit {
     margin-top: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
     border: none;
-    border-radius: var(--radius-sm, 6px);
+    border-radius: var(--radius-sm);
     background: var(--color-primary);
-    color: #fff;
-    font-size: var(--font-size-md, 1rem);
+    color: var(--color-white);
+    font-size: var(--font-size-base);
     cursor: pointer;
     transition: opacity var(--transition-fast);
 

@@ -4,7 +4,7 @@
     <p class="login__subtitle">Bitte anmelden</p>
 
     @if (errorMessage) {
-      <div class="login__error">{{ errorMessage }}</div>
+      <div class="login__error" role="alert">{{ errorMessage }}</div>
     }
 
     <label class="login__label" for="username">Benutzername</label>
