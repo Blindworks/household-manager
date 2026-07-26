@@ -1,0 +1,111 @@
+package com.household.manager.tractive;
+
+import com.household.manager.tractive.dto.TractiveHardwareDto;
+import com.household.manager.tractive.dto.TractivePositionDto;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * Die einzige Definition von "zu Hause". Entity-Mapper und Haustier-API fragen
+ * dieselbe Instanz, damit Dashboard-Kachel und Flow-Trigger nicht auseinanderlaufen.
+ *
+ * <p>Der Tracker wird zu Hause ausgeschaltet, und die Tractive-API kennt dafuer kein
+ * Statusfeld – erkennbar ist es nur an einem ausbleibenden Positionsbericht. Weil
+ * "Akku unterwegs leergelaufen" genauso aussieht, verlangt diese Deutung zwei
+ * unabhaengige Belege: einen gesunden Akkustand und Heimnaehe im weiten Radius.
+ *
+ * <p>{@link Optional#empty()} bedeutet ueberall dasselbe: keine Aussage moeglich. Es wird
+ * nie ein Zustand geraten – ein Alarm-Flow darf nicht bei jedem GPS-Aussetzer feuern.
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class TractiveHomeResolver {
+
+    private final TractiveProperties properties;
+
+    /** Die Warnung ueber fehlende Home-Koordinaten soll nicht jede Minute im Log stehen. */
+    private final AtomicBoolean missingHomeWarned = new AtomicBoolean();
+
+    public Optional<HomeVerdict> resolve(TractivePetSnapshot snapshot, Instant now) {
+        if (!hasHomeCoordinates()) {
+            warnAboutMissingHomeOnce();
+            return Optional.empty();
+        }
+
+        TractiveHardwareDto hardware = snapshot.hardware();
+        if (hardware != null && hardware.isCharging()) {
+            return Optional.of(HomeVerdict.charging());
+        }
+
+        TractivePositionDto position = snapshot.position();
+        if (position == null || !position.hasCoordinates()) {
+            return Optional.empty();
+        }
+
+        double distanceMeters = GeoZone.distanceMeters(
+                properties.getHomeLatitude(), properties.getHomeLongitude(),
+                position.latitude(), position.longitude());
+        Long ageMinutes = positionAgeMinutes(position, now);
+        boolean stale = ageMinutes != null && ageMinutes >= properties.getPoweredOffAfterMinutes();
+
+        if (stale && looksPoweredOffAtHome(hardware, distanceMeters)) {
+            return Optional.of(HomeVerdict.poweredOff(distanceMeters, ageMinutes));
+        }
+        return Optional.of(HomeVerdict.fromPosition(
+                distanceMeters <= properties.getHomeRadiusMeters(), stale, distanceMeters, ageMinutes));
+    }
+
+    private boolean hasHomeCoordinates() {
+        return properties.getHomeLatitude() != null && properties.getHomeLongitude() != null;
+    }
+
+    private void warnAboutMissingHomeOnce() {
+        if (missingHomeWarned.compareAndSet(false, true)) {
+            log.warn("tractive.home-latitude/-longitude sind nicht gesetzt – "
+                    + "die Entitaet 'zu Hause' wird nicht gemeldet.");
+        }
+    }
+
+    /** {@code null}, wenn der Bericht keinen Zeitstempel hat – dann gilt er als frisch. */
+    private Long positionAgeMinutes(TractivePositionDto position, Instant now) {
+        Instant reportedAt = position.reportedAt();
+        if (reportedAt == null) {
+            return null;
+        }
+        long minutes = Duration.between(reportedAt, now).toMinutes();
+        if (minutes < 0) {
+            // Uhren-Versatz zur Tractive-Cloud. Auf 0 geklemmt gilt der Bericht als frisch,
+            // was fail-safe ist – aber ein dauerhafter Versatz wuerde Regel 4 unerreichbar
+            // machen und einen zu Hause ausgeschalteten Tracker fuer immer als "unterwegs"
+            // melden. Deshalb sichtbar machen statt still schlucken.
+            log.warn("Tractive-Positionsbericht liegt {} Minuten in der Zukunft – Uhren-Versatz?",
+                    -minutes);
+            return 0L;
+        }
+        return minutes;
+    }
+
+    /**
+     * Fail-safe: ohne Akkustand wird nicht auf "ausgeschaltet" geschlossen. Sonst wuerde
+     * ein unterwegs verlorener Tracker als "zu Hause" gemeldet.
+     */
+    private boolean looksPoweredOffAtHome(TractiveHardwareDto hardware, double distanceMeters) {
+        if (hardware == null || hardware.batteryLevel() == null) {
+            return false;
+        }
+        return hardware.batteryLevel() >= properties.getPoweredOffMinBatteryPercent()
+                && distanceMeters <= effectiveArrivalRadiusMeters();
+    }
+
+    /** Ein kleiner konfigurierter Ankunftsradius darf die Regel nicht unwirksam machen. */
+    private double effectiveArrivalRadiusMeters() {
+        return Math.max(properties.getHomeArrivalRadiusMeters(), properties.getHomeRadiusMeters());
+    }
+}
