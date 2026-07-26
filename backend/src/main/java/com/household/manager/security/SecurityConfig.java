@@ -102,10 +102,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            SecurityContextRepository securityContextRepository,
                                            TokenBasedRememberMeServices rememberMeServices) throws Exception {
+        CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        // Default waere der Kontextpfad (/api) — dann sieht document.cookie der
+        // unter / laufenden Angular-App das XSRF-TOKEN-Cookie nicht und jeder
+        // POST scheitert mit 403 (Angulars XSRF-Interceptor sendet keinen Header)
+        csrfTokenRepository.setCookiePath("/");
         http
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                         // Token-Requests haben keinen Cookie-Kontext -> kein CSRF-Risiko
                         .ignoringRequestMatchers(

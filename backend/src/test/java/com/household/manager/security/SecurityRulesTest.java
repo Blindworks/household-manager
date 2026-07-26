@@ -199,4 +199,5 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isNotFound());
     }
+
 }
