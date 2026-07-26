@@ -11,6 +11,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       CORS_ALLOWED_ORIGINS: http://192.168.1.100:4200
 
+      # Benutzerverwaltung & API-Sicherheit
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      REMEMBER_ME_KEY: ${REMEMBER_ME_KEY:-}
+
       # AnkerSolix
       ANKER_ENABLED: ${ANKER_ENABLED:-false}
       ANKER_USER: ${ANKER_USER:-}
@@ -95,6 +99,7 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8080
+      API_TOKEN: ${VISION_API_TOKEN:-}
       BLINK_CAMERA_NAME: ${BLINK_CAMERA_NAME:-}
       CONFIDENCE_THRESHOLD: ${VISION_CONFIDENCE_THRESHOLD:-0.5}
       POLL_SECONDS: "10"
