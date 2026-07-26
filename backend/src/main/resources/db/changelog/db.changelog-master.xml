@@ -102,4 +102,7 @@
     <!-- Tractive-Haustiertracker -->
     <include file="db/changelog/changes/20260725-0041-create-tractive-auth-table.xml"/>
 
+    <!-- Benutzerverwaltung -->
+    <include file="db/changelog/changes/20260725-0042-create-user-management-tables.xml"/>
+
 </databaseChangeLog>
