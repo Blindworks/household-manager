@@ -1,5 +1,7 @@
 package com.household.manager.security;
 
+import com.household.manager.calendar.CalendarCategoryController;
+import com.household.manager.calendar.CalendarCategoryService;
 import com.household.manager.calendar.CalendarEventController;
 import com.household.manager.calendar.CalendarEventService;
 import com.household.manager.controller.SwitchController;
@@ -50,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * verfaelschen. Betrifft nur diesen Test-Slice, nicht die echte Anwendung.
  */
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
-        NukiController.class, TabletPresenceController.class},
+        CalendarCategoryController.class, NukiController.class, TabletPresenceController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -65,6 +67,8 @@ class SecurityRulesTest {
     private SwitchCommandService switchCommandService;
     @MockitoBean
     private CalendarEventService calendarEventService;
+    @MockitoBean
+    private CalendarCategoryService calendarCategoryService;
     @MockitoBean
     private NukiLockService nukiLockService;
     @MockitoBean
@@ -125,6 +129,26 @@ class SecurityRulesTest {
         mockMvc.perform(post("/v1/calendar/events").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isCreated());
+    }
+
+    /**
+     * Die Kategorien sind Stammdaten der Kalenderansicht: das Wandtablet muss Namen und
+     * Farben lesen duerfen, aendern darf sie nur ADMIN.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKategorienLesen() throws Exception {
+        mockMvc.perform(get("/v1/calendar/categories")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKategorienNichtAendern() throws Exception {
+        mockMvc.perform(post("/v1/calendar/categories")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test\",\"color\":\"#4caf50\",\"sortOrder\":1,\"active\":true}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
