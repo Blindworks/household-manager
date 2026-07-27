@@ -60,8 +60,14 @@ class CalendarCategoryServiceTest {
         assertThat(response.key()).isEqualTo("sport_freizeit");
     }
 
+    /**
+     * Dass bei einer Kollision eine Zahl angehaengt wird, beweist der
+     * CalendarCategoryKeyGeneratorTest. Hier geht es um die Zeile davor: dass der Service
+     * die bereits vergebenen Schluessel ueberhaupt einsammelt und weiterreicht — ihr
+     * Verlust waere ein stiller Ausfall bis zum Unique-Index.
+     */
     @Test
-    void haengtBeiKollisionEineZahlAn() {
+    void uebergibtDieBereitsVergebenenSchluesselAnDenGenerator() {
         when(repository.findAll()).thenReturn(List.of(existing()));
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
 
@@ -150,6 +156,34 @@ class CalendarCategoryServiceTest {
         assertThat(categories).extracting(CalendarCategoryResponse::key)
                 .containsExactly("muell", "arbeit");
         verify(repository, never()).findAll();
+    }
+
+    /**
+     * Ohne das Feld im JSON macht Jackson aus einem primitiven boolean ein false — die
+     * Kategorie waere angelegt, taeuchte aber in keiner Auswahlliste auf, ohne jede
+     * Fehlermeldung. Entity und Spalte sagen "neu = aktiv"; hier steht, dass die API
+     * dasselbe sagt.
+     */
+    @Test
+    void legtOhneAngabeEineAktiveKategorieAn() {
+        when(repository.findAll()).thenReturn(List.of());
+        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
+
+        CalendarCategoryResponse response = service.create(new CalendarCategoryRequest(
+                "Arbeit", "#ffb74d", null, 1, null));
+
+        assertThat(response.active()).isTrue();
+    }
+
+    @Test
+    void trimmtDenIconnamen() {
+        when(repository.findAll()).thenReturn(List.of());
+        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
+
+        CalendarCategoryResponse response = service.create(new CalendarCategoryRequest(
+                "Arbeit", "#ffb74d", " work ", 1, true));
+
+        assertThat(response.icon()).isEqualTo("work");
     }
 
     @Test
