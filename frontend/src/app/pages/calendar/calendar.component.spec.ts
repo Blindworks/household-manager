@@ -941,6 +941,18 @@ describe('CalendarComponent', () => {
     expect(titles).toEqual(['Muell (verschoben)', 'Muell']);
   });
 
+  it('zeigt die Uhrzeit eines Termins mit Uhrzeit auf dem Chip', () => {
+    // Die Aufbereitung prueft calendar-day-view.util.spec; hier geht es um die
+    // Verdrahtung - das Zeit-Element haengt an einem @if und wuerde sonst unbemerkt
+    // aus dem Template fallen.
+    const abends: CalendarOccurrence = { ...SINGLE_OCCURRENCE, allDay: false, startTime: '18:30' };
+    loadInitial([abends]);
+
+    const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
+    expect(chip.querySelector('.calendar__chip-time')?.textContent?.trim()).toBe('18:30');
+    expect(chip.getAttribute('title')).toBe('18:30 Zahnarzt');
+  });
+
   it('faerbt den Chip mit der eingebetteten Kategoriefarbe des Termins', () => {
     loadInitial([SINGLE_OCCURRENCE]);
 
