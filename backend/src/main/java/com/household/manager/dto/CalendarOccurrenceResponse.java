@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Ein konkretes (bereits expandiertes) Vorkommen. {@code eventId} zeigt immer auf die
@@ -43,6 +44,9 @@ public class CalendarOccurrenceResponse {
     private LocalDate endDate;
 
     private boolean recurring;
+
+    /** Zugeordnete Personen; leer = Haushaltstermin. */
+    private List<CalendarPersonView> persons;
 
     /** 0 = heute, 1 = morgen. Serverseitig berechnet (Muster WasteCollectionEventResponse). */
     private long daysUntil;

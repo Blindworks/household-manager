@@ -109,4 +109,7 @@
     <!-- Kalender: konfigurierbare Kategorien -->
     <include file="db/changelog/changes/20260727-0044-calendar-categories.xml"/>
 
+    <!-- Kalender: Personen-Zuordnung -->
+    <include file="db/changelog/changes/20260727-0045-calendar-event-persons.xml"/>
+
 </databaseChangeLog>

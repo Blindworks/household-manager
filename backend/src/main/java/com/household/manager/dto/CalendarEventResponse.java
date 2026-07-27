@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /** Stammdaten eines Termins/einer Serie, wie der Termindialog sie laedt. */
 @Data
@@ -36,4 +37,7 @@ public class CalendarEventResponse {
 
     private String rrule;
     private boolean recurring;
+
+    /** Zugeordnete Personen; leer = Haushaltstermin. */
+    private List<CalendarPersonView> persons;
 }

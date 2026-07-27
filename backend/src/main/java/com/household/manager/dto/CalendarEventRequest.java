@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /** Anlege-/Aenderungsdaten eines Kalendertermins. */
 @Data
@@ -35,4 +36,7 @@ public class CalendarEventRequest {
 
     /** iCal-RRULE; null/leer = Einzeltermin. */
     private String rrule;
+
+    /** Zugeordnete Nutzer; leer oder null = Haushaltstermin. */
+    private List<Long> personUserIds;
 }
