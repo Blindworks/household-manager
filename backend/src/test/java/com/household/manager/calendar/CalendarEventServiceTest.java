@@ -93,9 +93,13 @@ class CalendarEventServiceTest {
 
     @Test
     void fehlendeKategorieWirdAbgelehnt() {
+        // Bewusst auf "Kategorie fehlt" und nicht nur auf "Kategorie" geprueft: sonst wuerde
+        // auch die Meldung des existsById-Zweigs passen und der Test bliebe gruen, wenn genau
+        // diese Null-Pruefung wegfiele. In Produktion waere das der Unterschied zwischen 400
+        // und einem 500er aus Spring Data (InvalidDataAccessApiUsageException bei Null-Id).
         assertThatThrownBy(() -> service.create(validRequest().categoryId(null).build()))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Kategorie");
+                .hasMessageContaining("Kategorie fehlt");
         verify(repository, never()).save(any());
     }
 

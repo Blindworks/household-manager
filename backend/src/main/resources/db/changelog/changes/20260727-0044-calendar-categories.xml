@@ -75,19 +75,30 @@
     </changeSet>
 
     <!--
-        Die Umstellung von calendar_events.category (Enum-Text) auf category_id ist bewusst in
-        VIER Changesets zerlegt und darf nicht wieder zusammengefasst werden.
+        Die Umstellung von calendar_events.category (Enum-Text) auf category_id ist bewusst auf
+        DREI Changesets verteilt und darf nicht zusammengefasst werden.
 
         MariaDB/MySQL committen jedes DDL implizit — ein Changeset mit mehreren DDL-Schritten
-        laesst sich nach einem Fehler in der Mitte nicht zurueckrollen. Schritt 3 bricht bei
-        unerwarteten Daten absichtlich ab (siehe dort). In einem gemeinsamen Changeset waere
-        dann die Spalte bereits angelegt, das Changeset aber nicht in DATABASECHANGELOG
-        vermerkt: der naechste Start wiederholte es und scheiterte an "Duplicate column name
+        laesst sich nach einem Fehler in der Mitte nicht zurueckrollen. -b3 bricht bei
+        unerwarteten Daten absichtlich ab (siehe dort). Waere alles ein Changeset, stuende die
+        Spalte danach bereits in der Tabelle, das Changeset aber nicht in DATABASECHANGELOG:
+        der naechste Start wiederholte es und scheiterte an "Duplicate column name
         'category_id'" — auch nach korrigierten Daten, also dauerhaft ohne manuelles ALTER TABLE.
-        Zerlegt bleibt nur Schritt 3 offen; nach der Datenkorrektur laeuft der Neustart durch.
+
+        Die Trennlinie verlaeuft nicht entlang "ein Schritt pro Changeset", sondern entlang
+        WIEDERHOLBARKEIT: -b1 (addColumn) und -b4 (dropColumn) scheitern bei einer Wiederholung
+        und brauchen deshalb ein eigenes Changeset. UPDATE, MODIFY ... NOT NULL und
+        ADD CONSTRAINT sind bei einer Wiederholung dagegen unschaedlich und gehoeren zusammen
+        in -b3 — insbesondere muss das UPDATE mit dem abbrechenden Schritt zusammenliegen.
+        Laege es allein davor, waere es nach einem Abbruch als gelaufen vermerkt und die
+        naheliegende Reparatur (den unbekannten Enum-Text in calendar_events.category
+        berichtigen) bliebe wirkungslos: category_id bliebe NULL und -b3 scheiterte endlos
+        erneut. So wirkt die Reparatur an der alten Spalte wie erwartet.
+
+        (Die Id -b2 ist historisch und bleibt frei — Liquibase-Ids werden nie wiederverwendet.)
     -->
     <changeSet id="20260727-0044-b1" author="household-manager">
-        <comment>Schritt 1/4: Spalte category_id anlegen (noch nullable).</comment>
+        <comment>Schritt 1/3: Spalte category_id anlegen (noch nullable) — nicht wiederholbar.</comment>
 
         <addColumn tableName="calendar_events">
             <column name="category_id" type="BIGINT"/>
@@ -98,24 +109,18 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="20260727-0044-b2" author="household-manager">
-        <comment>Schritt 2/4: Enum-Text in die Fremdschluessel-Spalte umschreiben.</comment>
+    <changeSet id="20260727-0044-b3" author="household-manager">
+        <comment>Schritt 2/3: Daten umschreiben und category_id verbindlich machen. Bricht bei unbekanntem Enum-Text ab.</comment>
 
         <sql>
             UPDATE calendar_events e
             SET e.category_id = (SELECT c.id FROM calendar_category c WHERE c.cat_key = LOWER(e.category))
         </sql>
 
-        <!-- Kein Rueckwaertsschritt noetig: der Rollback von -b1 verwirft die Spalte samt Inhalt. -->
-        <rollback/>
-    </changeSet>
-
-    <changeSet id="20260727-0044-b3" author="household-manager">
-        <comment>Schritt 3/4: category_id verbindlich machen. Bricht ab, wenn eine Zeile keinen Treffer hatte.</comment>
-
-        <!-- Bleibt aus Schritt 2 eine Zeile ohne Treffer, schlaegt addNotNullConstraint fehl und
-             Liquibase bricht den Start ab. Gewollt: lauter Abbruch statt stiller Reparatur auf
-             "Allgemein". -->
+        <!-- Bleibt eine Zeile ohne Treffer, schlaegt addNotNullConstraint fehl und Liquibase
+             bricht den Start ab. Gewollt: lauter Abbruch statt stiller Reparatur auf
+             "Allgemein". Das UPDATE liegt bewusst im selben Changeset, damit es beim naechsten
+             Start erneut laeuft (siehe Kommentar oben). -->
         <addNotNullConstraint tableName="calendar_events" columnName="category_id" columnDataType="BIGINT"/>
 
         <addForeignKeyConstraint
@@ -130,7 +135,7 @@
     </changeSet>
 
     <changeSet id="20260727-0044-b4" author="household-manager">
-        <comment>Schritt 4/4: alte Enum-Spalte entfernen.</comment>
+        <comment>Schritt 3/3: alte Enum-Spalte entfernen — nicht wiederholbar.</comment>
 
         <dropColumn tableName="calendar_events" columnName="category"/>
 
