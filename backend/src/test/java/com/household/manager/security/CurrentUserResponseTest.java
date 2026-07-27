@@ -28,6 +28,25 @@ class CurrentUserResponseTest {
     }
 
     @Test
+    void nutzerSessionLiefertDieEigeneNutzerId() {
+        AppUserPrincipal principal = new AppUserPrincipal(AppUser.builder()
+                .id(5L).username("bene").displayName("Benedikt").passwordHash("x")
+                .role(UserRole.ADMIN).enabled(true).build());
+        var auth = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+
+        assertThat(CurrentUserResponse.from(auth).id()).isEqualTo(5L);
+    }
+
+    @Test
+    void serviceTokenLiefertKeineIdUndWirftNicht() {
+        var auth = UsernamePasswordAuthenticationToken.authenticated(
+                "tablet", null, AuthorityUtils.createAuthorityList("ROLE_KIOSK", "SERVICE"));
+
+        assertThat(CurrentUserResponse.from(auth).id()).isNull();
+    }
+
+    @Test
     void pflichtwechselFlagWirdDurchgereicht() {
         AppUserPrincipal principal = new AppUserPrincipal(AppUser.builder()
                 .username("admin").displayName("Administrator").passwordHash("x")

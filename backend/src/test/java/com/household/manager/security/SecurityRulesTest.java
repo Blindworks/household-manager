@@ -54,7 +54,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * verfaelschen. Betrifft nur diesen Test-Slice, nicht die echte Anwendung.
  */
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
-        CalendarCategoryController.class, NukiController.class, TabletPresenceController.class},
+        CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
+        HouseholdUserController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -75,6 +76,8 @@ class SecurityRulesTest {
     private NukiLockService nukiLockService;
     @MockitoBean
     private TabletPresenceService tabletPresenceService;
+    @MockitoBean
+    private AppUserService appUserService;
     @MockitoBean
     private ServiceTokenService serviceTokenService;
     @MockitoBean
@@ -141,6 +144,18 @@ class SecurityRulesTest {
     @WithMockUser(roles = "KIOSK")
     void kioskDarfKategorienLesen() throws Exception {
         mockMvc.perform(get("/v1/calendar/categories")).andExpect(status().isOk());
+    }
+
+    /**
+     * /v1/users braucht bewusst keine eigene Regel: das GET faellt auf die generische
+     * Regel GET /v1/** -> KIOSK. Dieser Test haelt das fest, damit eine spaetere
+     * Umsortierung der Matcher nicht unbemerkt den Zugriff des Wandtablets kappt.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieNutzerlisteLesen() throws Exception {
+        when(appUserService.list()).thenReturn(List.of());
+        mockMvc.perform(get("/v1/users")).andExpect(status().isOk());
     }
 
     /**
