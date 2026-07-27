@@ -11,6 +11,11 @@
     </div>
   </header>
 
+  <!-- Eigener Block, damit der Monatsabruf diese Meldung nicht ueberschreibt: ohne sie
+       saehe die Seite normal aus, obwohl der Termindialog nicht mehr aufgeht. -->
+  @if (categoryError) {
+    <p class="calendar__error" role="alert">{{ categoryError }}</p>
+  }
   @if (loadError) {
     <p class="calendar__error">{{ loadError }}</p>
   }

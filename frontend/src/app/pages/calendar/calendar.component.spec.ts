@@ -549,13 +549,24 @@ describe('CalendarComponent', () => {
 
   // --- Kategorien als Stammdaten, Personenzuordnung ------------------------------------
 
-  it('oeffnet den Termindialog nicht, wenn die Kategorien nicht geladen werden konnten', () => {
+  /** Startet die Seite mit fehlgeschlagenem Kategorien-Abruf; Nutzer und Raster gelingen. */
+  function loadWithFailedCategories(occurrences: CalendarOccurrence[] = []): void {
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/calendar/categories')
       .flush({ message: 'kaputt' }, { status: 500, statusText: 'Server Error' });
     httpMock.expectOne('/api/v1/users').flush(USERS);
-    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([SINGLE_OCCURRENCE]);
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(occurrences);
     fixture.detectChanges();
+  }
+
+  it('meldet einen Kategorien-Ladefehler im Banner und oeffnet den Termindialog nicht', () => {
+    loadWithFailedCategories([SINGLE_OCCURRENCE]);
+
+    // Ohne das Banner saehe die Seite normal aus, obwohl kein Dialog mehr aufgeht -
+    // das waere schlimmer als die leere Auswahlliste, die der Guard verhindern soll.
+    expect(fixture.componentInstance.categoryError).toBeTruthy();
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('.calendar__error');
+    expect(banner?.textContent).toContain('Kategorien konnten nicht geladen werden');
 
     // Ein Dialog mit leerer Kategorieliste saehe aus wie "es gibt keine Kategorien"
     // und verleitete zu falschen Eingaben.
@@ -570,6 +581,27 @@ describe('CalendarComponent', () => {
     clickChip('2026-08-10');
     fixture.detectChanges();
 
+    expect(fixture.componentInstance.dialogOpen).toBeFalse();
+  });
+
+  it('das Kategorien-Banner ueberlebt einen Monatswechsel', () => {
+    // Der Monatsabruf leert im Erfolgsfall loadError. Teilten sich beide Fehler ein Feld,
+    // waere das Banner nach dem ersten erfolgreichen Abruf spurlos weg - und mit ihm die
+    // einzige Erklaerung dafuer, warum der Termindialog nicht mehr aufgeht.
+    loadWithFailedCategories();
+
+    requireElement<HTMLButtonElement>('[aria-label="Naechster Monat"]').click();
+    expectOccurrencesRequest(SEPTEMBER_FROM, SEPTEMBER_TO).flush([]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.viewMonth).toBe(9);
+    expect(fixture.componentInstance.categoryError).toBeTruthy();
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('.calendar__error');
+    expect(banner?.textContent).toContain('Kategorien konnten nicht geladen werden');
+
+    // Und der Dialog bleibt auch im neuen Monat zu.
+    dayCell('2026-09-10').click();
+    fixture.detectChanges();
     expect(fixture.componentInstance.dialogOpen).toBeFalse();
   });
 

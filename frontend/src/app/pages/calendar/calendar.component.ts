@@ -77,7 +77,17 @@ export class CalendarComponent implements OnInit {
   grid: MonthDay[][] = [];
   /** Vorkommen des sichtbaren Rasters, gruppiert nach ISO-Datum. */
   occurrencesByDate = new Map<string, CalendarOccurrence[]>();
+  /** Fehler des Monatsabrufs; wird bei jedem erfolgreichen Abruf geleert. */
   loadError: string | null = null;
+  /**
+   * Fehler des Kategorien-Abrufs - bewusst ein eigenes Feld, nicht loadError.
+   * Beide Abrufe laufen beim Seitenaufbau parallel; der Monatsabruf leert loadError im
+   * Erfolgsfall und wuerde diese Meldung als Letzter ueberschreiben, spaetestens aber
+   * beim naechsten Monatswechsel. Uebrig bliebe eine normal aussehende Seite, deren
+   * Termindialog auf jeden Klick stumm nicht aufgeht. Die beiden Fehler haben ohnehin
+   * verschiedene Folgen: dieser macht den Dialog unbenutzbar, der andere nicht.
+   */
+  categoryError: string | null = null;
 
   /** Formularzustand des Termindialogs. */
   form = this.emptyForm();
@@ -131,7 +141,10 @@ export class CalendarComponent implements OnInit {
       },
       // Ein Dialog mit leerer Auswahlliste sieht aus wie "es gibt keine Kategorien" und
       // verleitet zu falschen Eingaben — deshalb bleibt er ohne Stammdaten geschlossen.
-      error: () => this.loadError = 'Die Kategorien konnten nicht geladen werden.'
+      // Das Banner ist der einzige Hinweis darauf, warum: ohne es waere die Seite von
+      // einer funktionierenden nicht zu unterscheiden.
+      error: () => this.categoryError =
+        'Die Kategorien konnten nicht geladen werden. Neue Termine lassen sich gerade nicht anlegen.'
     });
     this.userService.list().subscribe({
       next: users => this.users = users.filter(user => user.enabled),
