@@ -41,6 +41,12 @@ export class AdminTractiveComponent implements OnInit, OnDestroy {
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  /**
+   * Konnte der Bestand nicht geladen werden, bleibt das Formular verborgen. Sonst stuenden
+   * dort die hartkodierten Vorgabewerte, und Speichern wuerde die echte Konfiguration
+   * ueberschreiben – ein Netzwerkfehler duerfte niemals Daten loeschen.
+   */
+  readonly loadFailed = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
@@ -69,6 +75,7 @@ export class AdminTractiveComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading.set(false);
+        this.loadFailed.set(true);
         this.errorMessage.set('Einstellungen konnten nicht geladen werden.');
       }
     });

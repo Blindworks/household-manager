@@ -126,7 +126,7 @@ export const routes: Routes = [
     path: 'admin/tractive',
     loadComponent: () => import('./pages/admin-tractive/admin-tractive.component').then(m => m.AdminTractiveComponent),
     canActivate: [adminGuard],
-    title: 'Hundetracker - Household Manager'
+    title: 'Hundetracker-Zuhause - Household Manager'
   },
   {
     path: 'admin/audit-log',
