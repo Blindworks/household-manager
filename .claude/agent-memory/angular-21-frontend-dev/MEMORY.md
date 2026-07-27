@@ -1,5 +1,8 @@
 # Angular 21 Frontend Development - Project Memory
 
+## Template-Fallen
+- [Template-Fallen](template-pitfalls.md) — `@for track` braucht eindeutige Keys (Laufzeitfehler!); `<label>` um mehrere Buttons leitet Klicks fehl; helle Seiten vertragen keine `rgba(255,255,255)`-Styles.
+
 ## Git Safety
 - [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
 
@@ -37,6 +40,7 @@
 2. **MarketingComponent** (`/marketing`) - Landing page
 3. **MeterReadingsComponent** (`/meter-readings`) - Reading management
 4. **UtilityPricesComponent** (`/utility-prices`) - Price management with grouped tables
+4b. **CalendarComponent** (`/calendar`) - Monatsraster. Kategorien sind **Stammdaten** (`CalendarCategoryService`, `GET /api/v1/calendar/categories`), kein Enum mehr — `CATEGORY_META` existiert nicht mehr. Farbe/Name kommen aus der am Termin **eingebetteten** `category`. Termine tragen `persons` (leer = ganzer Haushalt); `HouseholdUserService` (`GET /api/v1/users`) fuellt die Auswahl. `update`/`updateOccurrence` sind PUT-**Vollersetzung** — der Dialog muss `personUserIds` beim Speichern immer mitsenden, sonst verschwinden sie still (gleiche Falle wie bei `notes`).
 5. **ZigbeeComponent** (`/zigbee`) - Zigbee sensor live tiles + history chart
 6. **FinanceOverviewComponent** (`/finance`) - KPIs, ECharts donut + trend, A/B layout toggle (`localStorage` key `finance.overviewLayout`)
 7. **FinanceTransactionsComponent** (`/finance/transactions`) - Transaction list, filters, inline categorization, rule-suggestion banner
