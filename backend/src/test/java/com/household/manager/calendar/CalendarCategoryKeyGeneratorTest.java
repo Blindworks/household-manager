@@ -42,4 +42,16 @@ class CalendarCategoryKeyGeneratorTest {
         assertThat(generator.generate("Arbeit", Set.of("arbeit"))).isEqualTo("arbeit_2");
         assertThat(generator.generate("Arbeit", Set.of("arbeit", "arbeit_2"))).isEqualTo("arbeit_3");
     }
+
+    @Test
+    void kuerztAufFuenfzigZeichenAuchBeiKollision() {
+        String lang = "a".repeat(50);
+        String result = generator.generate(lang, Set.of(lang));
+        assertThat(result).hasSize(50).endsWith("_2");
+    }
+
+    @Test
+    void entferntFuehrendeTrennzeichen() {
+        assertThat(generator.generate(" Notfall", Set.of())).isEqualTo("notfall");
+    }
 }

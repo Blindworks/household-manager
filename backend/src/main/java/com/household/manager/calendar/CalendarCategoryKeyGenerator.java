@@ -35,6 +35,12 @@ public class CalendarCategoryKeyGenerator {
         }
     }
 
+    /**
+     * Nur die deutschen Sonderzeichen (Umlaute, scharfes S) werden transliteriert, alles
+     * andere jenseits davon (z. B. "Café", "Façade") wird bewusst zum Trennzeichen -
+     * die Haushaltsanwendung ist deutschsprachig, eine vollstaendige Transliterationstabelle
+     * waere hier ueber das Ziel hinaus.
+     */
     private String normalize(String name) {
         String slug = (name == null ? "" : name).toLowerCase(Locale.ROOT)
                 .replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
