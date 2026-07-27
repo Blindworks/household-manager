@@ -95,3 +95,5 @@ com.household.manager/
 - [security-matcher-order-testing.md](security-matcher-order-testing.md) - prove an order-dependent SecurityConfig rule matters by temporarily removing it and confirming the test fails; method-less requestMatchers(String...) covers all HTTP methods
 - [double-validation-nan-pitfalls.md](double-validation-nan-pitfalls.md) - every Double comparison with NaN is false (one-sided range checks leak it through); isFinite is redundant when a finite upper bound already excludes NaN/Infinity - verify before assuming
 - [optional-empty-two-reasons.md](optional-empty-two-reasons.md) - resolver Optional.empty() can mean two unrelated causes (no config vs. no data); only one should freeze the entity - add a thin isConfigured()-style probe rather than reshaping the return type
+- [enum-to-lookup-table.md](enum-to-lookup-table.md) - Enum-Spalte zu Stammdatentabelle: ein Commit wegen ddl-auto=validate, Seed-Keys = alte Enum-Namen kleingeschrieben (Flow-Vertrag)
+- [bash-tool-heredoc.md](bash-tool-heredoc.md) - im Bash-Tool nie PowerShell-Here-Strings; `@'...'@` landet als literales @ in der Commit-Message
