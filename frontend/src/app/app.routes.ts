@@ -123,6 +123,13 @@ export const routes: Routes = [
     title: 'API-Tokens - Household Manager'
   },
   {
+    path: 'admin/calendar-categories',
+    loadComponent: () => import('./pages/admin-calendar-categories/admin-calendar-categories.component')
+      .then(m => m.AdminCalendarCategoriesComponent),
+    canActivate: [adminGuard],
+    title: 'Kalender-Kategorien - Household Manager'
+  },
+  {
     path: 'admin/tractive',
     loadComponent: () => import('./pages/admin-tractive/admin-tractive.component').then(m => m.AdminTractiveComponent),
     canActivate: [adminGuard],

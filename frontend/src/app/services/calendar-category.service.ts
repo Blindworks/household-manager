@@ -4,6 +4,23 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { CalendarCategory, CalendarCategoryRequest } from '../models/calendar-category.model';
 
+/**
+ * Fehler der Kategorie-API. Traegt den HTTP-Status mit, weil die Admin-Seite den
+ * Loeschkonflikt (409 — die Kategorie haengt noch an Terminen) von einem echten Ausfall
+ * unterscheiden muss: nur beim 409 darf sie das Deaktivieren als Ausweg anbieten. Wuerde
+ * sie das bei jedem Fehler tun, verspraeche sie bei ausgefallenem Backend einen Ausweg,
+ * der genauso fehlschlaegt.
+ *
+ * Bleibt eine gewoehnliche `Error`-Instanz mit unveraenderter `message` — bestehende
+ * Aufrufer (z. B. CalendarMasterDataService) merken davon nichts.
+ */
+export class CalendarCategoryApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'CalendarCategoryApiError';
+  }
+}
+
 /** Service fuer die Kalender-Kategorien (Stammdaten). */
 @Injectable({ providedIn: 'root' })
 export class CalendarCategoryService {
@@ -34,6 +51,6 @@ export class CalendarCategoryService {
   private handleError(error: HttpErrorResponse): Observable<never> {
     console.error('Kalender-Kategorie-API-Fehler:', error);
     const message = error.error?.message || 'Fehler bei der Kalender-Kommunikation.';
-    return throwError(() => new Error(message));
+    return throwError(() => new CalendarCategoryApiError(message, error.status));
   }
 }

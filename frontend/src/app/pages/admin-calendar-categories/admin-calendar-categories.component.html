@@ -1,0 +1,164 @@
+<div class="admin-calendar-categories">
+  <h1>Kalender-Kategorien</h1>
+
+  <p class="admin-calendar-categories__hint">
+    Der Schluessel entsteht einmal beim Anlegen aus dem Namen und aendert sich nie —
+    Automatisierungen filtern darauf. Umbenennen ist deshalb gefahrlos.
+    Eine deaktivierte Kategorie ist in neuen Terminen nicht mehr waehlbar;
+    Bestandstermine behalten sie.
+  </p>
+
+  @if (errorMessage()) {
+    <div class="admin-calendar-categories__error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <!--
+    Loeschschutz mit Ausweg: Der Server verweigert das Loeschen, solange Termine an der
+    Kategorie haengen. Statt den Nutzer in der Sackgasse stehen zu lassen, bietet das
+    Banner das Deaktivieren direkt an.
+  -->
+  @if (blocked(); as conflict) {
+    <div class="admin-calendar-categories__blocked" role="alert">
+      <p class="admin-calendar-categories__blocked-message">{{ conflict.message }}</p>
+      <p>
+        Du kannst sie stattdessen deaktivieren: Sie verschwindet aus der Auswahl neuer
+        Termine, die bestehenden behalten Farbe und Name.
+      </p>
+      <div class="admin-calendar-categories__blocked-actions">
+        <button
+          type="button"
+          class="admin-calendar-categories__deactivate"
+          (click)="setActive(conflict.category, false)">
+          Stattdessen deaktivieren
+        </button>
+        <button type="button" class="admin-calendar-categories__secondary" (click)="dismissBlocked()">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  }
+
+  <form class="admin-calendar-categories__form" (ngSubmit)="save()">
+    <h2 class="admin-calendar-categories__form-title">
+      {{ editing ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}
+    </h2>
+
+    <div class="admin-calendar-categories__fields">
+      <label class="admin-calendar-categories__field">
+        <span>Name</span>
+        <input type="text" name="name" maxlength="100" [(ngModel)]="form.name" placeholder="z. B. Arzttermin">
+      </label>
+
+      <label class="admin-calendar-categories__field">
+        <span>Farbe</span>
+        <input type="color" name="color" aria-label="Farbe" [(ngModel)]="form.color">
+      </label>
+
+      <!--
+        Kein <label> um den IconPicker: der besteht aus mehreren Buttons, und ein Label
+        leitet Klicks auf sein erstes Bedienelement um.
+      -->
+      <div class="admin-calendar-categories__field">
+        <span>Icon</span>
+        <app-icon-picker [value]="form.icon" (valueChange)="form.icon = $event" />
+      </div>
+
+      <label class="admin-calendar-categories__field admin-calendar-categories__field--narrow">
+        <span>Reihenfolge</span>
+        <input type="number" name="sortOrder" [(ngModel)]="form.sortOrder">
+      </label>
+
+      @if (form.key) {
+        <label class="admin-calendar-categories__field">
+          <span>Schluessel</span>
+          <!--
+            Bewusst ohne ngModel: der Schluessel ist keine Eingabe, sondern eine Anzeige.
+            Er wird nie gesendet, und ohne Formularsteuerung kann er es auch nicht werden.
+          -->
+          <input
+            class="admin-calendar-categories__key"
+            type="text"
+            [value]="form.key"
+            readonly
+            title="Unveraenderlich — Automatisierungen filtern auf diesen Wert.">
+        </label>
+      }
+
+      <label class="admin-calendar-categories__checkbox">
+        <input type="checkbox" name="active" [(ngModel)]="form.active">
+        <span>Aktiv</span>
+      </label>
+    </div>
+
+    <div class="admin-calendar-categories__form-actions">
+      <button type="submit" [disabled]="saving()">
+        {{ saving() ? 'Speichert …' : (editing ? 'Aenderungen speichern' : 'Anlegen') }}
+      </button>
+      @if (editing) {
+        <button type="button" class="admin-calendar-categories__secondary" (click)="resetForm()">
+          Abbrechen
+        </button>
+      }
+    </div>
+  </form>
+
+  @if (loading()) {
+    <p>Wird geladen …</p>
+  } @else if (loadFailed()) {
+    <!-- Keine Tabelle bei Ladefehler: eine leere Liste saehe aus wie „es gibt keine". -->
+    <p>Die Kategorien konnten nicht geladen werden. Bitte die Seite neu laden.</p>
+  } @else {
+    <table class="admin-calendar-categories__table">
+      <thead>
+        <tr>
+          <th scope="col">Icon</th>
+          <th scope="col">Name</th>
+          <th scope="col">Farbe</th>
+          <th scope="col">Schluessel</th>
+          <th scope="col">Reihenfolge</th>
+          <th scope="col">Aktiv</th>
+          <th scope="col"><span class="admin-calendar-categories__sr-only">Aktionen</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (category of categories(); track category.id) {
+          <tr [class.admin-calendar-categories__row--inactive]="!category.active">
+            <td>
+              @if (category.icon) {
+                <span class="material-symbols-outlined" [attr.title]="category.icon">{{ category.icon }}</span>
+              }
+            </td>
+            <td>{{ category.name }}</td>
+            <td>
+              <span
+                class="admin-calendar-categories__swatch"
+                [style.background]="category.color"
+                [attr.title]="category.color"></span>
+            </td>
+            <!-- Schreibgeschuetzt und in Monospace: genau dieser Wert steht in Flow-Filtern. -->
+            <td class="admin-calendar-categories__key-cell">{{ category.key }}</td>
+            <td>{{ category.sortOrder }}</td>
+            <td>{{ category.active ? 'Ja' : 'Nein' }}</td>
+            <td class="admin-calendar-categories__actions">
+              <button type="button" (click)="startEdit(category)">Bearbeiten</button>
+              <button
+                type="button"
+                class="admin-calendar-categories__toggle-active"
+                (click)="setActive(category, !category.active)">
+                {{ category.active ? 'Deaktivieren' : 'Aktivieren' }}
+              </button>
+              <button
+                type="button"
+                class="admin-calendar-categories__delete"
+                (click)="remove(category)">
+                Loeschen
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7">Noch keine Kategorien angelegt.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
