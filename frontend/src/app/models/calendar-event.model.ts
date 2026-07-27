@@ -27,7 +27,13 @@ export interface CalendarEventRequest {
 /** Stammdaten eines Termins/einer Serie (Bearbeiten-Dialog). */
 export interface CalendarEvent extends Omit<CalendarEventRequest, 'categoryId' | 'personUserIds'> {
   id: number;
-  category: CalendarCategoryRef;
+  /**
+   * null, wenn die Kategorie nicht aufloesbar war. Der Fremdschluessel schliesst das
+   * praktisch aus, aber das Backend liefert bewusst null statt zu werfen — eine fehlende
+   * Farbe darf nie den ganzen Monat leeren (siehe CalendarEventService.categoryView).
+   */
+  category: CalendarCategoryRef | null;
+  /** Leer = Haushaltstermin; nie null (das Backend liefert immer eine Liste). */
   persons: CalendarPerson[];
   recurring: boolean;
 }
@@ -41,7 +47,9 @@ export interface CalendarOccurrence {
   recurrenceDate: string | null;
   title: string;
   notes: string | null;
-  category: CalendarCategoryRef;
+  /** null, wenn die Kategorie nicht aufloesbar war — siehe CalendarEvent.category. */
+  category: CalendarCategoryRef | null;
+  /** Leer = Haushaltstermin; nie null (das Backend liefert immer eine Liste). */
   persons: CalendarPerson[];
   allDay: boolean;
   startTime: string | null;

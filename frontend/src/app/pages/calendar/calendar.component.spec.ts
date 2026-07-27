@@ -4,7 +4,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { CalendarComponent } from './calendar.component';
 import { CalendarEvent, CalendarOccurrence } from '../../models/calendar-event.model';
 import { CalendarCategory, CalendarCategoryRef } from '../../models/calendar-category.model';
-import { HouseholdUser } from '../../services/household-user.service';
+import { HouseholdUser } from '../../models/household-user.model';
 
 /** August 2026: fester Testmonat, damit das Raster (und damit from/to) deterministisch ist. */
 const VIEW_YEAR = 2026;
@@ -702,6 +702,163 @@ describe('CalendarComponent', () => {
     const initials = Array.from(dayCell('2026-08-10').querySelectorAll('.calendar__chip-initial'))
       .map(el => el.textContent?.trim());
     expect(initials).toEqual(['B', 'A']);
+  });
+
+  it('deckelt die Initialen und nennt die vollen Namen in der Chip-Beschriftung', () => {
+    // Ungedeckelt verdraengen die Initialen den Titel - und eine einzelne Initiale ist
+    // zwischen "Anna" und "Anton" nicht zu unterscheiden.
+    const crowded: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE,
+      persons: [
+        { id: 10, displayName: 'Anna' }, { id: 11, displayName: 'Anton' },
+        { id: 12, displayName: 'Bert' }, { id: 13, displayName: 'Clara' }
+      ]
+    };
+    loadInitial([crowded]);
+
+    const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
+    const badges = Array.from(chip.querySelectorAll('.calendar__chip-initial'))
+      .map(el => el.textContent?.trim());
+    expect(badges).toEqual(['A', 'A', '+2']);
+
+    // Der Titel steht in einem eigenen, schrumpfbaren Element statt als nackter Textknoten.
+    expect(chip.querySelector('.calendar__chip-title')?.textContent?.trim()).toBe('Zahnarzt');
+    expect(chip.getAttribute('title')).toBe('Zahnarzt — Anna, Anton, Bert, Clara');
+    expect(chip.getAttribute('aria-label')).toBe('Zahnarzt — Anna, Anton, Bert, Clara');
+  });
+
+  it('haelt eine inzwischen deaktivierte Person waehlbar, damit sie abwaehlbar bleibt', () => {
+    // "Ausgezogen" ist deaktiviert und damit nicht in der Auswahlliste - ohne Sonderfall
+    // haenge die Zuordnung unsichtbar am Termin und ginge beim Speichern wieder mit.
+    const assigned = { id: 12, displayName: 'Ausgezogen' };
+    const withRetired: CalendarOccurrence = { ...SINGLE_OCCURRENCE, persons: [assigned] };
+    loadInitial([withRetired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, persons: [assigned] });
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.form.personUserIds).toEqual([12]);
+    const retiredButton = findButton('Ausgezogen (deaktiviert)');
+    expect(retiredButton.getAttribute('aria-pressed')).toBe('true');
+
+    retiredButton.click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([]);
+    // Und sie bleibt in der Liste, falls der Nutzer es sich anders ueberlegt.
+    expect(findButton('Ausgezogen (deaktiviert)').getAttribute('aria-pressed')).toBe('false');
+
+    findButton('Speichern').click();
+    const put = httpMock.expectOne('/api/v1/calendar/events/1');
+    expect(put.request.body.personUserIds).toEqual([]);
+    put.flush(SINGLE_EVENT);
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('ein neuer Termin erbt die Sonderfaelle des zuvor bearbeiteten nicht', () => {
+    const retiredRef: CalendarCategoryRef =
+      { id: 9, key: 'urlaub', name: 'Urlaub', color: '#9575cd', icon: null };
+    const retired: CalendarCategory = { ...retiredRef, sortOrder: 9, active: false };
+    const special: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE, category: retiredRef, persons: [{ id: 12, displayName: 'Ausgezogen' }]
+    };
+
+    loadInitial([special], [...CATEGORIES, retired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1')
+      .flush({ ...SINGLE_EVENT, category: retiredRef, persons: special.persons });
+    fixture.detectChanges();
+    expect(findButton('Ausgezogen (deaktiviert)')).toBeTruthy();
+
+    findButton('Abbrechen').click();
+    fixture.detectChanges();
+    dayCell('2026-08-11').click();
+    fixture.detectChanges();
+
+    // Beide Sonderoptionen gehoerten zum vorigen Termin und haben hier nichts zu suchen.
+    const personNames = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__person')
+    ).map(button => button.textContent?.trim());
+    expect(personNames).toEqual(['Benedikt', 'Anna']);
+
+    const options = Array.from(
+      requireElement<HTMLSelectElement>('select[name="categoryId"]').options
+    ).map(option => option.textContent?.trim());
+    expect(options).not.toContain('Urlaub (deaktiviert)');
+
+    findButton('Abbrechen').click();
+  });
+
+  it('haelt die deaktivierte Kategorie waehlbar, auch nachdem einmal weggewaehlt wurde', () => {
+    // Aus dem Formularwert abgeleitet verschwaende die Option beim ersten Wegwaehlen;
+    // zurueck kaeme der Nutzer nur durch Verwerfen des Dialogs samt aller Aenderungen.
+    const retiredRef: CalendarCategoryRef =
+      { id: 9, key: 'urlaub', name: 'Urlaub', color: '#9575cd', icon: null };
+    const retired: CalendarCategory = { ...retiredRef, sortOrder: 9, active: false };
+    const occurrence: CalendarOccurrence = { ...SINGLE_OCCURRENCE, category: retiredRef };
+
+    loadInitial([occurrence], [...CATEGORIES, retired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, category: retiredRef });
+    fixture.detectChanges();
+
+    const select = requireElement<HTMLSelectElement>('select[name="categoryId"]');
+    select.value = select.options[1].value; // weg von "Urlaub (deaktiviert)"
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.categoryId).toBe(HEALTH.id);
+    const options = Array.from(
+      requireElement<HTMLSelectElement>('select[name="categoryId"]').options
+    ).map(option => option.textContent?.trim());
+    expect(options).toContain('Urlaub (deaktiviert)');
+
+    findButton('Abbrechen').click();
+  });
+
+  it('meldet einen Ausfall der Personenliste, laesst den Dialog aber offen', () => {
+    // Anders als bei den Kategorien: ein Termin ohne Personen ist gueltig. Ohne Meldung
+    // saehe die leere Liste aber aus wie "es gibt keine Haushaltsmitglieder".
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories').flush(CATEGORIES);
+    // Ohne strukturierten Body: so greift der Fallbacktext aus HouseholdUserService.
+    httpMock.expectOne('/api/v1/users').flush(null, { status: 500, statusText: 'Server Error' });
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+    fixture.detectChanges();
+
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeTrue();
+    expect(fixture.componentInstance.userError).toBeTruthy();
+    const dialogText = requireElement('.calendar__dialog').textContent ?? '';
+    expect(dialogText).toContain('Haushaltsmitglieder konnten nicht geladen werden');
+    expect(dialogText).not.toContain('betrifft den ganzen Haushalt');
+
+    findButton('Abbrechen').click();
+  });
+
+  it('verweigert das Speichern, wenn keine Kategorie waehlbar ist', () => {
+    // Erreichbar, sobald die Admin-Seite alle Kategorien deaktiviert: die Stammdaten sind
+    // geladen (der Dialog oeffnet), aber die Auswahlliste ist leer.
+    const allRetired = CATEGORIES.map(category => ({ ...category, active: false }));
+    loadInitial([], allRetired);
+
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.categoryId).toBeNull();
+
+    setInputValue('input[name="title"]', 'Ohne Kategorie');
+    findButton('Speichern').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeTrue();
+    expect(fixture.componentInstance.dialogError).toContain('Kategorie');
+    // httpMock.verify() im afterEach bestaetigt, dass gar kein Request feuerte.
+
+    findButton('Abbrechen').click();
   });
 
   it('faerbt den Chip mit der eingebetteten Kategoriefarbe des Termins', () => {

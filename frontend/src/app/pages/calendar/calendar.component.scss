@@ -114,7 +114,10 @@
     --chip-color: #64b5f6;
     display: flex;
     gap: 0.3rem;
-    align-items: baseline;
+    // center statt baseline: der Titel hat jetzt overflow:hidden und damit eine
+    // synthetische Baseline an seiner Unterkante - gegen die Initialen-Kreise saehe das
+    // versetzt aus.
+    align-items: center;
     border: none;
     border-left: 3px solid var(--chip-color);
     background: color-mix(in srgb, var(--chip-color) 18%, transparent);
@@ -124,6 +127,15 @@
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
+  }
+
+  // Der Titel ist das einzige schrumpfbare Element des Chips. text-overflow gehoert an
+  // ihn, nicht an den Flex-Container: dort greift es fuer die Items nicht, und der Titel
+  // wuerde mitten im Wort ohne Auslassungszeichen abgeschnitten.
+  &__chip-title {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -324,18 +336,21 @@
     }
   }
 
-  // Faerbung aus der Kategoriefarbe des Chips, damit die Initiale auf dem ohnehin
-  // blass eingefaerbten Chip sichtbar bleibt.
+  // Faerbung aus der Kategoriefarbe des Chips, damit die Initiale auf dem ohnehin blass
+  // eingefaerbten Chip sichtbar bleibt. Ans Ende geschoben werden die Initialen bereits
+  // vom flex:1 des Titels. 0.65rem waeren auf dem wandmontierten Tablet knapp 10 px;
+  // min-width statt fester Breite, damit auch "+2" hineinpasst.
   &__chip-initial {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 50%;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    padding: 0 0.15rem;
+    border-radius: 999px;
     background: color-mix(in srgb, var(--chip-color) 55%, transparent);
-    font-size: 0.65rem;
+    font-size: 0.72rem;
     font-weight: 600;
     line-height: 1;
   }

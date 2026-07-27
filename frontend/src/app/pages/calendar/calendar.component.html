@@ -35,19 +35,26 @@
           <span class="calendar__day-number">{{ day.dayOfMonth }}</span>
           <div class="calendar__chips">
             @for (occ of chipsFor(day).slice(0, dayChipLimit); track occ.eventId + '-' + occ.occurrenceDate) {
+              <!-- title/aria-label tragen den vollen Wortlaut: der Titel wird in der schmalen
+                   Tageszelle oft abgeschnitten, und eine Initiale ist mehrdeutig. -->
               <button type="button"
                       class="calendar__chip"
                       [style.--chip-color]="colorFor(occ)"
+                      [attr.title]="chipLabel(occ)"
+                      [attr.aria-label]="chipLabel(occ)"
                       (click)="openEdit(occ, $event)">
                 @if (!occ.allDay && occ.startTime) {
                   <span class="calendar__chip-time">{{ occ.startTime }}</span>
                 }
+                <span class="calendar__chip-title">{{ occ.title }}</span>
                 <!-- track $index: zwei Personen koennen denselben Anfangsbuchstaben haben,
                      doppelte Track-Keys sind in @for ein Laufzeitfehler. -->
                 @for (initial of initialsFor(occ); track $index) {
-                  <span class="calendar__chip-initial">{{ initial }}</span>
+                  <span class="calendar__chip-initial" aria-hidden="true">{{ initial }}</span>
                 }
-                {{ occ.title }}
+                @if (hiddenPersonCount(occ) > 0) {
+                  <span class="calendar__chip-initial" aria-hidden="true">+{{ hiddenPersonCount(occ) }}</span>
+                }
               </button>
             }
             @if (overflowCount(day) > 0) {
@@ -91,18 +98,21 @@
              beim Wochentag-Picker weiter unten). -->
         <div class="calendar__field" role="group" aria-label="Personen">
           <span>Personen</span>
+          @if (userError) {
+            <small class="calendar__error">{{ userError }}</small>
+          }
           <div class="calendar__persons">
-            @for (user of users; track user.id) {
+            @for (user of selectablePersons(); track user.id) {
               <button type="button"
                       class="calendar__person"
                       [class.calendar__person--on]="form.personUserIds.includes(user.id)"
                       [attr.aria-pressed]="form.personUserIds.includes(user.id)"
                       (click)="togglePerson(user.id)">
-                {{ user.displayName }}
+                {{ user.displayName }}{{ user.enabled ? '' : ' (deaktiviert)' }}
               </button>
             }
           </div>
-          @if (form.personUserIds.length === 0) {
+          @if (form.personUserIds.length === 0 && !userError) {
             <small class="calendar__hint">Niemand ausgewählt — betrifft den ganzen Haushalt.</small>
           }
         </div>

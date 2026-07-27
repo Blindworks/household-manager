@@ -5,11 +5,12 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CalendarService } from '../../services/calendar.service';
 import { CalendarCategoryService } from '../../services/calendar-category.service';
-import { HouseholdUser, HouseholdUserService } from '../../services/household-user.service';
+import { HouseholdUserService } from '../../services/household-user.service';
 import { AuthService } from '../../services/auth.service';
 import { CalendarCategory } from '../../models/calendar-category.model';
+import { HouseholdUser } from '../../models/household-user.model';
 import {
-  CalendarEvent, CalendarEventRequest, CalendarOccurrence
+  CalendarEvent, CalendarEventRequest, CalendarOccurrence, CalendarPerson
 } from '../../models/calendar-event.model';
 import { MonthDay, buildMonthGrid } from '../../shared/month-grid.util';
 import {
@@ -18,6 +19,12 @@ import {
 
 /** Wie viele Termin-Chips eine Tageszelle zeigt; der Rest wird "+n weitere". */
 const DAY_CHIP_LIMIT = 3;
+
+/**
+ * Wie viele Personen-Initialen ein Chip zeigt; der Rest wird "+n". Eine Tageszelle ist rund
+ * ein Siebtel der Rasterbreite - ohne Deckel verdraengen die Initialen den Termintitel.
+ */
+const CHIP_INITIAL_LIMIT = 2;
 
 /** Formularzustand des Termindialogs (Strings, wie die Inputs sie liefern). */
 interface CalendarFormState {
@@ -88,6 +95,12 @@ export class CalendarComponent implements OnInit {
    * verschiedene Folgen: dieser macht den Dialog unbenutzbar, der andere nicht.
    */
   categoryError: string | null = null;
+  /**
+   * Fehler des Nutzer-Abrufs. Anders als bei den Kategorien bleibt der Dialog offen - ein
+   * Termin ohne Personen ist gueltig. Aber er braucht eine Meldung: eine leere
+   * Personenliste saehe sonst aus wie "es gibt keine Haushaltsmitglieder".
+   */
+  userError: string | null = null;
 
   /** Formularzustand des Termindialogs. */
   form = this.emptyForm();
@@ -107,6 +120,18 @@ export class CalendarComponent implements OnInit {
    * trotzdem den urspruenglichen Serienstart, siehe resolveStartDate().
    */
   originalSeriesStartDate: string | null = null;
+  /**
+   * Die beim Oeffnen gesetzte Kategorie, falls sie inzwischen deaktiviert ist; sonst null.
+   * Gemerkt statt aus dem Formularwert abgeleitet - Muster wie originalSeriesStartDate,
+   * Begruendung siehe selectableCategories().
+   */
+  private retiredCategory: CalendarCategory | null = null;
+  /**
+   * Die beim Oeffnen zugeordneten Personen. Aus derselben Ueberlegung gemerkt: eine
+   * deaktivierte Person muss abwaehlbar bleiben, auch nachdem sie abgewaehlt wurde
+   * (der Nutzer koennte es sich anders ueberlegen).
+   */
+  private retiredPersons: CalendarPerson[] = [];
   /** Offene Scope-Frage bei Serien ('save' | 'delete'); null = keine. */
   scopeQuestion: 'save' | 'delete' | null = null;
   dialogError: string | null = null;
@@ -137,7 +162,6 @@ export class CalendarComponent implements OnInit {
       next: categories => {
         this.categories = categories;
         this.categoriesLoaded = true;
-        this.form = this.emptyForm();
       },
       // Ein Dialog mit leerer Auswahlliste sieht aus wie "es gibt keine Kategorien" und
       // verleitet zu falschen Eingaben — deshalb bleibt er ohne Stammdaten geschlossen.
@@ -147,8 +171,14 @@ export class CalendarComponent implements OnInit {
         'Die Kategorien konnten nicht geladen werden. Neue Termine lassen sich gerade nicht anlegen.'
     });
     this.userService.list().subscribe({
-      next: users => this.users = users.filter(user => user.enabled),
-      error: () => this.users = []
+      next: users => {
+        this.users = users.filter(user => user.enabled);
+        this.userError = null;
+      },
+      error: (err: Error) => {
+        this.users = [];
+        this.userError = err.message;
+      }
     });
     this.rebuildGrid();
   }
@@ -189,13 +219,34 @@ export class CalendarComponent implements OnInit {
     return Math.max(0, this.chipsFor(day).length - DAY_CHIP_LIMIT);
   }
 
-  colorFor(occurrence: CalendarOccurrence): string {
-    return occurrence.category?.color ?? '#64b5f6';
+  /**
+   * Kategoriefarbe des Chips; null laesst den --chip-color-Default aus dem SCSS greifen,
+   * statt ihn hier ein zweites Mal zu buchstabieren.
+   */
+  colorFor(occurrence: CalendarOccurrence): string | null {
+    return occurrence.category?.color ?? null;
   }
 
-  /** Initialen der zugeordneten Personen; leer = Haushaltstermin. */
+  /** Initialen der zugeordneten Personen, gedeckelt; leer = Haushaltstermin. */
   initialsFor(occurrence: CalendarOccurrence): string[] {
-    return (occurrence.persons ?? []).map(person => person.displayName.charAt(0).toUpperCase());
+    return occurrence.persons.slice(0, CHIP_INITIAL_LIMIT)
+      .map(person => person.displayName.charAt(0).toUpperCase());
+  }
+
+  /** Wie viele Personen der Chip nicht mehr als Initiale zeigt. */
+  hiddenPersonCount(occurrence: CalendarOccurrence): number {
+    return Math.max(0, occurrence.persons.length - CHIP_INITIAL_LIMIT);
+  }
+
+  /**
+   * Vollstaendige Beschriftung des Chips fuer title/aria-label. Eine einzelne Initiale ist
+   * mehrdeutig ("Anna"/"Anton"), und der Titel wird im Raster oft abgeschnitten.
+   */
+  chipLabel(occurrence: CalendarOccurrence): string {
+    const time = !occurrence.allDay && occurrence.startTime ? `${occurrence.startTime} ` : '';
+    const names = occurrence.persons.map(person => person.displayName);
+    return names.length ? `${time}${occurrence.title} — ${names.join(', ')}`
+                        : `${time}${occurrence.title}`;
   }
 
   /** Erste aktive Kategorie; ohne geladene Stammdaten null (der Dialog oeffnet dann nicht). */
@@ -203,15 +254,35 @@ export class CalendarComponent implements OnInit {
     return this.activeCategories()[0]?.id ?? null;
   }
 
-  /** Waehlbare Kategorien: alle aktiven plus die aktuell gesetzte (auch wenn deaktiviert). */
+  /**
+   * Waehlbare Kategorien: alle aktiven plus die beim Oeffnen gesetzte, falls die inzwischen
+   * deaktiviert wurde. Bewusst aus retiredCategory statt aus dem aktuellen Formularwert:
+   * sonst verschwaende die Sonderoption, sobald der Nutzer einmal wegwaehlt, und zurueck
+   * kaeme er nur durch Verwerfen des Dialogs samt aller anderen Aenderungen.
+   */
   selectableCategories(): CalendarCategory[] {
     const active = this.activeCategories();
-    const current = this.categories.find(cat => cat.id === this.form.categoryId);
-    return current && !current.active ? [current, ...active] : active;
+    return this.retiredCategory ? [this.retiredCategory, ...active] : active;
   }
 
   private activeCategories(): CalendarCategory[] {
     return this.categories.filter(cat => cat.active);
+  }
+
+  /**
+   * Waehlbare Personen: alle aktiven plus die beim Oeffnen zugeordneten, die es nicht (mehr)
+   * in der aktiven Liste gibt. Ohne sie haenge eine deaktivierte Person unsichtbar am Termin:
+   * kein Button waere markiert, der Chip zeigte trotzdem ihre Initiale, und das Speichern
+   * schickte die Zuordnung unveraendert wieder mit - der Nutzer wuerde sie nie los.
+   */
+  selectablePersons(): HouseholdUser[] {
+    const active = this.users;
+    const known = new Set(active.map(user => user.id));
+    const retired = this.retiredPersons
+      .filter(person => !known.has(person.id))
+      .map((person): HouseholdUser =>
+        ({ id: person.id, displayName: person.displayName, enabled: false }));
+    return [...active, ...retired];
   }
 
   /** Personenauswahl im Dialog umschalten. */
@@ -229,6 +300,8 @@ export class CalendarComponent implements OnInit {
     this.dialogGeneration++;
     this.editing = null;
     this.originalSeriesStartDate = null;
+    this.retiredCategory = null;
+    this.retiredPersons = [];
     this.form = this.emptyForm();
     this.form.startDate = day.isoDate;
     this.recurrence = CalendarComponent.defaultRecurrence();
@@ -260,6 +333,9 @@ export class CalendarComponent implements OnInit {
         }
         this.editing = { event, occurrence };
         this.originalSeriesStartDate = event.startDate;
+        const currentCategory = this.categories.find(cat => cat.id === occurrence.category?.id);
+        this.retiredCategory = currentCategory && !currentCategory.active ? currentCategory : null;
+        this.retiredPersons = occurrence.persons;
         // Formularwerte kommen aus dem VORKOMMEN, nicht aus der Serie: bei einem bereits
         // ueberschriebenen Vorkommen (Override-Zeile) haelt die Serie noch die alten Werte,
         // occurrence traegt bereits die tatsaechlich angezeigten (siehe getOccurrences()).
@@ -271,7 +347,7 @@ export class CalendarComponent implements OnInit {
           title: occurrence.title,
           notes: occurrence.notes ?? '',
           categoryId: occurrence.category?.id ?? this.defaultCategoryId(),
-          personUserIds: (occurrence.persons ?? []).map(person => person.id),
+          personUserIds: occurrence.persons.map(person => person.id),
           allDay: occurrence.allDay,
           startDate: occurrence.occurrenceDate,
           startTime: occurrence.startTime ?? '',
