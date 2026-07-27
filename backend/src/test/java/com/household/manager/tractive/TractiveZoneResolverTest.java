@@ -5,14 +5,19 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class TractiveZoneResolverTest {
 
+    /** Haelt den Mock fest, damit Tests pruefen koennen, OB gelesen wurde. */
+    private TractiveHomeSettingsService settingsService;
+
     private TractiveZoneResolver resolverWith(TractiveHomeSettings settings) {
-        TractiveHomeSettingsService settingsService = mock(TractiveHomeSettingsService.class);
-        when(settingsService.getSettings()).thenReturn(settings);
+        settingsService = mock(TractiveHomeSettingsService.class);
+        lenient().when(settingsService.getSettings()).thenReturn(settings);
         return new TractiveZoneResolver(settingsService);
     }
 
@@ -30,6 +35,9 @@ class TractiveZoneResolverTest {
         List<GeoZone> zones = List.of(new GeoZone("Garten", 48.2082, 16.3738, 100));
 
         assertEquals("Garten", resolver.resolve(48.2082, 16.3738, zones));
+
+        // Bekannte Geofences: die Home-Zone wird gar nicht gebraucht, also auch nicht gelesen.
+        verify(settingsService, never()).getSettings();
     }
 
     @Test
@@ -38,6 +46,9 @@ class TractiveZoneResolverTest {
         List<GeoZone> zones = List.of(new GeoZone("Garten", 48.2082, 16.3738, 100));
 
         assertEquals("away", resolver.resolve(48.3000, 16.3738, zones));
+
+        // Bekannte Geofences: die Home-Zone wird gar nicht gebraucht, also auch nicht gelesen.
+        verify(settingsService, never()).getSettings();
     }
 
     @Test
