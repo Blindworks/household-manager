@@ -5,8 +5,9 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.tractive.GeoZone;
 import com.household.manager.tractive.TractiveHomeResolver;
+import com.household.manager.tractive.TractiveHomeSettings;
+import com.household.manager.tractive.TractiveHomeSettingsService;
 import com.household.manager.tractive.TractivePetSnapshot;
-import com.household.manager.tractive.TractiveProperties;
 import com.household.manager.tractive.TractiveZoneResolver;
 import com.household.manager.tractive.dto.TractiveHardwareDto;
 import com.household.manager.tractive.dto.TractivePositionDto;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TractiveEntityMapperTest {
 
@@ -27,13 +30,13 @@ class TractiveEntityMapperTest {
 
     @BeforeEach
     void setUp() {
-        TractiveProperties properties = new TractiveProperties();
-        properties.setHomeLatitude(48.2082);
-        properties.setHomeLongitude(16.3738);
-        properties.setHomeRadiusMeters(100);
         // Home-Koordinaten sind zugleich die Fallback-Zone des TractiveZoneResolver.
-        mapper = new TractiveEntityMapper(new TractiveZoneResolver(properties),
-                new TractiveHomeResolver(properties));
+        TractiveHomeSettings settings =
+                new TractiveHomeSettings(48.2082, 16.3738, 100, 500, 60, 15, "Zuhause");
+        TractiveHomeSettingsService settingsService = mock(TractiveHomeSettingsService.class);
+        when(settingsService.getSettings()).thenReturn(settings);
+        mapper = new TractiveEntityMapper(new TractiveZoneResolver(settingsService),
+                new TractiveHomeResolver(settingsService));
     }
 
     private TractiveTrackableDto bello() {

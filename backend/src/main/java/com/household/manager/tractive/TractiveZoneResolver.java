@@ -20,7 +20,7 @@ public class TractiveZoneResolver {
     /** Zustand, wenn keine Zonenaussage moeglich ist. */
     public static final String UNKNOWN = "unknown";
 
-    private final TractiveProperties properties;
+    private final TractiveHomeSettingsService settingsService;
 
     public String resolve(double latitude, double longitude, List<GeoZone> zones) {
         List<GeoZone> effectiveZones = zones.isEmpty() ? homeZone() : zones;
@@ -34,12 +34,14 @@ public class TractiveZoneResolver {
                 .orElse(AWAY);
     }
 
+    /** Wird nur ohne bekannte Geofences gebraucht – kostet sonst keine Abfrage. */
     private List<GeoZone> homeZone() {
-        if (properties.getHomeLatitude() == null || properties.getHomeLongitude() == null) {
+        TractiveHomeSettings settings = settingsService.getSettings();
+        if (!settings.hasHomeCoordinates()) {
             return List.of();
         }
-        return List.of(new GeoZone(properties.getHomeZoneName(),
-                properties.getHomeLatitude(), properties.getHomeLongitude(),
-                properties.getHomeRadiusMeters()));
+        return List.of(new GeoZone(settings.homeZoneName(),
+                settings.homeLatitude(), settings.homeLongitude(),
+                settings.homeRadiusMeters()));
     }
 }

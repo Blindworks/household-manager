@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TractiveHomeResolverTest {
 
@@ -24,15 +26,17 @@ class TractiveHomeResolverTest {
 
     private static final Instant NOW = Instant.parse("2026-07-26T12:00:00Z");
 
-    private TractiveProperties propertiesWithHome() {
-        TractiveProperties properties = new TractiveProperties();
-        properties.setHomeLatitude(HOME_LAT);
-        properties.setHomeLongitude(HOME_LON);
-        properties.setHomeRadiusMeters(100);
-        properties.setHomeArrivalRadiusMeters(500);
-        properties.setPoweredOffAfterMinutes(60);
-        properties.setPoweredOffMinBatteryPercent(15);
-        return properties;
+    private TractiveHomeSettings settings(double homeRadiusMeters, double arrivalRadiusMeters) {
+        return new TractiveHomeSettings(HOME_LAT, HOME_LON, homeRadiusMeters, arrivalRadiusMeters,
+                60, 15, "Zuhause");
+    }
+
+    private TractiveHomeSettings defaultSettings() {
+        return settings(100, 500);
+    }
+
+    private TractiveHomeSettings notConfigured() {
+        return new TractiveHomeSettings(null, null, 100, 500, 60, 15, "Zuhause");
     }
 
     /** Positionsbericht mit einem Alter in Minuten relativ zu {@link #NOW}. */
@@ -48,8 +52,15 @@ class TractiveHomeResolverTest {
                 position, hardware, List.of());
     }
 
-    private Optional<HomeVerdict> resolve(TractiveProperties properties, TractivePetSnapshot snapshot) {
-        return new TractiveHomeResolver(properties).resolve(snapshot, NOW);
+    /**
+     * Der Resolver wird bewusst mit einem Mock des Settings-Service gebaut: dieser Test
+     * prueft die Regeln, nicht das Auslesen der Datenbank (das deckt
+     * TractiveHomeSettingsServiceTest ab).
+     */
+    private Optional<HomeVerdict> resolve(TractiveHomeSettings settings, TractivePetSnapshot snapshot) {
+        TractiveHomeSettingsService settingsService = mock(TractiveHomeSettingsService.class);
+        when(settingsService.getSettings()).thenReturn(settings);
+        return new TractiveHomeResolver(settingsService).resolve(snapshot, NOW);
     }
 
     // --- Regel 1: ohne Home-Koordinaten keine Aussage -----------------------------------
@@ -59,7 +70,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(HOME_LAT, HOME_LON, 1),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        assertThat(resolve(new TractiveProperties(), snapshot)).isEmpty();
+        assertThat(resolve(notConfigured(), snapshot)).isEmpty();
     }
 
     // --- Regel 2: Laden gewinnt ---------------------------------------------------------
@@ -69,7 +80,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(FAR_LAT, FAR_LON, 1),
                 new TractiveHardwareDto(50, "CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isTrue();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.CHARGING);
@@ -83,7 +94,7 @@ class TractiveHomeResolverTest {
      */
     @Test
     void chargingWinsEvenWithoutAnyPositionReport() {
-        var verdict = resolve(propertiesWithHome(),
+        var verdict = resolve(defaultSettings(),
                 snapshot(null, new TractiveHardwareDto(60, "CHARGING"))).orElseThrow();
 
         assertThat(verdict.atHome()).isTrue();
@@ -97,7 +108,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(HOME_LAT, HOME_LON, 5),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isTrue();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
@@ -111,7 +122,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(NEAR_LAT, HOME_LON, 5),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isFalse();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
@@ -120,12 +131,10 @@ class TractiveHomeResolverTest {
     /** Der Rand zaehlt als innerhalb – konsistent zu GeoZone.contains. */
     @Test
     void aPositionExactlyOnTheHomeRadiusCountsAsAtHome() {
-        TractiveProperties properties = propertiesWithHome();
-        var position = positionAgedMinutes(NEAR_LAT, HOME_LON, 5);
         double distance = GeoZone.distanceMeters(HOME_LAT, HOME_LON, NEAR_LAT, HOME_LON);
-        properties.setHomeRadiusMeters(distance);
+        var position = positionAgedMinutes(NEAR_LAT, HOME_LON, 5);
 
-        HomeVerdict verdict = resolve(properties, snapshot(position,
+        HomeVerdict verdict = resolve(settings(distance, 500), snapshot(position,
                 new TractiveHardwareDto(87, "NOT_CHARGING"))).orElseThrow();
 
         assertThat(verdict.atHome()).isTrue();
@@ -136,7 +145,7 @@ class TractiveHomeResolverTest {
     void positionWithoutTimestampIsTreatedAsFresh() {
         var position = new TractivePositionDto(List.of(FAR_LAT, FAR_LON), 12.0, "GPS", null);
 
-        HomeVerdict verdict = resolve(propertiesWithHome(),
+        HomeVerdict verdict = resolve(defaultSettings(),
                 snapshot(position, new TractiveHardwareDto(87, "NOT_CHARGING"))).orElseThrow();
 
         assertThat(verdict.stale()).isFalse();
@@ -151,7 +160,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(NEAR_LAT, HOME_LON, 90),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isTrue();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POWERED_OFF);
@@ -165,7 +174,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(FAR_LAT, FAR_LON, 60),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        assertThat(resolve(propertiesWithHome(), snapshot).orElseThrow().stale()).isTrue();
+        assertThat(resolve(defaultSettings(), snapshot).orElseThrow().stale()).isTrue();
     }
 
     // --- Regel 5: Stille ohne die Belege -> letztes Positionsurteil ---------------------
@@ -175,7 +184,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(NEAR_LAT, HOME_LON, 90),
                 new TractiveHardwareDto(3, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isFalse();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
@@ -188,7 +197,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(HOME_LAT, HOME_LON, 90),
                 new TractiveHardwareDto(3, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isTrue();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
@@ -200,7 +209,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(FAR_LAT, FAR_LON, 240),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.atHome()).isFalse();
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
@@ -213,7 +222,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(NEAR_LAT, HOME_LON, 90),
                 new TractiveHardwareDto(null, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
         assertThat(verdict.atHome()).isFalse();
@@ -223,7 +232,7 @@ class TractiveHomeResolverTest {
     void silenceWithoutAnyHardwareReportDoesNotInferPoweredOff() {
         var snapshot = snapshot(positionAgedMinutes(NEAR_LAT, HOME_LON, 90), null);
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POSITION);
         assertThat(verdict.atHome()).isFalse();
@@ -232,13 +241,10 @@ class TractiveHomeResolverTest {
     /** Ein zu klein konfigurierter Ankunftsradius darf Regel 4 nicht unwirksam machen. */
     @Test
     void theArrivalRadiusNeverFallsBelowTheHomeRadius() {
-        TractiveProperties properties = propertiesWithHome();
-        properties.setHomeRadiusMeters(400);
-        properties.setHomeArrivalRadiusMeters(10);
         var snapshot = snapshot(positionAgedMinutes(NEAR_LAT, HOME_LON, 90),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(properties, snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(settings(400, 10), snapshot).orElseThrow();
 
         assertThat(verdict.basis()).isEqualTo(HomeVerdict.Basis.POWERED_OFF);
     }
@@ -247,7 +253,7 @@ class TractiveHomeResolverTest {
 
     @Test
     void withoutPositionAndWithoutChargingThereIsNoVerdict() {
-        assertThat(resolve(propertiesWithHome(),
+        assertThat(resolve(defaultSettings(),
                 snapshot(null, new TractiveHardwareDto(87, "NOT_CHARGING")))).isEmpty();
     }
 
@@ -255,7 +261,7 @@ class TractiveHomeResolverTest {
     void aPositionWithoutCoordinatesYieldsNoVerdict() {
         var position = new TractivePositionDto(null, null, null, 1800000000L);
 
-        assertThat(resolve(propertiesWithHome(),
+        assertThat(resolve(defaultSettings(),
                 snapshot(position, new TractiveHardwareDto(87, "NOT_CHARGING")))).isEmpty();
     }
 
@@ -267,7 +273,7 @@ class TractiveHomeResolverTest {
         var snapshot = snapshot(positionAgedMinutes(HOME_LAT, HOME_LON, -30),
                 new TractiveHardwareDto(87, "NOT_CHARGING"));
 
-        HomeVerdict verdict = resolve(propertiesWithHome(), snapshot).orElseThrow();
+        HomeVerdict verdict = resolve(defaultSettings(), snapshot).orElseThrow();
 
         assertThat(verdict.stale()).isFalse();
         assertThat(verdict.positionAgeMinutes()).isEqualTo(0L);
