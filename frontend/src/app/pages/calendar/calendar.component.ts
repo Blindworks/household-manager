@@ -12,55 +12,16 @@ import {
   CalendarEvent, CalendarEventRequest, CalendarOccurrence, CalendarPerson
 } from '../../models/calendar-event.model';
 import { MonthDay, buildMonthGrid } from '../../shared/month-grid.util';
+import { DayView, PersonFilter, buildDayView } from '../../shared/calendar-day-view.util';
 import {
   Frequency, RecurrenceOptions, Weekday, buildRrule, parseRrule
 } from '../../shared/rrule.util';
 
-/** Wie viele Termin-Chips eine Tageszelle zeigt; der Rest wird "+n weitere". */
-const DAY_CHIP_LIMIT = 3;
-
 /**
- * Wie viele Personen-Initialen ein Chip zeigt; der Rest wird "+n". Eine Tageszelle ist rund
- * ein Siebtel der Rasterbreite - ohne Deckel verdraengen die Initialen den Termintitel.
+ * Ein beschrifteter Auswahleintrag des Dialogs (Kategorie oder Person); label traegt ein
+ * etwaiges "(deaktiviert)"-Suffix bereits.
  */
-const CHIP_INITIAL_LIMIT = 2;
-
-/** Ein Termin-Chip einer Tageszelle, fertig fuer die Anzeige. */
-interface ChipView {
-  /** Fuer den Bearbeiten-Klick; die Anzeige selbst braucht ihn nicht mehr. */
-  occurrence: CalendarOccurrence;
-  /** null laesst den --chip-color-Default aus dem SCSS greifen. */
-  color: string | null;
-  /** Nur bei Terminen mit Uhrzeit gesetzt. */
-  time: string | null;
-  title: string;
-  /** Initialen der zugeordneten Personen, gedeckelt; leer = Haushaltstermin. */
-  initials: string[];
-  /** Wie viele Personen der Chip nicht mehr als Initiale zeigt. */
-  hiddenPersons: number;
-  /**
-   * Vollstaendige Beschriftung fuer title/aria-label. Eine einzelne Initiale ist mehrdeutig
-   * ("Anna"/"Anton"), und der Titel wird im Raster oft abgeschnitten.
-   */
-  label: string;
-}
-
-/** Eine Tageszelle mit ihren sichtbaren Chips. */
-interface DayView {
-  day: MonthDay;
-  chips: ChipView[];
-  /** Wie viele Termine des Tages der Deckel abschneidet ("+n weitere"). */
-  overflow: number;
-}
-
-/** Ein Eintrag der Kategorie-Auswahl; label traegt das "(deaktiviert)"-Suffix bereits. */
-interface CategoryOption {
-  id: number;
-  label: string;
-}
-
-/** Ein Personen-Umschalter im Dialog; label traegt ein etwaiges Suffix bereits. */
-interface PersonOption {
+interface LabeledOption {
   id: number;
   label: string;
 }
@@ -115,21 +76,6 @@ export class CalendarComponent implements OnInit {
   private readonly grid = signal<MonthDay[][]>([]);
   /** Vorkommen des sichtbaren Rasters, gruppiert nach ISO-Datum. */
   private readonly occurrencesByDate = signal(new Map<string, CalendarOccurrence[]>());
-
-  /**
-   * Aktiver Personenfilter; null = alle. Rein clientseitig auf den bereits geladenen
-   * Vorkommen und bewusst nicht persistiert: nach jedem Laden steht wieder "Alle".
-   */
-  readonly personFilter = signal<number | null>(null);
-
-  /**
-   * Das Anzeigemodell des Rasters: fertige Chips statt Berechnungen im Template.
-   * Als computed statt als Methode, damit es sich bei jeder Aenderung von Raster,
-   * Vorkommen oder Filter von selbst erneuert - und nur dann, nicht bei jedem
-   * Change-Detection-Lauf. Der Filter braucht so keinen erneuten Abruf.
-   */
-  readonly weeks = computed<DayView[][]>(() =>
-    this.grid().map(week => week.map(day => this.buildDayView(day))));
 
   /** Fehler des Monatsabrufs; wird bei jedem erfolgreichen Abruf geleert. */
   loadError: string | null = null;
@@ -236,6 +182,16 @@ export class CalendarComponent implements OnInit {
     this.rebuildGrid();
   }
 
+  // --- Filterleiste und Anzeigemodell des Rasters --------------------------------------
+
+  /**
+   * Aktiver Personenfilter; null = alle. Rein clientseitig auf den bereits geladenen
+   * Vorkommen und bewusst nicht persistiert: nach jedem Laden steht wieder "Alle".
+   * Nach aussen nur lesbar - gesetzt wird ueber applyFilter().
+   */
+  private readonly filter = signal<PersonFilter>(null);
+  readonly personFilter = this.filter.asReadonly();
+
   /**
    * Personen der Filterleiste. Der angemeldete Nutzer fehlt bewusst: fuer ihn gibt es
    * schon "Meine". Zwei Knoepfe mit demselben Filter waeren gleichzeitig markiert, und
@@ -254,44 +210,21 @@ export class CalendarComponent implements OnInit {
   readonly showFilters = computed(() =>
     this.currentUserId !== null || this.filterPersons().length > 0);
 
-  private buildDayView(day: MonthDay): DayView {
-    const occurrences = (this.occurrencesByDate().get(day.isoDate) ?? [])
-      .filter(occ => this.matchesFilter(occ));
-    return {
-      day,
-      chips: occurrences.slice(0, DAY_CHIP_LIMIT).map(occ => CalendarComponent.buildChip(occ)),
-      overflow: Math.max(0, occurrences.length - DAY_CHIP_LIMIT)
-    };
-  }
-
   /**
-   * Ein Personenfilter zeigt zusaetzlich IMMER die Termine ohne Zuordnung: "Meine
-   * Termine" heisst "mir zugeordnet oder den ganzen Haushalt betreffend". Sonst
-   * verschwaende die Muellabfuhr genau dann aus dem Blick, wenn jemand auf sich selbst
-   * filtert - der Fall, in dem sie am ehesten uebersehen wird.
+   * Das Anzeigemodell des Rasters: fertige Chips statt Berechnungen im Template (siehe
+   * calendar-day-view.util). Als computed, damit es sich bei jeder Aenderung von Raster,
+   * Vorkommen oder Filter von selbst erneuert - und nur dann, nicht bei jedem
+   * Change-Detection-Lauf. Der Filter braucht so keinen erneuten Abruf.
    */
-  private matchesFilter(occurrence: CalendarOccurrence): boolean {
-    const filter = this.personFilter();
-    return filter === null
-      || occurrence.persons.length === 0
-      || occurrence.persons.some(person => person.id === filter);
-  }
+  readonly weeks = computed<DayView[][]>(() => {
+    const occurrences = this.occurrencesByDate();
+    const filter = this.filter();
+    return this.grid().map(week => week.map(day =>
+      buildDayView(day, occurrences.get(day.isoDate) ?? [], filter)));
+  });
 
-  private static buildChip(occurrence: CalendarOccurrence): ChipView {
-    const time = !occurrence.allDay && occurrence.startTime ? occurrence.startTime : null;
-    const names = occurrence.persons.map(person => person.displayName);
-    const prefix = time ? `${time} ` : '';
-    return {
-      occurrence,
-      color: occurrence.category?.color ?? null,
-      time,
-      title: occurrence.title,
-      initials: occurrence.persons.slice(0, CHIP_INITIAL_LIMIT)
-        .map(person => person.displayName.charAt(0).toUpperCase()),
-      hiddenPersons: Math.max(0, occurrence.persons.length - CHIP_INITIAL_LIMIT),
-      label: names.length ? `${prefix}${occurrence.title} — ${names.join(', ')}`
-                          : `${prefix}${occurrence.title}`
-    };
+  applyFilter(person: PersonFilter): void {
+    this.filter.set(person);
   }
 
   /** Erste aktive Kategorie; ohne geladene Stammdaten null (der Dialog oeffnet dann nicht). */
@@ -305,9 +238,9 @@ export class CalendarComponent implements OnInit {
    * sonst verschwaende die Sonderoption, sobald der Nutzer einmal wegwaehlt, und zurueck
    * kaeme er nur durch Verwerfen des Dialogs samt aller anderen Aenderungen.
    */
-  readonly categoryOptions = computed<CategoryOption[]>(() => {
+  readonly categoryOptions = computed<LabeledOption[]>(() => {
     const active = this.masterData.activeCategories()
-      .map((category): CategoryOption => ({ id: category.id, label: category.name }));
+      .map((category): LabeledOption => ({ id: category.id, label: category.name }));
     const retired = this.retiredCategory();
     return retired
       ? [{ id: retired.id, label: `${retired.name} (deaktiviert)` }, ...active]
@@ -320,18 +253,18 @@ export class CalendarComponent implements OnInit {
    * kein Button waere markiert, der Chip zeigte trotzdem ihre Initiale, und das Speichern
    * schickte die Zuordnung unveraendert wieder mit - der Nutzer wuerde sie nie los.
    */
-  readonly personOptions = computed<PersonOption[]>(() => {
+  readonly personOptions = computed<LabeledOption[]>(() => {
     const active = this.masterData.activeUsers();
     const known = new Set(active.map(user => user.id));
     const retired = this.retiredPersons()
       .filter(person => !known.has(person.id))
-      .map((person): PersonOption => ({
+      .map((person): LabeledOption => ({
         id: person.id,
         label: this.isKnownDisabled(person.id)
           ? `${person.displayName} (deaktiviert)`
           : person.displayName
       }));
-    return [...active.map((user): PersonOption => ({ id: user.id, label: user.displayName })),
+    return [...active.map((user): LabeledOption => ({ id: user.id, label: user.displayName })),
             ...retired];
   });
 
@@ -697,7 +630,7 @@ export class CalendarComponent implements OnInit {
     this.rebuildGrid();
   }
 
-  protected rebuildGrid(): void {
+  private rebuildGrid(): void {
     this.grid.set(buildMonthGrid(this.viewYear, this.viewMonth, new Date()));
     this.loadOccurrences();
   }

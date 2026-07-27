@@ -13,6 +13,15 @@
   min-height: 2.75rem;
 }
 
+// Aktivzustand eines Umschalters. Eigenes Mixin statt Teil von toggle-pill: der
+// Wochentag-Picker teilt zwar diesen Zustand, hat aber einen eigenen Grundzustand
+// (eckiger, schmaler) und heisst sein Modifier --active statt --on.
+@mixin toggle-pill-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
 .calendar {
   padding: var(--spacing-md) 0 var(--spacing-xl);
 
@@ -74,9 +83,7 @@
     @include toggle-pill;
 
     &--on {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      color: var(--color-white);
+      @include toggle-pill-active;
     }
   }
 
@@ -296,9 +303,7 @@
     min-height: 2.75rem;
 
     &--active {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      color: var(--color-white);
+      @include toggle-pill-active;
     }
   }
 
@@ -358,9 +363,7 @@
     @include toggle-pill;
 
     &--on {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      color: var(--color-white);
+      @include toggle-pill-active;
     }
   }
 

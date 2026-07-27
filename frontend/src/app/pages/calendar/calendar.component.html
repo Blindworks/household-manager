@@ -28,19 +28,19 @@
       <button type="button" class="calendar__filter"
               [class.calendar__filter--on]="personFilter() === null"
               [attr.aria-pressed]="personFilter() === null"
-              (click)="personFilter.set(null)">Alle</button>
+              (click)="applyFilter(null)">Alle</button>
       <!-- Ohne eigenen Nutzer (Anmeldung per Service-Token) gibt es kein "Meine". -->
       @if (currentUserId !== null) {
         <button type="button" class="calendar__filter"
                 [class.calendar__filter--on]="personFilter() === currentUserId"
                 [attr.aria-pressed]="personFilter() === currentUserId"
-                (click)="personFilter.set(currentUserId)">Meine</button>
+                (click)="applyFilter(currentUserId)">Meine</button>
       }
       @for (person of filterPersons(); track person.id) {
         <button type="button" class="calendar__filter"
                 [class.calendar__filter--on]="personFilter() === person.id"
                 [attr.aria-pressed]="personFilter() === person.id"
-                (click)="personFilter.set(person.id)">{{ person.displayName }}</button>
+                (click)="applyFilter(person.id)">{{ person.displayName }}</button>
       }
     </div>
   }
