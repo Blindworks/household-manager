@@ -74,6 +74,17 @@ public class TractiveHomeResolver {
                 distanceMeters <= settings.homeRadiusMeters(), stale, distanceMeters, ageMinutes));
     }
 
+    /**
+     * Ist ueberhaupt ein Zuhause hinterlegt? Trennt die beiden Gruende, aus denen
+     * {@link #resolve} leer liefert: "keine Definition" (der Nutzer hat die Koordinaten
+     * entfernt) und "keine Positionsdaten" (der Tracker ist still). Nur der erste Fall
+     * darf die Entitaet auf {@code unavailable} setzen – Stille ist zu Hause der
+     * Normalzustand und soll den letzten Wert behalten.
+     */
+    public boolean isHomeConfigured() {
+        return settingsService.getSettings().hasHomeCoordinates();
+    }
+
     private void warnAboutMissingHomeOnce() {
         if (missingHomeWarned.compareAndSet(false, true)) {
             log.warn("Kein Zuhause hinterlegt (Admin -> Hundetracker-Zuhause) – "

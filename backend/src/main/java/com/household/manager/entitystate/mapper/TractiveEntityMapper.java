@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Mappt einen Tractive-Haustier-Snapshot auf Entity-Zustaende:
@@ -74,10 +75,16 @@ public class TractiveEntityMapper {
         }
 
         // Ohne Urteil wird bewusst kein Update gemeldet: der Entity-State-Layer behaelt
-        // dann den letzten Wert, statt einen Zustand zu raten.
-        homeResolver.resolve(snapshot, now)
-                .map(verdict -> homeUpdate(verdict, snapshot, ref, name))
-                .ifPresent(updates::add);
+        // dann den letzten Wert, statt einen Zustand zu raten. Ausnahme: ist gar kein
+        // Zuhause hinterlegt, fehlt die Grundlage ueberhaupt – dann wuerde die Entitaet
+        // sonst fuer immer auf ihrem alten Wert stehen bleiben, waehrend Badge und Kachel
+        // bereits verschwunden sind.
+        Optional<HomeVerdict> verdict = homeResolver.resolve(snapshot, now);
+        if (verdict.isPresent()) {
+            updates.add(homeUpdate(verdict.get(), snapshot, ref, name));
+        } else if (!homeResolver.isHomeConfigured()) {
+            updates.add(homeUnavailable(ref, name));
+        }
 
         return updates;
     }
@@ -118,6 +125,19 @@ public class TractiveEntityMapper {
                 .friendlyName(name + " zu Hause")
                 .state(verdict.atHome() ? "on" : "off")
                 .attributes(attributes)
+                .build();
+    }
+
+    /** Kein Zuhause hinterlegt: die Entitaet bleibt sichtbar, sagt aber nichts aus. */
+    private EntityStateUpdate homeUnavailable(String ref, String name) {
+        return EntityStateUpdate.builder()
+                .entityId(EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.TRACTIVE, ref, HOME_SUFFIX))
+                .domain(EntityDomain.BINARY_SENSOR)
+                .source(EntitySource.TRACTIVE)
+                .sourceRef(ref)
+                .friendlyName(name + " zu Hause")
+                .state("unavailable")
+                .attributes(Map.of("deviceClass", "presence"))
                 .build();
     }
 
