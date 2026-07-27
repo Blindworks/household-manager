@@ -114,6 +114,27 @@ class TractiveHomeSettingsServiceTest {
         assertThat(settings.homeLongitude()).isNull();
     }
 
+    /** Die Regel muss in beide Richtungen greifen. */
+    @Test
+    void aSingleLongitudeAlsoCountsAsNotConfigured() {
+        TractiveHomeSettings settings = settingsFrom(Map.of("home_longitude", "16.3738"));
+
+        assertThat(settings.hasHomeCoordinates()).isFalse();
+        assertThat(settings.homeLatitude()).isNull();
+        assertThat(settings.homeLongitude()).isNull();
+    }
+
+    /** Ein per Hand eingetragener Ausreisser darf nicht die halbe Welt zum Zuhause machen. */
+    @Test
+    void anAbsurdlyLargeRadiusFallsBackToTheDefault() {
+        TractiveHomeSettings settings = settingsFrom(Map.of(
+                "home_radius_meters", "1e20",
+                "home_arrival_radius_meters", "99999999999999999999"));
+
+        assertThat(settings.homeRadiusMeters()).isEqualTo(100);
+        assertThat(settings.homeArrivalRadiusMeters()).isEqualTo(500);
+    }
+
     @Test
     void savingWritesAllKeysInOneCallAndAudits() {
         var service = new TractiveHomeSettingsService(applicationSettings, auditService);

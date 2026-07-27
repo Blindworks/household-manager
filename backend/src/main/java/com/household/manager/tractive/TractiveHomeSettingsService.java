@@ -39,6 +39,14 @@ public class TractiveHomeSettingsService {
     static final int DEFAULT_MIN_BATTERY_PERCENT = 15;
     static final String DEFAULT_ZONE_NAME = "Zuhause";
 
+    /**
+     * Obergrenze fuer beide Radien. Ein per Hand in die DB geschriebener Ausreisser
+     * (fehlendes Komma, Meter/Kilometer verwechselt) wuerde die halbe Welt zum Zuhause
+     * machen und die Entitaet dauerhaft auf "zu Hause" einfrieren – die unsichere
+     * Richtung fuer einen darauf gebauten Alarm.
+     */
+    static final double MAX_RADIUS_METERS = 100_000;
+
     private final ApplicationSettingsService applicationSettings;
     private final AuditService auditService;
 
@@ -123,7 +131,7 @@ public class TractiveHomeSettingsService {
         }
         try {
             double value = Double.parseDouble(raw);
-            if (!Double.isFinite(value) || value <= 0) {
+            if (!Double.isFinite(value) || value <= 0 || value > MAX_RADIUS_METERS) {
                 log.warn("Unplausibler Wert '{}' fuer {}, nutze {}", raw, key, defaultValue);
                 return defaultValue;
             }
