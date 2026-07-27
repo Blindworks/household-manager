@@ -125,6 +125,14 @@
     </changeSet>
 
     <changeSet id="20260727-0044-b3" author="household-manager">
+        <!-- Fehlt die alte Spalte, hat eine fruehere Fassung die Migration bereits vollstaendig
+             ausgefuehrt (category_id gefuellt, NOT NULL, Fremdschluessel) — dann ist hier nichts
+             mehr zu tun und das UPDATE waere sogar ein Syntaxfehler. Siehe -b1 zur Reihenfolge
+             von preConditions und comment. -->
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="calendar_events" columnName="category"/>
+        </preConditions>
+
         <comment>Schritt 2/3: Daten umschreiben und category_id verbindlich machen. Bricht bei unbekanntem Enum-Text ab.</comment>
 
         <sql>
