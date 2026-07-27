@@ -934,6 +934,13 @@ describe('CalendarComponent', () => {
     // die Warnung selbst zugesichert; eine reine Anzeigepruefung ginge daneben.
     const warn = spyOn(console, 'warn');
     loadInitial([verschoben, regulaer]);
+    // Zweiter Reconcile-Durchlauf, und zwar bewusst: Angulars @for prueft die Schluessel
+    // erst gegen eine bereits gefuellte Live-Collection. Beim ersten Rendern ist
+    // liveEndIdx = -1, die Hauptschleife laeuft null Mal, und recordDuplicateKeys wird nie
+    // erreicht. Heute traegt der Nachweis nur, weil detectChanges() intern checkNoChanges()
+    // nachschiebt - ein implizites Detail: mit detectChanges(false) oder nach einer
+    // Umstellung auf zoneless waere dieser Test lautlos wirkungslos und bliebe gruen.
+    fixture.detectChanges();
 
     expect(warn.calls.allArgs().join(' ')).not.toContain('NG0955');
     const titles = Array.from(dayCell('2026-08-19').querySelectorAll('.calendar__chip-title'))

@@ -81,7 +81,8 @@
                 }
                 <span class="calendar__chip-title">{{ chip.title }}</span>
                 <!-- track $index: zwei Personen koennen denselben Anfangsbuchstaben haben,
-                     doppelte Track-Keys sind in @for ein Laufzeitfehler. -->
+                     der Buchstabe waere also kein eindeutiger Schluessel (Folgen siehe
+                     Kommentar am Chip-@for weiter oben). -->
                 @for (initial of chip.initials; track $index) {
                   <span class="calendar__chip-initial" aria-hidden="true">{{ initial }}</span>
                 }
