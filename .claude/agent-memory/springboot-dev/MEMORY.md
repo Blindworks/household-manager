@@ -80,6 +80,7 @@ com.household.manager/
 ## Links to Detailed Notes
 - [usermanagement-tasks-10-12.md](usermanagement-tasks-10-12.md) - AppUserService/Bootstrap, Nuki KIOSK-lock-only rule, Admin-REST-API; strict-Mockito lenient() fix for plan test template
 - [usermanagement-tasks-13-14.md](usermanagement-tasks-13-14.md) - Audit-Verdrahtung (Chokepoints, Telegram-ThreadLocal, FLOW-Aktor); WebMvc-Slice-Fallstricke: DisabledUserSessionFilter braucht AppUserRepository-Stub, GlobalExceptionHandler verschluckt NoResourceFoundException zu 500
+- [join-table-replace-pattern.md](join-table-replace-pattern.md) - Zuordnungstabellen als Differenz pflegen, nie delete-all+insert-all; Mock-Tests koennen den Flush-Reihenfolge-Fehler nicht sehen
 - [liquibase-changeset-id-planning.md](liquibase-changeset-id-planning.md) - always re-check the changelog directory for the actual next free date-ID before creating a changeset; plan docs can go stale between writing and execution
 - [bounded-discovery-queries.md](bounded-discovery-queries.md) - discovery/distinct queries over append-only history tables must be time-bounded, not full scans
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
