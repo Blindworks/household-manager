@@ -36,7 +36,7 @@
           <td><input type="checkbox" [name]="'en-' + user.id" [(ngModel)]="user.enabled"></td>
           <td>
             <button type="button" (click)="save(user)">Speichern</button>
-            <button type="button" (click)="changePassword(user)">Passwort</button>
+            <button type="button" class="ghost" (click)="changePassword(user)">Passwort</button>
           </td>
         </tr>
       }

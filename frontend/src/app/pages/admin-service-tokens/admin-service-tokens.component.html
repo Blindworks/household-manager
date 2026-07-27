@@ -35,7 +35,7 @@
           <td>{{ token.lastUsedAt ? (token.lastUsedAt | date: 'dd.MM.yyyy HH:mm') : 'nie' }}</td>
           <td>
             @if (token.enabled) {
-              <button type="button" (click)="revoke(token)">Widerrufen</button>
+              <button type="button" class="danger" (click)="revoke(token)">Widerrufen</button>
             }
           </td>
         </tr>
