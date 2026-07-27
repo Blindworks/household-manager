@@ -120,6 +120,48 @@ class CalendarCategoryServiceTest {
     }
 
     @Test
+    void uebernimmtFarbeIconUndReihenfolgeBeimAendern() {
+        when(repository.findById(7L)).thenReturn(Optional.of(existing()));
+        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
+
+        CalendarCategoryResponse response = service.update(7L, new CalendarCategoryRequest(
+                "Arbeit", "#1e88e5", "work", 12, true));
+
+        assertThat(response.color()).isEqualTo("#1e88e5");
+        assertThat(response.icon()).isEqualTo("work");
+        assertThat(response.sortOrder()).isEqualTo(12);
+    }
+
+    /**
+     * Die Admin-Seite und die Auswahlliste verlassen sich auf die Reihenfolge der
+     * Kategorien — list() muss die sortierende Abfrage nutzen und darf sie nicht
+     * nachtraeglich umsortieren.
+     */
+    @Test
+    void liefertDieKategorienInDerSortierungDesRepositories() {
+        CalendarCategory zuerst = CalendarCategory.builder()
+                .id(1L).key("muell").name("Muellabfuhr").color("#8d6e63")
+                .sortOrder(1).active(true).build();
+        when(repository.findAllByOrderBySortOrderAscNameAsc())
+                .thenReturn(List.of(zuerst, existing()));
+
+        List<CalendarCategoryResponse> categories = service.list();
+
+        assertThat(categories).extracting(CalendarCategoryResponse::key)
+                .containsExactly("muell", "arbeit");
+        verify(repository, never()).findAll();
+    }
+
+    @Test
+    void weistEinenLeerenNamenAb() {
+        assertThatThrownBy(() -> service.create(new CalendarCategoryRequest(
+                "   ", "#4caf50", null, 1, true)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Name");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void weistEineUngueltigeFarbeAb() {
         assertThatThrownBy(() -> service.create(new CalendarCategoryRequest(
                 "Arbeit", "rot", null, 1, true)))

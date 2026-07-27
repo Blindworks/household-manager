@@ -9,6 +9,4 @@ public interface CalendarCategoryRepository extends JpaRepository<CalendarCatego
 
     /** Anzeigereihenfolge des Admin-Bereichs und der Auswahlliste. */
     List<CalendarCategory> findAllByOrderBySortOrderAscNameAsc();
-
-    boolean existsByKey(String key);
 }

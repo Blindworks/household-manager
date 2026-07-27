@@ -34,8 +34,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -141,13 +143,35 @@ class SecurityRulesTest {
         mockMvc.perform(get("/v1/calendar/categories")).andExpect(status().isOk());
     }
 
+    /**
+     * Anlegen, Aendern und Loeschen haengen an je einem eigenen methodenspezifischen
+     * Matcher — jede der drei Zeilen braucht ihren eigenen Test, sonst faellt der
+     * Wegfall einer davon niemandem auf.
+     */
     @Test
     @WithMockUser(roles = "MEMBER")
-    void memberDarfKategorienNichtAendern() throws Exception {
+    void memberDarfKategorienNichtAnlegen() throws Exception {
         mockMvc.perform(post("/v1/calendar/categories")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Test\",\"color\":\"#4caf50\",\"sortOrder\":1,\"active\":true}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKategorienNichtUmbenennen() throws Exception {
+        mockMvc.perform(put("/v1/calendar/categories/1")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test\",\"color\":\"#4caf50\",\"sortOrder\":1,\"active\":true}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKategorienNichtLoeschen() throws Exception {
+        mockMvc.perform(delete("/v1/calendar/categories/1").with(csrf()))
                 .andExpect(status().isForbidden());
     }
 
