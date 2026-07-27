@@ -200,4 +200,22 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Die generische Regel GET /v1/** laesst KIOSK lesen. Nur weil der ADMIN-Block in
+     * SecurityConfig davor steht, bleibt die Home-Definition dem Wandtablet verborgen –
+     * dieser Test haelt genau diese Reihenfolge fest.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieHomeEinstellungenNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/tractive/home-settings")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieHomeEinstellungenLesen() throws Exception {
+        // Kein TractiveHomeSettingsController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(get("/v1/tractive/home-settings")).andExpect(status().isNotFound());
+    }
+
 }

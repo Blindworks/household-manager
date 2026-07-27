@@ -1,0 +1,73 @@
+package com.household.manager.tractive;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+/**
+ * Pflege der Home-Definition im Admin-Bereich.
+ *
+ * <p>Der Zugriff ist ueber die Matcher-Reihenfolge in
+ * {@code SecurityConfig} auf ADMIN beschraenkt – die generische Regel
+ * {@code GET /v1/**} wuerde sonst auch dem Kiosk-Tablet das Lesen erlauben.
+ */
+@RestController
+@RequestMapping("/v1/tractive/home-settings")
+@RequiredArgsConstructor
+public class TractiveHomeSettingsController {
+
+    private final TractiveHomeSettingsService settingsService;
+
+    @GetMapping
+    public ResponseEntity<TractiveHomeSettings> get() {
+        return ResponseEntity.ok(settingsService.getSettings());
+    }
+
+    @PutMapping
+    public ResponseEntity<TractiveHomeSettings> update(@RequestBody TractiveHomeSettings settings) {
+        validate(settings);
+        settingsService.saveSettings(settings);
+        return ResponseEntity.ok(settingsService.getSettings());
+    }
+
+    /**
+     * Serverseitig, nicht nur im Formular: ein vertippter Breitengrad darf nicht in die
+     * Datenbank, weil er dort still zu "nicht konfiguriert" wird und die Entitaet
+     * verschwinden laesst.
+     */
+    private void validate(TractiveHomeSettings settings) {
+        boolean hasLatitude = settings.homeLatitude() != null;
+        boolean hasLongitude = settings.homeLongitude() != null;
+        if (hasLatitude != hasLongitude) {
+            throw badRequest("Breiten- und Laengengrad muessen gemeinsam gesetzt oder gemeinsam leer sein.");
+        }
+        if (hasLatitude && Math.abs(settings.homeLatitude()) > 90) {
+            throw badRequest("Der Breitengrad muss zwischen -90 und 90 liegen.");
+        }
+        if (hasLongitude && Math.abs(settings.homeLongitude()) > 180) {
+            throw badRequest("Der Laengengrad muss zwischen -180 und 180 liegen.");
+        }
+        if (settings.homeRadiusMeters() <= 0) {
+            throw badRequest("Der Home-Radius muss groesser als 0 sein.");
+        }
+        if (settings.homeArrivalRadiusMeters() <= 0) {
+            throw badRequest("Der Ankunftsradius muss groesser als 0 sein.");
+        }
+        if (settings.poweredOffAfterMinutes() <= 0) {
+            throw badRequest("Die Stille-Schwelle muss groesser als 0 Minuten sein.");
+        }
+        if (settings.poweredOffMinBatteryPercent() < 0 || settings.poweredOffMinBatteryPercent() > 100) {
+            throw badRequest("Der Mindest-Akkustand muss zwischen 0 und 100 Prozent liegen.");
+        }
+    }
+
+    private ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+}
