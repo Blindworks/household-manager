@@ -2,7 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { CalendarComponent } from './calendar.component';
+import { AuthService } from '../../services/auth.service';
 import { CalendarEvent, CalendarOccurrence } from '../../models/calendar-event.model';
+import { CalendarCategory, CalendarCategoryRef } from '../../models/calendar-category.model';
+import { HouseholdUser } from '../../models/household-user.model';
 
 /** August 2026: fester Testmonat, damit das Raster (und damit from/to) deterministisch ist. */
 const VIEW_YEAR = 2026;
@@ -14,13 +17,37 @@ const JULY_TO = '2026-08-02';
 const SEPTEMBER_FROM = '2026-08-31';
 const SEPTEMBER_TO = '2026-10-04';
 
+/** Gepflegte Kategorien, wie GET /calendar/categories sie liefert. */
+const HEALTH: CalendarCategoryRef =
+  { id: 3, key: 'health', name: 'Gesundheit', color: '#e57373', icon: null };
+const HOUSEHOLD: CalendarCategoryRef =
+  { id: 4, key: 'household', name: 'Haushalt', color: '#81c784', icon: null };
+
+/**
+ * Die deaktivierte Kategorie steht bewusst vorn: so faellt auf, wenn die Vorbelegung eines
+ * neuen Termins die erste Kategorie der Liste statt der ersten *aktiven* nimmt.
+ */
+const CATEGORIES: CalendarCategory[] = [
+  { id: 8, key: 'archiv', name: 'Archiv', color: '#90a4ae', icon: null, sortOrder: 1, active: false },
+  { ...HEALTH, sortOrder: 3, active: true },
+  { ...HOUSEHOLD, sortOrder: 4, active: true }
+];
+
+/** Der deaktivierte Nutzer gehoert nicht in die Personenauswahl. */
+const USERS: HouseholdUser[] = [
+  { id: 10, displayName: 'Benedikt', enabled: true },
+  { id: 11, displayName: 'Anna', enabled: true },
+  { id: 12, displayName: 'Ausgezogen', enabled: false }
+];
+
 const SINGLE_OCCURRENCE: CalendarOccurrence = {
   eventId: 1,
   occurrenceDate: '2026-08-10',
   recurrenceDate: null,
   title: 'Zahnarzt',
   notes: null,
-  category: 'HEALTH',
+  category: HEALTH,
+  persons: [],
   allDay: true,
   startTime: null,
   endTime: null,
@@ -33,7 +60,8 @@ const SINGLE_EVENT: CalendarEvent = {
   id: 1,
   title: 'Zahnarzt',
   notes: null,
-  category: 'HEALTH',
+  category: HEALTH,
+  persons: [],
   allDay: true,
   startDate: '2026-08-10',
   startTime: null,
@@ -49,7 +77,8 @@ const RECURRING_OCCURRENCE: CalendarOccurrence = {
   recurrenceDate: '2026-08-12',
   title: 'Muell',
   notes: null,
-  category: 'HOUSEHOLD',
+  category: HOUSEHOLD,
+  persons: [],
   allDay: true,
   startTime: null,
   endTime: null,
@@ -62,7 +91,8 @@ const RECURRING_EVENT: CalendarEvent = {
   id: 2,
   title: 'Muell',
   notes: null,
-  category: 'HOUSEHOLD',
+  category: HOUSEHOLD,
+  persons: [],
   allDay: true,
   startDate: '2026-01-07',
   startTime: null,
@@ -101,9 +131,15 @@ describe('CalendarComponent', () => {
       && req.params.get('to') === to);
   }
 
-  /** Loest den Initial-Load aus (ngOnInit via erstem detectChanges) und beantwortet ihn. */
-  function loadInitial(occurrences: CalendarOccurrence[] = []): void {
+  /**
+   * Loest den Initial-Load aus (ngOnInit via erstem detectChanges) und beantwortet alle
+   * drei Abrufe: Kategorien und Nutzer (Stammdaten) sowie das Monatsraster.
+   */
+  function loadInitial(occurrences: CalendarOccurrence[] = [],
+                       categories: CalendarCategory[] = CATEGORIES): void {
     fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories').flush(categories);
+    httpMock.expectOne('/api/v1/users').flush(USERS);
     expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(occurrences);
     fixture.detectChanges();
   }
@@ -323,6 +359,31 @@ describe('CalendarComponent', () => {
     return btn as HTMLButtonElement;
   }
 
+  /**
+   * Sucht einen Button innerhalb einer Gruppe. Noetig, weil Personennamen auf der Seite
+   * doppelt vorkommen: als Umschalter im Dialog und als Knopf der Filterleiste - das
+   * globale findButton faende sonst den erstbesten und damit oft den falschen.
+   */
+  function findButtonIn(groupSelector: string, label: string): HTMLButtonElement {
+    const btn = Array.from((fixture.nativeElement as HTMLElement)
+      .querySelectorAll<HTMLButtonElement>(groupSelector))
+      .find(b => b.textContent?.trim() === label);
+    if (!btn) {
+      throw new Error(`Button "${label}" in "${groupSelector}" nicht gefunden.`);
+    }
+    return btn;
+  }
+
+  /** Personen-Umschalter im Termindialog. */
+  function findPersonButton(label: string): HTMLButtonElement {
+    return findButtonIn('.calendar__person', label);
+  }
+
+  /** Knopf der Filterleiste ueber dem Monatsraster. */
+  function findFilterButton(label: string): HTMLButtonElement {
+    return findButtonIn('.calendar__filter', label);
+  }
+
   function setInputValue(selector: string, value: string): void {
     const input = requireElement<HTMLInputElement>(selector);
     input.value = value;
@@ -510,5 +571,542 @@ describe('CalendarComponent', () => {
     fixture.detectChanges();
 
     findButton('Abbrechen').click();
+  });
+
+  // --- Kategorien als Stammdaten, Personenzuordnung ------------------------------------
+
+  /** Startet die Seite mit fehlgeschlagenem Kategorien-Abruf; Nutzer und Raster gelingen. */
+  function loadWithFailedCategories(occurrences: CalendarOccurrence[] = []): void {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories')
+      .flush({ message: 'kaputt' }, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('/api/v1/users').flush(USERS);
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(occurrences);
+    fixture.detectChanges();
+  }
+
+  it('meldet einen Kategorien-Ladefehler im Banner und oeffnet den Termindialog nicht', () => {
+    loadWithFailedCategories([SINGLE_OCCURRENCE]);
+
+    // Ohne das Banner saehe die Seite normal aus, obwohl kein Dialog mehr aufgeht -
+    // das waere schlimmer als die leere Auswahlliste, die der Guard verhindern soll.
+    expect(fixture.componentInstance.categoryError).toBeTruthy();
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('.calendar__error');
+    expect(banner?.textContent).toContain('Kategorien konnten nicht geladen werden');
+
+    // Ein Dialog mit leerer Kategorieliste saehe aus wie "es gibt keine Kategorien"
+    // und verleitete zu falschen Eingaben.
+    dayCell('2026-08-11').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeFalse();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.calendar__dialog')).toBeNull();
+
+    // Auch der Bearbeiten-Weg bleibt zu; httpMock.verify() im afterEach bestaetigt
+    // zusaetzlich, dass gar keine Stammdaten nachgeladen wurden.
+    clickChip('2026-08-10');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeFalse();
+  });
+
+  it('das Kategorien-Banner ueberlebt einen Monatswechsel', () => {
+    // Der Monatsabruf leert im Erfolgsfall loadError. Teilten sich beide Fehler ein Feld,
+    // waere das Banner nach dem ersten erfolgreichen Abruf spurlos weg - und mit ihm die
+    // einzige Erklaerung dafuer, warum der Termindialog nicht mehr aufgeht.
+    loadWithFailedCategories();
+
+    requireElement<HTMLButtonElement>('[aria-label="Naechster Monat"]').click();
+    expectOccurrencesRequest(SEPTEMBER_FROM, SEPTEMBER_TO).flush([]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.viewMonth).toBe(9);
+    expect(fixture.componentInstance.categoryError).toBeTruthy();
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('.calendar__error');
+    expect(banner?.textContent).toContain('Kategorien konnten nicht geladen werden');
+
+    // Und der Dialog bleibt auch im neuen Monat zu.
+    dayCell('2026-09-10').click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.dialogOpen).toBeFalse();
+  });
+
+  it('haelt eine inzwischen deaktivierte Kategorie in der Auswahlliste, wenn der Termin sie traegt', () => {
+    // Sonst waere die Kategorie des Termins nicht waehlbar und ein Speichern wuerde ihn
+    // still umkategorisieren.
+    const retiredRef: CalendarCategoryRef =
+      { id: 9, key: 'urlaub', name: 'Urlaub', color: '#9575cd', icon: null };
+    const retired: CalendarCategory = { ...retiredRef, sortOrder: 9, active: false };
+    const occurrence: CalendarOccurrence = { ...SINGLE_OCCURRENCE, category: retiredRef };
+
+    loadInitial([occurrence], [...CATEGORIES, retired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, category: retiredRef });
+    fixture.detectChanges();
+
+    const options = Array.from(requireElement<HTMLSelectElement>('select[name="categoryId"]').options)
+      .map(option => option.textContent?.trim());
+    expect(options).toContain('Urlaub (deaktiviert)');
+    expect(options).toContain('Gesundheit');
+    expect(fixture.componentInstance.form.categoryId).toBe(9);
+
+    findButton('Speichern').click();
+    const put = httpMock.expectOne('/api/v1/calendar/events/1');
+    expect(put.request.body.categoryId).toBe(9);
+    put.flush({ ...SINGLE_EVENT, category: retiredRef });
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('uebernimmt die Personen des Termins ins Formular und sendet sie beim Speichern wieder mit', () => {
+    // PUT ist eine Vollersetzung: was der Dialog nicht mitschickt, verschwindet still.
+    const withPerson: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE, persons: [{ id: 11, displayName: 'Anna' }]
+    };
+    loadInitial([withPerson]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1')
+      .flush({ ...SINGLE_EVENT, persons: [{ id: 11, displayName: 'Anna' }] });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.personUserIds).toEqual([11]);
+
+    findButton('Speichern').click();
+    const put = httpMock.expectOne('/api/v1/calendar/events/1');
+    expect(put.request.body.personUserIds).toEqual([11]);
+    put.flush(SINGLE_EVENT);
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('der Personen-Umschalter nimmt eine Person auf und wieder heraus', () => {
+    loadInitial([]);
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.form.personUserIds).toEqual([]);
+
+    const personNames = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__person')
+    ).map(button => button.textContent?.trim());
+    expect(personNames).toEqual(['Benedikt', 'Anna']);
+
+    findPersonButton('Anna').click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([11]);
+
+    findPersonButton('Benedikt').click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([11, 10]);
+
+    findPersonButton('Anna').click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([10]);
+
+    setInputValue('input[name="title"]', 'Elternabend');
+    findButton('Speichern').click();
+    const post = httpMock.expectOne('/api/v1/calendar/events');
+    expect(post.request.body.personUserIds).toEqual([10]);
+    // Vorbelegung eines neuen Termins: die erste *aktive* Kategorie, nicht die erste der Liste.
+    expect(post.request.body.categoryId).toBe(HEALTH.id);
+    post.flush({ ...SINGLE_EVENT, id: 55 });
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('zeigt die Initialen der zugeordneten Personen auf dem Termin-Chip', () => {
+    const withPersons: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE,
+      persons: [{ id: 10, displayName: 'Benedikt' }, { id: 11, displayName: 'anna' }]
+    };
+    loadInitial([withPersons]);
+
+    const initials = Array.from(dayCell('2026-08-10').querySelectorAll('.calendar__chip-initial'))
+      .map(el => el.textContent?.trim());
+    expect(initials).toEqual(['B', 'A']);
+  });
+
+  it('deckelt die Initialen und nennt die vollen Namen in der Chip-Beschriftung', () => {
+    // Ungedeckelt verdraengen die Initialen den Titel - und eine einzelne Initiale ist
+    // zwischen "Anna" und "Anton" nicht zu unterscheiden.
+    const crowded: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE,
+      persons: [
+        { id: 10, displayName: 'Anna' }, { id: 11, displayName: 'Anton' },
+        { id: 12, displayName: 'Bert' }, { id: 13, displayName: 'Clara' }
+      ]
+    };
+    loadInitial([crowded]);
+
+    const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
+    const badges = Array.from(chip.querySelectorAll('.calendar__chip-initial'))
+      .map(el => el.textContent?.trim());
+    expect(badges).toEqual(['A', 'A', '+2']);
+
+    // Der Titel steht in einem eigenen, schrumpfbaren Element statt als nackter Textknoten.
+    expect(chip.querySelector('.calendar__chip-title')?.textContent?.trim()).toBe('Zahnarzt');
+    expect(chip.getAttribute('title')).toBe('Zahnarzt — Anna, Anton, Bert, Clara');
+    expect(chip.getAttribute('aria-label')).toBe('Zahnarzt — Anna, Anton, Bert, Clara');
+  });
+
+  it('haelt eine inzwischen deaktivierte Person waehlbar, damit sie abwaehlbar bleibt', () => {
+    // "Ausgezogen" ist deaktiviert und damit nicht in der Auswahlliste - ohne Sonderfall
+    // haenge die Zuordnung unsichtbar am Termin und ginge beim Speichern wieder mit.
+    const assigned = { id: 12, displayName: 'Ausgezogen' };
+    const withRetired: CalendarOccurrence = { ...SINGLE_OCCURRENCE, persons: [assigned] };
+    loadInitial([withRetired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, persons: [assigned] });
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.form.personUserIds).toEqual([12]);
+    const retiredButton = findPersonButton('Ausgezogen (deaktiviert)');
+    expect(retiredButton.getAttribute('aria-pressed')).toBe('true');
+
+    retiredButton.click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([]);
+    // Und sie bleibt in der Liste, falls der Nutzer es sich anders ueberlegt.
+    expect(findPersonButton('Ausgezogen (deaktiviert)').getAttribute('aria-pressed')).toBe('false');
+
+    findButton('Speichern').click();
+    const put = httpMock.expectOne('/api/v1/calendar/events/1');
+    expect(put.request.body.personUserIds).toEqual([]);
+    put.flush(SINGLE_EVENT);
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('ein neuer Termin erbt die Sonderfaelle des zuvor bearbeiteten nicht', () => {
+    const retiredRef: CalendarCategoryRef =
+      { id: 9, key: 'urlaub', name: 'Urlaub', color: '#9575cd', icon: null };
+    const retired: CalendarCategory = { ...retiredRef, sortOrder: 9, active: false };
+    const special: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE, category: retiredRef, persons: [{ id: 12, displayName: 'Ausgezogen' }]
+    };
+
+    loadInitial([special], [...CATEGORIES, retired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1')
+      .flush({ ...SINGLE_EVENT, category: retiredRef, persons: special.persons });
+    fixture.detectChanges();
+    expect(findPersonButton('Ausgezogen (deaktiviert)')).toBeTruthy();
+
+    findButton('Abbrechen').click();
+    fixture.detectChanges();
+    dayCell('2026-08-11').click();
+    fixture.detectChanges();
+
+    // Beide Sonderoptionen gehoerten zum vorigen Termin und haben hier nichts zu suchen.
+    const personNames = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__person')
+    ).map(button => button.textContent?.trim());
+    expect(personNames).toEqual(['Benedikt', 'Anna']);
+
+    const options = Array.from(
+      requireElement<HTMLSelectElement>('select[name="categoryId"]').options
+    ).map(option => option.textContent?.trim());
+    expect(options).not.toContain('Urlaub (deaktiviert)');
+
+    findButton('Abbrechen').click();
+  });
+
+  it('haelt die deaktivierte Kategorie waehlbar, auch nachdem einmal weggewaehlt wurde', () => {
+    // Aus dem Formularwert abgeleitet verschwaende die Option beim ersten Wegwaehlen;
+    // zurueck kaeme der Nutzer nur durch Verwerfen des Dialogs samt aller Aenderungen.
+    const retiredRef: CalendarCategoryRef =
+      { id: 9, key: 'urlaub', name: 'Urlaub', color: '#9575cd', icon: null };
+    const retired: CalendarCategory = { ...retiredRef, sortOrder: 9, active: false };
+    const occurrence: CalendarOccurrence = { ...SINGLE_OCCURRENCE, category: retiredRef };
+
+    loadInitial([occurrence], [...CATEGORIES, retired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, category: retiredRef });
+    fixture.detectChanges();
+
+    const select = requireElement<HTMLSelectElement>('select[name="categoryId"]');
+    select.value = select.options[1].value; // weg von "Urlaub (deaktiviert)"
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.categoryId).toBe(HEALTH.id);
+    const options = Array.from(
+      requireElement<HTMLSelectElement>('select[name="categoryId"]').options
+    ).map(option => option.textContent?.trim());
+    expect(options).toContain('Urlaub (deaktiviert)');
+
+    findButton('Abbrechen').click();
+  });
+
+  /** Startet die Seite mit fehlgeschlagenem Nutzer-Abruf; Kategorien und Raster gelingen. */
+  function loadWithFailedUsers(occurrences: CalendarOccurrence[] = []): void {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories').flush(CATEGORIES);
+    // Ohne strukturierten Body: so greift der Fallbacktext aus HouseholdUserService.
+    httpMock.expectOne('/api/v1/users').flush(null, { status: 500, statusText: 'Server Error' });
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(occurrences);
+    fixture.detectChanges();
+  }
+
+  it('meldet einen Ausfall der Personenliste, laesst den Dialog aber offen', () => {
+    // Anders als bei den Kategorien: ein Termin ohne Personen ist gueltig. Ohne Meldung
+    // saehe die leere Liste aber aus wie "es gibt keine Haushaltsmitglieder".
+    loadWithFailedUsers();
+
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeTrue();
+    expect(fixture.componentInstance.userError).toBeTruthy();
+    const dialogText = requireElement('.calendar__dialog').textContent ?? '';
+    expect(dialogText).toContain('Haushaltsmitglieder konnten nicht geladen werden');
+    expect(dialogText).not.toContain('betrifft den ganzen Haushalt');
+
+    findButton('Abbrechen').click();
+  });
+
+  it('nennt eine zugeordnete Person nicht "(deaktiviert)", wenn die Nutzerliste ausgefallen ist', () => {
+    // Das Suffix aus der blossen Abwesenheit in der aktiven Liste zu erschliessen, ist bei
+    // einem Ausfall des Abrufs eine glatte Falschaussage: die Liste ist dann leer, und
+    // JEDE zugeordnete Person traege es - auch die quicklebendigen. Genau die unbelegte
+    // Behauptung, wegen der auch der Haushalts-Hinweis in diesem Fall unterdrueckt wird.
+    const assigned = { id: 11, displayName: 'Anna' }; // in USERS aktiv, aber ungeladen
+    const withPerson: CalendarOccurrence = { ...SINGLE_OCCURRENCE, persons: [assigned] };
+    loadWithFailedUsers([withPerson]);
+
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, persons: [assigned] });
+    fixture.detectChanges();
+
+    // Waehlbar bleibt sie (sonst waere die Zuordnung nicht loesbar) - nur eben unbeschriftet.
+    const labels = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__person')
+    ).map(button => button.textContent?.trim());
+    expect(labels).toEqual(['Anna']);
+
+    findButton('Abbrechen').click();
+  });
+
+  it('verweigert das Speichern, wenn keine Kategorie waehlbar ist', () => {
+    // Erreichbar, sobald die Admin-Seite alle Kategorien deaktiviert: die Stammdaten sind
+    // geladen (der Dialog oeffnet), aber die Auswahlliste ist leer.
+    const allRetired = CATEGORIES.map(category => ({ ...category, active: false }));
+    loadInitial([], allRetired);
+
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.categoryId).toBeNull();
+
+    setInputValue('input[name="title"]', 'Ohne Kategorie');
+    findButton('Speichern').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeTrue();
+    expect(fixture.componentInstance.dialogError).toContain('Kategorie');
+    // httpMock.verify() im afterEach bestaetigt, dass gar kein Request feuerte.
+
+    findButton('Abbrechen').click();
+  });
+
+  it('vergibt zwei Vorkommen derselben Serie am selben Tag eindeutige Track-Schluessel', () => {
+    // Ueber die Oberflaeche erreichbar: ein Serien-Vorkommen per "Nur diesen Termin" auf
+    // einen anderen Tag DERSELBEN Serie verschieben. Die Override-Zeile meldet die
+    // Master-Id als eventId und den neuen Tag als occurrenceDate; unterdrueckt wird
+    // serverseitig nur das urspruengliche Datum, das regulaere Vorkommen des Zieltages
+    // bleibt also stehen. Ein Track-Key aus eventId+occurrenceDate waere hier doppelt.
+    const verschoben: CalendarOccurrence = {
+      ...RECURRING_OCCURRENCE, occurrenceDate: '2026-08-19', recurrenceDate: '2026-08-12',
+      title: 'Muell (verschoben)'
+    };
+    const regulaer: CalendarOccurrence = {
+      ...RECURRING_OCCURRENCE, occurrenceDate: '2026-08-19', recurrenceDate: '2026-08-19'
+    };
+    // NG0955 ist in Angular 19 eine Warnung, kein geworfener Fehler: beim ersten Rendern
+    // sieht alles richtig aus, und im Produktionsbuild entfaellt die Pruefung ganz -
+    // uebrig bliebe fehlerhafte DOM-Wiederverwendung beim naechsten Aktualisieren, bei
+    // der ein Klick auf Chip A das Vorkommen B zum Bearbeiten oeffnet. Deshalb wird hier
+    // die Warnung selbst zugesichert; eine reine Anzeigepruefung ginge daneben.
+    const warn = spyOn(console, 'warn');
+    loadInitial([verschoben, regulaer]);
+    // Zweiter Reconcile-Durchlauf, und zwar bewusst: Angulars @for prueft die Schluessel
+    // erst gegen eine bereits gefuellte Live-Collection. Beim ersten Rendern ist
+    // liveEndIdx = -1, die Hauptschleife laeuft null Mal, und recordDuplicateKeys wird nie
+    // erreicht. Heute traegt der Nachweis nur, weil detectChanges() intern checkNoChanges()
+    // nachschiebt - ein implizites Detail: mit detectChanges(false) oder nach einer
+    // Umstellung auf zoneless waere dieser Test lautlos wirkungslos und bliebe gruen.
+    fixture.detectChanges();
+
+    expect(warn.calls.allArgs().join(' ')).not.toContain('NG0955');
+    const titles = Array.from(dayCell('2026-08-19').querySelectorAll('.calendar__chip-title'))
+      .map(el => el.textContent?.trim());
+    expect(titles).toEqual(['Muell (verschoben)', 'Muell']);
+  });
+
+  it('zeigt die Uhrzeit eines Termins mit Uhrzeit auf dem Chip', () => {
+    // Die Aufbereitung prueft calendar-day-view.util.spec; hier geht es um die
+    // Verdrahtung - das Zeit-Element haengt an einem @if und wuerde sonst unbemerkt
+    // aus dem Template fallen.
+    const abends: CalendarOccurrence = { ...SINGLE_OCCURRENCE, allDay: false, startTime: '18:30' };
+    loadInitial([abends]);
+
+    const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
+    expect(chip.querySelector('.calendar__chip-time')?.textContent?.trim()).toBe('18:30');
+    expect(chip.getAttribute('title')).toBe('18:30 Zahnarzt');
+  });
+
+  it('faerbt den Chip mit der eingebetteten Kategoriefarbe des Termins', () => {
+    loadInitial([SINGLE_OCCURRENCE]);
+
+    const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
+    expect(chip.style.getPropertyValue('--chip-color')).toBe(HEALTH.color);
+  });
+
+  // --- Filterleiste -------------------------------------------------------------------
+
+  const ANNA = { id: 11, displayName: 'Anna' };
+  const BENEDIKT = { id: 10, displayName: 'Benedikt' };
+
+  /** Drei Termine am selben Tag: einer je Person, einer ohne Zuordnung. */
+  const ANNAS_TERMIN: CalendarOccurrence =
+    { ...SINGLE_OCCURRENCE, eventId: 201, title: 'Annas Termin', persons: [ANNA] };
+  const BENEDIKTS_TERMIN: CalendarOccurrence =
+    { ...SINGLE_OCCURRENCE, eventId: 202, title: 'Benedikts Termin', persons: [BENEDIKT] };
+  const MUELLABFUHR: CalendarOccurrence =
+    { ...SINGLE_OCCURRENCE, eventId: 203, title: 'Muellabfuhr', persons: [] };
+  const ALL_THREE = [ANNAS_TERMIN, BENEDIKTS_TERMIN, MUELLABFUHR];
+
+  /**
+   * Meldet einen Nutzer an, damit currentUserId gesetzt ist. AuthService laedt ihn traege
+   * ueber /v1/auth/me - ohne diesen Anstoss bleibt er null, wie bei Anmeldung per
+   * Service-Token.
+   */
+  function signIn(id: number, displayName: string): void {
+    TestBed.inject(AuthService).ensureLoaded().subscribe();
+    httpMock.expectOne('/api/v1/auth/me').flush({
+      id, username: 'test', displayName, role: 'MEMBER', mustChangePassword: false
+    });
+  }
+
+  /** Sichtbarer Text der Tageszelle, in der alle Filter-Termine liegen. */
+  function filteredDayText(): string {
+    return dayCell('2026-08-10').textContent ?? '';
+  }
+
+  /** Beschriftungen der Filterknoepfe in ihrer Reihenfolge. */
+  function filterLabels(): (string | undefined)[] {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__filter'))
+      .map(button => button.textContent?.trim());
+  }
+
+  it('startet auf "Alle" und zeigt damit jeden Termin', () => {
+    loadInitial(ALL_THREE);
+
+    expect(fixture.componentInstance.personFilter()).toBeNull();
+    expect(findFilterButton('Alle').getAttribute('aria-pressed')).toBe('true');
+    expect(filteredDayText()).toContain('Annas Termin');
+    expect(filteredDayText()).toContain('Benedikts Termin');
+    expect(filteredDayText()).toContain('Muellabfuhr');
+  });
+
+  it('ein Personenfilter zeigt die Termine der gewaehlten Person', () => {
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).toContain('Annas Termin');
+  });
+
+  it('ein Personenfilter zeigt zusaetzlich immer die Termine ohne Zuordnung', () => {
+    // "Meine Termine" heisst "mir zugeordnet ODER den ganzen Haushalt betreffend". Sonst
+    // verschwaende die Muellabfuhr genau dann, wenn jemand auf sich selbst filtert - der
+    // Fall, in dem sie am ehesten uebersehen wird.
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).toContain('Muellabfuhr');
+  });
+
+  it('ein Personenfilter blendet die Termine anderer Personen aus', () => {
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).not.toContain('Benedikts Termin');
+  });
+
+  it('der Filterwechsel arbeitet auf den geladenen Vorkommen, ohne neu abzurufen', () => {
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+    findFilterButton('Alle').click();
+    fixture.detectChanges();
+
+    // Ein zusaetzlicher Abruf bliebe hier als offene Anfrage haengen.
+    httpMock.verify();
+    expect(filteredDayText()).toContain('Benedikts Termin');
+  });
+
+  it('"Meine" filtert auf den angemeldeten Nutzer', () => {
+    signIn(BENEDIKT.id, BENEDIKT.displayName);
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Meine').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.personFilter()).toBe(BENEDIKT.id);
+    expect(filteredDayText()).toContain('Benedikts Termin');
+    expect(filteredDayText()).not.toContain('Annas Termin');
+  });
+
+  it('ohne eigenen Nutzer (Service-Token) gibt es kein "Meine"', () => {
+    loadInitial(ALL_THREE);
+
+    expect(fixture.componentInstance.currentUserId).toBeNull();
+    expect(filterLabels()).toEqual(['Alle', 'Benedikt', 'Anna']);
+  });
+
+  it('der angemeldete Nutzer steht nicht zusaetzlich als eigener Personenknopf da', () => {
+    // Zwei Knoepfe mit demselben Filter waeren gleichzeitig markiert - einer davon
+    // waere ueberfluessig und die doppelte Markierung verwirrend.
+    signIn(BENEDIKT.id, BENEDIKT.displayName);
+    loadInitial(ALL_THREE);
+
+    expect(filterLabels()).toEqual(['Alle', 'Meine', 'Anna']);
+  });
+
+  it('die Leiste bleibt weg, wenn es nichts zu filtern gibt', () => {
+    // Ohne "Meine" und ohne Person bliebe nur "Alle" - eine Leiste, die nichts kann.
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories').flush(CATEGORIES);
+    httpMock.expectOne('/api/v1/users').flush([]);
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(ALL_THREE);
+    fixture.detectChanges();
+
+    expect(filterLabels()).toEqual([]);
+  });
+
+  it('die "+n weitere"-Anzeige zaehlt nur die sichtbaren Termine', () => {
+    const annasVier: CalendarOccurrence[] = [1, 2, 3, 4].map(n => ({
+      ...SINGLE_OCCURRENCE, eventId: 300 + n, title: `Anna ${n}`, persons: [ANNA]
+    }));
+    loadInitial([...annasVier, BENEDIKTS_TERMIN]);
+    expect(filteredDayText()).toContain('+2 weitere');
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).toContain('+1 weitere');
+    expect(filteredDayText()).not.toContain('+2 weitere');
   });
 });

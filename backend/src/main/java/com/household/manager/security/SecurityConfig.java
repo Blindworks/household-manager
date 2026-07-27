@@ -148,6 +148,13 @@ public class SecurityConfig {
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
                                 "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout",
                                 "/v1/tractive/home-settings").hasRole("ADMIN")
+                        // Kategorien: lesen darf jeder Angemeldete ueber die generische
+                        // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
+                        // methodenspezifisch sein — ein methodenloser Matcher wuerde das
+                        // Lesen fuer das Wandtablet mitsperren.
+                        .requestMatchers(HttpMethod.POST, "/v1/calendar/categories").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/v1/calendar/categories/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/calendar/categories/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet

@@ -4,7 +4,9 @@ import { CalendarOccurrence } from '../models/calendar-event.model';
 function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
   return {
     eventId: 1, occurrenceDate: '2026-07-25', recurrenceDate: null,
-    title: 'Zahnarzt', notes: null, category: 'HEALTH', allDay: false,
+    title: 'Zahnarzt', notes: null,
+    category: { id: 3, key: 'health', name: 'Gesundheit', color: '#e57373', icon: null },
+    persons: [], allDay: false,
     startTime: '14:30', endTime: null, endDate: null, recurring: false, daysUntil: 0,
     ...overrides
   };

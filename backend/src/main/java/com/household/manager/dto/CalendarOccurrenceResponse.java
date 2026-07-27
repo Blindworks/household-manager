@@ -1,7 +1,6 @@
 package com.household.manager.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.household.manager.model.entity.CalendarCategory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Ein konkretes (bereits expandiertes) Vorkommen. {@code eventId} zeigt immer auf die
@@ -31,7 +31,7 @@ public class CalendarOccurrenceResponse {
 
     private String title;
     private String notes;
-    private CalendarCategory category;
+    private CalendarCategoryView category;
     private boolean allDay;
 
     @JsonFormat(pattern = "HH:mm")
@@ -44,6 +44,9 @@ public class CalendarOccurrenceResponse {
     private LocalDate endDate;
 
     private boolean recurring;
+
+    /** Zugeordnete Personen; leer = Haushaltstermin. */
+    private List<CalendarPersonView> persons;
 
     /** 0 = heute, 1 = morgen. Serverseitig berechnet (Muster WasteCollectionEventResponse). */
     private long daysUntil;

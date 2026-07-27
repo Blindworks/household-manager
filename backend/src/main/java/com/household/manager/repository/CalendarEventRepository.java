@@ -15,4 +15,7 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
             Long recurringParentId, LocalDate recurrenceDate);
 
     void deleteByRecurringParentId(Long recurringParentId);
+
+    /** Grundlage des Loeschschutzes: eine genutzte Kategorie darf nicht verschwinden. */
+    long countByCategoryId(Long categoryId);
 }

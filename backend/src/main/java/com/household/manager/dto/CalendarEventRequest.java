@@ -1,7 +1,6 @@
 package com.household.manager.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.household.manager.model.entity.CalendarCategory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /** Anlege-/Aenderungsdaten eines Kalendertermins. */
 @Data
@@ -19,7 +19,7 @@ public class CalendarEventRequest {
 
     private String title;
     private String notes;
-    private CalendarCategory category;
+    private Long categoryId;
     private boolean allDay;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -36,4 +36,7 @@ public class CalendarEventRequest {
 
     /** iCal-RRULE; null/leer = Einzeltermin. */
     private String rrule;
+
+    /** Zugeordnete Nutzer; leer oder null = Haushaltstermin. */
+    private List<Long> personUserIds;
 }

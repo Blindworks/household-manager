@@ -1,9 +1,10 @@
 package com.household.manager.calendar;
 
 import com.household.manager.dto.CalendarOccurrenceResponse;
+import com.household.manager.dto.CalendarPersonView;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
-import com.household.manager.model.entity.CalendarCategory;
+import com.household.manager.dto.CalendarCategoryView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +59,8 @@ class CalendarReminderSchedulerTest {
 
     private CalendarOccurrenceResponse occurrenceOn(LocalDate date, boolean allDay, LocalTime startTime) {
         return CalendarOccurrenceResponse.builder()
-                .eventId(1L).title("Zahnarzt").category(CalendarCategory.HEALTH)
+                .eventId(1L).title("Zahnarzt")
+                .category(new CalendarCategoryView(3L, "health", "Gesundheit", "#e57373", null))
                 .allDay(allDay).occurrenceDate(date)
                 .startTime(startTime)
                 .build();
@@ -202,6 +204,39 @@ class CalendarReminderSchedulerTest {
         tickingScheduler.checkDueReminders();
 
         verify(entityStateService, times(1)).reportEvent(any());
+    }
+
+    @Test
+    void meldetZugeordnetePersonenAlsAttribute() {
+        CalendarOccurrenceResponse occ = occurrence(false, LocalTime.of(14, 30));
+        occ.setPersons(List.of(new CalendarPersonView(2L, "Anna")));
+        when(calendarService.getOccurrences(any(), any())).thenReturn(List.of(occ));
+
+        scheduler.fireRemindersBetween(
+                berlin(2026, 7, 25, 14, 29),
+                berlin(2026, 7, 25, 14, 30));
+
+        ArgumentCaptor<EntityStateUpdate> update = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService).reportEvent(update.capture());
+        assertThat(update.getValue().attributes()).containsEntry("persons", List.of("Anna"));
+        assertThat(update.getValue().attributes()).containsEntry("personIds", List.of(2L));
+    }
+
+    @Test
+    void meldetLeereListenFuerHaushaltstermineOhneZugeordnetePersonen() {
+        CalendarOccurrenceResponse occ = occurrence(false, LocalTime.of(14, 30));
+        // occ.getPersons() bleibt null, wie CalendarOccurrenceResponse#builder es ohne
+        // explizite Zuweisung liefert (kein Lombok-Default fuer List-Felder).
+        when(calendarService.getOccurrences(any(), any())).thenReturn(List.of(occ));
+
+        scheduler.fireRemindersBetween(
+                berlin(2026, 7, 25, 14, 29),
+                berlin(2026, 7, 25, 14, 30));
+
+        ArgumentCaptor<EntityStateUpdate> update = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService).reportEvent(update.capture());
+        assertThat(update.getValue().attributes()).containsEntry("persons", List.of());
+        assertThat(update.getValue().attributes()).containsEntry("personIds", List.of());
     }
 
     /** Testbare Clock mit veraenderbarem Instant, um Scheduler-Laeufe ueber Zeit hinweg zu simulieren. */

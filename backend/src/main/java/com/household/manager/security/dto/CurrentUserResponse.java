@@ -4,8 +4,8 @@ import com.household.manager.security.AppUserPrincipal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
-/** Der angemeldete Aktor, wie ihn das Frontend braucht. */
-public record CurrentUserResponse(String username, String displayName, String role,
+/** Der angemeldete Aktor, wie ihn das Frontend braucht. {@code id} ist null bei Service-Tokens. */
+public record CurrentUserResponse(Long id, String username, String displayName, String role,
                                   boolean mustChangePassword) {
 
     public static CurrentUserResponse from(Authentication authentication) {
@@ -16,11 +16,11 @@ public record CurrentUserResponse(String username, String displayName, String ro
                 .findFirst()
                 .orElse("KIOSK");
         boolean isUser = authentication.getPrincipal() instanceof AppUserPrincipal;
-        String displayName = isUser
-                ? ((AppUserPrincipal) authentication.getPrincipal()).getDisplayName()
-                : authentication.getName();
-        boolean mustChangePassword = isUser
-                && ((AppUserPrincipal) authentication.getPrincipal()).isMustChangePassword();
-        return new CurrentUserResponse(authentication.getName(), displayName, role, mustChangePassword);
+        AppUserPrincipal principal = isUser ? (AppUserPrincipal) authentication.getPrincipal() : null;
+        String displayName = isUser ? principal.getDisplayName() : authentication.getName();
+        boolean mustChangePassword = isUser && principal.isMustChangePassword();
+        Long id = isUser ? principal.getId() : null;
+        return new CurrentUserResponse(id, authentication.getName(), displayName, role,
+                mustChangePassword);
     }
 }

@@ -80,6 +80,7 @@ com.household.manager/
 ## Links to Detailed Notes
 - [usermanagement-tasks-10-12.md](usermanagement-tasks-10-12.md) - AppUserService/Bootstrap, Nuki KIOSK-lock-only rule, Admin-REST-API; strict-Mockito lenient() fix for plan test template
 - [usermanagement-tasks-13-14.md](usermanagement-tasks-13-14.md) - Audit-Verdrahtung (Chokepoints, Telegram-ThreadLocal, FLOW-Aktor); WebMvc-Slice-Fallstricke: DisabledUserSessionFilter braucht AppUserRepository-Stub, GlobalExceptionHandler verschluckt NoResourceFoundException zu 500
+- [join-table-replace-pattern.md](join-table-replace-pattern.md) - Zuordnungstabellen als Differenz pflegen, nie delete-all+insert-all; Mock-Tests koennen den Flush-Reihenfolge-Fehler nicht sehen
 - [liquibase-changeset-id-planning.md](liquibase-changeset-id-planning.md) - always re-check the changelog directory for the actual next free date-ID before creating a changeset; plan docs can go stale between writing and execution
 - [bounded-discovery-queries.md](bounded-discovery-queries.md) - discovery/distinct queries over append-only history tables must be time-bounded, not full scans
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
@@ -95,3 +96,6 @@ com.household.manager/
 - [security-matcher-order-testing.md](security-matcher-order-testing.md) - prove an order-dependent SecurityConfig rule matters by temporarily removing it and confirming the test fails; method-less requestMatchers(String...) covers all HTTP methods
 - [double-validation-nan-pitfalls.md](double-validation-nan-pitfalls.md) - every Double comparison with NaN is false (one-sided range checks leak it through); isFinite is redundant when a finite upper bound already excludes NaN/Infinity - verify before assuming
 - [optional-empty-two-reasons.md](optional-empty-two-reasons.md) - resolver Optional.empty() can mean two unrelated causes (no config vs. no data); only one should freeze the entity - add a thin isConfigured()-style probe rather than reshaping the return type
+- [enum-to-lookup-table.md](enum-to-lookup-table.md) - Enum-Spalte zu Stammdatentabelle: ein Commit wegen ddl-auto=validate, Seed-Keys = alte Enum-Namen kleingeschrieben (Flow-Vertrag)
+- [bash-tool-heredoc.md](bash-tool-heredoc.md) - im Bash-Tool nie PowerShell-Here-Strings; `@'...'@` landet als literales @ in der Commit-Message
+- [calendar-persons-categories.md](calendar-persons-categories.md) - Task 5: personIds/persons am Erinnerungs-Event; Plan-Testcode kann falsche Methode/Accessor referenzieren, immer gegen echte Klasse pruefen

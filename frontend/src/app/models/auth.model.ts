@@ -1,6 +1,8 @@
 export type UserRole = 'ADMIN' | 'MEMBER' | 'KIOSK';
 
 export interface CurrentUser {
+  /** null bei Anmeldung per Service-Token. */
+  id: number | null;
   username: string;
   displayName: string;
   role: UserRole;

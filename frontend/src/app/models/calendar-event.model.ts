@@ -1,22 +1,18 @@
-/** Feste Kategorienliste — Werte muessen dem Backend-Enum CalendarCategory entsprechen. */
-export type CalendarCategory =
-  'GENERAL' | 'FAMILY' | 'HEALTH' | 'HOUSEHOLD' | 'WORK' | 'BIRTHDAY';
+import { CalendarCategoryRef } from './calendar-category.model';
 
-/** Anzeige-Metadaten je Kategorie (Farbe fuer Chips und Dialog). */
-export const CATEGORY_META: Record<CalendarCategory, { label: string; color: string }> = {
-  GENERAL:   { label: 'Allgemein',  color: '#64b5f6' },
-  FAMILY:    { label: 'Familie',    color: '#ba68c8' },
-  HEALTH:    { label: 'Gesundheit', color: '#e57373' },
-  HOUSEHOLD: { label: 'Haushalt',   color: '#81c784' },
-  WORK:      { label: 'Arbeit',     color: '#ffb74d' },
-  BIRTHDAY:  { label: 'Geburtstag', color: '#f06292' }
-};
+/** Eine dem Termin zugeordnete Person. */
+export interface CalendarPerson {
+  id: number;
+  displayName: string;
+}
 
 /** Anlege-/Aenderungsdaten eines Termins. */
 export interface CalendarEventRequest {
   title: string;
   notes: string | null;
-  category: CalendarCategory;
+  categoryId: number;
+  /** Leer = Haushaltstermin. */
+  personUserIds: number[];
   allDay: boolean;
   /** ISO-Datum, z. B. "2026-08-03". */
   startDate: string;
@@ -29,8 +25,16 @@ export interface CalendarEventRequest {
 }
 
 /** Stammdaten eines Termins/einer Serie (Bearbeiten-Dialog). */
-export interface CalendarEvent extends CalendarEventRequest {
+export interface CalendarEvent extends Omit<CalendarEventRequest, 'categoryId' | 'personUserIds'> {
   id: number;
+  /**
+   * null, wenn die Kategorie nicht aufloesbar war. Der Fremdschluessel schliesst das
+   * praktisch aus, aber das Backend liefert bewusst null statt zu werfen — eine fehlende
+   * Farbe darf nie den ganzen Monat leeren (siehe CalendarEventService.categoryView).
+   */
+  category: CalendarCategoryRef | null;
+  /** Leer = Haushaltstermin; nie null (das Backend liefert immer eine Liste). */
+  persons: CalendarPerson[];
   recurring: boolean;
 }
 
@@ -43,7 +47,10 @@ export interface CalendarOccurrence {
   recurrenceDate: string | null;
   title: string;
   notes: string | null;
-  category: CalendarCategory;
+  /** null, wenn die Kategorie nicht aufloesbar war — siehe CalendarEvent.category. */
+  category: CalendarCategoryRef | null;
+  /** Leer = Haushaltstermin; nie null (das Backend liefert immer eine Liste). */
+  persons: CalendarPerson[];
   allDay: boolean;
   startTime: string | null;
   endTime: string | null;

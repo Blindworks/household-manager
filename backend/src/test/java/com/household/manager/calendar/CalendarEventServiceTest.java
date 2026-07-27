@@ -4,14 +4,17 @@ import com.household.manager.audit.AuditService;
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
+import com.household.manager.dto.CalendarPersonView;
 import com.household.manager.model.entity.CalendarCategory;
 import com.household.manager.model.entity.CalendarEvent;
+import com.household.manager.repository.CalendarCategoryRepository;
 import com.household.manager.repository.CalendarEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
@@ -20,11 +23,16 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,8 +45,19 @@ class CalendarEventServiceTest {
     private static final Clock CLOCK =
             Clock.fixed(Instant.parse("2026-07-25T10:00:00Z"), ZONE);
 
+    /** Die einzige Kategorie dieser Tests; ihre Id steht in allen Testdaten. */
+    private static final CalendarCategory HEALTH = CalendarCategory.builder()
+            .id(3L).key("health").name("Gesundheit").color("#e57373").sortOrder(3).active(true).build();
+
+    /** Die einzige Person dieser Tests, wie der Personendienst sie liefert. */
+    private static final CalendarPersonView ANNA = new CalendarPersonView(2L, "Anna");
+
     @Mock
     private CalendarEventRepository repository;
+    @Mock
+    private CalendarCategoryRepository categoryRepository;
+    @Mock
+    private CalendarEventPersonService personService;
     @Mock
     private AuditService auditService;
 
@@ -46,13 +65,16 @@ class CalendarEventServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CalendarEventService(repository, new RecurrenceExpansionService(), CLOCK, auditService);
+        service = new CalendarEventService(repository, categoryRepository, personService,
+                new RecurrenceExpansionService(), CLOCK, auditService);
+        lenient().when(categoryRepository.findAll()).thenReturn(List.of(HEALTH));
+        lenient().when(categoryRepository.findById(3L)).thenReturn(Optional.of(HEALTH));
     }
 
     private CalendarEventRequest.CalendarEventRequestBuilder validRequest() {
         return CalendarEventRequest.builder()
                 .title("Zahnarzt")
-                .category(CalendarCategory.HEALTH)
+                .categoryId(3L)
                 .allDay(false)
                 .startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30));
@@ -66,6 +88,8 @@ class CalendarEventServiceTest {
 
         assertThat(response.getTitle()).isEqualTo("Zahnarzt");
         assertThat(response.isRecurring()).isFalse();
+        // Die Antwort traegt die Kategorie eingebettet, nicht nur ihre Id.
+        assertThat(response.getCategory().key()).isEqualTo("health");
         verify(repository).save(any(CalendarEvent.class));
     }
 
@@ -74,6 +98,30 @@ class CalendarEventServiceTest {
         assertThatThrownBy(() -> service.create(validRequest().title("  ").build()))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Titel");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void fehlendeKategorieWirdAbgelehnt() {
+        // Bewusst auf "Kategorie fehlt" und nicht nur auf "Kategorie" geprueft: sonst wuerde
+        // auch die Meldung des existsById-Zweigs passen und der Test bliebe gruen, wenn genau
+        // diese Null-Pruefung wegfiele. In Produktion waere das der Unterschied zwischen 400
+        // und einem 500er aus Spring Data (InvalidDataAccessApiUsageException bei Null-Id).
+        assertThatThrownBy(() -> service.create(validRequest().categoryId(null).build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Kategorie fehlt");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void unbekannteKategorieWirdAbgelehnt() {
+        // Seit die Kategorie kein Enum mehr ist, ist diese Pruefung die einzige Verteidigung
+        // davor, dass ein Fremdschluesselfehler als 500er beim Aufrufer landet.
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(validRequest().categoryId(99L).build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("existiert nicht");
         verify(repository, never()).save(any());
     }
 
@@ -163,7 +211,7 @@ class CalendarEventServiceTest {
     @Test
     void getEventLiefertStammdatenEinesExistierendenTermins() {
         CalendarEvent event = CalendarEvent.builder()
-                .id(4L).title("Zahnarzt").category(CalendarCategory.HEALTH)
+                .id(4L).title("Zahnarzt").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30))
                 .build();
@@ -173,6 +221,23 @@ class CalendarEventServiceTest {
 
         assertThat(response.getId()).isEqualTo(4L);
         assertThat(response.getTitle()).isEqualTo("Zahnarzt");
+    }
+
+    @Test
+    void getEventOhneAuffindbareKategorieLiefertDenTerminTrotzdem() {
+        // Der Fremdschluessel schliesst das aus; faellt er je weg, ist ein Termin ohne Farbe
+        // besser als ein 500er im Termindialog.
+        CalendarEvent event = CalendarEvent.builder()
+                .id(4L).title("Zahnarzt").categoryId(99L)
+                .allDay(true).startDate(LocalDate.of(2026, 8, 3))
+                .build();
+        when(repository.findById(4L)).thenReturn(Optional.of(event));
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        CalendarEventResponse response = service.getEvent(4L);
+
+        assertThat(response.getTitle()).isEqualTo("Zahnarzt");
+        assertThat(response.getCategory()).isNull();
     }
 
     @Test
@@ -204,7 +269,7 @@ class CalendarEventServiceTest {
     @Test
     void updatePersistiertGeaenderteFelderUndLiefertSieZurueck() {
         CalendarEvent existing = CalendarEvent.builder()
-                .id(3L).title("Alt").category(CalendarCategory.HEALTH)
+                .id(3L).title("Alt").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30))
                 .build();
@@ -220,7 +285,7 @@ class CalendarEventServiceTest {
     @Test
     void updateMitUnveraenderterRruleLaesstExdatesUndOverridesInRuhe() {
         CalendarEvent existing = CalendarEvent.builder()
-                .id(5L).title("Serie").category(CalendarCategory.HEALTH)
+                .id(5L).title("Serie").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30))
                 .rrule("FREQ=DAILY").exdates("2026-08-05")
@@ -237,7 +302,7 @@ class CalendarEventServiceTest {
     @Test
     void updateMitGeaenderterRruleLoeschtOverridesUndSetztExdatesAufNull() {
         CalendarEvent existing = CalendarEvent.builder()
-                .id(5L).title("Serie").category(CalendarCategory.HEALTH)
+                .id(5L).title("Serie").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30))
                 .rrule("FREQ=DAILY").exdates("2026-08-05")
@@ -254,7 +319,7 @@ class CalendarEventServiceTest {
     @Test
     void updateDasRruleEntferntLoeschtEbenfallsOverridesUndExdates() {
         CalendarEvent existing = CalendarEvent.builder()
-                .id(5L).title("Serie").category(CalendarCategory.HEALTH)
+                .id(5L).title("Serie").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30))
                 .rrule("FREQ=DAILY").exdates("2026-08-05")
@@ -270,7 +335,7 @@ class CalendarEventServiceTest {
 
     private CalendarEvent series(Long id, String title, LocalDate start, String rrule) {
         return CalendarEvent.builder()
-                .id(id).title(title).category(CalendarCategory.GENERAL)
+                .id(id).title(title).categoryId(3L)
                 .allDay(true).startDate(start).rrule(rrule)
                 .build();
     }
@@ -278,7 +343,7 @@ class CalendarEventServiceTest {
     @Test
     void einzelterminErscheintImFenster() {
         CalendarEvent single = CalendarEvent.builder()
-                .id(1L).title("Zahnarzt").category(CalendarCategory.HEALTH)
+                .id(1L).title("Zahnarzt").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 8, 3))
                 .startTime(LocalTime.of(14, 30))
                 .build();
@@ -290,6 +355,7 @@ class CalendarEventServiceTest {
         assertThat(result.get(0).getEventId()).isEqualTo(1L);
         assertThat(result.get(0).getRecurrenceDate()).isNull();
         assertThat(result.get(0).getDaysUntil()).isEqualTo(9);
+        assertThat(result.get(0).getCategory().key()).isEqualTo("health");
     }
 
     @Test
@@ -310,7 +376,7 @@ class CalendarEventServiceTest {
     void overrideErsetztDasBerechneteVorkommen() {
         CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
         CalendarEvent override = CalendarEvent.builder()
-                .id(3L).title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .id(3L).title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
                 .build();
@@ -330,12 +396,12 @@ class CalendarEventServiceTest {
     void upcomingFiltertHeuteBereitsVergangeneUhrzeitTermine() {
         // CLOCK steht auf 25.07.2026 12:00
         CalendarEvent past = CalendarEvent.builder()
-                .id(4L).title("Vorbei").category(CalendarCategory.GENERAL)
+                .id(4L).title("Vorbei").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 7, 25))
                 .startTime(LocalTime.of(9, 0))
                 .build();
         CalendarEvent later = CalendarEvent.builder()
-                .id(5L).title("Kommt noch").category(CalendarCategory.GENERAL)
+                .id(5L).title("Kommt noch").categoryId(3L)
                 .allDay(false).startDate(LocalDate.of(2026, 7, 25))
                 .startTime(LocalTime.of(18, 0))
                 .build();
@@ -373,7 +439,7 @@ class CalendarEventServiceTest {
         CalendarEvent weekly = series(10L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
         // Verschoben auf einen Termin weit ausserhalb des unten abgefragten Fensters.
         CalendarEvent override = CalendarEvent.builder()
-                .id(11L).title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .id(11L).title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 8, 1))
                 .recurringParentId(10L).recurrenceDate(LocalDate.of(2026, 7, 13))
                 .build();
@@ -390,7 +456,7 @@ class CalendarEventServiceTest {
         CalendarEvent weekly = series(12L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
         weekly.addExdate(LocalDate.of(2026, 7, 6));
         CalendarEvent override = CalendarEvent.builder()
-                .id(13L).title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .id(13L).title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 15))
                 .recurringParentId(12L).recurrenceDate(LocalDate.of(2026, 7, 13))
                 .build();
@@ -407,12 +473,12 @@ class CalendarEventServiceTest {
     @Test
     void mehrtaegigeTermineZeigenNurDenStarttagMitPassendemEnddatum() {
         CalendarEvent trip = CalendarEvent.builder()
-                .id(20L).title("Urlaub").category(CalendarCategory.GENERAL)
+                .id(20L).title("Urlaub").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 8, 10))
                 .endDate(LocalDate.of(2026, 8, 12))
                 .build();
         CalendarEvent weekendSeries = CalendarEvent.builder()
-                .id(21L).title("Wochenendtrip").category(CalendarCategory.GENERAL)
+                .id(21L).title("Wochenendtrip").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 8, 1))
                 .endDate(LocalDate.of(2026, 8, 2)).rrule("FREQ=WEEKLY")
                 .build();
@@ -444,7 +510,7 @@ class CalendarEventServiceTest {
     @Test
     void deleteOccurrenceBeiEinzelterminLoeschtDenTermin() {
         CalendarEvent single = CalendarEvent.builder()
-                .id(1L).title("Einmalig").category(CalendarCategory.GENERAL)
+                .id(1L).title("Einmalig").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 8, 3))
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(single));
@@ -459,7 +525,7 @@ class CalendarEventServiceTest {
         CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
         CalendarEvent override = CalendarEvent.builder()
                 .id(3L).recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
-                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .build();
         when(repository.findById(2L)).thenReturn(Optional.of(weekly));
@@ -483,7 +549,7 @@ class CalendarEventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CalendarEventRequest request = CalendarEventRequest.builder()
-                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .rrule("FREQ=WEEKLY") // muss ignoriert werden — Overrides sind nie Serien
                 .build();
@@ -501,7 +567,7 @@ class CalendarEventServiceTest {
     @Test
     void updateOccurrenceAufEinzelterminWirdAbgelehnt() {
         CalendarEvent single = CalendarEvent.builder()
-                .id(1L).title("Einmalig").category(CalendarCategory.GENERAL)
+                .id(1L).title("Einmalig").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 8, 3))
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(single));
@@ -516,7 +582,7 @@ class CalendarEventServiceTest {
         CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
         CalendarEvent override = CalendarEvent.builder()
                 .id(3L).recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
-                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .build();
         when(repository.findById(3L)).thenReturn(Optional.of(override));
@@ -533,7 +599,7 @@ class CalendarEventServiceTest {
     @Test
     void deleteOccurrenceBeiEinzelterminMitFalschemDatumWirdAbgelehnt() {
         CalendarEvent single = CalendarEvent.builder()
-                .id(1L).title("Einmalig").category(CalendarCategory.GENERAL)
+                .id(1L).title("Einmalig").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 8, 3))
                 .build();
         when(repository.findById(1L)).thenReturn(Optional.of(single));
@@ -564,7 +630,7 @@ class CalendarEventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CalendarEventRequest request = CalendarEventRequest.builder()
-                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .build();
 
@@ -578,7 +644,7 @@ class CalendarEventServiceTest {
         CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
         CalendarEvent existingOverride = CalendarEvent.builder()
                 .id(3L).recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
-                .title("Sport (fruehere Aenderung)").category(CalendarCategory.GENERAL)
+                .title("Sport (fruehere Aenderung)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 13))
                 .build();
         when(repository.findById(2L)).thenReturn(Optional.of(weekly));
@@ -587,7 +653,7 @@ class CalendarEventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CalendarEventRequest request = CalendarEventRequest.builder()
-                .title("Sport (neu verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (neu verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 15))
                 .build();
 
@@ -610,7 +676,7 @@ class CalendarEventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CalendarEventRequest request = CalendarEventRequest.builder()
-                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .rrule("FREQ=BANANA") // ungueltig, muss aber ignoriert werden
                 .build();
@@ -632,7 +698,7 @@ class CalendarEventServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CalendarEventRequest overrideRequest = CalendarEventRequest.builder()
-                .title("Sport (verschoben)").category(CalendarCategory.GENERAL)
+                .title("Sport (verschoben)").categoryId(3L)
                 .allDay(true).startDate(LocalDate.of(2026, 7, 14))
                 .build();
         service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), overrideRequest);
@@ -640,5 +706,134 @@ class CalendarEventServiceTest {
         service.update(2L, validRequest().rrule("FREQ=MONTHLY").build());
 
         verify(repository).deleteByRecurringParentId(2L);
+    }
+
+    // --- Zusammenspiel mit dem Personendienst -------------------------------------------
+
+    private CalendarEvent zahnarzt() {
+        return CalendarEvent.builder()
+                .id(1L).title("Zahnarzt").categoryId(3L).allDay(true)
+                .startDate(LocalDate.of(2026, 7, 25)).build();
+    }
+
+    /** Wie die Datenbank: eine Zeile ohne Id bekommt beim Speichern die uebergebene. */
+    private void saveAssigningId(Long newRowId) {
+        when(repository.save(any())).thenAnswer(call -> {
+            CalendarEvent event = call.getArgument(0);
+            if (event.getId() == null) {
+                event.setId(newRowId);
+            }
+            return event;
+        });
+    }
+
+    @Test
+    void createSchreibtDiePersonenAnDieIdDerNeuenZeile() {
+        saveAssigningId(42L);
+        when(personService.replace(42L, List.of(2L))).thenReturn(List.of(ANNA));
+
+        CalendarEventResponse response =
+                service.create(validRequest().personUserIds(List.of(2L)).build());
+
+        verify(personService).replace(42L, List.of(2L));
+        assertThat(response.getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
+    }
+
+    @Test
+    void createSpeichertNichtsWennDiePersonenpruefungWirft() {
+        // Die Pruefung gehoert vor den ersten Schreibzugriff, sonst haengt das Verwerfen
+        // eines halb angelegten Termins allein am Transaktions-Rollback.
+        doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Der Nutzer 99 existiert nicht."))
+                .when(personService).validate(List.of(99L));
+
+        assertThatThrownBy(() -> service.create(validRequest().personUserIds(List.of(99L)).build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("99");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void updateSchreibtDiePersonenAnDieTerminId() {
+        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
+        saveAssigningId(99L);
+
+        service.update(1L, validRequest().personUserIds(List.of(2L)).build());
+
+        verify(personService).replace(1L, List.of(2L));
+    }
+
+    @Test
+    void updateOccurrenceSchreibtDiePersonenAnDieIdDerOverrideZeile() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
+                .thenReturn(Optional.empty());
+        // Die neu angelegte Override-Zeile bekommt eine eigene Id (3), der Master hat 2.
+        saveAssigningId(3L);
+        // Bewusst ueber beliebige Ids gestubbt: eine falsche Id soll an der Verifikation
+        // unten scheitern, nicht schon an der strengen Stubbing-Pruefung von Mockito.
+        when(personService.replace(anyLong(), any())).thenReturn(List.of(ANNA));
+
+        CalendarEventRequest request = CalendarEventRequest.builder()
+                .title("Sport (verschoben)").categoryId(3L)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .personUserIds(List.of(2L))
+                .build();
+
+        CalendarOccurrenceResponse response =
+                service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
+
+        // Die entscheidende Unterscheidung: geschrieben wird an die Id der Override-Zeile.
+        // Mit der Master-Id (2) wuerden die Personen der ganzen Serie ueberschrieben.
+        verify(personService).replace(3L, List.of(2L));
+        verify(personService, never()).replace(eq(2L), any());
+        assertThat(response.getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
+    }
+
+    @Test
+    void getEventLiefertDieZugeordnetenPersonen() {
+        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
+        when(personService.viewsFor(1L)).thenReturn(List.of(ANNA));
+
+        CalendarEventResponse response = service.getEvent(1L);
+
+        assertThat(response.getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
+    }
+
+    @Test
+    void liefertPersonenAmVorkommenMit() {
+        when(repository.findAll()).thenReturn(List.of(zahnarzt()));
+        when(personService.viewsByEvent()).thenReturn(Map.of(1L, List.of(ANNA)));
+
+        List<CalendarOccurrenceResponse> occurrences = service.getOccurrences(
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+
+        assertThat(occurrences).hasSize(1);
+        assertThat(occurrences.get(0).getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
+    }
+
+    @Test
+    void vorkommenEinerOverrideZeileTraegtDerenEigenePersonen() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        CalendarEvent override = CalendarEvent.builder()
+                .id(3L).title("Sport (verschoben)").categoryId(3L)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .recurringParentId(2L).recurrenceDate(LocalDate.of(2026, 7, 13))
+                .build();
+        when(repository.findAll()).thenReturn(List.of(weekly, override));
+        // Die Zuordnung haengt an der eigenen Zeilen-Id (3), nicht an der Master-Id (2),
+        // die die Antwort als eventId ausweist.
+        when(personService.viewsByEvent()).thenReturn(Map.of(3L, List.of(ANNA)));
+
+        var result = service.getOccurrences(LocalDate.of(2026, 7, 12), LocalDate.of(2026, 7, 18));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEventId()).isEqualTo(2L);
+        assertThat(result.get(0).getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
     }
 }

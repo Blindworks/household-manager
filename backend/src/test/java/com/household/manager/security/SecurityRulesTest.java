@@ -1,5 +1,7 @@
 package com.household.manager.security;
 
+import com.household.manager.calendar.CalendarCategoryController;
+import com.household.manager.calendar.CalendarCategoryService;
 import com.household.manager.calendar.CalendarEventController;
 import com.household.manager.calendar.CalendarEventService;
 import com.household.manager.controller.SwitchController;
@@ -32,8 +34,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -50,7 +54,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * verfaelschen. Betrifft nur diesen Test-Slice, nicht die echte Anwendung.
  */
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
-        NukiController.class, TabletPresenceController.class},
+        CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
+        HouseholdUserController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -66,9 +71,13 @@ class SecurityRulesTest {
     @MockitoBean
     private CalendarEventService calendarEventService;
     @MockitoBean
+    private CalendarCategoryService calendarCategoryService;
+    @MockitoBean
     private NukiLockService nukiLockService;
     @MockitoBean
     private TabletPresenceService tabletPresenceService;
+    @MockitoBean
+    private AppUserService appUserService;
     @MockitoBean
     private ServiceTokenService serviceTokenService;
     @MockitoBean
@@ -125,6 +134,60 @@ class SecurityRulesTest {
         mockMvc.perform(post("/v1/calendar/events").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isCreated());
+    }
+
+    /**
+     * Die Kategorien sind Stammdaten der Kalenderansicht: das Wandtablet muss Namen und
+     * Farben lesen duerfen, aendern darf sie nur ADMIN.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKategorienLesen() throws Exception {
+        mockMvc.perform(get("/v1/calendar/categories")).andExpect(status().isOk());
+    }
+
+    /**
+     * /v1/users braucht bewusst keine eigene Regel: das GET faellt auf die generische
+     * Regel GET /v1/** -> KIOSK. Dieser Test haelt das fest, damit eine spaetere
+     * Umsortierung der Matcher nicht unbemerkt den Zugriff des Wandtablets kappt.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieNutzerlisteLesen() throws Exception {
+        when(appUserService.list()).thenReturn(List.of());
+        mockMvc.perform(get("/v1/users")).andExpect(status().isOk());
+    }
+
+    /**
+     * Anlegen, Aendern und Loeschen haengen an je einem eigenen methodenspezifischen
+     * Matcher — jede der drei Zeilen braucht ihren eigenen Test, sonst faellt der
+     * Wegfall einer davon niemandem auf.
+     */
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKategorienNichtAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/calendar/categories")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test\",\"color\":\"#4caf50\",\"sortOrder\":1,\"active\":true}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKategorienNichtUmbenennen() throws Exception {
+        mockMvc.perform(put("/v1/calendar/categories/1")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test\",\"color\":\"#4caf50\",\"sortOrder\":1,\"active\":true}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKategorienNichtLoeschen() throws Exception {
+        mockMvc.perform(delete("/v1/calendar/categories/1").with(csrf()))
+                .andExpect(status().isForbidden());
     }
 
     @Test

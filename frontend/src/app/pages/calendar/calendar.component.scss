@@ -1,3 +1,27 @@
+// Umschalt-Knopf (Filterleiste ueber dem Raster, Personenauswahl im Dialog). Gleiche
+// Trefferflaeche wie der Wochentag-Picker: die Seite wird auf dem wandmontierten
+// Touch-Tablet bedient. Tonalitaet bewusst dunkel auf hell - Seite und Dialog haben
+// beide einen weissen Hintergrund.
+@mixin toggle-pill {
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  min-height: 2.75rem;
+}
+
+// Aktivzustand eines Umschalters. Eigenes Mixin statt Teil von toggle-pill: der
+// Wochentag-Picker teilt zwar diesen Zustand, hat aber einen eigenen Grundzustand
+// (eckiger, schmaler) und heisst sein Modifier --active statt --on.
+@mixin toggle-pill-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
 .calendar {
   padding: var(--spacing-md) 0 var(--spacing-xl);
 
@@ -44,6 +68,23 @@
   &__error {
     color: var(--color-error);
     margin-bottom: var(--spacing-sm);
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  // Derselbe Umschalter-Typ wie die Personenauswahl im Dialog - gleiche Trefferflaeche
+  // fuers Wandtablet, gleiche Tonalitaet auf dem hellen Seitenhintergrund.
+  &__filter {
+    @include toggle-pill;
+
+    &--on {
+      @include toggle-pill-active;
+    }
   }
 
   &__grid {
@@ -114,7 +155,10 @@
     --chip-color: #64b5f6;
     display: flex;
     gap: 0.3rem;
-    align-items: baseline;
+    // center statt baseline: der Titel hat jetzt overflow:hidden und damit eine
+    // synthetische Baseline an seiner Unterkante - gegen die Initialen-Kreise saehe das
+    // versetzt aus.
+    align-items: center;
     border: none;
     border-left: 3px solid var(--chip-color);
     background: color-mix(in srgb, var(--chip-color) 18%, transparent);
@@ -124,6 +168,18 @@
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
+  }
+
+  // Der Titel ist das einzige schrumpfbare Element des Chips. text-overflow gehoert an
+  // ihn, nicht an den Flex-Container: dort greift es fuer die Items nicht, und der Titel
+  // wuerde mitten im Wort ohne Auslassungszeichen abgeschnitten.
+  // flex-basis 3rem statt 0: gegen die nicht schrumpfbaren Badges verliert eine
+  // 0-Basis auf schmalen Ansichten vollstaendig - dann wuerden die Badges beschnitten
+  // statt des Titels, obwohl genau der das kuerzbare Element ist.
+  &__chip-title {
+    flex: 1 1 3rem;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -247,9 +303,7 @@
     min-height: 2.75rem;
 
     &--active {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      color: var(--color-white);
+      @include toggle-pill-active;
     }
   }
 
@@ -297,5 +351,43 @@
       opacity: 0.5;
       cursor: default;
     }
+  }
+
+  &__persons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  &__person {
+    @include toggle-pill;
+
+    &--on {
+      @include toggle-pill-active;
+    }
+  }
+
+  // Faerbung aus der Kategoriefarbe des Chips, damit die Initiale auf dem ohnehin blass
+  // eingefaerbten Chip sichtbar bleibt. Ans Ende geschoben werden die Initialen bereits
+  // vom flex:1 des Titels. 0.65rem waeren auf dem wandmontierten Tablet knapp 10 px;
+  // min-width statt fester Breite, damit auch "+2" hineinpasst.
+  &__chip-initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    padding: 0 0.15rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--chip-color) 55%, transparent);
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  &__hint {
+    opacity: 0.7;
+    font-size: 0.8rem;
   }
 }

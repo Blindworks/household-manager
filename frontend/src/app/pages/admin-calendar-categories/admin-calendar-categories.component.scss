@@ -1,0 +1,190 @@
+.admin-calendar-categories {
+  padding: var(--spacing-lg);
+
+  &__hint {
+    max-width: 70ch;
+    margin-bottom: var(--spacing-md);
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  &__error {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+
+  &__blocked {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(245, 158, 11, 0.12);
+
+    p {
+      margin: 0 0 var(--spacing-xs);
+    }
+  }
+
+  &__blocked-title {
+    margin: 0 0 var(--spacing-xs);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  &__blocked-message {
+    font-weight: 600;
+  }
+
+  &__blocked-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+  }
+
+  &__form {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  &__form-title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1.1rem;
+  }
+
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--spacing-md);
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+
+    input {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border: 1px solid var(--color-light-gray);
+      border-radius: var(--radius-sm, 6px);
+      font-size: 0.95rem;
+    }
+
+    input[type='color'] {
+      width: 3rem;
+      padding: 2px;
+    }
+
+    &--narrow input {
+      width: 7rem;
+    }
+  }
+
+  &__key {
+    font-family: 'Courier New', monospace;
+    background: var(--color-light-gray);
+    color: var(--color-gray);
+    cursor: default;
+  }
+
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    font-size: 0.9rem;
+  }
+
+  &__form-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+  }
+
+  /*
+   * :where() macht diese Grundregel spezifitaetsfrei (zaehlt wie ein blosses `button`).
+   * Ohne das schluege sie jeden Modifier-Klassenselektor unten und alle Knoepfe waeren
+   * primaerblau — auch der zum Loeschen, der genau seine Kennzeichnung verlieren wuerde.
+   */
+  :where(&__form-actions, &__blocked-actions, &__actions) button {
+    padding: var(--spacing-xs) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-sm, 6px);
+    background: var(--color-primary);
+    color: #fff;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
+  &__secondary,
+  &__toggle-active {
+    background: var(--color-light-gray);
+    color: var(--color-dark);
+  }
+
+  /* Der Ausweg aus dem Loeschkonflikt ist die empfohlene Aktion — bewusst primaerfarben. */
+  &__deactivate {
+    background: var(--color-primary);
+  }
+
+  &__delete {
+    background: var(--color-error);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--spacing-sm);
+      border-bottom: 1px solid var(--color-light-gray);
+      text-align: left;
+      vertical-align: middle;
+    }
+  }
+
+  &__key-cell {
+    font-family: 'Courier New', monospace;
+    color: var(--color-gray);
+  }
+
+  &__swatch {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--color-light-gray);
+    border-radius: 4px;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  /** Deaktivierte Kategorien bleiben sichtbar, treten aber zurueck. */
+  &__row--inactive {
+    opacity: 0.55;
+  }
+
+  &__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
