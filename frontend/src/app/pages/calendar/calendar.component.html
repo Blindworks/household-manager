@@ -61,7 +61,13 @@
              (click)="openCreate(dayView.day)">
           <span class="calendar__day-number">{{ dayView.day.dayOfMonth }}</span>
           <div class="calendar__chips">
-            @for (chip of dayView.chips; track chip.key) {
+            <!-- track $index: eventId+occurrenceDate ist NICHT eindeutig. Verschiebt der
+                 Nutzer ein Serien-Vorkommen per "Nur diesen Termin" auf einen anderen Tag
+                 derselben Serie, tragen die Override-Zeile und das regulaere Vorkommen
+                 dieses Tages beides die Master-Id und dasselbe Datum. Doppelte Track-Keys
+                 meldet Angular 19 nur als Warnung (NG0955) - im Produktionsbuild gar nicht
+                 mehr; uebrig bliebe fehlerhafte DOM-Wiederverwendung. -->
+            @for (chip of dayView.chips; track $index) {
               <!-- title/aria-label tragen den vollen Wortlaut: der Titel wird in der schmalen
                    Tageszelle oft abgeschnitten, und eine Initiale ist mehrdeutig. -->
               <button type="button"

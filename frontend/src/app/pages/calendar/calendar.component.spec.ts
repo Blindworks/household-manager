@@ -914,6 +914,33 @@ describe('CalendarComponent', () => {
     findButton('Abbrechen').click();
   });
 
+  it('vergibt zwei Vorkommen derselben Serie am selben Tag eindeutige Track-Schluessel', () => {
+    // Ueber die Oberflaeche erreichbar: ein Serien-Vorkommen per "Nur diesen Termin" auf
+    // einen anderen Tag DERSELBEN Serie verschieben. Die Override-Zeile meldet die
+    // Master-Id als eventId und den neuen Tag als occurrenceDate; unterdrueckt wird
+    // serverseitig nur das urspruengliche Datum, das regulaere Vorkommen des Zieltages
+    // bleibt also stehen. Ein Track-Key aus eventId+occurrenceDate waere hier doppelt.
+    const verschoben: CalendarOccurrence = {
+      ...RECURRING_OCCURRENCE, occurrenceDate: '2026-08-19', recurrenceDate: '2026-08-12',
+      title: 'Muell (verschoben)'
+    };
+    const regulaer: CalendarOccurrence = {
+      ...RECURRING_OCCURRENCE, occurrenceDate: '2026-08-19', recurrenceDate: '2026-08-19'
+    };
+    // NG0955 ist in Angular 19 eine Warnung, kein geworfener Fehler: beim ersten Rendern
+    // sieht alles richtig aus, und im Produktionsbuild entfaellt die Pruefung ganz -
+    // uebrig bliebe fehlerhafte DOM-Wiederverwendung beim naechsten Aktualisieren, bei
+    // der ein Klick auf Chip A das Vorkommen B zum Bearbeiten oeffnet. Deshalb wird hier
+    // die Warnung selbst zugesichert; eine reine Anzeigepruefung ginge daneben.
+    const warn = spyOn(console, 'warn');
+    loadInitial([verschoben, regulaer]);
+
+    expect(warn.calls.allArgs().join(' ')).not.toContain('NG0955');
+    const titles = Array.from(dayCell('2026-08-19').querySelectorAll('.calendar__chip-title'))
+      .map(el => el.textContent?.trim());
+    expect(titles).toEqual(['Muell (verschoben)', 'Muell']);
+  });
+
   it('faerbt den Chip mit der eingebetteten Kategoriefarbe des Termins', () => {
     loadInitial([SINGLE_OCCURRENCE]);
 

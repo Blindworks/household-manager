@@ -27,8 +27,6 @@ const CHIP_INITIAL_LIMIT = 2;
 
 /** Ein Termin-Chip einer Tageszelle, fertig fuer die Anzeige. */
 interface ChipView {
-  /** Stabiler @for-Schluessel; ein Termin kommt pro Tag hoechstens einmal vor. */
-  key: string;
   /** Fuer den Bearbeiten-Klick; die Anzeige selbst braucht ihn nicht mehr. */
   occurrence: CalendarOccurrence;
   /** null laesst den --chip-color-Default aus dem SCSS greifen. */
@@ -284,7 +282,6 @@ export class CalendarComponent implements OnInit {
     const names = occurrence.persons.map(person => person.displayName);
     const prefix = time ? `${time} ` : '';
     return {
-      key: `${occurrence.eventId}-${occurrence.occurrenceDate}`,
       occurrence,
       color: occurrence.category?.color ?? null,
       time,
