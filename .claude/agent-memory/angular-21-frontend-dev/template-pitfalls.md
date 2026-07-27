@@ -42,6 +42,32 @@ bewusst vergroessert.
 Siehe auch [[dashboard-style-encapsulation]] (Kehrseite: `lumina`-Styles greifen nur in
 `dashboard.component.*`).
 
+## Aus Abwesenheit erschlossene Beschriftungen werden bei Ladefehlern zu Falschaussagen
+`"(deaktiviert)"` wurde daraus abgeleitet, dass eine Person **nicht** in der aktiven
+Nutzerliste steht. Faellt deren Abruf aus, ist die Liste leer — und jede zugeordnete
+Person traegt das Suffix, auch die quicklebendigen. Dieselbe Klasse Fehler wie ein
+Hinweis, der aus einer leeren Liste auf "es gibt keine" schliesst, nur in die andere
+Richtung. Loesung: das Label an einen **positiven Beleg** haengen (die geladene Liste
+enthaelt die Person mit `enabled: false`); ohne Beleg nichts behaupten.
+
+**Why:** Ein Ladefehler darf die Anzeige leer machen, aber nicht falsch.
+**How to apply:** Bei jedem abgeleiteten Label/Badge fragen: "Was zeigt das an, wenn die
+Quelle leer ist, weil ihr Abruf gescheitert ist?" Dieser Fall braucht einen eigenen Test —
+er ist mit den ueblichen Erfolgs-Fixtures nicht abgedeckt.
+
+## Gleiche Beschriftungen in zwei Seitenbereichen brechen textbasierte Test-Sucher
+Die Filterleiste des Kalenders traegt dieselben Personennamen wie die Personen-Umschalter
+im Termindialog. Der ueblich gewordene Spec-Helfer `findButton(label)` (sucht ueber
+`querySelectorAll('button')` nach Text) fand danach den erstbesten — also den falschen —
+und ein bestehender Test kippte, obwohl die UI korrekt war.
+
+**Why:** Der Fehlschlag sieht aus wie ein Regressionsfund, ist aber ein mehrdeutiger
+Selektor. Kostet Zeit, wenn man ihn falsch deutet.
+**How to apply:** Sobald eine neue Ansicht Beschriftungen aus einer bestehenden wiederholt
+(Namen, Kategorien, Zustaende), textbasierte Sucher auf ihre Gruppe einschraenken —
+`findButtonIn('.calendar__person', label)` statt global. Vorbild:
+`calendar.component.spec.ts`.
+
 ## Ein Fehlerfeld pro Ursache — sonst loescht ein paralleler Abruf die Meldung
 Schreiben zwei Abrufe in dasselbe `loadError`, und einer davon leert es im Erfolgsfall
 (`next: () => this.loadError = null`, das uebliche Muster hier), gewinnt der, der zuletzt
