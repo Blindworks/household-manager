@@ -1,6 +1,6 @@
 package com.household.manager.security;
 
-import com.household.manager.model.entity.AppUser;
+import com.household.manager.security.dto.HouseholdUserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,12 +22,6 @@ import java.util.List;
 public class HouseholdUserController {
 
     private final AppUserService service;
-
-    public record HouseholdUserResponse(Long id, String displayName, boolean enabled) {
-        static HouseholdUserResponse of(AppUser user) {
-            return new HouseholdUserResponse(user.getId(), user.getDisplayName(), user.isEnabled());
-        }
-    }
 
     @GetMapping
     public ResponseEntity<List<HouseholdUserResponse>> list() {

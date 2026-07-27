@@ -9,7 +9,37 @@ Feature branch `feature/calendar-persons-categories` extends the existing calend
 ([[haushaltskalender]]) with a proper category table, category-key stability, person
 assignment to events, and person attributes on the reminder event. Task order: 1 category
 table, 2 key generation, 3 category API with delete-protection, 4 person assignment,
-5 persons in reminder event (done), 6 user list, 7+ frontend.
+5 persons in reminder event (done), 6 user list + own id (done), 7+ frontend.
+
+## Task 6: `/v1/users` + own id in `/v1/auth/me` (done)
+- `HouseholdUserController` (`backend/src/main/java/com/household/manager/security/`) exposes
+  `GET /v1/users` -> `[{id, displayName, enabled}]` only — no username, no role. Deliberately
+  thin vs. ADMIN-only `/v1/admin/users`, because the KIOSK wall tablet reads it too (person
+  picker in the calendar dialog needs the list, but must never learn residents' usernames).
+  Reuses the existing `AppUserService.list()` (already there from user management), no new
+  service method.
+- **Response record placement:** the project keeps response records as their own file under a
+  `dto` package, never nested inside the `@RestController` class — see `security/dto/UserAdminDtos.java`
+  and, closest to this case, `dto/CalendarPersonView.java` (same `id`+`displayName` shape from
+  `AppUser`). First draft nested `HouseholdUserResponse` inside `HouseholdUserController`; quality
+  review grepped all `public record` occurrences and found it was the *only* nested one in the
+  whole backend. Moved to `security/dto/HouseholdUserResponse.java` with the `of(AppUser)` factory
+  method following it (mirroring `CalendarPersonView`, both public since cross-package now).
+- **No new SecurityConfig rule needed** — confirmed by reading `SecurityConfig.filterChain`:
+  the ADMIN block matches `/v1/admin/**`, not `/v1/users`, so the generic
+  `GET /v1/**` -> `hasRole("KIOSK")` rule (which sits after it) catches `/v1/users`. Added a
+  regression test (`SecurityRulesTest.kioskDarfDieNutzerlisteLesen`) specifically so a future
+  reordering of that generic rule doesn't silently break the tablet's access — mutation-verified
+  by temporarily adding `/v1/users` to the ADMIN matcher list and confirming exactly that one
+  test goes red.
+- `AppUserPrincipal` gained a `Long id` field (from `AppUser.getId()`); `CurrentUserResponse`
+  gained `Long id` as its first component (position matters — it's a record, no other direct
+  positional constructors existed outside the class itself, verified via grep before touching
+  it). `id` is `null` for service-token principals (`authentication.getPrincipal()` is a bare
+  `String`, not `AppUserPrincipal`) — same fallback pattern already used for `displayName`.
+- The plan's literal code snippet for `CurrentUserResponse` was correct as given this time
+  (unlike Task 5) — verified the `AppUser` builder already supports `.id(...)` and
+  `AppUserService.list()` already existed before writing the controller.
 
 ## Task 5: persons in `event.calendar_reminder` (done)
 - `CalendarReminderScheduler.fire(...)` (`backend/src/main/java/com/household/manager/calendar/CalendarReminderScheduler.java`)
