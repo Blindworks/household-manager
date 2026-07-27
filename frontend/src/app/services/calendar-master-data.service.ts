@@ -5,12 +5,16 @@ import { CalendarCategory } from '../models/calendar-category.model';
 import { HouseholdUser } from '../models/household-user.model';
 
 /**
- * Meldung bei ausgefallenem Kategorien-Abruf. Konstante statt Inline-Text: sie ist der
- * einzige Hinweis darauf, warum der Termindialog nicht mehr aufgeht, und wird sowohl
- * gesetzt als auch (im Test) erwartet.
+ * Meldung bei ausgefallenem Kategorien-Abruf: erst die Folge fuer den Nutzer, dann die
+ * Ursache. Die Ursache muss mit - CalendarCategoryService baut sie bereits aus dem
+ * Fehlerbody des Backends; verwirft man sie, steht im Supportfall auf dem Wandtablet nur
+ * der generische Satz und niemand weiss, ob das Backend, das Netz oder die Anmeldung
+ * schuld ist.
  */
-const CATEGORY_LOAD_ERROR =
-  'Die Kategorien konnten nicht geladen werden. Neue Termine lassen sich gerade nicht anlegen.';
+function categoryLoadError(cause: string): string {
+  return 'Die Kategorien konnten nicht geladen werden. Neue Termine lassen sich gerade '
+    + `nicht anlegen. Ursache: ${cause}`;
+}
 
 /**
  * Stammdaten des Kalenders: Kategorien und Haushaltsmitglieder.
@@ -70,7 +74,7 @@ export class CalendarMasterDataService {
         this.categoriesLoadedState.set(true);
         this.categoryErrorState.set(null);
       },
-      error: () => this.categoryErrorState.set(CATEGORY_LOAD_ERROR)
+      error: (err: Error) => this.categoryErrorState.set(categoryLoadError(err.message))
     });
     this.userApi.list().subscribe({
       next: users => {
