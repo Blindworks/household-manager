@@ -20,8 +20,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * "Akku unterwegs leergelaufen" genauso aussieht, verlangt diese Deutung zwei
  * unabhaengige Belege: einen gesunden Akkustand und Heimnaehe im weiten Radius.
  *
- * <p>{@link Optional#empty()} bedeutet ueberall dasselbe: keine Aussage moeglich. Es wird
+ * <p>{@link Optional#empty()} bedeutet immer dasselbe: keine Aussage moeglich. Es wird
  * nie ein Zustand geraten – ein Alarm-Flow darf nicht bei jedem GPS-Aussetzer feuern.
+ * Die beiden GRUENDE dafuer sind allerdings verschieden zu behandeln, siehe
+ * {@link #isHomeConfigured()}.
  */
 @Component
 @RequiredArgsConstructor
