@@ -104,3 +104,29 @@ Nutzer erfaehrt *warum*. Sonst tauscht man einen sichtbaren Fehler gegen einen s
 bestehendes Fehlerfeld irgendwo bedingungslos auf `null` gesetzt wird. Und: einen Test,
 der ein Fehlerbanner zusichert, immer *nach* dem Beantworten aller parallelen Abrufe
 zusichern lassen — sonst prueft er einen Zwischenstand, den der Nutzer nie sieht.
+
+## `ngModel` in einem `<form>` ist im Test erst nach `whenStable()` verdrahtet
+Verifiziert 2026-07-27 (Angular 19.2.x in `frontend/`, Chrome Headless 150), nachgelesen in
+`node_modules/@angular/forms/fesm2022/forms.mjs`: `NgForm.addControl` registriert jedes
+`NgModel` erst in einem **Microtask** (`resolvedPromise.then(...)`). Bis der geflossen ist,
+haengt der ValueAccessor noch nicht am Modell:
+
+```ts
+fixture.detectChanges();
+input.value = 'x';
+input.dispatchEvent(new Event('input'));   // veraendert das Modell NICHT
+```
+
+Der Test scheitert dann an einer irrefuehrenden Stelle weiter unten ("erwartet 'neu',
+bekam 'alt'", oder ein erwarteter Request bleibt aus) — der Absender sieht wie ein
+Komponentenfehler aus, ist aber Test-Timing. Abhilfe: `it(..., async () => { ...
+await fixture.whenStable(); ... })` nach dem ersten `detectChanges()`. Vorbild:
+`admin-calendar-categories.component.spec.ts` (`loadWith`). Ausserhalb eines `<form>`
+(z. B. `vision.component.spec.ts`) tritt das nicht auf — dort laeuft `NgModel` standalone
+und wird synchron verdrahtet.
+
+**Verwandt, aber Entwarnung:** Ein `[ngModel]` **ohne** `name` in einer Kind-Komponente
+(z. B. das Freitextfeld in `IconPickerComponent`) wirft *kein* `NG01352`, auch wenn die
+Kind-Komponente in einem `<form>` steht: `NgModel` injiziert seinen `ControlContainer` mit
+`@Optional() @Host()`, und `@Host()` stoppt an der Host-Grenze der Komponente. Der
+IconPicker darf also gefahrlos in einem `<form>` stehen.
