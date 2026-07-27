@@ -22,6 +22,14 @@ Aktualisieren (Klick auf Chip A oeffnet Vorkommen B). Zusichern laesst sich das 
 `spyOn(console, 'warn')` + `expect(...).not.toContain('NG0955')` — Vorbild:
 `calendar.component.spec.ts`.
 
+**Und dieser Nachweis braucht zwei Reconcile-Durchlaeufe.** `@for` prueft die Schluessel
+erst gegen eine bereits gefuellte Live-Collection; beim ersten Rendern ist `liveEndIdx =
+-1`, die Hauptschleife laeuft null Mal und `recordDuplicateKeys` wird nie erreicht. Dass
+so ein Test ueberhaupt greift, liegt allein daran, dass `ComponentFixture.detectChanges()`
+intern `checkNoChanges()` nachschiebt. Mit `detectChanges(false)` oder nach einer
+Umstellung auf zoneless waere er lautlos wirkungslos — und bliebe gruen. Deshalb ein
+zweites `fixture.detectChanges()` explizit hinschreiben und kommentieren.
+
 **Zusammengesetzte Schluessel sind Behauptungen, keine Garantien.** Konkret gefallen:
 `eventId + occurrenceDate` fuer Kalender-Vorkommen. Verschiebt der Nutzer ein
 Serien-Vorkommen per "Nur diesen Termin" auf einen anderen Tag *derselben* Serie, meldet
