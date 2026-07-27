@@ -7,6 +7,7 @@ import { CalendarService } from '../../services/calendar.service';
 import { CalendarMasterDataService } from '../../services/calendar-master-data.service';
 import { AuthService } from '../../services/auth.service';
 import { CalendarCategory } from '../../models/calendar-category.model';
+import { HouseholdUser } from '../../models/household-user.model';
 import {
   CalendarEvent, CalendarEventRequest, CalendarOccurrence, CalendarPerson
 } from '../../models/calendar-event.model';
@@ -118,9 +119,16 @@ export class CalendarComponent implements OnInit {
   private readonly occurrencesByDate = signal(new Map<string, CalendarOccurrence[]>());
 
   /**
+   * Aktiver Personenfilter; null = alle. Rein clientseitig auf den bereits geladenen
+   * Vorkommen und bewusst nicht persistiert: nach jedem Laden steht wieder "Alle".
+   */
+  readonly personFilter = signal<number | null>(null);
+
+  /**
    * Das Anzeigemodell des Rasters: fertige Chips statt Berechnungen im Template.
-   * Als computed statt als Methode, damit es sich bei jeder Aenderung von Raster oder
-   * Vorkommen von selbst erneuert - und nur dann, nicht bei jedem Change-Detection-Lauf.
+   * Als computed statt als Methode, damit es sich bei jeder Aenderung von Raster,
+   * Vorkommen oder Filter von selbst erneuert - und nur dann, nicht bei jedem
+   * Change-Detection-Lauf. Der Filter braucht so keinen erneuten Abruf.
    */
   readonly weeks = computed<DayView[][]>(() =>
     this.grid().map(week => week.map(day => this.buildDayView(day))));
@@ -230,13 +238,45 @@ export class CalendarComponent implements OnInit {
     this.rebuildGrid();
   }
 
+  /**
+   * Personen der Filterleiste. Der angemeldete Nutzer fehlt bewusst: fuer ihn gibt es
+   * schon "Meine". Zwei Knoepfe mit demselben Filter waeren gleichzeitig markiert, und
+   * einer von beiden waere ueberfluessig.
+   */
+  readonly filterPersons = computed<HouseholdUser[]>(() => {
+    const own = this.currentUserId;
+    return this.masterData.activeUsers().filter(user => user.id !== own);
+  });
+
+  /**
+   * Ohne "Meine" und ohne Person gaebe es nur den Knopf "Alle" - eine Leiste, die
+   * nichts filtern kann. Etwa bei Anmeldung per Service-Token in einem Haushalt ohne
+   * gepflegte Mitglieder oder wenn der Nutzer-Abruf ausgefallen ist.
+   */
+  readonly showFilters = computed(() =>
+    this.currentUserId !== null || this.filterPersons().length > 0);
+
   private buildDayView(day: MonthDay): DayView {
-    const occurrences = this.occurrencesByDate().get(day.isoDate) ?? [];
+    const occurrences = (this.occurrencesByDate().get(day.isoDate) ?? [])
+      .filter(occ => this.matchesFilter(occ));
     return {
       day,
       chips: occurrences.slice(0, DAY_CHIP_LIMIT).map(occ => CalendarComponent.buildChip(occ)),
       overflow: Math.max(0, occurrences.length - DAY_CHIP_LIMIT)
     };
+  }
+
+  /**
+   * Ein Personenfilter zeigt zusaetzlich IMMER die Termine ohne Zuordnung: "Meine
+   * Termine" heisst "mir zugeordnet oder den ganzen Haushalt betreffend". Sonst
+   * verschwaende die Muellabfuhr genau dann aus dem Blick, wenn jemand auf sich selbst
+   * filtert - der Fall, in dem sie am ehesten uebersehen wird.
+   */
+  private matchesFilter(occurrence: CalendarOccurrence): boolean {
+    const filter = this.personFilter();
+    return filter === null
+      || occurrence.persons.length === 0
+      || occurrence.persons.some(person => person.id === filter);
   }
 
   private static buildChip(occurrence: CalendarOccurrence): ChipView {

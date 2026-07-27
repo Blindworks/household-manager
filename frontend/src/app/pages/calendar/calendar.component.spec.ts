@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { CalendarComponent } from './calendar.component';
+import { AuthService } from '../../services/auth.service';
 import { CalendarEvent, CalendarOccurrence } from '../../models/calendar-event.model';
 import { CalendarCategory, CalendarCategoryRef } from '../../models/calendar-category.model';
 import { HouseholdUser } from '../../models/household-user.model';
@@ -358,6 +359,31 @@ describe('CalendarComponent', () => {
     return btn as HTMLButtonElement;
   }
 
+  /**
+   * Sucht einen Button innerhalb einer Gruppe. Noetig, weil Personennamen auf der Seite
+   * doppelt vorkommen: als Umschalter im Dialog und als Knopf der Filterleiste - das
+   * globale findButton faende sonst den erstbesten und damit oft den falschen.
+   */
+  function findButtonIn(groupSelector: string, label: string): HTMLButtonElement {
+    const btn = Array.from((fixture.nativeElement as HTMLElement)
+      .querySelectorAll<HTMLButtonElement>(groupSelector))
+      .find(b => b.textContent?.trim() === label);
+    if (!btn) {
+      throw new Error(`Button "${label}" in "${groupSelector}" nicht gefunden.`);
+    }
+    return btn;
+  }
+
+  /** Personen-Umschalter im Termindialog. */
+  function findPersonButton(label: string): HTMLButtonElement {
+    return findButtonIn('.calendar__person', label);
+  }
+
+  /** Knopf der Filterleiste ueber dem Monatsraster. */
+  function findFilterButton(label: string): HTMLButtonElement {
+    return findButtonIn('.calendar__filter', label);
+  }
+
   function setInputValue(selector: string, value: string): void {
     const input = requireElement<HTMLInputElement>(selector);
     input.value = value;
@@ -668,15 +694,15 @@ describe('CalendarComponent', () => {
     ).map(button => button.textContent?.trim());
     expect(personNames).toEqual(['Benedikt', 'Anna']);
 
-    findButton('Anna').click();
+    findPersonButton('Anna').click();
     fixture.detectChanges();
     expect(component.form.personUserIds).toEqual([11]);
 
-    findButton('Benedikt').click();
+    findPersonButton('Benedikt').click();
     fixture.detectChanges();
     expect(component.form.personUserIds).toEqual([11, 10]);
 
-    findButton('Anna').click();
+    findPersonButton('Anna').click();
     fixture.detectChanges();
     expect(component.form.personUserIds).toEqual([10]);
 
@@ -739,14 +765,14 @@ describe('CalendarComponent', () => {
 
     const component = fixture.componentInstance;
     expect(component.form.personUserIds).toEqual([12]);
-    const retiredButton = findButton('Ausgezogen (deaktiviert)');
+    const retiredButton = findPersonButton('Ausgezogen (deaktiviert)');
     expect(retiredButton.getAttribute('aria-pressed')).toBe('true');
 
     retiredButton.click();
     fixture.detectChanges();
     expect(component.form.personUserIds).toEqual([]);
     // Und sie bleibt in der Liste, falls der Nutzer es sich anders ueberlegt.
-    expect(findButton('Ausgezogen (deaktiviert)').getAttribute('aria-pressed')).toBe('false');
+    expect(findPersonButton('Ausgezogen (deaktiviert)').getAttribute('aria-pressed')).toBe('false');
 
     findButton('Speichern').click();
     const put = httpMock.expectOne('/api/v1/calendar/events/1');
@@ -770,7 +796,7 @@ describe('CalendarComponent', () => {
     httpMock.expectOne('/api/v1/calendar/events/1')
       .flush({ ...SINGLE_EVENT, category: retiredRef, persons: special.persons });
     fixture.detectChanges();
-    expect(findButton('Ausgezogen (deaktiviert)')).toBeTruthy();
+    expect(findPersonButton('Ausgezogen (deaktiviert)')).toBeTruthy();
 
     findButton('Abbrechen').click();
     fixture.detectChanges();
@@ -893,5 +919,148 @@ describe('CalendarComponent', () => {
 
     const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
     expect(chip.style.getPropertyValue('--chip-color')).toBe(HEALTH.color);
+  });
+
+  // --- Filterleiste -------------------------------------------------------------------
+
+  const ANNA = { id: 11, displayName: 'Anna' };
+  const BENEDIKT = { id: 10, displayName: 'Benedikt' };
+
+  /** Drei Termine am selben Tag: einer je Person, einer ohne Zuordnung. */
+  const ANNAS_TERMIN: CalendarOccurrence =
+    { ...SINGLE_OCCURRENCE, eventId: 201, title: 'Annas Termin', persons: [ANNA] };
+  const BENEDIKTS_TERMIN: CalendarOccurrence =
+    { ...SINGLE_OCCURRENCE, eventId: 202, title: 'Benedikts Termin', persons: [BENEDIKT] };
+  const MUELLABFUHR: CalendarOccurrence =
+    { ...SINGLE_OCCURRENCE, eventId: 203, title: 'Muellabfuhr', persons: [] };
+  const ALL_THREE = [ANNAS_TERMIN, BENEDIKTS_TERMIN, MUELLABFUHR];
+
+  /**
+   * Meldet einen Nutzer an, damit currentUserId gesetzt ist. AuthService laedt ihn traege
+   * ueber /v1/auth/me - ohne diesen Anstoss bleibt er null, wie bei Anmeldung per
+   * Service-Token.
+   */
+  function signIn(id: number, displayName: string): void {
+    TestBed.inject(AuthService).ensureLoaded().subscribe();
+    httpMock.expectOne('/api/v1/auth/me').flush({
+      id, username: 'test', displayName, role: 'MEMBER', mustChangePassword: false
+    });
+  }
+
+  /** Sichtbarer Text der Tageszelle, in der alle Filter-Termine liegen. */
+  function filteredDayText(): string {
+    return dayCell('2026-08-10').textContent ?? '';
+  }
+
+  /** Beschriftungen der Filterknoepfe in ihrer Reihenfolge. */
+  function filterLabels(): (string | undefined)[] {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__filter'))
+      .map(button => button.textContent?.trim());
+  }
+
+  it('startet auf "Alle" und zeigt damit jeden Termin', () => {
+    loadInitial(ALL_THREE);
+
+    expect(fixture.componentInstance.personFilter()).toBeNull();
+    expect(findFilterButton('Alle').getAttribute('aria-pressed')).toBe('true');
+    expect(filteredDayText()).toContain('Annas Termin');
+    expect(filteredDayText()).toContain('Benedikts Termin');
+    expect(filteredDayText()).toContain('Muellabfuhr');
+  });
+
+  it('ein Personenfilter zeigt die Termine der gewaehlten Person', () => {
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).toContain('Annas Termin');
+  });
+
+  it('ein Personenfilter zeigt zusaetzlich immer die Termine ohne Zuordnung', () => {
+    // "Meine Termine" heisst "mir zugeordnet ODER den ganzen Haushalt betreffend". Sonst
+    // verschwaende die Muellabfuhr genau dann, wenn jemand auf sich selbst filtert - der
+    // Fall, in dem sie am ehesten uebersehen wird.
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).toContain('Muellabfuhr');
+  });
+
+  it('ein Personenfilter blendet die Termine anderer Personen aus', () => {
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).not.toContain('Benedikts Termin');
+  });
+
+  it('der Filterwechsel arbeitet auf den geladenen Vorkommen, ohne neu abzurufen', () => {
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+    findFilterButton('Alle').click();
+    fixture.detectChanges();
+
+    // Ein zusaetzlicher Abruf bliebe hier als offene Anfrage haengen.
+    httpMock.verify();
+    expect(filteredDayText()).toContain('Benedikts Termin');
+  });
+
+  it('"Meine" filtert auf den angemeldeten Nutzer', () => {
+    signIn(BENEDIKT.id, BENEDIKT.displayName);
+    loadInitial(ALL_THREE);
+
+    findFilterButton('Meine').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.personFilter()).toBe(BENEDIKT.id);
+    expect(filteredDayText()).toContain('Benedikts Termin');
+    expect(filteredDayText()).not.toContain('Annas Termin');
+  });
+
+  it('ohne eigenen Nutzer (Service-Token) gibt es kein "Meine"', () => {
+    loadInitial(ALL_THREE);
+
+    expect(fixture.componentInstance.currentUserId).toBeNull();
+    expect(filterLabels()).toEqual(['Alle', 'Benedikt', 'Anna']);
+  });
+
+  it('der angemeldete Nutzer steht nicht zusaetzlich als eigener Personenknopf da', () => {
+    // Zwei Knoepfe mit demselben Filter waeren gleichzeitig markiert - einer davon
+    // waere ueberfluessig und die doppelte Markierung verwirrend.
+    signIn(BENEDIKT.id, BENEDIKT.displayName);
+    loadInitial(ALL_THREE);
+
+    expect(filterLabels()).toEqual(['Alle', 'Meine', 'Anna']);
+  });
+
+  it('die Leiste bleibt weg, wenn es nichts zu filtern gibt', () => {
+    // Ohne "Meine" und ohne Person bliebe nur "Alle" - eine Leiste, die nichts kann.
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories').flush(CATEGORIES);
+    httpMock.expectOne('/api/v1/users').flush([]);
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(ALL_THREE);
+    fixture.detectChanges();
+
+    expect(filterLabels()).toEqual([]);
+  });
+
+  it('die "+n weitere"-Anzeige zaehlt nur die sichtbaren Termine', () => {
+    const annasVier: CalendarOccurrence[] = [1, 2, 3, 4].map(n => ({
+      ...SINGLE_OCCURRENCE, eventId: 300 + n, title: `Anna ${n}`, persons: [ANNA]
+    }));
+    loadInitial([...annasVier, BENEDIKTS_TERMIN]);
+    expect(filteredDayText()).toContain('+2 weitere');
+
+    findFilterButton('Anna').click();
+    fixture.detectChanges();
+
+    expect(filteredDayText()).toContain('+1 weitere');
+    expect(filteredDayText()).not.toContain('+2 weitere');
   });
 });
