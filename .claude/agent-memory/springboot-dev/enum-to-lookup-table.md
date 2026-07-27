@@ -33,17 +33,25 @@ deaktivierter Kategorie behaelt seine Farbe. Im Service einmal
 gefolgt von `addNotNullConstraint`. Bleibt eine Zeile ohne Treffer, bricht Liquibase
 den Start ab — gewollt, statt still auf einen Default zu reparieren.
 
-**Ein fail-loud-Schritt zwingt zur Aufteilung in mehrere Changesets.**
-MariaDB/MySQL committen jedes DDL implizit — ein Changeset mit mehreren DDL-Schritten
+**Ein fail-loud-Schritt zwingt zur Aufteilung in mehrere Changesets — aber die
+Trennlinie ist WIEDERHOLBARKEIT, nicht "ein Schritt pro Changeset".**
+MariaDB/MySQL committen jedes DDL implizit; ein Changeset mit mehreren DDL-Schritten
 laesst sich nach einem Fehler in der Mitte nicht zurueckrollen. Gebuendelt bliebe die
 neue Spalte stehen, ohne dass das Changeset in `DATABASECHANGELOG` landet: der naechste
 Start scheitert an "Duplicate column name" — auch nach korrigierten Daten, also dauerhaft
-ohne manuelles `ALTER TABLE`. Deshalb je ein Changeset fuer addColumn / UPDATE /
-NOT-NULL+FK / dropColumn (hier `-b1` bis `-b4`), Rollback-Bloecke entsprechend aufgeteilt.
-Beim UPDATE-Changeset ein leeres `<rollback/>` setzen — sonst scheitert ein Rollback an
-"no rollback defined" fuer `<sql>`.
-**Merksatz:** Sobald ein Changeset absichtlich abbrechen kann, muss jeder Schritt davor
-einzeln als gelaufen vermerkbar sein.
+ohne manuelles `ALTER TABLE`.
+
+Richtige Aufteilung (hier `-b1`, `-b3`, `-b4`):
+- eigenes Changeset fuer alles, was bei einer **Wiederholung scheitert**: `addColumn`, `dropColumn`
+- **zusammen** in das abbrechende Changeset: `UPDATE` + `addNotNullConstraint` + `addForeignKeyConstraint` (bei Wiederholung alle unschaedlich)
+
+**Warum das UPDATE nicht allein davor stehen darf** (Review-Befund 2026-07-27, erst in
+der zweiten Runde gefunden): Als eigenes Changeset waere es nach dem Abbruch als gelaufen
+vermerkt. Die naheliegende Reparatur — den unbekannten Wert in der ALTEN Spalte
+berichtigen — bliebe dann wirkungslos, die FK-Spalte bliebe NULL und der Start scheiterte
+endlos erneut. Durchkaeme nur, wer die FK-Spalte direkt setzt.
+**Merksatz:** Nicht nur fragen "bleibt etwas Halbfertiges stehen?", sondern
+"laeuft die *naheliegende* Reparatur danach wirklich durch?"
 
 Siehe auch [[liquibase-changeset-id-planning]] (freie Changeset-Id immer am
 Verzeichnis pruefen, nicht aus dem Plan uebernehmen).
