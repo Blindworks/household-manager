@@ -109,38 +109,9 @@
   }
 
   /*
-   * :where() macht diese Grundregel spezifitaetsfrei (zaehlt wie ein blosses `button`).
-   * Ohne das schluege sie jeden Modifier-Klassenselektor unten und alle Knoepfe waeren
-   * primaerblau — auch der zum Loeschen, der genau seine Kennzeichnung verlieren wuerde.
+   * Die Button-Optik kommt aus dem globalen Admin-Scope in styles.scss
+   * (default = primaer, .ghost, .danger); hier stehen nur noch Layout-Regeln.
    */
-  :where(&__form-actions, &__blocked-actions, &__actions) button {
-    padding: var(--spacing-xs) var(--spacing-md);
-    border: none;
-    border-radius: var(--radius-sm, 6px);
-    background: var(--color-primary);
-    color: #fff;
-    cursor: pointer;
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-  }
-
-  &__secondary,
-  &__toggle-active {
-    background: var(--color-light-gray);
-    color: var(--color-dark);
-  }
-
-  /* Der Ausweg aus dem Loeschkonflikt ist die empfohlene Aktion — bewusst primaerfarben. */
-  &__deactivate {
-    background: var(--color-primary);
-  }
-
-  &__delete {
-    background: var(--color-error);
-  }
 
   &__table {
     width: 100%;

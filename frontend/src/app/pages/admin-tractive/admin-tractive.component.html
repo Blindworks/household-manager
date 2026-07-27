@@ -1,5 +1,55 @@
 <div class="admin-tractive">
-  <h1>Hundetracker – Zuhause festlegen</h1>
+  <h1>Hundetracker – Verbindung und Zuhause</h1>
+
+  <section class="connection" *ngIf="connectionChecked()">
+    <h2>Verbindung zu Tractive</h2>
+
+    <ng-container *ngIf="connected(); else loginForm">
+      <p class="connected">
+        Verbunden<ng-container *ngIf="connectedEmail()"> als {{ connectedEmail() }}</ng-container>.
+        <span *ngIf="tokenExpiresAt()" class="hint">
+          Token gueltig bis {{ tokenExpiresAt() | date:'short' }}.
+        </span>
+      </p>
+      <p class="hint">
+        Tractive gibt kein Erneuerungs-Token aus – nach Ablauf ist eine erneute Anmeldung
+        noetig. Bis dahin melden die Entitaeten „unavailable“ und die Hundetracker-Seite
+        zeigt keine Position.
+      </p>
+      <button type="button" class="secondary" (click)="logout()" [disabled]="authBusy()">
+        Abmelden
+      </button>
+    </ng-container>
+
+    <ng-template #loginForm>
+      <p class="warning">
+        Keine Verbindung zu Tractive. Ohne sie gibt es keine Positionsdaten – die
+        Hundetracker-Seite bleibt leer, und weder Badge noch Dashboard-Kachel erscheinen.
+      </p>
+      <p class="hint">
+        Die Zugangsdaten werden nur zur Anmeldung verwendet und nie gespeichert – abgelegt
+        wird ausschliesslich das Token.
+      </p>
+      <form (ngSubmit)="login()" class="login">
+        <label>
+          E-Mail
+          <input type="email" name="email" [(ngModel)]="email" required autocomplete="username">
+        </label>
+        <label>
+          Passwort
+          <input type="password" name="password" [(ngModel)]="password" required
+                 autocomplete="current-password">
+        </label>
+        <button type="submit" [disabled]="!email || !password || authBusy()">
+          {{ authBusy() ? 'Meldet an …' : 'Anmelden' }}
+        </button>
+      </form>
+    </ng-template>
+
+    <p class="error" *ngIf="authError()">{{ authError() }}</p>
+  </section>
+
+  <h2>Zuhause festlegen</h2>
 
   <p *ngIf="loading()">Wird geladen …</p>
 
@@ -80,7 +130,7 @@
       <button type="button" (click)="save()" [disabled]="saving()">
         {{ saving() ? 'Speichert …' : 'Speichern' }}
       </button>
-      <button type="button" class="secondary" (click)="clearCoordinates()" *ngIf="hasCoordinates">
+      <button type="button" class="danger" (click)="clearCoordinates()" *ngIf="hasCoordinates">
         Koordinaten entfernen
       </button>
     </div>

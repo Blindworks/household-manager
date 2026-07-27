@@ -38,7 +38,7 @@
           (click)="setActive(conflict.category, false)">
           Stattdessen deaktivieren
         </button>
-        <button type="button" class="admin-calendar-categories__secondary" (click)="dismissBlocked()">
+        <button type="button" class="admin-calendar-categories__secondary ghost" (click)="dismissBlocked()">
           Abbrechen
         </button>
       </div>
@@ -102,7 +102,7 @@
         {{ saving() ? 'Speichert …' : (editing ? 'Änderungen speichern' : 'Anlegen') }}
       </button>
       @if (editing) {
-        <button type="button" class="admin-calendar-categories__secondary" (click)="resetForm()">
+        <button type="button" class="admin-calendar-categories__secondary ghost" (click)="resetForm()">
           Abbrechen
         </button>
       }
@@ -150,13 +150,13 @@
               <button type="button" (click)="startEdit(category)">Bearbeiten</button>
               <button
                 type="button"
-                class="admin-calendar-categories__toggle-active"
+                class="admin-calendar-categories__toggle-active ghost"
                 (click)="setActive(category, !category.active)">
                 {{ category.active ? 'Deaktivieren' : 'Aktivieren' }}
               </button>
               <button
                 type="button"
-                class="admin-calendar-categories__delete"
+                class="admin-calendar-categories__delete danger"
                 (click)="remove(category)">
                 Löschen
               </button>

@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import * as L from 'leaflet';
 import { TractiveService } from '../../services/tractive.service';
 import { TractiveHomeSettings } from '../../models/tractive-home-settings.model';
+import { TractiveAuthStatus } from '../../models/tractive.model';
 
 /**
  * Leaflet ermittelt die Standard-Marker-Icons ueber eine relative URL zum aktuell
@@ -28,7 +29,7 @@ const FALLBACK_CENTER: L.LatLngExpression = [51.1657, 10.4515];
 const FALLBACK_ZOOM = 6;
 const CONFIGURED_ZOOM = 17;
 
-/** Admin-Seite „Hundetracker": Definition von „zu Hause" pflegen. */
+/** Admin-Seite „Hundetracker": Verbindung zu Tractive und Definition von „zu Hause". */
 @Component({
   selector: 'app-admin-tractive',
   standalone: true,
@@ -50,6 +51,22 @@ export class AdminTractiveComponent implements OnInit, OnDestroy {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
+  /**
+   * Verbindungszustand zur Tractive-Cloud. Die Anmeldung liegt bewusst hier und nicht auf
+   * der Hundetracker-Seite: {@code POST /v1/tractive/login} ist ADMIN-only, ein Formular
+   * auf der fuer alle Angemeldeten offenen Seite haette fuer MEMBER und das Wandtablet
+   * immer nur einen 403 erzeugt – angezeigt als "Tractive nicht erreichbar".
+   */
+  readonly connected = signal(false);
+  readonly connectionChecked = signal(false);
+  readonly connectedEmail = signal<string | null>(null);
+  readonly tokenExpiresAt = signal<string | null>(null);
+  readonly authError = signal<string | null>(null);
+  readonly authBusy = signal(false);
+
+  email = '';
+  password = '';
+
   settings: TractiveHomeSettings = {
     homeLatitude: null,
     homeLongitude: null,
@@ -66,6 +83,11 @@ export class AdminTractiveComponent implements OnInit, OnDestroy {
   private arrivalCircle?: L.Circle;
 
   ngOnInit(): void {
+    // Bewusst zwei unabhaengige Abrufe: die Zuhause-Definition laesst sich auch ohne
+    // bestehende Tractive-Verbindung pflegen, und ein Fehler in einem der beiden darf
+    // den anderen Bereich nicht mit ausblenden.
+    this.loadConnectionStatus();
+
     this.tractiveService.getHomeSettings().subscribe({
       next: settings => {
         this.settings = settings;
@@ -79,6 +101,62 @@ export class AdminTractiveComponent implements OnInit, OnDestroy {
         this.errorMessage.set('Einstellungen konnten nicht geladen werden.');
       }
     });
+  }
+
+  login(): void {
+    this.authBusy.set(true);
+    this.authError.set(null);
+    this.tractiveService.login(this.email, this.password).subscribe({
+      next: status => {
+        this.password = '';
+        this.authBusy.set(false);
+        this.applyStatus(status);
+      },
+      // Ein 401 bedeutet falsche Zugangsdaten; jeder andere Fehler bedeutet, dass die
+      // Tractive-Cloud nicht erreichbar ist - das darf nicht faelschlich als falsches
+      // Passwort dargestellt werden.
+      error: (err: HttpErrorResponse) => {
+        this.password = '';
+        this.authBusy.set(false);
+        this.authError.set(err.status === 401
+          ? 'Anmeldung fehlgeschlagen. Bitte Zugangsdaten pruefen.'
+          : 'Tractive ist derzeit nicht erreichbar. Bitte spaeter erneut versuchen.');
+      }
+    });
+  }
+
+  logout(): void {
+    this.authBusy.set(true);
+    this.authError.set(null);
+    this.tractiveService.logout().subscribe({
+      next: () => {
+        this.authBusy.set(false);
+        this.connected.set(false);
+        this.connectedEmail.set(null);
+        this.tokenExpiresAt.set(null);
+      },
+      error: () => {
+        this.authBusy.set(false);
+        this.authError.set('Abmelden fehlgeschlagen.');
+      }
+    });
+  }
+
+  private loadConnectionStatus(): void {
+    this.tractiveService.getStatus().subscribe({
+      next: status => this.applyStatus(status),
+      error: () => {
+        this.connectionChecked.set(true);
+        this.authError.set('Verbindungszustand konnte nicht geladen werden.');
+      }
+    });
+  }
+
+  private applyStatus(status: TractiveAuthStatus): void {
+    this.connectionChecked.set(true);
+    this.connected.set(status.authenticated);
+    this.connectedEmail.set(status.email ?? null);
+    this.tokenExpiresAt.set(status.expiresAt ?? null);
   }
 
   ngOnDestroy(): void {

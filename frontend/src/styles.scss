@@ -562,6 +562,92 @@ $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
   }
 }
 
+/* ============================================================
+   Admin pages shared button styling
+   Same scoping pattern as the finance block above: raw-element
+   rules only inside the admin page containers, so they never
+   bleed into pages with their own .btn utilities (e.g. .admin).
+   Variant vocabulary matches the finance scope:
+   default = primary, .ghost = neutral outline, .danger = red outline.
+   ============================================================ */
+
+$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories';
+
+#{$admin-scopes} {
+
+  // Eingebettete Komponenten mit eigener Button-Optik (Icon-Picker) bleiben unberuehrt.
+  button:not([class*='icon-picker']) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1.1rem;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    font-weight: 600;
+    cursor: pointer;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast),
+                color var(--transition-fast), box-shadow var(--transition-fast),
+                transform var(--transition-fast);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-dark);
+      box-shadow: var(--shadow-md);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(13, 110, 189, 0.3);
+    }
+
+    &:disabled,
+    &[disabled] {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    // Neutral secondary action (cancel, dismiss, toggle)
+    &.ghost {
+      background-color: transparent;
+      border-color: #d1d5db;
+      color: var(--color-gray);
+
+      &:hover:not(:disabled) {
+        background-color: #f3f4f6;
+        border-color: #9ca3af;
+        color: var(--color-dark);
+        box-shadow: none;
+      }
+    }
+
+    // Destructive action (delete, revoke, remove)
+    &.danger {
+      background-color: transparent;
+      border-color: var(--color-error);
+      color: var(--color-error);
+
+      &:hover:not(:disabled) {
+        background-color: var(--color-error);
+        color: var(--color-white);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+      }
+    }
+  }
+
+  // Row actions inside tables stay compact
+  td button {
+    padding: 0.35rem 0.8rem;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   :root {

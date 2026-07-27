@@ -89,7 +89,7 @@ public class TractiveHomeResolver {
 
     private void warnAboutMissingHomeOnce() {
         if (missingHomeWarned.compareAndSet(false, true)) {
-            log.warn("Kein Zuhause hinterlegt (Admin -> Hundetracker-Zuhause) – "
+            log.warn("Kein Zuhause hinterlegt (Admin -> Hundetracker-Einstellungen) – "
                     + "die Entitaet 'zu Hause' wird nicht gemeldet.");
         }
     }

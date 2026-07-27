@@ -352,10 +352,12 @@ describe('AdminCalendarCategoriesComponent', () => {
     const remove = rows()[0].querySelector('.admin-calendar-categories__delete') as HTMLButtonElement;
 
     // Beide Werte festgenagelt, nicht nur ihre Ungleichheit: Faellt die Grundregel aus,
-    // bekaeme „Bearbeiten" den Browser-Default und „Loeschen" bliebe rot — verschieden,
-    // aber roh. Faellt der Modifier aus, waeren beide primaerblau.
+    // bekaeme „Bearbeiten" den Browser-Default. Faellt der .danger-Modifier aus,
+    // waere „Loeschen" primaerblau gefuellt statt rot umrandet.
     expect(getComputedStyle(edit).backgroundColor).toBe(resolvedColor('--color-primary'));
-    expect(getComputedStyle(remove).backgroundColor).toBe(resolvedColor('--color-error'));
+    expect(getComputedStyle(remove).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(remove).borderTopColor).toBe(resolvedColor('--color-error'));
+    expect(getComputedStyle(remove).color).toBe(resolvedColor('--color-error'));
   });
 
   it('macht das Umschalten in der Zeile nicht durch spaeteres Speichern rueckgaengig', async () => {
