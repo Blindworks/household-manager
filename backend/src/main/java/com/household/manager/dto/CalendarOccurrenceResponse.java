@@ -1,7 +1,6 @@
 package com.household.manager.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.household.manager.model.entity.CalendarCategory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,7 +30,7 @@ public class CalendarOccurrenceResponse {
 
     private String title;
     private String notes;
-    private CalendarCategory category;
+    private CalendarCategoryView category;
     private boolean allDay;
 
     @JsonFormat(pattern = "HH:mm")

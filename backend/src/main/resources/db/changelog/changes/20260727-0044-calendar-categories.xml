@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260727-0044-a" author="household-manager">
+        <comment>Kalender-Kategorien werden Stammdaten; cat_key ist der stabile Schluessel, auf den Flows filtern.</comment>
+
+        <createTable tableName="calendar_category">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cat_key" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_calendar_category_key"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="color" type="VARCHAR(7)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="icon" type="VARCHAR(50)"/>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Die Schluessel sind exakt die Strings, die der Erinnerungs-Scheduler bisher
+             als Event-State geschrieben hat: bestehende Flows bleiben lauffaehig. -->
+        <insert tableName="calendar_category">
+            <column name="cat_key" value="general"/><column name="name" value="Allgemein"/>
+            <column name="color" value="#64b5f6"/><column name="sort_order" valueNumeric="1"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="calendar_category">
+            <column name="cat_key" value="family"/><column name="name" value="Familie"/>
+            <column name="color" value="#ba68c8"/><column name="sort_order" valueNumeric="2"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="calendar_category">
+            <column name="cat_key" value="health"/><column name="name" value="Gesundheit"/>
+            <column name="color" value="#e57373"/><column name="sort_order" valueNumeric="3"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="calendar_category">
+            <column name="cat_key" value="household"/><column name="name" value="Haushalt"/>
+            <column name="color" value="#81c784"/><column name="sort_order" valueNumeric="4"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="calendar_category">
+            <column name="cat_key" value="work"/><column name="name" value="Arbeit"/>
+            <column name="color" value="#ffb74d"/><column name="sort_order" valueNumeric="5"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="calendar_category">
+            <column name="cat_key" value="birthday"/><column name="name" value="Geburtstag"/>
+            <column name="color" value="#f06292"/><column name="sort_order" valueNumeric="6"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+
+        <rollback>
+            <dropTable tableName="calendar_category"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260727-0044-b" author="household-manager">
+        <comment>calendar_events.category (Enum-Text) wird zu category_id mit Fremdschluessel.</comment>
+
+        <addColumn tableName="calendar_events">
+            <column name="category_id" type="BIGINT"/>
+        </addColumn>
+
+        <sql>
+            UPDATE calendar_events e
+            SET e.category_id = (SELECT c.id FROM calendar_category c WHERE c.cat_key = LOWER(e.category))
+        </sql>
+
+        <!-- Bleibt hier eine Zeile ohne Treffer, schlaegt der naechste Schritt fehl und
+             Liquibase bricht den Start ab. Gewollt: lauter Abbruch statt stiller
+             Reparatur auf "Allgemein". -->
+        <addNotNullConstraint tableName="calendar_events" columnName="category_id" columnDataType="BIGINT"/>
+
+        <addForeignKeyConstraint
+                baseTableName="calendar_events" baseColumnNames="category_id"
+                referencedTableName="calendar_category" referencedColumnNames="id"
+                constraintName="fk_calendar_events_category" onDelete="RESTRICT"/>
+
+        <dropColumn tableName="calendar_events" columnName="category"/>
+
+        <rollback>
+            <addColumn tableName="calendar_events">
+                <column name="category" type="VARCHAR(30)"/>
+            </addColumn>
+            <sql>
+                UPDATE calendar_events e
+                SET e.category = (SELECT UPPER(c.cat_key) FROM calendar_category c WHERE c.id = e.category_id)
+            </sql>
+            <dropForeignKeyConstraint baseTableName="calendar_events" constraintName="fk_calendar_events_category"/>
+            <dropColumn tableName="calendar_events" columnName="category_id"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

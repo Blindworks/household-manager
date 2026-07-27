@@ -3,7 +3,7 @@ package com.household.manager.calendar;
 import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
-import com.household.manager.model.entity.CalendarCategory;
+import com.household.manager.dto.CalendarCategoryView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +58,8 @@ class CalendarReminderSchedulerTest {
 
     private CalendarOccurrenceResponse occurrenceOn(LocalDate date, boolean allDay, LocalTime startTime) {
         return CalendarOccurrenceResponse.builder()
-                .eventId(1L).title("Zahnarzt").category(CalendarCategory.HEALTH)
+                .eventId(1L).title("Zahnarzt")
+                .category(new CalendarCategoryView(3L, "health", "Gesundheit", "#e57373", null))
                 .allDay(allDay).occurrenceDate(date)
                 .startTime(startTime)
                 .build();

@@ -15,12 +15,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
  * Feuert fuer faellige Kalender-Vorkommen das Flow-Event {@code event.calendar_reminder}
- * (action = Kategorie kleingeschrieben) — Uhrzeit-Termine zum Start, ganztaegige um 08:00.
+ * (action = Schluessel der Kategorie) — Uhrzeit-Termine zum Start, ganztaegige um 08:00.
  */
 @Service
 @Slf4j
@@ -125,7 +124,12 @@ public class CalendarReminderScheduler {
                 .source(EntitySource.CALENDAR)
                 .sourceRef("calendar")
                 .friendlyName("Kalender-Erinnerung")
-                .state(occ.getCategory().name().toLowerCase(Locale.ROOT))
+                // Der Kategorie-Schluessel ist der Vertrag zur Flow-Engine: er bleibt
+                // stabil, auch wenn die Kategorie umbenannt wird. Eine fehlende Kategorie
+                // schliesst der Fremdschluessel aus; der Fallback verhindert nur, dass ein
+                // Ausnahmefall den Erinnerungslauf statt eines Events einen Fehler liefern
+                // laesst — ein Event ohne State waere fuer jeden Flow-Filter wertlos.
+                .state(occ.getCategory() != null ? occ.getCategory().key() : "general")
                 .attributes(attributes)
                 .build());
         log.info("Kalender-Erinnerung gefeuert: {} am {}", occ.getTitle(), occ.getOccurrenceDate());

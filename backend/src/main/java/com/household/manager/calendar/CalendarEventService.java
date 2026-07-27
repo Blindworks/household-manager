@@ -1,10 +1,13 @@
 package com.household.manager.calendar;
 
 import com.household.manager.audit.AuditService;
+import com.household.manager.dto.CalendarCategoryView;
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
+import com.household.manager.model.entity.CalendarCategory;
 import com.household.manager.model.entity.CalendarEvent;
+import com.household.manager.repository.CalendarCategoryRepository;
 import com.household.manager.repository.CalendarEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -34,15 +38,18 @@ import java.util.stream.Collectors;
 public class CalendarEventService {
 
     private final CalendarEventRepository repository;
+    private final CalendarCategoryRepository categoryRepository;
     private final RecurrenceExpansionService expansionService;
     private final Clock clock;
     private final AuditService auditService;
 
     public CalendarEventService(CalendarEventRepository repository,
+                                CalendarCategoryRepository categoryRepository,
                                 RecurrenceExpansionService expansionService,
                                 Clock clock,
                                 AuditService auditService) {
         this.repository = repository;
+        this.categoryRepository = categoryRepository;
         this.expansionService = expansionService;
         this.clock = clock;
         this.auditService = auditService;
@@ -65,6 +72,9 @@ public class CalendarEventService {
         validateWindow(from, to);
         LocalDate today = today();
         List<CalendarEvent> all = repository.findAll();
+        // Einmal alle Kategorien laden statt pro Termin nachzuschlagen: der Fensterabruf
+        // kostet dadurch genau eine zusaetzliche Abfrage, unabhaengig von der Terminanzahl.
+        Map<Long, CalendarCategory> categories = categoriesById();
         Map<Long, Set<LocalDate>> overriddenDates = all.stream()
                 .filter(CalendarEvent::isOverride)
                 .collect(Collectors.groupingBy(CalendarEvent::getRecurringParentId,
@@ -74,7 +84,7 @@ public class CalendarEventService {
         for (CalendarEvent event : all) {
             if (event.isOverride() || !event.isRecurring()) {
                 if (!event.getStartDate().isBefore(from) && !event.getStartDate().isAfter(to)) {
-                    occurrences.add(toOccurrence(event, event.getStartDate(), today));
+                    occurrences.add(toOccurrence(event, event.getStartDate(), today, categories));
                 }
                 continue;
             }
@@ -83,7 +93,7 @@ public class CalendarEventService {
             for (LocalDate date : expansionService.expand(
                     event.getRrule(), event.getStartDate(), from, to)) {
                 if (!skip.contains(date)) {
-                    occurrences.add(toOccurrence(event, date, today));
+                    occurrences.add(toOccurrence(event, date, today, categories));
                 }
             }
         }
@@ -132,7 +142,9 @@ public class CalendarEventService {
         }
     }
 
-    private CalendarOccurrenceResponse toOccurrence(CalendarEvent event, LocalDate date, LocalDate today) {
+    private CalendarOccurrenceResponse toOccurrence(CalendarEvent event, LocalDate date,
+                                                    LocalDate today,
+                                                    Map<Long, CalendarCategory> categories) {
         boolean override = event.isOverride();
         long durationDays = event.getEndDate() != null
                 ? ChronoUnit.DAYS.between(event.getStartDate(), event.getEndDate()) : 0;
@@ -143,7 +155,7 @@ public class CalendarEventService {
                         : (event.isRecurring() ? date : null))
                 .title(event.getTitle())
                 .notes(event.getNotes())
-                .category(event.getCategory())
+                .category(categoryView(event.getCategoryId(), categories))
                 .allDay(event.isAllDay())
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())
@@ -151,6 +163,23 @@ public class CalendarEventService {
                 .recurring(event.isRecurring() || override)
                 .daysUntil(ChronoUnit.DAYS.between(today, date))
                 .build();
+    }
+
+    /** Alle Kategorien nach Id — eine Abfrage pro Fensterabruf statt einer pro Termin. */
+    private Map<Long, CalendarCategory> categoriesById() {
+        return categoryRepository.findAll().stream()
+                .collect(Collectors.toMap(CalendarCategory::getId, Function.identity()));
+    }
+
+    /**
+     * Die Kategorie eines Termins als eingebettete Ansicht. Fehlt sie in der Map (der
+     * Fremdschluessel schliesst das aus, ein Testdouble aber nicht), liefert die Methode
+     * null statt zu werfen — eine fehlende Farbe darf nie den ganzen Monat leeren.
+     */
+    private CalendarCategoryView categoryView(Long categoryId,
+                                              Map<Long, CalendarCategory> categories) {
+        CalendarCategory category = categories.get(categoryId);
+        return category != null ? CalendarCategoryView.of(category) : null;
     }
 
     @Transactional(readOnly = true)
@@ -276,7 +305,8 @@ public class CalendarEventService {
         override.setRrule(null); // Overrides sind nie selbst Serien
         master.removeExdate(occurrenceDate);
         repository.save(master);
-        CalendarOccurrenceResponse response = toOccurrence(repository.save(override), occurrenceDate, today());
+        CalendarOccurrenceResponse response =
+                toOccurrence(repository.save(override), occurrenceDate, today(), categoriesById());
         auditService.record("calendar.update-occurrence", "Termin " + id + " am " + occurrenceDate);
         return response;
     }
@@ -289,7 +319,7 @@ public class CalendarEventService {
     private CalendarEvent applyRequest(CalendarEventRequest request, CalendarEvent event) {
         event.setTitle(request.getTitle().trim());
         event.setNotes(request.getNotes());
-        event.setCategory(request.getCategory());
+        event.setCategoryId(request.getCategoryId());
         event.setAllDay(request.isAllDay());
         event.setStartDate(request.getStartDate());
         event.setStartTime(request.isAllDay() ? null : request.getStartTime());
@@ -314,8 +344,12 @@ public class CalendarEventService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Der Titel darf hoechstens 200 Zeichen lang sein.");
         }
-        if (request.getCategory() == null) {
+        if (request.getCategoryId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Die Kategorie fehlt.");
+        }
+        if (!categoryRepository.existsById(request.getCategoryId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Die Kategorie %d existiert nicht.".formatted(request.getCategoryId()));
         }
         if (request.getStartDate() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Das Startdatum fehlt.");
@@ -347,7 +381,8 @@ public class CalendarEventService {
                 .id(event.getId())
                 .title(event.getTitle())
                 .notes(event.getNotes())
-                .category(event.getCategory())
+                .category(categoryRepository.findById(event.getCategoryId())
+                        .map(CalendarCategoryView::of).orElse(null))
                 .allDay(event.isAllDay())
                 .startDate(event.getStartDate())
                 .startTime(event.getStartTime())

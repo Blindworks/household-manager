@@ -3,11 +3,11 @@ package com.household.manager.calendar;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.household.manager.dto.CalendarCategoryView;
 import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.exception.GlobalExceptionHandler;
-import com.household.manager.model.entity.CalendarCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,7 +61,7 @@ class CalendarEventControllerTest {
                 .eventId(1L)
                 .occurrenceDate(LocalDate.of(2026, 7, 27))
                 .title("Zahnarzt")
-                .category(CalendarCategory.HEALTH)
+                .category(new CalendarCategoryView(3L, "health", "Gesundheit", "#e57373", null))
                 .allDay(false)
                 .recurring(false)
                 .daysUntil(2)
@@ -72,7 +72,7 @@ class CalendarEventControllerTest {
         return CalendarEventResponse.builder()
                 .id(1L)
                 .title("Zahnarzt")
-                .category(CalendarCategory.HEALTH)
+                .category(new CalendarCategoryView(3L, "health", "Gesundheit", "#e57373", null))
                 .allDay(false)
                 .startDate(LocalDate.of(2026, 7, 27))
                 .recurring(false)
@@ -88,7 +88,10 @@ class CalendarEventControllerTest {
         mockMvc.perform(get("/v1/calendar/events").param("from", "2026-07-01").param("to", "2026-07-31"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("Zahnarzt"))
-                .andExpect(jsonPath("$[0].eventId").value(1));
+                .andExpect(jsonPath("$[0].eventId").value(1))
+                // Die Kategorie kommt eingebettet mit, damit das Raster ohne Nachschlagen rendert.
+                .andExpect(jsonPath("$[0].category.key").value("health"))
+                .andExpect(jsonPath("$[0].category.color").value("#e57373"));
     }
 
     @Test
@@ -109,7 +112,7 @@ class CalendarEventControllerTest {
         mockMvc.perform(post("/v1/calendar/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"Zahnarzt","category":"HEALTH","allDay":false,
+                                {"title":"Zahnarzt","categoryId":3,"allDay":false,
                                  "startDate":"2026-07-27"}
                                 """))
                 .andExpect(status().isCreated())
@@ -164,7 +167,7 @@ class CalendarEventControllerTest {
         mockMvc.perform(put("/v1/calendar/events/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"Zahnarzt","category":"HEALTH","allDay":false,
+                                {"title":"Zahnarzt","categoryId":3,"allDay":false,
                                  "startDate":"2026-07-27"}
                                 """))
                 .andExpect(status().isOk())
@@ -173,6 +176,7 @@ class CalendarEventControllerTest {
         ArgumentCaptor<CalendarEventRequest> requestCaptor = ArgumentCaptor.forClass(CalendarEventRequest.class);
         verify(service).update(eq(1L), requestCaptor.capture());
         assertThat(requestCaptor.getValue().getTitle()).isEqualTo("Zahnarzt");
+        assertThat(requestCaptor.getValue().getCategoryId()).isEqualTo(3L);
     }
 
     @Test
@@ -183,7 +187,7 @@ class CalendarEventControllerTest {
                 .eventId(1L)
                 .recurrenceDate(LocalDate.of(2026, 7, 27))
                 .title("Zahnarzt (verschoben)")
-                .category(CalendarCategory.HEALTH)
+                .category(new CalendarCategoryView(3L, "health", "Gesundheit", "#e57373", null))
                 .allDay(false)
                 .recurring(true)
                 .daysUntil(2)
@@ -194,7 +198,7 @@ class CalendarEventControllerTest {
         mockMvc.perform(put("/v1/calendar/events/1/occurrences/2026-07-27")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"Zahnarzt (verschoben)","category":"HEALTH","allDay":false,
+                                {"title":"Zahnarzt (verschoben)","categoryId":3,"allDay":false,
                                  "startDate":"2026-07-27"}
                                 """))
                 .andExpect(status().isOk())

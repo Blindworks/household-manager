@@ -11,7 +11,7 @@ class CalendarEventTest {
     private CalendarEvent event() {
         return CalendarEvent.builder()
                 .title("Testtermin")
-                .category(CalendarCategory.GENERAL)
+                .categoryId(1L)
                 .startDate(LocalDate.of(2026, 1, 1))
                 .build();
     }

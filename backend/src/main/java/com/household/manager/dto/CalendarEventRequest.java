@@ -1,7 +1,6 @@
 package com.household.manager.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.household.manager.model.entity.CalendarCategory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +18,7 @@ public class CalendarEventRequest {
 
     private String title;
     private String notes;
-    private CalendarCategory category;
+    private Long categoryId;
     private boolean allDay;
 
     @JsonFormat(pattern = "yyyy-MM-dd")

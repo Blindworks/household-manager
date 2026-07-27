@@ -2,8 +2,6 @@ package com.household.manager.model.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -48,9 +46,9 @@ public class CalendarEvent {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private CalendarCategory category;
+    /** Fremdschluessel auf calendar_category; bewusst als nackte Id (Projektstil). */
+    @Column(name = "category_id", nullable = false)
+    private Long categoryId;
 
     @Column(name = "all_day", nullable = false)
     private boolean allDay;
