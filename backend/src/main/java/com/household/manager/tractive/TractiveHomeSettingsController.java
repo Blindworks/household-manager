@@ -72,8 +72,14 @@ public class TractiveHomeSettingsController {
     /**
      * Dieselbe Grenze, die {@link TractiveHomeSettingsService} beim Lesen anwendet – sonst
      * nimmt die API einen Wert mit 200 an, den der Service danach wortlos auf den Default
-     * zurueckdreht. Die explizite {@code isFinite}-Pruefung ist noetig, weil JEDER Vergleich
-     * mit {@code NaN} false ergibt und ein NaN sonst durch alle Schranken faellt.
+     * zurueckdreht.
+     *
+     * <p>Die {@code isFinite}-Pruefung ist hier streng genommen redundant: weil dies eine
+     * BEIDSEITIGE Schranke ist, faellt {@code NaN} schon an {@code > 0} und {@code Infinity}
+     * an der Obergrenze durch. Sie steht trotzdem da, damit die Absicht sichtbar bleibt und
+     * das Entfernen der Obergrenze nicht stillschweigend ein Loch aufreisst. Bei den
+     * EINSEITIGEN Koordinatenpruefungen oben ist sie dagegen tragend – dort ergibt
+     * {@code Math.abs(NaN) > 90} false, und ein NaN kaeme ohne sie durch.
      */
     private boolean isPlausibleRadius(double meters) {
         return Double.isFinite(meters) && meters > 0 && meters <= TractiveHomeSettingsService.MAX_RADIUS_METERS;
