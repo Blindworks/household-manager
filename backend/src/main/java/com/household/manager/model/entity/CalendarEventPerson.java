@@ -26,6 +26,9 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+// Der Verbundschluessel ist fachlich und wird nach dem Anlegen nie geaendert — der Fall,
+// in dem Gleichheit ueber alle Felder einer Entity gefahrlos ist.
+@EqualsAndHashCode
 public class CalendarEventPerson {
 
     @Id
@@ -42,6 +45,9 @@ public class CalendarEventPerson {
     @AllArgsConstructor
     @EqualsAndHashCode
     public static class Key implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
         private Long calendarEventId;
         private Long userId;
     }

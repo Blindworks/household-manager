@@ -5,20 +5,16 @@ import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.dto.CalendarPersonView;
-import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.CalendarCategory;
 import com.household.manager.model.entity.CalendarEvent;
-import com.household.manager.model.entity.CalendarEventPerson;
-import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.CalendarCategoryRepository;
-import com.household.manager.repository.CalendarEventPersonRepository;
 import com.household.manager.repository.CalendarEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
@@ -26,13 +22,16 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,18 +49,15 @@ class CalendarEventServiceTest {
     private static final CalendarCategory HEALTH = CalendarCategory.builder()
             .id(3L).key("health").name("Gesundheit").color("#e57373").sortOrder(3).active(true).build();
 
-    /** Die einzige Person dieser Tests. */
-    private static final AppUser ANNA = AppUser.builder()
-            .id(2L).username("anna").displayName("Anna").enabled(true).build();
+    /** Die einzige Person dieser Tests, wie der Personendienst sie liefert. */
+    private static final CalendarPersonView ANNA = new CalendarPersonView(2L, "Anna");
 
     @Mock
     private CalendarEventRepository repository;
     @Mock
     private CalendarCategoryRepository categoryRepository;
     @Mock
-    private CalendarEventPersonRepository personRepository;
-    @Mock
-    private AppUserRepository userRepository;
+    private CalendarEventPersonService personService;
     @Mock
     private AuditService auditService;
 
@@ -69,8 +65,8 @@ class CalendarEventServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CalendarEventService(repository, categoryRepository, personRepository,
-                userRepository, new RecurrenceExpansionService(), CLOCK, auditService);
+        service = new CalendarEventService(repository, categoryRepository, personService,
+                new RecurrenceExpansionService(), CLOCK, auditService);
         lenient().when(categoryRepository.findAll()).thenReturn(List.of(HEALTH));
         lenient().when(categoryRepository.findById(3L)).thenReturn(Optional.of(HEALTH));
     }
@@ -712,7 +708,7 @@ class CalendarEventServiceTest {
         verify(repository).deleteByRecurringParentId(2L);
     }
 
-    // --- Personen-Zuordnung ---------------------------------------------------------------
+    // --- Zusammenspiel mit dem Personendienst -------------------------------------------
 
     private CalendarEvent zahnarzt() {
         return CalendarEvent.builder()
@@ -720,29 +716,36 @@ class CalendarEventServiceTest {
                 .startDate(LocalDate.of(2026, 7, 25)).build();
     }
 
-    @SuppressWarnings("unchecked")
-    private List<CalendarEventPerson> capturedSaveAll() {
-        ArgumentCaptor<List<CalendarEventPerson>> saved = ArgumentCaptor.forClass(List.class);
-        verify(personRepository).saveAll(saved.capture());
-        return saved.getValue();
+    /** Wie die Datenbank: eine Zeile ohne Id bekommt beim Speichern die uebergebene. */
+    private void saveAssigningId(Long newRowId) {
+        when(repository.save(any())).thenAnswer(call -> {
+            CalendarEvent event = call.getArgument(0);
+            if (event.getId() == null) {
+                event.setId(newRowId);
+            }
+            return event;
+        });
     }
 
     @Test
-    void speichertDieZugeordnetenPersonen() {
-        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
-        when(userRepository.findAllById(List.of(2L))).thenReturn(List.of(ANNA));
+    void createSchreibtDiePersonenAnDieIdDerNeuenZeile() {
+        saveAssigningId(42L);
+        when(personService.replace(42L, List.of(2L))).thenReturn(List.of(ANNA));
 
-        service.create(validRequest().personUserIds(List.of(2L, 2L)).build());
+        CalendarEventResponse response =
+                service.create(validRequest().personUserIds(List.of(2L)).build());
 
-        // Eine doppelt geschickte Id darf nicht zu zwei Zeilen fuehren — der
-        // Primaerschluessel wuerde das mit einem 500er quittieren.
-        assertThat(capturedSaveAll()).hasSize(1);
-        assertThat(capturedSaveAll().get(0).getUserId()).isEqualTo(2L);
+        verify(personService).replace(42L, List.of(2L));
+        assertThat(response.getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
     }
 
     @Test
-    void weistUnbekanntePersonenAb() {
-        when(userRepository.findAllById(List.of(99L))).thenReturn(List.of());
+    void createSpeichertNichtsWennDiePersonenpruefungWirft() {
+        // Die Pruefung gehoert vor den ersten Schreibzugriff, sonst haengt das Verwerfen
+        // eines halb angelegten Termins allein am Transaktions-Rollback.
+        doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Der Nutzer 99 existiert nicht."))
+                .when(personService).validate(List.of(99L));
 
         assertThatThrownBy(() -> service.create(validRequest().personUserIds(List.of(99L)).build()))
                 .isInstanceOf(ResponseStatusException.class)
@@ -751,46 +754,66 @@ class CalendarEventServiceTest {
     }
 
     @Test
-    void ignoriertNullEintraegeInDerPersonenliste() {
-        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
+    void updateSchreibtDiePersonenAnDieTerminId() {
+        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
+        saveAssigningId(99L);
 
-        // Ein null im JSON-Array darf nicht bis zu findAllById durchschlagen — Spring Data
-        // wirft dort eine InvalidDataAccessApiUsageException, also einen 500er.
-        service.create(validRequest().personUserIds(Arrays.asList((Long) null)).build());
+        service.update(1L, validRequest().personUserIds(List.of(2L)).build());
 
-        verify(personRepository, never()).saveAll(any());
-        verify(userRepository, never()).findAllById(any());
+        verify(personService).replace(1L, List.of(2L));
+    }
+
+    @Test
+    void updateOccurrenceSchreibtDiePersonenAnDieIdDerOverrideZeile() {
+        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
+        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
+        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
+                .thenReturn(Optional.empty());
+        // Die neu angelegte Override-Zeile bekommt eine eigene Id (3), der Master hat 2.
+        saveAssigningId(3L);
+        // Bewusst ueber beliebige Ids gestubbt: eine falsche Id soll an der Verifikation
+        // unten scheitern, nicht schon an der strengen Stubbing-Pruefung von Mockito.
+        when(personService.replace(anyLong(), any())).thenReturn(List.of(ANNA));
+
+        CalendarEventRequest request = CalendarEventRequest.builder()
+                .title("Sport (verschoben)").categoryId(3L)
+                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
+                .personUserIds(List.of(2L))
+                .build();
+
+        CalendarOccurrenceResponse response =
+                service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
+
+        // Die entscheidende Unterscheidung: geschrieben wird an die Id der Override-Zeile.
+        // Mit der Master-Id (2) wuerden die Personen der ganzen Serie ueberschrieben.
+        verify(personService).replace(3L, List.of(2L));
+        verify(personService, never()).replace(eq(2L), any());
+        assertThat(response.getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
+    }
+
+    @Test
+    void getEventLiefertDieZugeordnetenPersonen() {
+        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
+        when(personService.viewsFor(1L)).thenReturn(List.of(ANNA));
+
+        CalendarEventResponse response = service.getEvent(1L);
+
+        assertThat(response.getPersons())
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
     }
 
     @Test
     void liefertPersonenAmVorkommenMit() {
         when(repository.findAll()).thenReturn(List.of(zahnarzt()));
-        when(personRepository.findAll()).thenReturn(List.of(
-                CalendarEventPerson.builder().calendarEventId(1L).userId(2L).build()));
-        when(userRepository.findAll()).thenReturn(List.of(ANNA));
+        when(personService.viewsByEvent()).thenReturn(Map.of(1L, List.of(ANNA)));
 
         List<CalendarOccurrenceResponse> occurrences = service.getOccurrences(
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
 
         assertThat(occurrences).hasSize(1);
         assertThat(occurrences.get(0).getPersons())
-                .extracting(CalendarPersonView::displayName)
-                .containsExactly("Anna");
-    }
-
-    @Test
-    void laesstZuordnungenOhneNutzerAusDemVorkommenWeg() {
-        when(repository.findAll()).thenReturn(List.of(zahnarzt()));
-        when(personRepository.findAll()).thenReturn(List.of(
-                CalendarEventPerson.builder().calendarEventId(1L).userId(99L).build()));
-        when(userRepository.findAll()).thenReturn(List.of(ANNA));
-
-        List<CalendarOccurrenceResponse> occurrences = service.getOccurrences(
-                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
-
-        // Der Fremdschluessel schliesst das aus; faellt er je weg, ist eine ausgelassene
-        // Person besser als ein Chip ohne Namen im Monatsraster.
-        assertThat(occurrences.get(0).getPersons()).isEmpty();
+                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
     }
 
     @Test
@@ -804,9 +827,7 @@ class CalendarEventServiceTest {
         when(repository.findAll()).thenReturn(List.of(weekly, override));
         // Die Zuordnung haengt an der eigenen Zeilen-Id (3), nicht an der Master-Id (2),
         // die die Antwort als eventId ausweist.
-        when(personRepository.findAll()).thenReturn(List.of(
-                CalendarEventPerson.builder().calendarEventId(3L).userId(2L).build()));
-        when(userRepository.findAll()).thenReturn(List.of(ANNA));
+        when(personService.viewsByEvent()).thenReturn(Map.of(3L, List.of(ANNA)));
 
         var result = service.getOccurrences(LocalDate.of(2026, 7, 12), LocalDate.of(2026, 7, 18));
 
@@ -814,81 +835,5 @@ class CalendarEventServiceTest {
         assertThat(result.get(0).getEventId()).isEqualTo(2L);
         assertThat(result.get(0).getPersons())
                 .extracting(CalendarPersonView::displayName).containsExactly("Anna");
-    }
-
-    @Test
-    void getEventLiefertDieZugeordnetenPersonen() {
-        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
-        when(personRepository.findByCalendarEventId(1L)).thenReturn(List.of(
-                CalendarEventPerson.builder().calendarEventId(1L).userId(2L).build()));
-        when(userRepository.findAllById(List.of(2L))).thenReturn(List.of(ANNA));
-
-        CalendarEventResponse response = service.getEvent(1L);
-
-        assertThat(response.getPersons())
-                .extracting(CalendarPersonView::displayName).containsExactly("Anna");
-    }
-
-    @Test
-    void updateEntferntNichtMehrZugeordnetePersonen() {
-        CalendarEventPerson link = CalendarEventPerson.builder()
-                .calendarEventId(1L).userId(2L).build();
-        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
-        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
-        when(personRepository.findByCalendarEventId(1L)).thenReturn(List.of(link));
-
-        service.update(1L, validRequest().build());
-
-        verify(personRepository).deleteAll(List.of(link));
-        verify(personRepository, never()).saveAll(any());
-    }
-
-    @Test
-    void updateLaesstUnveraenderteZuordnungenUnberuehrt() {
-        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
-        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
-        when(userRepository.findAllById(List.of(2L))).thenReturn(List.of(ANNA));
-        when(personRepository.findByCalendarEventId(1L)).thenReturn(List.of(
-                CalendarEventPerson.builder().calendarEventId(1L).userId(2L).build()));
-
-        service.update(1L, validRequest().personUserIds(List.of(2L)).build());
-
-        // Denselben Schluessel in einer Transaktion zu loeschen und sofort wieder
-        // anzulegen waere eine Wette auf Hibernates Flush-Reihenfolge (Inserts laufen
-        // vor Deletes) — eine unveraenderte Zuordnung bleibt deshalb einfach stehen.
-        verify(personRepository, never()).deleteAll(any());
-        verify(personRepository, never()).saveAll(any());
-    }
-
-    @Test
-    void updateOccurrencePflegtDiePersonenDerOverrideZeile() {
-        CalendarEvent weekly = series(2L, "Sport", LocalDate.of(2026, 7, 6), "FREQ=WEEKLY");
-        when(repository.findById(2L)).thenReturn(Optional.of(weekly));
-        when(repository.findByRecurringParentIdAndRecurrenceDate(2L, LocalDate.of(2026, 7, 13)))
-                .thenReturn(Optional.empty());
-        when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
-        when(userRepository.findAllById(List.of(2L))).thenReturn(List.of(ANNA));
-
-        CalendarEventRequest request = CalendarEventRequest.builder()
-                .title("Sport (verschoben)").categoryId(3L)
-                .allDay(true).startDate(LocalDate.of(2026, 7, 14))
-                .personUserIds(List.of(2L))
-                .build();
-
-        CalendarOccurrenceResponse response =
-                service.updateOccurrence(2L, LocalDate.of(2026, 7, 13), request);
-
-        assertThat(capturedSaveAll()).hasSize(1);
-        assertThat(capturedSaveAll().get(0).getUserId()).isEqualTo(2L);
-        assertThat(response.getPersons()).isNotNull();
-    }
-
-    @Test
-    void raeumtDieZuordnungenBeimLoeschenAb() {
-        when(repository.findById(1L)).thenReturn(Optional.of(zahnarzt()));
-
-        service.delete(1L);
-
-        verify(personRepository).deleteByCalendarEventId(1L);
     }
 }

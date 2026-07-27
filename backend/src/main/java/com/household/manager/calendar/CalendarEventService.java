@@ -6,13 +6,9 @@ import com.household.manager.dto.CalendarEventRequest;
 import com.household.manager.dto.CalendarEventResponse;
 import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.dto.CalendarPersonView;
-import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.CalendarCategory;
 import com.household.manager.model.entity.CalendarEvent;
-import com.household.manager.model.entity.CalendarEventPerson;
-import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.CalendarCategoryRepository;
-import com.household.manager.repository.CalendarEventPersonRepository;
 import com.household.manager.repository.CalendarEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -44,23 +40,20 @@ public class CalendarEventService {
 
     private final CalendarEventRepository repository;
     private final CalendarCategoryRepository categoryRepository;
-    private final CalendarEventPersonRepository personRepository;
-    private final AppUserRepository userRepository;
+    private final CalendarEventPersonService personService;
     private final RecurrenceExpansionService expansionService;
     private final Clock clock;
     private final AuditService auditService;
 
     public CalendarEventService(CalendarEventRepository repository,
                                 CalendarCategoryRepository categoryRepository,
-                                CalendarEventPersonRepository personRepository,
-                                AppUserRepository userRepository,
+                                CalendarEventPersonService personService,
                                 RecurrenceExpansionService expansionService,
                                 Clock clock,
                                 AuditService auditService) {
         this.repository = repository;
         this.categoryRepository = categoryRepository;
-        this.personRepository = personRepository;
-        this.userRepository = userRepository;
+        this.personService = personService;
         this.expansionService = expansionService;
         this.clock = clock;
         this.auditService = auditService;
@@ -87,7 +80,7 @@ public class CalendarEventService {
         // nachzuschlagen: der Fensterabruf kostet dadurch eine feste Zahl zusaetzlicher
         // Abfragen, unabhaengig von der Terminanzahl.
         Map<Long, CalendarCategory> categories = categoriesById();
-        Map<Long, List<CalendarPersonView>> personsByEvent = personsByEvent();
+        Map<Long, List<CalendarPersonView>> personsByEvent = personService.viewsByEvent();
         Map<Long, Set<LocalDate>> overriddenDates = all.stream()
                 .filter(CalendarEvent::isOverride)
                 .collect(Collectors.groupingBy(CalendarEvent::getRecurringParentId,
@@ -205,22 +198,24 @@ public class CalendarEventService {
     @Transactional(readOnly = true)
     public CalendarEventResponse getEvent(Long id) {
         CalendarEvent event = findOrThrow(id);
-        return toResponse(event, categoryRepository.findById(event.getCategoryId()).orElse(null));
+        return toResponse(event, categoryRepository.findById(event.getCategoryId()).orElse(null),
+                personService.viewsFor(event.getId()));
     }
 
     @Transactional
     public CalendarEventResponse create(CalendarEventRequest request) {
-        CalendarCategory category = validate(request);
+        CalendarCategory category = validateAndResolveCategory(request);
         CalendarEvent saved = repository.save(applyRequest(request, new CalendarEvent()));
-        replacePersons(saved.getId(), request.getPersonUserIds());
-        CalendarEventResponse response = toResponse(saved, category);
+        List<CalendarPersonView> persons =
+                personService.replace(saved.getId(), request.getPersonUserIds());
+        CalendarEventResponse response = toResponse(saved, category, persons);
         auditService.record("calendar.create", request.getTitle());
         return response;
     }
 
     @Transactional
     public CalendarEventResponse update(Long id, CalendarEventRequest request) {
-        CalendarCategory category = validate(request);
+        CalendarCategory category = validateAndResolveCategory(request);
         CalendarEvent event = findOrThrow(id);
         String oldRrule = event.getRrule();
         String newRrule = normalizeRrule(request.getRrule());
@@ -234,20 +229,27 @@ public class CalendarEventService {
             repository.deleteByRecurringParentId(id);
         }
         CalendarEvent saved = repository.save(event);
-        replacePersons(saved.getId(), request.getPersonUserIds());
-        CalendarEventResponse response = toResponse(saved, category);
+        List<CalendarPersonView> persons =
+                personService.replace(saved.getId(), request.getPersonUserIds());
+        CalendarEventResponse response = toResponse(saved, category, persons);
         auditService.record("calendar.update", request.getTitle());
         return response;
     }
 
+    /**
+     * Loescht den Termin samt seiner Override-Zeilen. Die Personenzuordnungen raeumt
+     * ausschliesslich die Datenbank ab (ON DELETE CASCADE auf {@code calendar_event_id}) —
+     * bewusst ohne expliziten Aufruf, denn auch die Zuordnungen der hier geloeschten
+     * Override-Zeilen, die von {@code update} bei geaenderter RRULE und die von
+     * {@code deleteOccurrence} haengen an derselben Kaskade. Eine Absicherung, die nur
+     * einen von vier Pfaden abdeckt, waere ein Versprechen, das sie nicht haelt.
+     */
     @Transactional
     public void delete(Long id) {
         CalendarEvent event = findOrThrow(id);
-        // DB hat ON DELETE CASCADE fuer recurring_parent_id und calendar_event_id; die
-        // expliziten Aufrufe hier sind bewusste Absicherung (z.B. falls ein Fremdschluessel
-        // je gelockert wird), kein toter Code.
+        // DB hat ON DELETE CASCADE fuer recurring_parent_id; der explizite Aufruf hier ist
+        // bewusste Absicherung (z.B. falls der Fremdschluessel je gelockert wird), kein toter Code.
         repository.deleteByRecurringParentId(id);
-        personRepository.deleteByCalendarEventId(id);
         repository.delete(event);
         auditService.record("calendar.delete", "Termin " + id);
     }
@@ -321,7 +323,7 @@ public class CalendarEventService {
                     "Das Datum %s ist kein Vorkommen dieser Serie.".formatted(occurrenceDate));
         }
         request.setRrule(null);
-        CalendarCategory category = validate(request);
+        CalendarCategory category = validateAndResolveCategory(request);
         CalendarEvent override = repository
                 .findByRecurringParentIdAndRecurrenceDate(id, occurrenceDate)
                 .orElseGet(() -> CalendarEvent.builder()
@@ -333,9 +335,12 @@ public class CalendarEventService {
         master.removeExdate(occurrenceDate);
         repository.save(master);
         CalendarEvent saved = repository.save(override);
-        replacePersons(saved.getId(), request.getPersonUserIds());
+        // Bewusst die Id der Override-Zeile, nicht die der Serie: das geaenderte Vorkommen
+        // hat seine eigenen Personen.
+        List<CalendarPersonView> persons =
+                personService.replace(saved.getId(), request.getPersonUserIds());
         CalendarOccurrenceResponse response = toOccurrence(saved, occurrenceDate, today(),
-                categoryView(category), personsOf(saved.getId()));
+                categoryView(category), persons);
         auditService.record("calendar.update-occurrence", "Termin " + id + " am " + occurrenceDate);
         return response;
     }
@@ -367,9 +372,10 @@ public class CalendarEventService {
     /**
      * Prueft den Request und liefert dabei die geladene Kategorie zurueck. Die Antwort
      * braucht sie ohnehin; so gibt es genau eine Abfrage und genau eine Stelle, die
-     * entscheidet, ob eine Kategorie-Id gueltig ist.
+     * entscheidet, ob eine Kategorie-Id gueltig ist. Laeuft vollstaendig vor dem ersten
+     * Schreibzugriff — auch die Personenpruefung.
      */
-    private CalendarCategory validate(CalendarEventRequest request) {
+    private CalendarCategory validateAndResolveCategory(CalendarEventRequest request) {
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Der Titel darf nicht leer sein.");
@@ -407,99 +413,12 @@ public class CalendarEventService {
                         "Das Ende der Wiederholung darf nicht vor dem Startdatum liegen.");
             }
         }
-        validatePersons(request.getPersonUserIds());
+        personService.validate(request.getPersonUserIds());
         return category;
     }
 
-    /** Wirft, sobald eine Id keinem Nutzer entspricht — sonst entstuenden stille Geisterzuordnungen. */
-    private void validatePersons(List<Long> userIds) {
-        List<Long> distinct = distinctPersonIds(userIds);
-        if (distinct.isEmpty()) {
-            return;
-        }
-        Set<Long> known = userRepository.findAllById(distinct).stream()
-                .map(AppUser::getId).collect(Collectors.toSet());
-        for (Long userId : distinct) {
-            if (!known.contains(userId)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Der Nutzer %d existiert nicht.".formatted(userId));
-            }
-        }
-    }
-
-    /**
-     * Bringt die Zuordnungen eines Termins auf den gewuenschten Stand. Bewusst als
-     * Differenz und nicht als "alles loeschen, alles neu schreiben": derselbe
-     * Primaerschluessel innerhalb einer Transaktion geloescht und sofort wieder angelegt
-     * waere eine Wette auf Hibernates Flush-Reihenfolge (Inserts laufen vor Deletes), und
-     * genau das passiert beim blossen Umbenennen eines Termins mit gleichbleibenden
-     * Personen. Duplikate im Request werden dabei zusammengefasst.
-     */
-    private void replacePersons(Long eventId, List<Long> userIds) {
-        List<Long> wanted = distinctPersonIds(userIds);
-        List<CalendarEventPerson> existing = personRepository.findByCalendarEventId(eventId);
-        List<CalendarEventPerson> obsolete = existing.stream()
-                .filter(link -> !wanted.contains(link.getUserId()))
-                .toList();
-        if (!obsolete.isEmpty()) {
-            personRepository.deleteAll(obsolete);
-        }
-        Set<Long> alreadyLinked = existing.stream()
-                .map(CalendarEventPerson::getUserId).collect(Collectors.toSet());
-        List<CalendarEventPerson> added = wanted.stream()
-                .filter(userId -> !alreadyLinked.contains(userId))
-                .map(userId -> CalendarEventPerson.builder()
-                        .calendarEventId(eventId).userId(userId).build())
-                .toList();
-        if (!added.isEmpty()) {
-            personRepository.saveAll(added);
-        }
-    }
-
-    /** null-Eintraege fliegen raus: sie wuerden in Spring Data als 500er enden. */
-    private List<Long> distinctPersonIds(List<Long> userIds) {
-        return userIds == null ? List.of()
-                : userIds.stream().filter(Objects::nonNull).distinct().toList();
-    }
-
-    /** Alle Zuordnungen nach Termin-Id — eine Abfrage pro Fensterabruf statt einer pro Termin. */
-    private Map<Long, List<CalendarPersonView>> personsByEvent() {
-        Map<Long, String> displayNames = displayNamesById(userRepository.findAll());
-        return personRepository.findAll().stream()
-                .collect(Collectors.groupingBy(CalendarEventPerson::getCalendarEventId,
-                        Collectors.collectingAndThen(Collectors.toList(),
-                                links -> personViews(links, displayNames))));
-    }
-
-    /** Die Zuordnungen eines einzelnen Termins. */
-    private List<CalendarPersonView> personsOf(Long eventId) {
-        List<CalendarEventPerson> links = personRepository.findByCalendarEventId(eventId);
-        if (links.isEmpty()) {
-            return List.of();
-        }
-        return personViews(links, displayNamesById(userRepository.findAllById(
-                links.stream().map(CalendarEventPerson::getUserId).toList())));
-    }
-
-    private Map<Long, String> displayNamesById(List<AppUser> users) {
-        return users.stream().collect(Collectors.toMap(AppUser::getId, AppUser::getDisplayName));
-    }
-
-    /**
-     * Die einzige Stelle, die aus Zuordnungen eingebettete Personen macht. Ein Verweis ohne
-     * passenden Nutzer faellt weg statt namenlos ausgeliefert zu werden — der
-     * Fremdschluessel schliesst das aus, ein Testdouble aber nicht.
-     */
-    private List<CalendarPersonView> personViews(List<CalendarEventPerson> links,
-                                                 Map<Long, String> displayNames) {
-        return links.stream()
-                .filter(link -> displayNames.containsKey(link.getUserId()))
-                .map(link -> new CalendarPersonView(link.getUserId(),
-                        displayNames.get(link.getUserId())))
-                .toList();
-    }
-
-    private CalendarEventResponse toResponse(CalendarEvent event, CalendarCategory category) {
+    private CalendarEventResponse toResponse(CalendarEvent event, CalendarCategory category,
+                                             List<CalendarPersonView> persons) {
         return CalendarEventResponse.builder()
                 .id(event.getId())
                 .title(event.getTitle())
@@ -512,7 +431,7 @@ public class CalendarEventService {
                 .endDate(event.getEndDate())
                 .rrule(event.getRrule())
                 .recurring(event.isRecurring())
-                .persons(personsOf(event.getId()))
+                .persons(persons)
                 .build();
     }
 }

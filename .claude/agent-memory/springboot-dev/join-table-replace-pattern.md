@@ -21,7 +21,7 @@ Im Projekt gibt es keine Integrationstests gegen eine echte DB, die das auffange
 
 **How to apply:** Immer wenn eine Fassade "ersetze die Zuordnungen von X" anbietet.
 Ein Test der Form „unveraenderte Zuordnung loest weder deleteAll noch saveAll aus"
-haelt die Entscheidung fest (siehe `CalendarEventServiceTest`).
+haelt die Entscheidung fest (siehe `CalendarEventPersonServiceTest`).
 Nebeneffekt: deutlich weniger Schreiblast beim blossen Bearbeiten anderer Felder.
 
 Verwandt: [[liquibase-changeset-id-planning]]

@@ -6,14 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 /**
- * Zuordnungen Termin↔Person. {@code deleteByCalendarEventId} ist eine abgeleitete
- * Loeschmethode und laeuft damit in der Transaktion des Aufrufers — alle Aufrufer im
- * {@code CalendarEventService} sind {@code @Transactional}.
+ * Zuordnungen Termin↔Person. Es gibt bewusst keine Loeschmethode nach Termin: das
+ * Abraeumen beim Loeschen eines Termins uebernimmt vollstaendig die Kaskade des
+ * Fremdschluessels (siehe {@code CalendarEventService#delete}).
  */
 public interface CalendarEventPersonRepository
         extends JpaRepository<CalendarEventPerson, CalendarEventPerson.Key> {
 
     List<CalendarEventPerson> findByCalendarEventId(Long calendarEventId);
-
-    void deleteByCalendarEventId(Long calendarEventId);
 }
