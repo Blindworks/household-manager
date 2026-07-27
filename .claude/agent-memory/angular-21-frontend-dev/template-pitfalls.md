@@ -7,17 +7,35 @@ metadata:
 
 # Template-Fallen (in diesem Repo real aufgetreten)
 
-## `@for ... track` braucht eindeutige Werte
+## `@for ... track` braucht eindeutige Werte — und NG0955 ist nur eine *Warnung*
 Beim Rendern abgeleiteter Werte (z. B. Initialen von Personennamen) ist der Wert selbst
 **kein** gueltiger Track-Key: zwei Personen mit demselben Anfangsbuchstaben erzeugen
-doppelte Keys, und Angular wirft dafuer zur Laufzeit (NG0955), nicht beim Build. Bei
-abgeleiteten/nicht garantiert eindeutigen Werten `track $index` nehmen; `track item.id`
-nur, wenn es wirklich eine Id gibt.
+doppelte Keys. Bei abgeleiteten/nicht garantiert eindeutigen Werten `track $index` nehmen;
+`track item.id` nur, wenn es wirklich eine Id gibt.
 
-**Why:** Der Fehler kommt erst zur Laufzeit mit echten Daten — Build und Tests mit
-Ein-Element-Fixtures laufen gruen durch.
+**Korrektur (nachgemessen, Angular 19.2.18 in diesem Repo):** NG0955 wird als
+`console.warn` ausgegeben, **nicht** geworfen — eine fruehere Notiz hier behauptete das
+Gegenteil. Ein Test, der nur die Anzeige prueft, laeuft mit doppelten Keys gruen durch;
+das Rendern selbst ist beim ersten Durchlauf korrekt. Im Produktionsbuild entfaellt die
+Pruefung ganz, uebrig bleibt fehlerhafte DOM-Wiederverwendung beim naechsten
+Aktualisieren (Klick auf Chip A oeffnet Vorkommen B). Zusichern laesst sich das nur ueber
+`spyOn(console, 'warn')` + `expect(...).not.toContain('NG0955')` — Vorbild:
+`calendar.component.spec.ts`.
+
+**Zusammengesetzte Schluessel sind Behauptungen, keine Garantien.** Konkret gefallen:
+`eventId + occurrenceDate` fuer Kalender-Vorkommen. Verschiebt der Nutzer ein
+Serien-Vorkommen per "Nur diesen Termin" auf einen anderen Tag *derselben* Serie, meldet
+die Override-Zeile die Master-Id als `eventId` und den neuen Tag als `occurrenceDate`;
+serverseitig unterdrueckt wird nur das urspruengliche Datum
+(`CalendarEventService.getOccurrences` fuellt `overriddenDates` aus `recurrenceDate`).
+Beide Vorkommen tragen dann denselben Schluessel.
+
+**Why:** Der Schaden ist im Prod-Build still und aeussert sich als "falscher Termin
+oeffnet sich" — praktisch nicht als Track-Key-Problem erkennbar.
 **How to apply:** Bei jedem neuen `@for` fragen, ob der Track-Ausdruck ueber die ganze
-Liste eindeutig sein *muss* und ob er das garantiert ist.
+Liste eindeutig sein *muss* und ob er das garantiert ist. Wenn die Eindeutigkeit aus einer
+Invariante der Datenquelle folgt, diese Invariante **im Backend nachlesen**, statt sie
+hinzuschreiben.
 
 ## `<label>` darf nicht mehrere Buttons umschliessen
 `<button>` ist ein labelable element. Ein `<label>`, das mehrere Toggle-Buttons (oder
