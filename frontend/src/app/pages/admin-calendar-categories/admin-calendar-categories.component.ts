@@ -85,14 +85,22 @@ export class AdminCalendarCategoriesComponent implements OnInit {
 
   form: CategoryFormState = emptyForm(SORT_ORDER_STEP);
 
+  /**
+   * Zuletzt vorgeschlagene Reihenfolge. Nur solange das Feld genau diesen Wert traegt,
+   * gilt es als unberuehrt — der Vergleich muss gegen das Feld selbst gehen, nicht gegen
+   * ein anderes: Wer eine Reihenfolge eintraegt, bevor er den Namen tippt, verliert sie
+   * sonst beim naechsten Nachladen kommentarlos.
+   */
+  private lastProposedSortOrder = SORT_ORDER_STEP;
+
   ngOnInit(): void {
     this.load();
   }
 
   /**
    * Laedt die Liste neu. `afterLoad` laeuft, sobald die Antwort da ist — auch im
-   * Fehlerfall, damit ein bereits gespeichertes Formular nicht stehen bleibt und ein
-   * zweites Mal abgeschickt werden kann.
+   * Fehlerfall. Sonst bliebe nach einem gescheiterten Nachladen ein bereits gespeichertes
+   * Formular samt gesetztem `saving` stehen, und die Seite waere bis zum Neuladen tot.
    *
    * `loading` wird hier bewusst nicht wieder auf true gesetzt: es markiert nur den
    * allerersten Abruf.
@@ -137,7 +145,8 @@ export class AdminCalendarCategoriesComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.form = emptyForm(this.nextSortOrder());
+    this.lastProposedSortOrder = this.nextSortOrder();
+    this.form = emptyForm(this.lastProposedSortOrder);
     this.errorMessage.set(null);
     this.blocked.set(null);
   }
@@ -148,13 +157,16 @@ export class AdminCalendarCategoriesComponent implements OnInit {
    * Der haeufigste Weg zu einer neuen Kategorie fuehrt gar nicht ueber `resetForm()` —
    * Seite oeffnen, Namen tippen, anlegen. Ohne diesen Schritt bliebe dort der beim Bauen
    * der Komponente geratene Wert stehen, der die geladene Liste noch nicht kannte.
-   * Sobald der Nutzer angefangen hat oder eine Kategorie bearbeitet, wird nichts mehr
-   * angefasst: ein Nachladen darf keine Eingabe ueberschreiben.
+   *
+   * Beim Bearbeiten und bei einem selbst eingetragenen Wert bleibt das Feld unangetastet:
+   * ein Nachladen darf keine Eingabe ueberschreiben.
    */
   private proposeSortOrder(): void {
-    if (this.form.id === null && this.form.name === '') {
-      this.form.sortOrder = this.nextSortOrder();
+    if (this.form.id !== null || this.form.sortOrder !== this.lastProposedSortOrder) {
+      return;
     }
+    this.lastProposedSortOrder = this.nextSortOrder();
+    this.form.sortOrder = this.lastProposedSortOrder;
   }
 
   /**
@@ -183,13 +195,17 @@ export class AdminCalendarCategoriesComponent implements OnInit {
       ? this.categoryApi.create(request)
       : this.categoryApi.update(id, request);
     call.subscribe({
-      next: () => {
+      // Erst nach dem Neuladen zuruecksetzen: der Reihenfolge-Vorschlag fuer den
+      // naechsten Eintrag muss den gerade gespeicherten schon kennen, sonst schlaegt er
+      // genau dessen Wert noch einmal vor.
+      //
+      // `saving` gehoert deshalb in denselben Rueckruf: Bis dahin traegt das Formular noch
+      // die eingegebenen Werte, und weil ein Nachladen sonst nichts Sichtbares aendert,
+      // legte ein zweiter Klick in diesem Fenster dieselbe Kategorie ein zweites Mal an.
+      next: () => this.load(() => {
         this.saving.set(false);
-        // Erst nach dem Neuladen zuruecksetzen: der Reihenfolge-Vorschlag fuer den
-        // naechsten Eintrag muss den gerade gespeicherten schon kennen, sonst schlaegt er
-        // genau dessen Wert noch einmal vor.
-        this.load(() => this.resetForm());
-      },
+        this.resetForm();
+      }),
       error: (err: Error) => {
         this.saving.set(false);
         this.errorMessage.set(err.message);

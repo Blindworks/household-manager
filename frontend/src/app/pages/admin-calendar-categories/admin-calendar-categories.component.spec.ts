@@ -6,6 +6,20 @@ import { CalendarCategory } from '../../models/calendar-category.model';
 
 const CATEGORIES_URL = '/api/v1/calendar/categories';
 
+/**
+ * Loest ein Farb-Token aus `styles.scss` in die Schreibweise auf, die `getComputedStyle`
+ * liefert. Die Werte werden dadurch nicht im Test dupliziert — geprueft wird, dass der
+ * Knopf das gemeinte Token traegt, nicht ein zufaellig gleiches Rot.
+ */
+function resolvedColor(token: string): string {
+  const probe = document.createElement('div');
+  probe.style.backgroundColor = `var(${token})`;
+  document.body.appendChild(probe);
+  const value = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return value;
+}
+
 const ARZT: CalendarCategory = {
   id: 1, key: 'arzttermin', name: 'Arzttermin', color: '#64b5f6',
   icon: 'local_hospital', sortOrder: 1, active: true
@@ -212,6 +226,68 @@ describe('AdminCalendarCategoriesComponent', () => {
     httpMock.expectOne(CATEGORIES_URL).flush([ARZT, ALTLAST]);
   });
 
+  it('laesst waehrend des Nachladens kein zweites Anlegen zu', async () => {
+    await loadWith([]);
+
+    const name = el.querySelector('input[name="name"]') as HTMLInputElement;
+    name.value = 'Geburtstag';
+    name.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const submit = el.querySelector('button[type="submit"]') as HTMLButtonElement;
+    submit.click();
+    httpMock.expectOne(r => r.method === 'POST')
+      .flush({ id: 3, key: 'geburtstag', name: 'Geburtstag', color: '#64b5f6', icon: null, sortOrder: 10, active: true });
+    fixture.detectChanges();
+
+    // Der Nachlade-GET laeuft noch. Bis er da ist, traegt das Formular unveraendert die
+    // eingegebenen Werte — waere der Knopf hier schon wieder frei, legte ein zweiter
+    // Klick dieselbe Kategorie ein zweites Mal an.
+    expect(submit.disabled).toBeTrue();
+    submit.click();
+    httpMock.expectNone(r => r.method === 'POST');
+
+    httpMock.expectOne(CATEGORIES_URL).flush([]);
+    fixture.detectChanges();
+    expect(submit.disabled).toBeFalse();
+  });
+
+  it('behaelt eine selbst eingetragene Reihenfolge ueber ein Nachladen hinweg', async () => {
+    await loadWith([ARZT]);
+
+    const sortOrder = el.querySelector('input[name="sortOrder"]') as HTMLInputElement;
+    sortOrder.value = '5';
+    sortOrder.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    // Nachladen ohne Zutun des Nutzers am Formular — hier ueber das Umschalten in der Zeile.
+    (rows()[0].querySelector('.admin-calendar-categories__toggle-active') as HTMLButtonElement).click();
+    httpMock.expectOne(`${CATEGORIES_URL}/1`).flush({ ...ARZT, active: false });
+    httpMock.expectOne(CATEGORIES_URL).flush([{ ...ARZT, active: false }]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.sortOrder).toBe(5);
+  });
+
+  it('nimmt den Konflikt-Banner weg, wenn stattdessen eine neue Kategorie angelegt wird', async () => {
+    await loadWith([ARZT]);
+    failingDelete(1, 409, 'Die Kategorie wird von 4 Termin(en) genutzt und kann nicht geloescht werden.');
+    expect(el.querySelector('.admin-calendar-categories__blocked')).toBeTruthy();
+
+    const name = el.querySelector('input[name="name"]') as HTMLInputElement;
+    name.value = 'Geburtstag';
+    name.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    httpMock.expectOne(r => r.method === 'POST')
+      .flush({ id: 3, key: 'geburtstag', name: 'Geburtstag', color: '#64b5f6', icon: null, sortOrder: 11, active: true });
+    httpMock.expectOne(CATEGORIES_URL).flush([ARZT]);
+    fixture.detectChanges();
+
+    // Der einzige Pfad, auf dem allein resetForm aufraeumt.
+    expect(el.querySelector('.admin-calendar-categories__blocked')).toBeFalsy();
+  });
+
   it('lehnt einen leeren Namen ohne Anfrage ab', async () => {
     await loadWith([]);
 
@@ -269,16 +345,17 @@ describe('AdminCalendarCategoriesComponent', () => {
     expect(fixture.componentInstance.form.active).toBeTrue();
   });
 
-  it('hebt den Loeschen-Knopf farblich von den uebrigen ab', async () => {
+  it('faerbt die Knoepfe nach ihrer Rolle', async () => {
     await loadWith([ARZT]);
 
     const edit = rows()[0].querySelector('button') as HTMLButtonElement;
     const remove = rows()[0].querySelector('.admin-calendar-categories__delete') as HTMLButtonElement;
 
-    // Die Grundregel fuer Knoepfe darf den Modifier nicht ueberstimmen — sonst saehe die
-    // destruktive Aktion aus wie jede andere.
-    expect(getComputedStyle(remove).backgroundColor)
-      .not.toBe(getComputedStyle(edit).backgroundColor);
+    // Beide Werte festgenagelt, nicht nur ihre Ungleichheit: Faellt die Grundregel aus,
+    // bekaeme „Bearbeiten" den Browser-Default und „Loeschen" bliebe rot — verschieden,
+    // aber roh. Faellt der Modifier aus, waeren beide primaerblau.
+    expect(getComputedStyle(edit).backgroundColor).toBe(resolvedColor('--color-primary'));
+    expect(getComputedStyle(remove).backgroundColor).toBe(resolvedColor('--color-error'));
   });
 
   it('macht das Umschalten in der Zeile nicht durch spaeteres Speichern rueckgaengig', async () => {
