@@ -100,9 +100,9 @@
         (Die Id -b2 ist historisch und bleibt frei — Liquibase-Ids werden nie wiederverwendet.)
     -->
     <changeSet id="20260727-0044-b1" author="household-manager">
-        <comment>Schritt 1/3: Spalte category_id anlegen (noch nullable) — nicht wiederholbar.</comment>
+        <!-- preConditions muss laut Schema das erste Kind von changeSet sein, noch vor comment.
 
-        <!-- Die Aufteilung allein reicht nicht: Auf einer Datenbank, auf der eine fruehere,
+             Die Aufteilung allein reicht nicht: Auf einer Datenbank, auf der eine fruehere,
              noch gebuendelte Fassung dieses Changesets lief, steht die Spalte bereits in der
              Tabelle, ohne dass eine der neuen Ids protokolliert waere. Ohne diese Vorbedingung
              scheitert der Start dann dauerhaft an "Duplicate column name 'category_id'".
@@ -112,6 +112,8 @@
                 <columnExists tableName="calendar_events" columnName="category_id"/>
             </not>
         </preConditions>
+
+        <comment>Schritt 1/3: Spalte category_id anlegen (noch nullable) — nicht wiederholbar.</comment>
 
         <addColumn tableName="calendar_events">
             <column name="category_id" type="BIGINT"/>
@@ -148,13 +150,13 @@
     </changeSet>
 
     <changeSet id="20260727-0044-b4" author="household-manager">
-        <comment>Schritt 3/3: alte Enum-Spalte entfernen — nicht wiederholbar.</comment>
-
-        <!-- Gegenstueck zu -b1: hat eine fruehere Fassung die Spalte bereits entfernt, ist
-             hier nichts mehr zu tun. -->
+        <!-- Gegenstueck zu -b1 (dort steht auch, warum preConditions vor comment gehoert):
+             hat eine fruehere Fassung die Spalte bereits entfernt, ist hier nichts mehr zu tun. -->
         <preConditions onFail="MARK_RAN">
             <columnExists tableName="calendar_events" columnName="category"/>
         </preConditions>
+
+        <comment>Schritt 3/3: alte Enum-Spalte entfernen — nicht wiederholbar.</comment>
 
         <dropColumn tableName="calendar_events" columnName="category"/>
 
