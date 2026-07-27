@@ -1,0 +1,91 @@
+<div class="admin-tractive">
+  <h1>Hundetracker – Zuhause festlegen</h1>
+
+  <p *ngIf="loading()">Wird geladen …</p>
+
+  <!--
+    Bei fehlgeschlagenem Laden wird das Formular NICHT gezeigt: es enthielte sonst nur die
+    hartkodierten Vorgabewerte, saehe aber echt aus – ein Klick auf Speichern wuerde die
+    tatsaechliche Konfiguration ueberschreiben.
+  -->
+  <p class="error" *ngIf="loadFailed()">
+    {{ errorMessage() }} Das Formular bleibt ausgeblendet, damit nichts versehentlich
+    ueberschrieben wird. Bitte die Seite neu laden.
+  </p>
+
+  <ng-container *ngIf="!loading() && !loadFailed()">
+    <p class="warning" *ngIf="!hasCoordinates">
+      Es ist kein Zuhause hinterlegt. Ohne Koordinaten gibt es keine „Hund zu Hause"-Entitaet,
+      kein Badge auf der Hundetracker-Seite und keine Dashboard-Kachel.
+      Klicke auf der Karte auf dein Haus.
+    </p>
+
+    <div id="home-map" class="map"></div>
+
+    <div class="fields">
+      <label>
+        Breitengrad
+        <input type="number" step="0.000001" name="latitude"
+               [(ngModel)]="settings.homeLatitude" (ngModelChange)="onValueChange()">
+      </label>
+      <label>
+        Laengengrad
+        <input type="number" step="0.000001" name="longitude"
+               [(ngModel)]="settings.homeLongitude" (ngModelChange)="onValueChange()">
+      </label>
+      <label>
+        Home-Radius (m)
+        <input type="number" min="1" name="radius"
+               [(ngModel)]="settings.homeRadiusMeters" (ngModelChange)="onValueChange()">
+        <span class="hint">Innerhalb dieses Kreises gilt der Hund als zu Hause.</span>
+      </label>
+      <label>
+        Ankunftsradius (m)
+        <input type="number" min="1" name="arrivalRadius"
+               [(ngModel)]="settings.homeArrivalRadiusMeters" (ngModelChange)="onValueChange()">
+        <span class="hint">
+          Weiter Radius fuer den Fall, dass der Tracker zu Hause ausgeschaltet wird und der
+          letzte Bericht noch von unterwegs stammt. Ein Wert kleiner als der Home-Radius
+          bleibt wirkungslos – es gilt immer der groessere der beiden.
+        </span>
+      </label>
+      <label>
+        Stille-Schwelle (Minuten)
+        <input type="number" min="1" name="poweredOffAfter"
+               [(ngModel)]="settings.poweredOffAfterMinutes" (ngModelChange)="onValueChange()">
+        <span class="hint">
+          Ab wann ein ausbleibender Positionsbericht als „Tracker ausgeschaltet" gilt.
+        </span>
+      </label>
+      <label>
+        Mindest-Akkustand (%)
+        <input type="number" min="0" max="100" name="minBattery"
+               [(ngModel)]="settings.poweredOffMinBatteryPercent" (ngModelChange)="onValueChange()">
+        <span class="hint">
+          Darunter gilt Stille als „Akku leer" statt als „ausgeschaltet".
+        </span>
+      </label>
+      <label>
+        Name der Zone
+        <input type="text" name="zoneName"
+               [(ngModel)]="settings.homeZoneName" (ngModelChange)="onValueChange()">
+        <span class="hint">
+          Erscheint als Zustand des Standort-Sensors – aber nur, wenn keine Tractive-Geofences
+          lesbar sind. Mit funktionierenden Geofences bleibt dieser Name wirkungslos.
+        </span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="button" (click)="save()" [disabled]="saving()">
+        {{ saving() ? 'Speichert …' : 'Speichern' }}
+      </button>
+      <button type="button" class="secondary" (click)="clearCoordinates()" *ngIf="hasCoordinates">
+        Koordinaten entfernen
+      </button>
+    </div>
+
+    <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+    <p class="success" *ngIf="successMessage()">{{ successMessage() }}</p>
+  </ng-container>
+</div>

@@ -20,15 +20,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * "Akku unterwegs leergelaufen" genauso aussieht, verlangt diese Deutung zwei
  * unabhaengige Belege: einen gesunden Akkustand und Heimnaehe im weiten Radius.
  *
- * <p>{@link Optional#empty()} bedeutet ueberall dasselbe: keine Aussage moeglich. Es wird
+ * <p>{@link Optional#empty()} bedeutet immer dasselbe: keine Aussage moeglich. Es wird
  * nie ein Zustand geraten – ein Alarm-Flow darf nicht bei jedem GPS-Aussetzer feuern.
+ * Die beiden GRUENDE dafuer sind allerdings verschieden zu behandeln, siehe
+ * {@link #isHomeConfigured()}.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class TractiveHomeResolver {
 
-    private final TractiveProperties properties;
+    private final TractiveHomeSettingsService settingsService;
 
     /** Die Warnung ueber fehlende Home-Koordinaten soll nicht jede Minute im Log stehen. */
     private final AtomicBoolean missingHomeWarned = new AtomicBoolean();
@@ -41,10 +43,15 @@ public class TractiveHomeResolver {
     private final AtomicBoolean clockSkewWarned = new AtomicBoolean();
 
     public Optional<HomeVerdict> resolve(TractivePetSnapshot snapshot, Instant now) {
-        if (!hasHomeCoordinates()) {
+        // Einmal lesen: innerhalb einer Bewertung darf sich die Definition nicht aendern.
+        TractiveHomeSettings settings = settingsService.getSettings();
+
+        if (!settings.hasHomeCoordinates()) {
             warnAboutMissingHomeOnce();
             return Optional.empty();
         }
+        // Zuruecksetzen, damit ein spaeteres Entfernen der Koordinaten wieder auffaellt.
+        missingHomeWarned.set(false);
 
         TractiveHardwareDto hardware = snapshot.hardware();
         if (hardware != null && hardware.isCharging()) {
@@ -57,25 +64,32 @@ public class TractiveHomeResolver {
         }
 
         double distanceMeters = GeoZone.distanceMeters(
-                properties.getHomeLatitude(), properties.getHomeLongitude(),
+                settings.homeLatitude(), settings.homeLongitude(),
                 position.latitude(), position.longitude());
         Long ageMinutes = positionAgeMinutes(position, now);
-        boolean stale = ageMinutes != null && ageMinutes >= properties.getPoweredOffAfterMinutes();
+        boolean stale = ageMinutes != null && ageMinutes >= settings.poweredOffAfterMinutes();
 
-        if (stale && looksPoweredOffAtHome(hardware, distanceMeters)) {
+        if (stale && looksPoweredOffAtHome(hardware, distanceMeters, settings)) {
             return Optional.of(HomeVerdict.poweredOff(distanceMeters, ageMinutes));
         }
         return Optional.of(HomeVerdict.fromPosition(
-                distanceMeters <= properties.getHomeRadiusMeters(), stale, distanceMeters, ageMinutes));
+                distanceMeters <= settings.homeRadiusMeters(), stale, distanceMeters, ageMinutes));
     }
 
-    private boolean hasHomeCoordinates() {
-        return properties.getHomeLatitude() != null && properties.getHomeLongitude() != null;
+    /**
+     * Ist ueberhaupt ein Zuhause hinterlegt? Trennt die beiden Gruende, aus denen
+     * {@link #resolve} leer liefert: "keine Definition" (der Nutzer hat die Koordinaten
+     * entfernt) und "keine Positionsdaten" (der Tracker ist still). Nur der erste Fall
+     * darf die Entitaet auf {@code unavailable} setzen – Stille ist zu Hause der
+     * Normalzustand und soll den letzten Wert behalten.
+     */
+    public boolean isHomeConfigured() {
+        return settingsService.getSettings().hasHomeCoordinates();
     }
 
     private void warnAboutMissingHomeOnce() {
         if (missingHomeWarned.compareAndSet(false, true)) {
-            log.warn("tractive.home-latitude/-longitude sind nicht gesetzt – "
+            log.warn("Kein Zuhause hinterlegt (Admin -> Hundetracker-Zuhause) – "
                     + "die Entitaet 'zu Hause' wird nicht gemeldet.");
         }
     }
@@ -105,16 +119,12 @@ public class TractiveHomeResolver {
      * Fail-safe: ohne Akkustand wird nicht auf "ausgeschaltet" geschlossen. Sonst wuerde
      * ein unterwegs verlorener Tracker als "zu Hause" gemeldet.
      */
-    private boolean looksPoweredOffAtHome(TractiveHardwareDto hardware, double distanceMeters) {
+    private boolean looksPoweredOffAtHome(TractiveHardwareDto hardware, double distanceMeters,
+                                          TractiveHomeSettings settings) {
         if (hardware == null || hardware.batteryLevel() == null) {
             return false;
         }
-        return hardware.batteryLevel() >= properties.getPoweredOffMinBatteryPercent()
-                && distanceMeters <= effectiveArrivalRadiusMeters();
-    }
-
-    /** Ein kleiner konfigurierter Ankunftsradius darf die Regel nicht unwirksam machen. */
-    private double effectiveArrivalRadiusMeters() {
-        return Math.max(properties.getHomeArrivalRadiusMeters(), properties.getHomeRadiusMeters());
+        return hardware.batteryLevel() >= settings.poweredOffMinBatteryPercent()
+                && distanceMeters <= settings.effectiveArrivalRadiusMeters();
     }
 }

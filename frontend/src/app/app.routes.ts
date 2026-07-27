@@ -123,6 +123,12 @@ export const routes: Routes = [
     title: 'API-Tokens - Household Manager'
   },
   {
+    path: 'admin/tractive',
+    loadComponent: () => import('./pages/admin-tractive/admin-tractive.component').then(m => m.AdminTractiveComponent),
+    canActivate: [adminGuard],
+    title: 'Hundetracker-Zuhause - Household Manager'
+  },
+  {
     path: 'admin/audit-log',
     loadComponent: () => import('./pages/admin-audit-log/admin-audit-log.component').then(m => m.AdminAuditLogComponent),
     canActivate: [adminGuard],

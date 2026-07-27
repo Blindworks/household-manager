@@ -14,6 +14,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,13 +26,17 @@ class TractivePetServiceTest {
     @Mock
     private TractiveZoneResolver zoneResolver;
 
-    /** Bewusst die echte Klasse: der Test soll die reale Home-Definition pruefen. */
+    /**
+     * Bewusst der echte Resolver: der Test soll die reale Home-Definition pruefen.
+     * Der Stub ist lenient, weil einige Tests (leerer Cache, kein Poll) listPets() vor
+     * jeder Snapshot-Bewertung kurzschliessen – der Resolver wird dort nie aufgerufen.
+     */
     private TractiveHomeResolver homeResolver() {
-        TractiveProperties properties = new TractiveProperties();
-        properties.setHomeLatitude(48.2082);
-        properties.setHomeLongitude(16.3738);
-        properties.setHomeRadiusMeters(100);
-        return new TractiveHomeResolver(properties);
+        TractiveHomeSettings settings =
+                new TractiveHomeSettings(48.2082, 16.3738, 100, 500, 60, 15, "Zuhause");
+        TractiveHomeSettingsService settingsService = mock(TractiveHomeSettingsService.class);
+        lenient().when(settingsService.getSettings()).thenReturn(settings);
+        return new TractiveHomeResolver(settingsService);
     }
 
     @Test

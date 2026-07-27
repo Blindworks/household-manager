@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { TractiveAuthStatus, TractivePet } from '../models/tractive.model';
+import { TractiveHomeSettings } from '../models/tractive-home-settings.model';
 
 /** REST-Service fuer die Tractive-Haustiertracker. */
 @Injectable({ providedIn: 'root' })
@@ -30,6 +31,17 @@ export class TractiveService {
     return this.http.get<TractivePet[]>(`${this.baseUrl}/pets`).pipe(
       catchError(this.handleError)
     );
+  }
+
+  getHomeSettings(): Observable<TractiveHomeSettings> {
+    return this.http.get<TractiveHomeSettings>(`${this.baseUrl}/home-settings`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Fehler werden bewusst NICHT geschluckt: die Seite zeigt die 400-Meldung des Servers an. */
+  saveHomeSettings(settings: TractiveHomeSettings): Observable<TractiveHomeSettings> {
+    return this.http.put<TractiveHomeSettings>(`${this.baseUrl}/home-settings`, settings);
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

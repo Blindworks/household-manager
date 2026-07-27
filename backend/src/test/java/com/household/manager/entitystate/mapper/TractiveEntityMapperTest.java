@@ -5,8 +5,9 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.tractive.GeoZone;
 import com.household.manager.tractive.TractiveHomeResolver;
+import com.household.manager.tractive.TractiveHomeSettings;
+import com.household.manager.tractive.TractiveHomeSettingsService;
 import com.household.manager.tractive.TractivePetSnapshot;
-import com.household.manager.tractive.TractiveProperties;
 import com.household.manager.tractive.TractiveZoneResolver;
 import com.household.manager.tractive.dto.TractiveHardwareDto;
 import com.household.manager.tractive.dto.TractivePositionDto;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TractiveEntityMapperTest {
 
@@ -27,13 +30,13 @@ class TractiveEntityMapperTest {
 
     @BeforeEach
     void setUp() {
-        TractiveProperties properties = new TractiveProperties();
-        properties.setHomeLatitude(48.2082);
-        properties.setHomeLongitude(16.3738);
-        properties.setHomeRadiusMeters(100);
         // Home-Koordinaten sind zugleich die Fallback-Zone des TractiveZoneResolver.
-        mapper = new TractiveEntityMapper(new TractiveZoneResolver(properties),
-                new TractiveHomeResolver(properties));
+        TractiveHomeSettings settings =
+                new TractiveHomeSettings(48.2082, 16.3738, 100, 500, 60, 15, "Zuhause");
+        TractiveHomeSettingsService settingsService = mock(TractiveHomeSettingsService.class);
+        when(settingsService.getSettings()).thenReturn(settings);
+        mapper = new TractiveEntityMapper(new TractiveZoneResolver(settingsService),
+                new TractiveHomeResolver(settingsService));
     }
 
     private TractiveTrackableDto bello() {
@@ -154,6 +157,46 @@ class TractiveEntityMapperTest {
         List<EntityStateUpdate> updates = mapper.map(snapshot, NOW);
 
         assertTrue(updates.stream().noneMatch(u -> u.entityId().endsWith("_home")));
+    }
+
+    /**
+     * Kein Zuhause hinterlegt: die Entitaet darf nicht auf ihrem alten Wert einfrieren,
+     * sonst behauptet sie weiter "zu Hause", waehrend Badge und Kachel schon weg sind.
+     */
+    @Test
+    void withoutAnyHomeConfiguredTheEntityBecomesUnavailable() {
+        TractiveEntityMapper unconfigured = mapperWithoutHome();
+        var snapshot = new TractivePetSnapshot(bello(),
+                new TractivePositionDto(List.of(48.2082, 16.3738), 12.0, "GPS",
+                        Instant.now().getEpochSecond()),
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+
+        var home = byId(unconfigured.map(snapshot, Instant.now()),
+                "binary_sensor.tractive_dev_9_home");
+
+        assertEquals("unavailable", home.state());
+        assertEquals("presence", home.attributes().get("deviceClass"));
+    }
+
+    /** Zuhause hinterlegt, aber keine Daten: hier bleibt es beim Einfrieren (kein Update). */
+    @Test
+    void withHomeConfiguredButNoDataStillNoHomeUpdate() {
+        var snapshot = new TractivePetSnapshot(bello(), null,
+                new TractiveHardwareDto(87, "NOT_CHARGING"), List.of());
+
+        List<EntityStateUpdate> updates = mapper.map(snapshot, Instant.now());
+
+        assertTrue(updates.stream().noneMatch(u -> u.entityId().endsWith("_home")));
+    }
+
+    /** Mapper ohne hinterlegtes Zuhause – der Fall nach "Koordinaten entfernen". */
+    private TractiveEntityMapper mapperWithoutHome() {
+        TractiveHomeSettings settings =
+                new TractiveHomeSettings(null, null, 100, 500, 60, 15, "Zuhause");
+        TractiveHomeSettingsService settingsService = mock(TractiveHomeSettingsService.class);
+        when(settingsService.getSettings()).thenReturn(settings);
+        return new TractiveEntityMapper(new TractiveZoneResolver(settingsService),
+                new TractiveHomeResolver(settingsService));
     }
 
     @Test
