@@ -11,6 +11,41 @@
   margin-bottom: 1.5rem;
 }
 
+.connection {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin-top: 0;
+  }
+}
+
+.connected {
+  font-weight: 600;
+  color: #14532d;
+}
+
+.login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 400px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-weight: 600;
+  }
+
+  input {
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+}
+
 .warning {
   padding: 0.75rem 1rem;
   border-radius: 8px;
@@ -48,10 +83,6 @@
   display: flex;
   gap: 0.75rem;
   margin-top: 1.5rem;
-}
-
-.secondary {
-  opacity: 0.8;
 }
 
 .error {

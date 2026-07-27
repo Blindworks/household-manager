@@ -3,25 +3,18 @@
 
   <p *ngIf="loading()">Wird geladen …</p>
 
-  <section class="login" *ngIf="!loading() && !authenticated()">
-    <h2>Bei Tractive anmelden</h2>
-    <p class="hint">
-      Die Zugangsdaten werden nur zur Anmeldung verwendet und nie gespeichert.
-      Da Tractive kein Erneuerungs-Token ausgibt, ist gelegentlich eine erneute
-      Anmeldung noetig.
+  <!--
+    Bewusst nur ein Hinweis statt eines Anmeldeformulars: POST /v1/tractive/login ist
+    ADMIN-only, diese Seite aber fuer jeden Angemeldeten offen. Ein Formular hier haette
+    fuer MEMBER und das Wandtablet immer nur einen 403 erzeugt.
+  -->
+  <section class="not-connected" *ngIf="!loading() && !authenticated()">
+    <h2>Keine Verbindung zu Tractive</h2>
+    <p>
+      Der Hundetracker ist nicht mit Tractive verbunden, deshalb gibt es keine
+      Positionsdaten. Ein Administrator stellt die Verbindung unter
+      <strong>Admin → Hundetracker-Einstellungen</strong> her.
     </p>
-    <form (ngSubmit)="login()">
-      <label>
-        E-Mail
-        <input type="email" name="email" [(ngModel)]="email" required autocomplete="username">
-      </label>
-      <label>
-        Passwort
-        <input type="password" name="password" [(ngModel)]="password" required
-               autocomplete="current-password">
-      </label>
-      <button type="submit" [disabled]="!email || !password">Anmelden</button>
-    </form>
   </section>
 
   <section *ngIf="!loading() && authenticated()">
@@ -48,8 +41,6 @@
     <p *ngIf="pets().length === 0" class="muted">
       Noch keine Daten – der erste Abruf erfolgt kurz nach dem Start.
     </p>
-
-    <button type="button" class="logout" (click)="logout()">Abmelden</button>
   </section>
 
   <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>

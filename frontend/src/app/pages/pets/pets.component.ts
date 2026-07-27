@@ -1,7 +1,5 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { HttpErrorResponse } from '@angular/common/http';
 import * as L from 'leaflet';
 import { TractiveService } from '../../services/tractive.service';
 import { TractivePet } from '../../models/tractive.model';
@@ -24,11 +22,15 @@ function fixLeafletDefaultIcon(): void {
 }
 fixLeafletDefaultIcon();
 
-/** Seite „Hundetracker": Login, Karte und Kacheln je Haustier. */
+/**
+ * Seite „Hundetracker": Karte und Kacheln je Haustier. Reiner Betrachter – die Anmeldung
+ * an Tractive liegt im Admin-Bereich, weil ihr Endpunkt ADMIN-only ist, diese Seite aber
+ * fuer jeden Angemeldeten offen steht.
+ */
 @Component({
   selector: 'app-pets',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   templateUrl: './pets.component.html',
   styleUrl: './pets.component.scss'
 })
@@ -39,9 +41,6 @@ export class PetsComponent implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly pets = signal<TractivePet[]>([]);
-
-  email = '';
-  password = '';
 
   private map?: L.Map;
   private markers = new Map<string, L.Marker>();
@@ -66,39 +65,6 @@ export class PetsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.stopPolling();
     this.destroyMap();
-  }
-
-  login(): void {
-    this.errorMessage.set(null);
-    this.tractiveService.login(this.email, this.password).subscribe({
-      next: () => {
-        this.password = '';
-        this.authenticated.set(true);
-        this.startPolling();
-      },
-      // Ein 401 bedeutet falsche Zugangsdaten; jeder andere Fehler (z. B. 502)
-      // bedeutet, dass die Tractive-Cloud nicht erreichbar ist - das darf nicht
-      // faelschlich als falsches Passwort dargestellt werden.
-      error: (err: HttpErrorResponse) => {
-        this.password = '';
-        if (err.status === 401) {
-          this.errorMessage.set('Anmeldung fehlgeschlagen. Bitte Zugangsdaten pruefen.');
-        } else {
-          this.errorMessage.set('Tractive ist derzeit nicht erreichbar. Bitte spaeter erneut versuchen.');
-        }
-      }
-    });
-  }
-
-  logout(): void {
-    this.tractiveService.logout().subscribe({
-      next: () => {
-        this.stopPolling();
-        this.destroyMap();
-        this.authenticated.set(false);
-        this.pets.set([]);
-      }
-    });
   }
 
   /** Anzeigetext der Zone. */

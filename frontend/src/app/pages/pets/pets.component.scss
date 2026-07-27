@@ -11,25 +11,16 @@
   margin-bottom: 1.5rem;
 }
 
-.login {
-  max-width: 400px;
+.not-connected {
+  max-width: 640px;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #7c2d12;
 
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  input {
-    padding: 0.5rem;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+  h2 {
+    margin-top: 0;
+    font-size: 1.1rem;
   }
 }
 
@@ -86,8 +77,4 @@
 
 .error {
   color: #c0392b;
-}
-
-.logout {
-  margin-top: 1.5rem;
 }
