@@ -4,7 +4,7 @@
   &__hint {
     max-width: 70ch;
     margin-bottom: var(--spacing-md);
-    color: var(--color-dark-gray, #555);
+    color: var(--color-gray);
     font-size: 0.9rem;
   }
 
@@ -27,6 +27,12 @@
     p {
       margin: 0 0 var(--spacing-xs);
     }
+  }
+
+  &__blocked-title {
+    margin: 0 0 var(--spacing-xs);
+    font-size: 1rem;
+    font-weight: 700;
   }
 
   &__blocked-message {
@@ -83,8 +89,8 @@
 
   &__key {
     font-family: 'Courier New', monospace;
-    background: var(--color-light-gray, #eee);
-    color: var(--color-dark-gray, #444);
+    background: var(--color-light-gray);
+    color: var(--color-gray);
     cursor: default;
   }
 
@@ -102,7 +108,12 @@
     margin-top: var(--spacing-md);
   }
 
-  button {
+  /*
+   * :where() macht diese Grundregel spezifitaetsfrei (zaehlt wie ein blosses `button`).
+   * Ohne das schluege sie jeden Modifier-Klassenselektor unten und alle Knoepfe waeren
+   * primaerblau — auch der zum Loeschen, der genau seine Kennzeichnung verlieren wuerde.
+   */
+  :where(&__form-actions, &__blocked-actions, &__actions) button {
     padding: var(--spacing-xs) var(--spacing-md);
     border: none;
     border-radius: var(--radius-sm, 6px);
@@ -118,12 +129,17 @@
 
   &__secondary,
   &__toggle-active {
-    background: var(--color-light-gray, #e0e0e0);
-    color: var(--color-dark-gray, #333);
+    background: var(--color-light-gray);
+    color: var(--color-dark);
+  }
+
+  /* Der Ausweg aus dem Loeschkonflikt ist die empfohlene Aktion — bewusst primaerfarben. */
+  &__deactivate {
+    background: var(--color-primary);
   }
 
   &__delete {
-    background: var(--color-error, #ef4444);
+    background: var(--color-error);
   }
 
   &__table {
@@ -141,7 +157,7 @@
 
   &__key-cell {
     font-family: 'Courier New', monospace;
-    color: var(--color-dark-gray, #444);
+    color: var(--color-gray);
   }
 
   &__swatch {

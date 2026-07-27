@@ -78,6 +78,9 @@ describe('AdminCalendarCategoriesComponent', () => {
     const banner = el.querySelector('.admin-calendar-categories__blocked');
     expect(banner).toBeTruthy();
     expect(banner?.textContent).toContain('4 Termin(en)');
+    // Die Servermeldung nennt nur die Anzahl — ohne den Namen zeigt der Banner nicht,
+    // worauf sich das Angebot bezieht.
+    expect(banner?.textContent).toContain('Arzttermin');
     expect(el.querySelector('.admin-calendar-categories__deactivate')).toBeTruthy();
   });
 
@@ -152,10 +155,130 @@ describe('AdminCalendarCategoriesComponent', () => {
     const created = httpMock.expectOne(CATEGORIES_URL);
     expect(created.request.method).toBe('POST');
     expect(created.request.body).toEqual({
-      name: 'Geburtstag', color: '#64b5f6', icon: null, sortOrder: 0, active: true
+      name: 'Geburtstag', color: '#64b5f6', icon: null, sortOrder: 10, active: true
     });
     created.flush({ id: 3, key: 'geburtstag', name: 'Geburtstag', color: '#64b5f6', icon: null, sortOrder: 0, active: true });
     httpMock.expectOne(CATEGORIES_URL).flush([]);
+  });
+
+  it('nimmt den Konflikt-Banner weg, sobald eine andere Kategorie bearbeitet wird', async () => {
+    await loadWith([ARZT, ALTLAST]);
+    failingDelete(1, 409, 'Die Kategorie wird von 4 Termin(en) genutzt und kann nicht geloescht werden.');
+    expect(el.querySelector('.admin-calendar-categories__blocked')).toBeTruthy();
+
+    // „Bearbeiten" auf der ZWEITEN Zeile: Ohne Aufraeumen zeigte der Banner weiter
+    // Kategorie 1 an, und „Stattdessen deaktivieren" traefe sie auch.
+    (rows()[1].querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-calendar-categories__blocked')).toBeFalsy();
+  });
+
+  it('raeumt das Formular, wenn die gerade bearbeitete Kategorie geloescht wird', async () => {
+    await loadWith([ARZT]);
+
+    (rows()[0].querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Kategorie bearbeiten');
+
+    spyOn(window, 'confirm').and.returnValue(true);
+    (rows()[0].querySelector('.admin-calendar-categories__delete') as HTMLButtonElement).click();
+    httpMock.expectOne(`${CATEGORIES_URL}/1`).flush(null);
+    httpMock.expectOne(CATEGORIES_URL).flush([]);
+    fixture.detectChanges();
+
+    // Sonst stuende dort weiter „Kategorie bearbeiten", und Speichern schickte ein PUT
+    // auf eine geloeschte Id.
+    expect(el.textContent).not.toContain('Kategorie bearbeiten');
+    expect(fixture.componentInstance.form.id).toBeNull();
+  });
+
+  it('schlaegt fuer eine neue Kategorie eine Reihenfolge hinter allen bestehenden vor', async () => {
+    await loadWith([ARZT, ALTLAST]);
+
+    const sortOrder = el.querySelector('input[name="sortOrder"]') as HTMLInputElement;
+    expect(sortOrder.value).toBe('12');
+
+    const name = el.querySelector('input[name="name"]') as HTMLInputElement;
+    name.value = 'Geburtstag';
+    name.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+
+    // Mit der 0 stuende die neue Kategorie in JEDEM Termindialog vor den gepflegten.
+    const created = httpMock.expectOne(CATEGORIES_URL);
+    expect(created.request.body.sortOrder).toBe(12);
+    created.flush({ id: 3, key: 'geburtstag', name: 'Geburtstag', color: '#64b5f6', icon: null, sortOrder: 12, active: true });
+    httpMock.expectOne(CATEGORIES_URL).flush([ARZT, ALTLAST]);
+  });
+
+  it('lehnt einen leeren Namen ohne Anfrage ab', async () => {
+    await loadWith([]);
+
+    (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    httpMock.expectNone(CATEGORIES_URL);
+    expect(el.querySelector('.admin-calendar-categories__error')?.textContent)
+      .toContain('Der Name darf nicht leer sein.');
+  });
+
+  it('zeigt die Tabelle nach einem geglueckten Nachladen wieder', () => {
+    fixture.detectChanges();
+    httpMock.expectOne(CATEGORIES_URL)
+      .flush({ message: 'Kurzer Aussetzer.' }, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+    expect(el.querySelector('.admin-calendar-categories__table')).toBeFalsy();
+
+    fixture.componentInstance.load();
+    httpMock.expectOne(CATEGORIES_URL).flush([ARZT]);
+    fixture.detectChanges();
+
+    // Ohne das Zuruecksetzen von loadFailed bliebe die Seite bis zum Neuladen blind.
+    expect(el.querySelector('.admin-calendar-categories__table')).toBeTruthy();
+  });
+
+  it('laesst die Tabelle waehrend eines Nachladens stehen', async () => {
+    await loadWith([ARZT]);
+
+    (rows()[0].querySelector('.admin-calendar-categories__toggle-active') as HTMLButtonElement).click();
+    httpMock.expectOne(`${CATEGORIES_URL}/1`).flush({ ...ARZT, active: false });
+    fixture.detectChanges();
+
+    // Der Abruf laeuft noch: Wuerde `loading` erneut gesetzt, verschwaende die Tabelle
+    // und das Layout spraenge bei jeder Aktion.
+    expect(el.querySelector('.admin-calendar-categories__table')).toBeTruthy();
+    httpMock.expectOne(CATEGORIES_URL).flush([{ ...ARZT, active: false }]);
+  });
+
+  it('laesst das Formular in Ruhe, wenn eine andere Kategorie umgeschaltet wird', async () => {
+    // Beide Kategorien sind aktiv. Waeren sie es nicht, liefe der Test ins Leere: Die
+    // umgeschaltete landete dann genau in dem Zustand, den das Formular ohnehin hat, und
+    // ein faelschlich mitgeschaltetes Formular waere nicht zu unterscheiden.
+    const sport: CalendarCategory = { ...ARZT, id: 3, key: 'sport', name: 'Sport', sortOrder: 3 };
+    await loadWith([ARZT, sport]);
+
+    (rows()[0].querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (rows()[1].querySelector('.admin-calendar-categories__toggle-active') as HTMLButtonElement).click();
+    httpMock.expectOne(`${CATEGORIES_URL}/3`).flush({ ...sport, active: false });
+    httpMock.expectOne(CATEGORIES_URL).flush([ARZT, { ...sport, active: false }]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.id).toBe(1);
+    expect(fixture.componentInstance.form.active).toBeTrue();
+  });
+
+  it('hebt den Loeschen-Knopf farblich von den uebrigen ab', async () => {
+    await loadWith([ARZT]);
+
+    const edit = rows()[0].querySelector('button') as HTMLButtonElement;
+    const remove = rows()[0].querySelector('.admin-calendar-categories__delete') as HTMLButtonElement;
+
+    // Die Grundregel fuer Knoepfe darf den Modifier nicht ueberstimmen — sonst saehe die
+    // destruktive Aktion aus wie jede andere.
+    expect(getComputedStyle(remove).backgroundColor)
+      .not.toBe(getComputedStyle(edit).backgroundColor);
   });
 
   it('macht das Umschalten in der Zeile nicht durch spaeteres Speichern rueckgaengig', async () => {

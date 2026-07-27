@@ -41,9 +41,14 @@ interface DeleteConflict {
 }
 
 const DEFAULT_COLOR = '#64b5f6';
+/**
+ * Abstand zwischen zwei vorgeschlagenen Reihenfolgen. Laesst Platz, um spaeter eine
+ * Kategorie dazwischen zu schieben, ohne alle anderen anzufassen.
+ */
+const SORT_ORDER_STEP = 10;
 
-function emptyForm(): CategoryFormState {
-  return { id: null, key: null, name: '', color: DEFAULT_COLOR, icon: '', sortOrder: 0, active: true };
+function emptyForm(sortOrder: number): CategoryFormState {
+  return { id: null, key: null, name: '', color: DEFAULT_COLOR, icon: '', sortOrder, active: true };
 }
 
 /**
@@ -61,6 +66,11 @@ export class AdminCalendarCategoriesComponent implements OnInit {
   private readonly categoryApi = inject(CalendarCategoryService);
 
   readonly categories = signal<CalendarCategory[]>([]);
+  /**
+   * Nur der erste Abruf blendet die Tabelle aus. Spaetere Aktualisierungen — nach jedem
+   * Speichern, Umschalten und Loeschen — lassen sie stehen; sonst springt das Layout bei
+   * jeder Aktion.
+   */
   readonly loading = signal(true);
   /**
    * Bei fehlgeschlagenem Laden bleibt die Tabelle verborgen. Sonst behauptete sie mit
@@ -73,24 +83,34 @@ export class AdminCalendarCategoriesComponent implements OnInit {
   /** Gesetzt, solange ein abgelehnter Loeschversuch das Deaktivieren als Ausweg anbietet. */
   readonly blocked = signal<DeleteConflict | null>(null);
 
-  form: CategoryFormState = emptyForm();
+  form: CategoryFormState = emptyForm(SORT_ORDER_STEP);
 
   ngOnInit(): void {
     this.load();
   }
 
-  load(): void {
-    this.loading.set(true);
+  /**
+   * Laedt die Liste neu. `afterLoad` laeuft, sobald die Antwort da ist — auch im
+   * Fehlerfall, damit ein bereits gespeichertes Formular nicht stehen bleibt und ein
+   * zweites Mal abgeschickt werden kann.
+   *
+   * `loading` wird hier bewusst nicht wieder auf true gesetzt: es markiert nur den
+   * allerersten Abruf.
+   */
+  load(afterLoad?: () => void): void {
     this.categoryApi.list().subscribe({
       next: categories => {
         this.categories.set(categories);
         this.loadFailed.set(false);
         this.loading.set(false);
+        afterLoad?.();
+        this.proposeSortOrder();
       },
       error: (err: Error) => {
         this.loading.set(false);
         this.loadFailed.set(true);
         this.errorMessage.set(err.message);
+        afterLoad?.();
       }
     });
   }
@@ -101,6 +121,10 @@ export class AdminCalendarCategoriesComponent implements OnInit {
 
   startEdit(category: CalendarCategory): void {
     this.errorMessage.set(null);
+    // Der Konflikt-Banner gehoert zu der Kategorie, deren Loeschung scheiterte. Bliebe er
+    // beim Wechsel ins Formular einer anderen stehen, deaktivierte „Stattdessen
+    // deaktivieren" sichtbar die eine und tatsaechlich die andere.
+    this.blocked.set(null);
     this.form = {
       id: category.id,
       key: category.key,
@@ -113,8 +137,37 @@ export class AdminCalendarCategoriesComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.form = emptyForm();
+    this.form = emptyForm(this.nextSortOrder());
     this.errorMessage.set(null);
+    this.blocked.set(null);
+  }
+
+  /**
+   * Uebernimmt den Reihenfolge-Vorschlag in ein noch unberuehrtes Anlege-Formular.
+   *
+   * Der haeufigste Weg zu einer neuen Kategorie fuehrt gar nicht ueber `resetForm()` —
+   * Seite oeffnen, Namen tippen, anlegen. Ohne diesen Schritt bliebe dort der beim Bauen
+   * der Komponente geratene Wert stehen, der die geladene Liste noch nicht kannte.
+   * Sobald der Nutzer angefangen hat oder eine Kategorie bearbeitet, wird nichts mehr
+   * angefasst: ein Nachladen darf keine Eingabe ueberschreiben.
+   */
+  private proposeSortOrder(): void {
+    if (this.form.id === null && this.form.name === '') {
+      this.form.sortOrder = this.nextSortOrder();
+    }
+  }
+
+  /**
+   * Vorschlag fuer die Reihenfolge einer neuen Kategorie: hinter allen bestehenden.
+   *
+   * Ohne ihn bekaeme jede neue Kategorie die 0 und stuende damit nicht nur in dieser
+   * Tabelle ganz oben, sondern auch in der Kategorieauswahl **jedes** Termindialogs vor
+   * den gepflegten — der Server sortiert nach `sortOrder ASC, name ASC`.
+   */
+  private nextSortOrder(): number {
+    const highest = this.categories()
+      .reduce((max, category) => Math.max(max, category.sortOrder), 0);
+    return highest + SORT_ORDER_STEP;
   }
 
   save(): void {
@@ -132,8 +185,10 @@ export class AdminCalendarCategoriesComponent implements OnInit {
     call.subscribe({
       next: () => {
         this.saving.set(false);
-        this.resetForm();
-        this.load();
+        // Erst nach dem Neuladen zuruecksetzen: der Reihenfolge-Vorschlag fuer den
+        // naechsten Eintrag muss den gerade gespeicherten schon kennen, sonst schlaegt er
+        // genau dessen Wert noch einmal vor.
+        this.load(() => this.resetForm());
       },
       error: (err: Error) => {
         this.saving.set(false);
@@ -164,13 +219,21 @@ export class AdminCalendarCategoriesComponent implements OnInit {
   }
 
   remove(category: CalendarCategory): void {
-    if (!confirm(`Kategorie „${category.name}" endgueltig loeschen?`)) {
+    if (!confirm(`Kategorie „${category.name}“ endgültig löschen?`)) {
       return;
     }
     this.errorMessage.set(null);
     this.blocked.set(null);
     this.categoryApi.delete(category.id).subscribe({
-      next: () => this.load(),
+      next: () => {
+        // Stand die geloeschte Kategorie im Formular, ist dessen Id jetzt tot: Die
+        // Ueberschrift behauptete weiter „Kategorie bearbeiten", und Speichern schickte
+        // ein PUT auf eine geloeschte Id.
+        if (this.form.id === category.id) {
+          this.resetForm();
+        }
+        this.load();
+      },
       error: (err: Error) => {
         // Nur der Loeschschutz (409) hat einen Ausweg. Bei jedem anderen Fehler — Netz weg,
         // Sitzung abgelaufen — waere das Deaktivieren-Angebot ein Versprechen, das
