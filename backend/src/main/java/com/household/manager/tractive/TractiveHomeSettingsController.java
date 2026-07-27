@@ -47,17 +47,19 @@ public class TractiveHomeSettingsController {
         if (hasLatitude != hasLongitude) {
             throw badRequest("Breiten- und Laengengrad muessen gemeinsam gesetzt oder gemeinsam leer sein.");
         }
-        if (hasLatitude && Math.abs(settings.homeLatitude()) > 90) {
+        if (hasLatitude && (!Double.isFinite(settings.homeLatitude()) || Math.abs(settings.homeLatitude()) > 90)) {
             throw badRequest("Der Breitengrad muss zwischen -90 und 90 liegen.");
         }
-        if (hasLongitude && Math.abs(settings.homeLongitude()) > 180) {
+        if (hasLongitude && (!Double.isFinite(settings.homeLongitude()) || Math.abs(settings.homeLongitude()) > 180)) {
             throw badRequest("Der Laengengrad muss zwischen -180 und 180 liegen.");
         }
-        if (settings.homeRadiusMeters() <= 0) {
-            throw badRequest("Der Home-Radius muss groesser als 0 sein.");
+        if (!isPlausibleRadius(settings.homeRadiusMeters())) {
+            throw badRequest("Der Home-Radius muss zwischen 0 und "
+                    + (long) TractiveHomeSettingsService.MAX_RADIUS_METERS + " Metern liegen.");
         }
-        if (settings.homeArrivalRadiusMeters() <= 0) {
-            throw badRequest("Der Ankunftsradius muss groesser als 0 sein.");
+        if (!isPlausibleRadius(settings.homeArrivalRadiusMeters())) {
+            throw badRequest("Der Ankunftsradius muss zwischen 0 und "
+                    + (long) TractiveHomeSettingsService.MAX_RADIUS_METERS + " Metern liegen.");
         }
         if (settings.poweredOffAfterMinutes() <= 0) {
             throw badRequest("Die Stille-Schwelle muss groesser als 0 Minuten sein.");
@@ -65,6 +67,16 @@ public class TractiveHomeSettingsController {
         if (settings.poweredOffMinBatteryPercent() < 0 || settings.poweredOffMinBatteryPercent() > 100) {
             throw badRequest("Der Mindest-Akkustand muss zwischen 0 und 100 Prozent liegen.");
         }
+    }
+
+    /**
+     * Dieselbe Grenze, die {@link TractiveHomeSettingsService} beim Lesen anwendet – sonst
+     * nimmt die API einen Wert mit 200 an, den der Service danach wortlos auf den Default
+     * zurueckdreht. Die explizite {@code isFinite}-Pruefung ist noetig, weil JEDER Vergleich
+     * mit {@code NaN} false ergibt und ein NaN sonst durch alle Schranken faellt.
+     */
+    private boolean isPlausibleRadius(double meters) {
+        return Double.isFinite(meters) && meters > 0 && meters <= TractiveHomeSettingsService.MAX_RADIUS_METERS;
     }
 
     private ResponseStatusException badRequest(String message) {

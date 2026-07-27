@@ -52,14 +52,18 @@ class TractiveHomeSettingsControllerTest {
     }
 
     @Test
-    void validSettingsAreSaved() throws Exception {
+    void validSettingsAreSavedAndTheResponseShowsTheStoredState() throws Exception {
+        // Bewusst andere Werte als im Request: die Antwort muss den gespeicherten Stand
+        // zeigen, nicht den Request spiegeln – der Service bereinigt beim Lesen.
         when(settingsService.getSettings()).thenReturn(new TractiveHomeSettings(
-                48.2082, 16.3738, 120, 400, 45, 20, "Daheim"));
+                48.2082, 16.3738, 100, 500, 60, 15, "Zuhause"));
 
         mockMvc.perform(put("/v1/tractive/home-settings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(48.2082, 16.3738, 120, 400, 45, 20, "Daheim")))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.homeRadiusMeters").value(100.0))
+                .andExpect(jsonPath("$.homeZoneName").value("Zuhause"));
 
         verify(settingsService).saveSettings(new TractiveHomeSettings(
                 48.2082, 16.3738, 120, 400, 45, 20, "Daheim"));
@@ -125,6 +129,45 @@ class TractiveHomeSettingsControllerTest {
         mockMvc.perform(put("/v1/tractive/home-settings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(48.2082, 16.3738, 100, 500, 60, 150, "Zuhause")))
+                .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * Jeder Vergleich mit NaN ist false – ohne isFinite-Pruefung faellt ein NaN durch alle
+     * Schranken und laesst die Entitaet spaeter wortlos verschwinden.
+     */
+    @Test
+    void aNaNLatitudeIsRejected() throws Exception {
+        mockMvc.perform(put("/v1/tractive/home-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Double.NaN, 16.3738, 100, 500, 60, 15, "Zuhause")))
+                .andExpect(status().isBadRequest());
+
+        verify(settingsService, never()).saveSettings(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void aNaNRadiusIsRejected() throws Exception {
+        mockMvc.perform(put("/v1/tractive/home-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(48.2082, 16.3738, Double.NaN, 500, 60, 15, "Zuhause")))
+                .andExpect(status().isBadRequest());
+    }
+
+    /** Meter mit Kilometer verwechselt: der Service wuerde den Wert spaeter still zuruecksetzen. */
+    @Test
+    void anOversizedRadiusIsRejected() throws Exception {
+        mockMvc.perform(put("/v1/tractive/home-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(48.2082, 16.3738, 1_000_000, 500, 60, 15, "Zuhause")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aNegativeRadiusIsRejected() throws Exception {
+        mockMvc.perform(put("/v1/tractive/home-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(48.2082, 16.3738, -5, 500, 60, 15, "Zuhause")))
                 .andExpect(status().isBadRequest());
     }
 }
