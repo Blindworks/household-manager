@@ -35,7 +35,8 @@
                [(ngModel)]="settings.homeArrivalRadiusMeters" (ngModelChange)="onValueChange()">
         <span class="hint">
           Weiter Radius fuer den Fall, dass der Tracker zu Hause ausgeschaltet wird und der
-          letzte Bericht noch von unterwegs stammt.
+          letzte Bericht noch von unterwegs stammt. Ein Wert kleiner als der Home-Radius
+          bleibt wirkungslos – es gilt immer der groessere der beiden.
         </span>
       </label>
       <label>

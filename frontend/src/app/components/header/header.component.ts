@@ -70,7 +70,7 @@ export class HeaderComponent {
         { path: '/admin/users', label: 'Nutzer', minRole: 'ADMIN' },
         { path: '/admin/service-tokens', label: 'API-Tokens', minRole: 'ADMIN' },
         { path: '/admin/audit-log', label: 'Audit-Log', minRole: 'ADMIN' },
-        { path: '/admin/tractive', label: 'Hundetracker', minRole: 'ADMIN' }
+        { path: '/admin/tractive', label: 'Hundetracker-Zuhause', minRole: 'ADMIN' }
       ]
     },
     {
