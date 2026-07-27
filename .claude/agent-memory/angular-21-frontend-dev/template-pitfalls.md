@@ -1,6 +1,6 @@
 ---
 name: template-pitfalls
-description: Verified Angular template/markup traps hit in this repo — @for track keys, label wrapping multiple buttons, and plan snippets styled for the wrong tonality
+description: Verified UI traps hit in this repo — @for track keys, label wrapping multiple buttons, plan snippets styled for the wrong tonality, and error banners silently overwritten by a parallel request
 metadata:
   type: feedback
 ---
@@ -41,3 +41,22 @@ bewusst vergroessert.
 
 Siehe auch [[dashboard-style-encapsulation]] (Kehrseite: `lumina`-Styles greifen nur in
 `dashboard.component.*`).
+
+## Ein Fehlerfeld pro Ursache — sonst loescht ein paralleler Abruf die Meldung
+Schreiben zwei Abrufe in dasselbe `loadError`, und einer davon leert es im Erfolgsfall
+(`next: () => this.loadError = null`, das uebliche Muster hier), gewinnt der, der zuletzt
+antwortet. Beim Seitenaufbau laufen sie parallel — die Meldung des fehlgeschlagenen
+Abrufs ist damit praktisch nie zu sehen. Wird der leerende Abruf auch noch bei jeder
+Interaktion wiederholt (hier: Monatswechsel), ist sie garantiert weg.
+
+Real passiert in `calendar.component.ts`: Der Kategorien-Ladefehler wurde vom Monatsabruf
+ueberschrieben. Uebrig blieb eine normal aussehende Seite, deren Termindialog auf jeden
+Klick stumm nicht aufging — schlimmer als der Zustand, den der Guard verhindern sollte.
+Loesung: eigenes Feld (`categoryError`) mit eigenem Banner-Block.
+
+**Why:** Ein Guard, der eine Aktion blockiert, ist nur dann eine Verbesserung, wenn der
+Nutzer erfaehrt *warum*. Sonst tauscht man einen sichtbaren Fehler gegen einen stummen.
+**How to apply:** Beim Hinzufuegen eines Abrufs in eine Komponente pruefen, ob ein
+bestehendes Fehlerfeld irgendwo bedingungslos auf `null` gesetzt wird. Und: einen Test,
+der ein Fehlerbanner zusichert, immer *nach* dem Beantworten aller parallelen Abrufe
+zusichern lassen — sonst prueft er einen Zwischenstand, den der Nutzer nie sieht.
