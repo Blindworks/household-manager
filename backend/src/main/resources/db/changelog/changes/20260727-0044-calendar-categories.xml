@@ -87,7 +87,9 @@
 
         Die Trennlinie verlaeuft nicht entlang "ein Schritt pro Changeset", sondern entlang
         WIEDERHOLBARKEIT: -b1 (addColumn) und -b4 (dropColumn) scheitern bei einer Wiederholung
-        und brauchen deshalb ein eigenes Changeset. UPDATE, MODIFY ... NOT NULL und
+        und brauchen deshalb ein eigenes Changeset *und* eine Vorbedingung (siehe dort) — die
+        Aufteilung allein deckt nur den Datenfehler ab, nicht eine bereits halb migrierte
+        Tabelle aus einer frueheren Fassung dieser Datei. UPDATE, MODIFY ... NOT NULL und
         ADD CONSTRAINT sind bei einer Wiederholung dagegen unschaedlich und gehoeren zusammen
         in -b3 — insbesondere muss das UPDATE mit dem abbrechenden Schritt zusammenliegen.
         Laege es allein davor, waere es nach einem Abbruch als gelaufen vermerkt und die
@@ -99,6 +101,17 @@
     -->
     <changeSet id="20260727-0044-b1" author="household-manager">
         <comment>Schritt 1/3: Spalte category_id anlegen (noch nullable) — nicht wiederholbar.</comment>
+
+        <!-- Die Aufteilung allein reicht nicht: Auf einer Datenbank, auf der eine fruehere,
+             noch gebuendelte Fassung dieses Changesets lief, steht die Spalte bereits in der
+             Tabelle, ohne dass eine der neuen Ids protokolliert waere. Ohne diese Vorbedingung
+             scheitert der Start dann dauerhaft an "Duplicate column name 'category_id'".
+             MARK_RAN statt CONTINUE, damit -b1 nicht bei jedem Start erneut geprueft wird. -->
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="calendar_events" columnName="category_id"/>
+            </not>
+        </preConditions>
 
         <addColumn tableName="calendar_events">
             <column name="category_id" type="BIGINT"/>
@@ -136,6 +149,12 @@
 
     <changeSet id="20260727-0044-b4" author="household-manager">
         <comment>Schritt 3/3: alte Enum-Spalte entfernen — nicht wiederholbar.</comment>
+
+        <!-- Gegenstueck zu -b1: hat eine fruehere Fassung die Spalte bereits entfernt, ist
+             hier nichts mehr zu tun. -->
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="calendar_events" columnName="category"/>
+        </preConditions>
 
         <dropColumn tableName="calendar_events" columnName="category"/>
 
