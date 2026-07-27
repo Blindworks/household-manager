@@ -130,11 +130,15 @@ class CalendarEventPersonServiceTest {
     @Test
     void ignoriertNullEintraegeBeimSchreiben() {
         when(repository.findByCalendarEventId(1L)).thenReturn(List.of());
+        when(userRepository.findAllById(List.of(2L))).thenReturn(List.of(ANNA));
 
-        assertThat(service.replace(1L, Arrays.asList(null, 2L, null))).isEmpty();
+        List<CalendarPersonView> views = service.replace(1L, Arrays.asList(null, 2L, null));
 
         assertThat(capturedSaveAll()).hasSize(1);
         assertThat(capturedSaveAll().get(0).getUserId()).isEqualTo(2L);
+        // Die null-Eintraege duerfen weder eine Zeile noch einen Eintrag in der Antwort
+        // erzeugen — die echte Person daneben aber sehr wohl.
+        assertThat(views).extracting(CalendarPersonView::displayName).containsExactly("Anna");
     }
 
     // --- Leseformen -----------------------------------------------------------------------

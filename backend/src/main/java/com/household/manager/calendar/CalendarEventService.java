@@ -243,6 +243,10 @@ public class CalendarEventService {
      * Override-Zeilen, die von {@code update} bei geaenderter RRULE und die von
      * {@code deleteOccurrence} haengen an derselben Kaskade. Eine Absicherung, die nur
      * einen von vier Pfaden abdeckt, waere ein Versprechen, das sie nicht haelt.
+     *
+     * <p>Fuer die Override-Zeilen eine Zeile weiter unten steht die Absicherung dagegen zu
+     * Recht: Master-Zeilen mit Override-Kindern loescht ausschliesslich diese Methode, dort
+     * deckt sie also den einzigen Pfad ab.
      */
     @Transactional
     public void delete(Long id) {
