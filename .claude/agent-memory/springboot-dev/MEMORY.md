@@ -98,3 +98,4 @@ com.household.manager/
 - [optional-empty-two-reasons.md](optional-empty-two-reasons.md) - resolver Optional.empty() can mean two unrelated causes (no config vs. no data); only one should freeze the entity - add a thin isConfigured()-style probe rather than reshaping the return type
 - [enum-to-lookup-table.md](enum-to-lookup-table.md) - Enum-Spalte zu Stammdatentabelle: ein Commit wegen ddl-auto=validate, Seed-Keys = alte Enum-Namen kleingeschrieben (Flow-Vertrag)
 - [bash-tool-heredoc.md](bash-tool-heredoc.md) - im Bash-Tool nie PowerShell-Here-Strings; `@'...'@` landet als literales @ in der Commit-Message
+- [calendar-persons-categories.md](calendar-persons-categories.md) - Task 5: personIds/persons am Erinnerungs-Event; Plan-Testcode kann falsche Methode/Accessor referenzieren, immer gegen echte Klasse pruefen
