@@ -1,3 +1,18 @@
+// Umschalt-Knopf (Personenauswahl im Dialog, spaeter die Filterleiste). Gleiche
+// Trefferflaeche wie der Wochentag-Picker: die Seite wird auf dem wandmontierten
+// Touch-Tablet bedient. Tonalitaet bewusst dunkel auf hell - Seite und Dialog haben
+// beide einen weissen Hintergrund.
+@mixin toggle-pill {
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  min-height: 2.75rem;
+}
+
 .calendar {
   padding: var(--spacing-md) 0 var(--spacing-xl);
 
@@ -133,8 +148,11 @@
   // Der Titel ist das einzige schrumpfbare Element des Chips. text-overflow gehoert an
   // ihn, nicht an den Flex-Container: dort greift es fuer die Items nicht, und der Titel
   // wuerde mitten im Wort ohne Auslassungszeichen abgeschnitten.
+  // flex-basis 3rem statt 0: gegen die nicht schrumpfbaren Badges verliert eine
+  // 0-Basis auf schmalen Ansichten vollstaendig - dann wuerden die Badges beschnitten
+  // statt des Titels, obwohl genau der das kuerzbare Element ist.
   &__chip-title {
-    flex: 1;
+    flex: 1 1 3rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -317,17 +335,8 @@
     gap: 0.4rem;
   }
 
-  // Gleiche Trefferflaeche wie der Wochentag-Picker: derselbe Umschalter-Typ, und die
-  // Seite wird auf dem wandmontierten Touch-Tablet bedient.
   &__person {
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    border-radius: 999px;
-    padding: var(--spacing-xs) var(--spacing-md);
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    min-height: 2.75rem;
+    @include toggle-pill;
 
     &--on {
       background: var(--color-primary);

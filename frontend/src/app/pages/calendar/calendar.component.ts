@@ -1,14 +1,12 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CalendarService } from '../../services/calendar.service';
-import { CalendarCategoryService } from '../../services/calendar-category.service';
-import { HouseholdUserService } from '../../services/household-user.service';
+import { CalendarMasterDataService } from '../../services/calendar-master-data.service';
 import { AuthService } from '../../services/auth.service';
 import { CalendarCategory } from '../../models/calendar-category.model';
-import { HouseholdUser } from '../../models/household-user.model';
 import {
   CalendarEvent, CalendarEventRequest, CalendarOccurrence, CalendarPerson
 } from '../../models/calendar-event.model';
@@ -25,6 +23,48 @@ const DAY_CHIP_LIMIT = 3;
  * ein Siebtel der Rasterbreite - ohne Deckel verdraengen die Initialen den Termintitel.
  */
 const CHIP_INITIAL_LIMIT = 2;
+
+/** Ein Termin-Chip einer Tageszelle, fertig fuer die Anzeige. */
+interface ChipView {
+  /** Stabiler @for-Schluessel; ein Termin kommt pro Tag hoechstens einmal vor. */
+  key: string;
+  /** Fuer den Bearbeiten-Klick; die Anzeige selbst braucht ihn nicht mehr. */
+  occurrence: CalendarOccurrence;
+  /** null laesst den --chip-color-Default aus dem SCSS greifen. */
+  color: string | null;
+  /** Nur bei Terminen mit Uhrzeit gesetzt. */
+  time: string | null;
+  title: string;
+  /** Initialen der zugeordneten Personen, gedeckelt; leer = Haushaltstermin. */
+  initials: string[];
+  /** Wie viele Personen der Chip nicht mehr als Initiale zeigt. */
+  hiddenPersons: number;
+  /**
+   * Vollstaendige Beschriftung fuer title/aria-label. Eine einzelne Initiale ist mehrdeutig
+   * ("Anna"/"Anton"), und der Titel wird im Raster oft abgeschnitten.
+   */
+  label: string;
+}
+
+/** Eine Tageszelle mit ihren sichtbaren Chips. */
+interface DayView {
+  day: MonthDay;
+  chips: ChipView[];
+  /** Wie viele Termine des Tages der Deckel abschneidet ("+n weitere"). */
+  overflow: number;
+}
+
+/** Ein Eintrag der Kategorie-Auswahl; label traegt das "(deaktiviert)"-Suffix bereits. */
+interface CategoryOption {
+  id: number;
+  label: string;
+}
+
+/** Ein Personen-Umschalter im Dialog; label traegt ein etwaiges Suffix bereits. */
+interface PersonOption {
+  id: number;
+  label: string;
+}
 
 /** Formularzustand des Termindialogs (Strings, wie die Inputs sie liefern). */
 interface CalendarFormState {
@@ -64,43 +104,29 @@ type RecurrenceFormState = Omit<RecurrenceOptions, 'freq'> & { freq: 'NONE' | Fr
 })
 export class CalendarComponent implements OnInit {
   private readonly calendarService = inject(CalendarService);
-  private readonly categoryService = inject(CalendarCategoryService);
-  private readonly userService = inject(HouseholdUserService);
+  private readonly masterData = inject(CalendarMasterDataService);
   private readonly authService = inject(AuthService);
 
-  /** Alle Kategorien inkl. deaktivierter — Bestandstermine brauchen ihre Farbe weiter. */
-  categories: CalendarCategory[] = [];
-  users: HouseholdUser[] = [];
-  /** false = Stammdaten noch nicht geladen; der Termindialog bleibt dann zu. */
-  categoriesLoaded = false;
-
   readonly weekdayLabels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  readonly dayChipLimit = DAY_CHIP_LIMIT;
 
   /** Angezeigter Monat. */
   viewYear = new Date().getFullYear();
   viewMonth = new Date().getMonth() + 1;
 
-  grid: MonthDay[][] = [];
+  private readonly grid = signal<MonthDay[][]>([]);
   /** Vorkommen des sichtbaren Rasters, gruppiert nach ISO-Datum. */
-  occurrencesByDate = new Map<string, CalendarOccurrence[]>();
+  private readonly occurrencesByDate = signal(new Map<string, CalendarOccurrence[]>());
+
+  /**
+   * Das Anzeigemodell des Rasters: fertige Chips statt Berechnungen im Template.
+   * Als computed statt als Methode, damit es sich bei jeder Aenderung von Raster oder
+   * Vorkommen von selbst erneuert - und nur dann, nicht bei jedem Change-Detection-Lauf.
+   */
+  readonly weeks = computed<DayView[][]>(() =>
+    this.grid().map(week => week.map(day => this.buildDayView(day))));
+
   /** Fehler des Monatsabrufs; wird bei jedem erfolgreichen Abruf geleert. */
   loadError: string | null = null;
-  /**
-   * Fehler des Kategorien-Abrufs - bewusst ein eigenes Feld, nicht loadError.
-   * Beide Abrufe laufen beim Seitenaufbau parallel; der Monatsabruf leert loadError im
-   * Erfolgsfall und wuerde diese Meldung als Letzter ueberschreiben, spaetestens aber
-   * beim naechsten Monatswechsel. Uebrig bliebe eine normal aussehende Seite, deren
-   * Termindialog auf jeden Klick stumm nicht aufgeht. Die beiden Fehler haben ohnehin
-   * verschiedene Folgen: dieser macht den Dialog unbenutzbar, der andere nicht.
-   */
-  categoryError: string | null = null;
-  /**
-   * Fehler des Nutzer-Abrufs. Anders als bei den Kategorien bleibt der Dialog offen - ein
-   * Termin ohne Personen ist gueltig. Aber er braucht eine Meldung: eine leere
-   * Personenliste saehe sonst aus wie "es gibt keine Haushaltsmitglieder".
-   */
-  userError: string | null = null;
 
   /** Formularzustand des Termindialogs. */
   form = this.emptyForm();
@@ -123,15 +149,15 @@ export class CalendarComponent implements OnInit {
   /**
    * Die beim Oeffnen gesetzte Kategorie, falls sie inzwischen deaktiviert ist; sonst null.
    * Gemerkt statt aus dem Formularwert abgeleitet - Muster wie originalSeriesStartDate,
-   * Begruendung siehe selectableCategories().
+   * Begruendung siehe categoryOptions.
    */
-  private retiredCategory: CalendarCategory | null = null;
+  private readonly retiredCategory = signal<CalendarCategory | null>(null);
   /**
    * Die beim Oeffnen zugeordneten Personen. Aus derselben Ueberlegung gemerkt: eine
    * deaktivierte Person muss abwaehlbar bleiben, auch nachdem sie abgewaehlt wurde
    * (der Nutzer koennte es sich anders ueberlegen).
    */
-  private retiredPersons: CalendarPerson[] = [];
+  private readonly retiredPersons = signal<CalendarPerson[]>([]);
   /** Offene Scope-Frage bei Serien ('save' | 'delete'); null = keine. */
   scopeQuestion: 'save' | 'delete' | null = null;
   dialogError: string | null = null;
@@ -158,29 +184,22 @@ export class CalendarComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.categoryService.list().subscribe({
-      next: categories => {
-        this.categories = categories;
-        this.categoriesLoaded = true;
-      },
-      // Ein Dialog mit leerer Auswahlliste sieht aus wie "es gibt keine Kategorien" und
-      // verleitet zu falschen Eingaben — deshalb bleibt er ohne Stammdaten geschlossen.
-      // Das Banner ist der einzige Hinweis darauf, warum: ohne es waere die Seite von
-      // einer funktionierenden nicht zu unterscheiden.
-      error: () => this.categoryError =
-        'Die Kategorien konnten nicht geladen werden. Neue Termine lassen sich gerade nicht anlegen.'
-    });
-    this.userService.list().subscribe({
-      next: users => {
-        this.users = users.filter(user => user.enabled);
-        this.userError = null;
-      },
-      error: (err: Error) => {
-        this.users = [];
-        this.userError = err.message;
-      }
-    });
+    this.masterData.load();
     this.rebuildGrid();
+  }
+
+  /** false = Stammdaten noch nicht geladen; der Termindialog bleibt dann zu. */
+  get categoriesLoaded(): boolean {
+    return this.masterData.categoriesLoaded();
+  }
+
+  /** Eigenes Banner: dieser Fehler macht den Dialog unbenutzbar, loadError nicht. */
+  get categoryError(): string | null {
+    return this.masterData.categoryError();
+  }
+
+  get userError(): string | null {
+    return this.masterData.userError();
   }
 
   /**
@@ -211,47 +230,36 @@ export class CalendarComponent implements OnInit {
     this.rebuildGrid();
   }
 
-  chipsFor(day: MonthDay): CalendarOccurrence[] {
-    return this.occurrencesByDate.get(day.isoDate) ?? [];
+  private buildDayView(day: MonthDay): DayView {
+    const occurrences = this.occurrencesByDate().get(day.isoDate) ?? [];
+    return {
+      day,
+      chips: occurrences.slice(0, DAY_CHIP_LIMIT).map(occ => CalendarComponent.buildChip(occ)),
+      overflow: Math.max(0, occurrences.length - DAY_CHIP_LIMIT)
+    };
   }
 
-  overflowCount(day: MonthDay): number {
-    return Math.max(0, this.chipsFor(day).length - DAY_CHIP_LIMIT);
-  }
-
-  /**
-   * Kategoriefarbe des Chips; null laesst den --chip-color-Default aus dem SCSS greifen,
-   * statt ihn hier ein zweites Mal zu buchstabieren.
-   */
-  colorFor(occurrence: CalendarOccurrence): string | null {
-    return occurrence.category?.color ?? null;
-  }
-
-  /** Initialen der zugeordneten Personen, gedeckelt; leer = Haushaltstermin. */
-  initialsFor(occurrence: CalendarOccurrence): string[] {
-    return occurrence.persons.slice(0, CHIP_INITIAL_LIMIT)
-      .map(person => person.displayName.charAt(0).toUpperCase());
-  }
-
-  /** Wie viele Personen der Chip nicht mehr als Initiale zeigt. */
-  hiddenPersonCount(occurrence: CalendarOccurrence): number {
-    return Math.max(0, occurrence.persons.length - CHIP_INITIAL_LIMIT);
-  }
-
-  /**
-   * Vollstaendige Beschriftung des Chips fuer title/aria-label. Eine einzelne Initiale ist
-   * mehrdeutig ("Anna"/"Anton"), und der Titel wird im Raster oft abgeschnitten.
-   */
-  chipLabel(occurrence: CalendarOccurrence): string {
-    const time = !occurrence.allDay && occurrence.startTime ? `${occurrence.startTime} ` : '';
+  private static buildChip(occurrence: CalendarOccurrence): ChipView {
+    const time = !occurrence.allDay && occurrence.startTime ? occurrence.startTime : null;
     const names = occurrence.persons.map(person => person.displayName);
-    return names.length ? `${time}${occurrence.title} — ${names.join(', ')}`
-                        : `${time}${occurrence.title}`;
+    const prefix = time ? `${time} ` : '';
+    return {
+      key: `${occurrence.eventId}-${occurrence.occurrenceDate}`,
+      occurrence,
+      color: occurrence.category?.color ?? null,
+      time,
+      title: occurrence.title,
+      initials: occurrence.persons.slice(0, CHIP_INITIAL_LIMIT)
+        .map(person => person.displayName.charAt(0).toUpperCase()),
+      hiddenPersons: Math.max(0, occurrence.persons.length - CHIP_INITIAL_LIMIT),
+      label: names.length ? `${prefix}${occurrence.title} — ${names.join(', ')}`
+                          : `${prefix}${occurrence.title}`
+    };
   }
 
   /** Erste aktive Kategorie; ohne geladene Stammdaten null (der Dialog oeffnet dann nicht). */
   private defaultCategoryId(): number | null {
-    return this.activeCategories()[0]?.id ?? null;
+    return this.masterData.activeCategories()[0]?.id ?? null;
   }
 
   /**
@@ -260,14 +268,14 @@ export class CalendarComponent implements OnInit {
    * sonst verschwaende die Sonderoption, sobald der Nutzer einmal wegwaehlt, und zurueck
    * kaeme er nur durch Verwerfen des Dialogs samt aller anderen Aenderungen.
    */
-  selectableCategories(): CalendarCategory[] {
-    const active = this.activeCategories();
-    return this.retiredCategory ? [this.retiredCategory, ...active] : active;
-  }
-
-  private activeCategories(): CalendarCategory[] {
-    return this.categories.filter(cat => cat.active);
-  }
+  readonly categoryOptions = computed<CategoryOption[]>(() => {
+    const active = this.masterData.activeCategories()
+      .map((category): CategoryOption => ({ id: category.id, label: category.name }));
+    const retired = this.retiredCategory();
+    return retired
+      ? [{ id: retired.id, label: `${retired.name} (deaktiviert)` }, ...active]
+      : active;
+  });
 
   /**
    * Waehlbare Personen: alle aktiven plus die beim Oeffnen zugeordneten, die es nicht (mehr)
@@ -275,14 +283,29 @@ export class CalendarComponent implements OnInit {
    * kein Button waere markiert, der Chip zeigte trotzdem ihre Initiale, und das Speichern
    * schickte die Zuordnung unveraendert wieder mit - der Nutzer wuerde sie nie los.
    */
-  selectablePersons(): HouseholdUser[] {
-    const active = this.users;
+  readonly personOptions = computed<PersonOption[]>(() => {
+    const active = this.masterData.activeUsers();
     const known = new Set(active.map(user => user.id));
-    const retired = this.retiredPersons
+    const retired = this.retiredPersons()
       .filter(person => !known.has(person.id))
-      .map((person): HouseholdUser =>
-        ({ id: person.id, displayName: person.displayName, enabled: false }));
-    return [...active, ...retired];
+      .map((person): PersonOption => ({
+        id: person.id,
+        label: this.isKnownDisabled(person.id)
+          ? `${person.displayName} (deaktiviert)`
+          : person.displayName
+      }));
+    return [...active.map((user): PersonOption => ({ id: user.id, label: user.displayName })),
+            ...retired];
+  });
+
+  /**
+   * "(deaktiviert)" darf nur behauptet werden, wo die geladene Nutzerliste es belegt.
+   * Aus der blossen Abwesenheit erschlossen waere es bei einem Ausfall des Nutzer-Abrufs
+   * eine glatte Falschaussage: die Liste ist dann leer, und JEDE zugeordnete Person
+   * traege das Suffix - auch die quicklebendigen.
+   */
+  private isKnownDisabled(userId: number): boolean {
+    return this.masterData.users().some(user => user.id === userId && !user.enabled);
   }
 
   /** Personenauswahl im Dialog umschalten. */
@@ -300,8 +323,8 @@ export class CalendarComponent implements OnInit {
     this.dialogGeneration++;
     this.editing = null;
     this.originalSeriesStartDate = null;
-    this.retiredCategory = null;
-    this.retiredPersons = [];
+    this.retiredCategory.set(null);
+    this.retiredPersons.set([]);
     this.form = this.emptyForm();
     this.form.startDate = day.isoDate;
     this.recurrence = CalendarComponent.defaultRecurrence();
@@ -333,9 +356,11 @@ export class CalendarComponent implements OnInit {
         }
         this.editing = { event, occurrence };
         this.originalSeriesStartDate = event.startDate;
-        const currentCategory = this.categories.find(cat => cat.id === occurrence.category?.id);
-        this.retiredCategory = currentCategory && !currentCategory.active ? currentCategory : null;
-        this.retiredPersons = occurrence.persons;
+        const currentCategory = this.masterData.categories()
+          .find(category => category.id === occurrence.category?.id);
+        this.retiredCategory.set(
+          currentCategory && !currentCategory.active ? currentCategory : null);
+        this.retiredPersons.set(occurrence.persons);
         // Formularwerte kommen aus dem VORKOMMEN, nicht aus der Serie: bei einem bereits
         // ueberschriebenen Vorkommen (Override-Zeile) haelt die Serie noch die alten Werte,
         // occurrence traegt bereits die tatsaechlich angezeigten (siehe getOccurrences()).
@@ -636,23 +661,24 @@ export class CalendarComponent implements OnInit {
   }
 
   protected rebuildGrid(): void {
-    this.grid = buildMonthGrid(this.viewYear, this.viewMonth, new Date());
+    this.grid.set(buildMonthGrid(this.viewYear, this.viewMonth, new Date()));
     this.loadOccurrences();
   }
 
   private loadOccurrences(): void {
-    const from = this.grid[0][0].isoDate;
-    const lastWeek = this.grid[this.grid.length - 1];
-    const to = lastWeek[6].isoDate;
+    const grid = this.grid();
+    const from = grid[0][0].isoDate;
+    const to = grid[grid.length - 1][6].isoDate;
     this.calendarService.getOccurrences(from, to).subscribe({
       next: occurrences => {
         this.loadError = null;
-        this.occurrencesByDate = new Map();
+        const byDate = new Map<string, CalendarOccurrence[]>();
         for (const occ of occurrences) {
-          const list = this.occurrencesByDate.get(occ.occurrenceDate) ?? [];
+          const list = byDate.get(occ.occurrenceDate) ?? [];
           list.push(occ);
-          this.occurrencesByDate.set(occ.occurrenceDate, list);
+          byDate.set(occ.occurrenceDate, list);
         }
+        this.occurrencesByDate.set(byDate);
       },
       error: (err: Error) => (this.loadError = err.message)
     });

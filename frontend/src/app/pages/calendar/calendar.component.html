@@ -25,40 +25,42 @@
       <div class="calendar__weekday">{{ label }}</div>
     }
 
-    @for (week of grid; track $index) {
-      @for (day of week; track day.isoDate) {
+    <!-- weeks() ist das vorberechnete Anzeigemodell: fertige Chips statt Berechnungen im
+         Template, die sonst bei jedem Change-Detection-Lauf neu liefen. -->
+    @for (week of weeks(); track $index) {
+      @for (dayView of week; track dayView.day.isoDate) {
         <div class="calendar__day"
-             [class.calendar__day--outside]="!day.inMonth"
-             [class.calendar__day--today]="day.isToday"
-             [attr.data-date]="day.isoDate"
-             (click)="openCreate(day)">
-          <span class="calendar__day-number">{{ day.dayOfMonth }}</span>
+             [class.calendar__day--outside]="!dayView.day.inMonth"
+             [class.calendar__day--today]="dayView.day.isToday"
+             [attr.data-date]="dayView.day.isoDate"
+             (click)="openCreate(dayView.day)">
+          <span class="calendar__day-number">{{ dayView.day.dayOfMonth }}</span>
           <div class="calendar__chips">
-            @for (occ of chipsFor(day).slice(0, dayChipLimit); track occ.eventId + '-' + occ.occurrenceDate) {
+            @for (chip of dayView.chips; track chip.key) {
               <!-- title/aria-label tragen den vollen Wortlaut: der Titel wird in der schmalen
                    Tageszelle oft abgeschnitten, und eine Initiale ist mehrdeutig. -->
               <button type="button"
                       class="calendar__chip"
-                      [style.--chip-color]="colorFor(occ)"
-                      [attr.title]="chipLabel(occ)"
-                      [attr.aria-label]="chipLabel(occ)"
-                      (click)="openEdit(occ, $event)">
-                @if (!occ.allDay && occ.startTime) {
-                  <span class="calendar__chip-time">{{ occ.startTime }}</span>
+                      [style.--chip-color]="chip.color"
+                      [attr.title]="chip.label"
+                      [attr.aria-label]="chip.label"
+                      (click)="openEdit(chip.occurrence, $event)">
+                @if (chip.time) {
+                  <span class="calendar__chip-time">{{ chip.time }}</span>
                 }
-                <span class="calendar__chip-title">{{ occ.title }}</span>
+                <span class="calendar__chip-title">{{ chip.title }}</span>
                 <!-- track $index: zwei Personen koennen denselben Anfangsbuchstaben haben,
                      doppelte Track-Keys sind in @for ein Laufzeitfehler. -->
-                @for (initial of initialsFor(occ); track $index) {
+                @for (initial of chip.initials; track $index) {
                   <span class="calendar__chip-initial" aria-hidden="true">{{ initial }}</span>
                 }
-                @if (hiddenPersonCount(occ) > 0) {
-                  <span class="calendar__chip-initial" aria-hidden="true">+{{ hiddenPersonCount(occ) }}</span>
+                @if (chip.hiddenPersons > 0) {
+                  <span class="calendar__chip-initial" aria-hidden="true">+{{ chip.hiddenPersons }}</span>
                 }
               </button>
             }
-            @if (overflowCount(day) > 0) {
-              <span class="calendar__more">+{{ overflowCount(day) }} weitere</span>
+            @if (dayView.overflow > 0) {
+              <span class="calendar__more">+{{ dayView.overflow }} weitere</span>
             }
           </div>
         </div>
@@ -87,8 +89,8 @@
         <label class="calendar__field">
           <span>Kategorie</span>
           <select [(ngModel)]="form.categoryId" name="categoryId">
-            @for (cat of selectableCategories(); track cat.id) {
-              <option [ngValue]="cat.id">{{ cat.name }}{{ cat.active ? '' : ' (deaktiviert)' }}</option>
+            @for (option of categoryOptions(); track option.id) {
+              <option [ngValue]="option.id">{{ option.label }}</option>
             }
           </select>
         </label>
@@ -102,13 +104,13 @@
             <small class="calendar__error">{{ userError }}</small>
           }
           <div class="calendar__persons">
-            @for (user of selectablePersons(); track user.id) {
+            @for (option of personOptions(); track option.id) {
               <button type="button"
                       class="calendar__person"
-                      [class.calendar__person--on]="form.personUserIds.includes(user.id)"
-                      [attr.aria-pressed]="form.personUserIds.includes(user.id)"
-                      (click)="togglePerson(user.id)">
-                {{ user.displayName }}{{ user.enabled ? '' : ' (deaktiviert)' }}
+                      [class.calendar__person--on]="form.personUserIds.includes(option.id)"
+                      [attr.aria-pressed]="form.personUserIds.includes(option.id)"
+                      (click)="togglePerson(option.id)">
+                {{ option.label }}
               </button>
             }
           </div>

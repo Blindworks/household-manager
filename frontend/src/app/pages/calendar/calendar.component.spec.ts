@@ -818,15 +818,20 @@ describe('CalendarComponent', () => {
     findButton('Abbrechen').click();
   });
 
-  it('meldet einen Ausfall der Personenliste, laesst den Dialog aber offen', () => {
-    // Anders als bei den Kategorien: ein Termin ohne Personen ist gueltig. Ohne Meldung
-    // saehe die leere Liste aber aus wie "es gibt keine Haushaltsmitglieder".
+  /** Startet die Seite mit fehlgeschlagenem Nutzer-Abruf; Kategorien und Raster gelingen. */
+  function loadWithFailedUsers(occurrences: CalendarOccurrence[] = []): void {
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/calendar/categories').flush(CATEGORIES);
     // Ohne strukturierten Body: so greift der Fallbacktext aus HouseholdUserService.
     httpMock.expectOne('/api/v1/users').flush(null, { status: 500, statusText: 'Server Error' });
-    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(occurrences);
     fixture.detectChanges();
+  }
+
+  it('meldet einen Ausfall der Personenliste, laesst den Dialog aber offen', () => {
+    // Anders als bei den Kategorien: ein Termin ohne Personen ist gueltig. Ohne Meldung
+    // saehe die leere Liste aber aus wie "es gibt keine Haushaltsmitglieder".
+    loadWithFailedUsers();
 
     dayCell('2026-08-10').click();
     fixture.detectChanges();
@@ -836,6 +841,28 @@ describe('CalendarComponent', () => {
     const dialogText = requireElement('.calendar__dialog').textContent ?? '';
     expect(dialogText).toContain('Haushaltsmitglieder konnten nicht geladen werden');
     expect(dialogText).not.toContain('betrifft den ganzen Haushalt');
+
+    findButton('Abbrechen').click();
+  });
+
+  it('nennt eine zugeordnete Person nicht "(deaktiviert)", wenn die Nutzerliste ausgefallen ist', () => {
+    // Das Suffix aus der blossen Abwesenheit in der aktiven Liste zu erschliessen, ist bei
+    // einem Ausfall des Abrufs eine glatte Falschaussage: die Liste ist dann leer, und
+    // JEDE zugeordnete Person traege es - auch die quicklebendigen. Genau die unbelegte
+    // Behauptung, wegen der auch der Haushalts-Hinweis in diesem Fall unterdrueckt wird.
+    const assigned = { id: 11, displayName: 'Anna' }; // in USERS aktiv, aber ungeladen
+    const withPerson: CalendarOccurrence = { ...SINGLE_OCCURRENCE, persons: [assigned] };
+    loadWithFailedUsers([withPerson]);
+
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, persons: [assigned] });
+    fixture.detectChanges();
+
+    // Waehlbar bleibt sie (sonst waere die Zuordnung nicht loesbar) - nur eben unbeschriftet.
+    const labels = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__person')
+    ).map(button => button.textContent?.trim());
+    expect(labels).toEqual(['Anna']);
 
     findButton('Abbrechen').click();
   });
