@@ -7,10 +7,14 @@ describe('CalendarService', () => {
   let service: CalendarService;
   let httpMock: HttpTestingController;
 
+  /** Die Kategorie, wie das Backend sie in Antworten einbettet. */
+  const category = { id: 3, key: 'health', name: 'Gesundheit', color: '#e57373', icon: null };
+
   const request: CalendarEventRequest = {
     title: 'Zahnarzt',
     notes: null,
-    category: 'HEALTH',
+    categoryId: category.id,
+    personUserIds: [],
     allDay: false,
     startDate: '2026-08-03',
     startTime: '14:30',
@@ -89,7 +93,8 @@ describe('CalendarService', () => {
       recurrenceDate: '2026-07-25',
       title: request.title,
       notes: request.notes,
-      category: request.category,
+      category,
+      persons: [],
       allDay: request.allDay,
       startTime: request.startTime,
       endTime: request.endTime,

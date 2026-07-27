@@ -37,6 +37,11 @@
                 @if (!occ.allDay && occ.startTime) {
                   <span class="calendar__chip-time">{{ occ.startTime }}</span>
                 }
+                <!-- track $index: zwei Personen koennen denselben Anfangsbuchstaben haben,
+                     doppelte Track-Keys sind in @for ein Laufzeitfehler. -->
+                @for (initial of initialsFor(occ); track $index) {
+                  <span class="calendar__chip-initial">{{ initial }}</span>
+                }
                 {{ occ.title }}
               </button>
             }
@@ -69,12 +74,33 @@
 
         <label class="calendar__field">
           <span>Kategorie</span>
-          <select [(ngModel)]="form.category" name="category">
-            @for (cat of categories; track cat) {
-              <option [value]="cat">{{ categoryMeta[cat].label }}</option>
+          <select [(ngModel)]="form.categoryId" name="categoryId">
+            @for (cat of selectableCategories(); track cat.id) {
+              <option [ngValue]="cat.id">{{ cat.name }}{{ cat.active ? '' : ' (deaktiviert)' }}</option>
             }
           </select>
         </label>
+
+        <!-- Bewusst kein <label>: ein Label mit mehreren Buttons wuerde einen Klick auf
+             Leerraum oder den Hinweistext an den ersten Button weiterleiten (Muster wie
+             beim Wochentag-Picker weiter unten). -->
+        <div class="calendar__field" role="group" aria-label="Personen">
+          <span>Personen</span>
+          <div class="calendar__persons">
+            @for (user of users; track user.id) {
+              <button type="button"
+                      class="calendar__person"
+                      [class.calendar__person--on]="form.personUserIds.includes(user.id)"
+                      [attr.aria-pressed]="form.personUserIds.includes(user.id)"
+                      (click)="togglePerson(user.id)">
+                {{ user.displayName }}
+              </button>
+            }
+          </div>
+          @if (form.personUserIds.length === 0) {
+            <small class="calendar__hint">Niemand ausgewählt — betrifft den ganzen Haushalt.</small>
+          }
+        </div>
 
         <label class="calendar__field calendar__field--inline">
           <input type="checkbox" [(ngModel)]="form.allDay" name="allDay">

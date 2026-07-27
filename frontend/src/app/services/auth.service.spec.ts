@@ -9,7 +9,7 @@ describe('AuthService', () => {
   let httpMock: HttpTestingController;
 
   const user: CurrentUser = {
-    username: 'bene', displayName: 'Benedikt', role: 'ADMIN', mustChangePassword: false
+    id: 1, username: 'bene', displayName: 'Benedikt', role: 'ADMIN', mustChangePassword: false
   };
 
   beforeEach(() => {

@@ -3,6 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { CalendarComponent } from './calendar.component';
 import { CalendarEvent, CalendarOccurrence } from '../../models/calendar-event.model';
+import { CalendarCategory, CalendarCategoryRef } from '../../models/calendar-category.model';
+import { HouseholdUser } from '../../services/household-user.service';
 
 /** August 2026: fester Testmonat, damit das Raster (und damit from/to) deterministisch ist. */
 const VIEW_YEAR = 2026;
@@ -14,13 +16,37 @@ const JULY_TO = '2026-08-02';
 const SEPTEMBER_FROM = '2026-08-31';
 const SEPTEMBER_TO = '2026-10-04';
 
+/** Gepflegte Kategorien, wie GET /calendar/categories sie liefert. */
+const HEALTH: CalendarCategoryRef =
+  { id: 3, key: 'health', name: 'Gesundheit', color: '#e57373', icon: null };
+const HOUSEHOLD: CalendarCategoryRef =
+  { id: 4, key: 'household', name: 'Haushalt', color: '#81c784', icon: null };
+
+/**
+ * Die deaktivierte Kategorie steht bewusst vorn: so faellt auf, wenn die Vorbelegung eines
+ * neuen Termins die erste Kategorie der Liste statt der ersten *aktiven* nimmt.
+ */
+const CATEGORIES: CalendarCategory[] = [
+  { id: 8, key: 'archiv', name: 'Archiv', color: '#90a4ae', icon: null, sortOrder: 1, active: false },
+  { ...HEALTH, sortOrder: 3, active: true },
+  { ...HOUSEHOLD, sortOrder: 4, active: true }
+];
+
+/** Der deaktivierte Nutzer gehoert nicht in die Personenauswahl. */
+const USERS: HouseholdUser[] = [
+  { id: 10, displayName: 'Benedikt', enabled: true },
+  { id: 11, displayName: 'Anna', enabled: true },
+  { id: 12, displayName: 'Ausgezogen', enabled: false }
+];
+
 const SINGLE_OCCURRENCE: CalendarOccurrence = {
   eventId: 1,
   occurrenceDate: '2026-08-10',
   recurrenceDate: null,
   title: 'Zahnarzt',
   notes: null,
-  category: 'HEALTH',
+  category: HEALTH,
+  persons: [],
   allDay: true,
   startTime: null,
   endTime: null,
@@ -33,7 +59,8 @@ const SINGLE_EVENT: CalendarEvent = {
   id: 1,
   title: 'Zahnarzt',
   notes: null,
-  category: 'HEALTH',
+  category: HEALTH,
+  persons: [],
   allDay: true,
   startDate: '2026-08-10',
   startTime: null,
@@ -49,7 +76,8 @@ const RECURRING_OCCURRENCE: CalendarOccurrence = {
   recurrenceDate: '2026-08-12',
   title: 'Muell',
   notes: null,
-  category: 'HOUSEHOLD',
+  category: HOUSEHOLD,
+  persons: [],
   allDay: true,
   startTime: null,
   endTime: null,
@@ -62,7 +90,8 @@ const RECURRING_EVENT: CalendarEvent = {
   id: 2,
   title: 'Muell',
   notes: null,
-  category: 'HOUSEHOLD',
+  category: HOUSEHOLD,
+  persons: [],
   allDay: true,
   startDate: '2026-01-07',
   startTime: null,
@@ -101,9 +130,15 @@ describe('CalendarComponent', () => {
       && req.params.get('to') === to);
   }
 
-  /** Loest den Initial-Load aus (ngOnInit via erstem detectChanges) und beantwortet ihn. */
-  function loadInitial(occurrences: CalendarOccurrence[] = []): void {
+  /**
+   * Loest den Initial-Load aus (ngOnInit via erstem detectChanges) und beantwortet alle
+   * drei Abrufe: Kategorien und Nutzer (Stammdaten) sowie das Monatsraster.
+   */
+  function loadInitial(occurrences: CalendarOccurrence[] = [],
+                       categories: CalendarCategory[] = CATEGORIES): void {
     fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories').flush(categories);
+    httpMock.expectOne('/api/v1/users').flush(USERS);
     expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush(occurrences);
     fixture.detectChanges();
   }
@@ -510,5 +545,137 @@ describe('CalendarComponent', () => {
     fixture.detectChanges();
 
     findButton('Abbrechen').click();
+  });
+
+  // --- Kategorien als Stammdaten, Personenzuordnung ------------------------------------
+
+  it('oeffnet den Termindialog nicht, wenn die Kategorien nicht geladen werden konnten', () => {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/calendar/categories')
+      .flush({ message: 'kaputt' }, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('/api/v1/users').flush(USERS);
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([SINGLE_OCCURRENCE]);
+    fixture.detectChanges();
+
+    // Ein Dialog mit leerer Kategorieliste saehe aus wie "es gibt keine Kategorien"
+    // und verleitete zu falschen Eingaben.
+    dayCell('2026-08-11').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeFalse();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.calendar__dialog')).toBeNull();
+
+    // Auch der Bearbeiten-Weg bleibt zu; httpMock.verify() im afterEach bestaetigt
+    // zusaetzlich, dass gar keine Stammdaten nachgeladen wurden.
+    clickChip('2026-08-10');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.dialogOpen).toBeFalse();
+  });
+
+  it('haelt eine inzwischen deaktivierte Kategorie in der Auswahlliste, wenn der Termin sie traegt', () => {
+    // Sonst waere die Kategorie des Termins nicht waehlbar und ein Speichern wuerde ihn
+    // still umkategorisieren.
+    const retiredRef: CalendarCategoryRef =
+      { id: 9, key: 'urlaub', name: 'Urlaub', color: '#9575cd', icon: null };
+    const retired: CalendarCategory = { ...retiredRef, sortOrder: 9, active: false };
+    const occurrence: CalendarOccurrence = { ...SINGLE_OCCURRENCE, category: retiredRef };
+
+    loadInitial([occurrence], [...CATEGORIES, retired]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1').flush({ ...SINGLE_EVENT, category: retiredRef });
+    fixture.detectChanges();
+
+    const options = Array.from(requireElement<HTMLSelectElement>('select[name="categoryId"]').options)
+      .map(option => option.textContent?.trim());
+    expect(options).toContain('Urlaub (deaktiviert)');
+    expect(options).toContain('Gesundheit');
+    expect(fixture.componentInstance.form.categoryId).toBe(9);
+
+    findButton('Speichern').click();
+    const put = httpMock.expectOne('/api/v1/calendar/events/1');
+    expect(put.request.body.categoryId).toBe(9);
+    put.flush({ ...SINGLE_EVENT, category: retiredRef });
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('uebernimmt die Personen des Termins ins Formular und sendet sie beim Speichern wieder mit', () => {
+    // PUT ist eine Vollersetzung: was der Dialog nicht mitschickt, verschwindet still.
+    const withPerson: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE, persons: [{ id: 11, displayName: 'Anna' }]
+    };
+    loadInitial([withPerson]);
+    clickChip('2026-08-10');
+    httpMock.expectOne('/api/v1/calendar/events/1')
+      .flush({ ...SINGLE_EVENT, persons: [{ id: 11, displayName: 'Anna' }] });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.personUserIds).toEqual([11]);
+
+    findButton('Speichern').click();
+    const put = httpMock.expectOne('/api/v1/calendar/events/1');
+    expect(put.request.body.personUserIds).toEqual([11]);
+    put.flush(SINGLE_EVENT);
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('der Personen-Umschalter nimmt eine Person auf und wieder heraus', () => {
+    loadInitial([]);
+    dayCell('2026-08-10').click();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.form.personUserIds).toEqual([]);
+
+    const personNames = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.calendar__person')
+    ).map(button => button.textContent?.trim());
+    expect(personNames).toEqual(['Benedikt', 'Anna']);
+
+    findButton('Anna').click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([11]);
+
+    findButton('Benedikt').click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([11, 10]);
+
+    findButton('Anna').click();
+    fixture.detectChanges();
+    expect(component.form.personUserIds).toEqual([10]);
+
+    setInputValue('input[name="title"]', 'Elternabend');
+    findButton('Speichern').click();
+    const post = httpMock.expectOne('/api/v1/calendar/events');
+    expect(post.request.body.personUserIds).toEqual([10]);
+    // Vorbelegung eines neuen Termins: die erste *aktive* Kategorie, nicht die erste der Liste.
+    expect(post.request.body.categoryId).toBe(HEALTH.id);
+    post.flush({ ...SINGLE_EVENT, id: 55 });
+    fixture.detectChanges();
+
+    expectOccurrencesRequest(AUGUST_FROM, AUGUST_TO).flush([]);
+  });
+
+  it('zeigt die Initialen der zugeordneten Personen auf dem Termin-Chip', () => {
+    const withPersons: CalendarOccurrence = {
+      ...SINGLE_OCCURRENCE,
+      persons: [{ id: 10, displayName: 'Benedikt' }, { id: 11, displayName: 'anna' }]
+    };
+    loadInitial([withPersons]);
+
+    const initials = Array.from(dayCell('2026-08-10').querySelectorAll('.calendar__chip-initial'))
+      .map(el => el.textContent?.trim());
+    expect(initials).toEqual(['B', 'A']);
+  });
+
+  it('faerbt den Chip mit der eingebetteten Kategoriefarbe des Termins', () => {
+    loadInitial([SINGLE_OCCURRENCE]);
+
+    const chip = dayCell('2026-08-10').querySelector('.calendar__chip') as HTMLElement;
+    expect(chip.style.getPropertyValue('--chip-color')).toBe(HEALTH.color);
   });
 });

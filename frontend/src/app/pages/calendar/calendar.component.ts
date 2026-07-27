@@ -4,8 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CalendarService } from '../../services/calendar.service';
+import { CalendarCategoryService } from '../../services/calendar-category.service';
+import { HouseholdUser, HouseholdUserService } from '../../services/household-user.service';
+import { AuthService } from '../../services/auth.service';
+import { CalendarCategory } from '../../models/calendar-category.model';
 import {
-  CATEGORY_META, CalendarCategory, CalendarEvent, CalendarEventRequest, CalendarOccurrence
+  CalendarEvent, CalendarEventRequest, CalendarOccurrence
 } from '../../models/calendar-event.model';
 import { MonthDay, buildMonthGrid } from '../../shared/month-grid.util';
 import {
@@ -19,7 +23,10 @@ const DAY_CHIP_LIMIT = 3;
 interface CalendarFormState {
   title: string;
   notes: string;
-  category: CalendarCategory;
+  /** null nur, solange die Kategorien nicht geladen sind — dann oeffnet der Dialog nicht. */
+  categoryId: number | null;
+  /** Leer = Haushaltstermin. */
+  personUserIds: number[];
   allDay: boolean;
   startDate: string;
   startTime: string;
@@ -50,9 +57,16 @@ type RecurrenceFormState = Omit<RecurrenceOptions, 'freq'> & { freq: 'NONE' | Fr
 })
 export class CalendarComponent implements OnInit {
   private readonly calendarService = inject(CalendarService);
+  private readonly categoryService = inject(CalendarCategoryService);
+  private readonly userService = inject(HouseholdUserService);
+  private readonly authService = inject(AuthService);
 
-  readonly categoryMeta = CATEGORY_META;
-  readonly categories = Object.keys(CATEGORY_META) as CalendarCategory[];
+  /** Alle Kategorien inkl. deaktivierter — Bestandstermine brauchen ihre Farbe weiter. */
+  categories: CalendarCategory[] = [];
+  users: HouseholdUser[] = [];
+  /** false = Stammdaten noch nicht geladen; der Termindialog bleibt dann zu. */
+  categoriesLoaded = false;
+
   readonly weekdayLabels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   readonly dayChipLimit = DAY_CHIP_LIMIT;
 
@@ -109,7 +123,29 @@ export class CalendarComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.categoryService.list().subscribe({
+      next: categories => {
+        this.categories = categories;
+        this.categoriesLoaded = true;
+        this.form = this.emptyForm();
+      },
+      // Ein Dialog mit leerer Auswahlliste sieht aus wie "es gibt keine Kategorien" und
+      // verleitet zu falschen Eingaben — deshalb bleibt er ohne Stammdaten geschlossen.
+      error: () => this.loadError = 'Die Kategorien konnten nicht geladen werden.'
+    });
+    this.userService.list().subscribe({
+      next: users => this.users = users.filter(user => user.enabled),
+      error: () => this.users = []
+    });
     this.rebuildGrid();
+  }
+
+  /**
+   * Id des angemeldeten Nutzers; null bei Service-Token.
+   * AuthService haelt den Nutzer als computed-Signal, nicht als Observable.
+   */
+  get currentUserId(): number | null {
+    return this.authService.currentUser()?.id ?? null;
   }
 
   get monthLabel(): string {
@@ -141,10 +177,42 @@ export class CalendarComponent implements OnInit {
   }
 
   colorFor(occurrence: CalendarOccurrence): string {
-    return CATEGORY_META[occurrence.category].color;
+    return occurrence.category?.color ?? '#64b5f6';
+  }
+
+  /** Initialen der zugeordneten Personen; leer = Haushaltstermin. */
+  initialsFor(occurrence: CalendarOccurrence): string[] {
+    return (occurrence.persons ?? []).map(person => person.displayName.charAt(0).toUpperCase());
+  }
+
+  /** Erste aktive Kategorie; ohne geladene Stammdaten null (der Dialog oeffnet dann nicht). */
+  private defaultCategoryId(): number | null {
+    return this.activeCategories()[0]?.id ?? null;
+  }
+
+  /** Waehlbare Kategorien: alle aktiven plus die aktuell gesetzte (auch wenn deaktiviert). */
+  selectableCategories(): CalendarCategory[] {
+    const active = this.activeCategories();
+    const current = this.categories.find(cat => cat.id === this.form.categoryId);
+    return current && !current.active ? [current, ...active] : active;
+  }
+
+  private activeCategories(): CalendarCategory[] {
+    return this.categories.filter(cat => cat.active);
+  }
+
+  /** Personenauswahl im Dialog umschalten. */
+  togglePerson(userId: number): void {
+    const selected = this.form.personUserIds;
+    this.form.personUserIds = selected.includes(userId)
+      ? selected.filter(id => id !== userId)
+      : [...selected, userId];
   }
 
   openCreate(day: MonthDay): void {
+    if (!this.categoriesLoaded) {
+      return;
+    }
     this.dialogGeneration++;
     this.editing = null;
     this.originalSeriesStartDate = null;
@@ -165,6 +233,9 @@ export class CalendarComponent implements OnInit {
    */
   openEdit(occurrence: CalendarOccurrence, clickEvent: Event): void {
     clickEvent.stopPropagation();
+    if (!this.categoriesLoaded) {
+      return;
+    }
     // Vor dem asynchronen Aufruf hochzaehlen: klickt der Nutzer waehrend der Anfrage einen
     // anderen Termin (oder schliesst den Dialog), ist diese Generation beim Eintreffen der
     // Antwort schon veraltet und wird unten verworfen (siehe dialogGeneration-Kommentar).
@@ -186,7 +257,8 @@ export class CalendarComponent implements OnInit {
         this.form = {
           title: occurrence.title,
           notes: occurrence.notes ?? '',
-          category: occurrence.category,
+          categoryId: occurrence.category?.id ?? this.defaultCategoryId(),
+          personUserIds: (occurrence.persons ?? []).map(person => person.id),
           allDay: occurrence.allDay,
           startDate: occurrence.occurrenceDate,
           startTime: occurrence.startTime ?? '',
@@ -384,6 +456,14 @@ export class CalendarComponent implements OnInit {
       this.dialogError = 'Der Titel darf nicht leer sein.';
       return null;
     }
+    // Erreichbar, wenn alle Kategorien deaktiviert sind: die Stammdaten sind dann geladen
+    // (der Dialog oeffnet), aber die Auswahlliste ist leer. Sauberer Ersatz fuer eine
+    // Non-Null-Assertion auf einen Wert, den TS hier nicht garantieren kann.
+    const categoryId = this.form.categoryId;
+    if (categoryId === null) {
+      this.dialogError = 'Es ist keine Kategorie ausgewaehlt.';
+      return null;
+    }
     if (!this.form.startDate) {
       this.dialogError = 'Das Startdatum fehlt.';
       return null;
@@ -410,7 +490,8 @@ export class CalendarComponent implements OnInit {
     return {
       title: this.form.title.trim(),
       notes: this.form.notes.trim() || null,
-      category: this.form.category,
+      categoryId,
+      personUserIds: this.form.personUserIds,
       allDay: this.form.allDay,
       startDate,
       startTime: this.form.allDay ? null : this.form.startTime || null,
@@ -490,8 +571,8 @@ export class CalendarComponent implements OnInit {
 
   private emptyForm(): CalendarFormState {
     return {
-      title: '', notes: '', category: 'GENERAL', allDay: true,
-      startDate: '', startTime: '', endTime: '', endDate: ''
+      title: '', notes: '', categoryId: this.defaultCategoryId(), personUserIds: [],
+      allDay: true, startDate: '', startTime: '', endTime: '', endDate: ''
     };
   }
 
