@@ -74,27 +74,63 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="20260727-0044-b" author="household-manager">
-        <comment>calendar_events.category (Enum-Text) wird zu category_id mit Fremdschluessel.</comment>
+    <!--
+        Die Umstellung von calendar_events.category (Enum-Text) auf category_id ist bewusst in
+        VIER Changesets zerlegt und darf nicht wieder zusammengefasst werden.
+
+        MariaDB/MySQL committen jedes DDL implizit — ein Changeset mit mehreren DDL-Schritten
+        laesst sich nach einem Fehler in der Mitte nicht zurueckrollen. Schritt 3 bricht bei
+        unerwarteten Daten absichtlich ab (siehe dort). In einem gemeinsamen Changeset waere
+        dann die Spalte bereits angelegt, das Changeset aber nicht in DATABASECHANGELOG
+        vermerkt: der naechste Start wiederholte es und scheiterte an "Duplicate column name
+        'category_id'" — auch nach korrigierten Daten, also dauerhaft ohne manuelles ALTER TABLE.
+        Zerlegt bleibt nur Schritt 3 offen; nach der Datenkorrektur laeuft der Neustart durch.
+    -->
+    <changeSet id="20260727-0044-b1" author="household-manager">
+        <comment>Schritt 1/4: Spalte category_id anlegen (noch nullable).</comment>
 
         <addColumn tableName="calendar_events">
             <column name="category_id" type="BIGINT"/>
         </addColumn>
+
+        <rollback>
+            <dropColumn tableName="calendar_events" columnName="category_id"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260727-0044-b2" author="household-manager">
+        <comment>Schritt 2/4: Enum-Text in die Fremdschluessel-Spalte umschreiben.</comment>
 
         <sql>
             UPDATE calendar_events e
             SET e.category_id = (SELECT c.id FROM calendar_category c WHERE c.cat_key = LOWER(e.category))
         </sql>
 
-        <!-- Bleibt hier eine Zeile ohne Treffer, schlaegt der naechste Schritt fehl und
-             Liquibase bricht den Start ab. Gewollt: lauter Abbruch statt stiller
-             Reparatur auf "Allgemein". -->
+        <!-- Kein Rueckwaertsschritt noetig: der Rollback von -b1 verwirft die Spalte samt Inhalt. -->
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="20260727-0044-b3" author="household-manager">
+        <comment>Schritt 3/4: category_id verbindlich machen. Bricht ab, wenn eine Zeile keinen Treffer hatte.</comment>
+
+        <!-- Bleibt aus Schritt 2 eine Zeile ohne Treffer, schlaegt addNotNullConstraint fehl und
+             Liquibase bricht den Start ab. Gewollt: lauter Abbruch statt stiller Reparatur auf
+             "Allgemein". -->
         <addNotNullConstraint tableName="calendar_events" columnName="category_id" columnDataType="BIGINT"/>
 
         <addForeignKeyConstraint
                 baseTableName="calendar_events" baseColumnNames="category_id"
                 referencedTableName="calendar_category" referencedColumnNames="id"
                 constraintName="fk_calendar_events_category" onDelete="RESTRICT"/>
+
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="calendar_events" constraintName="fk_calendar_events_category"/>
+            <dropNotNullConstraint tableName="calendar_events" columnName="category_id" columnDataType="BIGINT"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260727-0044-b4" author="household-manager">
+        <comment>Schritt 4/4: alte Enum-Spalte entfernen.</comment>
 
         <dropColumn tableName="calendar_events" columnName="category"/>
 
@@ -106,8 +142,6 @@
                 UPDATE calendar_events e
                 SET e.category = (SELECT UPPER(c.cat_key) FROM calendar_category c WHERE c.id = e.category_id)
             </sql>
-            <dropForeignKeyConstraint baseTableName="calendar_events" constraintName="fk_calendar_events_category"/>
-            <dropColumn tableName="calendar_events" columnName="category_id"/>
         </rollback>
     </changeSet>
 

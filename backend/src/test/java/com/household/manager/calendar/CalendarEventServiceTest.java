@@ -92,6 +92,26 @@ class CalendarEventServiceTest {
     }
 
     @Test
+    void fehlendeKategorieWirdAbgelehnt() {
+        assertThatThrownBy(() -> service.create(validRequest().categoryId(null).build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Kategorie");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void unbekannteKategorieWirdAbgelehnt() {
+        // Seit die Kategorie kein Enum mehr ist, ist diese Pruefung die einzige Verteidigung
+        // davor, dass ein Fremdschluesselfehler als 500er beim Aufrufer landet.
+        when(categoryRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(validRequest().categoryId(99L).build()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("existiert nicht");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void uhrzeitTerminOhneStartzeitWirdAbgelehnt() {
         assertThatThrownBy(() -> service.create(validRequest().startTime(null).build()))
                 .isInstanceOf(ResponseStatusException.class)
