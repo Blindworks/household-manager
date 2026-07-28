@@ -17,6 +17,9 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Verbindet sich beim Start mit dem MQTT-Broker, abonniert die zigbee2mqtt-Topics
@@ -36,6 +39,16 @@ public class ZigbeeMqttConfig {
     private final EntityStateService entityStateService;
 
     private Mqtt3AsyncClient client;
+
+    /** Eigener Scheduler nur fuer Resubscribe-Wiederholungen. */
+    private final ScheduledExecutorService retryScheduler =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "zigbee-mqtt-retry");
+                t.setDaemon(true);
+                return t;
+            });
+
+    private static final int RESUBSCRIBE_MAX_DELAY_SECONDS = 60;
 
     @PostConstruct
     public void start() {
@@ -74,20 +87,36 @@ public class ZigbeeMqttConfig {
     }
 
     private void subscribe() {
-        if (client == null) {
+        subscribe(1);
+    }
+
+    /**
+     * Abonniert das Topic-Filter und wiederholt den Versuch bei Fehlschlag unbegrenzt
+     * mit wachsendem Abstand (max. {@value #RESUBSCRIBE_MAX_DELAY_SECONDS}s).
+     * <p>
+     * Ohne diese Wiederholung bliebe der Client nach einem fehlgeschlagenen Subscribe
+     * dauerhaft verbunden, ohne je wieder Nachrichten zu empfangen — ein lautloser
+     * Dauerausfall, der genau so schon einmal aufgetreten ist.
+     */
+    private void subscribe(int attempt) {
+        Mqtt3AsyncClient current = this.client;
+        if (current == null) {
             return;
         }
-        client.subscribeWith()
+        current.subscribeWith()
                 .topicFilter(properties.getTopicFilter())
                 .qos(MqttQos.AT_LEAST_ONCE)
                 .callback(this::handle)
                 .send()
                 .whenComplete((subAck, throwable) -> {
-                    if (throwable != null) {
-                        log.warn("Zigbee MQTT subscribe failed: {}", throwable.getMessage());
-                    } else {
+                    if (throwable == null) {
                         log.info("Zigbee MQTT subscribed to {}", properties.getTopicFilter());
+                        return;
                     }
+                    int delay = Math.min(1 << Math.min(attempt, 6), RESUBSCRIBE_MAX_DELAY_SECONDS);
+                    log.warn("Zigbee MQTT subscribe fehlgeschlagen (Versuch {}), erneuter Versuch in {}s: {}",
+                            attempt, delay, throwable.getMessage());
+                    retryScheduler.schedule(() -> subscribe(attempt + 1), delay, TimeUnit.SECONDS);
                 });
     }
 
@@ -119,6 +148,7 @@ public class ZigbeeMqttConfig {
 
     @PreDestroy
     public void stop() {
+        retryScheduler.shutdownNow();
         if (client != null) {
             try {
                 client.disconnect();
