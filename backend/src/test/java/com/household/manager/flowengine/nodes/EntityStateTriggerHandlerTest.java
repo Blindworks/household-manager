@@ -225,4 +225,25 @@ class EntityStateTriggerHandlerTest {
         verify(future).cancel(false);
         assertTrue(emitted.isEmpty());
     }
+
+    @Test
+    void timerFeuertNichtWennEntitaetBeimAblaufUnavailableIst() {
+        // "!=" ist bewusst gewaehlt: nur dort ist matches("unavailable", "!=", value)
+        // wahr (String-Vergleich in StateComparator) - mit "==" liefe dieser Test auch
+        // ohne den Riegel im Ablauf-Lambda gruen und bewiese nichts.
+        NodeConfig config = config(Map.of(
+                "entityId", "lock.nuki_x", "operator", "!=", "value", "locked", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        ArgumentCaptor<Runnable> timerTask = ArgumentCaptor.forClass(Runnable.class);
+        doReturn(future).when(taskScheduler).schedule(timerTask.capture(), any(Instant.class));
+
+        handler.onEntityEvent(event("locked", "unlocked"), config, ctx);   // Timer startet
+
+        when(entityStateService.getByEntityId("lock.nuki_x")).thenReturn(
+                Optional.of(EntityState.builder().entityId("lock.nuki_x").state("unavailable").build()));
+        timerTask.getValue().run();
+
+        assertTrue(emitted.isEmpty(),
+                "Ein Ausfall waehrend der Wartezeit darf beim Ablauf nicht doch noch feuern");
+    }
 }
