@@ -8,6 +8,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.ZigbeeEntityMapper;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
 import com.household.manager.zigbee.parser.ZigbeeAvailability;
+import com.household.manager.zigbee.service.ZigbeeConnectionControl;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeMessageParser;
 import com.household.manager.zigbee.service.ZigbeeReadingService;
@@ -35,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ZigbeeMqttConfig {
+public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
 
     private final ZigbeeMqttProperties properties;
     private final ZigbeeMessageParser parser;
@@ -143,7 +144,21 @@ public class ZigbeeMqttConfig {
                 .buildAsync();
         this.client = builtClient;
 
-        var connectBuilder = builtClient.connectWith();
+        connect();
+    }
+
+    /**
+     * Baut die eigentliche Verbindung auf. Herausgeloest aus {@link #start()}, damit
+     * {@link #forceReconnect()} nach einem selbst angestossenen {@code disconnect()}
+     * explizit neu verbinden kann — HiveMQs {@code automaticReconnect} greift nur bei
+     * unerwarteten Abbruechen, ein gewolltes disconnect() schaltet ihn ab.
+     */
+    private void connect() {
+        Mqtt3AsyncClient current = this.client;
+        if (current == null) {
+            return;
+        }
+        var connectBuilder = current.connectWith();
         if (properties.getUsername() != null && !properties.getUsername().isBlank()) {
             connectBuilder = connectBuilder.simpleAuth()
                     .username(properties.getUsername())
@@ -152,10 +167,38 @@ public class ZigbeeMqttConfig {
         }
         connectBuilder.send().whenComplete((ack, throwable) -> {
             if (throwable != null) {
-                log.warn("Zigbee MQTT initial connect failed (will auto-reconnect): {}", throwable.getMessage());
+                log.warn("Zigbee MQTT connect fehlgeschlagen (Auto-Reconnect laeuft): {}",
+                        throwable.getMessage());
             } else {
                 log.info("Zigbee MQTT connected to {}:{}", properties.getHost(), properties.getPort());
             }
+        });
+    }
+
+    /**
+     * Erzwungener Neuaufbau: trennen UND danach explizit neu verbinden.
+     * <p>
+     * Das explizite {@link #connect()} ist zwingend — HiveMQs automaticReconnect greift
+     * nur bei unerwarteten Abbruechen, ein selbst angestossenes disconnect() gilt als
+     * gewollt und schaltet ihn ab. Ein forceReconnect, das nur trennt, wuerde die
+     * Anbindung endgueltig killen statt sie zu heilen.
+     * <p>
+     * Der anschliessende ConnectedListener loest ein frisches Subscribe aus — genau das
+     * heilt den Fall "verbunden, aber ohne Subscription".
+     */
+    @Override
+    public void forceReconnect() {
+        Mqtt3AsyncClient current = this.client;
+        if (current == null) {
+            return;
+        }
+        log.warn("Zigbee MQTT: erzwungener Reconnect durch den Watchdog");
+        current.disconnect().whenComplete((ignored, throwable) -> {
+            if (throwable != null) {
+                log.warn("Zigbee MQTT: Trennen vor dem Reconnect fehlgeschlagen: {}",
+                        throwable.getMessage());
+            }
+            connect();
         });
     }
 
