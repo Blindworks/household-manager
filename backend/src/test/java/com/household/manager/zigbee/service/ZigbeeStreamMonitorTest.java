@@ -58,6 +58,20 @@ class ZigbeeStreamMonitorTest {
     }
 
     @Test
+    void meldetStilleGenauAufDerSchwelle() {
+        clock.advance(Duration.ofMinutes(15));
+
+        assertThat(monitor.status().health()).isEqualTo(ZigbeeStreamStatus.Health.STILL);
+    }
+
+    @Test
+    void bleibtGesundKurzVorDerSchwelle() {
+        clock.advance(Duration.ofMinutes(14).plusSeconds(59));
+
+        assertThat(monitor.status().health()).isEqualTo(ZigbeeStreamStatus.Health.OK);
+    }
+
+    @Test
     void meldetBridgeOfflineSofort() {
         monitor.recordBridgeState("offline");
 
@@ -68,6 +82,30 @@ class ZigbeeStreamMonitorTest {
     void bridgeOnlineHebtDenOfflineZustandWiederAuf() {
         monitor.recordBridgeState("offline");
         monitor.recordBridgeState("online");
+
+        assertThat(monitor.status().health()).isEqualTo(ZigbeeStreamStatus.Health.OK);
+    }
+
+    @Test
+    void bridgeOfflineGewinntGegenueberStille() {
+        monitor.recordBridgeState("offline");
+        clock.advance(Duration.ofMinutes(16));
+
+        assertThat(monitor.status().health()).isEqualTo(ZigbeeStreamStatus.Health.BRIDGE_OFFLINE);
+    }
+
+    @Test
+    void unerwarteterBridgeTextLoestKeinenAlarmAus() {
+        monitor.recordBridgeState("restarting");
+
+        assertThat(monitor.status().health()).isEqualTo(ZigbeeStreamStatus.Health.OK);
+    }
+
+    @Test
+    void geraetenachrichtNachOfflineMeldungHebtDenAlarmAuf() {
+        monitor.recordBridgeState("offline");
+        clock.advance(Duration.ofMinutes(1));
+        monitor.recordMessage("Temperatur Buero");
 
         assertThat(monitor.status().health()).isEqualTo(ZigbeeStreamStatus.Health.OK);
     }

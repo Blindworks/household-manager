@@ -6,17 +6,20 @@ import java.util.List;
 /**
  * Urteil ueber den Zustand der Zigbee-Anbindung.
  *
- * @param health         Gesamturteil
- * @param lastMessageAt  wann kam zuletzt irgendeine Geraetenachricht
- * @param silentMinutes  wie lange ist es seitdem still
- * @param bridgeState    letzter von zigbee2mqtt gemeldeter Zustand, oder null
- * @param offlineDevices Geraete, die zigbee2mqtt als offline meldet
+ * @param health          Gesamturteil
+ * @param lastMessageAt   wann kam zuletzt irgendeine Geraetenachricht
+ * @param silentMinutes   wie lange ist es seitdem still
+ * @param bridgeState     letzter von zigbee2mqtt gemeldeter Zustand, oder null
+ * @param lastBridgeStateAt wann kam diese Zustandsmeldung, oder null; macht sichtbar,
+ *                          wie alt eine {@code bridgeState}-Aussage ist
+ * @param offlineDevices  Geraete, die zigbee2mqtt als offline meldet
  */
 public record ZigbeeStreamStatus(
         Health health,
         Instant lastMessageAt,
         long silentMinutes,
         String bridgeState,
+        Instant lastBridgeStateAt,
         List<String> offlineDevices) {
 
     public enum Health {
