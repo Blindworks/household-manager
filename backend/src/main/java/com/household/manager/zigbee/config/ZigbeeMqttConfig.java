@@ -26,6 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -69,6 +70,16 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
      * doppelt verarbeitet (doppelte DB-Zeilen, doppelt feuernde Flows).
      */
     private final AtomicInteger subscribeGeneration = new AtomicInteger(0);
+
+    /**
+     * Von {@link #stop()} VOR dem {@code disconnect()} gesetzt. Sowohl ein regulaeres
+     * Herunterfahren als auch {@link #forceReconnect()} loesen einen USER-Disconnect
+     * aus, den der Disconnected-Listener sonst nicht unterscheiden kann. Ohne dieses
+     * Flag wuerde ein vom Watchdog erzwungener Reconnect als "gewolltes Shutdown"
+     * geloggt - eine Fehlspur ausgerechnet in dem Log, das einen Ausfall wie den
+     * 22-Stunden-PROD-Vorfall diagnostizierbar machen soll.
+     */
+    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
 
     /**
      * Verarbeitung laeuft bewusst auf GENAU EINEM Thread: mehrere Threads koennten
@@ -131,11 +142,20 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
                 .addConnectedListener(ctx -> subscribe())
                 .addDisconnectedListener(ctx -> {
                     if (ctx.getSource() == MqttDisconnectSource.USER) {
-                        // Selbst angestossenes disconnect() (siehe stop()) - kein
-                        // Ausfall, kein Reconnect zu erwarten. Ohne diese
-                        // Unterscheidung wuerde jedes regulaere Herunterfahren ein
-                        // irrefuehrendes "Reconnect laeuft" loggen.
-                        log.info("Zigbee MQTT Verbindung geschlossen (gewolltes Shutdown)");
+                        // Zwei Quellen fuer ein selbst angestossenes disconnect():
+                        // stop() (regulaeres Herunterfahren, kein Reconnect zu
+                        // erwarten) und forceReconnect() (Watchdog-Selbstheilung,
+                        // ein explizites connect() folgt sofort). Ohne die
+                        // shuttingDown-Unterscheidung wuerden BEIDE hier als
+                        // "gewolltes Shutdown" geloggt - ein erzwungener Reconnect
+                        // waere dann im Log nicht von einem echten Shutdown zu
+                        // unterscheiden, obwohl er ein Alarmsignal ist.
+                        if (shuttingDown.get()) {
+                            log.info("Zigbee MQTT Verbindung geschlossen (gewolltes Shutdown)");
+                        } else {
+                            log.warn("Zigbee MQTT Verbindung von uns getrennt (erzwungener "
+                                    + "Reconnect durch den Watchdog), Neuverbindung folgt");
+                        }
                         return;
                     }
                     log.warn("Zigbee MQTT getrennt (Quelle {}), Reconnect laeuft: {}",
@@ -332,6 +352,7 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
         // @Transactional-DB-Operation (readingService.record), rollt die Transaktion
         // zwar korrekt zurueck, aber ein Messwert geht verloren und es kann bei jedem
         // Herunterfahren eine JDBCConnectionException geloggt werden.
+        shuttingDown.set(true);
         if (client != null) {
             try {
                 client.disconnect().orTimeout(3, TimeUnit.SECONDS).exceptionally(t -> null).join();
