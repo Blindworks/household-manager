@@ -32,8 +32,11 @@ public class TractiveWalkService {
     static final int MAX_DAYS = 14;
     /** Groesser lehnt die Cloud ab (Code 7500 HISTORY, real beobachtet bei 7 Tagen). */
     private static final Duration MAX_CHUNK = Duration.ofHours(24);
-    /** Der angebrochene Tag aendert sich laufend und wird nur kurz gecacht. */
-    private static final Duration CURRENT_DAY_TTL = Duration.ofMinutes(5);
+    /**
+     * Der angebrochene Tag aendert sich laufend und wird nur kurz gecacht —
+     * bewusst knapp, damit eine gerade beendete Runde schnell im Dialog steht.
+     */
+    private static final Duration CURRENT_DAY_TTL = Duration.ofMinutes(1);
     /** Nach einem 429 pausieren alle Cloud-Abrufe, sonst schaukelt sich das Limit hoch. */
     private static final Duration RATE_LIMIT_COOLDOWN = Duration.ofSeconds(60);
     /** Lokale Haushaltszeit — wie ueberall im Projekt (Kalender, Scheduler). */

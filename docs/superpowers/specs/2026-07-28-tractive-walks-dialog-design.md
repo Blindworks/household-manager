@@ -63,6 +63,14 @@ ein fehlgeschlagener Abruf wird als Fehler gemeldet, nie geraten.
   die 5-min-TTL), beim ersten 429 Abbruch aller weiteren Cloud-Aufrufe mit 60 s
   Abkühlpause und Teilergebnis; ohne jegliche Daten eine verständliche
   Rate-Limit-Meldung. Fehlende alte Tage füllt der nächste Klick inkrementell nach.
+- **Nachtrag 3 (Nutzerentscheidung 2026-07-28):** Heuristik umgestellt auf den
+  Einschalt-Indikator dieses Haushalts: der Tracker ist zu Hause aus und wird nur
+  für die Runde eingeschaltet. Spaziergang = Berichts-Cluster zwischen zwei
+  Funkpausen > 30 min (Ränder ≈ Ein-/Ausschalten; deckt sich mit den
+  App-Gassirunden), Mindestdauer 5 min, und mindestens ein Punkt muss außerhalb
+  des Home-Radius liegen (Ladeschalen-Schutz). Distanz über alle Cluster-Punkte,
+  auch nahe dem Haus. Zusätzlich: TTL des angebrochenen Tages 1 min statt 5,
+  Tracker-Polling 30 s statt 60 s.
 - Fällt unter die generische `GET /v1/**`-Regel (KIOSK liest — wie die Position
   selbst). Keine neue Security-Regel, `SecurityRulesTest` bleibt unberührt.
 - Ergebnis wird 5 Minuten pro (Tracker, days) im Speicher gecacht.
