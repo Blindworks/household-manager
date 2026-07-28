@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -82,6 +83,24 @@ public class TractiveApiClient {
     public TractiveHardwareDto getHardware(String token, String userId, String trackerId) {
         // Der abschliessende Slash ist von der API vorgegeben.
         return get("/device_hw_report/" + trackerId + "/", token, userId, TractiveHardwareDto.class);
+    }
+
+    /**
+     * Positionshistorie des Trackers als Segmente (Liste von Punktlisten).
+     * Antwortform nur gegen Fremdbibliotheken verifiziert; Aufrufer muessen
+     * unplausible Punkte selbst verwerfen.
+     */
+    public List<List<TractivePositionDto>> getPositionHistory(String token, String userId,
+                                                              String trackerId,
+                                                              Instant from,
+                                                              Instant to) {
+        String path = "/tracker/" + trackerId + "/positions"
+                + "?time_from=" + from.getEpochSecond()
+                + "&time_to=" + to.getEpochSecond()
+                + "&format=json_segments";
+        return getList(path, token, userId,
+                new ParameterizedTypeReference<List<List<TractivePositionDto>>>() {
+                });
     }
 
     /**
