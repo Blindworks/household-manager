@@ -36,6 +36,8 @@ import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
 import { TractiveService } from '../../services/tractive.service';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
+import { ZigbeeService } from '../../services/zigbee.service';
+import { ZigbeeHealth } from '../../models/zigbee.model';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -69,6 +71,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly nukiService = inject(NukiService);
   private readonly powerConsumerService = inject(PowerConsumerService);
   private readonly tractiveService = inject(TractiveService);
+  private readonly zigbeeService = inject(ZigbeeService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -86,6 +89,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private nukiSubscription?: Subscription;
   private consumerSubscription?: Subscription;
   private petSubscription?: Subscription;
+  private zigbeeHealthSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -237,6 +241,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Verwirft verspätete Antworten eines bereits geschlossenen Dialogs. */
   private walksRequestId = 0;
 
+  /** Zustand der Zigbee-Anbindung; null = gesund oder Health-Endpunkt nicht erreichbar. */
+  zigbeeHealth: ZigbeeHealth | null = null;
+
   ngOnInit(): void {
     this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
     this.startClock();
@@ -250,6 +257,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startCalendarRefresh();
     this.startNukiRefresh();
     this.startPetRefresh();
+    this.loadZigbeeHealth();
   }
 
   ngOnDestroy(): void {
@@ -265,6 +273,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.nukiSubscription?.unsubscribe();
     this.consumerSubscription?.unsubscribe();
     this.petSubscription?.unsubscribe();
+    this.zigbeeHealthSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -942,6 +951,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.pets = pets;
         }
       });
+  }
+
+  /**
+   * Laedt den Zustand der Zigbee-Anbindung fuer den Fussleisten-Hinweis. Fehler bewusst
+   * still: ein nicht erreichbarer Health-Endpunkt darf die Kachel nicht anzeigen und die
+   * Seite nicht stoeren (gleiches Muster wie {@link ZigbeeComponent.loadHealth}).
+   */
+  private loadZigbeeHealth(): void {
+    this.zigbeeHealthSubscription = this.zigbeeService.getHealth().subscribe({
+      next: (health) => (this.zigbeeHealth = health),
+      error: () => (this.zigbeeHealth = null)
+    });
   }
 
   /** Nur Tiere mit einer Aussage; ohne sie bleibt die Kachel leer statt zu raten. */

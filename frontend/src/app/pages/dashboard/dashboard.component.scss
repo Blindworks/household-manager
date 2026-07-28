@@ -928,6 +928,14 @@
   flex: 1;
 }
 
+.lumina__zigbee-outage {
+  border-color: rgba(255, 180, 171, 0.4);
+
+  .lumina__secured-icon {
+    color: var(--error);
+  }
+}
+
 .lumina__pets {
   display: flex;
   align-items: center;
