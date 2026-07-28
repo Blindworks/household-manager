@@ -100,8 +100,62 @@ class TractiveWalkServiceTest {
         service.getWalks("dev-9", 7);
         service.getWalks("dev-9", 7);
 
-        verify(apiClient, times(1)).getPositionHistory(anyString(), anyString(), anyString(),
+        // 7 Tages-Haeppchen beim ersten Abruf, kein einziger Cloud-Aufruf beim zweiten.
+        verify(apiClient, times(7)).getPositionHistory(anyString(), anyString(), anyString(),
                 any(Instant.class), any(Instant.class));
+    }
+
+    @Test
+    void holtDieHistorieInLueckenlosenTagesHaeppchen() {
+        when(homeSettingsService.getSettings()).thenReturn(HOME);
+        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class))).thenReturn(List.of());
+
+        service.getWalks("dev-9", 7);
+
+        var fromCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        var toCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        verify(apiClient, times(7)).getPositionHistory(anyString(), anyString(), anyString(),
+                fromCaptor.capture(), toCaptor.capture());
+        for (int i = 0; i < 7; i++) {
+            java.time.Duration window = java.time.Duration.between(
+                    fromCaptor.getAllValues().get(i), toCaptor.getAllValues().get(i));
+            assertTrue(window.compareTo(java.time.Duration.ofHours(24)) <= 0,
+                    "Fenster " + i + " ist groesser als 24 h: " + window);
+        }
+        for (int i = 1; i < 7; i++) {
+            assertEquals(toCaptor.getAllValues().get(i - 1), fromCaptor.getAllValues().get(i),
+                    "Luecke zwischen Haeppchen " + (i - 1) + " und " + i);
+        }
+    }
+
+    @Test
+    void einzelneFehlgeschlageneHaeppchenWerdenToleriert() {
+        when(homeSettingsService.getSettings()).thenReturn(HOME);
+        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+        // Das aelteste Haeppchen scheitert (z. B. ausserhalb der Abo-Historie),
+        // die uebrigen liefern Daten.
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class)))
+                .thenThrow(new TractiveException("400 Bad Request"))
+                .thenReturn(walkSegments());
+
+        var walks = service.getWalks("dev-9", 7);
+
+        assertEquals(1, walks.size());
+        assertEquals(30, walks.get(0).durationMinutes());
+    }
+
+    @Test
+    void wennAlleHaeppchenScheiternKommtDerFehlerDurch() {
+        when(homeSettingsService.getSettings()).thenReturn(HOME);
+        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class)))
+                .thenThrow(new TractiveException("kaputt"));
+
+        assertThrows(TractiveException.class, () -> service.getWalks("dev-9", 7));
     }
 
     @Test
@@ -114,9 +168,10 @@ class TractiveWalkServiceTest {
         service.getWalks("dev-9", 999);
 
         var fromCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
-        verify(apiClient).getPositionHistory(anyString(), anyString(), anyString(),
-                fromCaptor.capture(), any(Instant.class));
-        long ageDays = java.time.Duration.between(fromCaptor.getValue(), Instant.now()).toDays();
+        verify(apiClient, times(TractiveWalkService.MAX_DAYS)).getPositionHistory(
+                anyString(), anyString(), anyString(), fromCaptor.capture(), any(Instant.class));
+        long ageDays = java.time.Duration.between(
+                fromCaptor.getAllValues().get(0), Instant.now()).toDays();
         assertTrue(ageDays <= TractiveWalkService.MAX_DAYS);
     }
 }

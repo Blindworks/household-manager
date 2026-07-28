@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +24,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TractiveWalkService {
 
     static final int MAX_DAYS = 14;
+    /**
+     * Die Cloud lehnt grosse Abfragefenster ab (Code 7500, Kategorie HISTORY,
+     * "The requested time frame is invalid" — real beobachtet bei 7 Tagen);
+     * die Tractive-Apps laden die Historie tageweise. Deshalb wird in
+     * 24-h-Haeppchen abgerufen.
+     */
+    private static final Duration HISTORY_CHUNK = Duration.ofHours(24);
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
     private final TractiveApiClient apiClient;
@@ -53,16 +61,48 @@ public class TractiveWalkService {
 
         Instant to = Instant.now();
         Instant from = to.minus(Duration.ofDays(clampedDays));
-        List<List<TractivePositionDto>> segments = apiClient.getPositionHistory(
-                auth.getAccessToken(), auth.getUserId(), trackerId, from, to);
+        List<TractivePositionDto> points = fetchPointsInChunks(auth, trackerId, from, to);
 
         GeoZone home = new GeoZone(settings.homeZoneName(),
                 settings.homeLatitude(), settings.homeLongitude(), settings.homeRadiusMeters());
-        List<TractiveWalkDto> walks = TractiveWalkDetector.detectWalks(
-                segments.stream().flatMap(List::stream).toList(), home);
+        List<TractiveWalkDto> walks = TractiveWalkDetector.detectWalks(points, home);
 
         cache.put(cacheKey, new CachedWalks(Instant.now(), walks));
         return walks;
+    }
+
+    /**
+     * Einzelne fehlgeschlagene Haeppchen werden toleriert: im Basic-Abo reicht die
+     * Historie nur 24 h zurueck, aeltere Fenster antworten dann mit einem Fehler —
+     * der juengste Tag soll trotzdem sichtbar sein. Erst wenn ausnahmslos jedes
+     * Haeppchen scheitert, ist die Cloud wirklich nicht erreichbar und der letzte
+     * Fehler geht an den Aufrufer.
+     */
+    private List<TractivePositionDto> fetchPointsInChunks(TractiveAuth auth, String trackerId,
+                                                          Instant from, Instant to) {
+        List<TractivePositionDto> points = new ArrayList<>();
+        TractiveException lastError = null;
+        int failedChunks = 0;
+        int totalChunks = 0;
+        for (Instant chunkFrom = from; chunkFrom.isBefore(to); chunkFrom = chunkFrom.plus(HISTORY_CHUNK)) {
+            Instant chunkTo = chunkFrom.plus(HISTORY_CHUNK).isBefore(to)
+                    ? chunkFrom.plus(HISTORY_CHUNK) : to;
+            totalChunks++;
+            try {
+                apiClient.getPositionHistory(auth.getAccessToken(), auth.getUserId(),
+                                trackerId, chunkFrom, chunkTo)
+                        .forEach(points::addAll);
+            } catch (TractiveException ex) {
+                failedChunks++;
+                lastError = ex;
+                log.warn("Tractive-Positionshistorie {}..{} nicht lesbar: {}",
+                        chunkFrom, chunkTo, ex.getMessage());
+            }
+        }
+        if (totalChunks > 0 && failedChunks == totalChunks) {
+            throw lastError;
+        }
+        return points;
     }
 
     private record CachedWalks(Instant fetchedAt, List<TractiveWalkDto> walks) {

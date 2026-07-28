@@ -52,6 +52,11 @@ ein fehlgeschlagener Abruf wird als Fehler gemeldet, nie geraten.
 ### 3. Endpunkt `GET /v1/tractive/pets/{trackerId}/walks?days=7`
 
 - `days` Default 7, Maximum 14 (Schutz vor teuren Cloud-Abfragen).
+- **Nachtrag 2026-07-28 (Realtest):** Die Cloud lehnt große Abfragefenster ab
+  (Code 7500, Kategorie HISTORY, „The requested time frame is invalid" — beobachtet
+  bei 7 Tagen). Der Abruf erfolgt deshalb in lückenlosen 24-h-Häppchen; einzelne
+  fehlgeschlagene Häppchen werden toleriert (Basic-Abo: nur 24 h Historie), erst
+  wenn alle scheitern, geht der letzte Fehler an den Aufrufer.
 - Fällt unter die generische `GET /v1/**`-Regel (KIOSK liest — wie die Position
   selbst). Keine neue Security-Regel, `SecurityRulesTest` bleibt unberührt.
 - Ergebnis wird 5 Minuten pro (Tracker, days) im Speicher gecacht.
