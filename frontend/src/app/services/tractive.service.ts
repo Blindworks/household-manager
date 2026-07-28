@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { TractiveAuthStatus, TractivePet } from '../models/tractive.model';
+import { TractiveAuthStatus, TractivePet, TractiveWalk } from '../models/tractive.model';
 import { TractiveHomeSettings } from '../models/tractive-home-settings.model';
 
 /** REST-Service fuer die Tractive-Haustiertracker. */
@@ -31,6 +31,15 @@ export class TractiveService {
     return this.http.get<TractivePet[]>(`${this.baseUrl}/pets`).pipe(
       catchError(this.handleError)
     );
+  }
+
+  /**
+   * Fehler werden bewusst NICHT auf eine Einheitsmeldung reduziert: der Dialog
+   * zeigt die Server-Meldung an (z. B. "Kein Zuhause konfiguriert").
+   */
+  getWalks(trackerId: string, days = 7): Observable<TractiveWalk[]> {
+    return this.http.get<TractiveWalk[]>(
+      `${this.baseUrl}/pets/${trackerId}/walks`, { params: { days } });
   }
 
   getHomeSettings(): Observable<TractiveHomeSettings> {

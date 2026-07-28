@@ -35,7 +35,7 @@ import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
 import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
 import { TractiveService } from '../../services/tractive.service';
-import { TractivePet } from '../../models/tractive.model';
+import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -230,6 +230,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Haustiere fuer die Zu-Hause-Kachel; leer = Kachel wird nicht gerendert. */
   pets: TractivePet[] = [];
+  /** True, solange der Spaziergänge-Dialog offen ist. */
+  walksDialogOpen = false;
+  /** Ein Abschnitt pro Hund im Spaziergänge-Dialog. */
+  walkSections: PetWalkSection[] = [];
+  /** Verwirft verspätete Antworten eines bereits geschlossenen Dialogs. */
+  private walksRequestId = 0;
 
   ngOnInit(): void {
     this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
@@ -282,6 +288,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Schliesst die geoeffneten Dialoge per Escape-Taste. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.walksDialogOpen) {
+      this.closeWalksDialog();
+      return;
+    }
     if (this.historyConsumer) {
       this.closeHistoryDialog();
       return;
@@ -947,6 +957,78 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return pet.atHome ? 'home' : 'pets';
   }
 
+  /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */
+  openWalksDialog(): void {
+    if (this.petsWithVerdict.length === 0) {
+      return;
+    }
+    this.walksDialogOpen = true;
+    const requestId = ++this.walksRequestId;
+    this.walkSections = this.petsWithVerdict.map(pet => ({
+      pet, dayGroups: [], loading: true, error: null, empty: false
+    }));
+    for (const section of this.walkSections) {
+      this.tractiveService.getWalks(section.pet.trackerId).subscribe({
+        next: walks => {
+          if (requestId !== this.walksRequestId) {
+            return;
+          }
+          section.loading = false;
+          section.empty = walks.length === 0;
+          section.dayGroups = this.groupWalksByDay(walks);
+        },
+        error: err => {
+          if (requestId !== this.walksRequestId) {
+            return;
+          }
+          section.loading = false;
+          section.error = err?.error?.message ?? 'Spaziergänge konnten nicht geladen werden.';
+        }
+      });
+    }
+  }
+
+  closeWalksDialog(): void {
+    this.walksDialogOpen = false;
+    this.walksRequestId++;
+    this.walkSections = [];
+  }
+
+  /** Gruppiert nach Kalendertag; die Reihenfolge (neueste zuerst) kommt vom Server. */
+  private groupWalksByDay(walks: TractiveWalk[]): { label: string; walks: TractiveWalk[] }[] {
+    const groups: { label: string; walks: TractiveWalk[] }[] = [];
+    for (const walk of walks) {
+      const label = new Date(walk.start).toLocaleDateString('de-DE', {
+        weekday: 'long', day: 'numeric', month: 'long'
+      });
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) {
+        last.walks.push(walk);
+      } else {
+        groups.push({ label, walks: [walk] });
+      }
+    }
+    return groups;
+  }
+
+  walkTimeRange(walk: TractiveWalk): string {
+    const format = (iso: string) =>
+      new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    return `${format(walk.start)}–${format(walk.end)} Uhr`;
+  }
+
+  walkDuration(walk: TractiveWalk): string {
+    const hours = Math.floor(walk.durationMinutes / 60);
+    const minutes = walk.durationMinutes % 60;
+    return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+  }
+
+  walkDistance(walk: TractiveWalk): string {
+    return walk.distanceMeters >= 1000
+      ? `${(walk.distanceMeters / 1000).toFixed(1).replace('.', ',')} km`
+      : `${Math.round(walk.distanceMeters)} m`;
+  }
+
   private executeNukiAction(lock: NukiLock, action: NukiLockActionType): void {
     this.pendingNukiIds.add(lock.smartlockId);
     this.nukiError = null;
@@ -1035,5 +1117,14 @@ interface EnergyGauge {
   readonly icon: string;
   readonly value: string;
   readonly offset: number;
+}
+
+/** Spaziergänge eines Hundes, gruppiert nach Tag. */
+interface PetWalkSection {
+  pet: TractivePet;
+  dayGroups: { label: string; walks: TractiveWalk[] }[];
+  loading: boolean;
+  error: string | null;
+  empty: boolean;
 }
 

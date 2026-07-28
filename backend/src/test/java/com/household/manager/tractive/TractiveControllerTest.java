@@ -20,6 +20,8 @@ class TractiveControllerTest {
 
     @Mock
     private TractivePetService petService;
+    @Mock
+    private TractiveWalkService walkService;
 
     @Test
     void petsDelegatesToTheService() throws Exception {
@@ -28,7 +30,7 @@ class TractiveControllerTest {
         when(petService.listPets()).thenReturn(List.of(pet));
 
         MockMvc mockMvc = MockMvcBuilders
-                .standaloneSetup(new TractiveController(petService)).build();
+                .standaloneSetup(new TractiveController(petService, walkService)).build();
 
         mockMvc.perform(get("/v1/tractive/pets"))
                 .andExpect(status().isOk())
