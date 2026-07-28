@@ -101,6 +101,12 @@ public class ZigbeeMqttConfig {
                             + "(Nachricht waehrend des Abschaltens)");
                     return;
                 }
+                // Bei einer unbeschraenkten LinkedBlockingQueue kann dieser Zweig im
+                // Normalbetrieb NICHT feuern - execute() lehnt nur bei voller (bounded)
+                // Queue oder nach shutdown() ab, und Letzteres faengt der Zweig oben ab.
+                // Bleibt als Leitplanke, falls die Queue spaeter wieder beschraenkt wird -
+                // wer diese Zeile im Log sieht, sucht sonst einen Fehler, den es (heute)
+                // gar nicht geben kann.
                 log.error("Zigbee-Verarbeitung abgelehnt, obwohl der Executor noch laeuft "
                         + "- unerwarteter Zustand.");
             });
@@ -168,6 +174,19 @@ public class ZigbeeMqttConfig {
      * bevor ein Folgeversuch geplant wird. Sonst koennten eine alte, noch retry-ende
      * Kette und eine neue, durch einen frischen Connect ausgeloeste Kette beide
      * erfolgreich subscriben und zu doppelten Subscriptions fuehren.
+     * <p>
+     * Die Generationspruefung allein reicht NICHT: HiveMQ laesst ein {@code subscribe()}
+     * waehrend eines laufenden Auto-Reconnects nicht scheitern, sondern queued es intern
+     * (siehe {@code MqttSubscriptionHandler}) und liefert es erst beim naechsten CONNACK
+     * aus - der Client bleibt dabei {@code DISCONNECTED_RECONNECT}, es gibt also KEINEN
+     * neuen {@code ConnectedListener}-Aufruf und damit keine Generationsaenderung, bis
+     * die Verbindung tatsaechlich zurueckkommt. Ein alter Retry-Versuch koennte in genau
+     * diesem Fenster (Sekunden bis Minuten) den Generations-Check passieren und trotzdem
+     * noch in die interne Warteschlange geraten; beim naechsten CONNACK wuerde er dann
+     * ZUSAETZLICH zur frischen Subscription des neuen ConnectedListener-Aufrufs
+     * ausgeliefert. Deshalb zusaetzlich pruefen, ob der Client ueberhaupt verbunden ist -
+     * ist er das nicht, bricht dieser Versuch wortlos ab; der ConnectedListener
+     * subscribed beim naechsten erfolgreichen Connect ohnehin neu.
      */
     private void subscribe(int attempt, int generation) {
         if (generation != subscribeGeneration.get()) {
@@ -175,6 +194,9 @@ public class ZigbeeMqttConfig {
         }
         Mqtt3AsyncClient current = this.client;
         if (current == null) {
+            return;
+        }
+        if (!current.getConfig().getState().isConnected()) {
             return;
         }
         current.subscribeWith()
@@ -226,19 +248,34 @@ public class ZigbeeMqttConfig {
 
     @PreDestroy
     public void stop() {
-        // Erst disconnecten, DANN die Executors herunterfahren: andersherum ruft
-        // ThreadPoolExecutor#shutdownNow() den RejectedExecutionHandler auch fuer
-        // Nachrichten auf, die waehrend des Abschaltfensters noch eintreffen - bei
-        // minuetlich meldenden Sensoren realistisch, und ohne diese Reihenfolge waere
-        // das der haeufigste Ausloeser der Verwerfen-Meldung ueberhaupt.
+        // client.disconnect() liefert ein CompletableFuture<Void>, dessen Abschluss wir
+        // hier mit Timeout ABWARTEN, bevor die Executors herunterfahren. Der reine Aufruf
+        // ohne join() haette das Abschaltfenster nicht wirklich geschlossen - die
+        // shutdownNow()-Aufrufe liefen praktisch sofort danach, typischerweise bevor das
+        // DISCONNECT-Paket ueberhaupt auf der Leitung war.
+        //
+        // handlerExecutor faehrt bewusst per shutdown() + awaitTermination() herunter,
+        // NICHT per shutdownNow(): Letzteres unterbricht den laufenden
+        // zigbee-mqtt-handler-Thread hart. Steckt der gerade in einer
+        // @Transactional-DB-Operation (readingService.record), rollt die Transaktion
+        // zwar korrekt zurueck, aber ein Messwert geht verloren und es kann bei jedem
+        // Herunterfahren eine JDBCConnectionException geloggt werden.
         if (client != null) {
             try {
-                client.disconnect();
+                client.disconnect().orTimeout(3, TimeUnit.SECONDS).exceptionally(t -> null).join();
             } catch (Exception ex) {
                 log.debug("Error during MQTT disconnect: {}", ex.getMessage());
             }
         }
         retryScheduler.shutdownNow();
-        handlerExecutor.shutdownNow();
+        handlerExecutor.shutdown();
+        try {
+            if (!handlerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                handlerExecutor.shutdownNow();
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            handlerExecutor.shutdownNow();
+        }
     }
 }
