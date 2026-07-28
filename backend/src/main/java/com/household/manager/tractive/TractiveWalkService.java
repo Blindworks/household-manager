@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class TractiveWalkService {
 
-    static final int DEFAULT_DAYS = 7;
     static final int MAX_DAYS = 14;
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
