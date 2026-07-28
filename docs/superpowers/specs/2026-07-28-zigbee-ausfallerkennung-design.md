@@ -141,24 +141,64 @@ Ohne Gegenmaßnahme macht der Watchdog die Lage an einer Stelle **schlechter**:
 beim Ausfall „offen" war und bei der Erholung von `unavailable` auf `on` zurückspringt,
 erfüllt genau diese Bedingung — Flow #2 sendete im Modus „Abwesend" einen Fehlalarm.
 
-Deshalb, engine-weit: **kein Feuern, wenn `oldState` gleich `unavailable` ist.**
-`unavailable` bedeutet „unbekannt", nicht „passte nicht". Das gilt auch für
-`operator: changed` — sonst feuerte jeder Ausfall zweimal, beim Weggehen und beim
-Wiederkommen.
+**Revidiert am 2026-07-28 nach dem Code-Review — die erste Fassung dieser Regel war
+sicherheitsgefährdend.**
 
-Bewusst in Kauf genommen: eine Zustandsänderung, die *während* des Ausfalls wirklich
-passiert ist, wird nachträglich nicht gemeldet. Sie war ohnehin verloren.
+Ursprünglich war vorgesehen, *beide* Richtungen zu unterdrücken. Das Review hat gezeigt,
+dass das einen Alarm verschluckt, der wichtiger ist als die vermiedene Dopplung:
 
-Zusätzlich zu prüfen: `EntityConditionHandler` muss eine Bedingung auf einer
-`unavailable`-Entität als *nicht erfüllt* werten, nicht als Fehler.
+Prod-Flow #4 („Feuer-Verdacht") triggert auf `Temperatur > 40`. Bei beidseitiger
+Unterdrückung wird der Übergang `unavailable → 41` verworfen. Bricht ein Feuer *während*
+eines Zigbee-Ausfalls aus, kommt der Sensor mit 41 °C zurück — und der Alarm feuert
+**nie**, bis die Temperatur erst unter 40 fällt und erneut steigt.
+
+Der Fehlalarm auf der Gegenseite ist zudem schwächer als angenommen: Ein Türkontakt, der
+bei der Erholung auf `on` springt, bedeutet, dass die Tür in diesem Moment *tatsächlich
+offen* ist, während „Abwesend" aktiv ist. Das ist eine **Dopplung**, keine Falschmeldung.
+Eine Dopplung ist ärgerlich, ein verschluckter Brandalarm nicht.
+
+**Gültige Regel, engine-weit:**
+
+- **Kein Feuern, wenn `newState` gleich `unavailable` ist** — der Ausfall selbst ist kein
+  Ereignis der beobachteten Größe. Nötig, weil sonst `operator: "!="` und
+  `operator: "changed"` bei jedem Ausfall auslösten. Ein laufender `forSeconds`-Timer wird
+  dabei storniert.
+- **Der Übergang aus `unavailable` heraus feuert normal.** Beim Wiederanlaufen wird der
+  erste echte Wert regulär bewertet.
+- **Der `forSeconds`-Ablauf prüft zusätzlich selbst**, ob der aktuelle Zustand
+  `unavailable` ist, und emittiert dann nicht. `StateComparator` vergleicht
+  nicht-numerische Werte als String, `matches("unavailable", "!=", "on")` wäre sonst
+  **wahr** — und `future.cancel(false)` stoppt eine bereits gestartete Task nicht mehr.
+
+Bewusst in Kauf genommen: Nach einem Ausfall kann eine bereits gemeldete Bedingung ein
+zweites Mal melden.
+
+`EntityConditionHandler` bleibt unverändert. Geprüft: `StateComparator` kann
+`"unavailable"` nicht als Zahl parsen, numerische Operatoren liefern damit korrekt
+`false`. **Bekannte Falle, bewusst nicht geändert:** `!=` vergleicht nicht-numerisch als
+String, `unavailable != on` ist deshalb **wahr** — eine Bedingung „Tür ist nicht offen"
+gilt bei einem Ausfall als erfüllt.
+
+**Nebeneffekt auf andere Quellen, der dokumentiert gehört:** `ShellyPollingService`,
+`SmartDeviceEntityMapper` (Kasa/Tapo), `NukiPollingService` und `TractivePollingService`
+schreiben `unavailable` bei *jedem* fehlgeschlagenen Poll. Die Unterdrückung der
+Hin-Richtung betrifft damit auch kurze, routinemäßige Aussetzer dieser Quellen — für
+`changed`- und `!=`-Trigger ist das erwünscht, für alles andere folgenlos.
 
 ### 6. Härtungen am MQTT-Client
 
 - **Resubscribe wiederholen** statt einmal zu warnen (Backoff, unbegrenzt).
-- **Verarbeitung vom Netty-Event-Loop entkoppeln:** `.callback(handler, executor)` mit einem
-  **einzelnen** Thread und begrenzter Queue — bewusst kein Pool: mehrere Threads könnten
-  Nachrichten desselben Geräts umsortieren, und bei einem Türkontakt wäre ein vertauschtes
-  „offen"/„zu" fatal. Läuft die Queue voll, wird verworfen und laut geloggt.
+- **Verarbeitung vom Netty-Event-Loop entkoppeln:** `.callback(handler).executor(handlerExecutor)`
+  mit einem **einzelnen** Thread — bewusst kein Pool: mehrere Threads könnten Nachrichten
+  desselben Geräts umsortieren, und bei einem Türkontakt wäre ein vertauschtes „offen"/„zu"
+  fatal.
+  **Korrigiert nach der Umsetzung:** Die erste Fassung sah eine *begrenzte* Queue vor, die bei
+  Überlauf laut loggt. Das wäre eine Zusage gewesen, die der Code nicht halten kann: HiveMQ
+  wickelt den Executor in `Schedulers.from(...)`, und dessen `ExecutorWorker` hält seine eigene
+  unbeschränkte Queue und submittet sich selbst nur, wenn nichts läuft — in unserer Queue steht
+  damit immer höchstens **eine** Task. Sie liefe nie voll, die Warnung wäre toter Code. Das echte
+  Backpressure kommt aus RxJavas `observeOn`-Puffer. Deshalb: unbeschränkte Queue und der
+  tatsächliche Mechanismus im Javadoc, statt einer inszenierten Kapazitätsgrenze.
 - **Logging:** `handle`-Fehler von `debug` auf `warn` mit Stacktrace; zusätzlich ein
   `addDisconnectedListener`, damit Reconnect-Zyklen überhaupt sichtbar werden.
 

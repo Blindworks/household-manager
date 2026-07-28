@@ -115,6 +115,21 @@ git commit -m "fix(zigbee): MQTT-Fehler und Reconnects sichtbar loggen"
 Der wahrscheinlichste Kandidat für den beobachteten Dauerausfall: scheitert `subscribe()`
 einmal, bleibt der Client verbunden, ohne je wieder ein Topic zu abonnieren.
 
+> **Nachtrag aus dem Review — die naive Wiederholung erzeugt einen neuen Fehler.**
+> `addConnectedListener(ctx -> subscribe())` startet bei *jedem* Connect eine neue
+> Retry-Kette, ohne eine laufende zu beenden. Scheitert Kette A und gelingt danach der
+> Auto-Reconnect (→ Kette B, erfolgreich), feuert der noch anstehende Versuch von Kette A
+> bis zu 60 s später ebenfalls erfolgreich — es gibt dann **zwei** Subscriptions auf
+> demselben Topic-Filter. HiveMQ dedupliziert nicht, also läuft `handle(...)` pro Nachricht
+> zweimal: doppelte Messwerte in der DB und **jeder Tastendruck feuert seinen Flow doppelt**.
+> Lautlos, ausgerechnet in dem Feature, das lautlose Fehler sichtbar machen soll.
+>
+> Deshalb braucht die Kette einen **Generationszähler**: ein `AtomicInteger`, den der
+> ConnectedListener vor `subscribe()` hochzählt und den `subscribe(attempt, generation)`
+> mitführt; passt die Generation nicht mehr, bricht die Kette wortlos ab. Die Prüfung muss
+> **vor dem Absenden und erneut im `whenComplete`** stehen, bevor ein Folgeversuch geplant
+> wird.
+
 **Files:**
 - Modify: `backend/src/main/java/com/household/manager/zigbee/config/ZigbeeMqttConfig.java`
 
@@ -212,6 +227,24 @@ inklusive Keepalive und Reconnect.
 Bewusst **ein einziger** Thread, kein Pool: mehrere Threads könnten Nachrichten desselben
 Geräts umsortieren, und bei einem Türkontakt wäre ein vertauschtes „offen"/„zu" fatal.
 
+> **Nachtrag aus dem Review — die beschränkte Queue bewirkt nichts.**
+> HiveMQ wickelt den Executor in `Schedulers.from(executor)`. Ein RxJava-`ExecutorWorker`
+> sammelt die Runnables in seiner *eigenen unbeschränkten* Queue und submittet sich selbst
+> nur, wenn `wip.getAndIncrement() == 0` — in der `ArrayBlockingQueue` steht damit immer
+> höchstens **eine** Task. Sie läuft nie voll, der `RejectedExecutionHandler` feuert im
+> Normalbetrieb nie, die „Queue voll"-Fehlermeldung ist toter Code.
+>
+> Das echte Verhalten bei hängender Datenbank ist RxJava-Backpressure (`observeOn` puffert
+> bis 128, danach drosselt HiveMQ Richtung Broker) — funktional in Ordnung, aber eben nicht
+> das, was der Code behauptet. Keine Warnung zusagen, die nie kommt: den tatsächlichen
+> Mechanismus im Javadoc benennen statt eine Kapazitätsgrenze zu inszenieren.
+>
+> Zweite Folge: `ThreadPoolExecutor` ruft den Reject-Handler auch bei `isShutdown()` auf.
+> Wird der Executor **vor** dem `disconnect()` gestoppt, ist der Shutdown der einzige
+> realistische Auslöser — und die Meldung „deutet auf eine hängende Datenbank hin" wäre in
+> praktisch jedem echten Vorkommen irreführend. In `stop()` deshalb **erst** disconnecten,
+> **dann** die Executors herunterfahren.
+
 **Files:**
 - Modify: `backend/src/main/java/com/household/manager/zigbee/config/ZigbeeMqttConfig.java`
 
@@ -252,8 +285,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 In `subscribe(int attempt)` den Callback um den Executor erweitern:
 
 ```java
-                .callback(this::handle, handlerExecutor)
+                .callback(this::handle)
+                .executor(handlerExecutor)
 ```
+
+**Korrigiert nach der Umsetzung:** Eine Überladung `callback(Consumer, Executor)` gibt es in
+`hivemq-mqtt-client:1.3.17` **nicht** — `callback(...)` nimmt genau ein Argument und liefert
+ein `Call.Ex`, das `executor(...)` anbietet. Verifiziert per `javap` gegen das Jar; intern
+landet der Executor in `MqttAsyncClient.subscribe(...)` bei
+`observeOnBoth(Schedulers.from(executor), true)`, der Callback läuft also tatsächlich nicht
+mehr auf dem Netty-Event-Loop.
 
 In `stop()` ergänzen, neben `retryScheduler.shutdownNow()`:
 
@@ -370,13 +411,15 @@ In `EntityStateTriggerHandler` eine Konstante ergänzen, neben `OP_CHANGED`:
 ```java
     @Override
     public void onEntityEvent(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx) {
-        // "unavailable" heisst "unbekannt", nicht "passte nicht". Weder der Ausfall noch
-        // das Wiederanlaufen einer Quelle ist ein Ereignis der beobachteten Groesse:
-        // sonst meldete ein Tuerkontakt, der beim Ausfall offen war, bei der Erholung
-        // "Tuer geoeffnet". Bewusst in Kauf genommen: eine Aenderung, die WAEHREND des
-        // Ausfalls passiert ist, wird nachtraeglich nicht gemeldet — sie war ohnehin
-        // verloren.
-        if (STATE_UNAVAILABLE.equals(event.oldState()) || STATE_UNAVAILABLE.equals(event.newState())) {
+        // Der Ausfall selbst ist kein Ereignis der beobachteten Groesse — ohne diese
+        // Unterdrueckung loesten "!=" und "changed" bei jedem Aussetzer aus.
+        // Das Wiederanlaufen feuert dagegen BEWUSST normal: unterdrueckte man es,
+        // bliebe Flow #4 ("Feuer-Verdacht", Temperatur > 40) nach jedem Zigbee-Ausfall
+        // entwaffnet, bis die Temperatur erst unter 40 faellt und wieder steigt — ein
+        // waehrend des Ausfalls ausgebrochenes Feuer wuerde nie gemeldet. Der Preis ist
+        // eine moegliche Doppelmeldung (Flow #2, Tuer bereits vor dem Ausfall offen);
+        // eine Dopplung ist aergerlich, ein verschluckter Brandalarm nicht.
+        if (STATE_UNAVAILABLE.equals(event.newState())) {
             cancelTimer(ctx);
             return;
         }
@@ -1930,7 +1973,7 @@ Unterabschnitt, falls es keinen gibt) ergänzen:
 - Die Telegram-Warnung ist ein **Flow** auf diesem Event, kein Java-Code. **Preis:** die Ausfallmeldung hängt damit selbst an der Flow-Engine. Für Zigbee trägt das (das Backend läuft ja); für einen künftigen *Backend*-Ausfall wäre dieser Weg untauglich
 - **`unavailable` darf die Attribute nicht löschen:** `EntityStateWriter.upsert` überschreibt sie bei jedem Update, deshalb liest der Watchdog die gespeicherten Attribute aus der DB zurück und gibt sie mit. Ohne das verlören alle Zigbee-Entitäten beim Ausfall `unit`, `deviceClass` und `batteryPercent`
 - EVENT-Entitäten (Taster) werden vom `unavailable` ausgenommen — ein Ereignis hat keinen fortdauernden Zustand
-- **Die Flow-Engine feuert nicht mehr bei Übergängen von/nach `unavailable`** (`EntityStateTriggerHandler`, gilt auch für `operator: changed`). Ohne das meldete ein Türkontakt, der beim Ausfall offen war, bei der Erholung „Tür geöffnet". Bewusst in Kauf genommen: eine Änderung *während* des Ausfalls wird nachträglich nicht gemeldet — sie war ohnehin verloren
+- ~~**Die Flow-Engine feuert nicht mehr bei Übergängen von/nach `unavailable`**~~ **VERALTET — diese Regel wurde während der Umsetzung umgedreht.** Gültig ist: nur der Übergang **nach** `unavailable` wird unterdrückt, der Übergang **heraus** feuert normal. Grund: bei beidseitiger Unterdrückung bliebe Flow #4 („Feuer-Verdacht", `Temperatur > 40`) nach jedem Ausfall entwaffnet, bis die Temperatur unter 40 fällt und wieder steigt — ein während des Ausfalls ausgebrochenes Feuer würde nie gemeldet. Maßgeblich ist die revidierte Spec (Punkt 5) und der Abschnitt in `CLAUDE.md`; dieser Plan-Text ist nur noch Historie
 - **Bekannte Semantik-Falle, bewusst nicht geändert:** `StateComparator` vergleicht nicht-numerische Werte als String, deshalb ist `unavailable != on` **wahr**. Eine `entity-condition` „Tür ist nicht offen" ist bei einem Ausfall also erfüllt. Numerische Operatoren sind davon nicht betroffen (`unavailable` parst nicht als Zahl → immer `false`)
 - MQTT-Härtung: fehlgeschlagenes Subscribe wird mit Backoff wiederholt (vorher: einmal geloggt, nie erneut versucht — lautloser Dauerausfall); die Verarbeitung läuft auf **genau einem** eigenen Thread statt auf dem Netty-Event-Loop, damit eine hängende DB nicht Keepalive und Reconnect blockiert — ein Pool wäre falsch, er könnte Nachrichten desselben Geräts umsortieren und bei einem Türkontakt „offen"/„zu" vertauschen
 - `zigbee2mqtt/bridge/state` und `<gerät>/availability` werden ausgewertet (vorher verworfen) und unterscheiden in der Meldung, *wer* weg ist
