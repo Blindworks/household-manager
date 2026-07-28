@@ -3,6 +3,7 @@ package com.household.manager.zigbee.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
+import com.household.manager.zigbee.parser.ZigbeeAvailability;
 import com.household.manager.zigbee.parser.ZigbeeMeasurementValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -161,5 +162,61 @@ class ZigbeeMessageParserTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().action()).isNull();
+    }
+
+    @Test
+    void liestBridgeStateAlsJson() {
+        Optional<String> result = parser.parseBridgeState(
+                "zigbee2mqtt/bridge/state", "{\"state\":\"online\"}");
+
+        assertThat(result).contains("online");
+    }
+
+    @Test
+    void liestBridgeStateAlsKlartext() {
+        Optional<String> result = parser.parseBridgeState(
+                "zigbee2mqtt/bridge/state", "offline");
+
+        assertThat(result).contains("offline");
+    }
+
+    @Test
+    void ignoriertBridgeStateAufFremdemTopic() {
+        assertThat(parser.parseBridgeState("zigbee2mqtt/Kueche", "online")).isEmpty();
+    }
+
+    @Test
+    void liestGeraeteVerfuegbarkeit() {
+        Optional<ZigbeeAvailability> result = parser.parseAvailability(
+                "zigbee2mqtt/Temperatur Buero/availability", "{\"state\":\"offline\"}");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().friendlyName()).isEqualTo("Temperatur Buero");
+        assertThat(result.get().online()).isFalse();
+    }
+
+    @Test
+    void liestGeraeteVerfuegbarkeitAlsKlartext() {
+        Optional<ZigbeeAvailability> result = parser.parseAvailability(
+                "zigbee2mqtt/Motion Flur/availability", "online");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().online()).isTrue();
+    }
+
+    @Test
+    void ignoriertBridgeAlsGeraeteVerfuegbarkeit() {
+        assertThat(parser.parseAvailability("zigbee2mqtt/bridge/availability", "online"))
+                .isEmpty();
+    }
+
+    @Test
+    void wertTopicsBleibenUnveraendert() {
+        Optional<ParsedZigbeeMessage> result =
+                parser.parse("zigbee2mqtt/Kueche", "{\"temperature\":21.5}");
+
+        assertThat(result).isPresent();
+        assertThat(valueOf(result.get(), MeasurementType.TEMPERATURE))
+                .isEqualByComparingTo("21.5");
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
+import com.household.manager.zigbee.parser.ZigbeeAvailability;
 import com.household.manager.zigbee.parser.ZigbeeMeasurementValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,9 @@ import java.util.Optional;
 public class ZigbeeMessageParser {
 
     private static final String TOPIC_PREFIX = "zigbee2mqtt/";
+    private static final String BRIDGE_STATE_TOPIC = "zigbee2mqtt/bridge/state";
+    private static final String AVAILABILITY_SUFFIX = "/availability";
+    private static final String BRIDGE_NAME = "bridge";
 
     /** zigbee2mqtt-Feldname -> Messgröße. */
     private static final Map<String, MeasurementType> FIELD_TYPES = new LinkedHashMap<>();
@@ -91,6 +95,60 @@ public class ZigbeeMessageParser {
             return Optional.empty();
         }
         return Optional.of(new ParsedZigbeeMessage(friendlyName, battery, linkQuality, measurements, action));
+    }
+
+    /**
+     * Liest den Zustand von zigbee2mqtt selbst ({@code online}/{@code offline}).
+     * Leer, wenn das Topic nicht {@value #BRIDGE_STATE_TOPIC} ist.
+     */
+    public Optional<String> parseBridgeState(String topic, String payload) {
+        if (!BRIDGE_STATE_TOPIC.equals(topic)) {
+            return Optional.empty();
+        }
+        return stateFromPayload(payload);
+    }
+
+    /**
+     * Liest die Verfuegbarkeit eines einzelnen Geraets.
+     * <p>
+     * Geraetenamen mit '/' werden — wie schon in {@link #isDeviceTopic} — nicht
+     * unterstuetzt; das ist eine bewusst geteilte Annahme mit dem bestehenden
+     * Identitaetsmodell.
+     */
+    public Optional<ZigbeeAvailability> parseAvailability(String topic, String payload) {
+        if (topic == null || !topic.startsWith(TOPIC_PREFIX) || !topic.endsWith(AVAILABILITY_SUFFIX)) {
+            return Optional.empty();
+        }
+        String name = topic.substring(TOPIC_PREFIX.length(), topic.length() - AVAILABILITY_SUFFIX.length());
+        if (name.isEmpty() || name.contains("/") || BRIDGE_NAME.equals(name)) {
+            return Optional.empty();
+        }
+        return stateFromPayload(payload)
+                .map(state -> new ZigbeeAvailability(name, "online".equalsIgnoreCase(state)));
+    }
+
+    /**
+     * Neuere zigbee2mqtt-Versionen senden {@code {"state":"online"}}, aeltere den
+     * nackten Text {@code online}. Beides muss funktionieren.
+     */
+    private Optional<String> stateFromPayload(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return Optional.empty();
+        }
+        String trimmed = payload.trim();
+        if (trimmed.startsWith("{")) {
+            try {
+                JsonNode root = objectMapper.readTree(trimmed);
+                JsonNode state = root.get("state");
+                if (state != null && state.isTextual() && !state.asText().isBlank()) {
+                    return Optional.of(state.asText().trim());
+                }
+            } catch (Exception ex) {
+                log.debug("Zigbee-Status-Payload nicht parsebar: {}", ex.getMessage());
+            }
+            return Optional.empty();
+        }
+        return Optional.of(trimmed);
     }
 
     private boolean isDeviceTopic(String topic) {
