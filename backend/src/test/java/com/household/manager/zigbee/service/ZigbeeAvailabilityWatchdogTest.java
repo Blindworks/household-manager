@@ -6,6 +6,7 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.EntityState;
+import com.household.manager.zigbee.config.ZigbeeMqttProperties;
 import com.household.manager.zigbee.config.ZigbeeWatchdogProperties;
 import com.household.manager.zigbee.model.ZigbeeStreamStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,12 +38,13 @@ class ZigbeeAvailabilityWatchdogTest {
     private ZigbeeConnectionControl connectionControl;
 
     private final ZigbeeWatchdogProperties properties = new ZigbeeWatchdogProperties();
+    private final ZigbeeMqttProperties mqttProperties = new ZigbeeMqttProperties();
     private ZigbeeAvailabilityWatchdog watchdog;
 
     @BeforeEach
     void setUp() {
         watchdog = new ZigbeeAvailabilityWatchdog(
-                monitor, properties, entityStateService, connectionControl, new ObjectMapper());
+                monitor, properties, mqttProperties, entityStateService, connectionControl, new ObjectMapper());
         when(entityStateService.find(isNull(), eq(EntitySource.ZIGBEE)))
                 .thenReturn(List.of(sensorEntity(), buttonEntity()));
     }
@@ -90,6 +92,22 @@ class ZigbeeAvailabilityWatchdogTest {
 
         verifyNoInteractions(connectionControl);
         verify(entityStateService, never()).reportState(any());
+    }
+
+    @Test
+    void tutNichtsWennDieMqttAnbindungDeaktiviertIst() {
+        // Bei zigbee.mqtt.enabled=false startet ZigbeeMqttConfig gar nicht erst, der Monitor
+        // bleibt fuer immer ungefuettert (silentFor liefert hier trotzdem "still", weil das
+        // dieselbe Ausgangslage wie ein echter Ausfall waere) — der Watchdog darf das nicht
+        // als Ausfall werten.
+        mqttProperties.setEnabled(false);
+        silentFor(99);
+
+        watchdog.check();
+
+        verifyNoInteractions(connectionControl);
+        verify(entityStateService, never()).reportState(any());
+        verify(entityStateService, never()).reportEvent(any());
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.EntityState;
+import com.household.manager.zigbee.config.ZigbeeMqttProperties;
 import com.household.manager.zigbee.config.ZigbeeWatchdogProperties;
 import com.household.manager.zigbee.model.ZigbeeStreamStatus;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class ZigbeeAvailabilityWatchdog {
 
     private final ZigbeeStreamMonitor monitor;
     private final ZigbeeWatchdogProperties properties;
+    private final ZigbeeMqttProperties mqttProperties;
     private final EntityStateService entityStateService;
     private final ZigbeeConnectionControl connectionControl;
     private final ObjectMapper objectMapper;
@@ -59,7 +61,13 @@ public class ZigbeeAvailabilityWatchdog {
     /** Wirft nie — ein Fehler hier darf den Scheduler nicht stilllegen. */
     @Scheduled(fixedDelayString = "60000", initialDelayString = "60000")
     public void check() {
-        if (!properties.isEnabled()) {
+        // Beide Flags noetig: properties.isEnabled() schaltet nur den Watchdog selbst ab,
+        // sagt aber nichts darueber, ob ueberhaupt eine MQTT-Verbindung existiert. Ist
+        // zigbee.mqtt.enabled=false, startet ZigbeeMqttConfig gar nicht erst, der Monitor
+        // bleibt fuer immer ungefuettert, und der Watchdog wuerde nach 20 Minuten
+        // zuverlaessig einen Ausfall melden, der keiner ist (Dev-Umgebungen, Zweitinstanzen,
+        // temporaere Abschaltung).
+        if (!properties.isEnabled() || !mqttProperties.isEnabled()) {
             return;
         }
         try {
