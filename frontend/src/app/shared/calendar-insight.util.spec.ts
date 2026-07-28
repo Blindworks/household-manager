@@ -41,6 +41,25 @@ describe('buildCalendarInsights', () => {
     expect(tones).toEqual(['error', 'error', 'tertiary', 'primary']);
   });
 
+  it('haengt die zugeordnete Person an die Zeitangabe', () => {
+    const [insight] = buildCalendarInsights([
+      occurrence({ daysUntil: 1, persons: [{ id: 7, displayName: 'Anna' }] })]);
+    expect(insight.text).toBe('Morgen, 14:30 Uhr · Anna');
+  });
+
+  it('listet mehrere Personen auf', () => {
+    const [insight] = buildCalendarInsights([occurrence({
+      allDay: true, startTime: null, daysUntil: 0,
+      persons: [{ id: 7, displayName: 'Anna' }, { id: 8, displayName: 'Ben' }]
+    })]);
+    expect(insight.text).toBe('Heute · Anna, Ben');
+  });
+
+  it('laesst Haushaltstermine ohne Personenzusatz', () => {
+    const [insight] = buildCalendarInsights([occurrence({ daysUntil: 1, persons: [] })]);
+    expect(insight.text).toBe('Morgen, 14:30 Uhr');
+  });
+
   it('nutzt den Wochentag fuer fernere Termine', () => {
     // 29.07.2026 ist ein Mittwoch
     const [insight] = buildCalendarInsights([
