@@ -41,7 +41,7 @@ public class ZigbeeAvailabilityWatchdog {
     private static final String STATE_UNAVAILABLE = "unavailable";
     private static final String EVENT_SOURCE_REF = "bridge";
 
-    /** Die Melde-Entitaet selbst darf nie unavailable werden. */
+    /** Melde-Entitaet des Watchdogs; die Telegram-Warnung haengt als Flow daran. */
     private static final String STATUS_ENTITY_ID =
             EntityIds.build(EntityDomain.EVENT, EntitySource.ZIGBEE, EVENT_SOURCE_REF, "status");
 
@@ -97,8 +97,14 @@ public class ZigbeeAvailabilityWatchdog {
                     log.error("Zigbee-Anbindung ausgefallen: seit {} Minuten keine Nachricht (Zustand {})",
                             status.silentMinutes(), status.health());
                     phase = Phase.FAILED;
-                    markEntitiesUnavailable();
+                    // Reihenfolge ist nicht beliebig: die Meldung kommt zuerst.
+                    // markEntitiesUnavailable() liest ueber entityStateService.find() aus
+                    // der Datenbank und ist damit die einzige Stelle hier, die werfen kann
+                    // (reportState/reportEvent fangen selbst ab). Stuende sie vorn, wuerde
+                    // ein DB-Timeout die Ausfallmeldung verschlucken — und weil FAILED nie
+                    // wiederholt wird, gaebe es sie nie. Der Ausfallmelder fiele still aus.
                     reportStatusEvent("failed", status);
+                    markEntitiesUnavailable();
                 }
             }
             case FAILED -> {
@@ -114,6 +120,11 @@ public class ZigbeeAvailabilityWatchdog {
      */
     private void markEntitiesUnavailable() {
         for (EntityState entity : entityStateService.find(null, EntitySource.ZIGBEE)) {
+            // Dieser Filter schuetzt zugleich die eigene Melde-Entitaet
+            // (STATUS_ENTITY_ID liegt in der EVENT-Domain) — der Watchdog wuerde sonst
+            // seinen eigenen Meldekanal als tot markieren. Eine zweite, gezielte Pruefung
+            // gibt es bewusst nicht; wer STATUS_ENTITY_ID je in eine andere Domain legt,
+            // muss sie hier ergaenzen.
             if (entity.getDomain() == EntityDomain.EVENT) {
                 continue;
             }

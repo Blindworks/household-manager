@@ -129,6 +129,18 @@ class ZigbeeAvailabilityWatchdogTest {
     }
 
     @Test
+    void schweigtWaehrendDerGnadenfrist() {
+        silentFor(16);
+        watchdog.check();
+        silentFor(16 + properties.getRecoverGraceMinutes() - 1);
+
+        watchdog.check();
+
+        verify(entityStateService, never()).reportEvent(any());
+        verify(entityStateService, never()).reportState(any());
+    }
+
+    @Test
     void setztNurZustandsEntitaetenAufUnavailableUndBehaeltDieAttribute() {
         silentFor(16);
         watchdog.check();
@@ -154,6 +166,11 @@ class ZigbeeAvailabilityWatchdogTest {
         watchdog.check();
 
         verify(entityStateService, times(1)).reportEvent(any());
+        // Ebenso wenig darf sich der Rest wiederholen: reportState waere im Ausfall
+        // eine Schreiblast pro Minute, forceReconnect wuerde die MQTT-Verbindung
+        // minuetlich trennen und die Anbindung zusaetzlich sabotieren.
+        verify(entityStateService, times(1)).reportState(any());
+        verify(connectionControl, times(1)).forceReconnect();
     }
 
     @Test
