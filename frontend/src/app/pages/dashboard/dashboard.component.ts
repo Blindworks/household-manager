@@ -121,6 +121,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
   private static readonly CONSUMER_REFRESH_MS = 30000;
   private static readonly PETS_REFRESH_MS = 60000;
+  /** Aktualisierungsintervall der Zigbee-Health-Kachel (60 s; das Wandtablet laedt die Seite nur einmal). */
+  private static readonly ZIGBEE_HEALTH_REFRESH_MS = 60000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -241,7 +243,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Verwirft verspätete Antworten eines bereits geschlossenen Dialogs. */
   private walksRequestId = 0;
 
-  /** Zustand der Zigbee-Anbindung; null = gesund oder Health-Endpunkt nicht erreichbar. */
+  /** Zustand der Zigbee-Anbindung; null = noch kein Ergebnis (vor dem ersten Abruf). */
   zigbeeHealth: ZigbeeHealth | null = null;
 
   ngOnInit(): void {
@@ -257,7 +259,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startCalendarRefresh();
     this.startNukiRefresh();
     this.startPetRefresh();
-    this.loadZigbeeHealth();
+    this.startZigbeeHealthRefresh();
   }
 
   ngOnDestroy(): void {
@@ -954,15 +956,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Laedt den Zustand der Zigbee-Anbindung fuer den Fussleisten-Hinweis. Fehler bewusst
-   * still: ein nicht erreichbarer Health-Endpunkt darf die Kachel nicht anzeigen und die
-   * Seite nicht stoeren (gleiches Muster wie {@link ZigbeeComponent.loadHealth}).
+   * Haelt den Zustand der Zigbee-Anbindung fuer den Fussleisten-Hinweis aktuell. Das
+   * Wandtablet laedt die Seite genau einmal und nie wieder, deshalb dasselbe Polling-Muster
+   * wie bei den Nachbar-Kacheln (z. B. {@link startPetRefresh}). Ein fehlgeschlagener Abruf
+   * loescht den zuletzt bekannten Wert bewusst nicht (null = kein Update) – sonst wuerde ein
+   * einzelner Netzwerkfehler die Kachel verschwinden lassen, obwohl Zigbee gesund ist.
    */
-  private loadZigbeeHealth(): void {
-    this.zigbeeHealthSubscription = this.zigbeeService.getHealth().subscribe({
-      next: (health) => (this.zigbeeHealth = health),
-      error: () => (this.zigbeeHealth = null)
-    });
+  private startZigbeeHealthRefresh(): void {
+    this.zigbeeHealthSubscription = interval(DashboardComponent.ZIGBEE_HEALTH_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.zigbeeService.getHealth().pipe(catchError(() => of<ZigbeeHealth | null>(null))))
+      )
+      .subscribe(health => {
+        if (health) {
+          this.zigbeeHealth = health;
+        }
+      });
   }
 
   /** Nur Tiere mit einer Aussage; ohne sie bleibt die Kachel leer statt zu raten. */
