@@ -34,3 +34,15 @@ export interface ZigbeeLiveEvent {
   linkQuality?: number;
   measuredAt: string;
 }
+
+/** Zustand der Zigbee-Anbindung (GET /api/v1/zigbee/health). */
+export interface ZigbeeHealth {
+  health: 'OK' | 'STILL' | 'BRIDGE_OFFLINE';
+  healthy: boolean;
+  lastMessageAt: string;
+  silentMinutes: number;
+  bridgeState: string | null;
+  /** Optional: kann null sein, solange nie eine Bridge-Nachricht kam. */
+  lastBridgeStateAt?: string | null;
+  offlineDevices: string[];
+}
