@@ -51,6 +51,9 @@ public class ZigbeeMqttConfig {
                 .serverPort(properties.getPort())
                 .automaticReconnectWithDefaultConfig()
                 .addConnectedListener(ctx -> subscribe())
+                .addDisconnectedListener(ctx -> log.warn(
+                        "Zigbee MQTT getrennt (Quelle {}), Reconnect laeuft: {}",
+                        ctx.getSource(), ctx.getCause().getMessage()))
                 .buildAsync();
         this.client = builtClient;
 
@@ -99,7 +102,8 @@ public class ZigbeeMqttConfig {
                 reportEntityStates(msg);
             });
         } catch (Exception ex) {
-            log.debug("Failed to handle Zigbee MQTT message: {}", ex.getMessage());
+            log.warn("Zigbee-MQTT-Nachricht konnte nicht verarbeitet werden (Topic {}): {}",
+                    publish.getTopic(), ex.getMessage(), ex);
         }
     }
 
