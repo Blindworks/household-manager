@@ -7,9 +7,11 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.ZigbeeEntityMapper;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
+import com.household.manager.zigbee.parser.ZigbeeAvailability;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeMessageParser;
 import com.household.manager.zigbee.service.ZigbeeReadingService;
+import com.household.manager.zigbee.service.ZigbeeStreamMonitor;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,7 @@ public class ZigbeeMqttConfig {
     private final ZigbeeLiveService liveService;
     private final ZigbeeEntityMapper zigbeeEntityMapper;
     private final EntityStateService entityStateService;
+    private final ZigbeeStreamMonitor streamMonitor;
 
     private Mqtt3AsyncClient client;
 
@@ -224,8 +227,34 @@ public class ZigbeeMqttConfig {
         try {
             String topic = publish.getTopic().toString();
             String payload = new String(publish.getPayloadAsBytes(), StandardCharsets.UTF_8);
+
+            Optional<String> bridgeState = parser.parseBridgeState(topic, payload);
+            if (bridgeState.isPresent()) {
+                streamMonitor.recordBridgeState(bridgeState.get());
+                log.info("zigbee2mqtt meldet sich als {}", bridgeState.get());
+                return;
+            }
+
+            Optional<ZigbeeAvailability> availability = parser.parseAvailability(topic, payload);
+            if (availability.isPresent()) {
+                streamMonitor.recordAvailability(
+                        availability.get().friendlyName(), availability.get().online());
+                return;
+            }
+
             Optional<ParsedZigbeeMessage> parsed = parser.parse(topic, payload, publish.isRetain());
             parsed.ifPresent(msg -> {
+                // Retained Nachrichten duerfen die Stille-Uhr NICHT zuruecksetzen: nach
+                // einem Re-Subscribe spielt der Broker den letzten retained Wert jedes
+                // Geraets erneut aus, ohne dass eine einzige frische Funk-Nachricht kam.
+                // Ein recordMessage(...) hier wuerde die Anbindung bei einem zappelnden
+                // Client so lange "lebendig" erscheinen lassen, wie er zappelt. Die
+                // uebrige Verarbeitung (Messwerte speichern, Entity-States melden)
+                // bleibt fuer retained Nachrichten unveraendert - der Wert selbst ist
+                // ja weiterhin gueltig.
+                if (!publish.isRetain()) {
+                    streamMonitor.recordMessage(msg.friendlyName());
+                }
                 var events = readingService.record(msg);
                 events.forEach(liveService::broadcast);
                 reportEntityStates(msg);
