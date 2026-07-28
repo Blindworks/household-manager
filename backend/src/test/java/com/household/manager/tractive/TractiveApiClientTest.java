@@ -147,6 +147,18 @@ class TractiveApiClientTest {
     }
 
     @Test
+    void positionHistoryRateLimitWirdAlsEigeneExceptionGemeldet() {
+        server.expect(requestTo("https://graph.tractive.com/4/tracker/dev-9/positions"
+                        + "?time_from=1800000000&time_to=1800086400&format=json_segments"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+        assertThrows(TractiveRateLimitException.class,
+                () -> client.getPositionHistory("tok-1", "u-1", "dev-9",
+                        java.time.Instant.ofEpochSecond(1800000000L),
+                        java.time.Instant.ofEpochSecond(1800086400L)));
+    }
+
+    @Test
     void hardwareReportParsesBatteryAndCharging() {
         server.expect(requestTo("https://graph.tractive.com/4/device_hw_report/dev-9/"))
                 .andRespond(withSuccess("""

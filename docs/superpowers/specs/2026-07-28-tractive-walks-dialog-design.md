@@ -54,9 +54,15 @@ ein fehlgeschlagener Abruf wird als Fehler gemeldet, nie geraten.
 - `days` Default 7, Maximum 14 (Schutz vor teuren Cloud-Abfragen).
 - **Nachtrag 2026-07-28 (Realtest):** Die Cloud lehnt große Abfragefenster ab
   (Code 7500, Kategorie HISTORY, „The requested time frame is invalid" — beobachtet
-  bei 7 Tagen). Der Abruf erfolgt deshalb in lückenlosen 24-h-Häppchen; einzelne
+  bei 7 Tagen). Der Abruf erfolgt deshalb in Tages-Häppchen; einzelne
   fehlgeschlagene Häppchen werden toleriert (Basic-Abo: nur 24 h Historie), erst
-  wenn alle scheitern, geht der letzte Fehler an den Aufrufer.
+  wenn kein Tag Daten liefert, geht ein Fehler an den Aufrufer.
+- **Nachtrag 2 (Realtest):** Die Positions-Ressource ist zusätzlich rate-limitiert
+  (429, Code 4006 REQUEST). Deshalb: Kalendertag-Häppchen neueste zuerst,
+  abgeschlossene Tage dauerhaft im Speicher gecacht (nur der angebrochene Tag hat
+  die 5-min-TTL), beim ersten 429 Abbruch aller weiteren Cloud-Aufrufe mit 60 s
+  Abkühlpause und Teilergebnis; ohne jegliche Daten eine verständliche
+  Rate-Limit-Meldung. Fehlende alte Tage füllt der nächste Klick inkrementell nach.
 - Fällt unter die generische `GET /v1/**`-Regel (KIOSK liest — wie die Position
   selbst). Keine neue Security-Regel, `SecurityRulesTest` bleibt unberührt.
 - Ergebnis wird 5 Minuten pro (Tracker, days) im Speicher gecacht.
