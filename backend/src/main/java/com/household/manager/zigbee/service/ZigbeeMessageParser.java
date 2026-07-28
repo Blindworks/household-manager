@@ -18,8 +18,11 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Parst zigbee2mqtt-Wert-Topics (zigbee2mqtt/&lt;friendly_name&gt;) in {@link ParsedZigbeeMessage}.
- * Steuer-/Meta-Topics (bridge/*, /availability, /set, /get) werden ignoriert.
+ * Parst zigbee2mqtt-Topics. {@link #parse(String, String)} liest Wert-Topics
+ * (zigbee2mqtt/&lt;friendly_name&gt;) in {@link ParsedZigbeeMessage} und ignoriert dabei
+ * Steuer-/Meta-Topics (bridge/*, /availability, /set, /get). Diese Meta-Topics werden
+ * von den dedizierten Methoden {@link #parseBridgeState} und {@link #parseAvailability}
+ * gelesen.
  */
 @Component
 @RequiredArgsConstructor
@@ -119,8 +122,15 @@ public class ZigbeeMessageParser {
         if (topic == null || !topic.startsWith(TOPIC_PREFIX) || !topic.endsWith(AVAILABILITY_SUFFIX)) {
             return Optional.empty();
         }
-        String name = topic.substring(TOPIC_PREFIX.length(), topic.length() - AVAILABILITY_SUFFIX.length());
-        if (name.isEmpty() || name.contains("/") || BRIDGE_NAME.equals(name)) {
+        // Praefix- und Suffix-Pruefung koennen sich ueberlappen, z.B. beim Topic
+        // "zigbee2mqtt/availability" (ein Geraet, das "availability" heisst). Ohne
+        // diese Schranke waere beginIndex > endIndex und substring wuerfe.
+        int end = topic.length() - AVAILABILITY_SUFFIX.length();
+        if (end <= TOPIC_PREFIX.length()) {
+            return Optional.empty();
+        }
+        String name = topic.substring(TOPIC_PREFIX.length(), end);
+        if (name.contains("/") || BRIDGE_NAME.equals(name)) {
             return Optional.empty();
         }
         return stateFromPayload(payload)
@@ -156,7 +166,7 @@ public class ZigbeeMessageParser {
             return false;
         }
         String rest = topic.substring(TOPIC_PREFIX.length());
-        return !rest.isEmpty() && !rest.contains("/") && !rest.equals("bridge");
+        return !rest.isEmpty() && !rest.contains("/") && !rest.equals(BRIDGE_NAME);
     }
 
     private BigDecimal toDecimal(JsonNode node) {

@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class ZigbeeMessageParserTest {
 
@@ -218,5 +219,62 @@ class ZigbeeMessageParserTest {
         assertThat(result).isPresent();
         assertThat(valueOf(result.get(), MeasurementType.TEMPERATURE))
                 .isEqualByComparingTo("21.5");
+    }
+
+    @Test
+    void ignoriertVerfuegbarkeitOhneStateFeld() {
+        assertThat(parser.parseAvailability("zigbee2mqtt/Kueche/availability", "{}")).isEmpty();
+    }
+
+    @Test
+    void ignoriertVerfuegbarkeitMitNullState() {
+        assertThat(parser.parseAvailability("zigbee2mqtt/Kueche/availability", "{\"state\":null}"))
+                .isEmpty();
+    }
+
+    @Test
+    void ignoriertVerfuegbarkeitBeiLeeremPayload() {
+        assertThat(parser.parseAvailability("zigbee2mqtt/Kueche/availability", "")).isEmpty();
+    }
+
+    @Test
+    void ignoriertVerfuegbarkeitBeiNullPayload() {
+        assertThat(parser.parseAvailability("zigbee2mqtt/Kueche/availability", null)).isEmpty();
+    }
+
+    @Test
+    void geraetNamensgleichMitAvailabilitySuffixWirftNicht() {
+        // "zigbee2mqtt/availability" - ein Geraet, das "availability" heisst. Praefix-
+        // und Suffix-Pruefung ueberlappen sich hier vollstaendig, dazwischen steht
+        // nichts: darf nicht werfen, muss leer zurueckgeben.
+        assertThatCode(() -> parser.parseAvailability("zigbee2mqtt/availability", "online"))
+                .doesNotThrowAnyException();
+        assertThat(parser.parseAvailability("zigbee2mqtt/availability", "online")).isEmpty();
+    }
+
+    @Test
+    void ignoriertVerfuegbarkeitMitSchraegstrichImGeraetenamen() {
+        assertThat(parser.parseAvailability("zigbee2mqtt/a/b/availability", "online")).isEmpty();
+    }
+
+    @Test
+    void ignoriertBridgeStateOhneStateFeld() {
+        assertThat(parser.parseBridgeState("zigbee2mqtt/bridge/state", "{}")).isEmpty();
+    }
+
+    @Test
+    void ignoriertBridgeStateMitNullState() {
+        assertThat(parser.parseBridgeState("zigbee2mqtt/bridge/state", "{\"state\":null}"))
+                .isEmpty();
+    }
+
+    @Test
+    void ignoriertBridgeStateBeiLeeremPayload() {
+        assertThat(parser.parseBridgeState("zigbee2mqtt/bridge/state", "")).isEmpty();
+    }
+
+    @Test
+    void ignoriertBridgeStateBeiNullPayload() {
+        assertThat(parser.parseBridgeState("zigbee2mqtt/bridge/state", null)).isEmpty();
     }
 }
