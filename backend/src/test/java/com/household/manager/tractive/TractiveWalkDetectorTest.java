@@ -77,6 +77,22 @@ class TractiveWalkDetectorTest {
     }
 
     @Test
+    void lueckeVonExaktZehnMinutenWirdNochUeberbrueckt() {
+        var walks = TractiveWalkDetector.detectWalks(List.of(
+                awayPoint(0), awayPoint(10)), HOME);
+        assertEquals(1, walks.size());
+        assertEquals(10, walks.get(0).durationMinutes());
+    }
+
+    @Test
+    void spaziergangVonExaktFuenfMinutenBleibtErhalten() {
+        var walks = TractiveWalkDetector.detectWalks(List.of(
+                awayPoint(0), awayPoint(5)), HOME);
+        assertEquals(1, walks.size());
+        assertEquals(5, walks.get(0).durationMinutes());
+    }
+
+    @Test
     void lueckeAbZehnMinutenTeiltInZweiSpaziergaenge() {
         var walks = TractiveWalkDetector.detectWalks(List.of(
                 awayPoint(0), awayPoint(6), awayPoint(20), awayPoint(28)), HOME);

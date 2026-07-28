@@ -40,8 +40,10 @@ ein fehlgeschlagener Abruf wird als Fehler gemeldet, nie geraten.
   ist. Zuhause-Definition wird **wiederverwendet** (`TractiveHomeSettingsService` +
   `GeoZone.distanceMeters`) — keine zweite Definition von „zu Hause“.
 - Aufeinanderfolgende Unterwegs-Punkte werden zu einem Spaziergang gruppiert;
-  Lücken < 10 Minuten werden überbrückt, Spaziergänge < 5 Minuten verworfen
-  (GPS-Jitter am Radiusrand). Beide Schwellen als Konstanten im Service.
+  Lücken bis einschließlich 10 Minuten werden überbrückt (erst eine echt größere
+  Lücke trennt — ein Tracker mit exakt 10-minütigem Meldeintervall darf keine
+  Dauersplits erzeugen), Spaziergänge < 5 Minuten verworfen (GPS-Jitter am
+  Radiusrand). Beide Schwellen als Konstanten im Service.
 - Pro Spaziergang: Start (`Instant`), Ende, Dauer, grobe Distanz in Metern
   (Summe der Haversine-Abstände aufeinanderfolgender Punkte).
 - Ohne konfiguriertes Zuhause: eindeutiger Fehler („Kein Zuhause konfiguriert“),

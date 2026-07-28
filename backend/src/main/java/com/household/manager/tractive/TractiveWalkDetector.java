@@ -17,7 +17,12 @@ import java.util.List;
  */
 public final class TractiveWalkDetector {
 
-    /** Berichte kommen unregelmaessig; kuerzere Luecken gelten als derselbe Spaziergang. */
+    /**
+     * Berichte kommen unregelmaessig; Luecken bis einschliesslich MAX_GAP
+     * gelten noch als derselbe Spaziergang (siehe {@link #gapTooLarge}) — erst
+     * eine echt groessere Luecke trennt, sonst wuerde ein Tracker mit exakt
+     * zehnminuetigem Meldeintervall staendig in Einzelpunkte zerfallen.
+     */
     static final Duration MAX_GAP = Duration.ofMinutes(10);
     /** GPS-Jitter am Radiusrand erzeugt Sekunden-"Spaziergaenge" – die fliegen raus. */
     static final Duration MIN_DURATION = Duration.ofMinutes(5);
