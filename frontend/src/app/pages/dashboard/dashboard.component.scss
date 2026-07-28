@@ -955,6 +955,62 @@
   color: var(--tertiary);
 }
 
+.lumina__pets--clickable {
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 3px;
+  }
+}
+
+.lumina__walk-section + .lumina__walk-section {
+  margin-top: 1.5rem;
+}
+
+.lumina__walk-pet {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.lumina__walk-day {
+  margin-bottom: 1rem;
+}
+
+.lumina__walk-day-label {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.lumina__walk-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0;
+
+  .lumina__walk-icon {
+    font-size: 1.1rem;
+    opacity: 0.7;
+  }
+
+  .lumina__walk-time {
+    flex: 1;
+  }
+
+  .lumina__walk-meta {
+    opacity: 0.7;
+    font-size: 0.85rem;
+  }
+}
+
 .lumina__lock-battery-warn {
   display: inline-flex;
   align-items: center;

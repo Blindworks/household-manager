@@ -295,7 +295,16 @@
       </div>
     </div>
 
-    <div class="lumina-card lumina__pets" *ngIf="petsWithVerdict.length > 0">
+    <div
+      class="lumina-card lumina__pets lumina__pets--clickable"
+      *ngIf="petsWithVerdict.length > 0"
+      role="button"
+      tabindex="0"
+      (click)="openWalksDialog()"
+      (keydown.enter)="openWalksDialog()"
+      (keydown.space)="$event.preventDefault(); openWalksDialog()"
+      aria-label="Spaziergänge anzeigen"
+    >
       <div class="lumina__secured-icon">
         <span class="material-symbols-outlined">pets</span>
       </div>
@@ -571,6 +580,51 @@
         <button type="button" class="lumina__confirm-cancel" (click)="cancelNukiAction()">
           Abbrechen
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spaziergaenge-Dialog (oeffnet sich beim Klick auf die Hund-Kachel) -->
+  <div
+    *ngIf="walksDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeWalksDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--walks"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Spaziergänge"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">Spaziergänge</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeWalksDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <section *ngFor="let section of walkSections" class="lumina__walk-section">
+          <h3 *ngIf="walkSections.length > 1" class="lumina__walk-pet">{{ section.pet.name }}</h3>
+          <p *ngIf="section.loading" class="lumina__history-message">Lädt…</p>
+          <p *ngIf="section.error" class="lumina__history-message">{{ section.error }}</p>
+          <p *ngIf="section.empty && !section.error" class="lumina__history-message">
+            Keine Spaziergänge in den letzten 7 Tagen
+          </p>
+          <div *ngFor="let group of section.dayGroups" class="lumina__walk-day">
+            <h4 class="lumina__walk-day-label">{{ group.label }}</h4>
+            <div *ngFor="let walk of group.walks" class="lumina__walk-row">
+              <span class="material-symbols-outlined lumina__walk-icon">directions_walk</span>
+              <span class="lumina__walk-time">{{ walkTimeRange(walk) }}</span>
+              <span class="lumina__walk-meta">{{ walkDuration(walk) }} • {{ walkDistance(walk) }}</span>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
