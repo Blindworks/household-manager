@@ -1991,16 +1991,24 @@ git commit -m "docs: Zigbee-Ausfallerkennung dokumentieren"
 
 ## Task 15: Telegram-Flow anlegen
 
-Erst **nach** dem Deployment des Backends ausführen — die Entität
-`event.zigbee_bridge_status` existiert vorher nicht, und `flow_deploy` würde sie nicht
-auflösen können.
+**Direkt nach dem Deployment ausführen — nicht warten.**
+
+> **Korrigiert nach dem Schlussreview.** Die erste Fassung verlangte, zu warten, bis
+> `event.zigbee_bridge_status` in `flow_list_entities` auftaucht. Das war ein Denkfehler mit
+> ernster Folge: Die Entität entsteht erst beim ersten `reportEvent`, also **beim ersten
+> echten Ausfall** — wer der Anweisung folgt, hat ausgerechnet dann keinen Flow.
+>
+> Die Prämisse stimmt ohnehin nicht: `FlowValidator` behandelt eine unbekannte Entität als
+> **Warnung**, nicht als Fehler, und `FlowRegistry.rebuildTriggerIndex` indiziert über die
+> konfigurierte `entityId`-Zeichenkette. Der Flow lässt sich sofort anlegen, deployen und
+> aktivieren und feuert beim ersten Ereignis.
 
 **Files:** keine (Flow wird über den flow-mcp-server in PROD angelegt)
 
-- [ ] **Step 1: Node-Katalog und Entität prüfen**
+- [ ] **Step 1: Node-Katalog prüfen**
 
-`flow_node_types` aufrufen sowie `flow_list_entities` mit `domain: event`.
-Erwartung: `event.zigbee_bridge_status` ist gelistet.
+`flow_node_types` aufrufen und die Feldnamen von `telegram-send` und
+`entity-event-trigger` gegen die Definition unten abgleichen.
 
 - [ ] **Step 2: Flow anlegen**
 
@@ -2020,7 +2028,7 @@ Erwartung: `event.zigbee_bridge_status` ist gelistet.
       "type": "telegram-send",
       "name": "Warnung senden",
       "config": {
-        "text": "Zigbee-Anbindung ausgefallen: seit {{silentMinutes}} Minuten keine Nachricht ({{reason}}). Tür-, Fenster- und Temperatur-Flows sind bis auf Weiteres wirkungslos."
+        "message": "Zigbee-Anbindung ausgefallen. Tür-, Fenster- und Temperatur-Flows sind bis auf Weiteres wirkungslos. Details unter /zigbee."
       }
     }
   ],
@@ -2028,8 +2036,26 @@ Erwartung: `event.zigbee_bridge_status` ist gelistet.
 }
 ```
 
-Die Platzhalter-Syntax vorher gegen `docs/flows/flow-import-format.md` prüfen und bei
-Abweichung anpassen.
+> **Zwei Korrekturen gegenüber der ersten Fassung, beide hätten das Deployen verhindert
+> oder die Nachricht unbrauchbar gemacht:**
+>
+> 1. Der Config-Schlüssel heißt **`message`**, nicht `text`. Mit `text` scheitert
+>    `flow_deploy` an „Node 'melden': message fehlt".
+> 2. Platzhalter sind **einfache** Klammern und es gibt genau drei: `{entityId}`,
+>    `{newState}`, `{oldState}`. `{{silentMinutes}}` und `{{reason}}` landeten wörtlich im
+>    Telegram-Text.
+>
+> **Deshalb ist der Text attributfrei.** Die `FlowMessage` eines `entity-event-trigger`
+> enthält `entityId`, `action`, `attributes`, `timestamp`, `triggerNodeId` — aber
+> `TelegramSendNodeHandler.render` kann `attributes` nicht auflösen. Die Attribute
+> `reason`, `silentMinutes` und `offlineDevices`, die der Watchdog mitgibt, sind über
+> keinen existierenden Node renderbar.
+>
+> **Konsequenz für die Spec:** Die Zusage „liefert die Unterscheidung direkt in den
+> Meldungstext" ist über diesen Weg **nicht** einlösbar. Die Unterscheidung ist im
+> Health-Endpunkt, im Dashboard-Banner und im Log sichtbar — nicht in der Telegram-Nachricht.
+> Wer sie dort haben will, muss `TelegramSendNodeHandler` um einen Zugriff auf `attributes`
+> erweitern; das ist bewusst **nicht** Teil dieses Branches.
 
 - [ ] **Step 3: Deployen und aktivieren**
 

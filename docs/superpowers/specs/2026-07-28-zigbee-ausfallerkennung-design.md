@@ -123,6 +123,26 @@ Benachrichtigungsschiene.
 trägt das, weil das Backend in diesem Szenario läuft. Für einen künftigen *Backend*-Ausfall
 wäre dieser Weg untauglich — das darf später niemand als gegeben annehmen.
 
+**Nachtrag aus dem Schlussreview — eine Zusage dieses Entwurfs ist so nicht einlösbar.**
+Oben und im Abschnitt „Gewählter Ansatz" steht, die Unterscheidung „wer ist weg" lande
+„direkt im Meldungstext". Das geht über diesen Meldeweg nicht: `TelegramSendNodeHandler`
+kennt genau drei Platzhalter (`{entityId}`, `{newState}`, `{oldState}`) und kann
+`attributes` nicht auflösen. Die Attribute `reason`, `silentMinutes` und `offlineDevices`
+sind damit über keinen existierenden Node renderbar.
+
+Die Unterscheidung ist sichtbar — im Health-Endpunkt, im Dashboard-Banner und im Log —,
+nur eben nicht in der Telegram-Nachricht. Die Nachricht bleibt deshalb bewusst
+attributfrei. Wer mehr will, muss `TelegramSendNodeHandler` um einen Attribut-Zugriff
+erweitern; das ist bewusst nicht Teil dieser Arbeit.
+
+**Zweiter Nachtrag:** Die Geräte-`availability`-Hälfte läuft in diesem Haushalt derzeit
+leer. `zigbee2mqtt/data/configuration.yaml` enthält keinen `availability:`-Block, und
+zigbee2mqtt hat das Feature per Default **aus** — die Topics werden also gar nicht
+publiziert. Parser und Monitor sind korrekt, es fehlt nur der Schalter auf der
+zigbee2mqtt-Seite. `offlineDevices` bleibt bis dahin immer leer und `reason` immer
+`stream_silent`. Wer die Unterscheidung will, setzt `availability: true` in der
+z2m-Konfiguration; sie wirkt nach einem z2m-Neustart.
+
 ### 4. Entitäten auf `unavailable`
 
 Über das vorhandene `EntityStateService.find(null, EntitySource.ZIGBEE)`; keine
