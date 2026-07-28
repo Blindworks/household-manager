@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,8 +17,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Liefert Spaziergaenge on-the-fly aus der Tractive-Positionshistorie.
- * Ergebnis wird kurz gecacht, damit wiederholtes Oeffnen des Dialogs
- * nicht die Cloud haemmert.
+ *
+ * <p>Zwei real beobachtete Grenzen der Cloud praegen den Abruf: grosse
+ * Abfragefenster werden abgelehnt (Code 7500 HISTORY, ab wenigen Tagen) und
+ * die Positions-Ressource ist rate-limitiert (HTTP 429, Code 4006). Deshalb
+ * wird tageweise geholt, abgeschlossene Tage werden dauerhaft gecacht (sie
+ * aendern sich nie mehr), und beim ersten 429 stoppen alle weiteren Aufrufe.
  */
 @Service
 @RequiredArgsConstructor
@@ -24,20 +30,21 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TractiveWalkService {
 
     static final int MAX_DAYS = 14;
-    /**
-     * Die Cloud lehnt grosse Abfragefenster ab (Code 7500, Kategorie HISTORY,
-     * "The requested time frame is invalid" — real beobachtet bei 7 Tagen);
-     * die Tractive-Apps laden die Historie tageweise. Deshalb wird in
-     * 24-h-Haeppchen abgerufen.
-     */
-    private static final Duration HISTORY_CHUNK = Duration.ofHours(24);
-    private static final Duration CACHE_TTL = Duration.ofMinutes(5);
+    /** Groesser lehnt die Cloud ab (Code 7500 HISTORY, real beobachtet bei 7 Tagen). */
+    private static final Duration MAX_CHUNK = Duration.ofHours(24);
+    /** Der angebrochene Tag aendert sich laufend und wird nur kurz gecacht. */
+    private static final Duration CURRENT_DAY_TTL = Duration.ofMinutes(5);
+    /** Nach einem 429 pausieren alle Cloud-Abrufe, sonst schaukelt sich das Limit hoch. */
+    private static final Duration RATE_LIMIT_COOLDOWN = Duration.ofSeconds(60);
+    /** Lokale Haushaltszeit — wie ueberall im Projekt (Kalender, Scheduler). */
+    private static final ZoneId ZONE = ZoneId.systemDefault();
 
     private final TractiveApiClient apiClient;
     private final TractiveAuthService authService;
     private final TractiveHomeSettingsService homeSettingsService;
 
-    private final Map<String, CachedWalks> cache = new ConcurrentHashMap<>();
+    private final Map<DayKey, CachedDay> dayCache = new ConcurrentHashMap<>();
+    private volatile Instant rateLimitedUntil = Instant.EPOCH;
 
     public List<TractiveWalkDto> getWalks(String trackerId, int days) {
         int clampedDays = Math.clamp(days, 1, MAX_DAYS);
@@ -50,61 +57,99 @@ public class TractiveWalkService {
                     "Kein Zuhause konfiguriert. Bitte unter Admin → Hundetracker-Zuhause festlegen.");
         }
 
-        String cacheKey = trackerId + ":" + clampedDays;
-        CachedWalks cached = cache.get(cacheKey);
-        if (cached != null && cached.fetchedAt().isAfter(Instant.now().minus(CACHE_TTL))) {
-            return cached.walks();
-        }
-
         TractiveAuth auth = authService.getValidToken()
                 .orElseThrow(() -> new TractiveAuthException("Nicht bei Tractive angemeldet."));
 
-        Instant to = Instant.now();
-        Instant from = to.minus(Duration.ofDays(clampedDays));
-        List<TractivePositionDto> points = fetchPointsInChunks(auth, trackerId, from, to);
+        LocalDate today = LocalDate.now(ZONE);
+        List<TractivePositionDto> points = new ArrayList<>();
+        boolean cloudBlocked = Instant.now().isBefore(rateLimitedUntil);
+        int daysWithData = 0;
+        TractiveException lastError = null;
+
+        // Neueste zuerst: bricht das Rate-Limit mittendrin ab, fehlen nur die
+        // aeltesten Tage — und der naechste Klick fuellt sie aus dem Cache heraus nach.
+        for (int i = 0; i < clampedDays; i++) {
+            LocalDate day = today.minusDays(i);
+            boolean currentDay = i == 0;
+            DayKey key = new DayKey(trackerId, day);
+            CachedDay cached = dayCache.get(key);
+
+            boolean cacheFresh = cached != null && (currentDay
+                    ? cached.fetchedAt().isAfter(Instant.now().minus(CURRENT_DAY_TTL))
+                    : cached.coversFullDay());
+            if (cacheFresh) {
+                points.addAll(cached.points());
+                daysWithData++;
+                continue;
+            }
+            if (cloudBlocked) {
+                // Lieber ein veralteter Tagesstand als gar keiner.
+                if (cached != null) {
+                    points.addAll(cached.points());
+                    daysWithData++;
+                }
+                continue;
+            }
+
+            Instant chunkFrom = day.atStartOfDay(ZONE).toInstant();
+            Instant naturalEnd = currentDay
+                    ? Instant.now() : day.plusDays(1).atStartOfDay(ZONE).toInstant();
+            // Am 25-h-Umstellungstag wuerde der Kalendertag das Fenster sprengen;
+            // die gekappte Stunde ist fuer Spaziergaenge verschmerzbar.
+            Instant cap = chunkFrom.plus(MAX_CHUNK);
+            Instant chunkTo = naturalEnd.isBefore(cap) ? naturalEnd : cap;
+            try {
+                List<TractivePositionDto> dayPoints = new ArrayList<>();
+                apiClient.getPositionHistory(auth.getAccessToken(), auth.getUserId(),
+                                trackerId, chunkFrom, chunkTo)
+                        .forEach(dayPoints::addAll);
+                dayCache.put(key, new CachedDay(Instant.now(), !currentDay, List.copyOf(dayPoints)));
+                points.addAll(dayPoints);
+                daysWithData++;
+            } catch (TractiveRateLimitException ex) {
+                cloudBlocked = true;
+                rateLimitedUntil = Instant.now().plus(RATE_LIMIT_COOLDOWN);
+                lastError = ex;
+                log.warn("Tractive-Rate-Limit erreicht, restliche Tages-Haeppchen uebersprungen");
+                if (cached != null) {
+                    points.addAll(cached.points());
+                    daysWithData++;
+                }
+            } catch (TractiveException ex) {
+                lastError = ex;
+                log.warn("Tractive-Positionshistorie fuer {} nicht lesbar: {}", day, ex.getMessage());
+                if (cached != null) {
+                    points.addAll(cached.points());
+                    daysWithData++;
+                }
+            }
+        }
+        pruneOldDays(today);
+
+        if (daysWithData == 0 && lastError != null) {
+            if (lastError instanceof TractiveRateLimitException) {
+                throw new TractiveException(
+                        "Tractive-Rate-Limit erreicht — bitte in etwa einer Minute erneut versuchen.");
+            }
+            throw lastError;
+        }
 
         GeoZone home = new GeoZone(settings.homeZoneName(),
                 settings.homeLatitude(), settings.homeLongitude(), settings.homeRadiusMeters());
-        List<TractiveWalkDto> walks = TractiveWalkDetector.detectWalks(points, home);
-
-        cache.put(cacheKey, new CachedWalks(Instant.now(), walks));
-        return walks;
+        return TractiveWalkDetector.detectWalks(points, home);
     }
 
-    /**
-     * Einzelne fehlgeschlagene Haeppchen werden toleriert: im Basic-Abo reicht die
-     * Historie nur 24 h zurueck, aeltere Fenster antworten dann mit einem Fehler —
-     * der juengste Tag soll trotzdem sichtbar sein. Erst wenn ausnahmslos jedes
-     * Haeppchen scheitert, ist die Cloud wirklich nicht erreichbar und der letzte
-     * Fehler geht an den Aufrufer.
-     */
-    private List<TractivePositionDto> fetchPointsInChunks(TractiveAuth auth, String trackerId,
-                                                          Instant from, Instant to) {
-        List<TractivePositionDto> points = new ArrayList<>();
-        TractiveException lastError = null;
-        int failedChunks = 0;
-        int totalChunks = 0;
-        for (Instant chunkFrom = from; chunkFrom.isBefore(to); chunkFrom = chunkFrom.plus(HISTORY_CHUNK)) {
-            Instant chunkTo = chunkFrom.plus(HISTORY_CHUNK).isBefore(to)
-                    ? chunkFrom.plus(HISTORY_CHUNK) : to;
-            totalChunks++;
-            try {
-                apiClient.getPositionHistory(auth.getAccessToken(), auth.getUserId(),
-                                trackerId, chunkFrom, chunkTo)
-                        .forEach(points::addAll);
-            } catch (TractiveException ex) {
-                failedChunks++;
-                lastError = ex;
-                log.warn("Tractive-Positionshistorie {}..{} nicht lesbar: {}",
-                        chunkFrom, chunkTo, ex.getMessage());
-            }
-        }
-        if (totalChunks > 0 && failedChunks == totalChunks) {
-            throw lastError;
-        }
-        return points;
+    /** Haelt den Cache klein; aeltere Tage kann der Endpunkt ohnehin nie mehr anfragen. */
+    private void pruneOldDays(LocalDate today) {
+        LocalDate cutoff = today.minusDays(MAX_DAYS);
+        dayCache.keySet().removeIf(key -> key.day().isBefore(cutoff));
     }
 
-    private record CachedWalks(Instant fetchedAt, List<TractiveWalkDto> walks) {
+    private record DayKey(String trackerId, LocalDate day) {
+    }
+
+    /** {@code coversFullDay} unterscheidet den fertigen Tag vom angebrochenen. */
+    private record CachedDay(Instant fetchedAt, boolean coversFullDay,
+                             List<TractivePositionDto> points) {
     }
 }

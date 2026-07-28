@@ -127,6 +127,8 @@ public class TractiveApiClient {
                 throw new TractiveException("Leere Antwort von " + path);
             }
             return body;
+        } catch (HttpClientErrorException.TooManyRequests ex) {
+            throw new TractiveRateLimitException("Tractive-Rate-Limit fuer " + path + " erreicht");
         } catch (RestClientException ex) {
             throw new TractiveException("Tractive-Abruf " + path + " fehlgeschlagen: " + ex.getMessage(), ex);
         }
@@ -138,6 +140,8 @@ public class TractiveApiClient {
             var response = restTemplate.exchange(properties.getBaseUrl() + path, HttpMethod.GET,
                     new HttpEntity<>(authHeaders(token, userId)), type);
             return response.getBody() != null ? response.getBody() : List.of();
+        } catch (HttpClientErrorException.TooManyRequests ex) {
+            throw new TractiveRateLimitException("Tractive-Rate-Limit fuer " + path + " erreicht");
         } catch (RestClientException ex) {
             throw new TractiveException("Tractive-Abruf " + path + " fehlgeschlagen: " + ex.getMessage(), ex);
         }

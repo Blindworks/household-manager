@@ -4,9 +4,11 @@ import com.household.manager.tractive.dto.TractivePositionDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +47,11 @@ class TractiveWalkServiceTest {
         return TractiveAuth.builder().accessToken("tok-1").userId("u-1").build();
     }
 
+    private void stubHappyAuth() {
+        when(homeSettingsService.getSettings()).thenReturn(HOME);
+        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+    }
+
     /**
      * Vier Unterwegs-Punkte im 10-Minuten-Abstand (die Obergrenze der
      * Gap-Toleranz des Detektors) – zusammen ein 30-minuetiger Spaziergang.
@@ -79,8 +86,7 @@ class TractiveWalkServiceTest {
 
     @Test
     void liefertSpaziergaengeAusDerPositionshistorie() {
-        when(homeSettingsService.getSettings()).thenReturn(HOME);
-        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+        stubHappyAuth();
         when(apiClient.getPositionHistory(eq("tok-1"), eq("u-1"), eq("dev-9"),
                 any(Instant.class), any(Instant.class))).thenReturn(walkSegments());
 
@@ -91,66 +97,74 @@ class TractiveWalkServiceTest {
     }
 
     @Test
-    void zweiterAbrufInnerhalbDerTtlKommtAusDemCache() {
-        when(homeSettingsService.getSettings()).thenReturn(HOME);
-        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+    void holtDieHistorieInTagesHaeppchenNeuesteZuerst() {
+        stubHappyAuth();
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class))).thenReturn(List.of());
+
+        service.getWalks("dev-9", 7);
+
+        var fromCaptor = ArgumentCaptor.forClass(Instant.class);
+        var toCaptor = ArgumentCaptor.forClass(Instant.class);
+        verify(apiClient, times(7)).getPositionHistory(anyString(), anyString(), anyString(),
+                fromCaptor.capture(), toCaptor.capture());
+        List<Instant> froms = fromCaptor.getAllValues();
+        List<Instant> tos = toCaptor.getAllValues();
+
+        // Erster Aufruf ist der heutige (angebrochene) Tag und endet jetzt.
+        assertTrue(Duration.between(tos.get(0), Instant.now()).abs()
+                .compareTo(Duration.ofMinutes(1)) < 0, "erstes Haeppchen endet nicht 'jetzt'");
+        for (int i = 0; i < 7; i++) {
+            Duration window = Duration.between(froms.get(i), tos.get(i));
+            assertTrue(window.compareTo(Duration.ofHours(24)) <= 0,
+                    "Fenster " + i + " ist groesser als 24 h: " + window);
+            assertFalse(window.isNegative(), "Fenster " + i + " ist negativ");
+        }
+        for (int i = 0; i + 1 < 7; i++) {
+            // Rueckwaerts lueckenlos; am 25-h-Umstellungstag darf maximal
+            // eine Stunde fehlen (24-h-Fenster-Kappung).
+            Duration gap = Duration.between(tos.get(i + 1), froms.get(i));
+            assertFalse(gap.isNegative(), "Haeppchen " + i + " ueberlappt Vortag");
+            assertTrue(gap.compareTo(Duration.ofHours(1)) <= 0,
+                    "Luecke zwischen Haeppchen " + (i + 1) + " und " + i + ": " + gap);
+        }
+    }
+
+    @Test
+    void abgeschlosseneTageKommenBeimZweitenAbrufAusDemCache() {
+        stubHappyAuth();
         when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
                 any(Instant.class), any(Instant.class))).thenReturn(walkSegments());
 
         service.getWalks("dev-9", 7);
         service.getWalks("dev-9", 7);
 
-        // 7 Tages-Haeppchen beim ersten Abruf, kein einziger Cloud-Aufruf beim zweiten.
+        // Vortage sind unveraenderlich, der heutige Tag hat eine kurze TTL:
+        // der zweite Abruf direkt danach kostet keinen einzigen Cloud-Aufruf.
         verify(apiClient, times(7)).getPositionHistory(anyString(), anyString(), anyString(),
                 any(Instant.class), any(Instant.class));
     }
 
     @Test
-    void holtDieHistorieInLueckenlosenTagesHaeppchen() {
-        when(homeSettingsService.getSettings()).thenReturn(HOME);
-        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
-        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
-                any(Instant.class), any(Instant.class))).thenReturn(List.of());
-
-        service.getWalks("dev-9", 7);
-
-        var fromCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
-        var toCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
-        verify(apiClient, times(7)).getPositionHistory(anyString(), anyString(), anyString(),
-                fromCaptor.capture(), toCaptor.capture());
-        for (int i = 0; i < 7; i++) {
-            java.time.Duration window = java.time.Duration.between(
-                    fromCaptor.getAllValues().get(i), toCaptor.getAllValues().get(i));
-            assertTrue(window.compareTo(java.time.Duration.ofHours(24)) <= 0,
-                    "Fenster " + i + " ist groesser als 24 h: " + window);
-        }
-        for (int i = 1; i < 7; i++) {
-            assertEquals(toCaptor.getAllValues().get(i - 1), fromCaptor.getAllValues().get(i),
-                    "Luecke zwischen Haeppchen " + (i - 1) + " und " + i);
-        }
-    }
-
-    @Test
     void einzelneFehlgeschlageneHaeppchenWerdenToleriert() {
-        when(homeSettingsService.getSettings()).thenReturn(HOME);
-        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
-        // Das aelteste Haeppchen scheitert (z. B. ausserhalb der Abo-Historie),
-        // die uebrigen liefern Daten.
+        stubHappyAuth();
+        // Heute liefert Daten, ein Vortag scheitert, der Rest ist leer.
         when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
                 any(Instant.class), any(Instant.class)))
-                .thenThrow(new TractiveException("400 Bad Request"))
-                .thenReturn(walkSegments());
+                .thenReturn(walkSegments())
+                .thenThrow(new TractiveException("500 Internal Server Error"))
+                .thenReturn(List.of());
 
         var walks = service.getWalks("dev-9", 7);
 
         assertEquals(1, walks.size());
-        assertEquals(30, walks.get(0).durationMinutes());
+        verify(apiClient, times(7)).getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class));
     }
 
     @Test
     void wennAlleHaeppchenScheiternKommtDerFehlerDurch() {
-        when(homeSettingsService.getSettings()).thenReturn(HOME);
-        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+        stubHappyAuth();
         when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
                 any(Instant.class), any(Instant.class)))
                 .thenThrow(new TractiveException("kaputt"));
@@ -159,19 +173,67 @@ class TractiveWalkServiceTest {
     }
 
     @Test
+    void rateLimitBrichtWeitereCloudAufrufeAbUndLiefertTeilergebnis() {
+        stubHappyAuth();
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class)))
+                .thenReturn(walkSegments())
+                .thenThrow(new TractiveRateLimitException("429"));
+
+        var walks = service.getWalks("dev-9", 7);
+
+        assertEquals(1, walks.size());
+        // Nach dem ersten 429 wird kein weiteres Haeppchen mehr versucht.
+        verify(apiClient, times(2)).getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class));
+    }
+
+    @Test
+    void nachRateLimitKeineSofortigenNeuversuche() {
+        stubHappyAuth();
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class)))
+                .thenReturn(walkSegments())
+                .thenThrow(new TractiveRateLimitException("429"));
+
+        service.getWalks("dev-9", 7);
+        var walks = service.getWalks("dev-9", 7);
+
+        // Zweiter Klick waehrend der Abkuehlpause: Cache liefert, Cloud bleibt in Ruhe.
+        assertEquals(1, walks.size());
+        verify(apiClient, times(2)).getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class));
+    }
+
+    @Test
+    void rateLimitOhneJeglicheDatenLiefertVerstaendlichenFehler() {
+        stubHappyAuth();
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class)))
+                .thenThrow(new TractiveRateLimitException("429"));
+
+        TractiveException ex = assertThrows(TractiveException.class,
+                () -> service.getWalks("dev-9", 7));
+
+        assertTrue(ex.getMessage().contains("Rate-Limit"));
+        // Schon der erste 429 beendet den Durchlauf.
+        verify(apiClient, times(1)).getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class));
+    }
+
+    @Test
     void tageWerdenAufDasMaximumGeklemmt() {
-        when(homeSettingsService.getSettings()).thenReturn(HOME);
-        when(authService.getValidToken()).thenReturn(Optional.of(auth()));
+        stubHappyAuth();
         when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
                 any(Instant.class), any(Instant.class))).thenReturn(List.of());
 
         service.getWalks("dev-9", 999);
 
-        var fromCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        var fromCaptor = ArgumentCaptor.forClass(Instant.class);
         verify(apiClient, times(TractiveWalkService.MAX_DAYS)).getPositionHistory(
                 anyString(), anyString(), anyString(), fromCaptor.capture(), any(Instant.class));
-        long ageDays = java.time.Duration.between(
-                fromCaptor.getAllValues().get(0), Instant.now()).toDays();
+        Instant oldest = fromCaptor.getAllValues().stream().min(Instant::compareTo).orElseThrow();
+        long ageDays = Duration.between(oldest, Instant.now()).toDays();
         assertTrue(ageDays <= TractiveWalkService.MAX_DAYS);
     }
 }
