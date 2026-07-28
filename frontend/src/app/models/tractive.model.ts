@@ -21,3 +21,11 @@ export interface TractivePet {
   /** undefined, wenn keine Aussage moeglich ist – dann wird kein Badge gezeigt. */
   atHome?: boolean;
 }
+
+/** Ein aus der Positionshistorie abgeleiteter Spaziergang. */
+export interface TractiveWalk {
+  start: string;
+  end: string;
+  durationMinutes: number;
+  distanceMeters: number;
+}
