@@ -87,6 +87,7 @@ public class ZigbeeController {
                 .lastMessageAt(status.lastMessageAt())
                 .silentMinutes(status.silentMinutes())
                 .bridgeState(status.bridgeState())
+                .lastBridgeStateAt(status.lastBridgeStateAt())
                 .offlineDevices(status.offlineDevices())
                 .build());
     }

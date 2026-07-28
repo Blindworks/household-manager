@@ -15,5 +15,6 @@ public record ZigbeeHealthResponse(
         Instant lastMessageAt,
         long silentMinutes,
         String bridgeState,
+        Instant lastBridgeStateAt,
         List<String> offlineDevices) {
 }
