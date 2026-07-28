@@ -147,4 +147,54 @@ class EntityStateTriggerHandlerTest {
         assertTrue(handler.validate(config(Map.of("entityId", "e", "operator", "changed"))).isEmpty());
         assertTrue(handler.validate(config(Map.of("entityId", "e", "operator", "<", "value", "5"))).isEmpty());
     }
+
+    @Test
+    void feuertNichtBeimWiederanlaufenAusUnavailable() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "==",
+                "value", "on"));
+
+        handler.onEntityEvent(event("unavailable", "on"), config, ctx);
+
+        assertTrue(emitted.isEmpty(),
+                "Erholung aus unavailable darf kein Ereignis sein");
+    }
+
+    @Test
+    void feuertNichtBeimAusfallNachUnavailable() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "changed"));
+
+        handler.onEntityEvent(event("on", "unavailable"), config, ctx);
+
+        assertTrue(emitted.isEmpty(),
+                "Der Ausfall selbst darf kein Ereignis sein");
+    }
+
+    @Test
+    void feuertNichtBeiChangedAusUnavailable() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "changed"));
+
+        handler.onEntityEvent(event("unavailable", "off"), config, ctx);
+
+        assertTrue(emitted.isEmpty(),
+                "Auch 'changed' darf beim Wiederanlaufen nicht feuern");
+    }
+
+    @Test
+    void feuertWeiterhinBeiEchtemZustandswechsel() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "==",
+                "value", "on"));
+
+        handler.onEntityEvent(event("off", "on"), config, ctx);
+
+        assertEquals(1, emitted.size(),
+                "Ein echter Wechsel muss unveraendert feuern");
+    }
 }

@@ -32,6 +32,7 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     static final String STATE_KEY_TIMER = "pendingTimer";
     private static final String OP_CHANGED = "changed";
+    private static final String STATE_UNAVAILABLE = "unavailable";
 
     private final EntityStateService entityStateService;
 
@@ -84,6 +85,17 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     @Override
     public void onEntityEvent(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx) {
+        // "unavailable" heisst "unbekannt", nicht "passte nicht". Weder der Ausfall noch
+        // das Wiederanlaufen einer Quelle ist ein Ereignis der beobachteten Groesse:
+        // sonst meldete ein Tuerkontakt, der beim Ausfall offen war, bei der Erholung
+        // "Tuer geoeffnet". Bewusst in Kauf genommen: eine Aenderung, die WAEHREND des
+        // Ausfalls passiert ist, wird nachtraeglich nicht gemeldet — sie war ohnehin
+        // verloren.
+        if (STATE_UNAVAILABLE.equals(event.oldState()) || STATE_UNAVAILABLE.equals(event.newState())) {
+            cancelTimer(ctx);
+            return;
+        }
+
         String operator = config.string("operator").orElse(OP_CHANGED);
 
         if (OP_CHANGED.equals(operator)) {
