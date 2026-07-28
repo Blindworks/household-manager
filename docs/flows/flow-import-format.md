@@ -69,6 +69,36 @@ Feuert bei Zustandsübergang einer Entität IN den passenden Bereich (flankenget
 | `value` | ja*, außer bei `changed` | Vergleichswert als String, z. B. `"on"`, `"25"` |
 | `forSeconds` | nein | Zahl; feuert erst, wenn die Bedingung so viele Sekunden ununterbrochen gilt |
 
+> **⚠️ `unavailable` — ein Trigger auf diesen Wert kann nie feuern.**
+> Fällt eine Quelle aus, schreibt sie den State `unavailable`. Der Übergang **nach**
+> `unavailable` ist engine-weit **unterdrückt** — der Ausfall selbst ist kein Ereignis der
+> beobachteten Größe (sonst löste er bei `!=` und `changed` bei jedem Aussetzer aus).
+> Ein Trigger mit `"operator": "=="` und `"value": "unavailable"` validiert, deployt und
+> lässt sich aktivieren, ist aber **tot** — ohne Fehler und ohne Log-Eintrag.
+> Ein laufender `forSeconds`-Timer wird beim Ausfall zusätzlich storniert.
+>
+> **Ausfälle werden stattdessen über EVENT-Entitäten gemeldet** — für Zigbee z. B.
+> `event.zigbee_bridge_status` (States `failed` / `recovered`) via `entity-event-trigger`.
+
+Weitere Eigenheiten rund um `unavailable`, die beim Autoren zählen:
+
+- **Der Übergang AUS `unavailable` heraus feuert normal.** Beim Wiederanlaufen wird der
+  erste echte Wert regulär bewertet — bewusst so, damit z. B. `Temperatur > 40` einen
+  Brand meldet, der *während* eines Ausfalls ausgebrochen ist. Preis: eine bereits
+  gemeldete Bedingung kann nach dem Ausfall ein zweites Mal melden.
+- **Ausnahme bei `operator: "!="`:** nicht-numerische Werte werden als String verglichen,
+  `unavailable != on` ist also **wahr**. Der Trigger „gilt" damit schon während des
+  Ausfalls, und die Erholungsflanke feuert **nicht**. Ein Flow „Schloss nicht verriegelt"
+  (`lock.nuki_… != locked`) meldet nach einem Cloud-Ausfall also *nicht*, dass das Schloss
+  offen ist. Er wird erst wieder scharf, wenn der Bereich einmal echt verlassen und neu
+  betreten wird.
+- **Flatternde Quellen können wiederholt auslösen:** Shelly, Kasa/Tapo/Meross, Nuki und
+  Tractive schreiben bei *jedem* fehlgeschlagenen Poll `unavailable`. Bei `power > 500`
+  ergibt `700` → `unavailable` → `700` deshalb ein erneutes Feuern. Mit `rate-limit`
+  beherrschbar.
+- Numerische Operatoren (`<`, `<=`, `>`, `>=`) sind unkritisch: `unavailable` parst nicht
+  als Zahl und matcht damit nie.
+
 ### `schedule-trigger` — Zeitplan (Trigger, 1 Ausgang)
 
 | config | Pflicht | Wert |
@@ -83,6 +113,12 @@ Prüft den AKTUELLEN Zustand einer beliebigen Entität.
 | `entityId` | ja | Entity-ID |
 | `operator` | ja | einer von `<`, `<=`, `>`, `>=`, `==`, `!=` |
 | `value` | ja | Vergleichswert als String |
+
+> **Falle bei `!=` und `unavailable`:** nicht-numerische Werte werden als String
+> verglichen, `unavailable != on` ist also **wahr**. Eine Bedingung „Tür ist nicht offen"
+> (`!= on`) gilt bei einem Ausfall der Quelle damit als **erfüllt** und lässt die Message
+> auf Port 0 (wahr) durch. Wo das gefährlich wäre, lieber positiv formulieren (`== off`)
+> — dann verhält sich ein Ausfall wie „falsch".
 
 ### `delay` — Verzögerung (1 Ausgang)
 
