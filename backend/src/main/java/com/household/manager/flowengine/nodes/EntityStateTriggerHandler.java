@@ -85,13 +85,14 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     @Override
     public void onEntityEvent(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx) {
-        // "unavailable" heisst "unbekannt", nicht "passte nicht". Weder der Ausfall noch
-        // das Wiederanlaufen einer Quelle ist ein Ereignis der beobachteten Groesse:
-        // sonst meldete ein Tuerkontakt, der beim Ausfall offen war, bei der Erholung
-        // "Tuer geoeffnet". Bewusst in Kauf genommen: eine Aenderung, die WAEHREND des
-        // Ausfalls passiert ist, wird nachtraeglich nicht gemeldet — sie war ohnehin
-        // verloren.
-        if (STATE_UNAVAILABLE.equals(event.oldState()) || STATE_UNAVAILABLE.equals(event.newState())) {
+        // Nur der Uebergang NACH "unavailable" wird unterdrueckt: der Ausfall selbst ist
+        // kein Ereignis der beobachteten Groesse (sonst wuerde er bei operator "!=" oder
+        // "changed" faelschlich feuern). Der Uebergang AUS "unavailable" heraus feuert
+        // dagegen bewusst normal: ein verschluckter Schwellenalarm (z.B. Temperatur > 40
+        // beim Wiederanlaufen mitten in einem Brand) wiegt schwerer als eine doppelte
+        // Meldung (ein Tuerkontakt, der bei der Erholung auf "on" springt, war in diesem
+        // Moment tatsaechlich offen — das ist eine Dopplung, keine Falschmeldung).
+        if (STATE_UNAVAILABLE.equals(event.newState())) {
             cancelTimer(ctx);
             return;
         }
@@ -128,6 +129,12 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
                 ctx.state().remove(STATE_KEY_TIMER);
                 String currentState = entityStateService.getByEntityId(entityId)
                         .map(e -> e.getState()).orElse(null);
+                // Ohne diese Sperre koennte "!=" bei unavailable (String-Vergleich, "wahr")
+                // beim Ablauf ein Ereignis mit newState="unavailable" emittieren — genau
+                // der Ausfall, den der Guard in onEntityEvent eigentlich verhindern soll.
+                if (STATE_UNAVAILABLE.equals(currentState)) {
+                    return;
+                }
                 if (StateComparator.matches(currentState, operator, value)) {
                     ctx.emit(0, toMessage(event, ctx).with("newState", currentState));
                 }

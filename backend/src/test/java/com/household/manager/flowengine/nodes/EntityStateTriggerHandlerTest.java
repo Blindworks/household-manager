@@ -149,7 +149,7 @@ class EntityStateTriggerHandlerTest {
     }
 
     @Test
-    void feuertNichtBeimWiederanlaufenAusUnavailable() {
+    void feuertBeimWiederanlaufenAusUnavailable() {
         NodeConfig config = config(Map.of(
                 "entityId", "binary_sensor.zigbee_eingangstuer_contact",
                 "operator", "==",
@@ -157,8 +157,9 @@ class EntityStateTriggerHandlerTest {
 
         handler.onEntityEvent(event("unavailable", "on"), config, ctx);
 
-        assertTrue(emitted.isEmpty(),
-                "Erholung aus unavailable darf kein Ereignis sein");
+        assertEquals(1, emitted.size(),
+                "Ein verschluckter Schwellenalarm beim Wiederanlaufen wiegt schwerer "
+                        + "als eine doppelte Meldung, deshalb feuert dieser Uebergang normal");
     }
 
     @Test
@@ -174,15 +175,15 @@ class EntityStateTriggerHandlerTest {
     }
 
     @Test
-    void feuertNichtBeiChangedAusUnavailable() {
+    void feuertBeiChangedAusUnavailable() {
         NodeConfig config = config(Map.of(
                 "entityId", "binary_sensor.zigbee_eingangstuer_contact",
                 "operator", "changed"));
 
         handler.onEntityEvent(event("unavailable", "off"), config, ctx);
 
-        assertTrue(emitted.isEmpty(),
-                "Auch 'changed' darf beim Wiederanlaufen nicht feuern");
+        assertEquals(1, emitted.size(),
+                "Auch 'changed' feuert beim Wiederanlaufen wieder normal");
     }
 
     @Test
@@ -196,5 +197,32 @@ class EntityStateTriggerHandlerTest {
 
         assertEquals(1, emitted.size(),
                 "Ein echter Wechsel muss unveraendert feuern");
+    }
+
+    @Test
+    void feuertBeiUebergangAusUnknown() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "==",
+                "value", "on"));
+
+        handler.onEntityEvent(event("unknown", "on"), config, ctx);
+
+        assertEquals(1, emitted.size(),
+                "'unknown' ist nicht 'unavailable' und darf nicht mit unterdrueckt werden");
+    }
+
+    @Test
+    void wechselNachUnavailableStorniertLaufendenTimer() {
+        NodeConfig config = config(Map.of(
+                "entityId", "sensor.x", "operator", "<", "value", "5", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        doReturn(future).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        handler.onEntityEvent(event("10", "4"), config, ctx);           // Timer startet
+        handler.onEntityEvent(event("4", "unavailable"), config, ctx);  // Ausfall
+
+        verify(future).cancel(false);
+        assertTrue(emitted.isEmpty());
     }
 }
