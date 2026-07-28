@@ -17,8 +17,10 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,6 +51,27 @@ public class ZigbeeMqttConfig {
             });
 
     private static final int RESUBSCRIBE_MAX_DELAY_SECONDS = 60;
+
+    private static final int HANDLER_QUEUE_CAPACITY = 1000;
+
+    /**
+     * Verarbeitung laeuft bewusst auf GENAU EINEM Thread: mehrere Threads koennten
+     * Nachrichten desselben Geraets umsortieren, und bei einem Tuerkontakt waere ein
+     * vertauschtes "offen"/"zu" fatal. Der Netty-Event-Loop bleibt trotzdem frei,
+     * sodass eine haengende Datenbank Keepalive und Reconnect nicht mehr blockiert.
+     */
+    private final ThreadPoolExecutor handlerExecutor = new ThreadPoolExecutor(
+            1, 1, 0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(HANDLER_QUEUE_CAPACITY),
+            r -> {
+                Thread t = new Thread(r, "zigbee-mqtt-handler");
+                t.setDaemon(true);
+                return t;
+            },
+            (r, executor) -> log.error(
+                    "Zigbee-Verarbeitungsqueue voll ({} Eintraege) — Nachricht verworfen. "
+                            + "Das deutet auf eine haengende Datenbank hin.",
+                    HANDLER_QUEUE_CAPACITY));
 
     @PostConstruct
     public void start() {
@@ -107,6 +130,7 @@ public class ZigbeeMqttConfig {
                 .topicFilter(properties.getTopicFilter())
                 .qos(MqttQos.AT_LEAST_ONCE)
                 .callback(this::handle)
+                .executor(handlerExecutor)
                 .send()
                 .whenComplete((subAck, throwable) -> {
                     if (throwable == null) {
@@ -149,6 +173,7 @@ public class ZigbeeMqttConfig {
     @PreDestroy
     public void stop() {
         retryScheduler.shutdownNow();
+        handlerExecutor.shutdownNow();
         if (client != null) {
             try {
                 client.disconnect();
