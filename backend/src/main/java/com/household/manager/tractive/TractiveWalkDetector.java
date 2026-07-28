@@ -10,21 +10,27 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Leitet Spaziergaenge aus der rohen Positionshistorie ab: zusammenhaengende
- * Zeitraeume ausserhalb des Home-Radius. Bewusste Unschaerfe (siehe Spec):
- * jede Abwesenheit zaehlt, und im Stromsparmodus meldet der Tracker selten –
- * kurze Runden koennen verschluckt werden.
+ * Leitet Spaziergaenge aus der rohen Positionshistorie ab — ueber den
+ * Einschalt-Indikator dieses Haushalts: der Tracker ist zu Hause aus und wird
+ * nur fuer die Runde eingeschaltet. Ein Spaziergang ist deshalb ein
+ * zusammenhaengender Block von Positionsberichten zwischen zwei langen
+ * Funkpausen; die Blockraender entsprechen dem Ein- und Ausschalten.
+ *
+ * <p>Als Absicherung zaehlt ein Block nur, wenn mindestens ein Punkt ausserhalb
+ * des Home-Radius liegt — sonst wuerde ein zu Hause eingeschalteter Tracker
+ * (etwa auf der Ladeschale) als Spaziergang erscheinen. Kehrseite: bleibt der
+ * Tracker unterwegs versehentlich dauerhaft an, wird der ganze Zeitraum ein
+ * einziger langer "Spaziergang".
  */
 public final class TractiveWalkDetector {
 
     /**
-     * Berichte kommen unregelmaessig; Luecken bis einschliesslich MAX_GAP
-     * gelten noch als derselbe Spaziergang (siehe {@link #gapTooLarge}) — erst
-     * eine echt groessere Luecke trennt, sonst wuerde ein Tracker mit exakt
-     * zehnminuetigem Meldeintervall staendig in Einzelpunkte zerfallen.
+     * Erst eine echt laengere Funkpause gilt als Ausschalten — der Sparmodus
+     * meldet unregelmaessig, und ein exakt 30-minuetiges Meldeintervall darf
+     * eine Runde nicht zerteilen.
      */
-    static final Duration MAX_GAP = Duration.ofMinutes(10);
-    /** GPS-Jitter am Radiusrand erzeugt Sekunden-"Spaziergaenge" – die fliegen raus. */
+    static final Duration OFF_GAP = Duration.ofMinutes(30);
+    /** GPS-Jitter und Test-Einschalten erzeugen Mini-Blocks – die fliegen raus. */
     static final Duration MIN_DURATION = Duration.ofMinutes(5);
 
     private TractiveWalkDetector() {
@@ -37,19 +43,14 @@ public final class TractiveWalkDetector {
                 .toList();
 
         List<TractiveWalkDto> walks = new ArrayList<>();
-        List<TractivePositionDto> current = new ArrayList<>();
+        List<TractivePositionDto> cluster = new ArrayList<>();
         for (TractivePositionDto point : usable) {
-            boolean away = !home.contains(point.latitude(), point.longitude());
-            if (!away) {
-                closeWalk(current, walks);
-                continue;
+            if (!cluster.isEmpty() && offGap(cluster.get(cluster.size() - 1), point)) {
+                closeCluster(cluster, walks, home);
             }
-            if (!current.isEmpty() && gapTooLarge(current.get(current.size() - 1), point)) {
-                closeWalk(current, walks);
-            }
-            current.add(point);
+            cluster.add(point);
         }
-        closeWalk(current, walks);
+        closeCluster(cluster, walks, home);
 
         walks.sort(Comparator.comparing(TractiveWalkDto::start).reversed());
         return walks;
@@ -66,25 +67,25 @@ public final class TractiveWalkDetector {
                 && Math.abs(point.longitude()) <= 180;
     }
 
-    private static boolean gapTooLarge(TractivePositionDto previous, TractivePositionDto next) {
-        // Strikt groesser als MAX_GAP: eine Luecke von genau MAX_GAP gilt noch
-        // als ueberbrueckt, sonst wuerde ein exakt zehnminuetiges Reporting-
-        // intervall einen einzelnen Spaziergang in lauter Einzelpunkte zerlegen.
+    private static boolean offGap(TractivePositionDto previous, TractivePositionDto next) {
         return Duration.between(previous.reportedAt(), next.reportedAt())
-                .compareTo(MAX_GAP) > 0;
+                .compareTo(OFF_GAP) > 0;
     }
 
-    private static void closeWalk(List<TractivePositionDto> current, List<TractiveWalkDto> walks) {
-        if (current.isEmpty()) {
+    private static void closeCluster(List<TractivePositionDto> cluster, List<TractiveWalkDto> walks,
+                                     GeoZone home) {
+        if (cluster.isEmpty()) {
             return;
         }
-        Instant start = current.get(0).reportedAt();
-        Instant end = current.get(current.size() - 1).reportedAt();
+        Instant start = cluster.get(0).reportedAt();
+        Instant end = cluster.get(cluster.size() - 1).reportedAt();
         Duration duration = Duration.between(start, end);
-        if (duration.compareTo(MIN_DURATION) >= 0) {
-            walks.add(new TractiveWalkDto(start, end, duration.toMinutes(), distance(current)));
+        boolean leftHome = cluster.stream()
+                .anyMatch(p -> !home.contains(p.latitude(), p.longitude()));
+        if (duration.compareTo(MIN_DURATION) >= 0 && leftHome) {
+            walks.add(new TractiveWalkDto(start, end, duration.toMinutes(), distance(cluster)));
         }
-        current.clear();
+        cluster.clear();
     }
 
     private static double distance(List<TractivePositionDto> points) {

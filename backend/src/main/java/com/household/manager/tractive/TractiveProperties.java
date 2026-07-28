@@ -19,7 +19,7 @@ public class TractiveProperties {
     private String baseUrl = "https://graph.tractive.com/4";
     /** Oeffentliche Client-ID der Tractive-App; kein Geheimnis. */
     private String clientId = "625e533dc3c3b41c28a669f0";
-    private long pollIntervalMs = 60000;
+    private long pollIntervalMs = 30000;
     private long initialDelayMs = 20000;
     private int httpTimeoutMs = 10000;
 }
