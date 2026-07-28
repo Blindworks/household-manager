@@ -2,6 +2,7 @@ package com.household.manager.zigbee.config;
 
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.lifecycle.MqttDisconnectSource;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.ZigbeeEntityMapper;
@@ -17,11 +18,12 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Verbindet sich beim Start mit dem MQTT-Broker, abonniert die zigbee2mqtt-Topics
@@ -52,26 +54,56 @@ public class ZigbeeMqttConfig {
 
     private static final int RESUBSCRIBE_MAX_DELAY_SECONDS = 60;
 
-    private static final int HANDLER_QUEUE_CAPACITY = 1000;
+    /**
+     * Zaehlt, welche Connect-/Resubscribe-Kette aktuell gueltig ist. Jeder
+     * {@code addConnectedListener}-Aufruf startet eine neue Kette und zaehlt hoch;
+     * eine laufende Retry-Kette einer AELTEREN Verbindung erkennt daran, dass sie
+     * ueberholt wurde, und bricht wortlos ab, statt ein zweites Mal erfolgreich zu
+     * subscriben. Ohne das koennten zwei Ketten (die alte, noch retry-ende, und die
+     * neue, durch einen frischen Connect ausgeloeste) beide erfolgreich subscriben -
+     * zwei aktive Subscriptions auf demselben Topic-Filter, jede Nachricht wird
+     * doppelt verarbeitet (doppelte DB-Zeilen, doppelt feuernde Flows).
+     */
+    private final AtomicInteger subscribeGeneration = new AtomicInteger(0);
 
     /**
      * Verarbeitung laeuft bewusst auf GENAU EINEM Thread: mehrere Threads koennten
      * Nachrichten desselben Geraets umsortieren, und bei einem Tuerkontakt waere ein
      * vertauschtes "offen"/"zu" fatal. Der Netty-Event-Loop bleibt trotzdem frei,
      * sodass eine haengende Datenbank Keepalive und Reconnect nicht mehr blockiert.
+     * <p>
+     * Unbeschraenkte Queue mit Absicht, keine Kapazitaetsgrenze: HiveMQ wickelt diesen
+     * Executor in {@code Schedulers.from(executor)} (RxJava). Der resultierende
+     * {@code ExecutorScheduler.ExecutorWorker} haelt selbst nur maximal EINE Task in
+     * dieser Queue - er sammelt Runnables in seiner eigenen unbeschraenkten
+     * Warteschlange und submittet sich nur neu, wenn keine Task mehr laeuft. Das
+     * tatsaechliche Backpressure-Verhalten bei einer haengenden Datenbank kommt von
+     * RxJavas {@code observeOn} (puffert bis 128, drosselt danach Richtung Broker),
+     * nicht von dieser Queue. Eine begrenzte Queue mit RejectedExecutionHandler wuerde
+     * im Normalbetrieb nie greifen; eine unbeschraenkte mit diesem Kommentar ist
+     * ehrlicher als eine beschraenkte, die nichts bewirkt.
      */
     private final ThreadPoolExecutor handlerExecutor = new ThreadPoolExecutor(
             1, 1, 0L, TimeUnit.MILLISECONDS,
-            new ArrayBlockingQueue<>(HANDLER_QUEUE_CAPACITY),
+            new LinkedBlockingQueue<>(),
             r -> {
                 Thread t = new Thread(r, "zigbee-mqtt-handler");
                 t.setDaemon(true);
                 return t;
             },
-            (r, executor) -> log.error(
-                    "Zigbee-Verarbeitungsqueue voll ({} Eintraege) — Nachricht verworfen. "
-                            + "Das deutet auf eine haengende Datenbank hin.",
-                    HANDLER_QUEUE_CAPACITY));
+            (r, executor) -> {
+                if (executor.isShutdown()) {
+                    // Erwartet: stop() disconnectet zuerst und faehrt die Executors
+                    // erst danach herunter, aber eine letzte Nachricht kann in diesem
+                    // kurzen Fenster trotzdem eintreffen. Regulaeres Herunterfahren,
+                    // kein Fehler.
+                    log.debug("Zigbee-Verarbeitung nach Shutdown verworfen "
+                            + "(Nachricht waehrend des Abschaltens)");
+                    return;
+                }
+                log.error("Zigbee-Verarbeitung abgelehnt, obwohl der Executor noch laeuft "
+                        + "- unerwarteter Zustand.");
+            });
 
     @PostConstruct
     public void start() {
@@ -87,9 +119,18 @@ public class ZigbeeMqttConfig {
                 .serverPort(properties.getPort())
                 .automaticReconnectWithDefaultConfig()
                 .addConnectedListener(ctx -> subscribe())
-                .addDisconnectedListener(ctx -> log.warn(
-                        "Zigbee MQTT getrennt (Quelle {}), Reconnect laeuft: {}",
-                        ctx.getSource(), ctx.getCause().getMessage()))
+                .addDisconnectedListener(ctx -> {
+                    if (ctx.getSource() == MqttDisconnectSource.USER) {
+                        // Selbst angestossenes disconnect() (siehe stop()) - kein
+                        // Ausfall, kein Reconnect zu erwarten. Ohne diese
+                        // Unterscheidung wuerde jedes regulaere Herunterfahren ein
+                        // irrefuehrendes "Reconnect laeuft" loggen.
+                        log.info("Zigbee MQTT Verbindung geschlossen (gewolltes Shutdown)");
+                        return;
+                    }
+                    log.warn("Zigbee MQTT getrennt (Quelle {}), Reconnect laeuft: {}",
+                            ctx.getSource(), ctx.getCause().getMessage());
+                })
                 .buildAsync();
         this.client = builtClient;
 
@@ -110,7 +151,7 @@ public class ZigbeeMqttConfig {
     }
 
     private void subscribe() {
-        subscribe(1);
+        subscribe(1, subscribeGeneration.incrementAndGet());
     }
 
     /**
@@ -120,8 +161,18 @@ public class ZigbeeMqttConfig {
      * Ohne diese Wiederholung bliebe der Client nach einem fehlgeschlagenen Subscribe
      * dauerhaft verbunden, ohne je wieder Nachrichten zu empfangen — ein lautloser
      * Dauerausfall, der genau so schon einmal aufgetreten ist.
+     * <p>
+     * {@code generation} identifiziert die Kette, die diesen Versuch gestartet hat.
+     * Wird zwischenzeitlich ein neuer Connect ausgeloest (neue Generation), bricht
+     * diese Kette wortlos ab — sowohl vor dem Senden als auch im {@code whenComplete},
+     * bevor ein Folgeversuch geplant wird. Sonst koennten eine alte, noch retry-ende
+     * Kette und eine neue, durch einen frischen Connect ausgeloeste Kette beide
+     * erfolgreich subscriben und zu doppelten Subscriptions fuehren.
      */
-    private void subscribe(int attempt) {
+    private void subscribe(int attempt, int generation) {
+        if (generation != subscribeGeneration.get()) {
+            return;
+        }
         Mqtt3AsyncClient current = this.client;
         if (current == null) {
             return;
@@ -133,6 +184,9 @@ public class ZigbeeMqttConfig {
                 .executor(handlerExecutor)
                 .send()
                 .whenComplete((subAck, throwable) -> {
+                    if (generation != subscribeGeneration.get()) {
+                        return;
+                    }
                     if (throwable == null) {
                         log.info("Zigbee MQTT subscribed to {}", properties.getTopicFilter());
                         return;
@@ -140,7 +194,7 @@ public class ZigbeeMqttConfig {
                     int delay = Math.min(1 << Math.min(attempt, 6), RESUBSCRIBE_MAX_DELAY_SECONDS);
                     log.warn("Zigbee MQTT subscribe fehlgeschlagen (Versuch {}), erneuter Versuch in {}s: {}",
                             attempt, delay, throwable.getMessage());
-                    retryScheduler.schedule(() -> subscribe(attempt + 1), delay, TimeUnit.SECONDS);
+                    retryScheduler.schedule(() -> subscribe(attempt + 1, generation), delay, TimeUnit.SECONDS);
                 });
     }
 
@@ -172,8 +226,11 @@ public class ZigbeeMqttConfig {
 
     @PreDestroy
     public void stop() {
-        retryScheduler.shutdownNow();
-        handlerExecutor.shutdownNow();
+        // Erst disconnecten, DANN die Executors herunterfahren: andersherum ruft
+        // ThreadPoolExecutor#shutdownNow() den RejectedExecutionHandler auch fuer
+        // Nachrichten auf, die waehrend des Abschaltfensters noch eintreffen - bei
+        // minuetlich meldenden Sensoren realistisch, und ohne diese Reihenfolge waere
+        // das der haeufigste Ausloeser der Verwerfen-Meldung ueberhaupt.
         if (client != null) {
             try {
                 client.disconnect();
@@ -181,5 +238,7 @@ public class ZigbeeMqttConfig {
                 log.debug("Error during MQTT disconnect: {}", ex.getMessage());
             }
         }
+        retryScheduler.shutdownNow();
+        handlerExecutor.shutdownNow();
     }
 }
