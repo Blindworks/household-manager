@@ -36,6 +36,8 @@ import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
 import { TractiveService } from '../../services/tractive.service';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
+import { ZigbeeService } from '../../services/zigbee.service';
+import { ZigbeeHealth } from '../../models/zigbee.model';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -69,6 +71,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly nukiService = inject(NukiService);
   private readonly powerConsumerService = inject(PowerConsumerService);
   private readonly tractiveService = inject(TractiveService);
+  private readonly zigbeeService = inject(ZigbeeService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -86,6 +89,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private nukiSubscription?: Subscription;
   private consumerSubscription?: Subscription;
   private petSubscription?: Subscription;
+  private zigbeeHealthSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -117,6 +121,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
   private static readonly CONSUMER_REFRESH_MS = 30000;
   private static readonly PETS_REFRESH_MS = 60000;
+  /** Aktualisierungsintervall der Zigbee-Health-Kachel (60 s; das Wandtablet laedt die Seite nur einmal). */
+  private static readonly ZIGBEE_HEALTH_REFRESH_MS = 60000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -237,6 +243,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Verwirft verspätete Antworten eines bereits geschlossenen Dialogs. */
   private walksRequestId = 0;
 
+  /** Zustand der Zigbee-Anbindung; null = noch kein Ergebnis (vor dem ersten Abruf). */
+  zigbeeHealth: ZigbeeHealth | null = null;
+
   ngOnInit(): void {
     this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
     this.startClock();
@@ -250,6 +259,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startCalendarRefresh();
     this.startNukiRefresh();
     this.startPetRefresh();
+    this.startZigbeeHealthRefresh();
   }
 
   ngOnDestroy(): void {
@@ -265,6 +275,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.nukiSubscription?.unsubscribe();
     this.consumerSubscription?.unsubscribe();
     this.petSubscription?.unsubscribe();
+    this.zigbeeHealthSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -940,6 +951,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(pets => {
         if (pets) {
           this.pets = pets;
+        }
+      });
+  }
+
+  /**
+   * Haelt den Zustand der Zigbee-Anbindung fuer den Fussleisten-Hinweis aktuell. Das
+   * Wandtablet laedt die Seite genau einmal und nie wieder, deshalb dasselbe Polling-Muster
+   * wie bei den Nachbar-Kacheln (z. B. {@link startPetRefresh}). Ein fehlgeschlagener Abruf
+   * loescht den zuletzt bekannten Wert bewusst nicht (null = kein Update) – sonst wuerde ein
+   * einzelner Netzwerkfehler die Kachel verschwinden lassen, obwohl Zigbee gesund ist.
+   */
+  private startZigbeeHealthRefresh(): void {
+    this.zigbeeHealthSubscription = interval(DashboardComponent.ZIGBEE_HEALTH_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.zigbeeService.getHealth().pipe(catchError(() => of<ZigbeeHealth | null>(null))))
+      )
+      .subscribe(health => {
+        if (health) {
+          this.zigbeeHealth = health;
         }
       });
   }

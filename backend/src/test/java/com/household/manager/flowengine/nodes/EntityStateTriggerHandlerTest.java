@@ -147,4 +147,103 @@ class EntityStateTriggerHandlerTest {
         assertTrue(handler.validate(config(Map.of("entityId", "e", "operator", "changed"))).isEmpty());
         assertTrue(handler.validate(config(Map.of("entityId", "e", "operator", "<", "value", "5"))).isEmpty());
     }
+
+    @Test
+    void feuertBeimWiederanlaufenAusUnavailable() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "==",
+                "value", "on"));
+
+        handler.onEntityEvent(event("unavailable", "on"), config, ctx);
+
+        assertEquals(1, emitted.size(),
+                "Ein verschluckter Schwellenalarm beim Wiederanlaufen wiegt schwerer "
+                        + "als eine doppelte Meldung, deshalb feuert dieser Uebergang normal");
+    }
+
+    @Test
+    void feuertNichtBeimAusfallNachUnavailable() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "changed"));
+
+        handler.onEntityEvent(event("on", "unavailable"), config, ctx);
+
+        assertTrue(emitted.isEmpty(),
+                "Der Ausfall selbst darf kein Ereignis sein");
+    }
+
+    @Test
+    void feuertBeiChangedAusUnavailable() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "changed"));
+
+        handler.onEntityEvent(event("unavailable", "off"), config, ctx);
+
+        assertEquals(1, emitted.size(),
+                "Auch 'changed' feuert beim Wiederanlaufen wieder normal");
+    }
+
+    @Test
+    void feuertWeiterhinBeiEchtemZustandswechsel() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "==",
+                "value", "on"));
+
+        handler.onEntityEvent(event("off", "on"), config, ctx);
+
+        assertEquals(1, emitted.size(),
+                "Ein echter Wechsel muss unveraendert feuern");
+    }
+
+    @Test
+    void feuertBeiUebergangAusUnknown() {
+        NodeConfig config = config(Map.of(
+                "entityId", "binary_sensor.zigbee_eingangstuer_contact",
+                "operator", "==",
+                "value", "on"));
+
+        handler.onEntityEvent(event("unknown", "on"), config, ctx);
+
+        assertEquals(1, emitted.size(),
+                "'unknown' ist nicht 'unavailable' und darf nicht mit unterdrueckt werden");
+    }
+
+    @Test
+    void wechselNachUnavailableStorniertLaufendenTimer() {
+        NodeConfig config = config(Map.of(
+                "entityId", "sensor.x", "operator", "<", "value", "5", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        doReturn(future).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        handler.onEntityEvent(event("10", "4"), config, ctx);           // Timer startet
+        handler.onEntityEvent(event("4", "unavailable"), config, ctx);  // Ausfall
+
+        verify(future).cancel(false);
+        assertTrue(emitted.isEmpty());
+    }
+
+    @Test
+    void timerFeuertNichtWennEntitaetBeimAblaufUnavailableIst() {
+        // "!=" ist bewusst gewaehlt: nur dort ist matches("unavailable", "!=", value)
+        // wahr (String-Vergleich in StateComparator) - mit "==" liefe dieser Test auch
+        // ohne den Riegel im Ablauf-Lambda gruen und bewiese nichts.
+        NodeConfig config = config(Map.of(
+                "entityId", "lock.nuki_x", "operator", "!=", "value", "locked", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        ArgumentCaptor<Runnable> timerTask = ArgumentCaptor.forClass(Runnable.class);
+        doReturn(future).when(taskScheduler).schedule(timerTask.capture(), any(Instant.class));
+
+        handler.onEntityEvent(event("locked", "unlocked"), config, ctx);   // Timer startet
+
+        when(entityStateService.getByEntityId("lock.nuki_x")).thenReturn(
+                Optional.of(EntityState.builder().entityId("lock.nuki_x").state("unavailable").build()));
+        timerTask.getValue().run();
+
+        assertTrue(emitted.isEmpty(),
+                "Ein Ausfall waehrend der Wartezeit darf beim Ablauf nicht doch noch feuern");
+    }
 }

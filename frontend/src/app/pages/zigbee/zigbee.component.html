@@ -1,6 +1,18 @@
 <section class="zigbee-page">
   <h1>Zigbee-Sensoren</h1>
 
+  @if (health && !health.healthy) {
+    <div class="outage-banner">
+      <strong>Zigbee-Anbindung gestört.</strong>
+      @if (health.health === 'BRIDGE_OFFLINE') {
+        <span>zigbee2mqtt meldet sich als offline.</span>
+      } @else {
+        <span>Seit {{ health.silentMinutes }} Minuten keine Nachricht empfangen.</span>
+      }
+      <span>Die angezeigten Werte sind nicht aktuell.</span>
+    </div>
+  }
+
   <div class="device-grid">
     @for (device of devices; track device.id) {
       <article class="device-card">

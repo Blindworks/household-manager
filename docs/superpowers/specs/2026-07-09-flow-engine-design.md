@@ -83,7 +83,7 @@ Editor speichert jederzeit nach `draft_definition` (nebenwirkungsfrei). **Deploy
 
 | Typ | Konfiguration | Verhalten |
 |---|---|---|
-| `entity-state-trigger` | `entityId`, `operator` (`<`,`>`,`<=`,`>=`,`==`,`!=`,`changed`), `value` (entfällt bei `changed`), `forSeconds` (optional) | Feuert bei passender Zustandsänderung, mit `forSeconds` erst nach ununterbrochener Verweildauer. Numerische Operatoren parsen den State-String; `unavailable`/`unknown`/nicht-numerisch matcht nur `==`/`!=`/`changed` |
+| `entity-state-trigger` | `entityId`, `operator` (`<`,`>`,`<=`,`>=`,`==`,`!=`,`changed`), `value` (entfällt bei `changed`), `forSeconds` (optional) | Feuert bei passender Zustandsänderung, mit `forSeconds` erst nach ununterbrochener Verweildauer. Numerische Operatoren parsen den State-String; `unknown`/nicht-numerisch matcht nur `==`/`!=`/`changed`. **`unavailable` ist gesondert geregelt — siehe „Randfälle"** |
 | `schedule-trigger` | `cron` (Spring-Cron) | Beim Deploy dynamisch registriert, bei Undeploy/Disable deregistriert |
 
 Jeder Trigger kann zusätzlich manuell per Inject-Endpoint gefeuert werden (kein eigener Node-Typ).
@@ -123,7 +123,13 @@ GET    /v1/flows/node-types               → Katalog (Typ, Ports, Config-Schema
 
 ## Randfälle
 
-- **Entität existiert nicht (mehr):** Deploy warnt nicht-blockierend; Trigger feuert nie bzw. Bedingung wertet auf „falsch"-Port. `unavailable` matcht nur `==`/`!=`/`changed`; numerische Vergleiche → kein Match.
+- **Entität existiert nicht (mehr):** Deploy warnt nicht-blockierend; Trigger feuert nie bzw. Bedingung wertet auf „falsch"-Port. Numerische Vergleiche gegen einen nicht-numerischen State → kein Match.
+- **Quelle fällt aus (`unavailable`)** — engine-weit, seit der Zigbee-Ausfallerkennung (2026-07-28, `docs/superpowers/specs/2026-07-28-zigbee-ausfallerkennung-design.md`):
+  - Der Übergang **nach** `unavailable` feuert **nicht** — der Ausfall ist kein Ereignis der beobachteten Größe (sonst löste er bei `!=` und `changed` bei jedem Aussetzer aus). Ein laufender `forSeconds`-Timer wird storniert; der Timer-Ablauf prüft zusätzlich selbst, weil `future.cancel(false)` eine bereits gestartete Task nicht mehr stoppt.
+  - **Folge: ein Trigger mit `value: "unavailable"` kann nie feuern.** Ausfälle werden über EVENT-Entitäten gemeldet (z. B. `event.zigbee_bridge_status`), nicht über einen Zustands-Trigger.
+  - Der Übergang **aus** `unavailable` heraus feuert **normal**. Beidseitige Unterdrückung wäre sicherheitsgefährdend: ein Schwellen-Alarm (`Temperatur > 40`) bliebe nach jedem Ausfall entwaffnet, bis der Wert erst unter die Schwelle fällt und wieder steigt. In Kauf genommen: eine bereits gemeldete Bedingung kann danach ein zweites Mal melden.
+  - **Ausnahme bei `!=`:** `StateComparator` vergleicht nicht-numerisch als String, `unavailable != on` ist **wahr**. `beforeMatched` gilt damit schon während des Ausfalls, und die Erholungsflanke feuert **nicht** (z. B. `lock.nuki_… != locked` meldet nach einem Cloud-Ausfall nicht, dass das Schloss offen ist). Dieselbe Falle in `entity-condition`: „Tür ist nicht offen" wertet bei einem Ausfall als erfüllt. Bewusst nicht behoben.
+  - **Wiederholtes Feuern bei flatternden Quellen:** Shelly, Kasa/Tapo/Meross, Nuki und Tractive schreiben bei *jedem* fehlgeschlagenen Poll `unavailable`; `700` → `unavailable` → `700` löst `> 500` erneut aus. Mit `rate-limit` beherrschbar.
 - **Aktion schlägt fehl** (Alexa nicht eingeloggt, Gerät offline): Log + Debug-Eintrag, Zweig endet — Engine bleibt gesund.
 - **Backend-Neustart:** deployte, enabled Flows werden beim Start aus der DB geladen; laufende Timer verfallen (siehe Engine).
 - **Deploy während laufender Executions:** laufende Executions beenden auf dem alten Graphen, neue Events treffen den neuen (atomarer Registry-Swap).

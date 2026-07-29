@@ -25,6 +25,11 @@ import java.util.concurrent.ScheduledFuture;
  * IN den passenden Bereich (nicht bei jeder Änderung innerhalb). Mit forSeconds
  * startet stattdessen ein Timer; bei Ablauf wird der aktuelle Zustand erneut
  * geprüft; Verlassen des Bereichs storniert den Timer.
+ * <p>
+ * "unavailable" ist kein Ereignis der beobachteten Größe: der Übergang NACH
+ * "unavailable" wird unterdrückt, der Übergang AUS "unavailable" heraus feuert
+ * dagegen bewusst wieder normal (Details und die bekannte Ausnahme für
+ * operator "!=" stehen im Kommentar in {@link #onEntityEvent}).
  */
 @Component
 @RequiredArgsConstructor
@@ -32,6 +37,7 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     static final String STATE_KEY_TIMER = "pendingTimer";
     private static final String OP_CHANGED = "changed";
+    private static final String STATE_UNAVAILABLE = "unavailable";
 
     private final EntityStateService entityStateService;
 
@@ -84,6 +90,28 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     @Override
     public void onEntityEvent(EntityStateChangedEvent event, NodeConfig config, NodeContext ctx) {
+        // Nur der Uebergang NACH "unavailable" wird unterdrueckt: der Ausfall selbst ist
+        // kein Ereignis der beobachteten Groesse (sonst wuerde er bei operator "!=" oder
+        // "changed" faelschlich feuern). Der Uebergang AUS "unavailable" heraus feuert
+        // dagegen bewusst normal: ein verschluckter Schwellenalarm (z.B. Temperatur > 40
+        // beim Wiederanlaufen mitten in einem Brand) wiegt schwerer als eine doppelte
+        // Meldung (ein Tuerkontakt, der bei der Erholung auf "on" springt, war in diesem
+        // Moment tatsaechlich offen — das ist eine Dopplung, keine Falschmeldung).
+        //
+        // Bekannte Ausnahme, NICHT Teil dieses Fixes: bei operator "!=" gilt schon
+        // "unavailable" selbst als "!= <value>" (StateComparator vergleicht nicht-
+        // numerische Werte als String), beforeMatched ist also bereits waehrend des
+        // Ausfalls wahr. Die Erholung feuert dadurch NICHT — der Trigger bleibt bis zum
+        // naechsten echten Verlassen-und-Wiederbetreten des Bereichs entwaffnet. Beispiel:
+        // "Schloss nicht verriegelt" (lock.nuki_... != locked) meldet sich bei einem
+        // Cloud-Ausfall waehrend "unlocked" beim Wiederanlaufen NICHT zurueck, obwohl das
+        // Schloss offen ist. Bestehende StateComparator-Einschraenkung, hier bewusst nicht
+        // behoben (vgl. denselben Befund bei EntityConditionHandler).
+        if (STATE_UNAVAILABLE.equals(event.newState())) {
+            cancelTimer(ctx);
+            return;
+        }
+
         String operator = config.string("operator").orElse(OP_CHANGED);
 
         if (OP_CHANGED.equals(operator)) {
@@ -116,6 +144,12 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
                 ctx.state().remove(STATE_KEY_TIMER);
                 String currentState = entityStateService.getByEntityId(entityId)
                         .map(e -> e.getState()).orElse(null);
+                // Ohne diese Sperre koennte "!=" bei unavailable (String-Vergleich, "wahr")
+                // beim Ablauf ein Ereignis mit newState="unavailable" emittieren — genau
+                // der Ausfall, den der Guard in onEntityEvent eigentlich verhindern soll.
+                if (STATE_UNAVAILABLE.equals(currentState)) {
+                    return;
+                }
                 if (StateComparator.matches(currentState, operator, value)) {
                     ctx.emit(0, toMessage(event, ctx).with("newState", currentState));
                 }

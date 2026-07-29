@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
+import com.household.manager.zigbee.parser.ZigbeeAvailability;
 import com.household.manager.zigbee.parser.ZigbeeMeasurementValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +18,11 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Parst zigbee2mqtt-Wert-Topics (zigbee2mqtt/&lt;friendly_name&gt;) in {@link ParsedZigbeeMessage}.
- * Steuer-/Meta-Topics (bridge/*, /availability, /set, /get) werden ignoriert.
+ * Parst zigbee2mqtt-Topics. {@link #parse(String, String)} liest Wert-Topics
+ * (zigbee2mqtt/&lt;friendly_name&gt;) in {@link ParsedZigbeeMessage} und ignoriert dabei
+ * Steuer-/Meta-Topics (bridge/*, /availability, /set, /get). Diese Meta-Topics werden
+ * von den dedizierten Methoden {@link #parseBridgeState} und {@link #parseAvailability}
+ * gelesen.
  */
 @Component
 @RequiredArgsConstructor
@@ -26,6 +30,9 @@ import java.util.Optional;
 public class ZigbeeMessageParser {
 
     private static final String TOPIC_PREFIX = "zigbee2mqtt/";
+    private static final String BRIDGE_STATE_TOPIC = "zigbee2mqtt/bridge/state";
+    private static final String AVAILABILITY_SUFFIX = "/availability";
+    private static final String BRIDGE_NAME = "bridge";
 
     /** zigbee2mqtt-Feldname -> Messgröße. */
     private static final Map<String, MeasurementType> FIELD_TYPES = new LinkedHashMap<>();
@@ -93,12 +100,73 @@ public class ZigbeeMessageParser {
         return Optional.of(new ParsedZigbeeMessage(friendlyName, battery, linkQuality, measurements, action));
     }
 
+    /**
+     * Liest den Zustand von zigbee2mqtt selbst ({@code online}/{@code offline}).
+     * Leer, wenn das Topic nicht {@value #BRIDGE_STATE_TOPIC} ist.
+     */
+    public Optional<String> parseBridgeState(String topic, String payload) {
+        if (!BRIDGE_STATE_TOPIC.equals(topic)) {
+            return Optional.empty();
+        }
+        return stateFromPayload(payload);
+    }
+
+    /**
+     * Liest die Verfuegbarkeit eines einzelnen Geraets.
+     * <p>
+     * Geraetenamen mit '/' werden — wie schon in {@link #isDeviceTopic} — nicht
+     * unterstuetzt; das ist eine bewusst geteilte Annahme mit dem bestehenden
+     * Identitaetsmodell.
+     */
+    public Optional<ZigbeeAvailability> parseAvailability(String topic, String payload) {
+        if (topic == null || !topic.startsWith(TOPIC_PREFIX) || !topic.endsWith(AVAILABILITY_SUFFIX)) {
+            return Optional.empty();
+        }
+        // Praefix- und Suffix-Pruefung koennen sich ueberlappen, z.B. beim Topic
+        // "zigbee2mqtt/availability" (ein Geraet, das "availability" heisst). Ohne
+        // diese Schranke waere beginIndex > endIndex und substring wuerfe.
+        int end = topic.length() - AVAILABILITY_SUFFIX.length();
+        if (end <= TOPIC_PREFIX.length()) {
+            return Optional.empty();
+        }
+        String name = topic.substring(TOPIC_PREFIX.length(), end);
+        if (name.contains("/") || BRIDGE_NAME.equals(name)) {
+            return Optional.empty();
+        }
+        return stateFromPayload(payload)
+                .map(state -> new ZigbeeAvailability(name, "online".equalsIgnoreCase(state)));
+    }
+
+    /**
+     * Neuere zigbee2mqtt-Versionen senden {@code {"state":"online"}}, aeltere den
+     * nackten Text {@code online}. Beides muss funktionieren.
+     */
+    private Optional<String> stateFromPayload(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return Optional.empty();
+        }
+        String trimmed = payload.trim();
+        if (trimmed.startsWith("{")) {
+            try {
+                JsonNode root = objectMapper.readTree(trimmed);
+                JsonNode state = root.get("state");
+                if (state != null && state.isTextual() && !state.asText().isBlank()) {
+                    return Optional.of(state.asText().trim());
+                }
+            } catch (Exception ex) {
+                log.debug("Zigbee-Status-Payload nicht parsebar: {}", ex.getMessage());
+            }
+            return Optional.empty();
+        }
+        return Optional.of(trimmed);
+    }
+
     private boolean isDeviceTopic(String topic) {
         if (topic == null || !topic.startsWith(TOPIC_PREFIX)) {
             return false;
         }
         String rest = topic.substring(TOPIC_PREFIX.length());
-        return !rest.isEmpty() && !rest.contains("/") && !rest.equals("bridge");
+        return !rest.isEmpty() && !rest.contains("/") && !rest.equals(BRIDGE_NAME);
     }
 
     private BigDecimal toDecimal(JsonNode node) {

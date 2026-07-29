@@ -7,9 +7,12 @@ const URGENT_DAYS_UNTIL = 1;
 /** Uebermorgen kuendigt sich der Termin an — der Indikator wird gelb. */
 const SOON_DAYS_UNTIL = 2;
 
+/** Trennt die Zeitangabe von den zugeordneten Personen. */
+const PERSON_SEPARATOR = ' · ';
+
 /**
  * Baut aus den naechsten Vorkommen bis zu `max` einzelne Hub-Eintraege
- * (Titel = Terminname, Text = "Morgen, 14:30 Uhr").
+ * (Titel = Terminname, Text = "Morgen, 14:30 Uhr · Anna").
  */
 export function buildCalendarInsights(
   occurrences: CalendarOccurrence[], max = 3): HubInsight[] {
@@ -37,5 +40,17 @@ function toneFor(occ: CalendarOccurrence): HubInsight['tone'] {
 
 function describe(occ: CalendarOccurrence): string {
   const day = relativeDayLabel(occ.daysUntil, occ.occurrenceDate);
-  return occ.allDay || !occ.startTime ? day : `${day}, ${occ.startTime} Uhr`;
+  const when = occ.allDay || !occ.startTime ? day : `${day}, ${occ.startTime} Uhr`;
+  const who = personNames(occ);
+  return who ? `${when}${PERSON_SEPARATOR}${who}` : when;
+}
+
+/**
+ * Keine Zuordnung heisst Haushaltstermin — dann bleibt der Text unveraendert, statt
+ * einen Platzhalter wie "Haushalt" zu erfinden. `persons` ist laut Vertrag nie null,
+ * der Zugriff wird trotzdem abgesichert: aeltere Antworten aus einem Browser-Cache
+ * duerfen den ganzen Hub nicht leeren.
+ */
+function personNames(occ: CalendarOccurrence): string {
+  return (occ.persons ?? []).map(person => person.displayName).join(', ');
 }

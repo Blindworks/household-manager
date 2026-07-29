@@ -11,6 +11,7 @@ import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeLiveService } from '../../services/zigbee-live.service';
 import {
   ZigbeeDevice,
+  ZigbeeHealth,
   ZigbeeLiveEvent,
   ZigbeeMeasurementType
 } from '../../models/zigbee.model';
@@ -41,6 +42,7 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
   devices: ZigbeeDevice[] = [];
   /** friendlyName -> (measurementType -> aktueller Wert) */
   liveValues: Record<string, Record<string, LiveValue>> = {};
+  health: ZigbeeHealth | null = null;
 
   selectedDevice?: string;
   selectedType: ZigbeeMeasurementType = 'TEMPERATURE';
@@ -50,9 +52,11 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
   private liveSub?: Subscription;
   private devicesSub?: Subscription;
   private historySub?: Subscription;
+  private healthSub?: Subscription;
   private devicesLoading = false;
 
   ngOnInit(): void {
+    this.loadHealth();
     this.loadDevices();
     this.liveSub = this.liveService.getLiveStream().subscribe({
       next: (event) => this.applyLiveEvent(event),
@@ -64,7 +68,16 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     this.liveSub?.unsubscribe();
     this.devicesSub?.unsubscribe();
     this.historySub?.unsubscribe();
+    this.healthSub?.unsubscribe();
     this.liveService.disconnect();
+  }
+
+  /** Fehler bewusst still: ein nicht erreichbarer Health-Endpunkt darf die Seite nicht stören. */
+  private loadHealth(): void {
+    this.healthSub = this.zigbeeService.getHealth().subscribe({
+      next: (health) => (this.health = health),
+      error: () => (this.health = null)
+    });
   }
 
   loadDevices(): void {

@@ -339,6 +339,21 @@
       </div>
       <p *ngIf="modeError" class="lumina__mode-error">{{ modeError }}</p>
     </div>
+
+    <div class="lumina-card lumina__secured lumina__zigbee-outage"
+         *ngIf="zigbeeHealth && !zigbeeHealth.healthy">
+      <div class="lumina__secured-icon">
+        <span class="material-symbols-outlined">sensors_off</span>
+      </div>
+      <div class="lumina__lock-info">
+        <h4 class="lumina__label lumina__label--secondary">Zigbee gestört</h4>
+        <p class="lumina__secured-detail">
+          {{ zigbeeHealth.health === 'BRIDGE_OFFLINE'
+              ? 'zigbee2mqtt ist offline'
+              : 'Seit ' + zigbeeHealth.silentMinutes + ' Min. keine Daten' }}
+        </p>
+      </div>
+    </div>
   </footer>
 
   <!-- Energiefluss-Dialog (oeffnet sich beim Klick auf die Energiefluss-Kachel) -->

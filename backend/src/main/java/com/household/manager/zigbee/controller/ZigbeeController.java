@@ -1,12 +1,15 @@
 package com.household.manager.zigbee.controller;
 
 import com.household.manager.zigbee.dto.ZigbeeDeviceResponse;
+import com.household.manager.zigbee.dto.ZigbeeHealthResponse;
 import com.household.manager.zigbee.dto.ZigbeeMeasurementResponse;
 import com.household.manager.zigbee.model.MeasurementType;
+import com.household.manager.zigbee.model.ZigbeeStreamStatus;
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
+import com.household.manager.zigbee.service.ZigbeeStreamMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -30,6 +33,7 @@ public class ZigbeeController {
     private final ZigbeeDeviceRepository deviceRepository;
     private final ZigbeeMeasurementRepository measurementRepository;
     private final ZigbeeLiveService liveService;
+    private final ZigbeeStreamMonitor streamMonitor;
 
     @GetMapping("/devices")
     public ResponseEntity<List<ZigbeeDeviceResponse>> getDevices() {
@@ -72,6 +76,20 @@ public class ZigbeeController {
     @GetMapping(value = "/live", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamLive() {
         return liveService.subscribe();
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<ZigbeeHealthResponse> getHealth() {
+        ZigbeeStreamStatus status = streamMonitor.status();
+        return ResponseEntity.ok(ZigbeeHealthResponse.builder()
+                .health(status.health().name())
+                .healthy(status.healthy())
+                .lastMessageAt(status.lastMessageAt())
+                .silentMinutes(status.silentMinutes())
+                .bridgeState(status.bridgeState())
+                .lastBridgeStateAt(status.lastBridgeStateAt())
+                .offlineDevices(status.offlineDevices())
+                .build());
     }
 
     private ZigbeeDeviceResponse toDeviceResponse(ZigbeeDevice device) {

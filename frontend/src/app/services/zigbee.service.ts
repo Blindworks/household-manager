@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ZigbeeDevice, ZigbeeMeasurement, ZigbeeMeasurementType } from '../models/zigbee.model';
+import { ZigbeeDevice, ZigbeeHealth, ZigbeeMeasurement, ZigbeeMeasurementType } from '../models/zigbee.model';
 
 /**
  * REST-Service für Zigbee-Sensoren.
@@ -33,6 +33,12 @@ export class ZigbeeService {
         { params }
       )
       .pipe(catchError(this.handleError));
+  }
+
+  getHealth(): Observable<ZigbeeHealth> {
+    return this.http.get<ZigbeeHealth>(`${this.baseUrl}/health`).pipe(
+      catchError(this.handleError)
+    );
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
