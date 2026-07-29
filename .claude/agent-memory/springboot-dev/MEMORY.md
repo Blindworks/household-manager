@@ -81,6 +81,7 @@ com.household.manager/
 - [usermanagement-tasks-10-12.md](usermanagement-tasks-10-12.md) - AppUserService/Bootstrap, Nuki KIOSK-lock-only rule, Admin-REST-API; strict-Mockito lenient() fix for plan test template
 - [usermanagement-tasks-13-14.md](usermanagement-tasks-13-14.md) - Audit-Verdrahtung (Chokepoints, Telegram-ThreadLocal, FLOW-Aktor); WebMvc-Slice-Fallstricke: DisabledUserSessionFilter braucht AppUserRepository-Stub, GlobalExceptionHandler verschluckt NoResourceFoundException zu 500
 - [join-table-replace-pattern.md](join-table-replace-pattern.md) - Zuordnungstabellen als Differenz pflegen, nie delete-all+insert-all; Mock-Tests koennen den Flush-Reihenfolge-Fehler nicht sehen
+- [plan-doc-text-goes-stale.md](plan-doc-text-goes-stale.md) - fertige Doku-Bloecke im Plan nie ungeprueft kopieren; Reviews drehen Regeln um, der Plan-Text altert mit. Semantikaenderung = auch Bestandsdoku pruefen
 - [liquibase-changeset-id-planning.md](liquibase-changeset-id-planning.md) - always re-check the changelog directory for the actual next free date-ID before creating a changeset; plan docs can go stale between writing and execution
 - [bounded-discovery-queries.md](bounded-discovery-queries.md) - discovery/distinct queries over append-only history tables must be time-bounded, not full scans
 - [database.md](database.md) - Database schema patterns and Liquibase conventions
@@ -99,3 +100,6 @@ com.household.manager/
 - [enum-to-lookup-table.md](enum-to-lookup-table.md) - Enum-Spalte zu Stammdatentabelle: ein Commit wegen ddl-auto=validate, Seed-Keys = alte Enum-Namen kleingeschrieben (Flow-Vertrag)
 - [bash-tool-heredoc.md](bash-tool-heredoc.md) - im Bash-Tool nie PowerShell-Here-Strings; `@'...'@` landet als literales @ in der Commit-Message
 - [calendar-persons-categories.md](calendar-persons-categories.md) - Task 5: personIds/persons am Erinnerungs-Event; Plan-Testcode kann falsche Methode/Accessor referenzieren, immer gegen echte Klasse pruefen
+- [tractive-walk-detector.md](tractive-walk-detector.md) - Task 2 Spaziergang-Heuristik: Plan-Tests+Referenzcode koennen sich selbst widersprechen (Gap-Schwelle, exakte Grenze, Distanz=0-Assertion); Referenzcode zuerst 1:1 laufen lassen um das zu erkennen
+- [zigbee-mqtt-hivemq-callback-executor.md](zigbee-mqtt-hivemq-callback-executor.md) - HiveMQ 1.3.17 kennt kein callback(Consumer, Executor); richtig ist .callback(c).executor(e) verkettet
+- [parallel-agent-git-index.md](parallel-agent-git-index.md) - bei Parallelagenten immer `git commit -- <pfade>`; ein normaler Commit nimmt fremde, zwischenzeitlich gestagte Dateien mit

@@ -2,6 +2,7 @@
 
 ## UI-Fallen
 - [UI-Fallen](template-pitfalls.md) — `@for track` braucht eindeutige Keys (Laufzeitfehler!); `<label>` um mehrere Buttons leitet Klicks fehl; helle Seiten vertragen keine `rgba(255,255,255)`-Styles; **ein Fehlerfeld pro Ursache** — ein paralleler Abruf leert es sonst; `ngModel` in einem `<form>` ist im Test erst nach `await fixture.whenStable()` ans Modell gebunden.
+- Dashboard-Fussleisten-Karte (`dashboard.component.html`, `<footer class="lumina__footer">`): neue Status-Hinweiskarten koennen die vorhandenen `.lumina__secured`/`.lumina__secured-icon`/`.lumina__secured-detail`/`.lumina__label`-Klassen der Nuki-Karte direkt wiederverwenden (nur Icon-Farbe per eigenem Modifier ueberschreiben, z. B. `.lumina__zigbee-outage .lumina__secured-icon { color: var(--error); }`) statt neue Layout-Klassen zu erfinden — `--error`/`--primary`/`--secondary`/`--tertiary` sind als CSS-Vars auf `.lumina` (Root-Klasse der Komponente) definiert und dunkel-Theme-tauglich; `rgba(255,255,255,…)` ist hier bewusst richtig, weil `.lumina` ein dunkles Glass-Theme ist (anders als bei hellen Seiten, siehe oben). `dashboard.component.scss` ueberschreitet das 16 kB-Style-Budget bereits **vor** jeder Aenderung (vorbestehende Warnung wie bei `energy.component.scss`, siehe unten) — nicht actionable, nicht versuchen zu fixen.
 
 ## Git Safety
 - [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
@@ -41,7 +42,7 @@
 3. **MeterReadingsComponent** (`/meter-readings`) - Reading management
 4. **UtilityPricesComponent** (`/utility-prices`) - Price management with grouped tables
 4b. **CalendarComponent** (`/calendar`) - Monatsraster. Stammdaten (Kategorien + Nutzer) liegen in `CalendarMasterDataService` (`services/calendar-master-data.service.ts`, Signals: `categories`/`users` roh, `activeCategories`/`activeUsers` computed, `categoriesLoaded`, `categoryError`, `userError`; `load()` stoesst beide Abrufe an) — die Kategorien-Admin-Seite soll denselben Service nutzen. Das Raster rendert ein computed-View-Model `weeks()`; die Aufbereitung selbst (Chips, Deckelung, Initialen, Beschriftung, Filterpraedikat) liegt **pur** in `shared/calendar-day-view.util.ts` mit eigenem Spec — Muster wie `shared/month-grid.util.ts`. Im Template stehen **keine** Methodenaufrufe mehr. Personenfilter `personFilter` (Signal, nicht persistiert) fliesst ins View-Model ein, also filtert er ohne neuen Abruf. Kategorien sind **Stammdaten** (`CalendarCategoryService`, `GET /api/v1/calendar/categories`), kein Enum mehr — `CATEGORY_META` existiert nicht mehr. Farbe/Name kommen aus der am Termin **eingebetteten** `category`. Termine tragen `persons` (leer = ganzer Haushalt); `HouseholdUserService` (`GET /api/v1/users`) fuellt die Auswahl. `update`/`updateOccurrence` sind PUT-**Vollersetzung** — der Dialog muss `personUserIds` beim Speichern immer mitsenden, sonst verschwinden sie still (gleiche Falle wie bei `notes`).
-5. **ZigbeeComponent** (`/zigbee`) - Zigbee sensor live tiles + history chart
+5. **ZigbeeComponent** (`/zigbee`) - Zigbee sensor live tiles + history chart. Since 2026-07-28 also shows a silent-outage banner (`.outage-banner`, only when `health && !health.healthy`) fed by `ZigbeeService.getHealth()` — the request/error handling is fire-and-forget-silent (`error: () => (this.health = null)`), matching the "an outage detector must never itself misbehave on error" requirement
 6. **FinanceOverviewComponent** (`/finance`) - KPIs, ECharts donut + trend, A/B layout toggle (`localStorage` key `finance.overviewLayout`)
 7. **FinanceTransactionsComponent** (`/finance/transactions`) - Transaction list, filters, inline categorization, rule-suggestion banner
 8. **FinanceAccountsComponent** (`/finance/accounts`) - Bank account CRUD
@@ -53,7 +54,7 @@
 ## Services
 1. **MeterReadingService** - CRUD for meter readings
 2. **UtilityPriceService** - CRUD for utility prices (getAllPrices, getPricesByMeterType, getCurrentPrice, createPrice, deletePrice)
-3. **ZigbeeService** - REST: getDevices, getMeasurements; baseUrl `/api/v1/zigbee`
+3. **ZigbeeService** - REST: getDevices, getMeasurements, getHealth (`GET .../health` → `ZigbeeHealth` model); baseUrl `/api/v1/zigbee`
 4. **ZigbeeLiveService** - SSE EventSource on `/api/v1/zigbee/live`, named event `live`
 5. **FinanceService** - Full finance API at `/api/v1/finance`: accounts, import, categories, transactions (categorize with PATCH), rules (apply-all POST), analytics (overview/trend), budgets (status GET), recurring (detect POST, confirm POST)
 
@@ -92,6 +93,7 @@
 ## Angular Budget
 - `anyComponentStyle`: 16kB warning, 24kB error
 - Pre-existing warning on `energy.component.scss` (16.16 kB) — not actionable
+- `dashboard.component.scss` also pre-exceeds the budget (~21.5 kB before any change, confirmed 2026-07-28 via `git stash` A/B build) — not actionable, small additions (a few hundred bytes) don't meaningfully worsen it
 
 ## Third-Party Package Docs
 - Check `node_modules/<pkg>/AI.md` or similar LLM-oriented guide files before reading `index.d.ts` cold — some modern packages (e.g. `@foblex/flow`) ship one; it's more version-accurate than training data. Still verify hard claims against `index.d.ts` / compiled bundle.

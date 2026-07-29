@@ -563,15 +563,15 @@ $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
 }
 
 /* ============================================================
-   Admin pages shared button styling
+   Admin/backend pages shared button styling
    Same scoping pattern as the finance block above: raw-element
-   rules only inside the admin page containers, so they never
+   rules only inside the listed page containers, so they never
    bleed into pages with their own .btn utilities (e.g. .admin).
    Variant vocabulary matches the finance scope:
    default = primary, .ghost = neutral outline, .danger = red outline.
    ============================================================ */
 
-$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories';
+$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories, .vision, .pets-page';
 
 #{$admin-scopes} {
 

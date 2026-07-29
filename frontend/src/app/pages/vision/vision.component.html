@@ -38,29 +38,29 @@
         <strong>{{ person.name }}</strong>
         <span class="vision__badge" *ngIf="!person.active">inaktiv</span>
         <span>{{ person.photoCount }} Foto(s)</span>
-        <button type="button" (click)="togglePhotos(person)">Fotos</button>
+        <button type="button" class="ghost" (click)="togglePhotos(person)">Fotos</button>
         <label class="vision__upload">
           Foto hochladen
           <input type="file" accept="image/jpeg,image/png" (change)="uploadPhoto(person, $event)">
         </label>
-        <button type="button" class="vision__rename" (click)="startRename(person)">Umbenennen</button>
-        <button type="button" class="vision__toggle-active" (click)="toggleActive(person)">
+        <button type="button" class="vision__rename ghost" (click)="startRename(person)">Umbenennen</button>
+        <button type="button" class="vision__toggle-active ghost" (click)="toggleActive(person)">
           {{ person.active ? 'Deaktivieren' : 'Aktivieren' }}
         </button>
-        <button type="button" class="vision__delete" (click)="deletePerson(person)">Löschen</button>
+        <button type="button" class="vision__delete danger" (click)="deletePerson(person)">Löschen</button>
       </div>
       <ng-template #renameRow>
         <div class="vision__person-row">
           <input class="vision__rename-input" type="text" aria-label="Neuer Name"
                  [(ngModel)]="editName" (keyup.enter)="saveRename(person)">
           <button type="button" class="vision__rename-save" (click)="saveRename(person)">Speichern</button>
-          <button type="button" (click)="cancelRename()">Abbrechen</button>
+          <button type="button" class="ghost" (click)="cancelRename()">Abbrechen</button>
         </div>
       </ng-template>
       <div class="vision__photos" *ngIf="expandedPersonId === person.id">
         <figure *ngFor="let photo of photosByPerson[person.id]">
           <img [src]="'data:image/jpeg;base64,' + photo.photoBase64" alt="Referenzfoto von {{ person.name }}">
-          <button type="button" (click)="deletePhoto(person, photo)">Entfernen</button>
+          <button type="button" class="danger" (click)="deletePhoto(person, photo)">Entfernen</button>
         </figure>
       </div>
     </div>
