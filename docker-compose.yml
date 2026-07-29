@@ -3,6 +3,12 @@ services:
     build:
       context: ./backend
     environment:
+      # Ohne TZ laeuft der Container in UTC, und jedes nackte LocalDateTime.now()
+      # schreibt Zeitstempel zwei Stunden hinter der Wanduhr — waehrend ClockConfig
+      # (Kalender, Muellerinnerung, Wetter-Import) ausdruecklich Europe/Berlin nutzt.
+      # Diese Vermischung liess u. a. die Aussentemperatur aus dem Chart fallen und
+      # Flow-Zeitplaene zwei Stunden zu spaet feuern.
+      TZ: Europe/Berlin
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: mariadb
       DB_PORT: 3306
