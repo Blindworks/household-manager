@@ -39,8 +39,11 @@ export class PetsComponent implements OnInit, OnDestroy {
 
   readonly authenticated = signal(false);
   readonly loading = signal(true);
+  readonly refreshing = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly pets = signal<TractivePet[]>([]);
+  /** Zeitpunkt des letzten erfolgreichen Abrufs in dieser Sitzung. */
+  readonly lastRefreshedAt = signal<Date | null>(null);
 
   private map?: L.Map;
   private markers = new Map<string, L.Marker>();
@@ -78,9 +81,41 @@ export class PetsComponent implements OnInit, OnDestroy {
     return pet.zone;
   }
 
+  /**
+   * Erzwingt einen Abruf bei Tractive. Bewusst ein Server-Aufruf und kein erneutes
+   * Lesen von /pets: liegt das Problem im Poller, liefert /pets beliebig oft denselben
+   * leeren Zwischenstand. Der Zeitgeber wird neu gestartet, damit der naechste
+   * automatische Abruf nicht direkt hinterher laeuft.
+   */
+  refresh(): void {
+    if (this.refreshing()) {
+      return;
+    }
+    this.refreshing.set(true);
+    this.tractiveService.refreshPets().subscribe({
+      next: pets => {
+        this.refreshing.set(false);
+        this.errorMessage.set(null);
+        this.lastRefreshedAt.set(new Date());
+        this.pets.set(pets);
+        this.renderMap(pets);
+        this.restartPolling();
+      },
+      error: err => {
+        this.refreshing.set(false);
+        this.errorMessage.set(err.error?.message ?? 'Abruf bei Tractive fehlgeschlagen.');
+      }
+    });
+  }
+
+  private restartPolling(): void {
+    this.stopPolling();
+    this.refreshTimer = setInterval(() => this.loadPets(), 60000);
+  }
+
   private startPolling(): void {
     this.loadPets();
-    this.refreshTimer = setInterval(() => this.loadPets(), 60000);
+    this.restartPolling();
   }
 
   private stopPolling(): void {

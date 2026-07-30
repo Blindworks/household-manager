@@ -281,4 +281,16 @@ class SecurityRulesTest {
         mockMvc.perform(get("/v1/tractive/home-settings")).andExpect(status().isNotFound());
     }
 
+    /**
+     * Der erzwungene Abruf schaltet nichts, er zieht nur Daten – ohne diese Regel waere der
+     * Aktualisieren-Knopf auf dem Wandtablet tot (403 statt Abruf).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenAbrufErzwingen() throws Exception {
+        // Kein TractiveController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(post("/v1/tractive/pets/refresh").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
 }

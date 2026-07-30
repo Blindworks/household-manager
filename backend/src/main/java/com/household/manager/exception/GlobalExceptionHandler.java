@@ -9,6 +9,7 @@ import com.household.manager.shelly.ShellyException;
 import com.household.manager.tapo.TapoException;
 import com.household.manager.tractive.TractiveAuthException;
 import com.household.manager.tractive.TractiveException;
+import com.household.manager.tractive.TractiveRateLimitException;
 import com.household.manager.vision.VisionException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
@@ -343,6 +344,27 @@ public class GlobalExceptionHandler {
 
         log.warn("Tractive auth error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * Muss VOR dem TractiveException-Handler stehen (Spring waehlt sonst zwar ohnehin den
+     * spezifischeren, aber die Reihenfolge macht die Absicht sichtbar): ein Rate-Limit ist
+     * kein Cloud-Ausfall, sondern eine Bitte um Warten — 429 statt 502.
+     */
+    @ExceptionHandler(TractiveRateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleTractiveRateLimitException(
+            TractiveRateLimitException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                .error("Too Many Requests")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Tractive rate limit: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
     }
 
     @ExceptionHandler(TractiveException.class)

@@ -1,5 +1,15 @@
 <div class="pets-page">
-  <h1>Hundetracker</h1>
+  <header class="page-header">
+    <h1>Hundetracker</h1>
+    <!--
+      Der Knopf ruft POST /pets/refresh und nicht einfach nochmal /pets: liegt das
+      Problem im Poller, liefert /pets beliebig oft denselben leeren Zwischenstand.
+    -->
+    <button type="button" class="refresh-button" *ngIf="!loading() && authenticated()"
+            [disabled]="refreshing()" (click)="refresh()">
+      {{ refreshing() ? 'Wird abgerufen …' : 'Jetzt aktualisieren' }}
+    </button>
+  </header>
 
   <p *ngIf="loading()">Wird geladen …</p>
 
@@ -38,8 +48,18 @@
       </article>
     </div>
 
+    <!--
+      Bewusst KEINE Deutung der Leere mehr: der alte Text behauptete "der erste Abruf
+      erfolgt kurz nach dem Start", obwohl der Poller in Wahrheit an einem Rate-Limit
+      scheiterte. Die Ursache nennt jetzt der erzwungene Abruf, nicht dieser Absatz.
+    -->
     <p *ngIf="pets().length === 0" class="muted">
-      Noch keine Daten – der erste Abruf erfolgt kurz nach dem Start.
+      Keine Positionsdaten. <strong>Jetzt aktualisieren</strong> erzwingt einen Abruf bei
+      Tractive und nennt die Ursache, falls er scheitert.
+    </p>
+
+    <p *ngIf="lastRefreshedAt()" class="muted">
+      Manuell aktualisiert: {{ lastRefreshedAt() | date:'short' }}
     </p>
   </section>
 

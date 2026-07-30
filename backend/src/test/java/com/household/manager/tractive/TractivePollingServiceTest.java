@@ -208,6 +208,119 @@ class TractivePollingServiceTest {
         verify(entityStateService).reportState(LOCATION_UPDATE);
     }
 
+    @Test
+    void refreshNowPollsImmediately() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        service.refreshNow();
+
+        verify(entityStateService).reportState(LOCATION_UPDATE);
+        assertNotNull(service.lastPolledAt());
+    }
+
+    /**
+     * Ohne Tractive-Anmeldung darf KEINE TractiveAuthException nach aussen: sie wuerde als
+     * 401 beim Frontend landen, und der Auth-Interceptor wirft den Nutzer daraufhin aus der
+     * Haushalts-Session, obwohl nur die Tractive-Anmeldung fehlt.
+     */
+    @Test
+    void refreshNowReportsAMissingLoginAsIllegalStateNotAsAuthFailure() {
+        when(authService.getValidToken()).thenReturn(Optional.empty());
+
+        // IllegalStateException ist keine TractiveException — der Handler dafuer liefert 400,
+        // nicht 401, und genau das haelt dieser Test fest.
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.refreshNow());
+
+        assertTrue(ex.getMessage().contains("Tractive-Anmeldung"));
+    }
+
+    /**
+     * Der reale Fall: jeder Tier-Abruf scheitert (hier am Rate-Limit), die Cloud antwortet aber.
+     * Vorher galt das als Erfolg mit null Tieren — die Seite behauptete daraufhin, das Konto
+     * habe keinen Tracker. Der Grund muss den Aufrufer erreichen.
+     */
+    @Test
+    void refreshNowReportsWhyNoPetCouldBeRead() {
+        givenAuthenticated();
+        when(apiClient.listTrackableObjects("tok", "u-1"))
+                .thenReturn(List.of(new TractiveTrackableRefDto("trk-1")));
+        when(apiClient.getTrackable("tok", "u-1", "trk-1"))
+                .thenThrow(new TractiveException("Tractive-Abruf /trackable_object/trk-1 fehlgeschlagen: 500"));
+
+        TractiveException ex = assertThrows(TractiveException.class, () -> service.refreshNow());
+
+        assertTrue(ex.getMessage().contains("1 Objekt"));
+        assertTrue(ex.getMessage().contains("trk-1"));
+    }
+
+    /** Ein leeres Konto ist eine andere Aussage als "alle Abrufe gescheitert". */
+    @Test
+    void refreshNowSaysSoWhenTheAccountListIsEmpty() {
+        givenAuthenticated();
+        when(apiClient.listTrackableObjects("tok", "u-1")).thenReturn(List.of());
+
+        TractiveException ex = assertThrows(TractiveException.class, () -> service.refreshNow());
+
+        assertTrue(ex.getMessage().contains("leere Liste"));
+    }
+
+    /**
+     * Ein Rate-Limit muss seinen Typ behalten (429 statt 502) und weitere Abrufe sperren –
+     * Nachdruecken bei ausbleibenden Daten wuerde das Limit sonst weiter hochschaukeln.
+     */
+    @Test
+    void refreshNowBlocksFurtherAttemptsAfterARateLimit() {
+        givenAuthenticated();
+        when(apiClient.listTrackableObjects("tok", "u-1"))
+                .thenThrow(new TractiveRateLimitException("Rate-Limit fuer /user/u-1/trackable_objects"));
+
+        TractiveRateLimitException first =
+                assertThrows(TractiveRateLimitException.class, () -> service.refreshNow());
+        assertTrue(first.getMessage().contains("gesperrt"));
+
+        TractiveRateLimitException second =
+                assertThrows(TractiveRateLimitException.class, () -> service.refreshNow());
+        assertTrue(second.getMessage().contains("Nächster Abruf"));
+    }
+
+    /** Zweimal kurz hintereinander druecken darf nicht zweimal die Cloud belasten. */
+    @Test
+    void refreshNowKeepsAMinimumGapBetweenForcedPolls() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        service.refreshNow();
+        reset(apiClient);
+
+        assertThrows(TractiveRateLimitException.class, () -> service.refreshNow());
+        verifyNoInteractions(apiClient);
+    }
+
+    /** Der Nutzer soll die Cloud-Ursache sehen, statt sie nur im Log zu haben. */
+    @Test
+    void refreshNowPassesTheCloudFailureToTheCaller() {
+        givenAuthenticated();
+        when(apiClient.listTrackableObjects("tok", "u-1"))
+                .thenThrow(new TractiveException("cloud down"));
+
+        TractiveException ex = assertThrows(TractiveException.class, () -> service.refreshNow());
+
+        assertTrue(ex.getMessage().contains("cloud down"));
+    }
+
+    @Test
+    void refreshNowSaysSoWhenTheIntegrationIsDisabled() {
+        properties.setEnabled(false);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.refreshNow());
+
+        assertTrue(ex.getMessage().contains("deaktiviert"));
+        verifyNoInteractions(apiClient, authService, entityStateService);
+    }
+
     /**
      * Die Home-Entitaet darf bei einem Ausfall nicht 'unavailable' werden – der Tracker
      * ist zu Hause bewusst aus, und der letzte Wert ist genau die gewuenschte Aussage.

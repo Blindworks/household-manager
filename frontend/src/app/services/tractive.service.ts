@@ -34,6 +34,16 @@ export class TractiveService {
   }
 
   /**
+   * Erzwingt einen sofortigen Abruf bei Tractive. Fehler werden bewusst NICHT auf eine
+   * Einheitsmeldung reduziert: die Seite zeigt die Server-Meldung an (z. B. "Anbindung
+   * deaktiviert" oder "keine gueltige Tractive-Anmeldung") — genau die Auskunft, die beim
+   * blossen Neuladen der Seite fehlt.
+   */
+  refreshPets(): Observable<TractivePet[]> {
+    return this.http.post<TractivePet[]>(`${this.baseUrl}/pets/refresh`, {});
+  }
+
+  /**
    * Fehler werden bewusst NICHT auf eine Einheitsmeldung reduziert: der Dialog
    * zeigt die Server-Meldung an (z. B. "Kein Zuhause konfiguriert").
    */
