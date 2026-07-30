@@ -13,6 +13,8 @@ export interface ComfortRating {
 
 /** Eine Innensensor-Zeile der Kachel. */
 export interface TemperatureRow {
+  /** Sensor-Id der zugrundeliegenden Messung (Schlüssel für den Detaildialog). */
+  sensorId: string;
   name: string;
   /** Temperatur, z. B. "21,4°". */
   valueLabel: string;
@@ -24,6 +26,8 @@ export interface TemperatureRow {
 
 /** Primärer Außenfühler (realer Sensor am Haus, z. B. Garten). */
 export interface OutdoorReading {
+  /** Sensor-Id der zugrundeliegenden Messung (Schlüssel für den Detaildialog). */
+  sensorId: string;
   name: string;
   /** Temperatur, z. B. "11,4°". */
   valueLabel: string;
@@ -90,8 +94,59 @@ export function buildClimateView(
   return { outdoor, weatherLabel, rows };
 }
 
+/**
+ * Detailansicht eines einzelnen Sensors (Dialog hinter einer Kachelzeile).
+ * `humidityLabel` ist null, wenn der Sensor keine Feuchte meldet.
+ */
+export interface SensorDetail {
+  sensorId: string;
+  name: string;
+  /** Temperatur, z. B. "21,4 °C". */
+  temperatureLabel: string;
+  /** Luftfeuchte, z. B. "48 %", oder null. */
+  humidityLabel: string | null;
+  /** Komfort-Wort oder "veraltet". */
+  statusLabel: string;
+  tone: ClimateTone;
+  /** ISO-Zeitstempel der Messung. */
+  measuredAt: string;
+  stale: boolean;
+}
+
+/**
+ * Baut die Detailansicht zu einer Sensor-Id aus den aktuellen Messwerten.
+ * Liefert null, wenn zu der Id keine Messung (mehr) vorliegt — der Dialog
+ * darf dann keinen veralteten Wert weiterzeigen.
+ */
+export function buildSensorDetail(
+  readings: CurrentTemperatureReading[],
+  sensorId: string,
+  nowMs: number
+): SensorDetail | null {
+  const reading = readings.find(candidate => candidate.sensorId === sensorId);
+  if (!reading) {
+    return null;
+  }
+  const stale = isStale(reading, nowMs);
+  const comfort = comfortRating(reading.temperature);
+  return {
+    sensorId: reading.sensorId,
+    name: reading.name,
+    temperatureLabel: `${formatNumber(reading.temperature, 1)} °C`,
+    humidityLabel:
+      reading.humidity === undefined || reading.humidity === null
+        ? null
+        : `${formatNumber(reading.humidity, 0)} %`,
+    statusLabel: stale ? 'veraltet' : comfort.label,
+    tone: stale ? 'stale' : comfort.tone,
+    measuredAt: reading.measuredAt,
+    stale
+  };
+}
+
 function toOutdoorReading(reading: CurrentTemperatureReading, nowMs: number): OutdoorReading {
   return {
+    sensorId: reading.sensorId,
     name: reading.name,
     valueLabel: formatCelsius(reading.temperature, 1),
     stale: isStale(reading, nowMs)
@@ -102,6 +157,7 @@ function toRow(reading: CurrentTemperatureReading, nowMs: number): TemperatureRo
   const stale = isStale(reading, nowMs);
   const comfort = comfortRating(reading.temperature);
   return {
+    sensorId: reading.sensorId,
     name: reading.name,
     valueLabel: formatCelsius(reading.temperature, 1),
     statusLabel: stale ? 'veraltet' : comfort.label,
@@ -115,8 +171,12 @@ function isStale(reading: CurrentTemperatureReading, nowMs: number): boolean {
 }
 
 function formatCelsius(value: number, fractionDigits: number): string {
-  return `${value.toLocaleString('de-DE', {
+  return `${formatNumber(value, fractionDigits)}°`;
+}
+
+function formatNumber(value: number, fractionDigits: number): string {
+  return value.toLocaleString('de-DE', {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits
-  })}°`;
+  });
 }

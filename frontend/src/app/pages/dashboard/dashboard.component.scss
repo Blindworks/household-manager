@@ -124,59 +124,70 @@
 // ============================================================================
 //  Uhr & Wetter
 // ============================================================================
+// Eine einzige flache Zeile: Uhrzeit | Datum | Wetter.
+// Auf dem Wandtablet (1280x800 CSS-Pixel) belegte die vorherige zentrierte
+// Stapelung rund ein Drittel der Bildschirmhoehe.
 .lumina__clock {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  text-align: center;
-  padding: 16px 0;
+  justify-content: center;
+  gap: clamp(16px, 3vw, 32px);
+  text-align: left;
+  padding: 0 0 4px;
 }
 
 .lumina__time {
   margin: 0;
   font-weight: 600;
-  font-size: clamp(64px, 11vw, 140px);
-  line-height: 1;
+  font-size: clamp(34px, 4.4vw, 56px);
+  line-height: 1.05;
   letter-spacing: -0.03em;
   color: #fff;
-  text-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+  text-shadow: 0 0 24px rgba(255, 255, 255, 0.18);
 }
 
 .lumina__clock-meta {
   display: flex;
   align-items: center;
-  gap: 32px;
-  margin-top: 8px;
+  gap: clamp(16px, 2.5vw, 28px);
+  margin-top: 0;
 }
 
 .lumina__date {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 0;
+
+  .lumina__label {
+    font-size: 10px;
+    line-height: 13px;
+    letter-spacing: 0.12em;
+  }
 }
 
 .lumina__date-value {
-  font-size: 32px;
+  font-size: clamp(15px, 1.5vw, 19px);
   font-weight: 500;
-  line-height: 40px;
+  line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
 .lumina__divider {
   width: 1px;
-  height: 48px;
+  height: 28px;
   background: rgba(255, 255, 255, 0.2);
 }
 
 .lumina__weather {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .lumina__weather-icon {
-  font-size: 48px;
+  font-size: 30px;
   color: var(--secondary);
 }
 
@@ -184,13 +195,19 @@
   text-align: left;
   display: flex;
   flex-direction: column;
+
+  .lumina__label {
+    font-size: 10px;
+    line-height: 13px;
+    letter-spacing: 0.12em;
+  }
 }
 
 .lumina__weather-temp {
   font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 36px;
+  font-size: clamp(17px, 1.7vw, 22px);
   font-weight: 500;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 // ============================================================================
@@ -256,6 +273,14 @@
 
 // ---- Klima-Kachel (Innentemperaturen vs. Aussen) -------------------------
 .lumina__climate-tile {
+  // Die Kachel ist kein einzelnes Klickziel mehr: die Sensorzeilen darin sind es.
+  cursor: default;
+
+  &:hover,
+  &:active {
+    transform: none;
+  }
+
   .lumina__room-icon {
     background: rgba(83, 225, 111, 0.1);
     color: var(--secondary);
@@ -265,6 +290,13 @@
     background: var(--secondary);
     color: var(--on-secondary);
   }
+}
+
+// Aussenwerte und Verlaufs-Knopf in der Kopfzeile nebeneinander.
+.lumina__climate-head-right {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 // ---- Schalter-Kachel -----------------------------------------------------
@@ -338,7 +370,18 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background: none;
   color: var(--on-surface);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
 
   &--stale {
     opacity: 0.45;
@@ -401,7 +444,18 @@
   align-items: baseline;
   gap: 10px;
   padding: 11px 0;
+  width: 100%;
+  background: none;
+  border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
 
   &--stale {
     opacity: 0.45;
@@ -561,6 +615,98 @@
   font-size: 24px;
   font-weight: 500;
   color: var(--on-surface);
+}
+
+// ---- Akkordeon-Darstellung der Kacheln (nur Tablet-Ansicht) ---------------
+// Nebeneinander sind die drei Kacheln auf dem Wandtablet zu gedraengt: der
+// Inhalt wird beschnitten und Namen brechen um. Untereinander mit jeweils einem
+// aufklappbaren Kopf steht der geoeffneten Kachel die ganze Breite zur
+// Verfuegung. Dieser Block muss NACH den Kachel-Bloecken stehen: er
+// ueberschreibt u. a. das Raster und die aspect-ratio bei gleicher Spezifitaet.
+.lumina__rooms--accordion {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.lumina__room--accordion {
+  aspect-ratio: auto;
+  gap: 0;
+  padding: 12px 18px;
+
+  // Die Kachel ist im Akkordeon kein Klickziel – nur der Kopf reagiert.
+  &:hover,
+  &:active {
+    transform: none;
+  }
+
+  .lumina__room-top {
+    align-items: center;
+  }
+
+  // Der Titel steht jetzt im Kopf, nicht mehr im Inhalt.
+  .lumina__room-name {
+    display: none;
+  }
+
+  // Flacheres Icon, damit eine geschlossene Kachel wenig Hoehe kostet.
+  .lumina__room-icon {
+    padding: 8px;
+    border-radius: var(--radius-xl);
+
+    .material-symbols-outlined {
+      font-size: 24px;
+    }
+  }
+
+  .lumina__room-body {
+    padding-top: 6px;
+  }
+}
+
+// Drei Klassen: .lumina__switch-tile .lumina__room-body setzt display: flex mit
+// derselben Spezifitaet – die zusaetzliche Klasse macht das Zuklappen
+// unabhaengig von der Reihenfolge im Stylesheet.
+.lumina__room.lumina__room--collapsed .lumina__room-body {
+  display: none;
+}
+
+.lumina__room-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin: 0 4px;
+  padding: 10px 8px 10px 14px;
+  border: none;
+  border-radius: var(--radius-xl);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.lumina__room-toggle-title {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.lumina__room-chevron {
+  font-size: 26px;
+  color: rgba(192, 198, 214, 0.7);
+  transition: transform 0.25s ease;
+}
+
+.lumina__room--accordion:not(.lumina__room--collapsed) .lumina__room-chevron {
+  transform: rotate(180deg);
 }
 
 // ---- Aktive Szene --------------------------------------------------------
@@ -1227,13 +1373,11 @@
     padding: 20px;
   }
 
-  .lumina__clock-meta {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .lumina__divider {
-    display: none;
+  // Auf schmalen Geraeten darf die Kopfzeile umbrechen, statt die Meta-Daten
+  // untereinander zu stapeln - das war die hohe Variante.
+  .lumina__clock {
+    flex-wrap: wrap;
+    gap: 12px 16px;
   }
 
   .lumina__rooms {
@@ -1422,6 +1566,62 @@
 
 .lumina__dialog--walks {
   width: min(560px, 92vw);
+}
+
+// ---- Sensor-Detaildialog (Temperatur + Luftfeuchte) ----------------------
+.lumina__dialog--sensor {
+  width: min(420px, 92vw);
+}
+
+.lumina__sensor-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lumina__sensor-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 12px;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.04);
+  text-align: center;
+}
+
+.lumina__sensor-metric-icon {
+  font-size: 26px;
+  color: #475569;
+}
+
+.lumina__sensor-metric-label {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.lumina__sensor-metric-value {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.lumina__sensor-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.lumina__sensor-status {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
 }
 
 .lumina__history-ranges {

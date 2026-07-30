@@ -12,13 +12,22 @@ import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { ViewModeService } from '../../services/view-mode.service';
+import {
+  DashboardAccordionService,
+  DashboardTileKey
+} from '../../services/dashboard-accordion.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { EnergyLive } from '../../models/energy-live.model';
 import { AnkerSolixLive } from '../../models/ankersolix.model';
 import { WeatherOverview } from '../../models/weather.model';
 import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
-import { ClimateView, buildClimateView } from '../../shared/temperature-comfort.util';
+import {
+  ClimateView,
+  SensorDetail,
+  buildClimateView,
+  buildSensorDetail
+} from '../../shared/temperature-comfort.util';
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { buildWasteInsight } from '../../shared/waste-insight.util';
@@ -75,6 +84,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
+
+  private readonly tileAccordion = inject(DashboardAccordionService);
+
+  /**
+   * True, wenn die Kacheln Temperaturen/Schalter/Verbraucher als Akkordeon
+   * untereinander stehen. Nur in der Tablet-Ansicht – in der Website-Ansicht
+   * bleibt das dreispaltige Raster.
+   */
+  get accordionActive(): boolean {
+    return this.viewMode.isTabletView();
+  }
+
+  /** True, wenn der Inhalt der Kachel sichtbar ist (ausserhalb des Akkordeons immer). */
+  isTileOpen(key: DashboardTileKey): boolean {
+    return !this.accordionActive || this.tileAccordion.isOpen(key);
+  }
+
+  toggleTile(key: DashboardTileKey): void {
+    this.tileAccordion.toggle(key);
+  }
 
   private clockSubscription?: Subscription;
   private weatherSubscription?: Subscription;
@@ -139,6 +168,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   flowDialogOpen = false;
 
   climate: ClimateView = { outdoor: [], weatherLabel: '--', rows: [] };
+
+  /** Zuletzt geladene Rohmesswerte; Quelle des Sensor-Detaildialogs. */
+  private currentTemperatures: CurrentTemperatureReading[] = [];
+  /** Sensor, dessen Detailwerte gerade angezeigt werden (null = Dialog zu). */
+  sensorDetail: SensorDetail | null = null;
 
   /** Meistgenutzte Schalter fuer die Kachel. */
   topSwitches: SwitchEntity[] = [];
@@ -307,6 +341,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.closeHistoryDialog();
       return;
     }
+    if (this.sensorDetail) {
+      this.closeSensorDialog();
+      return;
+    }
     this.closeFlowDialog();
     this.closeSwitchDialog();
     this.closeConfirmDialog();
@@ -449,6 +487,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.allSwitches = [];
     this.switchError = null;
     this.loadTopSwitches();
+  }
+
+  /** Öffnet den Detaildialog eines Temperatursensors (Temperatur + Luftfeuchte). */
+  openSensorDialog(sensorId: string): void {
+    this.sensorDetail = buildSensorDetail(this.currentTemperatures, sensorId, Date.now());
+  }
+
+  closeSensorDialog(): void {
+    this.sensorDetail = null;
+  }
+
+  /**
+   * Zieht den offenen Detaildialog auf die frisch geladenen Messwerte nach.
+   * Fehlt der Sensor in der neuen Antwort (Abruffehler liefert eine leere Liste),
+   * bleiben die zuletzt gezeigten Werte stehen statt den Dialog wegzureissen —
+   * ihr Alter ist im Dialog am Zeitstempel ablesbar.
+   */
+  private refreshSensorDetail(): void {
+    const open = this.sensorDetail;
+    if (!open) {
+      return;
+    }
+    const updated = buildSensorDetail(this.currentTemperatures, open.sensorId, Date.now());
+    if (updated) {
+      this.sensorDetail = updated;
+    }
   }
 
   /** Öffnet den Verbraucher-Dialog und lädt dafür die vollständige Liste. */
@@ -802,7 +866,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
           )
         )
       )
-      .subscribe(readings => (this.climate = buildClimateView(readings, Date.now())));
+      .subscribe(readings => {
+        this.currentTemperatures = readings;
+        this.climate = buildClimateView(readings, Date.now());
+        this.refreshSensorDetail();
+      });
   }
 
   private startSwitchRefresh(): void {

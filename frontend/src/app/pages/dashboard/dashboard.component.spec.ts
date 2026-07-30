@@ -20,6 +20,7 @@ import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer } from '../../models/power-consumer.model';
 import { CalendarService } from '../../services/calendar.service';
 import { CalendarOccurrence } from '../../models/calendar-event.model';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -1027,6 +1028,220 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
     expect(fixture.componentInstance.historyRange).toBe('WEEK');
     const series = (fixture.componentInstance.historyOptions as any)['series'][0];
     expect(series.data[0][1]).toBe(222);
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Klima-Kachel: Sensor-Detaildialog)', () => {
+  let temperatureServiceSpy: jasmine.SpyObj<TemperatureService>;
+
+  const wohnzimmer: CurrentTemperatureReading = {
+    sensorId: 'zigbee:1',
+    name: 'Wohnzimmer',
+    source: 'ZIGBEE',
+    temperature: 21.4,
+    humidity: 48.2,
+    measuredAt: new Date().toISOString()
+  };
+
+  beforeEach(async () => {
+    temperatureServiceSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureServiceSpy.getCurrent.and.returnValue(of([wohnzimmer]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureServiceSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('oeffnet per Klick auf eine Sensorzeile den Dialog mit Temperatur und Feuchte', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const row: HTMLButtonElement = fixture.nativeElement.querySelector('.lumina__climate-row');
+    row.click();
+    fixture.detectChanges();
+
+    const detail = fixture.componentInstance.sensorDetail;
+    expect(detail?.name).toBe('Wohnzimmer');
+    expect(detail?.temperatureLabel).toBe('21,4 °C');
+    expect(detail?.humidityLabel).toBe('48 %');
+
+    const dialog: HTMLElement = fixture.nativeElement.querySelector('.lumina__dialog--sensor');
+    expect(dialog.textContent).toContain('21,4 °C');
+    expect(dialog.textContent).toContain('48 %');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliesst den Dialog wieder', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openSensorDialog('zigbee:1');
+    fixture.componentInstance.closeSensorDialog();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.sensorDetail).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__dialog--sensor')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('zieht den offenen Dialog auf frische Messwerte nach', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openSensorDialog('zigbee:1');
+
+    temperatureServiceSpy.getCurrent.and.returnValue(of([
+      { ...wohnzimmer, temperature: 24.0, humidity: 51.0 }
+    ]));
+    tick(60000);
+
+    expect(fixture.componentInstance.sensorDetail?.temperatureLabel).toBe('24,0 °C');
+    expect(fixture.componentInstance.sensorDetail?.humidityLabel).toBe('51 %');
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaelt die zuletzt gezeigten Werte, wenn der Abruf fehlschlaegt', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.openSensorDialog('zigbee:1');
+
+    temperatureServiceSpy.getCurrent.and.returnValue(throwError(() => new Error('API down')));
+    tick(60000);
+
+    expect(fixture.componentInstance.sensorDetail?.temperatureLabel).toBe('21,4 °C');
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
+  const wohnzimmer: CurrentTemperatureReading = {
+    sensorId: 'zigbee:1',
+    name: 'Wohnzimmer',
+    source: 'ZIGBEE',
+    temperature: 21.4,
+    humidity: 48.2,
+    measuredAt: new Date().toISOString()
+  };
+
+  beforeEach(async () => {
+    localStorage.removeItem('household-manager-dashboard-tile');
+    localStorage.removeItem('household-manager-view-mode');
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureSpy.getCurrent.and.returnValue(of([wohnzimmer]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  afterAll(() => {
+    localStorage.removeItem('household-manager-dashboard-tile');
+    localStorage.removeItem('household-manager-view-mode');
+  });
+
+  it('zeigt in der Website-Ansicht alle drei Kacheln offen und ohne Aufklapp-Kopf', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    expect(component.accordionActive).toBeFalse();
+    expect(component.isTileOpen('climate')).toBeTrue();
+    expect(component.isTileOpen('switches')).toBeTrue();
+    expect(component.isTileOpen('consumers')).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.lumina__room-toggle')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('klappt in der Tablet-Ansicht nur die gewaehlte Kachel auf', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    expect(component.accordionActive).toBeTrue();
+    expect(component.isTileOpen('climate')).toBeTrue();
+    expect(component.isTileOpen('switches')).toBeFalse();
+
+    const toggles: HTMLButtonElement[] =
+      Array.from(fixture.nativeElement.querySelectorAll('.lumina__room-toggle'));
+    expect(toggles.length).toBe(3);
+
+    toggles[1].click();
+    fixture.detectChanges();
+
+    expect(component.isTileOpen('switches')).toBeTrue();
+    expect(component.isTileOpen('climate')).toBeFalse();
+    expect(fixture.nativeElement.querySelectorAll('.lumina__room--collapsed').length).toBe(2);
+
+    discardPeriodicTasks();
+  }));
+
+  it('stellt die Kacheln beim Zurueckschalten auf die Website-Ansicht wieder alle offen dar', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+    fixture.componentInstance.toggleTile('consumers');
+    fixture.detectChanges();
+
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.isTileOpen('climate')).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
 
     discardPeriodicTasks();
   }));

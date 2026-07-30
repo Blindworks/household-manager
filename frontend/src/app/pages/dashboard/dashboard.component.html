@@ -36,64 +36,105 @@
   <div class="lumina__grid">
     <!-- Raum-Kacheln & Szene -->
     <section class="lumina__main">
-      <div class="lumina__rooms">
+      <div class="lumina__rooms" [class.lumina__rooms--accordion]="accordionActive">
         <!-- Klima-Kachel: Innentemperaturen vs. Außen -->
-        <a
-          routerLink="/temperatures"
+        <div
           class="lumina-card lumina__room lumina__climate-tile lumina__fade"
+          [class.lumina__room--accordion]="accordionActive"
+          [class.lumina__room--collapsed]="!isTileOpen('climate')"
           style="--delay: 0.1s"
         >
           <div class="lumina__room-top">
             <div class="lumina__room-icon">
               <span class="material-symbols-outlined">device_thermostat</span>
             </div>
-            <div class="lumina__climate-outdoor">
-              <div
-                *ngFor="let outdoor of climate.outdoor; let first = first"
-                class="lumina__climate-primary"
-                [class.lumina__climate-primary--secondary]="!first"
-                [class.lumina__climate-primary--stale]="outdoor.stale"
-                [title]="outdoor.name"
+            <button
+              *ngIf="accordionActive"
+              type="button"
+              class="lumina__room-toggle"
+              [attr.aria-expanded]="isTileOpen('climate')"
+              aria-controls="lumina-panel-climate"
+              (click)="toggleTile('climate')"
+            >
+              <span class="lumina__room-toggle-title">Temperaturen</span>
+              <span class="material-symbols-outlined lumina__room-chevron">expand_more</span>
+            </button>
+            <div class="lumina__climate-head-right">
+              <div class="lumina__climate-outdoor">
+                <button
+                  *ngFor="let outdoor of climate.outdoor; let first = first"
+                  type="button"
+                  class="lumina__climate-primary"
+                  [class.lumina__climate-primary--secondary]="!first"
+                  [class.lumina__climate-primary--stale]="outdoor.stale"
+                  [title]="outdoor.name"
+                  [attr.aria-label]="outdoor.name + ' anzeigen'"
+                  (click)="openSensorDialog(outdoor.sensorId)"
+                >
+                  <span class="material-symbols-outlined lumina__climate-primary-icon">yard</span>
+                  <span class="lumina__climate-primary-value">{{ outdoor.valueLabel }}</span>
+                </button>
+                <div class="lumina__climate-secondary">
+                  <span class="material-symbols-outlined lumina__climate-secondary-icon">cloud</span>
+                  <span class="lumina__climate-secondary-label">DWD</span>
+                  <span class="lumina__climate-secondary-value">{{ climate.weatherLabel }}</span>
+                </div>
+              </div>
+              <a
+                routerLink="/temperatures"
+                class="lumina__switch-all"
+                title="Temperaturverlauf anzeigen"
+                aria-label="Temperaturverlauf anzeigen"
               >
-                <span class="material-symbols-outlined lumina__climate-primary-icon">yard</span>
-                <span class="lumina__climate-primary-value">{{ outdoor.valueLabel }}</span>
-              </div>
-              <div class="lumina__climate-secondary">
-                <span class="material-symbols-outlined lumina__climate-secondary-icon">cloud</span>
-                <span class="lumina__climate-secondary-label">DWD</span>
-                <span class="lumina__climate-secondary-value">{{ climate.weatherLabel }}</span>
-              </div>
+                <span class="material-symbols-outlined">expand_content</span>
+              </a>
             </div>
           </div>
-          <div class="lumina__room-body">
+          <div class="lumina__room-body" id="lumina-panel-climate">
             <h3 class="lumina__room-name">Temperaturen</h3>
             <div class="lumina__climate-rows">
               <p *ngIf="climate.rows.length === 0" class="lumina__climate-empty">
                 Keine Innensensoren verfügbar
               </p>
-              <div
+              <button
                 *ngFor="let row of climate.rows"
+                type="button"
                 class="lumina__climate-row"
                 [class.lumina__climate-row--stale]="row.stale"
+                [attr.aria-label]="row.name + ' anzeigen'"
+                (click)="openSensorDialog(row.sensorId)"
               >
                 <span class="lumina__climate-dot" [ngClass]="'lumina__climate-dot--' + row.tone"></span>
                 <span class="lumina__climate-name">{{ row.name }}</span>
                 <span class="lumina__climate-status">{{ row.statusLabel }}</span>
                 <span class="lumina__climate-value">{{ row.valueLabel }}</span>
-              </div>
+              </button>
             </div>
           </div>
-        </a>
+        </div>
 
         <!-- Schalter-Kachel: meistgenutzte Schalter, direkt schaltbar -->
         <div
           class="lumina-card lumina__room lumina__switch-tile lumina__fade"
+          [class.lumina__room--accordion]="accordionActive"
+          [class.lumina__room--collapsed]="!isTileOpen('switches')"
           style="--delay: 0.2s"
         >
           <div class="lumina__room-top">
             <div class="lumina__room-icon">
               <span class="material-symbols-outlined">toggle_on</span>
             </div>
+            <button
+              *ngIf="accordionActive"
+              type="button"
+              class="lumina__room-toggle"
+              [attr.aria-expanded]="isTileOpen('switches')"
+              aria-controls="lumina-panel-switches"
+              (click)="toggleTile('switches')"
+            >
+              <span class="lumina__room-toggle-title">Schalter</span>
+              <span class="material-symbols-outlined lumina__room-chevron">expand_more</span>
+            </button>
             <button
               type="button"
               class="lumina__switch-all"
@@ -104,7 +145,7 @@
               <span class="material-symbols-outlined">expand_content</span>
             </button>
           </div>
-          <div class="lumina__room-body">
+          <div class="lumina__room-body" id="lumina-panel-switches">
             <h3 class="lumina__room-name">Schalter</h3>
             <p *ngIf="topSwitches.length === 0" class="lumina__switch-empty">
               Keine Schalter
@@ -122,12 +163,25 @@
         <!-- Verbraucher-Kachel: Stromverbraucher, groesster zuerst -->
         <div
           class="lumina-card lumina__room lumina__consumer-tile lumina__fade"
+          [class.lumina__room--accordion]="accordionActive"
+          [class.lumina__room--collapsed]="!isTileOpen('consumers')"
           style="--delay: 0.3s"
         >
           <div class="lumina__room-top">
             <div class="lumina__room-icon">
               <span class="material-symbols-outlined">bolt</span>
             </div>
+            <button
+              *ngIf="accordionActive"
+              type="button"
+              class="lumina__room-toggle"
+              [attr.aria-expanded]="isTileOpen('consumers')"
+              aria-controls="lumina-panel-consumers"
+              (click)="toggleTile('consumers')"
+            >
+              <span class="lumina__room-toggle-title">Verbraucher</span>
+              <span class="material-symbols-outlined lumina__room-chevron">expand_more</span>
+            </button>
             <button
               type="button"
               class="lumina__switch-all"
@@ -138,7 +192,7 @@
               <span class="material-symbols-outlined">expand_content</span>
             </button>
           </div>
-          <div class="lumina__room-body">
+          <div class="lumina__room-body" id="lumina-panel-consumers">
             <h3 class="lumina__room-name">Verbraucher</h3>
             <div class="lumina__consumer-rows">
               <p *ngIf="topConsumers.length === 0" class="lumina__consumer-empty">
@@ -516,6 +570,53 @@
           class="lumina__history-chart"
           [options]="historyOptions"
         ></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detaildialog eines Temperatursensors: Temperatur und Luftfeuchte -->
+  <div
+    *ngIf="sensorDetail"
+    class="lumina__dialog-backdrop"
+    (click)="closeSensorDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--sensor"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'Messwerte ' + sensorDetail.name"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">{{ sensorDetail.name }}</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeSensorDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <div class="lumina__sensor-metrics">
+          <div class="lumina__sensor-metric">
+            <span class="material-symbols-outlined lumina__sensor-metric-icon">device_thermostat</span>
+            <span class="lumina__sensor-metric-label">Temperatur</span>
+            <span class="lumina__sensor-metric-value">{{ sensorDetail.temperatureLabel }}</span>
+          </div>
+          <div class="lumina__sensor-metric">
+            <span class="material-symbols-outlined lumina__sensor-metric-icon">humidity_percentage</span>
+            <span class="lumina__sensor-metric-label">Luftfeuchte</span>
+            <span class="lumina__sensor-metric-value">
+              {{ sensorDetail.humidityLabel ?? 'keine Messung' }}
+            </span>
+          </div>
+        </div>
+        <p class="lumina__sensor-meta">
+          <span class="lumina__sensor-status">{{ sensorDetail.statusLabel }}</span>
+          <span>Gemessen: {{ sensorDetail.measuredAt | date: 'dd.MM.yyyy, HH:mm' }}</span>
+        </p>
       </div>
     </div>
   </div>
