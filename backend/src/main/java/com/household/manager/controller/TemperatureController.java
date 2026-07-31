@@ -28,6 +28,21 @@ public class TemperatureController {
         return temperatureSeriesService.getSeries(range);
     }
 
+    /**
+     * Zeitreihe genau eines Sensors für den Verlaufsgraphen im Detaildialog.
+     *
+     * <p>sensorId ist bewusst ein Query-Parameter und keine Pfadvariable: die IDs tragen einen
+     * Doppelpunkt ("zigbee:12", "alexa:&lt;applianceId&gt;"), und die Alexa-Appliance-ID kommt
+     * unkontrolliert aus der Amazon-API. Enthielte sie ein "/" oder "=", zerlegte sie ein
+     * Pfadsegment und der Endpunkt wäre für genau diese Sensoren still kaputt.
+     */
+    @GetMapping("/series")
+    public TemperatureSensorSeries getSensorSeries(
+            @RequestParam String sensorId,
+            @RequestParam(required = false, defaultValue = "DAY") TemperatureRange range) {
+        return temperatureSeriesService.getSensorSeries(sensorId, range);
+    }
+
     @GetMapping("/current")
     public List<CurrentTemperatureReading> getCurrentTemperatures() {
         return temperatureSeriesService.getCurrent();
