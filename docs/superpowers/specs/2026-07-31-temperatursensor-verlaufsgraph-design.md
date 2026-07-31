@@ -111,7 +111,11 @@ Im Sensor-Dialog in `dashboard.component.html` (ab Zeile 579) folgt unter dem
 Messwerte-Block ein Verlaufsabschnitt mit derselben Struktur wie der
 Verbraucher-Verlauf: Zeitraum-Buttons (`lumina__history-range`) und darunter der
 ECharts-Container (`lumina__history-chart`). Beide Klassen existieren bereits in
-`dashboard.component.scss`; **neues Styling entsteht nicht**.
+`dashboard.component.scss` und werden unverändert wiederverwendet.
+
+Eine einzige Stilregel ändert sich: `.lumina__dialog--sensor` ist heute
+`min(420px, 92vw)` breit und staucht einen Graphen mit zwei Y-Achsen unleserlich.
+Sie wird auf `min(620px, 92vw)` gesetzt. Neue Klassen entstehen nicht.
 
 Das Markup bleibt **direkt in `dashboard.component.html`**. Die `lumina`-Styles sind
 dort gekapselt und griffen in einer Kindkomponente lautlos nicht.
