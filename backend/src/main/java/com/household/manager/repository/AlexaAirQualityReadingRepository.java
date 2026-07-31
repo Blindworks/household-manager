@@ -24,4 +24,8 @@ public interface AlexaAirQualityReadingRepository extends JpaRepository<AlexaAir
 
     List<AlexaAirQualityReading> findByReadingTimeBetweenOrderByReadingTimeAsc(
             LocalDateTime from, LocalDateTime to);
+
+    /** Messungen genau eines Geräts im Zeitfenster, aufsteigend — Grundlage des Sensor-Verlaufs. */
+    List<AlexaAirQualityReading> findByApplianceIdAndReadingTimeBetweenOrderByReadingTimeAsc(
+            String applianceId, LocalDateTime from, LocalDateTime to);
 }
