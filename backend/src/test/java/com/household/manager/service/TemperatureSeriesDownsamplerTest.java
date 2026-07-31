@@ -82,4 +82,32 @@ class TemperatureSeriesDownsamplerTest {
         assertThat(result.get(0).getValue()).isEqualByComparingTo("21.00");
         assertThat(result.get(1).getTime()).isEqualTo(LocalDateTime.parse("2026-07-31T12:00:00"));
     }
+
+    @Test
+    void ignoriertPunkteMitFehlenderZeitOderFehlendemWert() {
+        List<TimeValue> input = List.of(
+                point("2026-07-31T10:00:00", "20.0"),
+                TimeValue.builder().time(null).value(new BigDecimal("99.0")).build(),
+                TimeValue.builder().time(LocalDateTime.parse("2026-07-31T10:01:00")).value(null).build(),
+                point("2026-07-31T10:02:00", "22.0"));
+
+        List<TimeValue> result = downsampler.downsample(input, TemperatureRange.DAY);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTime()).isEqualTo(LocalDateTime.parse("2026-07-31T10:00:00"));
+        assertThat(result.get(0).getValue()).isEqualByComparingTo("21.00");
+    }
+
+    @Test
+    void rundetDenMittelwertHalfUpAufZweiNachkommastellen() {
+        List<TimeValue> input = List.of(
+                point("2026-07-31T10:00:00", "20.0"),
+                point("2026-07-31T10:01:00", "20.0"),
+                point("2026-07-31T10:02:00", "21.0"));
+
+        List<TimeValue> result = downsampler.downsample(input, TemperatureRange.DAY);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getValue()).isEqualByComparingTo("20.33");
+    }
 }

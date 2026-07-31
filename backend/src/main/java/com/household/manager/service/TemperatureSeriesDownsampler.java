@@ -8,6 +8,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class TemperatureSeriesDownsampler {
                 .time(start)
                 .value(average(values))
                 .build()));
-        result.sort(java.util.Comparator.comparing(TimeValue::getTime));
+        result.sort(Comparator.comparing(TimeValue::getTime));
         return result;
     }
 
