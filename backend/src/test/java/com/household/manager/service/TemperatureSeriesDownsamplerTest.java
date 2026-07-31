@@ -46,4 +46,40 @@ class TemperatureSeriesDownsamplerTest {
         assertThat(result.get(0).getTime()).isEqualTo(LocalDateTime.parse("2026-07-31T10:00:00"));
         assertThat(result.get(1).getTime()).isEqualTo(LocalDateTime.parse("2026-07-31T10:05:00"));
     }
+
+    @Test
+    void laesstLeereBucketsAusStattSieMitNullenZuFuellen() {
+        List<TimeValue> input = List.of(
+                point("2026-07-31T10:00:00", "20.0"),
+                point("2026-07-31T11:00:00", "21.0"));
+
+        List<TimeValue> result = downsampler.downsample(input, TemperatureRange.DAY);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(TimeValue::getTime)
+                .containsExactly(
+                        LocalDateTime.parse("2026-07-31T10:00:00"),
+                        LocalDateTime.parse("2026-07-31T11:00:00"));
+    }
+
+    @Test
+    void liefertBeiLeererEingabeEineLeereListe() {
+        assertThat(downsampler.downsample(List.of(), TemperatureRange.WEEK)).isEmpty();
+        assertThat(downsampler.downsample(null, TemperatureRange.WEEK)).isEmpty();
+    }
+
+    @Test
+    void nutztFuerMonatZweiStundenBuckets() {
+        List<TimeValue> input = List.of(
+                point("2026-07-31T10:00:00", "20.0"),
+                point("2026-07-31T11:59:00", "22.0"),
+                point("2026-07-31T12:00:00", "30.0"));
+
+        List<TimeValue> result = downsampler.downsample(input, TemperatureRange.MONTH);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getTime()).isEqualTo(LocalDateTime.parse("2026-07-31T10:00:00"));
+        assertThat(result.get(0).getValue()).isEqualByComparingTo("21.00");
+        assertThat(result.get(1).getTime()).isEqualTo(LocalDateTime.parse("2026-07-31T12:00:00"));
+    }
 }
