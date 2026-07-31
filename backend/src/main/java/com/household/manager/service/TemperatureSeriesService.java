@@ -7,11 +7,13 @@ import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.AlexaAirQualityReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
 import com.household.manager.repository.WeatherReadingRepository;
+import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
@@ -46,9 +48,11 @@ public class TemperatureSeriesService {
     private static final int CURRENT_LOOKBACK_DAYS = 7;
 
     private final ZigbeeMeasurementRepository zigbeeRepository;
+    private final ZigbeeDeviceRepository zigbeeDeviceRepository;
     private final WeatherReadingRepository weatherRepository;
     private final AlexaAirQualityReadingRepository alexaRepository;
     private final EntityStateService entityStateService;
+    private final TemperatureSeriesDownsampler downsampler;
 
     public List<TemperatureSensorSeries> getSeries(TemperatureRange range) {
         LocalDateTime to = LocalDateTime.now();
@@ -70,6 +74,114 @@ public class TemperatureSeriesService {
         result.addAll(safe("weather", this::weatherCurrent));
         result.addAll(safe("alexa", () -> alexaCurrent(since)));
         return result;
+    }
+
+    /**
+     * Zeitreihe genau eines Sensors, serverseitig auf Buckets gemittelt.
+     *
+     * <p>Bewusst ohne die {@code safe(...)}-Fehlerisolierung der Sammelabfrage: die ist dafür
+     * da, dass eine kaputte Quelle die Gesamtantwort nicht kippt. Bei genau einer angefragten
+     * Quelle verwandelte sie einen Fehler in einen stumm leeren Graphen — und der ist von
+     * "dieser Sensor hat nichts gemeldet" nicht unterscheidbar.
+     *
+     * @throws ResourceNotFoundException wenn die sensorId keiner bekannten Quelle zuzuordnen ist
+     */
+    public TemperatureSensorSeries getSensorSeries(String sensorId, TemperatureRange range) {
+        if (sensorId == null || sensorId.isBlank()) {
+            throw new ResourceNotFoundException("Sensor", "sensorId", sensorId);
+        }
+        LocalDateTime to = LocalDateTime.now();
+        LocalDateTime from = to.minusDays(range.getDays());
+
+        if (sensorId.startsWith("zigbee:")) {
+            return zigbeeSensorSeries(sensorId.substring("zigbee:".length()), from, to, range);
+        }
+        if (sensorId.equals("weather:outdoor")) {
+            return weatherSensorSeries(from, to, range);
+        }
+        if (sensorId.startsWith("alexa:")) {
+            return alexaSensorSeries(sensorId.substring("alexa:".length()), from, to, range);
+        }
+        throw new ResourceNotFoundException("Sensor", "sensorId", sensorId);
+    }
+
+    private TemperatureSensorSeries zigbeeSensorSeries(
+            String rawDeviceId, LocalDateTime from, LocalDateTime to, TemperatureRange range) {
+        long deviceId;
+        try {
+            deviceId = Long.parseLong(rawDeviceId);
+        } catch (NumberFormatException ex) {
+            throw new ResourceNotFoundException("Sensor", "sensorId", "zigbee:" + rawDeviceId);
+        }
+        ZigbeeDevice device = zigbeeDeviceRepository.findById(deviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sensor", "sensorId", "zigbee:" + deviceId));
+
+        List<TimeValue> temperature = zigbeeRepository
+                .findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                        deviceId, MeasurementType.TEMPERATURE, from, to)
+                .stream().map(this::toTimeValue).toList();
+        List<TimeValue> humidity = zigbeeRepository
+                .findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                        deviceId, MeasurementType.HUMIDITY, from, to)
+                .stream().map(this::toTimeValue).toList();
+
+        return TemperatureSensorSeries.builder()
+                .sensorId("zigbee:" + deviceId)
+                .name(temperatureName(EntitySource.ZIGBEE, device.getFriendlyName(), device.getFriendlyName()))
+                .source("ZIGBEE")
+                .temperature(downsampler.downsample(temperature, range))
+                .humidity(downsampler.downsample(humidity, range))
+                .build();
+    }
+
+    private TemperatureSensorSeries weatherSensorSeries(
+            LocalDateTime from, LocalDateTime to, TemperatureRange range) {
+        List<WeatherReading> readings =
+                weatherRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(from, to);
+
+        List<TimeValue> temperature = readings.stream()
+                .filter(r -> r.getTemperature() != null)
+                .map(r -> point(r.getReadingTime(), r.getTemperature()))
+                .toList();
+        List<TimeValue> humidity = readings.stream()
+                .filter(r -> r.getHumidity() != null)
+                .map(r -> point(r.getReadingTime(), BigDecimal.valueOf(r.getHumidity())))
+                .toList();
+
+        return TemperatureSensorSeries.builder()
+                .sensorId("weather:outdoor")
+                .name(temperatureName(EntitySource.WEATHER, "dwd", "Außen"))
+                .source("WEATHER")
+                .temperature(downsampler.downsample(temperature, range))
+                .humidity(downsampler.downsample(humidity, range))
+                .build();
+    }
+
+    private TemperatureSensorSeries alexaSensorSeries(
+            String applianceId, LocalDateTime from, LocalDateTime to, TemperatureRange range) {
+        List<AlexaAirQualityReading> readings = alexaRepository
+                .findByApplianceIdAndReadingTimeBetweenOrderByReadingTimeAsc(applianceId, from, to);
+
+        String name = readings.isEmpty() || readings.get(readings.size() - 1).getDeviceName() == null
+                ? applianceId
+                : readings.get(readings.size() - 1).getDeviceName();
+
+        List<TimeValue> temperature = readings.stream()
+                .filter(r -> r.getTemperature() != null)
+                .map(r -> point(r.getReadingTime(), r.getTemperature()))
+                .toList();
+        List<TimeValue> humidity = readings.stream()
+                .filter(r -> r.getHumidity() != null)
+                .map(r -> point(r.getReadingTime(), r.getHumidity()))
+                .toList();
+
+        return TemperatureSensorSeries.builder()
+                .sensorId("alexa:" + applianceId)
+                .name(temperatureName(EntitySource.ALEXA, applianceId, name))
+                .source("ALEXA")
+                .temperature(downsampler.downsample(temperature, range))
+                .humidity(downsampler.downsample(humidity, range))
+                .build();
     }
 
     private List<CurrentTemperatureReading> zigbeeCurrent(LocalDateTime since, LocalDateTime now) {

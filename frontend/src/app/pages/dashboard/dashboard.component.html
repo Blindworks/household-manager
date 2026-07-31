@@ -617,6 +617,27 @@
           <span class="lumina__sensor-status">{{ sensorDetail.statusLabel }}</span>
           <span>Gemessen: {{ sensorDetail.measuredAt | date: 'dd.MM.yyyy, HH:mm' }}</span>
         </p>
+        <div class="lumina__history-ranges" role="group" aria-label="Zeitraum">
+          <button
+            *ngFor="let range of sensorHistoryRanges"
+            type="button"
+            class="lumina__history-range"
+            [class.lumina__history-range--active]="range.value === sensorHistoryRange"
+            (click)="setSensorHistoryRange(range.value)"
+          >
+            {{ range.label }}
+          </button>
+        </div>
+        <p *ngIf="sensorHistoryError" class="lumina__history-message">{{ sensorHistoryError }}</p>
+        <p *ngIf="sensorHistoryEmpty && !sensorHistoryError" class="lumina__history-message">
+          Keine Messwerte in diesem Zeitraum
+        </p>
+        <div
+          *ngIf="sensorHistoryOptions && !sensorHistoryEmpty && !sensorHistoryError"
+          echarts
+          class="lumina__history-chart"
+          [options]="sensorHistoryOptions"
+        ></div>
       </div>
     </div>
   </div>

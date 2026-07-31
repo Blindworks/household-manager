@@ -1570,7 +1570,9 @@
 
 // ---- Sensor-Detaildialog (Temperatur + Luftfeuchte) ----------------------
 .lumina__dialog--sensor {
-  width: min(420px, 92vw);
+  // Breiter als die uebrigen Detaildialoge: der Verlaufsgraph traegt zwei Y-Achsen
+  // und wird bei 420px unleserlich gestaucht.
+  width: min(620px, 92vw);
 }
 
 .lumina__sensor-metrics {

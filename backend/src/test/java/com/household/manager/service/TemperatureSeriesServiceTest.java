@@ -2,15 +2,18 @@ package com.household.manager.service;
 
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
+import com.household.manager.dto.TimeValue;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
+import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.AlexaAirQualityReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
 import com.household.manager.repository.WeatherReadingRepository;
+import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
 import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
@@ -27,7 +30,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -36,6 +41,8 @@ import static org.mockito.Mockito.when;
 class TemperatureSeriesServiceTest {
 
     @Mock private ZigbeeMeasurementRepository zigbeeRepository;
+    @Mock private ZigbeeDeviceRepository zigbeeDeviceRepository;
+    @Mock private TemperatureSeriesDownsampler downsampler;
     @Mock private WeatherReadingRepository weatherRepository;
     @Mock private AlexaAirQualityReadingRepository alexaRepository;
     @Mock private EntityStateService entityStateService;
@@ -313,5 +320,62 @@ class TemperatureSeriesServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("Couch-Sensor");
+    }
+
+    @Test
+    void liefertDieZeitreiheEinesZigbeeSensors() {
+        LocalDateTime at = LocalDateTime.now().minusHours(1);
+        when(zigbeeDeviceRepository.findById(12L))
+                .thenReturn(Optional.of(device(12L, "Wohnzimmer")));
+        when(zigbeeRepository.findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                eq(12L), eq(MeasurementType.TEMPERATURE), any(), any()))
+                .thenReturn(List.of(measurement(MeasurementType.TEMPERATURE, "21.5", at)));
+        when(zigbeeRepository.findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                eq(12L), eq(MeasurementType.HUMIDITY), any(), any()))
+                .thenReturn(List.of(measurement(MeasurementType.HUMIDITY, "48", at)));
+        lenient().when(entityStateService.getByEntityId(any())).thenReturn(Optional.empty());
+        when(downsampler.downsample(anyList(), eq(TemperatureRange.DAY)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        TemperatureSensorSeries series = service.getSensorSeries("zigbee:12", TemperatureRange.DAY);
+
+        assertThat(series.getSensorId()).isEqualTo("zigbee:12");
+        assertThat(series.getSource()).isEqualTo("ZIGBEE");
+        assertThat(series.getName()).isEqualTo("Wohnzimmer");
+        assertThat(series.getTemperature()).hasSize(1);
+        assertThat(series.getHumidity()).hasSize(1);
+    }
+
+    @Test
+    void liefertLeereReihenWennDerSensorImZeitraumNichtsGemeldetHat() {
+        when(zigbeeDeviceRepository.findById(12L))
+                .thenReturn(Optional.of(device(12L, "Wohnzimmer")));
+        when(zigbeeRepository.findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                eq(12L), any(), any(), any()))
+                .thenReturn(List.of());
+        lenient().when(entityStateService.getByEntityId(any())).thenReturn(Optional.empty());
+        lenient().when(downsampler.downsample(anyList(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        TemperatureSensorSeries series = service.getSensorSeries("zigbee:12", TemperatureRange.DAY);
+
+        assertThat(series.getTemperature()).isEmpty();
+        assertThat(series.getHumidity()).isEmpty();
+    }
+
+    @Test
+    void meldetUnbekannteSensorIdsAlsNichtGefunden() {
+        when(zigbeeDeviceRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getSensorSeries("zigbee:99", TemperatureRange.DAY))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.getSensorSeries("zigbee:abc", TemperatureRange.DAY))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.getSensorSeries("quatsch:1", TemperatureRange.DAY))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.getSensorSeries("", TemperatureRange.DAY))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.getSensorSeries(null, TemperatureRange.DAY))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

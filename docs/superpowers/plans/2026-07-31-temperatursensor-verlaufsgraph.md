@@ -17,10 +17,10 @@
 **Backend-Build braucht JDK 21** (Standard auf dieser Maschine ist JDK 17). Vor jedem `mvn`-Aufruf:
 
 ```bash
-export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-21.0.10"
+export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10"
 ```
 
-Unter PowerShell entsprechend `$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.10"`. Der exakte Pfad kann abweichen — mit `ls "/c/Program Files/Eclipse Adoptium/"` prüfen.
+Unter PowerShell entsprechend `$env:JAVA_HOME = "C:\Program Files\Java\jdk-21.0.10"`.
 
 **Bekannte Vorbelastung:** Tests, die eine lokale Datenbank brauchen, schlagen hier fehl — das ist erwartet und kein Regressionssignal. Im Frontend gibt es drei vorbestehende Fehlschläge (App/Hero) sowie einen Karma-Flake in `SmartDeviceList`. Alle Testläufe in diesem Plan sind deshalb **gezielt auf die betroffene Klasse** eingegrenzt.
 
