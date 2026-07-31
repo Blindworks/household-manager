@@ -25,6 +25,14 @@ export class TemperatureService {
     );
   }
 
+  /** Zeitreihe genau eines Sensors für den Verlaufsgraphen im Detaildialog. */
+  getSensorSeries(sensorId: string, range: TimeRange): Observable<TemperatureSensorSeries> {
+    const params = new HttpParams().set('sensorId', sensorId).set('range', range);
+    return this.http.get<TemperatureSensorSeries>(`${this.baseUrl}/series`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<never> {
     console.error('Temperatur-API-Fehler:', error);
     return throwError(() => new Error('Fehler beim Laden der Temperaturdaten.'));
