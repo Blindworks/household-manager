@@ -6,7 +6,7 @@ import { catchError } from 'rxjs/operators';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
@@ -20,7 +20,7 @@ import { TemperatureService } from '../../services/temperature.service';
 import { EnergyLive } from '../../models/energy-live.model';
 import { AnkerSolixLive } from '../../models/ankersolix.model';
 import { WeatherOverview } from '../../models/weather.model';
-import { CurrentTemperatureReading } from '../../models/temperature.model';
+import { CurrentTemperatureReading, TemperatureSensorSeries, TimeRange } from '../../models/temperature.model';
 import { weatherSymbol } from '../../shared/weather-icon.util';
 import {
   ClimateView,
@@ -48,7 +48,8 @@ import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeHealth } from '../../models/zigbee.model';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+// LegendComponent: ohne Legende ist bei zwei Linien nicht erkennbar, welche welche ist.
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -173,6 +174,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private currentTemperatures: CurrentTemperatureReading[] = [];
   /** Sensor, dessen Detailwerte gerade angezeigt werden (null = Dialog zu). */
   sensorDetail: SensorDetail | null = null;
+  /** Gewählter Zeitraum des Sensor-Verlaufs. */
+  sensorHistoryRange: TimeRange = 'DAY';
+  /** ECharts-Optionen des Sensor-Verlaufs. */
+  sensorHistoryOptions: Record<string, unknown> | null = null;
+  /** True, wenn im gewählten Zeitraum keine Messpunkte vorliegen. */
+  sensorHistoryEmpty = false;
+  sensorHistoryError: string | null = null;
+
+  /** Auswählbare Zeiträume des Sensor-Verlaufs. */
+  readonly sensorHistoryRanges: { value: TimeRange; label: string }[] = [
+    { value: 'DAY', label: '24 Stunden' },
+    { value: 'WEEK', label: '7 Tage' },
+    { value: 'MONTH', label: '30 Tage' }
+  ];
 
   /** Meistgenutzte Schalter fuer die Kachel. */
   topSwitches: SwitchEntity[] = [];
@@ -492,10 +507,128 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Öffnet den Detaildialog eines Temperatursensors (Temperatur + Luftfeuchte). */
   openSensorDialog(sensorId: string): void {
     this.sensorDetail = buildSensorDetail(this.currentTemperatures, sensorId, Date.now());
+    this.sensorHistoryRange = 'DAY';
+    this.sensorHistoryOptions = null;
+    this.sensorHistoryEmpty = false;
+    this.sensorHistoryError = null;
+    if (this.sensorDetail) {
+      this.loadSensorHistory();
+    }
   }
 
   closeSensorDialog(): void {
     this.sensorDetail = null;
+    this.sensorHistoryRange = 'DAY';
+    this.sensorHistoryOptions = null;
+    this.sensorHistoryEmpty = false;
+    this.sensorHistoryError = null;
+  }
+
+  setSensorHistoryRange(range: TimeRange): void {
+    if (range === this.sensorHistoryRange) {
+      return;
+    }
+    this.sensorHistoryRange = range;
+    this.sensorHistoryOptions = null;
+    this.loadSensorHistory();
+  }
+
+  private loadSensorHistory(): void {
+    const detail = this.sensorDetail;
+    if (!detail) {
+      return;
+    }
+    const requestedId = detail.sensorId;
+    const requestedRange = this.sensorHistoryRange;
+    this.sensorHistoryError = null;
+    this.sensorHistoryEmpty = false;
+    this.temperatureService.getSensorSeries(requestedId, requestedRange).subscribe({
+      next: series => {
+        // Verworfen, wenn der Dialog inzwischen geschlossen, auf einen anderen Sensor
+        // gewechselt oder auf einen anderen Zeitraum gestellt wurde: sonst ueberschreibt
+        // eine spaet eintreffende 30-Tage-Antwort die schon geladene 24-Stunden-Sicht.
+        if (this.sensorDetail?.sensorId !== requestedId
+            || this.sensorHistoryRange !== requestedRange) {
+          return;
+        }
+        this.sensorHistoryEmpty = series.temperature.length === 0;
+        this.sensorHistoryOptions = this.buildSensorHistoryOptions(series);
+      },
+      error: () => {
+        // Derselbe Schutz: ein fehlgeschlagener alter Request darf nicht die Fehlermeldung
+        // ueber einen inzwischen erfolgreich geladenen Verlauf legen.
+        if (this.sensorDetail?.sensorId !== requestedId
+            || this.sensorHistoryRange !== requestedRange) {
+          return;
+        }
+        this.sensorHistoryOptions = null;
+        this.sensorHistoryError = 'Verlauf konnte nicht geladen werden.';
+      }
+    });
+  }
+
+  /**
+   * Liniendiagramm des Sensor-Verlaufs. Temperatur links, Luftfeuchte rechts auf eigener
+   * Achse. Fehlen Feuchtewerte, entfallen Serie und rechte Achse: eine leere zweite Achse
+   * suggeriert fehlende Daten, wo es nie welche gab.
+   *
+   * Kein connectNulls-Abriss wie beim Leistungsverlauf — Temperatursensoren melden nur bei
+   * Wertaenderung, eine Funkpause ist dort der Normalfall und kein Messausfall.
+   */
+  private buildSensorHistoryOptions(series: TemperatureSensorSeries): Record<string, unknown> {
+    const hasHumidity = series.humidity.length > 0;
+    const yAxis: Record<string, unknown>[] = [
+      {
+        type: 'value',
+        scale: true,
+        axisLabel: { color: '#94a3b8', formatter: '{value} °C' },
+        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } }
+      }
+    ];
+    const chartSeries: Record<string, unknown>[] = [
+      {
+        name: 'Temperatur',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        yAxisIndex: 0,
+        data: series.temperature.map(point => [point.time, point.value]),
+        lineStyle: { width: 2.5, color: '#ef4444' },
+        itemStyle: { color: '#ef4444' },
+        areaStyle: { color: 'rgba(239, 68, 68, 0.12)' }
+      }
+    ];
+
+    if (hasHumidity) {
+      yAxis.push({
+        type: 'value',
+        scale: true,
+        axisLabel: { color: '#94a3b8', formatter: '{value} %' },
+        splitLine: { show: false }
+      });
+      chartSeries.push({
+        name: 'Luftfeuchte',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        yAxisIndex: 1,
+        data: series.humidity.map(point => [point.time, point.value]),
+        lineStyle: { width: 2, color: '#3b82f6' },
+        itemStyle: { color: '#3b82f6' }
+      });
+    }
+
+    return {
+      grid: { left: 56, right: hasHumidity ? 56 : 16, top: 40, bottom: 32, containLabel: false },
+      tooltip: { trigger: 'axis' },
+      legend: { top: 0, textStyle: { color: '#94a3b8', fontSize: 11 } },
+      xAxis: {
+        type: 'time',
+        axisLabel: { color: '#94a3b8', fontSize: 11 }
+      },
+      yAxis,
+      series: chartSeries
+    };
   }
 
   /**
