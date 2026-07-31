@@ -54,7 +54,7 @@ describe('DashboardComponent (Schalter)', () => {
     const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
     ankerSpy.getLiveStream.and.returnValue(of(null));
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -285,7 +285,7 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
     const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
     ankerSpy.getLiveStream.and.returnValue(of(null));
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -414,7 +414,7 @@ describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {
     const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
     ankerSpy.getLiveStream.and.returnValue(of(null));
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -512,7 +512,7 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
     ankerSpy.getLiveStream.and.returnValue(of(null));
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -625,7 +625,7 @@ describe('DashboardComponent (Nuki-Tuerschloss)', () => {
     const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
     ankerSpy.getLiveStream.and.returnValue(of(null));
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -776,7 +776,7 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
     const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
     ankerSpy.getLiveStream.and.returnValue(of(null));
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -1046,8 +1046,15 @@ describe('DashboardComponent (Klima-Kachel: Sensor-Detaildialog)', () => {
   };
 
   beforeEach(async () => {
-    temperatureServiceSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatureServiceSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureServiceSpy.getCurrent.and.returnValue(of([wohnzimmer]));
+    temperatureServiceSpy.getSensorSeries.and.returnValue(of({
+      sensorId: 'zigbee:1',
+      name: 'Wohnzimmer',
+      source: 'ZIGBEE' as const,
+      temperature: [],
+      humidity: []
+    }));
 
     const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
     switchSpy.getSwitches.and.returnValue(of([]));
@@ -1139,6 +1146,40 @@ describe('DashboardComponent (Klima-Kachel: Sensor-Detaildialog)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('verwirft eine verspaetete Antwort nach Zeitraumwechsel', fakeAsync(() => {
+    const series = (range: string) => ({
+      sensorId: 'zigbee:1',
+      name: 'Wohnzimmer',
+      source: 'ZIGBEE' as const,
+      temperature: [{ time: '2026-07-31T10:00:00', value: range === 'DAY' ? 20 : 30 }],
+      humidity: []
+    });
+    temperatureServiceSpy.getSensorSeries.and.callFake((_id: string, range: string) =>
+      // Die 24-Stunden-Antwort trifft absichtlich SPAETER ein als die 7-Tage-Antwort.
+      range === 'DAY' ? of(series('DAY')).pipe(delay(100)) : of(series('WEEK'))
+    );
+    temperatureServiceSpy.getCurrent.and.returnValue(of([{
+      sensorId: 'zigbee:1',
+      name: 'Wohnzimmer',
+      source: 'ZIGBEE',
+      temperature: 21,
+      measuredAt: new Date().toISOString()
+    } as CurrentTemperatureReading]));
+
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    component.openSensorDialog('zigbee:1');
+    component.setSensorHistoryRange('WEEK');
+    tick(200);
+
+    expect(component.sensorHistoryRange).toBe('WEEK');
+    const seriesOption = (component.sensorHistoryOptions as any).series[0];
+    expect(seriesOption.data[0][1]).toBe(30);
+
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
@@ -1155,7 +1196,7 @@ describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
     localStorage.removeItem('household-manager-dashboard-tile');
     localStorage.removeItem('household-manager-view-mode');
 
-    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
     temperatureSpy.getCurrent.and.returnValue(of([wohnzimmer]));
 
     const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
