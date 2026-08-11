@@ -15,7 +15,7 @@ services:
       DB_NAME: household_manager
       DB_USERNAME: household_manager
       DB_PASSWORD: ${DB_PASSWORD}
-      CORS_ALLOWED_ORIGINS: http://192.168.1.100:4200
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://192.168.1.100:4200,https://192.168.1.100:4443}
 
       # Benutzerverwaltung & API-Sicherheit
       REMEMBER_ME_KEY: ${REMEMBER_ME_KEY:-}
@@ -71,8 +71,18 @@ services:
   frontend:
     build:
       context: ./frontend
+    environment:
+      # SANs des beim ersten Start erzeugten TLS-Zertifikats. Nach einer
+      # Aenderung certs/server.crt + certs/server.key loeschen, damit neu
+      # ausgestellt wird (die CA und damit die Geraete-Installation bleiben).
+      TLS_SANS: ${TLS_SANS:-IP:192.168.1.100,DNS:localhost}
     ports:
       - "4200:80"
+      - "4443:443"
+    volumes:
+      # CA + Server-Zertifikat; certs/ca.crt einmalig auf jedem Geraet
+      # installieren, sonst verweigern die Browser den Service Worker
+      - ./certs:/etc/nginx/certs
     depends_on:
       - backend
     networks:

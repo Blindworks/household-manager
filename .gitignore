@@ -1,6 +1,9 @@
 # Brainstorming visual companion artifacts
 .superpowers/
 
+# TLS-Zertifikate des Frontend-Containers (enthalten private Schluessel)
+certs/
+
 # Personal bank statement exports (never commit)
 backend/*.CSV
 backend/*.csv
