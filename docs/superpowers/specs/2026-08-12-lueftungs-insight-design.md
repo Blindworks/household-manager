@@ -39,9 +39,9 @@ Messwerte des bestehenden `TemperatureSeriesService`:
   (Default 24) liegt **und** außen ≥ `min-difference-celsius` (Default 2) kühler ist
   als dieser Raum.
 
-**Hysterese gegen Flattern:** Eine bestehende Empfehlung erlischt erst, wenn kein
-Raum mehr über der Raumschwelle liegt **oder** die Differenz unter 1 °C fällt
-(`off-difference-celsius`, Default 1). Ohne Hysterese schaltete die Entität bei
+**Hysterese gegen Flattern:** Eine bestehende Empfehlung bleibt bestehen, solange
+mindestens ein Raum ≥ Raumschwelle liegt **und** dessen Differenz zum Außenwert noch
+≥ `off-difference-celsius` (Default 1) beträgt; erst darunter erlischt sie. Ohne Hysterese schaltete die Entität bei
 23,9/24,1 °C im Minutentakt, und ein darauf gebauter Telegram-Flow spammte bei jeder
 `on`-Flanke.
 
