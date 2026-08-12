@@ -33,6 +33,9 @@ import { WasteCollectionService } from '../../services/waste-collection.service'
 import { buildWasteInsight } from '../../shared/waste-insight.util';
 import { CalendarService } from '../../services/calendar.service';
 import { buildCalendarInsights } from '../../shared/calendar-insight.util';
+import { InsightService } from '../../services/insight.service';
+import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
+import { VentilationAssessment } from '../../models/ventilation.model';
 import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
@@ -74,6 +77,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly energyLiveService = inject(EnergyLiveService);
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly temperatureService = inject(TemperatureService);
+  private readonly insightService = inject(InsightService);
   private readonly switchService = inject(SwitchService);
   private readonly modeService = inject(ModeService);
   private readonly wasteService = inject(WasteCollectionService);
@@ -111,6 +115,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
   private temperatureSubscription?: Subscription;
+  private ventilationSubscription?: Subscription;
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
@@ -244,6 +249,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private wasteInsight: HubInsight | null = null;
   /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
   private calendarInsights: HubInsight[] = [];
+  /** Zuletzt gebaute Lueftungs-Karte; null = keine Empfehlung. */
+  private ventilationInsight: HubInsight | null = null;
 
   /** Noch nicht angebundene Hub-Hinweise (Platzhalter). */
   private static readonly PLACEHOLDER_INSIGHTS: IntelligenceItem[] = [
@@ -306,6 +313,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startModeRefresh();
     this.startWasteRefresh();
     this.startCalendarRefresh();
+    this.startVentilationRefresh();
     this.startNukiRefresh();
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
@@ -317,6 +325,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.liveSubscription?.unsubscribe();
     this.statusSubscription?.unsubscribe();
     this.temperatureSubscription?.unsubscribe();
+    this.ventilationSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
@@ -1006,6 +1015,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Haelt die Lueftungs-Karte im Hub aktuell (gleicher Takt wie die Klima-Kacheln). */
+  private startVentilationRefresh(): void {
+    this.ventilationSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() =>
+          this.insightService.getVentilation().pipe(
+            catchError(() => of<VentilationAssessment | null>(null))
+          )
+        )
+      )
+      .subscribe(assessment => {
+        this.ventilationInsight = buildVentilationInsight(assessment);
+        this.rebuildInsights();
+      });
+  }
+
   private startSwitchRefresh(): void {
     this.switchSubscription = interval(DashboardComponent.SWITCH_REFRESH_MS)
       .pipe(
@@ -1101,11 +1127,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Komponiert den Hub: Muell voran, dann Termine, dahinter die Platzhalter. */
+  /** Komponiert den Hub: Muell voran, dann Termine, dann Lueften, dahinter die Platzhalter. */
   private rebuildInsights(): void {
     this.insights = [
       ...(this.wasteInsight ? [this.wasteInsight] : []),
       ...this.calendarInsights,
+      ...(this.ventilationInsight ? [this.ventilationInsight] : []),
       ...DashboardComponent.PLACEHOLDER_INSIGHTS
     ];
   }
