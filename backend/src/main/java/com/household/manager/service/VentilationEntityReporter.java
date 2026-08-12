@@ -60,6 +60,7 @@ public class VentilationEntityReporter {
 
     private Map<String, Object> attributesOf(VentilationAssessment assessment) {
         Map<String, Object> attributes = new HashMap<>();
+        attributes.put("deviceClass", "ventilation");
         if (assessment.outdoorTemperature() != null) {
             attributes.put("outdoorTemperature", assessment.outdoorTemperature());
         }

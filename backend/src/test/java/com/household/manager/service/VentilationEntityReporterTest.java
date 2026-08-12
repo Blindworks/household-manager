@@ -49,6 +49,7 @@ class VentilationEntityReporterTest {
         assertThat(update.entityId()).isEqualTo("binary_sensor.insight_ventilation");
         assertThat(update.state()).isEqualTo("on");
         assertThat(update.attributes()).containsEntry("outdoorTemperature", new BigDecimal("21.0"));
+        assertThat(update.attributes()).containsEntry("deviceClass", "ventilation");
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rooms = (List<Map<String, Object>>) update.attributes().get("rooms");
         assertThat(rooms).containsExactly(
