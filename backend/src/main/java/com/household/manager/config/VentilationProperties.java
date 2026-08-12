@@ -25,5 +25,6 @@ public class VentilationProperties {
     private int staleAfterMinutes = 30;
     /** Takt des Entity-Reporters. */
     private long reportIntervalMs = 300_000;
+    /** Wartezeit nach dem Start, bevor der Reporter erstmals läuft. */
     private long initialDelayMs = 60_000;
 }
