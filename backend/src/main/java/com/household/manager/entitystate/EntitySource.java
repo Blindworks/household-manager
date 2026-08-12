@@ -26,6 +26,8 @@ public enum EntitySource {
     TRACTIVE,
     /** Haushaltskalender (interne Termine, event.calendar_reminder). */
     CALENDAR,
+    /** Serverseitig berechnete Hinweise (z. B. Lüftungsempfehlung). */
+    INSIGHT,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }
