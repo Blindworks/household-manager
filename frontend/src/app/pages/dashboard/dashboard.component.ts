@@ -35,6 +35,7 @@ import { CalendarService } from '../../services/calendar.service';
 import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
+import { buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
 import { VentilationAssessment } from '../../models/ventilation.model';
 import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
@@ -251,6 +252,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private calendarInsights: HubInsight[] = [];
   /** Zuletzt gebaute Lueftungs-Karte; null = keine Empfehlung. */
   private ventilationInsight: HubInsight | null = null;
+  /** Zuletzt gebaute Tracker-Akku-Warnung; null = alle Akkus ausreichend. */
+  private trackerBatteryInsight: HubInsight | null = null;
 
   /** Noch nicht angebundene Hub-Hinweise (Platzhalter). */
   private static readonly PLACEHOLDER_INSIGHTS: IntelligenceItem[] = [
@@ -1127,12 +1130,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Komponiert den Hub: Muell voran, dann Termine, dann Lueften, dahinter die Platzhalter. */
+  /** Komponiert den Hub: Muell voran, dann Termine, Lueften, Tracker-Akku, dahinter die Platzhalter. */
   private rebuildInsights(): void {
     this.insights = [
       ...(this.wasteInsight ? [this.wasteInsight] : []),
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
+      ...(this.trackerBatteryInsight ? [this.trackerBatteryInsight] : []),
       ...DashboardComponent.PLACEHOLDER_INSIGHTS
     ];
   }
@@ -1179,6 +1183,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(pets => {
         if (pets) {
           this.pets = pets;
+          this.trackerBatteryInsight = buildTrackerBatteryInsight(pets);
+          this.rebuildInsights();
         }
       });
   }
