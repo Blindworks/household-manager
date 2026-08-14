@@ -12,3 +12,4 @@ tablet-app/local.properties
 tablet-app/.gradle/
 tablet-app/app/build/
 tablet-app/build/
+__pycache__/
