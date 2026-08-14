@@ -59,6 +59,10 @@ services:
 
       # Blink-Gesichtserkennung (blink-vision-Sidecar)
       VISION_SIDECAR_URL: http://blink-vision:8090
+
+      # Reboot-Button (rebooter-Sidecar)
+      REBOOTER_URL: http://rebooter:8095
+      REBOOTER_TOKEN: ${REBOOTER_TOKEN:-}
     depends_on:
       - mosquitto
       - alexa-sidecar
@@ -124,6 +128,21 @@ services:
     # nimmt unter /auth/login die Amazon-Zugangsdaten entgegen. Das Backend
     # erreicht ihn ueber app_net; zum Debuggen bei Bedarf temporaer
     # "127.0.0.1:8090:8090" ergaenzen (nur lokal, nicht im LAN).
+    networks:
+      - app_net
+
+  rebooter:
+    build:
+      context: ./rebooter
+    restart: unless-stopped
+    environment:
+      REBOOTER_TOKEN: ${REBOOTER_TOKEN:-}
+    volumes:
+      # Docker-Socket = root-aequivalenter Host-Zugriff; deshalb lebt er in
+      # diesem winzigen, zustandslosen Sidecar statt im LAN-exponierten Backend.
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Bewusst KEIN Port-Mapping (Muster blink-vision): der Sidecar kennt nur
+    # den Shared-Token als Schutz und ist deshalb nur ueber app_net erreichbar.
     networks:
       - app_net
 
