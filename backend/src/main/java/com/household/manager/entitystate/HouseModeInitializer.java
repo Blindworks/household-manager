@@ -35,6 +35,27 @@ public class HouseModeInitializer {
                 log.warn("Haus-Modus {} konnte nicht angelegt werden: {}", definition.name(), ex.getMessage());
             }
         }
+        try {
+            cleanUpRetiredShutdownMode();
+        } catch (Exception ex) {
+            log.warn("Alt-Modus Ausschalten konnte nicht bereinigt werden: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * Löscht den ehemaligen Modus „Ausschalten" (ersetzt durch den Reboot-Button).
+     * Der Marker-Check stellt sicher, dass ein später manuell angelegter Helfer
+     * gleichen Namens nicht mitgelöscht wird.
+     */
+    private void cleanUpRetiredShutdownMode() {
+        EntityState existing =
+                entityStateService.getByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID).orElse(null);
+        if (existing == null
+                || !HouseModes.isMode(responseMapper.parseAttributes(existing.getAttributes()))) {
+            return;
+        }
+        entityStateService.deleteByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID);
+        log.info("Alt-Modus entfernt: {}", HouseModes.RETIRED_SHUTDOWN_ENTITY_ID);
     }
 
     private void seed(HouseModeDefinition definition) {

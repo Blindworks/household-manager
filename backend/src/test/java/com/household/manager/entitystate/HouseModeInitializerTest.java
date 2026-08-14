@@ -58,7 +58,7 @@ class HouseModeInitializerTest {
                 "input_boolean.manual_abwesend",
                 "input_boolean.manual_toni_allein",
                 "input_boolean.manual_nachtmodus",
-                "input_boolean.manual_ausschalten");
+                "input_boolean.manual_bewegungssensoren");
         EntityStateUpdate first = captor.getAllValues().get(0);
         assertThat(first.friendlyName()).isEqualTo("Abwesend");
         assertThat(first.state()).isEqualTo("off");
@@ -110,5 +110,38 @@ class HouseModeInitializerTest {
         initializer.seedHouseModes();
 
         verify(entityStateService, times(3)).reportState(any());
+    }
+
+    @Test
+    void loescht_den_alten_ausschalten_modus_mit_marker() {
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+        when(entityStateService.getByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID))
+                .thenReturn(Optional.of(modeEntity(
+                        HouseModes.RETIRED_SHUTDOWN_ENTITY_ID, "on", "{\"mode\":true}")));
+
+        initializer.seedHouseModes();
+
+        verify(entityStateService).deleteByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID);
+    }
+
+    @Test
+    void loescht_einen_helfer_gleichen_namens_ohne_marker_nicht() {
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+        when(entityStateService.getByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID))
+                .thenReturn(Optional.of(modeEntity(
+                        HouseModes.RETIRED_SHUTDOWN_ENTITY_ID, "on", "{\"icon\":\"power\"}")));
+
+        initializer.seedHouseModes();
+
+        verify(entityStateService, never()).deleteByEntityId(anyString());
+    }
+
+    @Test
+    void bereinigt_nichts_wenn_die_entity_fehlt() {
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+
+        initializer.seedHouseModes();
+
+        verify(entityStateService, never()).deleteByEntityId(anyString());
     }
 }

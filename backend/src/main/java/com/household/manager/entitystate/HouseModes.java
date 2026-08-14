@@ -19,8 +19,15 @@ public final class HouseModes {
             new HouseModeDefinition("Abwesend", "exit_to_app"),
             new HouseModeDefinition("Toni allein", "pets"),
             new HouseModeDefinition("Nachtmodus", "nights_stay"),
-            new HouseModeDefinition("Ausschalten", "power_settings_new")
+            new HouseModeDefinition("Bewegungssensoren", "sensors")
     );
+
+    /**
+     * Ehemaliger Modus „Ausschalten", ersetzt durch den Reboot-Aktions-Button im
+     * Dashboard. Der {@link HouseModeInitializer} löscht die Alt-Entity beim Start,
+     * solange sie noch das Modus-Marker-Attribut trägt.
+     */
+    public static final String RETIRED_SHUTDOWN_ENTITY_ID = "input_boolean.manual_ausschalten";
 
     private HouseModes() {
     }
