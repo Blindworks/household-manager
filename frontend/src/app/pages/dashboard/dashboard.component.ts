@@ -41,6 +41,7 @@ import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeService } from '../../services/mode.service';
+import { SystemService } from '../../services/system.service';
 import { ModeEntity } from '../../models/mode.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
 import { NukiService } from '../../services/nuki.service';
@@ -81,6 +82,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly insightService = inject(InsightService);
   private readonly switchService = inject(SwitchService);
   private readonly modeService = inject(ModeService);
+  private readonly systemService = inject(SystemService);
   private readonly wasteService = inject(WasteCollectionService);
   private readonly calendarService = inject(CalendarService);
   private readonly nukiService = inject(NukiService);
@@ -143,8 +145,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly SWITCH_REFRESH_MS = 30000;
   /** Aktualisierungsintervall der Modus-Leiste (30 s; Flows schalten Modi auch von aussen). */
   private static readonly MODE_REFRESH_MS = 30000;
-  /** Farbton je Modus-Position (bestehende lumina__mode-Varianten). */
-  private static readonly MODE_TONES = ['primary', 'tertiary', 'neutral', 'error'] as const;
+  /** Farbton je Modus-Position (bestehende lumina__mode-Varianten); error traegt der Reboot-Button. */
+  private static readonly MODE_TONES = ['primary', 'tertiary', 'neutral', 'neutral'] as const;
+  /** Wartezeit nach dem Reboot, bevor das Reload-Polling beginnt. */
+  private static readonly REBOOT_POLL_DELAY_MS = 15000;
+  /** Abstand der Erreichbarkeits-Checks waehrend des Neustarts. */
+  private static readonly REBOOT_POLL_INTERVAL_MS = 5000;
   /** Haelt die Muell-Meldung ueber den Tag hinweg aktuell (z. B. bei geaenderten Einstellungen). */
   private static readonly WASTE_REFRESH_MS = 3600000;
   /** Kalender-Hub-Eintraege alle 5 Minuten auffrischen (Termine aendern sich haeufiger als Muell). */
@@ -283,6 +289,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly pendingModeIds = new Set<string>();
   modeError: string | null = null;
 
+  /** True, solange der Reboot-Bestätigungsdialog offen ist. */
+  rebootConfirm = false;
+  /** True ab bestätigtem Reboot bis zum automatischen Neuladen der Seite. */
+  rebootInProgress = false;
+  /** Erreichbarkeits-Polling nach dem Reboot (lädt die Seite neu). */
+  private rebootPollSubscription?: Subscription;
+
   /** Nuki-Schlösser für die Türschloss-Kachel. */
   nukiLocks: NukiLock[] = [];
   /** True, solange noch keine Nuki-Antwort vorliegt (unterscheidet "lädt" von "keine Schlösser"). */
@@ -337,6 +350,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.consumerSubscription?.unsubscribe();
     this.petSubscription?.unsubscribe();
     this.zigbeeHealthSubscription?.unsubscribe();
+    this.rebootPollSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -377,6 +391,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeConfirmDialog();
     this.closeConsumerDialog();
     this.nukiConfirm = null;
+    this.rebootConfirm = false;
   }
 
   /** Schliesst den Dialog und trennt den nur dafuer benoetigten Anker-Live-Stream. */
@@ -491,6 +506,54 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (match) {
       match.state = state;
     }
+  }
+
+  /** Öffnet den Reboot-Bestätigungsdialog (der Neustart selbst folgt erst nach Bestätigung). */
+  openRebootDialog(): void {
+    if (this.rebootInProgress) {
+      return;
+    }
+    this.rebootConfirm = true;
+  }
+
+  cancelReboot(): void {
+    this.rebootConfirm = false;
+  }
+
+  /**
+   * Löst den System-Neustart aus. Danach pollt das Dashboard das Backend und
+   * lädt die Seite automatisch neu, sobald es wieder antwortet.
+   */
+  confirmReboot(): void {
+    this.rebootConfirm = false;
+    this.rebootInProgress = true;
+    this.modeError = null;
+    this.systemService.reboot().subscribe({
+      next: () => this.startRebootReloadPolling(),
+      error: (err: Error) => {
+        this.rebootInProgress = false;
+        this.modeError = err.message;
+      }
+    });
+  }
+
+  private startRebootReloadPolling(): void {
+    this.rebootPollSubscription = timer(
+      DashboardComponent.REBOOT_POLL_DELAY_MS,
+      DashboardComponent.REBOOT_POLL_INTERVAL_MS
+    )
+      .pipe(switchMap(() => this.systemService.ping().pipe(catchError(() => of(null)))))
+      .subscribe(result => {
+        if (result !== null) {
+          this.rebootPollSubscription?.unsubscribe();
+          this.reloadPage();
+        }
+      });
+  }
+
+  /** Als eigene Methode gekapselt, damit Tests den harten Reload stubben können. */
+  reloadPage(): void {
+    window.location.reload();
   }
 
   /** Oeffnet den Schalter-Dialog und laedt dafuer die vollstaendige Liste. */

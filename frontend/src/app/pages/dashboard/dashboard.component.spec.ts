@@ -12,6 +12,7 @@ import { AnkerSolixService } from '../../services/ankersolix.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { ModeService } from '../../services/mode.service';
+import { SystemService } from '../../services/system.service';
 import { NukiService } from '../../services/nuki.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeEntity } from '../../models/mode.model';
@@ -589,6 +590,131 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     tick(30000);
 
     expect(fixture.componentInstance.modes.length).toBe(1);
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Reboot-Button)', () => {
+  let systemServiceSpy: jasmine.SpyObj<SystemService>;
+
+  beforeEach(async () => {
+    systemServiceSpy = jasmine.createSpyObj('SystemService', ['reboot', 'ping']);
+    systemServiceSpy.reboot.and.returnValue(of(void 0));
+    systemServiceSpy.ping.and.returnValue(of({}));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: SystemService, useValue: systemServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('rendert den Reboot-Button am Ende der Modus-Leiste', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('.lumina__mode--reboot');
+    expect(button?.textContent).toContain('Reboot');
+
+    discardPeriodicTasks();
+  }));
+
+  it('oeffnet beim Klick nur den Bestaetigungsdialog', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openRebootDialog();
+
+    expect(fixture.componentInstance.rebootConfirm).toBeTrue();
+    expect(systemServiceSpy.reboot).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  it('loest den Reboot erst nach Bestaetigung aus', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    spyOn(fixture.componentInstance, 'reloadPage');
+
+    fixture.componentInstance.openRebootDialog();
+    fixture.componentInstance.confirmReboot();
+    tick();
+
+    expect(systemServiceSpy.reboot).toHaveBeenCalled();
+    expect(fixture.componentInstance.rebootConfirm).toBeFalse();
+    expect(fixture.componentInstance.rebootInProgress).toBeTrue();
+
+    discardPeriodicTasks();
+  }));
+
+  it('bricht ohne Service-Aufruf ab', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openRebootDialog();
+    fixture.componentInstance.cancelReboot();
+
+    expect(fixture.componentInstance.rebootConfirm).toBeFalse();
+    expect(systemServiceSpy.reboot).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  it('meldet einen Fehler und beendet den Neustart-Zustand', fakeAsync(() => {
+    systemServiceSpy.reboot.and.returnValue(throwError(() => new Error('Reboot ist nicht konfiguriert.')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openRebootDialog();
+    fixture.componentInstance.confirmReboot();
+    tick();
+
+    expect(fixture.componentInstance.rebootInProgress).toBeFalse();
+    expect(fixture.componentInstance.modeError).toContain('Reboot ist nicht konfiguriert.');
+
+    discardPeriodicTasks();
+  }));
+
+  it('laedt die Seite neu, sobald das Backend wieder antwortet', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const reloadSpy = spyOn(fixture.componentInstance, 'reloadPage');
+
+    fixture.componentInstance.openRebootDialog();
+    fixture.componentInstance.confirmReboot();
+    tick();
+    expect(reloadSpy).not.toHaveBeenCalled();
+
+    tick(20000);
+
+    expect(systemServiceSpy.ping).toHaveBeenCalled();
+    expect(reloadSpy).toHaveBeenCalled();
 
     discardPeriodicTasks();
   }));

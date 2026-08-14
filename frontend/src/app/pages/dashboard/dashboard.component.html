@@ -390,6 +390,18 @@
           </span>
           <span class="lumina__mode-label">{{ mode.displayName }}</span>
         </button>
+        <!-- Reboot ist eine Aktion, kein Modus: fester Button mit Bestaetigungsdialog -->
+        <button
+          type="button"
+          class="lumina-card lumina__mode lumina__mode--error lumina__mode--reboot"
+          [class.lumina__mode--pending]="rebootInProgress"
+          (click)="openRebootDialog()"
+        >
+          <span class="lumina__mode-icon">
+            <span class="material-symbols-outlined">restart_alt</span>
+          </span>
+          <span class="lumina__mode-label">Reboot</span>
+        </button>
       </div>
       <p *ngIf="modeError" class="lumina__mode-error">{{ modeError }}</p>
     </div>
@@ -717,6 +729,55 @@
         <button type="button" class="lumina__confirm-cancel" (click)="cancelNukiAction()">
           Abbrechen
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reboot-Bestaetigungsdialog (Neustart erst nach Rueckfrage) -->
+  <div
+    *ngIf="rebootConfirm"
+    class="lumina__dialog-backdrop"
+    (click)="cancelReboot()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--confirm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Neustart bestätigen"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">System neu starten?</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="cancelReboot()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <p class="lumina__confirm-hint">
+          Alle Dienste werden neu gestartet. Das Dashboard ist danach kurz nicht erreichbar.
+        </p>
+        <button type="button" class="lumina__confirm-go" (click)="confirmReboot()">
+          Neu starten
+        </button>
+        <button type="button" class="lumina__confirm-cancel" (click)="cancelReboot()">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Neustart-Hinweis (bis das Backend wieder antwortet und die Seite neu laedt) -->
+  <div *ngIf="rebootInProgress" class="lumina__dialog-backdrop">
+    <div class="lumina__dialog lumina__dialog--confirm" role="alert">
+      <div class="lumina__dialog-body">
+        <p class="lumina__confirm-hint">
+          Neustart läuft — die Seite lädt gleich automatisch neu.
+        </p>
       </div>
     </div>
   </div>
