@@ -14,6 +14,8 @@ import com.household.manager.model.entity.UserRole;
 import com.household.manager.nuki.NukiController;
 import com.household.manager.nuki.NukiLockService;
 import com.household.manager.repository.AppUserRepository;
+import com.household.manager.system.SystemController;
+import com.household.manager.system.SystemRebootService;
 import com.household.manager.tablet.TabletPresenceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
-        HouseholdUserController.class},
+        HouseholdUserController.class, SystemController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -76,6 +78,8 @@ class SecurityRulesTest {
     private NukiLockService nukiLockService;
     @MockitoBean
     private TabletPresenceService tabletPresenceService;
+    @MockitoBean
+    private SystemRebootService systemRebootService;
     @MockitoBean
     private AppUserService appUserService;
     @MockitoBean
@@ -109,6 +113,13 @@ class SecurityRulesTest {
     void anonymDarfHealthAbfragen() throws Exception {
         // Kein HealthController im Slice: 404 statt 401/403 belegt, dass /v1/health oeffentlich bleibt
         mockMvc.perform(get("/v1/health")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfRebootAusloesen() throws Exception {
+        mockMvc.perform(post("/v1/system/reboot").with(csrf()))
+                .andExpect(status().isAccepted());
     }
 
     @Test
