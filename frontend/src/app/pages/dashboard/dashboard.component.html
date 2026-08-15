@@ -389,6 +389,7 @@
       [attr.data-tone]="petFoodTone(food)"
       (click)="openPetFoodPage()"
       (keydown.enter)="openPetFoodPage()"
+      (keydown.space)="$event.preventDefault(); openPetFoodPage()"
       aria-label="Futtervorrat öffnen"
     >
       <div class="lumina__secured-icon">
