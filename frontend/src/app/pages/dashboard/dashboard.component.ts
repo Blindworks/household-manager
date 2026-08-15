@@ -70,7 +70,6 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
  *
  * Echte Daten: Uhr, Wetter (WeatherService), Live-Energie (EnergyLiveService),
  * Klima, Schalter, Verbraucher, Modi, Müllabfuhr, Türkontakte und Türschloss.
- * Nur die Szenen sind aktuell statische Platzhalter.
  */
 @Component({
   selector: 'app-dashboard',
@@ -253,12 +252,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     { value: 'MONTH', label: '30 Tage' }
   ];
 
-  /** Aktive Szene und Schnellwahl-Szenen (Platzhalter). */
-  activeScene = 'Dynamisches Abendlicht';
-  readonly scenes: SceneButton[] = [
-    { label: 'Filmabend', active: true },
-    { label: 'Lesen', active: false }
-  ];
 
   /**
    * Hinweise des Intelligence Hub; Komposition und Reihenfolge baut
@@ -1530,12 +1523,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'device_thermostat';
     }
   }
-}
-
-/** Szenen-Schnellwahl-Button. */
-interface SceneButton {
-  readonly label: string;
-  readonly active: boolean;
 }
 
 /** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug/Einspeisung). */

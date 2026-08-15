@@ -34,7 +34,7 @@
 
   <!-- Hauptbereich -->
   <div class="lumina__grid">
-    <!-- Raum-Kacheln & Szene -->
+    <!-- Raum-Kacheln -->
     <section class="lumina__main">
       <div class="lumina__rooms" [class.lumina__rooms--accordion]="accordionActive">
         <!-- Klima-Kachel: Innentemperaturen vs. Außen -->
@@ -214,27 +214,6 @@
         </div>
       </div>
 
-      <div class="lumina-card lumina__scene lumina__fade" style="--delay: 0.4s">
-        <div class="lumina__scene-info">
-          <div class="lumina__scene-icon">
-            <span class="material-symbols-outlined">wb_incandescent</span>
-          </div>
-          <div>
-            <h4 class="lumina__label">Aktive Szene</h4>
-            <p class="lumina__scene-name">{{ activeScene }}</p>
-          </div>
-        </div>
-        <div class="lumina__scene-actions">
-          <button
-            *ngFor="let scene of scenes"
-            type="button"
-            class="lumina__pill"
-            [class.lumina__pill--active]="scene.active"
-          >
-            {{ scene.label }}
-          </button>
-        </div>
-      </div>
     </section>
 
     <!-- Intelligence Hub & Energie -->

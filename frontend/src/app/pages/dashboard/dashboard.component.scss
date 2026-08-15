@@ -709,70 +709,6 @@
   transform: rotate(180deg);
 }
 
-// ---- Aktive Szene --------------------------------------------------------
-.lumina__scene {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 32px;
-}
-
-.lumina__scene-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.lumina__scene-icon {
-  padding: 12px;
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--primary);
-
-  .material-symbols-outlined {
-    display: block;
-  }
-}
-
-.lumina__scene-name {
-  margin: 4px 0 0;
-  font-size: 18px;
-  line-height: 28px;
-}
-
-.lumina__scene-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.lumina__pill {
-  padding: 12px 24px;
-  border-radius: var(--radius-full);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  color: var(--on-surface-variant);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.05);
-  }
-
-  &--active {
-    color: var(--primary);
-    background: rgba(170, 199, 255, 0.2);
-    border-color: rgba(170, 199, 255, 0.3);
-
-    &:hover {
-      background: rgba(170, 199, 255, 0.3);
-    }
-  }
-}
-
 // ============================================================================
 //  Intelligence Hub
 // ============================================================================
@@ -1501,12 +1437,6 @@
 
   .lumina__room {
     aspect-ratio: auto;
-  }
-
-  .lumina__scene {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
   }
 
   .lumina__footer {
