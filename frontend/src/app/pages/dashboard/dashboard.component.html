@@ -381,6 +381,30 @@
       </div>
     </div>
 
+    <div
+      class="lumina-card lumina__petfood"
+      *ngIf="petFood as food"
+      role="button"
+      tabindex="0"
+      [attr.data-tone]="petFoodTone(food)"
+      (click)="openPetFoodPage()"
+      (keydown.enter)="openPetFoodPage()"
+      aria-label="Futtervorrat öffnen"
+    >
+      <div class="lumina__secured-icon">
+        <span class="material-symbols-outlined">pet_supplies</span>
+      </div>
+      <div class="lumina__lock-info">
+        <h4 class="lumina__label lumina__label--secondary">Toni-Futter</h4>
+        <p class="lumina__secured-detail">
+          {{ food.cansRemaining | number:'1.0-1':'de' }} Dosen • {{ food.percent }} % • ~{{ food.daysRemaining }} Tage
+        </p>
+        <div class="lumina__petfood-track">
+          <div class="lumina__petfood-fill" [style.width.%]="food.percent > 100 ? 100 : food.percent"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="lumina__modes-area">
       <div class="lumina__modes">
         <button

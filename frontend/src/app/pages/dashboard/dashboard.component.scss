@@ -1122,6 +1122,27 @@
   }
 }
 
+.lumina__petfood {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+
+  &[data-tone='ok'] .lumina__petfood-fill { background: #66bb6a; }
+  &[data-tone='warn'] .lumina__petfood-fill { background: #ffca28; }
+  &[data-tone='critical'] .lumina__petfood-fill { background: #ef5350; }
+}
+
+.lumina__petfood-track {
+  margin-top: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.lumina__petfood-fill { height: 100%; border-radius: 3px; }
+
 .lumina__walk-section + .lumina__walk-section {
   margin-top: 1.5rem;
 }

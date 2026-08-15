@@ -1,6 +1,6 @@
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
@@ -54,6 +54,8 @@ import { TractiveService } from '../../services/tractive.service';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeHealth } from '../../models/zigbee.model';
+import { PetFoodService } from '../../services/pet-food.service';
+import { PetFoodStatus } from '../../models/pet-food.model';
 
 // LegendComponent: ohne Legende ist bei zwei Linien nicht erkennbar, welche welche ist.
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -92,6 +94,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tractiveService = inject(TractiveService);
   private readonly zigbeeService = inject(ZigbeeService);
   private readonly entityStateService = inject(EntityStateService);
+  private readonly petFoodService = inject(PetFoodService);
+  private readonly router = inject(Router);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -304,6 +308,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Zustand der Zigbee-Anbindung; null = noch kein Ergebnis (vor dem ersten Abruf). */
   zigbeeHealth: ZigbeeHealth | null = null;
 
+  /** Toni-Futtervorrat; null = Kachel wird nicht gerendert. */
+  petFood: PetFoodStatus | null = null;
+
   ngOnInit(): void {
     this.startClock();
     this.loadWeather();
@@ -319,6 +326,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
     this.startDoorRefresh();
+    this.petFoodService.getStatus().subscribe({
+      next: status => (this.petFood = status),
+      error: () => { /* keine Kachel ist besser als eine geratene */ }
+    });
   }
 
   ngOnDestroy(): void {
@@ -1289,6 +1300,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   petStatusIcon(pet: TractivePet): string {
     return pet.atHome ? 'home' : 'pets';
+  }
+
+  petFoodTone(status: PetFoodStatus): 'ok' | 'warn' | 'critical' {
+    if (status.cansRemaining < 7) {
+      return 'critical';
+    }
+    return status.percent < 25 ? 'warn' : 'ok';
+  }
+
+  openPetFoodPage(): void {
+    this.router.navigate(['/pet-food']);
   }
 
   /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */
