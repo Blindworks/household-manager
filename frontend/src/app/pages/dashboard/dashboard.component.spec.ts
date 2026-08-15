@@ -22,6 +22,8 @@ import { PowerConsumer } from '../../models/power-consumer.model';
 import { CalendarService } from '../../services/calendar.service';
 import { CalendarOccurrence } from '../../models/calendar-event.model';
 import { CurrentTemperatureReading } from '../../models/temperature.model';
+import { EntityStateService } from '../../services/entity-state.service';
+import { EntityState } from '../../models/entity-state.model';
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -305,7 +307,7 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
     }).compileComponents();
   });
 
-  it('zeigt die Termine als Meldung im Hub, noch vor den Platzhaltern', fakeAsync(() => {
+  it('zeigt die Termine als Meldung im Hub', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
@@ -324,13 +326,13 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
     discardPeriodicTasks();
   }));
 
-  it('laesst den Hub ohne anstehende Termine bei den Platzhaltern', fakeAsync(() => {
+  it('zeigt ohne anstehende Termine die Ruhemeldung', fakeAsync(() => {
     wasteServiceSpy.getUpcoming.and.returnValue(of([]));
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
     expect(insightTexts(fixture).join(' ')).not.toContain('Müllabfuhr');
-    expect(insightTexts(fixture)[0]).toContain('Energie-Optimierung');
+    expect(insightTexts(fixture)[0]).toContain('Alles ruhig');
 
     discardPeriodicTasks();
   }));
@@ -341,7 +343,7 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
     fixture.detectChanges();
 
     expect(insightTexts(fixture).join(' ')).not.toContain('Müllabfuhr');
-    expect(insightTexts(fixture).length).toBe(3);
+    expect(insightTexts(fixture)[0]).toContain('Alles ruhig');
 
     discardPeriodicTasks();
   }));
@@ -446,7 +448,7 @@ describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {
     discardPeriodicTasks();
   }));
 
-  it('ordnet Muell vor Terminen vor den Platzhaltern ein', fakeAsync(() => {
+  it('ordnet Muell vor Terminen ein', fakeAsync(() => {
     wasteServiceSpy.getUpcoming.and.returnValue(of([
       { date: '2026-07-26', label: 'Hausmüll', daysUntil: 1 }
     ]));
@@ -457,7 +459,7 @@ describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {
     const texts = insightTexts(fixture);
     expect(texts[0]).toContain('Müllabfuhr');
     expect(texts[1]).toContain('Zahnarzt');
-    expect(texts[2]).toContain('Energie-Optimierung');
+    expect(texts.length).toBe(2);
 
     discardPeriodicTasks();
   }));
@@ -468,17 +470,123 @@ describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {
     fixture.detectChanges();
 
     expect(insightTexts(fixture).join(' ')).not.toContain('Zahnarzt');
-    expect(insightTexts(fixture).length).toBe(3);
+    expect(insightTexts(fixture)[0]).toContain('Alles ruhig');
 
     discardPeriodicTasks();
   }));
 
-  it('laesst den Hub ohne anstehende Termine bei den Platzhaltern', fakeAsync(() => {
+  it('zeigt ohne anstehende Termine die Ruhemeldung', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    expect(insightTexts(fixture)[0]).toContain('Energie-Optimierung');
-    expect(insightTexts(fixture).length).toBe(3);
+    expect(insightTexts(fixture)[0]).toContain('Alles ruhig');
+    expect(insightTexts(fixture).length).toBe(1);
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
+  let entityStateServiceSpy: jasmine.SpyObj<EntityStateService>;
+
+  const doorContact = (entityId: string, state: string): EntityState => ({
+    entityId,
+    domain: 'BINARY_SENSOR',
+    source: 'ZIGBEE',
+    sourceRef: entityId,
+    friendlyName: entityId,
+    displayName: entityId,
+    state,
+    attributes: {},
+    lastChanged: '2026-08-14T17:46:32',
+    lastUpdated: '2026-08-14T17:46:32'
+  });
+
+  function insightTexts(fixture: ComponentFixture<DashboardComponent>): string[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__insight')
+    ).map(element => (element.textContent ?? '').replace(/\s+/g, ' ').trim());
+  }
+
+  beforeEach(async () => {
+    entityStateServiceSpy = jasmine.createSpyObj('EntityStateService', ['getEntities']);
+    entityStateServiceSpy.getEntities.and.returnValue(of([]));
+
+    const wasteSpy = jasmine.createSpyObj('WasteCollectionService', ['getUpcoming']);
+    wasteSpy.getUpcoming.and.returnValue(of([]));
+
+    const calendarSpy = jasmine.createSpyObj('CalendarService', ['getUpcoming']);
+    calendarSpy.getUpcoming.and.returnValue(of([]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: EntityStateService, useValue: entityStateServiceSpy },
+        { provide: WasteCollectionService, useValue: wasteSpy },
+        { provide: CalendarService, useValue: calendarSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('zeigt offene Tueren als erste Meldungen im Hub', fakeAsync(() => {
+    entityStateServiceSpy.getEntities.and.returnValue(of([
+      doorContact('binary_sensor.zigbee_eingangstuer_contact', 'on'),
+      doorContact('binary_sensor.zigbee_terassentuer_contact', 'on')
+    ]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(entityStateServiceSpy.getEntities).toHaveBeenCalledWith('BINARY_SENSOR', 'ZIGBEE');
+    const texts = insightTexts(fixture);
+    expect(texts[0]).toContain('Haustür offen');
+    expect(texts[1]).toContain('Terrassentür offen');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt bei geschlossenen Tueren keine Tuer-Meldung', fakeAsync(() => {
+    entityStateServiceSpy.getEntities.and.returnValue(of([
+      doorContact('binary_sensor.zigbee_eingangstuer_contact', 'off'),
+      doorContact('binary_sensor.zigbee_terassentuer_contact', 'off')
+    ]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture).join(' ')).not.toContain('offen');
+
+    discardPeriodicTasks();
+  }));
+
+  it('leert die Tuer-Meldungen bei einem API-Fehler, statt das Dashboard zu stoeren', fakeAsync(() => {
+    entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture).join(' ')).not.toContain('Haustür');
 
     discardPeriodicTasks();
   }));

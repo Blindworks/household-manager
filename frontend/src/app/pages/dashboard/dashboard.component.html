@@ -245,6 +245,13 @@
           <span class="material-symbols-outlined lumina__hub-header-icon">insights</span>
         </div>
         <div class="lumina__hub-list">
+          <div *ngIf="insights.length === 0" class="lumina__insight lumina__insight--muted">
+            <span class="material-symbols-outlined lumina__insight-icon">check_circle</span>
+            <div>
+              <p class="lumina__insight-title">Alles ruhig</p>
+              <p class="lumina__insight-text">Keine Hinweise — Türen zu, nichts steht an.</p>
+            </div>
+          </div>
           <div
             *ngFor="let item of insights"
             class="lumina__insight"

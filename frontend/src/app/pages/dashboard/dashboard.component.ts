@@ -36,6 +36,8 @@ import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
 import { buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
+import { buildDoorInsights } from '../../shared/door-insight.util';
+import { EntityStateService } from '../../services/entity-state.service';
 import { VentilationAssessment } from '../../models/ventilation.model';
 import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
@@ -63,8 +65,8 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
  * und Modus-Schnellaktionen.
  *
  * Echte Daten: Uhr, Wetter (WeatherService), Live-Energie (EnergyLiveService),
- * Klima, Schalter, Verbraucher, Modi, Müllabfuhr und Türschloss.
- * Szenen und Intelligence-Hinweise sind aktuell statische Platzhalter.
+ * Klima, Schalter, Verbraucher, Modi, Müllabfuhr, Türkontakte und Türschloss.
+ * Nur die Szenen sind aktuell statische Platzhalter.
  */
 @Component({
   selector: 'app-dashboard',
@@ -89,6 +91,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly powerConsumerService = inject(PowerConsumerService);
   private readonly tractiveService = inject(TractiveService);
   private readonly zigbeeService = inject(ZigbeeService);
+  private readonly entityStateService = inject(EntityStateService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -128,6 +131,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private consumerSubscription?: Subscription;
   private petSubscription?: Subscription;
   private zigbeeHealthSubscription?: Subscription;
+  private doorSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -158,6 +162,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly DAY_MS = 86400000;
   /** Aktualisierungsintervall der Türschloss-Kachel (30 s). */
   private static readonly NUKI_REFRESH_MS = 30000;
+  /** Aktualisierungsintervall der Tuer-offen-Hinweise im Hub (30 s). */
+  private static readonly DOOR_REFRESH_MS = 30000;
   /** Anzahl der Verbraucher auf der Kachel; alle weiteren stehen im Dialog. */
   private static readonly CONSUMER_TILE_LIMIT = 4;
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
@@ -247,10 +253,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ];
 
   /**
-   * Hinweise des Intelligence Hub: die Muellabfuhr voran (sofern etwas ansteht),
-   * dahinter die Platzhalter. Wird von {@link startWasteRefresh} neu gesetzt.
+   * Hinweise des Intelligence Hub; Komposition und Reihenfolge baut
+   * {@link rebuildInsights}. Leer = keine Hinweise, der Hub zeigt eine Ruhemeldung.
    */
-  insights: IntelligenceItem[] = [];
+  insights: HubInsight[] = [];
 
   /** Zuletzt gebaute Muell-Meldung; null = nichts ansteht. */
   private wasteInsight: HubInsight | null = null;
@@ -260,28 +266,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private ventilationInsight: HubInsight | null = null;
   /** Zuletzt gebaute Tracker-Akku-Warnung; null = alle Akkus ausreichend. */
   private trackerBatteryInsight: HubInsight | null = null;
-
-  /** Noch nicht angebundene Hub-Hinweise (Platzhalter). */
-  private static readonly PLACEHOLDER_INSIGHTS: IntelligenceItem[] = [
-    {
-      icon: 'lightbulb',
-      tone: 'primary',
-      title: 'Energie-Optimierung',
-      text: 'Wohnzimmer um 1 °C senken könnte heute 5 % sparen.'
-    },
-    {
-      icon: 'package_2',
-      tone: 'secondary',
-      title: 'Lieferung',
-      text: 'Paket vor 12 Minuten an der Haustür erkannt.'
-    },
-    {
-      icon: 'schedule',
-      tone: 'muted',
-      title: 'Routine geplant',
-      text: 'Schlafmodus aktiviert sich in 45 Minuten.'
-    }
-  ];
+  /** Zuletzt gebaute Tuer-offen-Karten (Haustuer/Terrassentuer); leer = alles zu. */
+  private doorInsights: HubInsight[] = [];
 
   /** Haus-Modi der Fussleiste, vom Backend geladen. */
   modes: ModeEntity[] = [];
@@ -319,7 +305,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   zigbeeHealth: ZigbeeHealth | null = null;
 
   ngOnInit(): void {
-    this.insights = [...DashboardComponent.PLACEHOLDER_INSIGHTS];
     this.startClock();
     this.loadWeather();
     this.startLiveStream();
@@ -333,6 +318,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startNukiRefresh();
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
+    this.startDoorRefresh();
   }
 
   ngOnDestroy(): void {
@@ -350,6 +336,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.consumerSubscription?.unsubscribe();
     this.petSubscription?.unsubscribe();
     this.zigbeeHealthSubscription?.unsubscribe();
+    this.doorSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
@@ -1193,15 +1180,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Komponiert den Hub: Muell voran, dann Termine, Lueften, Tracker-Akku, dahinter die Platzhalter. */
+  /** Komponiert den Hub: offene Tueren voran, dann Muell, Termine, Lueften, Tracker-Akku. */
   private rebuildInsights(): void {
     this.insights = [
+      ...this.doorInsights,
       ...(this.wasteInsight ? [this.wasteInsight] : []),
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
-      ...(this.trackerBatteryInsight ? [this.trackerBatteryInsight] : []),
-      ...DashboardComponent.PLACEHOLDER_INSIGHTS
+      ...(this.trackerBatteryInsight ? [this.trackerBatteryInsight] : [])
     ];
+  }
+
+  /**
+   * Haelt die Tuer-offen-Karten im Hub aktuell. Ein Ladefehler leert die Karten
+   * bewusst (Muster Lueftung): eine veraltete "Tuer offen"-Meldung waere schlimmer
+   * als eine kurz fehlende — bei einem Zigbee-Ausfall werden die Kontakte ohnehin
+   * `unavailable` und zaehlen dann nicht als offen.
+   */
+  private startDoorRefresh(): void {
+    this.doorSubscription = interval(DashboardComponent.DOOR_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE')
+          .pipe(catchError(() => of([]))))
+      )
+      .subscribe(entities => {
+        this.doorInsights = buildDoorInsights(entities, Date.now());
+        this.rebuildInsights();
+      });
   }
 
   /**
@@ -1426,14 +1432,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 interface SceneButton {
   readonly label: string;
   readonly active: boolean;
-}
-
-/** Hinweis-Karte im Intelligence Hub. */
-interface IntelligenceItem {
-  readonly icon: string;
-  readonly tone: 'primary' | 'secondary' | 'muted' | 'tertiary' | 'error';
-  readonly title: string;
-  readonly text: string;
 }
 
 /** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug/Einspeisung). */
