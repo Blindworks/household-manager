@@ -28,6 +28,8 @@ public enum EntitySource {
     CALENDAR,
     /** Serverseitig berechnete Hinweise (z. B. Lüftungsempfehlung). */
     INSIGHT,
+    /** Toni-Futtervorrat (interner Bestand, sensor.pet_food_toni_cans). */
+    PET_FOOD,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL
 }
