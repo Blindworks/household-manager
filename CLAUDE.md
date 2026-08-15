@@ -19,6 +19,7 @@ Household-Manager is a full-stack application for managing household utilities a
 - **Air Quality Monitoring**: Airrohr sensor integration with live data and automated polling
 - **Data Visualization**: ECharts-based consumption and air quality charts
 - **CSV Import**: Bulk import of historical meter readings
+- **Pet Food Inventory**: Toni-Futtervorrat mit automatischem Fütterungsabzug und Füllstandsanzeige
 - **Docker Deployment**: Docker Compose setup for containerized deployment
 
 ### Planned Features
@@ -406,6 +407,15 @@ docker-compose down
 - `buildRrule` (Frontend) erzeugt bei „monatlich am selben Wochentag" mit Startdatum am Monatsende die iCal-Negativform (`BYDAY=-1TU` = letzter Dienstag), weil ein „fünfter Dienstag" in den meisten Monaten nicht existiert und der Termin sonst ausfiele
 - Beim Bearbeiten eines Serien-Vorkommens ist das Datumsfeld im Dialog mit dem Datum des angeklickten Vorkommens vorbelegt; wählt der Nutzer „Ganze Serie", ohne das Feld anzufassen, bleibt der ursprüngliche Serienstart erhalten
 - Zeiten sind lokale Haushaltszeit (Europe/Berlin), kein TZID-Handling
+
+### Toni-Futtervorrat
+- Modul `backend/src/main/java/com/household/manager/petfood/`; Tabellen `pet_food_stock` (Ein-Zeilen-Bestand: `cans_remaining` in 0,5-Schritten, `target_cans` Default 48, `deduction_marker`) und `pet_food_transaction` (Journal: FEEDING/PURCHASE/CORRECTION mit tatsächlich wirksamem Betrag und Bestand danach)
+- Automatischer Abzug: minütlicher Scheduler (`PetFoodFeedingScheduler` → `PetFoodService.applyDueFeedings`), Fütterungszeiten 7:00 und 16:00 Europe/Berlin je 0,5 Dosen (`FeedingSchedule`); persistierte Hochwassermarke als **Instant** (Zeitumstellungs-sicher), verpasste Fütterungen werden nach Neustarts nachgeholt; die Marke wird **sekundengenau abgeschnitten** gespeichert — MariaDB würde DATETIME-Bruchsekunden runden und die Marke in die Zukunft schieben (verlorene Fütterung); NULL-Marke = Erstinbetriebnahme: setzt nur die Marke (kein Nachholen ab Epoche) und spiegelt die Entität sofort; Bestand klemmt bei 0; Abzug+Journal+Marke laufen in **einer** Transaktion (Idempotenz), bewusst kein `@Version` (Haushalts-Scale, eine Korrektur heilt jeden Verlierer)
+- Entität `sensor.pet_food_toni_cans` (`EntitySource.PET_FOOD`, State = Dosenzahl via `stripTrailingZeros`/`toPlainString` → „34" statt „34.0", Attribute `targetCans`/`percent`/`unit`); wird nie `unavailable` (lokale Daten, keine externe Quelle)
+- API `/api/v1/pet-food`: GET Status (`percent`, `daysRemaining`), GET `/transactions?limit` (Kappung 1..200), POST `/purchases`, POST `/corrections` (absoluter Ist-Bestand, Journal = Differenz), PUT `/target`; Validierung: 0,5-Raster per BigDecimal (NaN strukturell unmöglich), 400 bei Verstoß; Lesen KIOSK (generische `GET /v1/**`-Regel), Schreiben MEMBER (`anyRequest`-Regel — bewusst **keine** eigene Zeile in `SecurityConfig`, `SecurityRulesTest` hält beide Richtungen fest); Audit: `petfood.purchase`/`petfood.correction`/`petfood.target.update`
+- **Warnschwelle 7 Dosen existiert an DREI Stellen:** Telegram-Flow (`sensor.pet_food_toni_cans < 7`, wird beim Rollout via flow-mcp angelegt), `criticalCans` in `pet-food.component.ts` und hart kodiert in `petFoodTone` in `dashboard.component.ts` — beim Ändern alle drei nachziehen
+- Frontend: Seite „Futtervorrat" (`pages/pet-food/`, Route `/pet-food`, Navi unter Smart Home) mit Füllstandsbalken/Reichweite/Journal; Dashboard-Footer-Kachel direkt in `dashboard.component.html` (lumina-Kapselung, siehe Tractive/Zigbee); schlägt das Laden der Kachel-Daten fehl, bleibt die Kachel weg
+- Rollout: Deploy (Liquibase seedet Bestand 0/Ziel 48; erster Scheduler-Lauf setzt die Marke ohne Abzug und erzeugt den Sensor) → realen Bestand per Korrektur erfassen → **danach** den Telegram-Warnflow via flow-mcp anlegen (create → deploy → enable); kein Trigger auf `value: "unavailable"` (tote-Trigger-Falle, hier ohnehin irrelevant)
 
 ### Benutzerverwaltung & API-Sicherheit
 - Spring Security mit Server-Sessions (HttpOnly-Cookie) + Remember-Me-Cookie (90 Tage, überlebt Backend-Neustarts nur mit gesetztem `REMEMBER_ME_KEY`); kein JWT — bewusste Entscheidung für LAN-only-Betrieb
