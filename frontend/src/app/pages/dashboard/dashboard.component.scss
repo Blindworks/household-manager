@@ -45,11 +45,11 @@
   overflow: hidden;
 }
 
-// ---- Dezenter Ansichts-Umschalter (oben rechts) --------------------------
+// ---- Dezenter Ansichts-Umschalter (oben links) ---------------------------
 .lumina__view-toggle {
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 20px;
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -124,7 +124,8 @@
 // ============================================================================
 //  Uhr & Wetter
 // ============================================================================
-// Eine einzige flache Zeile: Uhrzeit | Datum | Wetter.
+// Eine einzige flache Zeile: Uhrzeit | Datum | Wetter — als oberstes Element
+// der LINKEN Spalte (kein vollbreiter Header, der Hub rechts beginnt ganz oben).
 // Auf dem Wandtablet (1280x800 CSS-Pixel) belegte die vorherige zentrierte
 // Stapelung rund ein Drittel der Bildschirmhoehe.
 .lumina__clock {

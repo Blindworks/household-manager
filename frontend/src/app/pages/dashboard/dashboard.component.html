@@ -13,29 +13,28 @@
     </span>
   </button>
 
-  <!-- Uhr & Wetter -->
-  <header class="lumina__clock lumina__fade" style="--delay: 0s">
-    <h1 class="lumina__time">{{ clockTime }}</h1>
-    <div class="lumina__clock-meta">
-      <div class="lumina__date">
-        <span class="lumina__label">{{ weekday }}</span>
-        <span class="lumina__date-value">{{ calendarDate }}</span>
-      </div>
-      <div class="lumina__divider"></div>
-      <div class="lumina__weather">
-        <span class="material-symbols-outlined lumina__weather-icon">{{ weatherIcon }}</span>
-        <div class="lumina__weather-text">
-          <span class="lumina__weather-temp">{{ temperature }}°C</span>
-          <span class="lumina__label">{{ weatherLabel }}</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
   <!-- Hauptbereich -->
   <div class="lumina__grid">
-    <!-- Raum-Kacheln -->
+    <!-- Uhr/Wetter & Raum-Kacheln; kein vollbreiter Header mehr, damit der
+         Intelligence Hub rechts ganz oben beginnt -->
     <section class="lumina__main">
+      <header class="lumina__clock lumina__fade" style="--delay: 0s">
+        <h1 class="lumina__time">{{ clockTime }}</h1>
+        <div class="lumina__clock-meta">
+          <div class="lumina__date">
+            <span class="lumina__label">{{ weekday }}</span>
+            <span class="lumina__date-value">{{ calendarDate }}</span>
+          </div>
+          <div class="lumina__divider"></div>
+          <div class="lumina__weather">
+            <span class="material-symbols-outlined lumina__weather-icon">{{ weatherIcon }}</span>
+            <div class="lumina__weather-text">
+              <span class="lumina__weather-temp">{{ temperature }}°C</span>
+              <span class="lumina__label">{{ weatherLabel }}</span>
+            </div>
+          </div>
+        </div>
+      </header>
       <div class="lumina__rooms" [class.lumina__rooms--accordion]="accordionActive">
         <!-- Klima-Kachel: Innentemperaturen vs. Außen -->
         <div
