@@ -1161,6 +1161,82 @@
 
 .lumina__petfood-fill { height: 100%; border-radius: 2px; }
 
+// ---- Erfassungs-Dialog der Futter-Kachel ----------------------------------
+.lumina__petfood-summary {
+  // Im Dialog fliesst der Balken normal unter dem Text (in der Kachel ist er absolut).
+  .lumina__petfood-track { position: static; margin-top: 8px; }
+
+  &[data-tone='ok'] .lumina__petfood-fill { background: #66bb6a; }
+  &[data-tone='warn'] .lumina__petfood-fill { background: #ffca28; }
+  &[data-tone='critical'] .lumina__petfood-fill { background: #ef5350; }
+}
+
+.lumina__petfood-figures {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(192, 198, 214, 0.9);
+}
+
+.lumina__petfood-error {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--error);
+}
+
+.lumina__petfood-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.lumina__petfood-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  h3 { margin: 0; font-size: 14px; }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: rgba(192, 198, 214, 0.7);
+  }
+
+  input {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.25);
+    color: inherit;
+  }
+
+  button {
+    align-self: flex-start;
+    padding: 8px 16px;
+    border-radius: var(--radius-full);
+    border: none;
+    cursor: pointer;
+    background: var(--secondary);
+    color: #10131c;
+    font-weight: 600;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.lumina__petfood-page-link {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
 .lumina__walk-section + .lumina__walk-section {
   margin-top: 1.5rem;
 }

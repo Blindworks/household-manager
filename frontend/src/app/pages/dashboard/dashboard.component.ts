@@ -1,7 +1,8 @@
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
-import { Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Observable, Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -73,7 +74,7 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective],
+  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
@@ -95,7 +96,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly zigbeeService = inject(ZigbeeService);
   private readonly entityStateService = inject(EntityStateService);
   private readonly petFoodService = inject(PetFoodService);
-  private readonly router = inject(Router);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -313,6 +313,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Toni-Futtervorrat; null = Kachel wird nicht gerendert. */
   petFood: PetFoodStatus | null = null;
+
+  /** Erfassungs-Dialog der Futtervorrat-Kachel (Einkauf zubuchen, Bestand korrigieren). */
+  petFoodDialogOpen = false;
+  petFoodPurchaseCans: number | null = null;
+  petFoodPurchaseNote = '';
+  petFoodCorrectionCans: number | null = null;
+  petFoodCorrectionNote = '';
+  petFoodSaving = false;
+  petFoodError: string | null = null;
 
   ngOnInit(): void {
     this.startClock();
@@ -1330,8 +1339,54 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return status.percent < 25 ? 'warn' : 'ok';
   }
 
-  openPetFoodPage(): void {
-    this.router.navigate(['/pet-food']);
+  /** Öffnet den Erfassungs-Dialog; die Korrektur ist mit dem aktuellen Bestand vorbelegt. */
+  openPetFoodDialog(): void {
+    this.petFoodDialogOpen = true;
+    this.petFoodError = null;
+    this.petFoodPurchaseCans = null;
+    this.petFoodPurchaseNote = '';
+    this.petFoodCorrectionCans = this.petFood?.cansRemaining ?? null;
+    this.petFoodCorrectionNote = '';
+  }
+
+  closePetFoodDialog(): void {
+    this.petFoodDialogOpen = false;
+  }
+
+  submitPetFoodPurchase(): void {
+    if (this.petFoodPurchaseCans == null || this.petFoodPurchaseCans <= 0) {
+      return;
+    }
+    this.mutatePetFood(
+      this.petFoodService.recordPurchase(this.petFoodPurchaseCans, this.petFoodPurchaseNote),
+      () => { this.petFoodPurchaseCans = null; this.petFoodPurchaseNote = ''; });
+  }
+
+  submitPetFoodCorrection(): void {
+    if (this.petFoodCorrectionCans == null || this.petFoodCorrectionCans < 0) {
+      return;
+    }
+    this.mutatePetFood(
+      this.petFoodService.correctStock(this.petFoodCorrectionCans, this.petFoodCorrectionNote),
+      () => { this.petFoodCorrectionNote = ''; });
+  }
+
+  /** Der Dialog bleibt nach dem Buchen offen, damit der neue Füllstand sofort sichtbar ist. */
+  private mutatePetFood(request: Observable<PetFoodStatus>, onSuccess: () => void): void {
+    this.petFoodSaving = true;
+    this.petFoodError = null;
+    request.subscribe({
+      next: status => {
+        this.petFoodSaving = false;
+        this.petFood = status;
+        this.petFoodCorrectionCans = status.cansRemaining;
+        onSuccess();
+      },
+      error: (err: Error) => {
+        this.petFoodSaving = false;
+        this.petFoodError = err.message;
+      }
+    });
   }
 
   /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */
