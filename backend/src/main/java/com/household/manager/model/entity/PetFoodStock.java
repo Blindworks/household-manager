@@ -21,7 +21,9 @@ import java.time.LocalDateTime;
  * {@link #deductionMarker} ist die Hochwassermarke der automatischen Abzuege als
  * Instant: bis zu diesem Zeitpunkt sind alle Fuetterungen (7:00/16:00) verbucht.
  * NULL bedeutet Erstinbetriebnahme — der erste Lauf setzt die Marke ohne Abzug,
- * sonst wuerde ab Epochenbeginn nachgeholt.
+ * sonst wuerde ab Epochenbeginn nachgeholt. Die Marke wird sekundengenau
+ * abgeschnitten gespeichert — MariaDB wuerde Bruchsekunden in DATETIME sonst
+ * RUNDEN und koennte die Marke in die Zukunft schieben (verlorene Fuetterung).
  * <p>
  * Erste rohe Instant-Spalte dieses Schemas: Hibernate konvertiert Instant↔DATETIME
  * ueber die JVM-Zeitzone, die nur wegen TZ=Europe/Berlin im Docker-Deployment stabil

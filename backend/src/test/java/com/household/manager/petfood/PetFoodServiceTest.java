@@ -78,6 +78,8 @@ class PetFoodServiceTest {
         assertThat(stock.getDeductionMarker()).isEqualTo(at(2026, 8, 15, 16, 30));
         assertThat(stock.getCansRemaining()).isEqualByComparingTo("10.0");
         verify(transactionRepository, never()).save(any());
+        // Erstinbetriebnahme spiegelt sofort, damit der Sensor direkt existiert.
+        verify(entityStateService).reportState(any());
     }
 
     @Test
@@ -183,6 +185,39 @@ class PetFoodServiceTest {
         assertThat(status.cansRemaining()).isEqualByComparingTo("10.0");
         assertThat(status.percent()).isEqualTo(21); // 10/48 gerundet
         assertThat(status.daysRemaining()).isEqualTo(10);
+    }
+
+    @Test
+    void einkaufSpiegeltGlattenBestandOhneNachkommastellen() {
+        service.recordPurchase(new BigDecimal("24"), null);
+
+        verify(entityStateService).reportState(updateCaptor.capture());
+        // stripTrailingZeros/toPlainString-Vertrag: 34.0 wird "34", nie "34.0" —
+        // wichtig fuer numerische Flow-Vergleiche.
+        assertThat(updateCaptor.getValue().state()).isEqualTo("34");
+    }
+
+    @Test
+    void zielbestandHappyPathSpiegeltUndAuditiert() {
+        PetFoodDtos.StatusResponse status = service.updateTarget(new BigDecimal("60"));
+
+        assertThat(status.targetCans()).isEqualByComparingTo("60");
+        verify(entityStateService).reportState(updateCaptor.capture());
+        assertThat(updateCaptor.getValue().attributes().get("percent")).isEqualTo(17); // 10/60 gerundet
+        verify(auditService).record(org.mockito.ArgumentMatchers.eq("petfood.target.update"), any());
+    }
+
+    @Test
+    void journalLimitWirdGekappt() {
+        service.getTransactions(999);
+        service.getTransactions(0);
+
+        ArgumentCaptor<org.springframework.data.domain.Pageable> pageCaptor =
+                ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        verify(transactionRepository, org.mockito.Mockito.times(2))
+                .findByOrderByOccurredAtDescIdDesc(pageCaptor.capture());
+        assertThat(pageCaptor.getAllValues().get(0).getPageSize()).isEqualTo(200);
+        assertThat(pageCaptor.getAllValues().get(1).getPageSize()).isEqualTo(1);
     }
 
     @Test
