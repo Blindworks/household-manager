@@ -22,6 +22,12 @@ import java.time.LocalDateTime;
  * Instant: bis zu diesem Zeitpunkt sind alle Fuetterungen (7:00/16:00) verbucht.
  * NULL bedeutet Erstinbetriebnahme — der erste Lauf setzt die Marke ohne Abzug,
  * sonst wuerde ab Epochenbeginn nachgeholt.
+ * <p>
+ * Erste rohe Instant-Spalte dieses Schemas: Hibernate konvertiert Instant↔DATETIME
+ * ueber die JVM-Zeitzone, die nur wegen TZ=Europe/Berlin im Docker-Deployment stabil
+ * ist (siehe ClockConfig und die dokumentierte UTC-Falle). Instant ist hier trotzdem
+ * noetig, weil die Berliner Wandzeit bei der Oktober-Zeitumstellung nicht monoton ist
+ * — eine Wandzeit-Marke wuerde die wiederholte Stunde doppelt abziehen.
  */
 @Entity
 @Table(name = "pet_food_stock")
