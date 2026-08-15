@@ -57,6 +57,7 @@ import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeHealth } from '../../models/zigbee.model';
 import { PetFoodService } from '../../services/pet-food.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
+import { iconOffVariant } from '../../shared/icon-off.util';
 
 // LegendComponent: ohne Legende ist bei zwei Linien nicht erkennbar, welche welche ist.
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -481,6 +482,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Farbton eines Modus-Knopfs anhand seiner Position; ueberzaehlige werden neutral. */
   modeTone(index: number): string {
     return DashboardComponent.MODE_TONES[index] ?? 'neutral';
+  }
+
+  /** Icon eines Modus: im Aus-Zustand die durchgestrichene Variante, falls es eine gibt. */
+  modeIcon(mode: ModeEntity): string {
+    return mode.state === 'on' ? mode.icon : iconOffVariant(mode.icon);
   }
 
   /**
