@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260815-0046-create-pet-food-stock" author="claude">
+        <comment>Toni-Futtervorrat: Ein-Zeilen-Bestand mit persistierter Abzugs-Hochwassermarke</comment>
+        <createTable tableName="pet_food_stock">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cans_remaining" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_cans" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deduction_marker" type="DATETIME"/>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20260815-0046-create-pet-food-transaction" author="claude">
+        <comment>Toni-Futtervorrat: Buchungsjournal (Fuetterung/Einkauf/Korrektur)</comment>
+        <createTable tableName="pet_food_transaction">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="occurred_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cans_after" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="VARCHAR(255)"/>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="pet_food_transaction" indexName="idx_pet_food_tx_occurred_at">
+            <column name="occurred_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260815-0046-seed-pet-food-stock" author="claude">
+        <comment>Startbestand 0, Ziel 48, Marke NULL (der erste Scheduler-Lauf setzt sie ohne Abzug)</comment>
+        <insert tableName="pet_food_stock">
+            <column name="id" valueNumeric="1"/>
+            <column name="cans_remaining" valueNumeric="0"/>
+            <column name="target_cans" valueNumeric="48"/>
+            <column name="updated_at" valueComputed="NOW()"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

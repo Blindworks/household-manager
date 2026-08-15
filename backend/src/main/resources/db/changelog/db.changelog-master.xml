@@ -112,4 +112,7 @@
     <!-- Kalender: Personen-Zuordnung -->
     <include file="db/changelog/changes/20260727-0045-calendar-event-persons.xml"/>
 
+    <!-- Toni-Futtervorrat -->
+    <include file="db/changelog/changes/20260815-0046-create-pet-food-tables.xml"/>
+
 </databaseChangeLog>
