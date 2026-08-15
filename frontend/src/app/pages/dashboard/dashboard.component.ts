@@ -136,6 +136,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private petSubscription?: Subscription;
   private zigbeeHealthSubscription?: Subscription;
   private doorSubscription?: Subscription;
+  private petFoodSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -175,6 +176,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PETS_REFRESH_MS = 60000;
   /** Aktualisierungsintervall der Zigbee-Health-Kachel (60 s; das Wandtablet laedt die Seite nur einmal). */
   private static readonly ZIGBEE_HEALTH_REFRESH_MS = 60000;
+  /** Aktualisierungsintervall der Futtervorrat-Kachel (10 min; der Bestand aendert sich zweimal am Tag). */
+  private static readonly PET_FOOD_REFRESH_MS = 600000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -326,10 +329,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
     this.startDoorRefresh();
-    this.petFoodService.getStatus().subscribe({
-      next: status => (this.petFood = status),
-      error: () => { /* keine Kachel ist besser als eine geratene */ }
-    });
+    this.startPetFoodRefresh();
   }
 
   ngOnDestroy(): void {
@@ -348,6 +348,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.petSubscription?.unsubscribe();
     this.zigbeeHealthSubscription?.unsubscribe();
     this.doorSubscription?.unsubscribe();
+    this.petFoodSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
@@ -1285,6 +1286,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(health => {
         if (health) {
           this.zigbeeHealth = health;
+        }
+      });
+  }
+
+  /**
+   * Haelt die Futtervorrat-Kachel aktuell (Muster {@link startPetRefresh}; startWith(0)
+   * uebernimmt den initialen Load). Das Wandtablet laedt die Seite genau einmal — ohne
+   * Polling bliebe die Kachel wochenlang auf dem Stand des Seitenladens. 10 Minuten
+   * reichen, der Bestand aendert sich nur zweimal am Tag. Ein fehlgeschlagener Abruf
+   * behaelt den letzten Stand (null = kein Update) statt die Kachel verschwinden zu lassen.
+   */
+  private startPetFoodRefresh(): void {
+    this.petFoodSubscription = interval(DashboardComponent.PET_FOOD_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.petFoodService.getStatus().pipe(catchError(() => of<PetFoodStatus | null>(null))))
+      )
+      .subscribe(status => {
+        if (status) {
+          this.petFood = status;
         }
       });
   }
