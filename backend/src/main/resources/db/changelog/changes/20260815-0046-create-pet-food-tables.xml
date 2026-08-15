@@ -17,8 +17,9 @@
             <column name="target_cans" type="DECIMAL(6,1)">
                 <constraints nullable="false"/>
             </column>
+            <!-- fachlicher Zeitstempel, bewusst DATETIME statt Audit-TIMESTAMP-Konvention -->
             <column name="deduction_marker" type="DATETIME"/>
-            <column name="updated_at" type="DATETIME">
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -30,6 +31,7 @@
             <column name="id" type="BIGINT" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
+            <!-- fachlicher Zeitstempel, bewusst DATETIME statt Audit-TIMESTAMP-Konvention -->
             <column name="occurred_at" type="DATETIME">
                 <constraints nullable="false"/>
             </column>
@@ -43,7 +45,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="note" type="VARCHAR(255)"/>
-            <column name="created_at" type="DATETIME">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -58,7 +60,6 @@
             <column name="id" valueNumeric="1"/>
             <column name="cans_remaining" valueNumeric="0"/>
             <column name="target_cans" valueNumeric="48"/>
-            <column name="updated_at" valueComputed="NOW()"/>
         </insert>
     </changeSet>
 
