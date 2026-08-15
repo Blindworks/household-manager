@@ -1,0 +1,68 @@
+.pet-food {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+
+  &__subtitle { color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem; }
+  &__hint { opacity: 0.7; }
+  &__error { color: #ef5350; }
+
+  &__gauge {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin: 1.5rem 0;
+
+    &[data-tone='ok'] .pet-food__bar-fill { background: #66bb6a; }
+    &[data-tone='warn'] .pet-food__bar-fill { background: #ffca28; }
+    &[data-tone='critical'] .pet-food__bar-fill { background: #ef5350; }
+  }
+
+  &__bar-track {
+    height: 14px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+  }
+
+  &__bar-fill { height: 100%; border-radius: 7px; transition: width 0.4s ease; }
+
+  &__figures {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.6rem;
+    font-weight: 600;
+  }
+
+  &__range { margin-top: 0.25rem; opacity: 0.75; }
+
+  &__actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  &__form {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+
+    h2 { font-size: 1rem; margin: 0; }
+    label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; }
+    input { padding: 0.45rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.2); color: inherit; }
+    button { align-self: flex-start; padding: 0.5rem 1rem; border-radius: 8px; border: none; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: default; }
+  }
+
+  &__journal {
+    margin-top: 2rem;
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+  }
+
+  &__amount--minus { color: #ef9a9a; }
+}

@@ -1,0 +1,72 @@
+<div class="pet-food">
+  <header class="pet-food__header">
+    <h1>Futtervorrat</h1>
+    <p class="pet-food__subtitle">MjamMjam-Dosen für Toni — 1 Dose pro Tag (7:00 und 16:00 je eine Hälfte)</p>
+  </header>
+
+  <p *ngIf="loading" class="pet-food__hint">Lädt…</p>
+  <p *ngIf="error" class="pet-food__error">{{ error }}</p>
+
+  <ng-container *ngIf="status as s">
+    <section class="pet-food__gauge" [attr.data-tone]="fillTone(s)">
+      <div class="pet-food__bar-track">
+        <div class="pet-food__bar-fill" [style.width.%]="barWidth(s)"></div>
+      </div>
+      <div class="pet-food__figures">
+        <span class="pet-food__cans">{{ s.cansRemaining | number:'1.0-1':'de' }} von {{ s.targetCans | number:'1.0-1':'de' }} Dosen</span>
+        <span class="pet-food__percent">{{ s.percent }} %</span>
+      </div>
+      <p class="pet-food__range">Reicht noch etwa {{ s.daysRemaining }} Tage</p>
+    </section>
+
+    <section class="pet-food__actions">
+      <form class="pet-food__form" (ngSubmit)="submitPurchase()">
+        <h2>Einkauf zubuchen</h2>
+        <label>Dosen
+          <input type="number" name="purchaseCans" [(ngModel)]="purchaseCans" min="0.5" step="0.5" required>
+        </label>
+        <label>Notiz (optional)
+          <input type="text" name="purchaseNote" [(ngModel)]="purchaseNote" maxlength="255">
+        </label>
+        <button type="submit" [disabled]="saving || !purchaseCans">Zubuchen</button>
+      </form>
+
+      <form class="pet-food__form" (ngSubmit)="submitCorrection()">
+        <h2>Bestand korrigieren</h2>
+        <label>Gezählter Bestand
+          <input type="number" name="correctionCans" [(ngModel)]="correctionCans" min="0" step="0.5" required>
+        </label>
+        <label>Notiz (optional)
+          <input type="text" name="correctionNote" [(ngModel)]="correctionNote" maxlength="255">
+        </label>
+        <button type="submit" [disabled]="saving || correctionCans == null">Korrigieren</button>
+      </form>
+
+      <form class="pet-food__form" (ngSubmit)="submitTarget()">
+        <h2>Zielbestand</h2>
+        <label>Dosen (= 100 %)
+          <input type="number" name="targetCans" [(ngModel)]="targetCans" min="0.5" step="0.5" required>
+        </label>
+        <button type="submit" [disabled]="saving || !targetCans">Speichern</button>
+      </form>
+    </section>
+  </ng-container>
+
+  <section class="pet-food__journal" *ngIf="transactions.length > 0">
+    <h2>Historie</h2>
+    <table>
+      <thead>
+        <tr><th>Zeitpunkt</th><th>Typ</th><th>Änderung</th><th>Bestand danach</th><th>Notiz</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tx of transactions">
+          <td>{{ tx.occurredAt | date:'dd.MM.yyyy HH:mm' }}</td>
+          <td>{{ typeLabel(tx.type) }}</td>
+          <td [class.pet-food__amount--minus]="tx.amount < 0">{{ tx.amount > 0 ? '+' : '' }}{{ tx.amount | number:'1.0-1':'de' }}</td>
+          <td>{{ tx.cansAfter | number:'1.0-1':'de' }}</td>
+          <td>{{ tx.note }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>
