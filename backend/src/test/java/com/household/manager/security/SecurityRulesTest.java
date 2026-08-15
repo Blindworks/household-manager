@@ -324,6 +324,15 @@ class SecurityRulesTest {
     }
 
     @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeineBestandskorrekturBuchen() throws Exception {
+        mockMvc.perform(post("/v1/pet-food/corrections").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"cansRemaining\": 10}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "MEMBER")
     void memberDarfEinkaufBuchen() throws Exception {
         mockMvc.perform(post("/v1/pet-food/purchases").with(csrf())

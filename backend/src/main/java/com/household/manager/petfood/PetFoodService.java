@@ -90,6 +90,14 @@ public class PetFoodService {
             mirrorEntity(stock);
             return;
         }
+        if (now.isBefore(marker)) {
+            // Uhr-Ruecksprung (NTP-Korrektur/VM-Resume) darf die Marke nie zurueckspulen,
+            // sonst wuerde eine bereits verbuchte Fuetterung doppelt abgezogen. Nichts tun,
+            // bis die Uhr die Marke wieder eingeholt hat (Muster: Tractive-Zukunfts-Clamp).
+            log.warn("Futtervorrat: Uhr ({}) liegt vor der Abzugsmarke ({}) — Lauf uebersprungen",
+                    now, marker);
+            return;
+        }
         List<Instant> due = FeedingSchedule.between(marker, now, clock.getZone());
         boolean changed = false;
         for (Instant feeding : due) {

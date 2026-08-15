@@ -83,6 +83,19 @@ class PetFoodServiceTest {
     }
 
     @Test
+    void uhrRuecksprungSpultDieMarkeNichtZurueck() {
+        // Marke liegt NACH der (zurueckgesprungenen) Test-Uhr von 16:30 — z. B. 17:00.
+        stock.setDeductionMarker(at(2026, 8, 15, 17, 0));
+
+        service.applyDueFeedings();
+
+        assertThat(stock.getDeductionMarker()).isEqualTo(at(2026, 8, 15, 17, 0));
+        assertThat(stock.getCansRemaining()).isEqualByComparingTo("10.0");
+        verify(transactionRepository, never()).save(any());
+        verify(stockRepository, never()).save(any());
+    }
+
+    @Test
     void holtVerpassteFuetterungenNach() {
         // Marke 25,5 h zurueck: 16:00 (14.8.), 7:00 und 16:00 (15.8.) sind faellig.
         stock.setDeductionMarker(at(2026, 8, 14, 15, 0));
