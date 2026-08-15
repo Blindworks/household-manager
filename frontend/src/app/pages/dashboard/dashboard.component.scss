@@ -1126,11 +1126,23 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 16px 24px;
+  border-radius: var(--radius-full);
   cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 3px;
+  }
 
   &[data-tone='ok'] .lumina__petfood-fill { background: #66bb6a; }
   &[data-tone='warn'] .lumina__petfood-fill { background: #ffca28; }
   &[data-tone='critical'] .lumina__petfood-fill { background: #ef5350; }
+  &[data-tone='critical'] .lumina__secured-icon { color: var(--error); }
 }
 
 .lumina__petfood-track {
