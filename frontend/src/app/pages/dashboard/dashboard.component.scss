@@ -1123,6 +1123,7 @@
 }
 
 .lumina__petfood {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1145,15 +1146,20 @@
   &[data-tone='critical'] .lumina__secured-icon { color: var(--error); }
 }
 
+// Am unteren Kachelrand statt im Textblock: so bleibt die Kachel exakt so hoch
+// wie die Haustier-Kachel daneben (gleiche Struktur: Icon + Titel + Detailzeile).
 .lumina__petfood-track {
-  margin-top: 6px;
-  height: 6px;
-  border-radius: 3px;
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 8px;
+  height: 4px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
 }
 
-.lumina__petfood-fill { height: 100%; border-radius: 3px; }
+.lumina__petfood-fill { height: 100%; border-radius: 2px; }
 
 .lumina__walk-section + .lumina__walk-section {
   margin-top: 1.5rem;
