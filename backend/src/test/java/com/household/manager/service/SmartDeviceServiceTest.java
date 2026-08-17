@@ -6,6 +6,7 @@ import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
 import com.household.manager.kasa.KasaService;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
+import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
@@ -24,9 +25,11 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -154,5 +157,76 @@ class SmartDeviceServiceTest {
         newService().turnOn(5L);
 
         verify(kasaService).turnOn("192.168.1.77");
+    }
+
+    @Test
+    @DisplayName("addKasaDeviceByIp persistiert ein neues Geraet mit den gesondeten Werten und meldet den Entity-State")
+    void addKasaDeviceByIpPersistsNewDeviceAndReportsEntityState() {
+        KasaDiscoveryDto dto = new KasaDiscoveryDto();
+        dto.setIp("192.168.1.116");
+        dto.setDeviceId("8006ABCDEF");
+        dto.setModel("HS100(EU)");
+        dto.setAlias("Kueche");
+        dto.setRelayState(true);
+        when(kasaService.probe("192.168.1.116")).thenReturn(dto);
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.KASA, "8006ABCDEF"))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().addKasaDeviceByIp("192.168.1.116");
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals(DeviceType.KASA, saved.getDeviceType());
+        assertEquals("8006ABCDEF", saved.getExternalDeviceId());
+        assertEquals("192.168.1.116", saved.getIpAddress());
+        assertEquals("Kueche", saved.getDeviceName());
+        assertEquals("HS100(EU)", saved.getModel());
+        assertTrue(saved.isOnline());
+        assertTrue(saved.isPoweredOn());
+        verify(entityStateService).reportState(any());
+    }
+
+    @Test
+    @DisplayName("addKasaDeviceByIp fuer eine bereits bekannte hardware-deviceId aktualisiert die bestehende Zeile statt eine zweite anzulegen")
+    void addKasaDeviceByIpUpdatesExistingDeviceByHardwareDeviceId() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(9L);
+        existing.setDeviceType(DeviceType.KASA);
+        existing.setExternalDeviceId("8006ABCDEF");
+        existing.setIpAddress("192.168.1.50");
+        existing.setDeviceName("Altes Wohnzimmer");
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.KASA, "8006ABCDEF"))
+                .thenReturn(Optional.of(existing));
+
+        KasaDiscoveryDto dto = new KasaDiscoveryDto();
+        dto.setIp("192.168.1.99"); // neue IP fuer dasselbe Geraet
+        dto.setDeviceId("8006ABCDEF");
+        dto.setModel("HS100(EU)");
+        dto.setAlias("Wohnzimmer");
+        dto.setRelayState(false);
+        when(kasaService.probe("192.168.1.99")).thenReturn(dto);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().addKasaDeviceByIp("192.168.1.99");
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals(9L, saved.getId(), "es muss dieselbe Zeile aktualisiert werden, keine neue angelegt");
+        assertEquals("192.168.1.99", saved.getIpAddress(), "die IP wird als Kommunikationsadresse aktualisiert");
+        assertEquals("Wohnzimmer", saved.getDeviceName());
+    }
+
+    @Test
+    @DisplayName("addKasaDeviceByIp laesst eine KasaCommunicationException durch, ohne ein halbfertiges Geraet zu persistieren")
+    void addKasaDeviceByIpPropagatesCommunicationFailureWithoutPersisting() {
+        when(kasaService.probe("192.168.1.200"))
+                .thenThrow(new KasaCommunicationException("Failed to communicate with Kasa device at IP 192.168.1.200 after 3 attempts"));
+
+        assertThrows(KasaCommunicationException.class, () -> newService().addKasaDeviceByIp("192.168.1.200"));
+
+        verify(repository, never()).save(any());
     }
 }

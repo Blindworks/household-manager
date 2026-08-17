@@ -1,6 +1,7 @@
 package com.household.manager.controller;
 
 import com.household.manager.audit.AuditService;
+import com.household.manager.dto.KasaManualAddRequest;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceScanRequest;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
@@ -72,6 +73,28 @@ public class SmartDeviceController {
 
         log.info("Scan complete - found and persisted {} devices", devices.size());
         return ResponseEntity.status(HttpStatus.CREATED).body(devices);
+    }
+
+    /**
+     * Manually add (or update) a single Kasa device by its IP address.
+     * <p>
+     * Bypasses UDP broadcast discovery, which does not work in environments where it is
+     * blocked (e.g. the production backend running inside a Docker bridge network) even
+     * though a direct TCP connection to the device works fine.
+     *
+     * @param request the IPv4 address of the device to probe
+     * @return the persisted device
+     */
+    @PostMapping("/kasa")
+    public ResponseEntity<SmartDeviceResponse> addKasaDeviceByIp(
+            @Valid @RequestBody KasaManualAddRequest request) {
+        log.info("POST /api/devices/kasa - Adding Kasa device manually at {}", request.getIp());
+
+        SmartDeviceResponse device = smartDeviceService.addKasaDeviceByIp(request.getIp());
+        auditService.record("device.kasa.add-manual", request.getIp());
+
+        log.info("Successfully added Kasa device manually: {}", device.getDeviceName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(device);
     }
 
     /**

@@ -86,12 +86,6 @@ public class KasaDiscoveryService {
                 .path("system")
                 .path("get_sysinfo");
 
-        KasaDiscoveryDto dto = new KasaDiscoveryDto();
-        dto.setIp(ip);
-        dto.setDeviceId(sysInfo.path("deviceId").asText(null));
-        dto.setModel(sysInfo.path("model").asText(null));
-        dto.setAlias(sysInfo.path("alias").asText(null));
-        dto.setRelayState(sysInfo.path("relay_state").asInt(0) == 1);
-        return dto;
+        return KasaSysInfoMapper.toDiscoveryDto(ip, sysInfo);
     }
 }
