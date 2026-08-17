@@ -226,6 +226,12 @@ export const routes: Routes = [
     title: 'Futtervorrat - Household Manager'
   },
   {
+    path: 'notifications',
+    loadComponent: () => import('./pages/notifications/notifications.component').then(m => m.NotificationsComponent),
+    canActivate: [authGuard],
+    title: 'Benachrichtigungen - Household Manager'
+  },
+  {
     path: 'login',
     loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent),
     title: 'Anmelden - Household Manager'

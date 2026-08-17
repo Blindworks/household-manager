@@ -71,8 +71,8 @@ Rollout-Schritt.
 - **`PushNotificationService`**: Versand über die Library. **Fire-and-forget
   nach Telegram-Muster: wirft nie**; Fehler einzelner Geräte stoppen die
   anderen nicht (warn-Log). Antwortet der Push-Dienst **404 oder 410, wird die
-  Subscription gelöscht** (verfallen). Keine Subscriptions vorhanden →
-  debug-Log. Methoden: `sendToAll(title, body)` und
+  Subscription gelöscht** (verfallen). Keine Subscriptions global → debug-Log,
+  keine Subscriptions für `userId` → warn-Log. Methoden: `sendToAll(title, body)` und
   `sendToUser(userId, title, body)`.
 - **Controller `/api/v1/push`**:
   - `GET /vapid-public-key` — für die Anmeldung im Frontend
@@ -150,7 +150,8 @@ sowie der Zigbee-Ausfall-Flow; der Futtervorrat-Warnflow, falls schon angelegt).
 |---|---|
 | Push-Dienst antwortet 404/410 | Subscription löschen (Selbstbereinigung) |
 | Push-Dienst nicht erreichbar / sonstiger Fehler | warn-Log, restliche Geräte weiter, Flow läuft weiter |
-| Keine Subscriptions (global oder für `userId`) | debug-Log, kein Fehler |
+| Keine Subscriptions global | debug-Log, kein Fehler |
+| Keine Subscriptions für `userId` | warn-Log, kein Fehler |
 | VAPID-Keys fehlen/unlesbar | beim Start neu erzeugen; Lesen wirft nie in den Versandpfad |
 | Browser ohne Push-Support (Wandtablet-WebView) | Seite zeigt „nicht unterstützt", kein Fehler |
 

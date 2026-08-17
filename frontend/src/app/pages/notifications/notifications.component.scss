@@ -1,0 +1,92 @@
+.notifications-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem;
+
+  h1 { margin-bottom: 1rem; }
+  h2 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: var(--color-dark); }
+
+  .ios-hint {
+    background: rgba(242, 140, 40, 0.12);
+    border: 1px solid rgba(242, 140, 40, 0.4);
+    border-radius: var(--radius-lg);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-dark);
+  }
+
+  .status-card {
+    background: var(--color-light-gray);
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+
+    p { margin: 0 0 0.75rem; color: var(--color-dark); }
+    p:last-child { margin-bottom: 0; }
+
+    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      font: inherit;
+
+      &.primary { background: var(--color-primary); color: var(--color-white); }
+      &.secondary { background: #e5e7eb; color: var(--color-dark); }
+      &:disabled { opacity: 0.5; cursor: default; }
+    }
+  }
+
+  .message {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    margin: 0 0 1rem;
+
+    &.error { background: rgba(239, 68, 68, 0.1); color: var(--color-error); }
+    &.info { background: rgba(63, 174, 42, 0.1); color: var(--color-secondary-dark); }
+  }
+
+  .empty { color: var(--color-gray); }
+
+  .device-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #e5e7eb;
+
+      .device-label {
+        flex: 1;
+        font-weight: 600;
+        color: var(--color-dark);
+
+        em { font-weight: 400; color: var(--color-gray); font-style: normal; }
+      }
+
+      .device-date { color: var(--color-gray); font-size: 0.85rem; }
+
+      .danger {
+        background: transparent;
+        border: 1px solid var(--color-error);
+        color: var(--color-error);
+        border-radius: var(--radius-md);
+        padding: 0.35rem 0.75rem;
+        cursor: pointer;
+        font: inherit;
+
+        &:hover:not(:disabled) {
+          background: var(--color-error);
+          color: var(--color-white);
+        }
+      }
+    }
+  }
+}

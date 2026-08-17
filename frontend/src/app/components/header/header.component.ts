@@ -55,6 +55,7 @@ export class HeaderComponent {
         { path: '/zigbee', label: 'Zigbee-Sensoren' },
         { path: '/pets', label: 'Hundetracker' },
         { path: '/pet-food', label: 'Futtervorrat' },
+        { path: '/notifications', label: 'Benachrichtigungen' },
         { path: '/devices', label: 'Geraete' },
         { path: '/entities', label: 'Entitaeten' },
         { path: '/custom-entities', label: 'Eigene Helfer' }
