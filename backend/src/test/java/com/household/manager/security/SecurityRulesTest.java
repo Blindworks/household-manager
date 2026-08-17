@@ -15,6 +15,10 @@ import com.household.manager.nuki.NukiController;
 import com.household.manager.nuki.NukiLockService;
 import com.household.manager.petfood.PetFoodController;
 import com.household.manager.petfood.PetFoodService;
+import com.household.manager.push.PushController;
+import com.household.manager.push.PushNotificationService;
+import com.household.manager.push.PushSubscriptionService;
+import com.household.manager.push.VapidKeyService;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.system.SystemController;
 import com.household.manager.system.SystemRebootService;
@@ -59,7 +63,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
-        HouseholdUserController.class, SystemController.class, PetFoodController.class},
+        HouseholdUserController.class, SystemController.class, PetFoodController.class,
+        PushController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -92,6 +97,14 @@ class SecurityRulesTest {
     private AppUserDetailsService appUserDetailsService;
     @MockitoBean
     private PetFoodService petFoodService;
+    @MockitoBean
+    private VapidKeyService vapidKeyService;
+    @MockitoBean
+    private PushSubscriptionService pushSubscriptionService;
+    @MockitoBean
+    private PushNotificationService pushNotificationService;
+    @MockitoBean
+    private CurrentUserService currentUserService;
 
     /**
      * DisabledUserSessionFilter fragt bei jedem Request mit einem UserDetails-Principal
@@ -347,6 +360,32 @@ class SecurityRulesTest {
         mockMvc.perform(put("/v1/pet-food/target").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"targetCans\": 60}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfVapidPublicKeyLesen() throws Exception {
+        when(vapidKeyService.publicKey()).thenReturn("key");
+        mockMvc.perform(get("/v1/push/vapid-public-key")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeinePushSubscriptionAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/push/subscriptions").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"endpoint\": \"https://x\", \"p256dh\": \"k\", \"auth\": \"a\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfPushSubscriptionAnlegen() throws Exception {
+        when(currentUserService.requireUserId()).thenReturn(1L);
+        mockMvc.perform(post("/v1/push/subscriptions").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"endpoint\": \"https://x\", \"p256dh\": \"k\", \"auth\": \"a\"}"))
                 .andExpect(status().isOk());
     }
 
