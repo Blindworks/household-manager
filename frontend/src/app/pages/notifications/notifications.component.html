@@ -57,7 +57,11 @@
           }
         </span>
         <span class="device-date">angemeldet {{ device.createdAt | date:'dd.MM.yyyy' }}</span>
-        <button type="button" class="danger" (click)="removeDevice(device)">Entfernen</button>
+        @if (!isCurrentDevice(device)) {
+          <button type="button" class="danger" [disabled]="busy"
+                  [attr.aria-label]="'Geraet ' + device.deviceLabel + ' entfernen'"
+                  (click)="removeDevice(device)">Entfernen</button>
+        }
       </li>
     }
   </ul>

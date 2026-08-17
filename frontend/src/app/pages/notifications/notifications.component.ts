@@ -24,19 +24,29 @@ export class NotificationsComponent implements OnInit {
   infoMessage = '';
 
   async ngOnInit(): Promise<void> {
+    void this.pushService.preloadPublicKey();
     await this.refresh();
   }
 
   async refresh(): Promise<void> {
+    // Geraeteliste haengt an keiner SW-Interaktion und darf nicht auf sie warten.
+    this.loadDevices();
+
     if (!this.pushService.isSupported) {
       this.status = 'unsupported';
-    } else if (this.pushService.permission === 'denied') {
+      return;
+    }
+    if (this.pushService.permission === 'denied') {
       this.status = 'denied';
-    } else {
+      return;
+    }
+    try {
       this.currentEndpoint = await this.pushService.currentEndpoint();
       this.status = this.currentEndpoint ? 'active' : 'inactive';
+    } catch (err) {
+      this.status = 'inactive';
+      this.errorMessage = err instanceof Error ? err.message : String(err);
     }
-    this.loadDevices();
   }
 
   private loadDevices(): void {
@@ -68,7 +78,7 @@ export class NotificationsComponent implements OnInit {
     this.errorMessage = '';
     this.infoMessage = '';
     try {
-      await this.pushService.unsubscribeThisDevice(this.devices);
+      await this.pushService.unsubscribeThisDevice();
       this.infoMessage = 'Benachrichtigungen fuer dieses Geraet deaktiviert.';
     } catch (err) {
       this.errorMessage = err instanceof Error ? err.message : String(err);
@@ -79,17 +89,33 @@ export class NotificationsComponent implements OnInit {
   }
 
   removeDevice(device: PushDevice): void {
+    this.busy = true;
+    this.errorMessage = '';
     this.pushService.deleteDevice(device.id).subscribe({
-      next: () => this.refresh(),
-      error: err => this.errorMessage = err.message
+      next: () => {
+        this.busy = false;
+        this.refresh();
+      },
+      error: err => {
+        this.busy = false;
+        this.errorMessage = err.message;
+      }
     });
   }
 
   sendTest(): void {
+    this.busy = true;
+    this.errorMessage = '';
     this.infoMessage = '';
     this.pushService.sendTest().subscribe({
-      next: () => this.infoMessage = 'Testnachricht verschickt.',
-      error: err => this.errorMessage = err.message
+      next: () => {
+        this.busy = false;
+        this.infoMessage = 'Testnachricht verschickt.';
+      },
+      error: err => {
+        this.busy = false;
+        this.errorMessage = err.message;
+      }
     });
   }
 
