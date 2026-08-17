@@ -8,6 +8,7 @@ import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.interfaces.ECPrivateKey;
 import org.bouncycastle.jce.interfaces.ECPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.BigIntegers;
 import org.springframework.stereotype.Service;
 
 import java.security.KeyPair;
@@ -64,13 +65,23 @@ public class VapidKeyService {
             generator.initialize(ECNamedCurveTable.getParameterSpec("prime256v1"), new SecureRandom());
             KeyPair pair = generator.generateKeyPair();
             Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+            // Utils.encode(ECPrivateKey) liefert BigInteger.toByteArray() (signiertes
+            // Zweierkomplement) - nicht kanonisch, ~jeder zweite Schluessel bekaeme ein
+            // fuehrendes 0x00 (33 Byte) oder weniger als 32 Byte. Der private Skalar wird
+            // deshalb explizit auf 32 Byte ohne Vorzeichen kodiert.
+            byte[] privateKeyBytes = BigIntegers.asUnsignedByteArray(32, ((ECPrivateKey) pair.getPrivate()).getD());
             return new VapidKeys(
                     encoder.encodeToString(Utils.encode((ECPublicKey) pair.getPublic())),
-                    encoder.encodeToString(Utils.encode((ECPrivateKey) pair.getPrivate())));
+                    encoder.encodeToString(privateKeyBytes));
         } catch (Exception ex) {
             throw new IllegalStateException("VAPID-Schluesselerzeugung fehlgeschlagen", ex);
         }
     }
 
-    public record VapidKeys(String publicKey, String privateKey) {}
+    public record VapidKeys(String publicKey, String privateKey) {
+        @Override
+        public String toString() {
+            return "VapidKeys[publicKey=" + publicKey + ", privateKey=<redacted>]";
+        }
+    }
 }

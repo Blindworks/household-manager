@@ -1,6 +1,7 @@
 package com.household.manager.push;
 
 import com.household.manager.service.ApplicationSettingsService;
+import nl.martijndwars.webpush.Utils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -10,6 +11,7 @@ import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -26,7 +28,7 @@ class VapidKeyServiceTest {
     private ApplicationSettingsService settings;
 
     @Test
-    void generatesAndPersistsKeyPairOnFirstAccess() {
+    void generatesAndPersistsKeyPairOnFirstAccess() throws Exception {
         when(settings.getString(eq("PUSH_VAPID"), anyString(), isNull())).thenReturn(null);
 
         VapidKeyService.VapidKeys keys = new VapidKeyService(settings).keyPair();
@@ -35,6 +37,7 @@ class VapidKeyServiceTest {
         assertEquals(65, publicKey.length);
         assertEquals(0x04, publicKey[0]);
         assertFalse(keys.privateKey().isBlank());
+        assertTrue(Utils.verifyKeyPair(Utils.loadPrivateKey(keys.privateKey()), Utils.loadPublicKey(keys.publicKey())));
         verify(settings).saveSettings(eq("PUSH_VAPID"), argThat(map ->
                 map.get("publicKey").equals(keys.publicKey())
                         && map.get("privateKey").equals(keys.privateKey())));
