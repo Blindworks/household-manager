@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { SmartDevice } from '../../models/smart-device.model';
@@ -13,12 +14,13 @@ export type DeviceViewMode = 'normal' | 'compact';
 @Component({
   selector: 'app-smart-device-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './smart-device-list.component.html',
   styleUrl: './smart-device-list.component.scss'
 })
 export class SmartDeviceListComponent implements OnInit {
   private static readonly VIEW_MODE_STORAGE_KEY = 'smartDeviceViewMode';
+  private static readonly SUCCESS_MESSAGE_TIMEOUT_MS = 3000;
 
   private readonly smartDeviceService = inject(SmartDeviceService);
   private readonly typeOrder: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
@@ -31,6 +33,13 @@ export class SmartDeviceListComponent implements OnInit {
   errorMessage: string | null = null;
   togglingDevices = new Set<number>();
   viewMode: DeviceViewMode = 'normal';
+
+  // Kasa per IP hinzufuegen
+  showAddKasaForm = false;
+  kasaIpInput = '';
+  isAddingKasaDevice = false;
+  addKasaError: string | null = null;
+  addKasaSuccessMessage: string | null = null;
 
   ngOnInit(): void {
     this.viewMode = this.readStoredViewMode();
@@ -125,6 +134,71 @@ export class SmartDeviceListComponent implements OnInit {
         this.loadDevices();
       }
     });
+  }
+
+  toggleAddKasaForm(): void {
+    if (this.showAddKasaForm) {
+      this.cancelAddKasaForm();
+      return;
+    }
+    this.showAddKasaForm = true;
+    this.addKasaError = null;
+    this.addKasaSuccessMessage = null;
+  }
+
+  cancelAddKasaForm(): void {
+    this.showAddKasaForm = false;
+    this.kasaIpInput = '';
+    this.addKasaError = null;
+  }
+
+  submitAddKasaForm(): void {
+    if (this.isAddingKasaDevice) {
+      return;
+    }
+
+    const ip = this.kasaIpInput.trim();
+    if (!ip) {
+      this.addKasaError = 'Bitte eine IP-Adresse eingeben.';
+      return;
+    }
+    if (!this.isValidIpv4(ip)) {
+      this.addKasaError = 'Ungueltige IP-Adresse. Bitte z. B. 192.168.1.116 eingeben.';
+      return;
+    }
+
+    this.isAddingKasaDevice = true;
+    this.addKasaError = null;
+
+    this.smartDeviceService.addKasaDeviceByIp(ip).subscribe({
+      next: () => {
+        this.isAddingKasaDevice = false;
+        this.showAddKasaForm = false;
+        this.kasaIpInput = '';
+        this.loadDevices();
+        this.showAddKasaSuccess('Kasa-Geraet wurde hinzugefuegt.');
+      },
+      error: (error: Error) => {
+        // Eingabe bleibt bei einem Fehler erhalten, damit die IP nicht erneut getippt werden muss
+        this.addKasaError = error.message;
+        this.isAddingKasaDevice = false;
+      }
+    });
+  }
+
+  private isValidIpv4(value: string): boolean {
+    const octets = value.split('.');
+    if (octets.length !== 4) {
+      return false;
+    }
+    return octets.every(octet => /^\d{1,3}$/.test(octet) && Number(octet) <= 255);
+  }
+
+  private showAddKasaSuccess(message: string): void {
+    this.addKasaSuccessMessage = message;
+    setTimeout(() => {
+      this.addKasaSuccessMessage = null;
+    }, SmartDeviceListComponent.SUCCESS_MESSAGE_TIMEOUT_MS);
   }
 
   refreshAllDevices(): void {

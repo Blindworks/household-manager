@@ -9,6 +9,11 @@
   <button class="refresh-btn" (click)="refreshAllDevices()" [disabled]="isLoading || devices.length === 0">
     Status aktualisieren
   </button>
+  <button class="refresh-btn" type="button"
+          [class.refresh-btn--active]="showAddKasaForm"
+          (click)="toggleAddKasaForm()" [disabled]="isAddingKasaDevice">
+    Kasa per IP
+  </button>
 
   <div class="view-toggle" role="group" aria-label="Ansicht umschalten">
     <button type="button" class="view-toggle__btn"
@@ -24,6 +29,34 @@
       Kompakt
     </button>
   </div>
+</div>
+
+<form class="kasa-ip-form" *ngIf="showAddKasaForm" (ngSubmit)="submitAddKasaForm()">
+  <label class="kasa-ip-form__label" for="kasaIpInput">Kasa-Geraet per IP hinzufuegen</label>
+  <div class="kasa-ip-form__row">
+    <input
+      id="kasaIpInput"
+      name="kasaIpInput"
+      class="kasa-ip-form__input"
+      type="text"
+      inputmode="decimal"
+      placeholder="192.168.1.116"
+      autocomplete="off"
+      [(ngModel)]="kasaIpInput"
+      [disabled]="isAddingKasaDevice" />
+    <button class="refresh-btn" type="submit" [disabled]="isAddingKasaDevice">
+      {{ isAddingKasaDevice ? 'Wird hinzugefuegt...' : 'Hinzufuegen' }}
+    </button>
+    <button class="refresh-btn refresh-btn--ghost" type="button"
+            (click)="cancelAddKasaForm()" [disabled]="isAddingKasaDevice">
+      Abbrechen
+    </button>
+  </div>
+  <p class="kasa-ip-form__error" *ngIf="addKasaError">{{ addKasaError }}</p>
+</form>
+
+<div class="message message--success" *ngIf="addKasaSuccessMessage">
+  {{ addKasaSuccessMessage }}
 </div>
 
 <div class="message message--error" *ngIf="errorMessage">

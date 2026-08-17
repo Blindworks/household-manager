@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { SmartDeviceListComponent } from './smart-device-list.component';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { SmartDevice } from '../../models/smart-device.model';
@@ -17,7 +17,7 @@ describe('SmartDeviceListComponent', () => {
     localStorage.removeItem('smartDeviceViewMode');
 
     serviceSpy = jasmine.createSpyObj('SmartDeviceService', [
-      'getAllDevices', 'scanDevices', 'refreshDeviceState', 'turnOn', 'turnOff'
+      'getAllDevices', 'scanDevices', 'refreshDeviceState', 'turnOn', 'turnOff', 'addKasaDeviceByIp'
     ]);
     serviceSpy.getAllDevices.and.returnValue(of([device]));
     serviceSpy.scanDevices.and.returnValue(of([device]));
@@ -90,5 +90,57 @@ describe('SmartDeviceListComponent', () => {
     hit!.click();
 
     expect(serviceSpy.turnOn).toHaveBeenCalledWith(device.id);
+  });
+
+  it('zeigt das Kasa-per-IP-Formular nach Klick auf den Knopf', () => {
+    const fixture = TestBed.createComponent(SmartDeviceListComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showAddKasaForm).toBeFalse();
+
+    fixture.componentInstance.toggleAddKasaForm();
+
+    expect(fixture.componentInstance.showAddKasaForm).toBeTrue();
+  });
+
+  it('lehnt eine ungueltige IP ab, ohne den Service aufzurufen', () => {
+    const fixture = TestBed.createComponent(SmartDeviceListComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.kasaIpInput = 'keine-ip';
+    fixture.componentInstance.submitAddKasaForm();
+
+    expect(serviceSpy.addKasaDeviceByIp).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.addKasaError).toContain('Ungueltige IP-Adresse');
+  });
+
+  it('fuegt ein Kasa-Geraet per IP hinzu und laedt die Liste neu', () => {
+    serviceSpy.addKasaDeviceByIp.and.returnValue(of(device));
+
+    const fixture = TestBed.createComponent(SmartDeviceListComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.kasaIpInput = '192.168.1.116';
+    fixture.componentInstance.submitAddKasaForm();
+
+    expect(serviceSpy.addKasaDeviceByIp).toHaveBeenCalledWith('192.168.1.116');
+    expect(fixture.componentInstance.showAddKasaForm).toBeFalse();
+    expect(fixture.componentInstance.addKasaSuccessMessage).toBeTruthy();
+    expect(serviceSpy.getAllDevices).toHaveBeenCalledTimes(2);
+  });
+
+  it('behaelt die eingegebene IP bei einem Fehler und zeigt die Meldung an', () => {
+    serviceSpy.addKasaDeviceByIp.and.returnValue(throwError(() => new Error('Das Geraet hat nicht geantwortet.')));
+
+    const fixture = TestBed.createComponent(SmartDeviceListComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleAddKasaForm();
+    fixture.componentInstance.kasaIpInput = '192.168.1.116';
+    fixture.componentInstance.submitAddKasaForm();
+
+    expect(fixture.componentInstance.addKasaError).toBe('Das Geraet hat nicht geantwortet.');
+    expect(fixture.componentInstance.kasaIpInput).toBe('192.168.1.116');
+    expect(fixture.componentInstance.showAddKasaForm).toBeTrue();
   });
 });
