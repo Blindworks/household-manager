@@ -1,0 +1,64 @@
+<div class="notifications-page">
+  <h1>Benachrichtigungen</h1>
+
+  <div class="ios-hint">
+    <strong>iPhone/iPad:</strong> Push funktioniert nur in der installierten App
+    (Safari &rarr; Teilen &rarr; &bdquo;Zum Home-Bildschirm&ldquo;) und ab iOS 16.4 &mdash;
+    nicht im Safari-Tab.
+  </div>
+
+  <div class="status-card">
+    @switch (status) {
+      @case ('unsupported') {
+        <p>Dieses Geraet bzw. dieser Browser unterstuetzt keine Push-Benachrichtigungen.</p>
+      }
+      @case ('denied') {
+        <p>Die Benachrichtigungs-Berechtigung wurde verweigert. Bitte in den Browser- bzw.
+          iOS-Einstellungen wieder erlauben.</p>
+      }
+      @case ('inactive') {
+        <p>Push-Benachrichtigungen sind auf diesem Geraet nicht aktiv.</p>
+        <button type="button" class="primary" (click)="activate()" [disabled]="busy">
+          Benachrichtigungen aktivieren
+        </button>
+      }
+      @case ('active') {
+        <p>Push-Benachrichtigungen sind auf diesem Geraet aktiv.</p>
+        <div class="actions">
+          <button type="button" class="primary" (click)="sendTest()" [disabled]="busy">
+            Testnachricht senden
+          </button>
+          <button type="button" class="secondary" (click)="deactivate()" [disabled]="busy">
+            Auf diesem Geraet deaktivieren
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  @if (errorMessage) {
+    <p class="message error">{{ errorMessage }}</p>
+  }
+  @if (infoMessage) {
+    <p class="message info">{{ infoMessage }}</p>
+  }
+
+  <h2>Angemeldete Geraete</h2>
+  @if (devices.length === 0) {
+    <p class="empty">Keine Geraete angemeldet.</p>
+  }
+  <ul class="device-list">
+    @for (device of devices; track device.id) {
+      <li>
+        <span class="device-label">
+          {{ device.deviceLabel }}
+          @if (isCurrentDevice(device)) {
+            <em>(dieses Geraet)</em>
+          }
+        </span>
+        <span class="device-date">angemeldet {{ device.createdAt | date:'dd.MM.yyyy' }}</span>
+        <button type="button" class="danger" (click)="removeDevice(device)">Entfernen</button>
+      </li>
+    }
+  </ul>
+</div>
