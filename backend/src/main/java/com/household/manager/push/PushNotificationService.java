@@ -91,7 +91,7 @@ public class PushNotificationService {
             log.warn("Push-Versand unterbrochen — breche restliche Geraete ab");
             return false;
         } catch (Exception ex) {
-            log.warn("Push an '{}' fehlgeschlagen: {}", subscription.getDeviceLabel(), ex.getMessage());
+            log.warn("Push an '{}' fehlgeschlagen: {}", subscription.getDeviceLabel(), ex.toString());
         }
         return true;
     }

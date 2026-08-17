@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { firstValueFrom } from 'rxjs';
 import { PushService } from '../../services/push.service';
 import { PushDevice } from '../../models/push.model';
 
@@ -29,8 +30,9 @@ export class NotificationsComponent implements OnInit {
   }
 
   async refresh(): Promise<void> {
-    // Geraeteliste haengt an keiner SW-Interaktion und darf nicht auf sie warten.
-    this.loadDevices();
+    // Geraeteliste haengt an keiner SW-Interaktion und darf nicht auf sie warten
+    // (die 3s-Wartezeit auf swPush.subscription weiter unten darf die Liste nicht blockieren).
+    await this.loadDevices();
 
     if (!this.pushService.isSupported) {
       this.status = 'unsupported';
@@ -42,18 +44,24 @@ export class NotificationsComponent implements OnInit {
     }
     try {
       this.currentEndpoint = await this.pushService.currentEndpoint();
-      this.status = this.currentEndpoint ? 'active' : 'inactive';
     } catch (err) {
-      this.status = 'inactive';
+      this.currentEndpoint = null;
       this.errorMessage = err instanceof Error ? err.message : String(err);
     }
+    // "aktiv" nur, wenn Browser-Subscription UND Server-Geraeteliste uebereinstimmen —
+    // sonst behauptet die Seite auf einem geteilten Geraet oder nach Selbstbereinigung
+    // (404/410) faelschlich "aktiv", ohne einen Weg zurueck zur Aktivierung zu zeigen.
+    this.status = this.currentEndpoint && this.devices.some(d => d.endpoint === this.currentEndpoint)
+      ? 'active'
+      : 'inactive';
   }
 
-  private loadDevices(): void {
-    this.pushService.getDevices().subscribe({
-      next: devices => this.devices = devices,
-      error: err => this.errorMessage = err.message
-    });
+  private async loadDevices(): Promise<void> {
+    try {
+      this.devices = await firstValueFrom(this.pushService.getDevices());
+    } catch (err) {
+      this.errorMessage = err instanceof Error ? err.message : String(err);
+    }
   }
 
   async activate(): Promise<void> {

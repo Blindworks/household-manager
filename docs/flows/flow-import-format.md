@@ -164,6 +164,15 @@ Telegram-Nachricht an die erlaubten Chats oder einen bestimmten Chat senden. Pla
 | `message` | ja | Nachrichtentext (mit optionalen Platzhaltern) |
 | `chatId` | nein | numerische Chat-ID; leer = an alle erlaubten Chats (`TELEGRAM_ALLOWED_CHAT_IDS`) |
 
+### `push-send` — Push-Nachricht (1 Ausgang)
+Web-Push-Benachrichtigung an die abonnierten Geraete eines Nutzers oder alle Geraete senden. Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `message` | ja | Nachrichtentext (mit optionalen Platzhaltern) |
+| `title` | nein | Titel; leer = "Household Manager" |
+| `userId` | nein | numerische Nutzer-ID; leer = alle Geraete |
+
 > Referenzen müssen zu deiner Umgebung passen. Ist eine **`entityId`** beim Deploy noch
 > unbekannt, meldet der Validator eine **Warnung** (kein Fehler) — der Flow greift, sobald
 > die Entität existiert. **`deviceId`** und **`deviceSerials`** werden beim Deploy dagegen

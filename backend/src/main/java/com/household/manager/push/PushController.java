@@ -52,7 +52,12 @@ public class PushController {
 
     @PostMapping("/test")
     public ResponseEntity<Void> sendTest() {
-        notificationService.sendToUser(currentUserService.requireUserId(),
+        Long userId = currentUserService.requireUserId();
+        if (subscriptionService.listForUser(userId).isEmpty()) {
+            throw new IllegalStateException(
+                    "Keine angemeldeten Geraete — bitte zuerst Benachrichtigungen auf diesem Geraet aktivieren.");
+        }
+        notificationService.sendToUser(userId,
                 "Household Manager", "Testnachricht — Push funktioniert auf diesem Geraet.");
         return ResponseEntity.noContent().build();
     }

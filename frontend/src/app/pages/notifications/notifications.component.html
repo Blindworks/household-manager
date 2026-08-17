@@ -56,7 +56,12 @@
             <em>(dieses Geraet)</em>
           }
         </span>
-        <span class="device-date">angemeldet {{ device.createdAt | date:'dd.MM.yyyy' }}</span>
+        <span class="device-date">
+          angemeldet {{ device.createdAt | date:'dd.MM.yyyy' }}
+          @if (device.lastUsedAt) {
+            &middot; zuletzt genutzt {{ device.lastUsedAt | date:'dd.MM.yyyy' }}
+          }
+        </span>
         @if (!isCurrentDevice(device)) {
           <button type="button" class="danger" [disabled]="busy"
                   [attr.aria-label]="'Geraet ' + device.deviceLabel + ' entfernen'"
