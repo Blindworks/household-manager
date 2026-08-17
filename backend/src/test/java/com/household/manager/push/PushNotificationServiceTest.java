@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -81,5 +82,38 @@ class PushNotificationServiceTest {
         assertDoesNotThrow(() -> service().sendToUser(9L, "Titel", "Text"));
 
         verifyNoInteractions(webPushClient);
+    }
+
+    @Test
+    void deletesExpiredSubscriptionOn404() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(subscription(1)));
+        when(webPushClient.send(any(), anyString())).thenReturn(404);
+
+        service().sendToAll("Titel", "Text");
+
+        verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void successfulSendUpdatesLastUsedAt() throws Exception {
+        PushSubscription subscription = subscription(1);
+        when(repository.findAll()).thenReturn(List.of(subscription));
+        when(webPushClient.send(any(), anyString())).thenReturn(201);
+
+        service().sendToAll("Titel", "Text");
+
+        ArgumentCaptor<PushSubscription> saved = ArgumentCaptor.forClass(PushSubscription.class);
+        verify(repository).save(saved.capture());
+        assertTrue(saved.getValue().getLastUsedAt() != null);
+    }
+
+    @Test
+    void transientErrorDoesNotDeleteSubscription() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(subscription(1)));
+        when(webPushClient.send(any(), anyString())).thenReturn(429);
+
+        service().sendToAll("Titel", "Text");
+
+        verify(repository, never()).deleteById(any());
     }
 }

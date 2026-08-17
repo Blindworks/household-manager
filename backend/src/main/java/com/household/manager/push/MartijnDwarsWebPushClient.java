@@ -2,6 +2,7 @@ package com.household.manager.push;
 
 import com.household.manager.model.entity.PushSubscription;
 import lombok.RequiredArgsConstructor;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -11,6 +12,9 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.Security;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Einzige Stelle mit nl.martijndwars:web-push-Spezifika. Der PushService wird
@@ -24,6 +28,14 @@ public class MartijnDwarsWebPushClient implements WebPushClient {
     /** VAPID-Subject: Kontakt fuer den Push-Dienst-Betreiber (Apple verlangt einen validen Wert). */
     private static final String VAPID_SUBJECT = "mailto:benedikt.lind@gmail.com";
 
+    /**
+     * Harte Obergrenze fuer einen einzelnen Versand. Der zugrundeliegende
+     * HttpAsyncClient hat keine Socket-Timeouts, und der Aufruf laeuft im
+     * effektiv 2-Thread-Executor der Flow-Engine — ein haengender Push-Dienst
+     * darf nicht alle Flows blockieren.
+     */
+    private static final long SEND_TIMEOUT_SECONDS = 10;
+
     private final VapidKeyService vapidKeyService;
     private volatile PushService pushService;
 
@@ -34,8 +46,17 @@ public class MartijnDwarsWebPushClient implements WebPushClient {
                 subscription.getP256dhKey(),
                 subscription.getAuthSecret(),
                 payload.getBytes(StandardCharsets.UTF_8));
-        HttpResponse response = pushService().send(notification);
-        return response.getStatusLine().getStatusCode();
+        // sendAsync ist als deprecated markiert (Nachfolger: PushAsyncService), bleibt
+        // hier aber die einzige Moeglichkeit, den Versand mit einem begrenzten Wait zu
+        // versehen — das synchrone send() blockiert unbegrenzt.
+        Future<HttpResponse> future = pushService().sendAsync(notification, Encoding.AES128GCM);
+        try {
+            HttpResponse response = future.get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            return response.getStatusLine().getStatusCode();
+        } catch (TimeoutException ex) {
+            future.cancel(true);
+            throw ex;
+        }
     }
 
     private PushService pushService() throws GeneralSecurityException {

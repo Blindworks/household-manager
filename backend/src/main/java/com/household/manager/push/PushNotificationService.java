@@ -28,11 +28,24 @@ public class PushNotificationService {
     private final ObjectMapper objectMapper;
 
     public void sendToAll(String title, String body) {
-        send(repository.findAll(), title, body);
+        List<PushSubscription> subscriptions;
+        try {
+            subscriptions = repository.findAll();
+        } catch (Exception ex) {
+            log.warn("Push-Subscriptions konnten nicht geladen werden: {}", ex.getMessage());
+            return;
+        }
+        send(subscriptions, title, body);
     }
 
     public void sendToUser(Long userId, String title, String body) {
-        List<PushSubscription> subscriptions = repository.findByUserId(userId);
+        List<PushSubscription> subscriptions;
+        try {
+            subscriptions = repository.findByUserId(userId);
+        } catch (Exception ex) {
+            log.warn("Push-Subscriptions fuer Nutzer {} konnten nicht geladen werden: {}", userId, ex.getMessage());
+            return;
+        }
         if (subscriptions.isEmpty()) {
             log.warn("Keine Push-Subscriptions fuer Nutzer {} — Nachricht verworfen", userId);
             return;
@@ -52,10 +65,15 @@ public class PushNotificationService {
             log.warn("Push-Payload nicht serialisierbar: {}", ex.getMessage());
             return;
         }
-        subscriptions.forEach(subscription -> sendTo(subscription, payload));
+        for (PushSubscription subscription : subscriptions) {
+            if (!sendTo(subscription, payload)) {
+                break;
+            }
+        }
     }
 
-    private void sendTo(PushSubscription subscription, String payload) {
+    /** @return false wenn der Versand unterbrochen wurde und keine weiteren Geraete mehr bedient werden sollen. */
+    private boolean sendTo(PushSubscription subscription, String payload) {
         try {
             int status = webPushClient.send(subscription, payload);
             if (status == 404 || status == 410) {
@@ -68,9 +86,14 @@ public class PushNotificationService {
                 subscription.setLastUsedAt(LocalDateTime.now());
                 repository.save(subscription);
             }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Push-Versand unterbrochen — breche restliche Geraete ab");
+            return false;
         } catch (Exception ex) {
             log.warn("Push an '{}' fehlgeschlagen: {}", subscription.getDeviceLabel(), ex.getMessage());
         }
+        return true;
     }
 
     /** Payload im ngsw-Notification-Schema — der Angular Service Worker zeigt sie selbst an. */
