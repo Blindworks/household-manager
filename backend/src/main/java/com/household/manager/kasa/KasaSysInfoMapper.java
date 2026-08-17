@@ -9,6 +9,12 @@ import com.household.manager.kasa.dto.KasaDiscoveryDto;
  * ({@link KasaDiscoveryService}) and unicast probing ({@link KasaService#probe(String)}),
  * which receive the identical sysinfo payload shape, so the field extraction
  * exists in exactly one place.
+ * <p>
+ * The two callers hand this a differently-guaranteed {@code sysInfo} node, on purpose:
+ * {@code probe()} validates first and never calls here with a missing node, while
+ * {@link KasaDiscoveryService#discover} passes a possibly-missing node as-is, which yields an
+ * all-null DTO here rather than an exception — a broadcast reply from a non-Kasa device on the
+ * same network must not abort the whole discovery scan.
  */
 final class KasaSysInfoMapper {
 

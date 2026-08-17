@@ -248,6 +248,7 @@ docker-compose down
 - Device discovery via UDP broadcast
 - Turn devices on/off and get status
 - Implementation in `backend/src/main/java/com/household/manager/kasa/`
+- **Manuelles Hinzufuegen per IP (`POST /devices/kasa`, `{"ip": ...}`):** PROD laeuft im Docker-Bridge-Netz und kann keine UDP-Subnetz-Broadcasts senden, deshalb findet die Kasa-Discovery dort nichts (0 Geraete in PROD gegenueber 8 in Dev, verifiziert 2026-08-17); Unicast-TCP zur Steckdose funktioniert aus dem Container dagegen (getestet gegen 192.168.1.116:9999). Der Endpunkt fragt deshalb per Unicast dasselbe `get_sysinfo` ab wie die Discovery und legt das Geraet ueber denselben Upsert-Pfad an (Schluessel bleibt die Hardware-`deviceId`, die IP ist nur Kommunikationsadresse). **Wichtige Kehrseite:** ohne funktionierende Discovery findet das System eine per DHCP geaenderte IP nicht selbst nach — fuer manuell angelegte Kasa-Geraete gehoert eine feste IP-Reservierung im Router dazu, sonst schaltet ein darauf gebauter Flow ins Leere und das Geraet erscheint offline.
 
 ### TP-Link Tapo
 - Remote control via TP-Link Cloud API with token-based authentication

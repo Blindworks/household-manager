@@ -98,6 +98,16 @@ class SmartDeviceControllerTest {
     }
 
     @Test
+    @DisplayName("POST /devices/kasa lehnt eine IP mit fuehrender Null im Oktett mit 400 ab "
+            + "(JDK 21 wuerde sie sonst als Hostnamen per DNS aufloesen statt als Literal)")
+    void rejectsLeadingZeroOctetWithBadRequest() throws Exception {
+        mockMvc.perform(post("/devices/kasa")
+                        .contentType("application/json")
+                        .content("{\"ip\":\"010.1.1.1\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("POST /devices/kasa liefert 502, wenn das Geraet nicht antwortet, statt eines opaken 500")
     void mapsKasaCommunicationExceptionToBadGateway() throws Exception {
         when(smartDeviceService.addKasaDeviceByIp("192.168.1.200"))

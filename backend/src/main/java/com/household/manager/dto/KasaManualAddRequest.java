@@ -21,10 +21,15 @@ public class KasaManualAddRequest {
 
     /**
      * IPv4 address of the Kasa device to probe and persist.
+     * <p>
+     * Octets must not carry leading zeros (e.g. "010"): {@link java.net.InetSocketAddress}
+     * refuses to parse those as a literal on JDK 21, so a lax pattern would let a value like
+     * "010.1.1.1" through validation only for {@code KasaTcpClient} to treat it as a hostname
+     * and attempt a slow DNS lookup, turning what should be a crisp 400 into a confusing 502.
      */
     @NotBlank(message = "IP address is required")
     @Pattern(
-            regexp = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+            regexp = "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)$",
             message = "IP address must be a valid IPv4 address"
     )
     private String ip;
