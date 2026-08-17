@@ -53,11 +53,16 @@
 }
 
 // Kasa-per-IP Formular
+// Diese Komponente wird sowohl auf der (dunklen Verlaufs-)Geraeteseite als auch
+// im (hellen) Admin-Bereich eingebettet ("Smart Plugs"-Tab, .admin__card = weiss).
+// Deshalb hier eine eigene, fast deckende dunkle Flaeche statt eines transparenten
+// Glass-Effekts, der sich auf den Hintergrund der jeweiligen Seite verlassen wuerde -
+// nur so bleibt der helle Text in beiden Kontexten lesbar.
 .kasa-ip-form {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(45, 32, 68, 0.92);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 0.75rem;

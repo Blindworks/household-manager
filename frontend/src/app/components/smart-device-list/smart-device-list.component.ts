@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -18,7 +18,7 @@ export type DeviceViewMode = 'normal' | 'compact';
   templateUrl: './smart-device-list.component.html',
   styleUrl: './smart-device-list.component.scss'
 })
-export class SmartDeviceListComponent implements OnInit {
+export class SmartDeviceListComponent implements OnInit, OnDestroy {
   private static readonly VIEW_MODE_STORAGE_KEY = 'smartDeviceViewMode';
   private static readonly SUCCESS_MESSAGE_TIMEOUT_MS = 3000;
 
@@ -40,10 +40,15 @@ export class SmartDeviceListComponent implements OnInit {
   isAddingKasaDevice = false;
   addKasaError: string | null = null;
   addKasaSuccessMessage: string | null = null;
+  private addKasaSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.viewMode = this.readStoredViewMode();
     this.loadDevices();
+  }
+
+  ngOnDestroy(): void {
+    this.clearAddKasaSuccessTimer();
   }
 
   setViewMode(mode: DeviceViewMode): void {
@@ -144,12 +149,15 @@ export class SmartDeviceListComponent implements OnInit {
     this.showAddKasaForm = true;
     this.addKasaError = null;
     this.addKasaSuccessMessage = null;
+    this.clearAddKasaSuccessTimer();
   }
 
   cancelAddKasaForm(): void {
     this.showAddKasaForm = false;
     this.kasaIpInput = '';
     this.addKasaError = null;
+    this.addKasaSuccessMessage = null;
+    this.clearAddKasaSuccessTimer();
   }
 
   submitAddKasaForm(): void {
@@ -191,14 +199,35 @@ export class SmartDeviceListComponent implements OnInit {
     if (octets.length !== 4) {
       return false;
     }
-    return octets.every(octet => /^\d{1,3}$/.test(octet) && Number(octet) <= 255);
+    return octets.every(octet => this.isValidIpv4Octet(octet));
+  }
+
+  private isValidIpv4Octet(octet: string): boolean {
+    if (!/^\d{1,3}$/.test(octet)) {
+      return false;
+    }
+    // Fuehrende Nullen (z. B. "010") wertet Java als Oktalzahl/Hostname statt als Dezimal-Oktett
+    // und loest einen langsamen, verwirrenden DNS-Lookup statt eines klaren 400 aus - hier schon ablehnen.
+    if (octet.length > 1 && octet.startsWith('0')) {
+      return false;
+    }
+    return Number(octet) <= 255;
   }
 
   private showAddKasaSuccess(message: string): void {
+    this.clearAddKasaSuccessTimer();
     this.addKasaSuccessMessage = message;
-    setTimeout(() => {
+    this.addKasaSuccessTimeout = setTimeout(() => {
       this.addKasaSuccessMessage = null;
+      this.addKasaSuccessTimeout = null;
     }, SmartDeviceListComponent.SUCCESS_MESSAGE_TIMEOUT_MS);
+  }
+
+  private clearAddKasaSuccessTimer(): void {
+    if (this.addKasaSuccessTimeout !== null) {
+      clearTimeout(this.addKasaSuccessTimeout);
+      this.addKasaSuccessTimeout = null;
+    }
   }
 
   refreshAllDevices(): void {

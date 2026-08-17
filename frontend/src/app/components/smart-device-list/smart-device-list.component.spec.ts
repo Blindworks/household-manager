@@ -23,6 +23,10 @@ describe('SmartDeviceListComponent', () => {
     serviceSpy.scanDevices.and.returnValue(of([device]));
     serviceSpy.turnOn.and.returnValue(of(void 0));
     serviceSpy.turnOff.and.returnValue(of(void 0));
+    // loadDevices() schedules a 500ms background refresh via refreshDeviceState() for
+    // every device - without a stub it returns undefined and .subscribe() throws once
+    // that timer fires (can land mid-spec or during teardown and disconnect Chrome).
+    serviceSpy.refreshDeviceState.and.returnValue(of(device));
 
     await TestBed.configureTestingModule({
       imports: [SmartDeviceListComponent],
@@ -108,6 +112,17 @@ describe('SmartDeviceListComponent', () => {
     fixture.detectChanges();
 
     fixture.componentInstance.kasaIpInput = 'keine-ip';
+    fixture.componentInstance.submitAddKasaForm();
+
+    expect(serviceSpy.addKasaDeviceByIp).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.addKasaError).toContain('Ungueltige IP-Adresse');
+  });
+
+  it('lehnt ein Oktett mit fuehrender Null ab', () => {
+    const fixture = TestBed.createComponent(SmartDeviceListComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.kasaIpInput = '010.1.1.1';
     fixture.componentInstance.submitAddKasaForm();
 
     expect(serviceSpy.addKasaDeviceByIp).not.toHaveBeenCalled();
