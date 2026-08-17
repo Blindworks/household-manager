@@ -156,11 +156,18 @@
             <version>0.17.1</version>
         </dependency>
 
-        <!-- Web Push (VAPID + aes128gcm) fuer PWA-Benachrichtigungen; BouncyCastle + jose4j kommen transitiv -->
+        <!-- Web Push (VAPID + aes128gcm) fuer PWA-Benachrichtigungen; jose4j kommt transitiv,
+             BouncyCastle NICHT (die veroeffentlichte Maven-POM der Bibliothek listet es nicht,
+             nur die Gradle-Modul-Metadaten tun das) -->
         <dependency>
             <groupId>nl.martijndwars</groupId>
             <artifactId>web-push</artifactId>
             <version>5.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78</version>
         </dependency>
     </dependencies>
 
