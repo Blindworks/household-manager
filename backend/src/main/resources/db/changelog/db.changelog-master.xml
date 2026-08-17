@@ -115,4 +115,7 @@
     <!-- Toni-Futtervorrat -->
     <include file="db/changelog/changes/20260815-0046-create-pet-food-tables.xml"/>
 
+    <!-- Web-Push-Subscriptions der PWA -->
+    <include file="db/changelog/changes/20260817-0047-create-push-subscription-table.xml"/>
+
 </databaseChangeLog>
