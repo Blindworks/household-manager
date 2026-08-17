@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { SmartDevice, SmartDeviceScanRequest, SmartDeviceUpdateRequest } from '../models/smart-device.model';
+import { KasaManualAddRequest, SmartDevice, SmartDeviceScanRequest, SmartDeviceUpdateRequest } from '../models/smart-device.model';
 
 @Injectable({
   providedIn: 'root'
@@ -26,6 +26,13 @@ export class SmartDeviceService {
   scanDevices(deviceType: string): Observable<SmartDevice[]> {
     const request: SmartDeviceScanRequest = { deviceType: deviceType as any };
     return this.http.post<SmartDevice[]>(`${this.baseUrl}/scan`, request).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  addKasaDeviceByIp(ip: string): Observable<SmartDevice> {
+    const request: KasaManualAddRequest = { ip };
+    return this.http.post<SmartDevice>(`${this.baseUrl}/kasa`, request).pipe(
       catchError(this.handleError)
     );
   }

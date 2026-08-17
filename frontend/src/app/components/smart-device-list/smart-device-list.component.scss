@@ -39,6 +39,87 @@
   }
 }
 
+.refresh-btn--active {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.refresh-btn--ghost {
+  background: transparent;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+// Kasa-per-IP Formular
+// Diese Komponente wird sowohl auf der (dunklen Verlaufs-)Geraeteseite als auch
+// im (hellen) Admin-Bereich eingebettet ("Smart Plugs"-Tab, .admin__card = weiss).
+// Deshalb hier eine eigene, fast deckende dunkle Flaeche statt eines transparenten
+// Glass-Effekts, der sich auf den Hintergrund der jeweiligen Seite verlassen wuerde -
+// nur so bleibt der helle Text in beiden Kontexten lesbar.
+.kasa-ip-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(45, 32, 68, 0.92);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.kasa-ip-form__label {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.kasa-ip-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kasa-ip-form__input {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  color: #2d3748;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &:focus {
+    outline: none;
+    border-color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &::placeholder {
+    color: #a0aec0;
+  }
+}
+
+.kasa-ip-form__error {
+  margin: 0;
+  color: #ffe5e5;
+  background: rgba(252, 129, 129, 0.25);
+  border: 1px solid rgba(252, 129, 129, 0.6);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 // View Toggle (Normal / Kompakt)
 .view-toggle {
   display: inline-flex;
@@ -522,6 +603,13 @@
   color: #742a2a;
   border: 2px solid #fc8181;
   box-shadow: 0 4px 6px rgba(252, 129, 129, 0.1);
+}
+
+.message--success {
+  background: #c6f6d5;
+  color: #22543d;
+  border: 2px solid #48bb78;
+  box-shadow: 0 4px 6px rgba(72, 187, 120, 0.1);
 }
 
 .message__close {

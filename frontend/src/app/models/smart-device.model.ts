@@ -21,3 +21,7 @@ export interface SmartDeviceUpdateRequest {
   deviceName: string;
   metadata: Record<string, any>;
 }
+
+export interface KasaManualAddRequest {
+  ip: string;
+}

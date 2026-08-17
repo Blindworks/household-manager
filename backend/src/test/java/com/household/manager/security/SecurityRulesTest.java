@@ -1,11 +1,14 @@
 package com.household.manager.security;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.calendar.CalendarCategoryController;
 import com.household.manager.calendar.CalendarCategoryService;
 import com.household.manager.calendar.CalendarEventController;
 import com.household.manager.calendar.CalendarEventService;
+import com.household.manager.controller.SmartDeviceController;
 import com.household.manager.controller.SwitchController;
 import com.household.manager.controller.TabletPresenceController;
+import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.entitystate.SwitchCommandService;
 import com.household.manager.entitystate.SwitchQueryService;
 import com.household.manager.model.entity.AppUser;
@@ -20,6 +23,7 @@ import com.household.manager.push.PushNotificationService;
 import com.household.manager.push.PushSubscriptionService;
 import com.household.manager.push.VapidKeyService;
 import com.household.manager.repository.AppUserRepository;
+import com.household.manager.service.SmartDeviceService;
 import com.household.manager.system.SystemController;
 import com.household.manager.system.SystemRebootService;
 import com.household.manager.tablet.TabletPresenceService;
@@ -64,7 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
         HouseholdUserController.class, SystemController.class, PetFoodController.class,
-        PushController.class},
+        PushController.class, SmartDeviceController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -105,6 +109,10 @@ class SecurityRulesTest {
     private PushNotificationService pushNotificationService;
     @MockitoBean
     private CurrentUserService currentUserService;
+    @MockitoBean
+    private SmartDeviceService smartDeviceService;
+    @MockitoBean
+    private AuditService auditService;
 
     /**
      * DisabledUserSessionFilter fragt bei jedem Request mit einem UserDetails-Principal
@@ -387,6 +395,30 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"endpoint\": \"https://x\", \"p256dh\": \"k\", \"auth\": \"a\"}"))
                 .andExpect(status().isOk());
+    }
+
+    /**
+     * /devices/kasa faellt auf die generische anyRequest -> MEMBER-Regel (kein eigener
+     * Matcher in SecurityConfig). Bisher war kein /devices-Pfad ueberhaupt gepinnt.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeinKasaGeraetManuellHinzufuegen() throws Exception {
+        mockMvc.perform(post("/devices/kasa").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ip\": \"192.168.1.116\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKasaGeraetManuellHinzufuegen() throws Exception {
+        when(smartDeviceService.addKasaDeviceByIp("192.168.1.116")).thenReturn(
+                SmartDeviceResponse.builder().id(1L).deviceType("KASA").build());
+        mockMvc.perform(post("/devices/kasa").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ip\": \"192.168.1.116\"}"))
+                .andExpect(status().isCreated());
     }
 
 }

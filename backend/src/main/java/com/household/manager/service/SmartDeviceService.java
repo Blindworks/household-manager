@@ -251,6 +251,33 @@ public class SmartDeviceService {
         }
     }
 
+    /**
+     * Manually add (or update) a Kasa device by its IP address.
+     * <p>
+     * Bypasses UDP broadcast discovery entirely by sending a single unicast probe to the
+     * given IP, so it also works in environments where broadcast is blocked (e.g. the
+     * production backend running inside a Docker bridge network) but a direct TCP
+     * connection to the device works. Uses the same persist logic as
+     * {@link #scanKasaDevices()}, so the resulting row is indistinguishable in the database
+     * from a discovered one: identified by the stable hardware {@code deviceId}, created or
+     * updated accordingly, and followed by the same entity-state report.
+     *
+     * @param ip the device's IP address to probe
+     * @return the persisted device
+     * @throws com.household.manager.kasa.exception.KasaCommunicationException if the device is unreachable or answers unexpectedly
+     */
+    @Transactional
+    public SmartDeviceResponse addKasaDeviceByIp(String ip) {
+        log.info("Adding Kasa device manually by IP: {}", ip);
+
+        KasaDiscoveryDto dto = kasaService.probe(ip);
+        SmartDevice device = upsertKasaDevice(dto);
+        reportEntityState(device);
+
+        log.info("Successfully added/updated Kasa device: {}", device.getDeviceName());
+        return toResponse(device);
+    }
+
     // ==================== Kasa Device Methods ====================
 
     private List<SmartDevice> scanKasaDevices() {
