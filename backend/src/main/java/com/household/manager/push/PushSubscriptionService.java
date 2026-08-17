@@ -14,6 +14,9 @@ import java.util.List;
  * Verwaltung der Web-Push-Subscriptions. Anmelden ist ein Upsert per Endpoint —
  * erneutes Abonnieren desselben Geraets erzeugt keine Dublette, sondern
  * aktualisiert Schluessel und Besitzer.
+ * <p>Das find-then-save auf den Unique-Constraint von endpoint ist nicht gegen
+ * eine echte Race abgesichert (bewusst kein {@code @Version}, analog Futtervorrat) —
+ * bei Haushaltsgroesse triggert das nur ein doppeltes Auto-Retry desselben Browsers.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ import java.util.List;
 public class PushSubscriptionService {
 
     private static final int MAX_ENDPOINT_LENGTH = 500;
+    private static final int MAX_KEY_LENGTH = 255;
 
     private final PushSubscriptionRepository repository;
     private final AuditService auditService;
@@ -30,12 +34,17 @@ public class PushSubscriptionService {
         String endpoint = validated(request);
         PushSubscription subscription = repository.findByEndpoint(endpoint)
                 .orElseGet(() -> PushSubscription.builder().endpoint(endpoint).build());
+        Long previousUserId = subscription.getUserId();
         subscription.setUserId(userId);
         subscription.setP256dhKey(request.p256dh().trim());
         subscription.setAuthSecret(request.auth().trim());
         subscription.setDeviceLabel(deviceLabel(request.userAgent()));
         PushSubscription saved = repository.save(subscription);
-        auditService.record("push.subscribe", "Geraet: " + saved.getDeviceLabel());
+        String detail = "Geraet: " + saved.getDeviceLabel();
+        if (previousUserId != null && !previousUserId.equals(userId)) {
+            detail += " (uebernommen von Nutzer " + previousUserId + ")";
+        }
+        auditService.record("push.subscribe", detail);
         return toResponse(saved);
     }
 
@@ -65,6 +74,12 @@ public class PushSubscriptionService {
         }
         if (endpoint.length() > MAX_ENDPOINT_LENGTH) {
             throw new IllegalArgumentException("endpoint ist zu lang (max. " + MAX_ENDPOINT_LENGTH + " Zeichen)");
+        }
+        if (request.p256dh().trim().length() > MAX_KEY_LENGTH) {
+            throw new IllegalArgumentException("p256dh ist zu lang (max. " + MAX_KEY_LENGTH + " Zeichen)");
+        }
+        if (request.auth().trim().length() > MAX_KEY_LENGTH) {
+            throw new IllegalArgumentException("auth ist zu lang (max. " + MAX_KEY_LENGTH + " Zeichen)");
         }
         return endpoint;
     }

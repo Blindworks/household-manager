@@ -14,6 +14,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -64,6 +65,10 @@ class PushSubscriptionServiceTest {
         assertEquals(3L, captor.getValue().getId());
         assertEquals(7L, captor.getValue().getUserId());
         assertEquals("p256dh-key", captor.getValue().getP256dhKey());
+
+        ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
+        verify(auditService).record(eq("push.subscribe"), detailCaptor.capture());
+        assertTrue(detailCaptor.getValue().contains("uebernommen"));
     }
 
     @Test
@@ -72,6 +77,14 @@ class PushSubscriptionServiceTest {
                 new PushDtos.SubscribeRequest("", "k", "a", null)));
         assertThrows(IllegalArgumentException.class, () -> service().subscribe(7L,
                 new PushDtos.SubscribeRequest("http://insecure", "k", "a", null)));
+    }
+
+    @Test
+    void subscribeRejectsOversizedKeysAndEndpoint() {
+        assertThrows(IllegalArgumentException.class, () -> service().subscribe(7L,
+                new PushDtos.SubscribeRequest("https://web.push.apple.com/abc", "x".repeat(256), "a", null)));
+        assertThrows(IllegalArgumentException.class, () -> service().subscribe(7L,
+                new PushDtos.SubscribeRequest("https://" + "x".repeat(500), "k", "a", null)));
     }
 
     @Test
