@@ -3,9 +3,41 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { SmartDeviceService } from '../../services/smart-device.service';
-import { SmartDevice } from '../../models/smart-device.model';
+import { LightStateRequest, SmartDevice } from '../../models/smart-device.model';
+import { hexToHueSaturation, hueSaturationToHex } from '../../shared/color-conversion.util';
 
 export type DeviceViewMode = 'normal' | 'compact';
+
+/**
+ * Geraetespezifischer, lokal gehaltener Stand der Licht-Regler. Wird aus dem Ist-Zustand des
+ * Geraets vorbelegt (`SmartDevice.brightness`/`hue`/`saturation`/`colorTemp`) und bei jeder
+ * Aktualisierung des Geraets neu vorbelegt (siehe `seedLightState`) - nur waehrend der Nutzer aktiv
+ * an einem Regler zieht (zwischen `input` und `change`) bzw. waehrend ein Request noch laeuft, ist
+ * dieser lokale Stand die massgebliche Anzeige. Bleibt bei einem fehlgeschlagenen Request
+ * unveraendert stehen, statt auf einen Default zurueckzuspringen.
+ *
+ * Meldet das Geraet einen Wert nicht (kein Feld im JSON, siehe `SmartDevice`), zeigt der
+ * `*Known`-Flag das an - der Regler startet dann bei einem allgemeinen Default, aber die Kachel
+ * darf das nicht als echten Geraetewert ausgeben.
+ */
+export interface LightControlState {
+  brightness: number;
+  brightnessKnown: boolean;
+  colorTemp: number;
+  colorTempKnown: boolean;
+  colorHex: string;
+  colorKnown: boolean;
+  pending: boolean;
+  error: string | null;
+}
+
+/** Zustand des inline "IP setzen"-Formulars je Tapo-Geraet. */
+export interface TapoAddressFormState {
+  visible: boolean;
+  ip: string;
+  pending: boolean;
+  error: string | null;
+}
 
 /**
  * Wiederverwendbare Geraeteliste aus der smart_devices-Datenbank
@@ -21,6 +53,10 @@ export type DeviceViewMode = 'normal' | 'compact';
 export class SmartDeviceListComponent implements OnInit, OnDestroy {
   private static readonly VIEW_MODE_STORAGE_KEY = 'smartDeviceViewMode';
   private static readonly SUCCESS_MESSAGE_TIMEOUT_MS = 3000;
+  private static readonly DEFAULT_BRIGHTNESS = 100;
+  private static readonly DEFAULT_COLOR_TEMP_MIN = 2500;
+  private static readonly DEFAULT_COLOR_TEMP_MAX = 6500;
+  private static readonly DEFAULT_COLOR_HEX = '#ffffff';
 
   private readonly smartDeviceService = inject(SmartDeviceService);
   private readonly typeOrder: ReadonlyArray<SmartDevice['deviceType']> = ['KASA', 'TAPO', 'MEROSS'];
@@ -41,6 +77,12 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
   addKasaError: string | null = null;
   addKasaSuccessMessage: string | null = null;
   private addKasaSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Licht-Regler (Helligkeit/Farbe/Farbtemperatur) je Geraet, lazy angelegt
+  private readonly lightStates = new Map<number, LightControlState>();
+
+  // "IP setzen"-Formular je Tapo-Geraet, lazy angelegt
+  private readonly addressForms = new Map<number, TapoAddressFormState>();
 
   ngOnInit(): void {
     this.viewMode = this.readStoredViewMode();
@@ -83,6 +125,7 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     this.smartDeviceService.getAllDevices().subscribe({
       next: (devices) => {
         this.devices = devices;
+        devices.forEach(device => this.seedLightState(device));
         this.isLoading = false;
 
         // Automatisch den aktuellen Status aller Geräte im Hintergrund aktualisieren
@@ -275,6 +318,198 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     return this.togglingDevices.has(deviceId);
   }
 
+  // ==================== Licht-Regler (Helligkeit/Farbe/Farbtemperatur) ====================
+
+  hasCapability(device: SmartDevice, capability: string): boolean {
+    return device.capabilities?.includes(capability) ?? false;
+  }
+
+  hasLightControls(device: SmartDevice): boolean {
+    return this.hasCapability(device, 'BRIGHTNESS')
+      || this.hasCapability(device, 'COLOR')
+      || this.hasCapability(device, 'COLOR_TEMP');
+  }
+
+  /** Geraetespezifischer zulaessiger Farbtemperatur-Bereich, mit Fallback auf 2500-6500K. */
+  getColorTempRange(device: SmartDevice): { min: number; max: number } {
+    const min = this.asFiniteNumber(device.metadata?.['colorTempRangeMin']);
+    const max = this.asFiniteNumber(device.metadata?.['colorTempRangeMax']);
+    if (min !== null && max !== null && min < max) {
+      return { min, max };
+    }
+    return {
+      min: SmartDeviceListComponent.DEFAULT_COLOR_TEMP_MIN,
+      max: SmartDeviceListComponent.DEFAULT_COLOR_TEMP_MAX
+    };
+  }
+
+  /** Liefert den lokalen Reglerstand eines Geraets, belegt ihn beim ersten Zugriff aus dem Geraet vor. */
+  getLightState(device: SmartDevice): LightControlState {
+    let state = this.lightStates.get(device.id);
+    if (!state) {
+      this.seedLightState(device);
+      state = this.lightStates.get(device.id)!;
+    }
+    return state;
+  }
+
+  /**
+   * (Neu-)Belegt den lokalen Reglerstand eines Geraets aus dessen Ist-Zustand. Aufgerufen beim
+   * initialen Laden und aus `updateDeviceInList` - also bei jedem Refresh, inklusive dem, den ein
+   * erfolgreiches Setzen selbst ausloest (der Endpunkt liefert den aktualisierten Geraetezustand
+   * zurueck). Ein laufender Request oder eine bereits angezeigte Fehlermeldung werden dabei nicht
+   * angetastet - die Werte werden neu vorbelegt, der Interaktionszustand nicht.
+   */
+  private seedLightState(device: SmartDevice): void {
+    const existing = this.lightStates.get(device.id);
+    const range = this.getColorTempRange(device);
+
+    const brightnessKnown = this.isKnownNumber(device.brightness);
+    const colorTempKnown = this.isKnownNumber(device.colorTemp);
+    const colorKnown = this.isKnownNumber(device.hue) && this.isKnownNumber(device.saturation);
+
+    this.lightStates.set(device.id, {
+      brightness: brightnessKnown ? device.brightness! : SmartDeviceListComponent.DEFAULT_BRIGHTNESS,
+      brightnessKnown,
+      colorTemp: colorTempKnown ? device.colorTemp! : Math.round((range.min + range.max) / 2),
+      colorTempKnown,
+      colorHex: colorKnown ? hueSaturationToHex(device.hue!, device.saturation!) : SmartDeviceListComponent.DEFAULT_COLOR_HEX,
+      colorKnown,
+      pending: existing?.pending ?? false,
+      error: existing?.error ?? null
+    });
+  }
+
+  private isKnownNumber(value: number | undefined | null): value is number {
+    return value !== undefined && value !== null;
+  }
+
+  onBrightnessInput(device: SmartDevice, event: Event): void {
+    const state = this.getLightState(device);
+    state.brightness = this.numberFromInput(event);
+    // Ab der ersten aktiven Bedienung ist der Wert die bewusste Wahl des Nutzers, kein Default mehr.
+    state.brightnessKnown = true;
+    state.error = null;
+  }
+
+  onBrightnessCommit(device: SmartDevice): void {
+    const state = this.getLightState(device);
+    this.commitLightState(device, { brightness: state.brightness });
+  }
+
+  onColorTempInput(device: SmartDevice, event: Event): void {
+    const state = this.getLightState(device);
+    state.colorTemp = this.numberFromInput(event);
+    state.colorTempKnown = true;
+    state.error = null;
+  }
+
+  onColorTempCommit(device: SmartDevice): void {
+    const state = this.getLightState(device);
+    this.commitLightState(device, { colorTemp: state.colorTemp });
+  }
+
+  onColorInput(device: SmartDevice, event: Event): void {
+    const state = this.getLightState(device);
+    state.colorHex = (event.target as HTMLInputElement).value;
+    state.colorKnown = true;
+    state.error = null;
+  }
+
+  onColorCommit(device: SmartDevice): void {
+    const state = this.getLightState(device);
+    const { hue, saturation } = hexToHueSaturation(state.colorHex);
+    this.commitLightState(device, { hue, saturation });
+  }
+
+  private commitLightState(device: SmartDevice, request: LightStateRequest): void {
+    const state = this.getLightState(device);
+    if (state.pending) {
+      return;
+    }
+    state.pending = true;
+    state.error = null;
+
+    this.smartDeviceService.setLightState(device.id, request).subscribe({
+      next: (updatedDevice) => {
+        state.pending = false;
+        this.updateDeviceInList(updatedDevice);
+      },
+      error: (error: Error) => {
+        state.pending = false;
+        state.error = error.message;
+      }
+    });
+  }
+
+  private numberFromInput(event: Event): number {
+    return Number((event.target as HTMLInputElement).value);
+  }
+
+  private asFiniteNumber(value: unknown): number | null {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // ==================== Tapo-Adresse manuell setzen ====================
+
+  /** Liefert den Formularstand eines Tapo-Geraets, legt ihn beim ersten Zugriff an. */
+  getAddressForm(device: SmartDevice): TapoAddressFormState {
+    let state = this.addressForms.get(device.id);
+    if (!state) {
+      state = { visible: false, ip: device.ipAddress ?? '', pending: false, error: null };
+      this.addressForms.set(device.id, state);
+    }
+    return state;
+  }
+
+  toggleAddressForm(device: SmartDevice): void {
+    const state = this.getAddressForm(device);
+    state.visible = !state.visible;
+    state.error = null;
+    if (state.visible) {
+      state.ip = device.ipAddress ?? '';
+    }
+  }
+
+  onAddressInput(device: SmartDevice, event: Event): void {
+    const state = this.getAddressForm(device);
+    state.ip = (event.target as HTMLInputElement).value;
+    state.error = null;
+  }
+
+  submitAddressForm(device: SmartDevice): void {
+    const state = this.getAddressForm(device);
+    if (state.pending) {
+      return;
+    }
+
+    const ip = state.ip.trim();
+    if (!ip) {
+      state.error = 'Bitte eine IP-Adresse eingeben.';
+      return;
+    }
+    if (!this.isValidIpv4(ip)) {
+      state.error = 'Ungueltige IP-Adresse. Bitte z. B. 192.168.1.114 eingeben.';
+      return;
+    }
+
+    state.pending = true;
+    state.error = null;
+
+    this.smartDeviceService.setTapoAddress(device.id, ip).subscribe({
+      next: () => {
+        state.pending = false;
+        state.visible = false;
+        this.loadDevices();
+      },
+      error: (error: Error) => {
+        state.pending = false;
+        state.error = error.message;
+      }
+    });
+  }
+
   /** Flache, nach Typ-Reihenfolge sortierte Liste - für die Kompakt-Ansicht ohne Kategorien. */
   get orderedDevices(): SmartDevice[] {
     return this.groupedDevices.flatMap(group => group.devices);
@@ -330,6 +565,9 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     if (index !== -1) {
       this.devices[index] = updatedDevice;
     }
+    // Jeder Refresh (inklusive dem nach einem erfolgreichen Licht-Set) bringt den echten
+    // Geraetezustand mit - die Regler damit neu vorbelegen statt auf dem alten Stand zu bleiben.
+    this.seedLightState(updatedDevice);
   }
 
   private refreshAllDevicesInBackground(): void {

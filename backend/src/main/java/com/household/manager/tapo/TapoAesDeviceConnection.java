@@ -64,6 +64,13 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
     }
 
     @Override
+    public void setDeviceInfo(ObjectNode params) {
+        ObjectNode request = objectMapper.createObjectNode().put("method", "set_device_info");
+        request.set("params", params);
+        executeAuthenticatedRequest(request);
+    }
+
+    @Override
     public JsonNode getEnergyUsage() {
         return executeAuthenticatedRequest(objectMapper.createObjectNode().put("method", "get_energy_usage"));
     }

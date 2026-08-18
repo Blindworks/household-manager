@@ -173,6 +173,25 @@ Web-Push-Benachrichtigung an die abonnierten Geraete eines Nutzers oder alle Ger
 | `title` | nein | Titel; leer = "Household Manager" |
 | `userId` | nein | numerische Nutzer-ID; leer = alle Geraete |
 
+### `light-set` — Licht setzen (1 Ausgang)
+Setzt Helligkeit, Farbe und/oder Farbtemperatur einer Tapo-Lampe. Mindestens eines der vier
+Lichtfelder ist Pflicht — ein Node ohne jeden Lichtwert würde beim Ausführen nichts tun und
+wird deshalb bereits beim Deploy abgelehnt. Farbe (`hue`/`saturation`) und Farbtemperatur
+(`colorTemp`) sind am Gerät exklusive Modi; welche Felder ein Gerät überhaupt annimmt (Farbe
+vs. Farbtemperatur) und die gültigen Wertebereiche prüft erst der Backend-Service anhand der
+vom Gerät gemeldeten Fähigkeiten — ein unerreichbares oder ablehnendes Gerät bricht den
+Flow-Zweig nicht ab, der Fehler landet nur als Warnung im Log.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `deviceId` | ja | numerische SmartDevice-ID eines Tapo-Geräts |
+| `brightness` | nein* | Helligkeit 1-100 |
+| `hue` | nein* | Farbton 0-360 |
+| `saturation` | nein* | Sättigung 0-100 |
+| `colorTemp` | nein* | Farbtemperatur in Kelvin (gültiger Bereich ist geräteabhängig) |
+
+\* mindestens eines der vier Felder muss gesetzt sein.
+
 > Referenzen müssen zu deiner Umgebung passen. Ist eine **`entityId`** beim Deploy noch
 > unbekannt, meldet der Validator eine **Warnung** (kein Fehler) — der Flow greift, sobald
 > die Entität existiert. **`deviceId`** und **`deviceSerials`** werden beim Deploy dagegen

@@ -3,6 +3,7 @@ package com.household.manager.tapo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
@@ -123,27 +124,64 @@ public class TapoDeviceService {
      * Probe a statically configured device by trying KLAP, then AES.
      */
     private TapoDiscoveryDevice probeStaticDevice(TapoProperties.TapoDeviceConfig config) {
-        String ip = config.getIp();
+        LocalHandshakeResult handshake = tryLocalHandshake(config.getIp(), config.getName());
+        if (handshake == null) {
+            return null;
+        }
+        JsonNode info = handshake.info();
+        String deviceId = config.getDeviceId();
+        if (deviceId == null || deviceId.isBlank()) {
+            deviceId = firstText(info, "device_id", "deviceId");
+        }
+        return new TapoDiscoveryDevice(
+                config.getIp(), handshake.protocol(), deviceId,
+                firstText(info, "model", "device_model"),
+                firstText(info, "nickname", "alias"),
+                info.path("device_on").asBoolean(false)
+        );
+    }
+
+    /**
+     * Manually probes a device directly by IP, bypassing discovery and the connection caches
+     * entirely: tries KLAP first (current firmware default), then AES (older firmware). Used to
+     * set a device's address by hand when local UDP broadcast discovery cannot reach it (e.g. the
+     * production backend running inside a Docker bridge network) but a direct local connection
+     * works — mirrors {@link com.household.manager.kasa.KasaService#probe(String)}.
+     *
+     * @throws TapoException if the device answers neither protocol; a wrong IP must fail loudly
+     *                        instead of silently persisting an unreachable address
+     */
+    public TapoAddressProbeResult probeAddress(String ip) {
+        LocalHandshakeResult handshake = tryLocalHandshake(ip, ip);
+        if (handshake == null) {
+            throw new TapoException("Tapo-Geraet unter " + ip + " ist weder ueber KLAP noch ueber AES erreichbar.");
+        }
+        TapoDeviceState state = TapoDeviceState.fromLocal(handshake.info(), tapoCloudService);
+        String deviceId = firstText(handshake.info(), "device_id", "deviceId");
+        return new TapoAddressProbeResult(deviceId, handshake.protocol(), state);
+    }
+
+    /**
+     * Shared KLAP-then-AES probe used by {@link #probeStaticDevice} and {@link #probeAddress}.
+     * Returns the working protocol alongside the response rather than caching it on the instance:
+     * this service is a singleton bean and concurrent probes (a scheduled scan racing a manual
+     * "set address" request) must not share mutable state.
+     */
+    private LocalHandshakeResult tryLocalHandshake(String ip, String label) {
         for (TapoAuthProtocol protocol : new TapoAuthProtocol[]{TapoAuthProtocol.KLAP, TapoAuthProtocol.AES}) {
             try {
                 TapoLocalDeviceConnection conn = tapoDeviceFactory.create(protocol, ip,
                         tapoProperties.getEmail(), tapoProperties.getPassword());
                 JsonNode info = conn.getDeviceInfo();
-                String deviceId = config.getDeviceId();
-                if (deviceId == null || deviceId.isBlank()) {
-                    deviceId = firstText(info, "device_id", "deviceId");
-                }
-                return new TapoDiscoveryDevice(
-                        ip, protocol, deviceId,
-                        firstText(info, "model", "device_model"),
-                        firstText(info, "nickname", "alias"),
-                        info.path("device_on").asBoolean(false)
-                );
+                return new LocalHandshakeResult(protocol, info);
             } catch (Exception ex) {
-                log.debug("Probe {} mit {} fuer {} fehlgeschlagen: {}", ip, protocol, config.getName(), ex.getMessage());
+                log.debug("Probe {} mit {} fuer {} fehlgeschlagen: {}", ip, protocol, label, ex.getMessage());
             }
         }
         return null;
+    }
+
+    private record LocalHandshakeResult(TapoAuthProtocol protocol, JsonNode info) {
     }
 
     private static String firstText(JsonNode node, String... fields) {
@@ -182,6 +220,68 @@ public class TapoDeviceService {
         executeLocalWithRediscovery(deviceId, ipAddress, protocol,
                 conn -> { conn.setDevicePowered(false); return null; });
         log.info("Tapo device switched off locally (deviceId={})", deviceId);
+    }
+
+    /**
+     * Sets brightness, colour and/or colour temperature on a light-capable Tapo device via
+     * {@code set_device_info}. Capability and range validation happens in
+     * {@link com.household.manager.service.SmartDeviceService#setLightState} before this is
+     * called; this method only builds the protocol request and sends it.
+     *
+     * @param deviceSupportsColorTemp whether the device reports the {@code COLOR_TEMP} capability
+     *                                — gates whether a colour request is allowed to append
+     *                                {@code color_temp: 0} (see {@link #buildSetDeviceInfoParams})
+     */
+    public void setLightState(String deviceId, String ipAddress, TapoAuthProtocol protocol,
+                               LightState lightState, boolean deviceSupportsColorTemp) {
+        ObjectNode params = buildSetDeviceInfoParams(lightState, deviceSupportsColorTemp);
+        executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                conn -> { conn.setDeviceInfo(params); return null; });
+        log.info("Tapo light state set locally (deviceId={})", deviceId);
+    }
+
+    /**
+     * Builds the {@code set_device_info} params for a light-state change. Only the fields
+     * actually set on {@code lightState} are added to the request.
+     * <p>
+     * <b>Colour and colour-temperature are mutually exclusive modes on these bulbs</b> (verified
+     * against the real L530 protocol behaviour, see {@code TapoLocalProbeManualTest} / the
+     * tplink-leuchtmittel plan Task 1/4): setting {@code hue}/{@code saturation} while a non-zero
+     * {@code color_temp} is still active leaves the bulb in white mode instead of switching it to
+     * colour mode. A colour request must therefore explicitly send {@code color_temp: 0} alongside
+     * {@code hue}/{@code saturation} — <b>but only when {@code deviceSupportsColorTemp} is true</b>.
+     * A device that reports {@code COLOR} without {@code COLOR_TEMP} would reject an unexpected
+     * {@code color_temp} field outright ({@code validateResponse} throws on any non-zero
+     * {@code error_code}), and that failure then burns a protocol fallback plus a UDP
+     * re-discovery before surfacing as "beide Protokolle fehlgeschlagen" — pointing at the network
+     * instead of the actual cause, an unsupported parameter. Conversely, a pure colour-temperature
+     * request sends only {@code color_temp} and omits {@code hue}/{@code saturation} entirely,
+     * since sending either (even unset/0) risks re-triggering colour mode on some firmware. This
+     * is the single place that encodes the rule; callers just describe the desired end state via
+     * {@link LightState} plus whether the device supports colour temperature at all.
+     */
+    private ObjectNode buildSetDeviceInfoParams(LightState lightState, boolean deviceSupportsColorTemp) {
+        ObjectNode params = objectMapper.createObjectNode();
+        if (lightState.brightness() != null) {
+            params.put("brightness", lightState.brightness());
+        }
+
+        boolean settingColor = lightState.hue() != null || lightState.saturation() != null;
+        if (settingColor) {
+            if (lightState.hue() != null) {
+                params.put("hue", lightState.hue());
+            }
+            if (lightState.saturation() != null) {
+                params.put("saturation", lightState.saturation());
+            }
+            if (deviceSupportsColorTemp) {
+                params.put("color_temp", 0);
+            }
+        } else if (lightState.colorTemp() != null) {
+            params.put("color_temp", lightState.colorTemp());
+        }
+
+        return params;
     }
 
     public JsonNode getEnergyUsage(String deviceId) {

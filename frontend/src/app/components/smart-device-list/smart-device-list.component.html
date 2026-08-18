@@ -168,5 +168,88 @@
         </span>
       </button>
     </div>
+
+    <div class="device-card__light-controls" *ngIf="viewMode === 'normal' && hasLightControls(device)">
+      <div class="light-control" *ngIf="hasCapability(device, 'BRIGHTNESS')">
+        <div class="light-control__row">
+          <label class="light-control__label" [attr.for]="'brightness-' + device.id">Helligkeit</label>
+          <span class="light-control__value">
+            {{ getLightState(device).brightness }}%
+            <span class="light-control__unknown" *ngIf="!getLightState(device).brightnessKnown">(unbekannt)</span>
+          </span>
+        </div>
+        <input
+          [id]="'brightness-' + device.id"
+          class="light-control__range"
+          type="range"
+          min="1"
+          max="100"
+          [value]="getLightState(device).brightness"
+          [disabled]="getLightState(device).pending"
+          (input)="onBrightnessInput(device, $event)"
+          (change)="onBrightnessCommit(device)" />
+      </div>
+
+      <div class="light-control" *ngIf="hasCapability(device, 'COLOR_TEMP')">
+        <div class="light-control__row">
+          <label class="light-control__label" [attr.for]="'colortemp-' + device.id">Farbtemperatur</label>
+          <span class="light-control__value">
+            {{ getLightState(device).colorTemp }}K
+            <span class="light-control__unknown" *ngIf="!getLightState(device).colorTempKnown">(unbekannt)</span>
+          </span>
+        </div>
+        <input
+          [id]="'colortemp-' + device.id"
+          class="light-control__range"
+          type="range"
+          [attr.min]="getColorTempRange(device).min"
+          [attr.max]="getColorTempRange(device).max"
+          step="50"
+          [value]="getLightState(device).colorTemp"
+          [disabled]="getLightState(device).pending"
+          (input)="onColorTempInput(device, $event)"
+          (change)="onColorTempCommit(device)" />
+      </div>
+
+      <div class="light-control light-control--color" *ngIf="hasCapability(device, 'COLOR')">
+        <label class="light-control__label" [attr.for]="'color-' + device.id">
+          Farbe
+          <span class="light-control__unknown" *ngIf="!getLightState(device).colorKnown">(unbekannt)</span>
+        </label>
+        <input
+          [id]="'color-' + device.id"
+          class="light-control__color"
+          type="color"
+          [value]="getLightState(device).colorHex"
+          [disabled]="getLightState(device).pending"
+          (input)="onColorInput(device, $event)"
+          (change)="onColorCommit(device)" />
+      </div>
+
+      <p class="light-control__error" *ngIf="getLightState(device).error">{{ getLightState(device).error }}</p>
+    </div>
+
+    <div class="device-card__address" *ngIf="viewMode === 'normal' && device.deviceType === 'TAPO'">
+      <button type="button" class="address-toggle" (click)="toggleAddressForm(device)">
+        {{ getAddressForm(device).visible ? 'Abbrechen' : (device.ipAddress ? 'IP aendern' : 'IP setzen') }}
+      </button>
+
+      <form class="address-form" *ngIf="getAddressForm(device).visible" (ngSubmit)="submitAddressForm(device)">
+        <input
+          type="text"
+          inputmode="decimal"
+          class="address-form__input"
+          placeholder="192.168.1.114"
+          autocomplete="off"
+          [value]="getAddressForm(device).ip"
+          [disabled]="getAddressForm(device).pending"
+          (input)="onAddressInput(device, $event)" />
+        <button type="submit" class="address-form__submit" [disabled]="getAddressForm(device).pending">
+          {{ getAddressForm(device).pending ? 'Wird gesetzt...' : 'Speichern' }}
+        </button>
+      </form>
+
+      <p class="address-form__error" *ngIf="getAddressForm(device).error">{{ getAddressForm(device).error }}</p>
+    </div>
   </article>
 </ng-template>
