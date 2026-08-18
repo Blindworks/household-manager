@@ -227,9 +227,14 @@ public class TapoDeviceService {
      * {@code set_device_info}. Capability and range validation happens in
      * {@link com.household.manager.service.SmartDeviceService#setLightState} before this is
      * called; this method only builds the protocol request and sends it.
+     *
+     * @param deviceSupportsColorTemp whether the device reports the {@code COLOR_TEMP} capability
+     *                                — gates whether a colour request is allowed to append
+     *                                {@code color_temp: 0} (see {@link #buildSetDeviceInfoParams})
      */
-    public void setLightState(String deviceId, String ipAddress, TapoAuthProtocol protocol, LightState lightState) {
-        ObjectNode params = buildSetDeviceInfoParams(lightState);
+    public void setLightState(String deviceId, String ipAddress, TapoAuthProtocol protocol,
+                               LightState lightState, boolean deviceSupportsColorTemp) {
+        ObjectNode params = buildSetDeviceInfoParams(lightState, deviceSupportsColorTemp);
         executeLocalWithRediscovery(deviceId, ipAddress, protocol,
                 conn -> { conn.setDeviceInfo(params); return null; });
         log.info("Tapo light state set locally (deviceId={})", deviceId);
@@ -244,12 +249,18 @@ public class TapoDeviceService {
      * tplink-leuchtmittel plan Task 1/4): setting {@code hue}/{@code saturation} while a non-zero
      * {@code color_temp} is still active leaves the bulb in white mode instead of switching it to
      * colour mode. A colour request must therefore explicitly send {@code color_temp: 0} alongside
-     * {@code hue}/{@code saturation}. Conversely, a pure colour-temperature request sends only
-     * {@code color_temp} and omits {@code hue}/{@code saturation} entirely, since sending either
-     * (even unset/0) risks re-triggering colour mode on some firmware. This is the single place
-     * that encodes the rule; callers just describe the desired end state via {@link LightState}.
+     * {@code hue}/{@code saturation} — <b>but only when {@code deviceSupportsColorTemp} is true</b>.
+     * A device that reports {@code COLOR} without {@code COLOR_TEMP} would reject an unexpected
+     * {@code color_temp} field outright ({@code validateResponse} throws on any non-zero
+     * {@code error_code}), and that failure then burns a protocol fallback plus a UDP
+     * re-discovery before surfacing as "beide Protokolle fehlgeschlagen" — pointing at the network
+     * instead of the actual cause, an unsupported parameter. Conversely, a pure colour-temperature
+     * request sends only {@code color_temp} and omits {@code hue}/{@code saturation} entirely,
+     * since sending either (even unset/0) risks re-triggering colour mode on some firmware. This
+     * is the single place that encodes the rule; callers just describe the desired end state via
+     * {@link LightState} plus whether the device supports colour temperature at all.
      */
-    private ObjectNode buildSetDeviceInfoParams(LightState lightState) {
+    private ObjectNode buildSetDeviceInfoParams(LightState lightState, boolean deviceSupportsColorTemp) {
         ObjectNode params = objectMapper.createObjectNode();
         if (lightState.brightness() != null) {
             params.put("brightness", lightState.brightness());
@@ -263,7 +274,9 @@ public class TapoDeviceService {
             if (lightState.saturation() != null) {
                 params.put("saturation", lightState.saturation());
             }
-            params.put("color_temp", 0);
+            if (deviceSupportsColorTemp) {
+                params.put("color_temp", 0);
+            }
         } else if (lightState.colorTemp() != null) {
             params.put("color_temp", lightState.colorTemp());
         }

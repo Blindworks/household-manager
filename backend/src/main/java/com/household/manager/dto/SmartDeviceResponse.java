@@ -79,6 +79,23 @@ public class SmartDeviceResponse {
     private Map<String, Object> metadata;
 
     /**
+     * Current brightness (1-100), read from the device's last known {@code get_device_info}.
+     * {@code null} if the device doesn't report the {@code BRIGHTNESS} capability, or it hasn't
+     * been probed since this field was added. Lets the frontend seed a slider with the bulb's
+     * actual state instead of an invented default.
+     */
+    private Integer brightness;
+
+    /** Current hue (0-360 degrees). {@code null} under the same conditions as {@link #brightness}. */
+    private Integer hue;
+
+    /** Current saturation (0-100 percent). {@code null} under the same conditions as {@link #brightness}. */
+    private Integer saturation;
+
+    /** Current colour temperature in Kelvin. {@code null} under the same conditions as {@link #brightness}. */
+    private Integer colorTemp;
+
+    /**
      * Timestamp when this record was created
      */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

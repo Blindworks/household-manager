@@ -360,6 +360,7 @@ public class SmartDeviceService {
         metadata.put("authProtocol", probe.protocol().name());
         metadata.remove("localDiscoveryError");
         applyColorTempRange(metadata, state);
+        applyCurrentLightState(metadata, state);
         device.setMetadata(serializeMetadata(metadata));
 
         SmartDevice saved = smartDeviceRepository.save(device);
@@ -411,7 +412,8 @@ public class SmartDeviceService {
 
         String ip = device.getIpAddress();
         TapoAuthProtocol protocol = extractAuthProtocol(device);
-        tapoDeviceService.setLightState(device.getExternalDeviceId(), ip, protocol, lightState);
+        boolean supportsColorTemp = parseCapabilities(device.getCapabilities()).contains("COLOR_TEMP");
+        tapoDeviceService.setLightState(device.getExternalDeviceId(), ip, protocol, lightState, supportsColorTemp);
 
         // Only reached once the device actually accepted the change: refresh and persist the
         // display-relevant fields (online/poweredOn/name/model) from a fresh status read, the
@@ -436,6 +438,19 @@ public class SmartDeviceService {
         if (brightness == null && hue == null && saturation == null && colorTemp == null) {
             throw new IllegalArgumentException(
                     "Es wurde kein Lichtwert angegeben (Helligkeit, Farbe oder Farbtemperatur).");
+        }
+
+        // Colour and colour-temperature are mutually exclusive modes on the device itself (see
+        // TapoDeviceService.buildSetDeviceInfoParams). Without this check, a mixed request like
+        // {hue, saturation, colorTemp} would silently take the colour branch, send color_temp:0
+        // to the device (discarding the requested colorTemp), still return 200, and the audit
+        // entry would claim the requested colorTemp was set even though it never reached the
+        // device - exactly the silent-ignore this API forbids in the other direction (see the
+        // capability check below). Reject loudly instead, structurally, before any device-specific
+        // capability/range check even runs.
+        if ((hue != null || saturation != null) && colorTemp != null) {
+            throw new IllegalArgumentException(
+                    "Farbe und Farbtemperatur schliessen sich aus - bitte nur eines von beiden setzen.");
         }
 
         List<String> capabilities = parseCapabilities(device.getCapabilities());
@@ -508,6 +523,33 @@ public class SmartDeviceService {
         if (state.colorTempMin() != null && state.colorTempMax() != null) {
             metadata.put("colorTempRangeMin", state.colorTempMin());
             metadata.put("colorTempRangeMax", state.colorTempMax());
+        }
+    }
+
+    /**
+     * Stores the device's current brightness/hue/saturation/colorTemp in metadata so
+     * {@link #toResponse} can seed the frontend's light controls with the bulb's actual state
+     * instead of an invented default (e.g. a slider starting at 100% on a bulb sitting at 50%).
+     * Same pattern as {@link #applyColorTempRange}: only the fields this state actually reports
+     * are written, so a device with no light capabilities at all (or a round where the live probe
+     * reported nothing) leaves whatever was previously stored untouched rather than clobbering it.
+     */
+    private void applyCurrentLightState(Map<String, Object> metadata, TapoDeviceState state) {
+        LightState light = state.currentLightState();
+        if (light == null) {
+            return;
+        }
+        if (light.brightness() != null) {
+            metadata.put("lightBrightness", light.brightness());
+        }
+        if (light.hue() != null) {
+            metadata.put("lightHue", light.hue());
+        }
+        if (light.saturation() != null) {
+            metadata.put("lightSaturation", light.saturation());
+        }
+        if (light.colorTemp() != null) {
+            metadata.put("lightColorTemp", light.colorTemp());
         }
     }
 
@@ -634,6 +676,17 @@ public class SmartDeviceService {
 
         // IPs already claimed by a device the merge above matched via its cloud deviceId. Used
         // only to flag a suspicious case below - the merge itself already happened correctly.
+        // Kept deliberately (not deleted) despite being unreachable under normal operation:
+        // TapoDeviceService.discoverLocalDevices() already dedupes UDP-vs-static entries by IP
+        // (the static-config loop skips any IP the UDP broadcast already found), so two DIFFERENT
+        // localDeviceMap entries sharing one IP is not supposed to happen. The realistic trigger
+        // is a misconfigured static tapo.devices entry whose configured deviceId is stale/wrong
+        // while its IP now belongs to a different, correctly cloud-matched device (e.g. the
+        // physical device at that address was swapped, or the static deviceId was copy-pasted
+        // from another entry) - exactly the kind of silent-wrong-target mistake the identity check
+        // in setTapoDeviceAddress guards against for the manual path. This warning is the scan
+        // path's only signal for the equivalent misconfiguration; a future refactor that removes
+        // it should replace it with something else, not drop the check silently.
         Set<String> ipsClaimedByMatchedDevices = discovered.stream()
                 .map(TapoCloudDevice::deviceId)
                 .filter(Objects::nonNull)
@@ -669,6 +722,15 @@ public class SmartDeviceService {
      * Case-insensitive normalization for matching a Tapo device's id across its two independent,
      * unverified sources (TP-Link cloud API vs. the device's own {@code get_device_info}) — see
      * {@link #scanTapoDevices()}.
+     * <p>
+     * This normalization only affects the in-memory merge decision (which {@code TapoCloudDevice}
+     * pairs with which {@code TapoDiscoveryDevice}). The actual database row identity — whether
+     * {@code findByDeviceTypeAndExternalDeviceId} treats two differently-cased spellings of the
+     * same id as the same row and so avoids creating a duplicate — is decided by
+     * {@link #upsertTapoDevice} passing the RAW, un-normalized {@code dto.deviceId()} to that
+     * repository lookup. That "no duplicate row" guarantee therefore still depends on MariaDB's
+     * case-insensitive default collation (e.g. {@code utf8mb4_general_ci}) for the
+     * {@code external_device_id} column, not on this method.
      */
     private static String normalizeTapoDeviceId(String deviceId) {
         return deviceId == null ? null : deviceId.toUpperCase(Locale.ROOT);
@@ -727,6 +789,7 @@ public class SmartDeviceService {
         // protocol/range survives a scan round in which local discovery finds nothing or the
         // live probe below fails.
         TapoAuthProtocol previouslyKnownProtocol = extractAuthProtocol(device);
+        String previousIp = device.getIpAddress();
         Map<String, Object> priorMetadata = deserializeMetadata(device.getMetadata());
         Integer previousColorTempMin = asInteger(priorMetadata.get("colorTempRangeMin"));
         Integer previousColorTempMax = asInteger(priorMetadata.get("colorTempRangeMax"));
@@ -736,6 +799,18 @@ public class SmartDeviceService {
             device.setIpAddress(localDevice.ipAddress());
             metadata.put("authProtocol", localDevice.authProtocol().name());
             log.debug("Tapo device {} found locally at {}", externalId, localDevice.ipAddress());
+            if (previousIp != null && !previousIp.equals(localDevice.ipAddress())) {
+                // TapoDeviceService.getOrCreateLocalConnection keys its connection cache on
+                // deviceId:protocol only, NOT the ip - after a DHCP reshuffle a cached connection
+                // object created against the OLD ip would otherwise keep being reused, silently
+                // talking to whatever physical device now happens to sit at that old address (it
+                // would authenticate happily if it's another bulb on the same Tapo account). Same
+                // bug class setTapoDeviceAddress already guards against explicitly; a scan-discovered
+                // IP change needs the identical guard.
+                tapoDeviceService.clearLocalConnection(externalId);
+                log.info("Tapo device {} IP-Wechsel erkannt ({} -> {}), verworfene Verbindung invalidiert",
+                        externalId, previousIp, localDevice.ipAddress());
+            }
         } else if (previouslyKnownProtocol != null) {
             metadata.put("authProtocol", previouslyKnownProtocol.name());
         }
@@ -759,6 +834,7 @@ public class SmartDeviceService {
                 device.setModel(state.model());
             }
             applyColorTempRange(metadata, state);
+            applyCurrentLightState(metadata, state);
             device.setMetadata(serializeMetadata(metadata));
         } catch (Exception ex) {
             // Live probe failed: keep online (set above from local reachability), poweredOn
@@ -832,6 +908,7 @@ public class SmartDeviceService {
                 device.setModel(state.model());
             }
             applyColorTempRange(metadata, state);
+            applyCurrentLightState(metadata, state);
         } catch (Exception ex) {
             device.setOnline(false);
             metadata.put("localDiscoveryError",
@@ -845,6 +922,15 @@ public class SmartDeviceService {
         return smartDeviceRepository.save(device);
     }
 
+    /**
+     * Refreshes online/poweredOn/name/model from a live status read, and — same metadata
+     * read/merge/write shape as {@link #setTapoDeviceAddress} — the colour-temp range and current
+     * light values via {@link #applyColorTempRange}/{@link #applyCurrentLightState}. Without this,
+     * a device that is only ever refreshed (never rescanned or address-set) would keep the
+     * 2500-6500 Kelvin fallback range forever and never get its light-control seed values, even
+     * though every refresh already fetches the full {@code get_device_info} response that carries
+     * both.
+     */
     private void refreshTapoDeviceState(SmartDevice device) {
         try {
             String ip = device.getIpAddress();
@@ -859,6 +945,11 @@ public class SmartDeviceService {
             if (status.model() != null && !status.model().isBlank()) {
                 device.setModel(status.model());
             }
+
+            Map<String, Object> metadata = new HashMap<>(deserializeMetadata(device.getMetadata()));
+            applyColorTempRange(metadata, status);
+            applyCurrentLightState(metadata, status);
+            device.setMetadata(serializeMetadata(metadata));
         } catch (Exception ex) {
             log.warn("Tapo device {} appears offline: {}", device.getExternalDeviceId(), ex.getMessage());
             device.setOnline(false);
@@ -921,6 +1012,7 @@ public class SmartDeviceService {
     // ==================== Helper Methods ====================
 
     private SmartDeviceResponse toResponse(SmartDevice entity) {
+        Map<String, Object> metadata = deserializeMetadata(entity.getMetadata());
         return SmartDeviceResponse.builder()
                 .id(entity.getId())
                 .deviceType(entity.getDeviceType().name())
@@ -931,7 +1023,11 @@ public class SmartDeviceService {
                 .isOnline(entity.isOnline())
                 .isPoweredOn(entity.isPoweredOn())
                 .capabilities(parseCapabilities(entity.getCapabilities()))
-                .metadata(deserializeMetadata(entity.getMetadata()))
+                .metadata(metadata)
+                .brightness(asInteger(metadata.get("lightBrightness")))
+                .hue(asInteger(metadata.get("lightHue")))
+                .saturation(asInteger(metadata.get("lightSaturation")))
+                .colorTemp(asInteger(metadata.get("lightColorTemp")))
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
@@ -941,7 +1037,12 @@ public class SmartDeviceService {
         if (capabilities == null || capabilities.isBlank()) {
             return Collections.emptyList();
         }
-        return Arrays.asList(capabilities.split(","));
+        // .trim(): defensive, matches the metadata deserialization style elsewhere in this class —
+        // a capabilities string ever written with ", " separators would otherwise fail every
+        // capability check silently (List.contains("BRIGHTNESS") never matches " BRIGHTNESS").
+        return Arrays.stream(capabilities.split(","))
+                .map(String::trim)
+                .collect(Collectors.toList());
     }
 
     private String serializeMetadata(Map<String, Object> metadata) {

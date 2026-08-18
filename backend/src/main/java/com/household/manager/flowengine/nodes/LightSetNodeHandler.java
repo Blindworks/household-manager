@@ -70,10 +70,13 @@ public class LightSetNodeHandler implements NodeHandler {
 
         // hue ohne saturation wird bewusst NICHT abgelehnt: SmartDeviceService prueft hue und
         // saturation unabhaengig voneinander (beide erfordern nur die COLOR-Faehigkeit) und laesst
-        // ein alleinstehendes hue zu - das Geraet behaelt seine aktuelle Saettigung. Farbe und
-        // Farbtemperatur sind dagegen exklusive Modi, das entscheidet ebenfalls erst das Backend
-        // (colorTemp:0 beim Setzen von hue/saturation). Ein strengerer Validate-Fehler hier waere
-        // enger als die eigentliche API-Grenze und muesste bei einer Aenderung dort mitgepflegt werden.
+        // ein alleinstehendes hue zu - das Geraet behaelt seine aktuelle Saettigung. Farbe (hue/
+        // saturation) und Farbtemperatur (colorTemp) sind dagegen exklusive Modi; werden beide
+        // Gruppen gleichzeitig gesetzt, lehnt SmartDeviceService.setLightState das mit 400 ab statt
+        // eine der beiden Angaben still zu verwerfen. Ein strengerer Validate-Fehler hier waere
+        // enger als die eigentliche API-Grenze und muesste bei einer Aenderung dort mitgepflegt
+        // werden - ein fehlkonfigurierter Flow-Node scheitert dafuer erst zur Laufzeit (vom
+        // handle()-Catch geschluckt, siehe Klassendoku), statt schon beim Deploy aufzufallen.
         return errors;
     }
 

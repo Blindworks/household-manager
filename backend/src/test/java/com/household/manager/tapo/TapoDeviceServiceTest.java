@@ -120,7 +120,7 @@ class TapoDeviceServiceTest {
                 .thenReturn(klapConnection);
 
         newService().setLightState("DEV1", "192.168.1.114", TapoAuthProtocol.KLAP,
-                new LightState(null, 200, 80, null));
+                new LightState(null, 200, 80, null), true);
 
         ArgumentCaptor<ObjectNode> captor = ArgumentCaptor.forClass(ObjectNode.class);
         verify(klapConnection).setDeviceInfo(captor.capture());
@@ -131,6 +131,30 @@ class TapoDeviceServiceTest {
         assertFalse(sent.has("brightness"));
     }
 
+    /**
+     * A device that reports COLOR without COLOR_TEMP would reject an unexpected color_temp field
+     * outright (non-zero error_code -> TapoException), burning a protocol fallback plus a UDP
+     * re-discovery and surfacing as "beide Protokolle fehlgeschlagen" - masking the real cause
+     * (an unsupported parameter) behind what looks like a network problem.
+     */
+    @Test
+    @DisplayName("setLightState laesst color_temp:0 weg, wenn das Geraet COLOR_TEMP nicht meldet")
+    void setLightStateOmitsColorTempZeroWhenDeviceDoesNotSupportColorTemp() {
+        TapoLocalDeviceConnection klapConnection = mock(TapoLocalDeviceConnection.class);
+        when(tapoDeviceFactory.create(eq(TapoAuthProtocol.KLAP), eq("192.168.1.114"), any(), any()))
+                .thenReturn(klapConnection);
+
+        newService().setLightState("DEV1", "192.168.1.114", TapoAuthProtocol.KLAP,
+                new LightState(null, 200, 80, null), false);
+
+        ArgumentCaptor<ObjectNode> captor = ArgumentCaptor.forClass(ObjectNode.class);
+        verify(klapConnection).setDeviceInfo(captor.capture());
+        ObjectNode sent = captor.getValue();
+        assertEquals(200, sent.get("hue").asInt());
+        assertEquals(80, sent.get("saturation").asInt());
+        assertFalse(sent.has("color_temp"));
+    }
+
     @Test
     @DisplayName("setLightState sendet bei einer Farbtemperatur-Anfrage nur color_temp, kein hue/saturation")
     void setLightStateSendsOnlyColorTempWithoutHueOrSaturation() {
@@ -139,7 +163,7 @@ class TapoDeviceServiceTest {
                 .thenReturn(klapConnection);
 
         newService().setLightState("DEV1", "192.168.1.114", TapoAuthProtocol.KLAP,
-                new LightState(null, null, null, 4000));
+                new LightState(null, null, null, 4000), true);
 
         ArgumentCaptor<ObjectNode> captor = ArgumentCaptor.forClass(ObjectNode.class);
         verify(klapConnection).setDeviceInfo(captor.capture());
@@ -157,7 +181,7 @@ class TapoDeviceServiceTest {
                 .thenReturn(klapConnection);
 
         newService().setLightState("DEV1", "192.168.1.114", TapoAuthProtocol.KLAP,
-                new LightState(70, null, null, null));
+                new LightState(70, null, null, null), true);
 
         ArgumentCaptor<ObjectNode> captor = ArgumentCaptor.forClass(ObjectNode.class);
         verify(klapConnection).setDeviceInfo(captor.capture());

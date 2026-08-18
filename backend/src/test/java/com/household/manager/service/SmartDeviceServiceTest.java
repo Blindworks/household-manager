@@ -3,6 +3,7 @@ package com.household.manager.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.audit.AuditService;
 import com.household.manager.dto.LightStateRequest;
+import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -494,6 +496,77 @@ class SmartDeviceServiceTest {
         verify(repository, times(1)).save(any());
     }
 
+    /**
+     * CRITICAL-adjacent regression: TapoDeviceService.getOrCreateLocalConnection keys its
+     * connection cache on deviceId:protocol only, NOT the ip. After a DHCP reshuffle a stale
+     * cached connection would otherwise keep talking to whatever physical device now sits at the
+     * OLD ip (it would authenticate happily if it's another bulb on the same Tapo account) - a
+     * switch could silently control the WRONG device with no error. setTapoDeviceAddress already
+     * guards against this explicitly for the manual path; a scan-discovered IP change needs the
+     * identical guard.
+     */
+    @Test
+    @DisplayName("Scan invalidiert die zwischengespeicherte Verbindung, wenn sich die IP eines Geraets aendert")
+    void scanTapoClearsCachedConnectionWhenIpChanges() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "DEV1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+
+        TapoDiscoveryDevice localDevice = new TapoDiscoveryDevice(
+                "192.168.1.200", TapoAuthProtocol.KLAP, "DEV1", "L530", "Flur", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(localDevice));
+
+        SmartDevice existing = new SmartDevice();
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setIpAddress("192.168.1.114"); // alte, jetzt per DHCP neu vergebene IP
+        existing.setCapabilities("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP");
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
+                .thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("nicht relevant fuer diesen Test"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanTapoDevices();
+
+        verify(tapoDeviceService).clearLocalConnection("DEV1");
+    }
+
+    @Test
+    @DisplayName("Scan invalidiert NICHTS, wenn die IP eines Geraets unveraendert bleibt")
+    void scanTapoDoesNotClearCachedConnectionWhenIpIsUnchanged() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "DEV1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+
+        TapoDiscoveryDevice localDevice = new TapoDiscoveryDevice(
+                "192.168.1.114", TapoAuthProtocol.KLAP, "DEV1", "L530", "Flur", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(localDevice));
+
+        SmartDevice existing = new SmartDevice();
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setIpAddress("192.168.1.114"); // gleiche IP wie die Discovery
+        existing.setCapabilities("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP");
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
+                .thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("nicht relevant fuer diesen Test"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanTapoDevices();
+
+        verify(tapoDeviceService, never()).clearLocalConnection(any());
+    }
+
     // ==================== Tapo: Adresse manuell setzen (Task 3) ====================
 
     @Test
@@ -525,6 +598,48 @@ class SmartDeviceServiceTest {
         assertEquals("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", saved.getCapabilities());
         assertTrue(saved.getMetadata().contains("\"authProtocol\":\"KLAP\""));
         verify(entityStateService).reportState(any());
+    }
+
+    /**
+     * Regression for the resolveColorTempRange javadoc's claim ("captured ... on a previous
+     * scan/refresh/address-set") actually being true, and for exposing it on SmartDeviceResponse
+     * (item 6): the persisted metadata must carry the device's own colour-temp range AND its
+     * current brightness/hue/saturation/colorTemp values from the probe response, not hand-written
+     * fixtures — and toResponse must surface the light values as their own typed fields.
+     */
+    @Test
+    @DisplayName("setTapoDeviceAddress persistiert Farbtemperatur-Bereich und aktuelle Lichtwerte aus der Geraete-Probe")
+    void setTapoDeviceAddressPersistsColorTempRangeAndCurrentLightStateFromProbe() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setCapabilities("SWITCH");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        TapoDeviceState state = new TapoDeviceState("Flur", "L530", true, true,
+                "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", 2500, 6500,
+                new LightState(70, 200, 80, 0));
+        when(tapoDeviceService.probeAddress("192.168.1.114"))
+                .thenReturn(new TapoAddressProbeResult("DEV1", TapoAuthProtocol.KLAP, state));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SmartDeviceResponse response = newService().setTapoDeviceAddress(1L, "192.168.1.114");
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        String metadata = captor.getValue().getMetadata();
+        assertTrue(metadata.contains("\"colorTempRangeMin\":2500"));
+        assertTrue(metadata.contains("\"colorTempRangeMax\":6500"));
+        assertTrue(metadata.contains("\"lightBrightness\":70"));
+        assertTrue(metadata.contains("\"lightHue\":200"));
+        assertTrue(metadata.contains("\"lightSaturation\":80"));
+        assertTrue(metadata.contains("\"lightColorTemp\":0"));
+
+        assertEquals(70, response.getBrightness());
+        assertEquals(200, response.getHue());
+        assertEquals(80, response.getSaturation());
+        assertEquals(0, response.getColorTemp());
     }
 
     @Test
@@ -694,10 +809,44 @@ class SmartDeviceServiceTest {
         newService().setLightState(1L, request);
 
         verify(tapoDeviceService).setLightState(eq("DEV1"), eq("192.168.1.114"), any(),
-                eq(new LightState(70, 200, 80, null)));
+                eq(new LightState(70, 200, 80, null)), eq(true));
         verify(repository).save(any());
         verify(entityStateService).reportState(any());
         verify(auditService).record(eq("device.light.set"), anyString());
+    }
+
+    /**
+     * CRITICAL regression: a mixed request used to pass validation, then buildSetDeviceInfoParams
+     * silently took the colour branch and sent color_temp:0 - discarding the requested colorTemp
+     * value - while the response still carried 200 and the audit entry claimed colorTemp was set.
+     * That is exactly the silent-ignore the capability check below the mixed-check forbids, just
+     * from the other direction: it must be rejected loudly, before anything reaches the device.
+     */
+    @Test
+    @DisplayName("setLightState lehnt eine gemischte Anfrage aus Farbe UND Farbtemperatur ab und sendet nichts")
+    void setLightStateRejectsMixedColorAndColorTempRequest() {
+        tapoLight(1L, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", null);
+
+        LightStateRequest request = LightStateRequest.builder().hue(200).saturation(80).colorTemp(4000).build();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(1L, request));
+        assertTrue(ex.getMessage().contains("schliessen sich aus"));
+
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
+        verify(repository, never()).save(any());
+        verify(auditService, never()).record(anyString(), anyString());
+    }
+
+    /** Same rejection when only hue (no saturation) is combined with colorTemp. */
+    @Test
+    @DisplayName("setLightState lehnt hue allein zusammen mit Farbtemperatur ebenfalls ab")
+    void setLightStateRejectsHueAloneCombinedWithColorTemp() {
+        tapoLight(1L, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", null);
+
+        LightStateRequest request = LightStateRequest.builder().hue(200).colorTemp(4000).build();
+        assertThrows(IllegalArgumentException.class, () -> newService().setLightState(1L, request));
+
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -708,7 +857,7 @@ class SmartDeviceServiceTest {
         LightStateRequest request = LightStateRequest.builder().brightness(50).build();
         assertThrows(IllegalArgumentException.class, () -> newService().setLightState(1L, request));
 
-        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
         verify(repository, never()).save(any());
     }
 
@@ -720,7 +869,7 @@ class SmartDeviceServiceTest {
         LightStateRequest request = LightStateRequest.builder().build();
         assertThrows(IllegalArgumentException.class, () -> newService().setLightState(1L, request));
 
-        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -734,7 +883,7 @@ class SmartDeviceServiceTest {
         LightStateRequest request = LightStateRequest.builder().brightness(50).build();
         assertThrows(IllegalArgumentException.class, () -> newService().setLightState(5L, request));
 
-        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -745,7 +894,7 @@ class SmartDeviceServiceTest {
                 () -> newService().setLightState(1L, LightStateRequest.builder().brightness(0).build()));
         assertThrows(IllegalArgumentException.class,
                 () -> newService().setLightState(1L, LightStateRequest.builder().brightness(101).build()));
-        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
 
         when(tapoDeviceService.getStatus(any(), any(), any()))
                 .thenReturn(new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS"));
@@ -754,7 +903,7 @@ class SmartDeviceServiceTest {
         newService().setLightState(1L, LightStateRequest.builder().brightness(1).build());
         newService().setLightState(1L, LightStateRequest.builder().brightness(100).build());
 
-        verify(tapoDeviceService, times(2)).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, times(2)).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -766,7 +915,7 @@ class SmartDeviceServiceTest {
                 () -> newService().setLightState(1L, LightStateRequest.builder().colorTemp(2000).build()));
         assertThrows(IllegalArgumentException.class,
                 () -> newService().setLightState(1L, LightStateRequest.builder().colorTemp(7000).build()));
-        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -776,7 +925,7 @@ class SmartDeviceServiceTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> newService().setLightState(1L, LightStateRequest.builder().colorTemp(2000).build()));
-        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -784,7 +933,7 @@ class SmartDeviceServiceTest {
     void setLightStatePropagatesFailureWithoutPersisting() {
         tapoLight(1L, "SWITCH,BRIGHTNESS", null);
         org.mockito.Mockito.doThrow(new TapoException("Tapo-Geraet nicht erreichbar"))
-                .when(tapoDeviceService).setLightState(eq("DEV1"), eq("192.168.1.114"), any(), any());
+                .when(tapoDeviceService).setLightState(eq("DEV1"), eq("192.168.1.114"), any(), any(), anyBoolean());
 
         LightStateRequest request = LightStateRequest.builder().brightness(50).build();
         assertThrows(TapoException.class, () -> newService().setLightState(1L, request));

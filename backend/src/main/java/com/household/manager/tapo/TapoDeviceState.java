@@ -3,11 +3,17 @@ package com.household.manager.tapo;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * @param colorTempMin device-reported lower bound of {@code color_temp_range} (Kelvin), or
- *                      {@code null} if the device didn't report one (e.g. no COLOR_TEMP
- *                      capability, or this state predates that field's introduction)
- * @param colorTempMax device-reported upper bound of {@code color_temp_range} (Kelvin), or
- *                      {@code null} under the same conditions as {@link #colorTempMin}
+ * @param colorTempMin      device-reported lower bound of {@code color_temp_range} (Kelvin), or
+ *                          {@code null} if the device didn't report one (e.g. no COLOR_TEMP
+ *                          capability, or this state predates that field's introduction)
+ * @param colorTempMax      device-reported upper bound of {@code color_temp_range} (Kelvin), or
+ *                          {@code null} under the same conditions as {@link #colorTempMin}
+ * @param currentLightState the device's current brightness/hue/saturation/colorTemp, read
+ *                          straight off {@code get_device_info} (not the range, the live values) —
+ *                          used to seed the frontend's light controls with the bulb's actual state
+ *                          instead of an invented default. {@code null} if the device reported none
+ *                          of those fields (e.g. a plain switch); individual fields inside it are
+ *                          {@code null} if the device didn't report that specific one.
  */
 public record TapoDeviceState(
         String nickname,
@@ -16,12 +22,13 @@ public record TapoDeviceState(
         boolean online,
         String capabilities,
         Integer colorTempMin,
-        Integer colorTempMax
+        Integer colorTempMax,
+        LightState currentLightState
 ) {
 
-    /** Convenience constructor for callers that don't care about the colour-temp range. */
+    /** Convenience constructor for callers that don't care about colour-temp range or current light state. */
     public TapoDeviceState(String nickname, String model, boolean poweredOn, boolean online, String capabilities) {
-        this(nickname, model, poweredOn, online, capabilities, null, null);
+        this(nickname, model, poweredOn, online, capabilities, null, null, null);
     }
 
     public static TapoDeviceState fromLocal(JsonNode deviceInfo, TapoCloudService tapoCloudService) {
@@ -32,7 +39,8 @@ public record TapoDeviceState(
         int[] colorTempRange = readColorTempRange(deviceInfo);
         return new TapoDeviceState(nickname, model, poweredOn, true, capabilities,
                 colorTempRange == null ? null : colorTempRange[0],
-                colorTempRange == null ? null : colorTempRange[1]);
+                colorTempRange == null ? null : colorTempRange[1],
+                readCurrentLightState(deviceInfo));
     }
 
     public static TapoDeviceState from(
@@ -57,7 +65,8 @@ public record TapoDeviceState(
         // regardless of the cloud status field (which is unreliable for Tapo devices)
         return new TapoDeviceState(nickname, model, poweredOn, true, capabilities,
                 colorTempRange == null ? null : colorTempRange[0],
-                colorTempRange == null ? null : colorTempRange[1]);
+                colorTempRange == null ? null : colorTempRange[1],
+                readCurrentLightState(deviceInfo));
     }
 
     private static String firstText(JsonNode node, String... fieldNames) {
@@ -88,5 +97,25 @@ public record TapoDeviceState(
             return null;
         }
         return new int[]{min, max};
+    }
+
+    /**
+     * Reads the device's current {@code brightness}/{@code hue}/{@code saturation}/
+     * {@code color_temp} values (not the range — the live values reported alongside it), used to
+     * seed the frontend's light controls with the bulb's actual state. Returns {@code null} if
+     * none of the four fields are present (a plain switch); a field that IS present is read even
+     * if its value is {@code 0} (e.g. {@code color_temp: 0} in pure colour mode is a real value,
+     * not "absent" — same reasoning {@link TapoCapabilityMapper} already applies to capability
+     * derivation).
+     */
+    private static LightState readCurrentLightState(JsonNode deviceInfo) {
+        Integer brightness = deviceInfo.has("brightness") ? deviceInfo.path("brightness").asInt() : null;
+        Integer hue = deviceInfo.has("hue") ? deviceInfo.path("hue").asInt() : null;
+        Integer saturation = deviceInfo.has("saturation") ? deviceInfo.path("saturation").asInt() : null;
+        Integer colorTemp = deviceInfo.has("color_temp") ? deviceInfo.path("color_temp").asInt() : null;
+        if (brightness == null && hue == null && saturation == null && colorTemp == null) {
+            return null;
+        }
+        return new LightState(brightness, hue, saturation, colorTemp);
     }
 }
