@@ -4,18 +4,29 @@ import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { LightStateRequest, SmartDevice } from '../../models/smart-device.model';
-import { hexToHueSaturation } from '../../shared/color-conversion.util';
+import { hexToHueSaturation, hueSaturationToHex } from '../../shared/color-conversion.util';
 
 export type DeviceViewMode = 'normal' | 'compact';
 
-/** Geraetespezifischer, lokal gehaltener Stand der Licht-Regler (das Backend liefert den aktuellen
- * Helligkeits-/Farb-/Farbtemperaturwert nicht zurueck - nur Faehigkeiten und den zulaessigen
- * Farbtemperatur-Bereich). Bleibt bei einem Fehler unveraendert stehen, statt auf einen Default
- * zurueckzuspringen. */
+/**
+ * Geraetespezifischer, lokal gehaltener Stand der Licht-Regler. Wird aus dem Ist-Zustand des
+ * Geraets vorbelegt (`SmartDevice.brightness`/`hue`/`saturation`/`colorTemp`) und bei jeder
+ * Aktualisierung des Geraets neu vorbelegt (siehe `seedLightState`) - nur waehrend der Nutzer aktiv
+ * an einem Regler zieht (zwischen `input` und `change`) bzw. waehrend ein Request noch laeuft, ist
+ * dieser lokale Stand die massgebliche Anzeige. Bleibt bei einem fehlgeschlagenen Request
+ * unveraendert stehen, statt auf einen Default zurueckzuspringen.
+ *
+ * Meldet das Geraet einen Wert nicht (kein Feld im JSON, siehe `SmartDevice`), zeigt der
+ * `*Known`-Flag das an - der Regler startet dann bei einem allgemeinen Default, aber die Kachel
+ * darf das nicht als echten Geraetewert ausgeben.
+ */
 export interface LightControlState {
   brightness: number;
+  brightnessKnown: boolean;
   colorTemp: number;
+  colorTempKnown: boolean;
   colorHex: string;
+  colorKnown: boolean;
   pending: boolean;
   error: string | null;
 }
@@ -114,6 +125,7 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     this.smartDeviceService.getAllDevices().subscribe({
       next: (devices) => {
         this.devices = devices;
+        devices.forEach(device => this.seedLightState(device));
         this.isLoading = false;
 
         // Automatisch den aktuellen Status aller Geräte im Hintergrund aktualisieren
@@ -331,26 +343,52 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     };
   }
 
-  /** Liefert den lokalen Reglerstand eines Geraets, legt ihn beim ersten Zugriff mit Defaults an. */
+  /** Liefert den lokalen Reglerstand eines Geraets, belegt ihn beim ersten Zugriff aus dem Geraet vor. */
   getLightState(device: SmartDevice): LightControlState {
     let state = this.lightStates.get(device.id);
     if (!state) {
-      const range = this.getColorTempRange(device);
-      state = {
-        brightness: SmartDeviceListComponent.DEFAULT_BRIGHTNESS,
-        colorTemp: Math.round((range.min + range.max) / 2),
-        colorHex: SmartDeviceListComponent.DEFAULT_COLOR_HEX,
-        pending: false,
-        error: null
-      };
-      this.lightStates.set(device.id, state);
+      this.seedLightState(device);
+      state = this.lightStates.get(device.id)!;
     }
     return state;
+  }
+
+  /**
+   * (Neu-)Belegt den lokalen Reglerstand eines Geraets aus dessen Ist-Zustand. Aufgerufen beim
+   * initialen Laden und aus `updateDeviceInList` - also bei jedem Refresh, inklusive dem, den ein
+   * erfolgreiches Setzen selbst ausloest (der Endpunkt liefert den aktualisierten Geraetezustand
+   * zurueck). Ein laufender Request oder eine bereits angezeigte Fehlermeldung werden dabei nicht
+   * angetastet - die Werte werden neu vorbelegt, der Interaktionszustand nicht.
+   */
+  private seedLightState(device: SmartDevice): void {
+    const existing = this.lightStates.get(device.id);
+    const range = this.getColorTempRange(device);
+
+    const brightnessKnown = this.isKnownNumber(device.brightness);
+    const colorTempKnown = this.isKnownNumber(device.colorTemp);
+    const colorKnown = this.isKnownNumber(device.hue) && this.isKnownNumber(device.saturation);
+
+    this.lightStates.set(device.id, {
+      brightness: brightnessKnown ? device.brightness! : SmartDeviceListComponent.DEFAULT_BRIGHTNESS,
+      brightnessKnown,
+      colorTemp: colorTempKnown ? device.colorTemp! : Math.round((range.min + range.max) / 2),
+      colorTempKnown,
+      colorHex: colorKnown ? hueSaturationToHex(device.hue!, device.saturation!) : SmartDeviceListComponent.DEFAULT_COLOR_HEX,
+      colorKnown,
+      pending: existing?.pending ?? false,
+      error: existing?.error ?? null
+    });
+  }
+
+  private isKnownNumber(value: number | undefined | null): value is number {
+    return value !== undefined && value !== null;
   }
 
   onBrightnessInput(device: SmartDevice, event: Event): void {
     const state = this.getLightState(device);
     state.brightness = this.numberFromInput(event);
+    // Ab der ersten aktiven Bedienung ist der Wert die bewusste Wahl des Nutzers, kein Default mehr.
+    state.brightnessKnown = true;
     state.error = null;
   }
 
@@ -362,6 +400,7 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
   onColorTempInput(device: SmartDevice, event: Event): void {
     const state = this.getLightState(device);
     state.colorTemp = this.numberFromInput(event);
+    state.colorTempKnown = true;
     state.error = null;
   }
 
@@ -373,6 +412,7 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
   onColorInput(device: SmartDevice, event: Event): void {
     const state = this.getLightState(device);
     state.colorHex = (event.target as HTMLInputElement).value;
+    state.colorKnown = true;
     state.error = null;
   }
 
@@ -525,6 +565,9 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     if (index !== -1) {
       this.devices[index] = updatedDevice;
     }
+    // Jeder Refresh (inklusive dem nach einem erfolgreichen Licht-Set) bringt den echten
+    // Geraetezustand mit - die Regler damit neu vorbelegen statt auf dem alten Stand zu bleiben.
+    this.seedLightState(updatedDevice);
   }
 
   private refreshAllDevicesInBackground(): void {

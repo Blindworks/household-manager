@@ -1,4 +1,4 @@
-import { hexToHueSaturation } from './color-conversion.util';
+import { hexToHueSaturation, hueSaturationToHex } from './color-conversion.util';
 
 describe('hexToHueSaturation', () => {
   it('bildet reines Rot auf Farbton 0 bei voller Saettigung ab', () => {
@@ -53,5 +53,62 @@ describe('hexToHueSaturation', () => {
 
   it('akzeptiert Hex-Werte ohne fuehrendes Rautezeichen', () => {
     expect(hexToHueSaturation('00ff00')).toEqual({ hue: 120, saturation: 100 });
+  });
+});
+
+describe('hueSaturationToHex', () => {
+  it('bildet Farbton 0 bei voller Saettigung auf reines Rot ab', () => {
+    expect(hueSaturationToHex(0, 100)).toBe('#ff0000');
+  });
+
+  it('bildet Farbton 120 bei voller Saettigung auf reines Gruen ab', () => {
+    expect(hueSaturationToHex(120, 100)).toBe('#00ff00');
+  });
+
+  it('bildet Farbton 240 bei voller Saettigung auf reines Blau ab', () => {
+    expect(hueSaturationToHex(240, 100)).toBe('#0000ff');
+  });
+
+  it('bildet Farbton 60 auf Gelb ab', () => {
+    expect(hueSaturationToHex(60, 100)).toBe('#ffff00');
+  });
+
+  it('bildet Farbton 180 auf Cyan ab', () => {
+    expect(hueSaturationToHex(180, 100)).toBe('#00ffff');
+  });
+
+  it('bildet Farbton 300 auf Magenta ab', () => {
+    expect(hueSaturationToHex(300, 100)).toBe('#ff00ff');
+  });
+
+  it('bildet Saettigung 0 unabhaengig vom Farbton auf Weiss ab (voller Hellwert)', () => {
+    expect(hueSaturationToHex(200, 0)).toBe('#ffffff');
+  });
+});
+
+describe('Rundweg hexToHueSaturation <-> hueSaturationToHex', () => {
+  // Der Hellwert (V) wird von hexToHueSaturation bewusst verworfen und von hueSaturationToHex
+  // bewusst fest auf 1 gesetzt - der Rundweg ueber die Geraete-Werte (hue/saturation) ist deshalb
+  // verlustfrei, ein Rundweg ueber eine beliebige, vom Nutzer gewaehlte Hex-Farbe mit anderem
+  // Hellwert waere es nicht (siehe Doku an hueSaturationToHex).
+  const primaries: ReadonlyArray<[number, number]> = [
+    [0, 100], [60, 100], [120, 100], [180, 100], [240, 100], [300, 100]
+  ];
+
+  for (const [hue, saturation] of primaries) {
+    it(`haelt Farbton ${hue} / Saettigung ${saturation} stabil`, () => {
+      const hex = hueSaturationToHex(hue, saturation);
+      expect(hexToHueSaturation(hex)).toEqual({ hue, saturation });
+    });
+  }
+
+  it('haelt einen gemischten Farbton (220/75) ueber den Rundweg stabil', () => {
+    const hex = hueSaturationToHex(220, 75);
+    expect(hexToHueSaturation(hex)).toEqual({ hue: 220, saturation: 75 });
+  });
+
+  it('haelt einen gemischten Farbton mit Wraparound (345/100) ueber den Rundweg stabil', () => {
+    const hex = hueSaturationToHex(345, 100);
+    expect(hexToHueSaturation(hex)).toEqual({ hue: 345, saturation: 100 });
   });
 });

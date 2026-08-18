@@ -173,7 +173,10 @@
       <div class="light-control" *ngIf="hasCapability(device, 'BRIGHTNESS')">
         <div class="light-control__row">
           <label class="light-control__label" [attr.for]="'brightness-' + device.id">Helligkeit</label>
-          <span class="light-control__value">{{ getLightState(device).brightness }}%</span>
+          <span class="light-control__value">
+            {{ getLightState(device).brightness }}%
+            <span class="light-control__unknown" *ngIf="!getLightState(device).brightnessKnown">(unbekannt)</span>
+          </span>
         </div>
         <input
           [id]="'brightness-' + device.id"
@@ -190,7 +193,10 @@
       <div class="light-control" *ngIf="hasCapability(device, 'COLOR_TEMP')">
         <div class="light-control__row">
           <label class="light-control__label" [attr.for]="'colortemp-' + device.id">Farbtemperatur</label>
-          <span class="light-control__value">{{ getLightState(device).colorTemp }}K</span>
+          <span class="light-control__value">
+            {{ getLightState(device).colorTemp }}K
+            <span class="light-control__unknown" *ngIf="!getLightState(device).colorTempKnown">(unbekannt)</span>
+          </span>
         </div>
         <input
           [id]="'colortemp-' + device.id"
@@ -206,7 +212,10 @@
       </div>
 
       <div class="light-control light-control--color" *ngIf="hasCapability(device, 'COLOR')">
-        <label class="light-control__label" [attr.for]="'color-' + device.id">Farbe</label>
+        <label class="light-control__label" [attr.for]="'color-' + device.id">
+          Farbe
+          <span class="light-control__unknown" *ngIf="!getLightState(device).colorKnown">(unbekannt)</span>
+        </label>
         <input
           [id]="'color-' + device.id"
           class="light-control__color"

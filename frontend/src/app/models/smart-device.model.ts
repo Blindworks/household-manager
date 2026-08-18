@@ -9,6 +9,18 @@ export interface SmartDevice {
   isPoweredOn: boolean;
   capabilities: string[];
   metadata: Record<string, any> | null;
+  /**
+   * Aktuelle Helligkeit (1-100). Fehlt (kein Feld im JSON, nicht `null` - das Backend-DTO nutzt
+   * `@JsonInclude(NON_NULL)`), wenn das Geraet die Faehigkeit BRIGHTNESS nicht meldet oder noch
+   * nie live geprobt wurde. Zum Vorbelegen der Regler statt eines erfundenen Defaults nutzen.
+   */
+  brightness?: number;
+  /** Aktueller Farbton (0-360°). Fehlt unter denselben Bedingungen wie `brightness`. */
+  hue?: number;
+  /** Aktuelle Saettigung (0-100%). Fehlt unter denselben Bedingungen wie `brightness`. */
+  saturation?: number;
+  /** Aktuelle Farbtemperatur in Kelvin. Fehlt unter denselben Bedingungen wie `brightness`. */
+  colorTemp?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -514,6 +514,14 @@
   color: #2d3748;
 }
 
+// Kennzeichnet einen erfundenen Default statt eines vom Geraet gemeldeten Ist-Werts
+// (siehe SmartDeviceListComponent.seedLightState) - bewusst unauffaellig, aber nicht versteckt.
+.light-control__unknown {
+  font-weight: 500;
+  font-style: italic;
+  color: #a0aec0;
+}
+
 .light-control__range {
   width: 100%;
   accent-color: #4299e1;
