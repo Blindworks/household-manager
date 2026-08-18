@@ -2,7 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { KasaManualAddRequest, SmartDevice, SmartDeviceScanRequest, SmartDeviceUpdateRequest } from '../models/smart-device.model';
+import {
+  KasaManualAddRequest,
+  LightStateRequest,
+  SmartDevice,
+  SmartDeviceScanRequest,
+  SmartDeviceUpdateRequest,
+  TapoAddressRequest
+} from '../models/smart-device.model';
 
 @Injectable({
   providedIn: 'root'
@@ -33,6 +40,19 @@ export class SmartDeviceService {
   addKasaDeviceByIp(ip: string): Observable<SmartDevice> {
     const request: KasaManualAddRequest = { ip };
     return this.http.post<SmartDevice>(`${this.baseUrl}/kasa`, request).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setLightState(id: number, state: LightStateRequest): Observable<SmartDevice> {
+    return this.http.put<SmartDevice>(`${this.baseUrl}/${id}/light`, state).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setTapoAddress(id: number, ip: string): Observable<SmartDevice> {
+    const request: TapoAddressRequest = { ip };
+    return this.http.put<SmartDevice>(`${this.baseUrl}/${id}/address`, request).pipe(
       catchError(this.handleError)
     );
   }
