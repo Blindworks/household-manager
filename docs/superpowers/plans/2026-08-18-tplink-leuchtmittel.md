@@ -81,9 +81,20 @@ git commit -m "test(tapo): manueller Lokal-Probe fuer moderne TP-Link-Geraete"
 
 ---
 
-### Task 3: Lokal gefundene Geräte ohne Cloud-Eintrag übernehmen
+### Task 3: Ohne lokale Discovery steuerbar bleiben (+ lokal-only-Geräte übernehmen)
 
-Das ist die eigentliche Ursache des gemeldeten Problems: `scanTapoDevices()` startet bei `discoverCloudDevices()` und nutzt die lokale Discovery nur zum Anreichern. Wer lokal gefunden wird, aber in keinem Cloud-Konto steht, wird verworfen.
+**Nachgezogen nach dem Ergebnis von Task 1.** Das gemeldete Gerät ist die Tapo-Birne `Flur`
+(L530) und steht bereits in der Cloud-Liste — die Filterlogik war also **nicht** die Ursache
+für dieses Gerät. Die reale Ursache ist eine andere: `upsertTapoDevice` setzt IP und
+`authProtocol` **nur**, wenn die lokale Discovery das Gerät gefunden hat
+(`device.setOnline(localDevice != null)`). Im Docker-Bridge-Netz von PROD findet sie nie
+etwas, also bleibt die IP leer, der Live-Abruf scheitert und alle neun Tapo-Geräte stehen
+dauerhaft auf „offline" — obwohl sie per Unicast erreichbar wären (gegen 192.168.1.114
+nachgewiesen).
+
+Diese Aufgabe deckt daher beides ab: die IP/Protokoll-Zuordnung ohne lokale Discovery
+(manuell setzbar, analog zum Kasa-per-IP-Weg) **und** die Übernahme lokal gefundener
+Geräte, die in keinem Cloud-Konto stehen.
 
 **Files:**
 - Modify: `backend/src/main/java/com/household/manager/service/SmartDeviceService.java` (`scanTapoDevices`, `discoverLocalTapoDevices`, `upsertTapoDevice`)
