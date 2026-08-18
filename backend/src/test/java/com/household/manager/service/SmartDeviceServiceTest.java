@@ -91,6 +91,43 @@ class SmartDeviceServiceTest {
     }
 
     @Test
+    @DisplayName("Scan behaelt die zuletzt bekannten Faehigkeiten, wenn die Live-Statusabfrage fehlschlaegt")
+    void scanTapoKeepsExistingCapabilitiesWhenStatusProbeFails() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "DEV1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+
+        TapoDiscoveryDevice localDevice = new TapoDiscoveryDevice(
+                "192.168.1.114", TapoAuthProtocol.KLAP, "DEV1", "L530", "Flur", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(localDevice));
+
+        SmartDevice existing = new SmartDevice();
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setDeviceName("Flur");
+        existing.setOnline(true);
+        existing.setPoweredOn(true);
+        existing.setCapabilities("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP");
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
+                .thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("KLAP timeout"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanAndPersistDevices(DeviceType.TAPO);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", saved.getCapabilities(),
+                "eine fehlgeschlagene Live-Abfrage darf die zuvor gespeicherten Faehigkeiten nicht auf SWITCH zuruecksetzen");
+    }
+
+    @Test
     @DisplayName("Scan markiert ein nur cloud-bekanntes, nicht erreichbares Geraet als offline")
     void scanTapoMarksCloudOnlyDeviceOfflineWhenUnreachable() {
         TapoCloudDevice cloudDevice = new TapoCloudDevice(

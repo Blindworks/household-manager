@@ -376,6 +376,11 @@ public class SmartDeviceService {
             device = new SmartDevice();
             device.setDeviceType(DeviceType.TAPO);
             device.setExternalDeviceId(externalId);
+            // Default for a brand-new device with no get_device_info response yet. A real
+            // response (below) overwrites this with the derived value; a probe failure on an
+            // EXISTING device must not fall back here, or a briefly offline bulb would lose its
+            // capabilities and its controls would vanish from the UI.
+            device.setCapabilities("SWITCH");
             log.debug("Creating new Tapo device: {}", dto.deviceId());
         }
 
@@ -388,7 +393,6 @@ public class SmartDeviceService {
         device.setModel(dto.model());
         // Cloud status field is unreliable for Tapo devices; only trust local reachability.
         device.setOnline(localDevice != null);
-        device.setCapabilities("SWITCH");
 
         Map<String, Object> metadata = tapoDeviceService.buildMetadata(dto);
         if (localDevice != null) {
@@ -404,6 +408,7 @@ public class SmartDeviceService {
             TapoDeviceState state = tapoDeviceService.getStatus(externalId, ip, protocol);
             device.setOnline(state.online());
             device.setPoweredOn(state.poweredOn());
+            device.setCapabilities(state.capabilities());
             if (state.nickname() != null && !state.nickname().isBlank()) {
                 device.setDeviceName(state.nickname());
             }
@@ -411,9 +416,10 @@ public class SmartDeviceService {
                 device.setModel(state.model());
             }
         } catch (Exception ex) {
-            // Live probe failed: keep online (set above from local reachability) and
-            // poweredOn (last known-good value, either just persisted by local discovery
-            // or the SmartDevice default) untouched rather than clobbering them.
+            // Live probe failed: keep online (set above from local reachability), poweredOn
+            // (last known-good value, either just persisted by local discovery or the
+            // SmartDevice default) and capabilities (previously stored value, or the SWITCH
+            // default for a brand-new device) untouched rather than clobbering them.
             log.debug("Skipping live Tapo state during scan for {}: {}", externalId, ex.getMessage());
         }
 

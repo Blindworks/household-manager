@@ -103,3 +103,5 @@ com.household.manager/
 - [tractive-walk-detector.md](tractive-walk-detector.md) - Task 2 Spaziergang-Heuristik: Plan-Tests+Referenzcode koennen sich selbst widersprechen (Gap-Schwelle, exakte Grenze, Distanz=0-Assertion); Referenzcode zuerst 1:1 laufen lassen um das zu erkennen
 - [zigbee-mqtt-hivemq-callback-executor.md](zigbee-mqtt-hivemq-callback-executor.md) - HiveMQ 1.3.17 kennt kein callback(Consumer, Executor); richtig ist .callback(c).executor(e) verkettet
 - [parallel-agent-git-index.md](parallel-agent-git-index.md) - bei Parallelagenten immer `git commit -- <pfade>`; ein normaler Commit nimmt fremde, zwischenzeitlich gestagte Dateien mit
+- [tplink-modern-device-probe.md](tplink-modern-device-probe.md) - manueller No-Spring-Probe fuer moderne TP-Link-Geraete (KLAP/AES); Spring-`${VAR:default}`-Platzhalter selbst aufloesen; realer L530-`get_device_info` inzwischen verifiziert
+- [tplink-capability-mapper.md](tplink-capability-mapper.md) - Faehigkeiten aus get_device_info ableiten (Feld-Praesenz, nicht Wert!); TapoDeviceState traegt sie mit; Clobber-vor-try/catch-Falle beim Fallback-Wert
