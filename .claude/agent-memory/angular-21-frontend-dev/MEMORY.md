@@ -8,6 +8,9 @@
 - [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
 - [Kasa per IP](kasa-manual-add.md) has the recipe for committing only your own files when a parallel agent stages files elsewhere in the same index: `git commit -m "<msg>" -- <your paths...>` (pathspec after `-m`, never before).
 
+## TP-Link Leuchtmittel (Task 5, 2026-08-18)
+- [Smart-Device Light Controls](smart-device-light-controls.md) — brightness/color/color-temp sliders + Tapo address form in smart-device-list; backend never returns current light values (only capabilities+range) so sliders use a lazy per-device-id Map with local defaults; send-on-release via (input)/(change) split instead of ngModel; hexToHueSaturation pure util in shared/.
+
 ## Usermanagement Feature (WP7, Task 17+18)
 - [Usermanagement Frontend](usermanagement-frontend.md) — Header role-filtered nav (visibleNavLinks), admin pages for users/tokens/audit-log; header.component.spec.ts fix (provideRouter([]) + HTTP providers) dropped baseline fails 4→3.
 
