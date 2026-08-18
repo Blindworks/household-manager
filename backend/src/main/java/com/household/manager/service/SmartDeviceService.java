@@ -3,6 +3,8 @@ package com.household.manager.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.audit.AuditService;
+import com.household.manager.dto.LightStateRequest;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
 import com.household.manager.entitystate.EntityStateService;
@@ -16,6 +18,7 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.tapo.LightState;
 import com.household.manager.tapo.TapoAddressProbeResult;
 import com.household.manager.tapo.TapoAuthProtocol;
 import com.household.manager.tapo.TapoCloudDevice;
@@ -49,6 +52,11 @@ public class SmartDeviceService {
     private final ObjectMapper objectMapper;
     private final SmartDeviceEntityMapper smartDeviceEntityMapper;
     private final EntityStateService entityStateService;
+    private final AuditService auditService;
+
+    /** Fallback colour-temperature range (Kelvin) when a device never reported its own. */
+    private static final int DEFAULT_COLOR_TEMP_MIN = 2500;
+    private static final int DEFAULT_COLOR_TEMP_MAX = 6500;
 
     /**
      * Get all smart devices from the database.
@@ -328,12 +336,166 @@ public class SmartDeviceService {
 
         Map<String, Object> metadata = new HashMap<>(deserializeMetadata(device.getMetadata()));
         metadata.put("authProtocol", probe.protocol().name());
+        applyColorTempRange(metadata, state);
         device.setMetadata(serializeMetadata(metadata));
 
         SmartDevice saved = smartDeviceRepository.save(device);
         reportEntityState(saved);
         log.info("Successfully set Tapo device address: {} -> {}", saved.getDeviceName(), ip);
         return toResponse(saved);
+    }
+
+    /**
+     * Sets brightness, colour and/or colour temperature on a Tapo light.
+     * <p>
+     * Validates the request before touching the device: a field the device doesn't report as a
+     * capability (e.g. {@code hue} on a device without {@code COLOR}) is rejected with 400 rather
+     * than silently ignored — silently ignoring it would make the caller believe it was applied.
+     * Range checks use the device's own {@code color_temp_range} where it was captured on a
+     * previous scan/refresh/probe (stored in metadata), falling back to 2500-6500 Kelvin otherwise.
+     * <p>
+     * Nothing is persisted unless the device actually accepts the change: a communication failure
+     * propagates the {@link TapoException} untouched (mapped to 502 by the global exception
+     * handler) and leaves the stored row exactly as it was.
+     *
+     * @param id      the device's database ID
+     * @param request the light-state fields to set; all are optional but at least one is required
+     * @return the device response with its state refreshed from the device
+     * @throws IllegalArgumentException if the device doesn't exist, isn't a Tapo device, requests
+     *                                   a capability the device doesn't report, sets no field at
+     *                                   all, or sets a value outside its valid range
+     * @throws TapoException if the device does not answer
+     */
+    @Transactional
+    public SmartDeviceResponse setLightState(Long id, LightStateRequest request) {
+        log.info("Setting light state for device ID: {}", id);
+
+        SmartDevice device = smartDeviceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Device not found with ID: " + id));
+        if (device.getDeviceType() != DeviceType.TAPO) {
+            throw new IllegalArgumentException(
+                    "Geraet mit ID " + id + " ist kein Tapo-Geraet (Typ: " + device.getDeviceType() + ").");
+        }
+
+        LightState lightState = validateLightStateRequest(device, request);
+
+        String ip = device.getIpAddress();
+        TapoAuthProtocol protocol = extractAuthProtocol(device);
+        tapoDeviceService.setLightState(device.getExternalDeviceId(), ip, protocol, lightState);
+
+        // Only reached once the device actually accepted the change: refresh and persist the
+        // display-relevant fields (online/poweredOn/name/model) from a fresh status read, the
+        // same fields a plain refresh keeps up to date. Brightness/hue/saturation/colorTemp
+        // themselves have no columns on SmartDevice - the device is the source of truth for those.
+        refreshTapoDeviceState(device);
+        SmartDevice saved = smartDeviceRepository.save(device);
+        reportEntityState(saved);
+
+        auditService.record("device.light.set", "deviceId=" + id + ", " + describeLightState(lightState));
+
+        log.info("Successfully set light state for device: {}", saved.getDeviceName());
+        return toResponse(saved);
+    }
+
+    private LightState validateLightStateRequest(SmartDevice device, LightStateRequest request) {
+        Integer brightness = request.getBrightness();
+        Integer hue = request.getHue();
+        Integer saturation = request.getSaturation();
+        Integer colorTemp = request.getColorTemp();
+
+        if (brightness == null && hue == null && saturation == null && colorTemp == null) {
+            throw new IllegalArgumentException(
+                    "Es wurde kein Lichtwert angegeben (Helligkeit, Farbe oder Farbtemperatur).");
+        }
+
+        List<String> capabilities = parseCapabilities(device.getCapabilities());
+
+        if (brightness != null) {
+            requireCapability(device, capabilities, "BRIGHTNESS");
+            if (brightness < 1 || brightness > 100) {
+                throw new IllegalArgumentException("Helligkeit muss zwischen 1 und 100 liegen.");
+            }
+        }
+        if (hue != null || saturation != null) {
+            requireCapability(device, capabilities, "COLOR");
+            if (hue != null && (hue < 0 || hue > 360)) {
+                throw new IllegalArgumentException("Farbton (hue) muss zwischen 0 und 360 liegen.");
+            }
+            if (saturation != null && (saturation < 0 || saturation > 100)) {
+                throw new IllegalArgumentException("Saettigung muss zwischen 0 und 100 liegen.");
+            }
+        }
+        if (colorTemp != null) {
+            requireCapability(device, capabilities, "COLOR_TEMP");
+            int[] range = resolveColorTempRange(device);
+            if (colorTemp < range[0] || colorTemp > range[1]) {
+                throw new IllegalArgumentException(
+                        "Farbtemperatur muss zwischen " + range[0] + " und " + range[1] + " Kelvin liegen.");
+            }
+        }
+
+        return new LightState(brightness, hue, saturation, colorTemp);
+    }
+
+    private void requireCapability(SmartDevice device, List<String> capabilities, String capability) {
+        if (!capabilities.contains(capability)) {
+            throw new IllegalArgumentException(
+                    "Geraet " + device.getDeviceName() + " meldet die Faehigkeit " + capability + " nicht.");
+        }
+    }
+
+    /**
+     * Reads the device's own {@code colorTempRangeMin}/{@code colorTempRangeMax} metadata
+     * (captured from {@code color_temp_range} on a previous scan/refresh/address-set, see
+     * {@link #applyColorTempRange}), falling back to a generic default range if the device never
+     * reported one — e.g. it hasn't been probed since this field was added.
+     */
+    private int[] resolveColorTempRange(SmartDevice device) {
+        Map<String, Object> metadata = deserializeMetadata(device.getMetadata());
+        Integer min = asInteger(metadata.get("colorTempRangeMin"));
+        Integer max = asInteger(metadata.get("colorTempRangeMax"));
+        if (min != null && max != null && min < max) {
+            return new int[]{min, max};
+        }
+        return new int[]{DEFAULT_COLOR_TEMP_MIN, DEFAULT_COLOR_TEMP_MAX};
+    }
+
+    private Integer asInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return null;
+    }
+
+    /**
+     * Stores the device's self-reported colour-temperature range in metadata so future
+     * {@link #setLightState} calls can validate against it without re-probing the device. Only
+     * overwrites the stored range when this state actually carries one (a live probe result);
+     * a state without one (e.g. a failed live probe whose caller kept the previous value) leaves
+     * whatever was already in the metadata map untouched.
+     */
+    private void applyColorTempRange(Map<String, Object> metadata, TapoDeviceState state) {
+        if (state.colorTempMin() != null && state.colorTempMax() != null) {
+            metadata.put("colorTempRangeMin", state.colorTempMin());
+            metadata.put("colorTempRangeMax", state.colorTempMax());
+        }
+    }
+
+    private String describeLightState(LightState lightState) {
+        StringBuilder detail = new StringBuilder();
+        if (lightState.brightness() != null) {
+            detail.append("brightness=").append(lightState.brightness()).append(' ');
+        }
+        if (lightState.hue() != null) {
+            detail.append("hue=").append(lightState.hue()).append(' ');
+        }
+        if (lightState.saturation() != null) {
+            detail.append("saturation=").append(lightState.saturation()).append(' ');
+        }
+        if (lightState.colorTemp() != null) {
+            detail.append("colorTemp=").append(lightState.colorTemp()).append(' ');
+        }
+        return detail.toString().trim();
     }
 
     // ==================== Kasa Device Methods ====================
@@ -488,10 +650,15 @@ public class SmartDeviceService {
         device.setOnline(localDevice != null);
 
         // buildMetadata() returns a FRESH map assembled purely from the cloud DTO — it knows
-        // nothing about a previously stored authProtocol. Read the old value before it is
-        // overwritten below, so a manually-set (or previously discovered) protocol survives a
-        // scan round in which local discovery finds nothing.
+        // nothing about a previously stored authProtocol or colour-temp range. Read the old
+        // values before they are overwritten below, so a manually-set (or previously discovered)
+        // protocol/range survives a scan round in which local discovery finds nothing or the
+        // live probe below fails.
         TapoAuthProtocol previouslyKnownProtocol = extractAuthProtocol(device);
+        Map<String, Object> priorMetadata = deserializeMetadata(device.getMetadata());
+        Integer previousColorTempMin = asInteger(priorMetadata.get("colorTempRangeMin"));
+        Integer previousColorTempMax = asInteger(priorMetadata.get("colorTempRangeMax"));
+
         Map<String, Object> metadata = tapoDeviceService.buildMetadata(dto);
         if (localDevice != null) {
             device.setIpAddress(localDevice.ipAddress());
@@ -499,6 +666,10 @@ public class SmartDeviceService {
             log.debug("Tapo device {} found locally at {}", externalId, localDevice.ipAddress());
         } else if (previouslyKnownProtocol != null) {
             metadata.put("authProtocol", previouslyKnownProtocol.name());
+        }
+        if (previousColorTempMin != null && previousColorTempMax != null) {
+            metadata.put("colorTempRangeMin", previousColorTempMin);
+            metadata.put("colorTempRangeMax", previousColorTempMax);
         }
         device.setMetadata(serializeMetadata(metadata));
 
@@ -515,6 +686,8 @@ public class SmartDeviceService {
             if (state.model() != null && !state.model().isBlank()) {
                 device.setModel(state.model());
             }
+            applyColorTempRange(metadata, state);
+            device.setMetadata(serializeMetadata(metadata));
         } catch (Exception ex) {
             // Live probe failed: keep online (set above from local reachability), poweredOn
             // (last known-good value, either just persisted by local discovery or the
@@ -577,6 +750,7 @@ public class SmartDeviceService {
             if (state.model() != null && !state.model().isBlank()) {
                 device.setModel(state.model());
             }
+            applyColorTempRange(metadata, state);
         } catch (Exception ex) {
             device.setOnline(false);
             metadata.put("localDiscoveryError",

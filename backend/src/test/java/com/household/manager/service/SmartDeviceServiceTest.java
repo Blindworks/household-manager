@@ -1,6 +1,8 @@
 package com.household.manager.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.audit.AuditService;
+import com.household.manager.dto.LightStateRequest;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
@@ -11,6 +13,7 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.tapo.LightState;
 import com.household.manager.tapo.TapoAddressProbeResult;
 import com.household.manager.tapo.TapoAuthProtocol;
 import com.household.manager.tapo.TapoCloudDevice;
@@ -32,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -53,11 +57,12 @@ class SmartDeviceServiceTest {
     private final TapoDeviceService tapoDeviceService = mock(TapoDeviceService.class);
     private final SmartDeviceEntityMapper smartDeviceEntityMapper = new SmartDeviceEntityMapper();
     private final EntityStateService entityStateService = mock(EntityStateService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     private SmartDeviceService newService() {
         return new SmartDeviceService(repository, kasaService, kasaDiscoveryService,
                 merossDeviceService, tapoDeviceService, new ObjectMapper(),
-                smartDeviceEntityMapper, entityStateService);
+                smartDeviceEntityMapper, entityStateService, auditService);
     }
 
     @Test
@@ -511,5 +516,131 @@ class SmartDeviceServiceTest {
         assertThrows(TapoException.class, () -> newService().setTapoDeviceAddress(3L, "192.168.1.200"));
 
         verify(repository, never()).save(any());
+    }
+
+    // ==================== Licht-Steuerung (Task 4) ====================
+
+    private SmartDevice tapoLight(Long id, String capabilities, String metadataJson) {
+        SmartDevice device = new SmartDevice();
+        device.setId(id);
+        device.setDeviceType(DeviceType.TAPO);
+        device.setExternalDeviceId("DEV1");
+        device.setDeviceName("Flur");
+        device.setIpAddress("192.168.1.114");
+        device.setCapabilities(capabilities);
+        device.setMetadata(metadataJson);
+        when(repository.findById(id)).thenReturn(Optional.of(device));
+        return device;
+    }
+
+    @Test
+    @DisplayName("setLightState reicht die Werte durch, persistiert den aufgefrischten Zustand und schreibt einen Audit-Eintrag")
+    void setLightStateAppliesRefreshesAndAudits() {
+        tapoLight(1L, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", null);
+        when(tapoDeviceService.getStatus(eq("DEV1"), eq("192.168.1.114"), any()))
+                .thenReturn(new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        LightStateRequest request = LightStateRequest.builder().brightness(70).hue(200).saturation(80).build();
+        newService().setLightState(1L, request);
+
+        verify(tapoDeviceService).setLightState(eq("DEV1"), eq("192.168.1.114"), any(),
+                eq(new LightState(70, 200, 80, null)));
+        verify(repository).save(any());
+        verify(entityStateService).reportState(any());
+        verify(auditService).record(eq("device.light.set"), anyString());
+    }
+
+    @Test
+    @DisplayName("setLightState lehnt eine Faehigkeit ab, die das Geraet nicht meldet, und sendet nichts an das Geraet")
+    void setLightStateRejectsUnreportedCapability() {
+        tapoLight(1L, "SWITCH", null); // keine BRIGHTNESS-Faehigkeit
+
+        LightStateRequest request = LightStateRequest.builder().brightness(50).build();
+        assertThrows(IllegalArgumentException.class, () -> newService().setLightState(1L, request));
+
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("setLightState lehnt eine leere Anfrage ohne jedes Feld ab")
+    void setLightStateRejectsEmptyRequest() {
+        tapoLight(1L, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", null);
+
+        LightStateRequest request = LightStateRequest.builder().build();
+        assertThrows(IllegalArgumentException.class, () -> newService().setLightState(1L, request));
+
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("setLightState lehnt ein Nicht-Tapo-Geraet ab")
+    void setLightStateRejectsNonTapoDevice() {
+        SmartDevice device = new SmartDevice();
+        device.setId(5L);
+        device.setDeviceType(DeviceType.KASA);
+        when(repository.findById(5L)).thenReturn(Optional.of(device));
+
+        LightStateRequest request = LightStateRequest.builder().brightness(50).build();
+        assertThrows(IllegalArgumentException.class, () -> newService().setLightState(5L, request));
+
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("setLightState: Helligkeit 0 und 101 werden abgelehnt, 1 und 100 werden akzeptiert")
+    void setLightStateValidatesBrightnessBoundaries() {
+        tapoLight(1L, "SWITCH,BRIGHTNESS", null);
+        assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(1L, LightStateRequest.builder().brightness(0).build()));
+        assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(1L, LightStateRequest.builder().brightness(101).build()));
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenReturn(new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS"));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().setLightState(1L, LightStateRequest.builder().brightness(1).build());
+        newService().setLightState(1L, LightStateRequest.builder().brightness(100).build());
+
+        verify(tapoDeviceService, times(2)).setLightState(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("setLightState lehnt eine Farbtemperatur ausserhalb des vom Geraet gemeldeten Bereichs ab")
+    void setLightStateRejectsColorTempOutsideDeviceReportedRange() {
+        tapoLight(1L, "SWITCH,COLOR_TEMP", "{\"colorTempRangeMin\":2500,\"colorTempRangeMax\":6500}");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(1L, LightStateRequest.builder().colorTemp(2000).build()));
+        assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(1L, LightStateRequest.builder().colorTemp(7000).build()));
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("setLightState faellt ohne gespeicherten Bereich auf 2500-6500 zurueck")
+    void setLightStateFallsBackToDefaultColorTempRangeWhenDeviceReportedNone() {
+        tapoLight(1L, "SWITCH,COLOR_TEMP", null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(1L, LightStateRequest.builder().colorTemp(2000).build()));
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("setLightState laesst eine TapoException durch, wenn das Geraet nicht antwortet, und persistiert nichts")
+    void setLightStatePropagatesFailureWithoutPersisting() {
+        tapoLight(1L, "SWITCH,BRIGHTNESS", null);
+        org.mockito.Mockito.doThrow(new TapoException("Tapo-Geraet nicht erreichbar"))
+                .when(tapoDeviceService).setLightState(eq("DEV1"), eq("192.168.1.114"), any(), any());
+
+        LightStateRequest request = LightStateRequest.builder().brightness(50).build();
+        assertThrows(TapoException.class, () -> newService().setLightState(1L, request));
+
+        verify(repository, never()).save(any());
+        verify(auditService, never()).record(anyString(), anyString());
     }
 }

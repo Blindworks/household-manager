@@ -42,7 +42,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -442,6 +444,30 @@ class SecurityRulesTest {
         mockMvc.perform(put("/devices/7/address").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ip\": \"192.168.1.114\"}"))
+                .andExpect(status().isOk());
+    }
+
+    /**
+     * /devices/{id}/light faellt wie /devices/kasa und /devices/{id}/address auf die
+     * generische anyRequest -> MEMBER-Regel (kein eigener Matcher in SecurityConfig).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfLichtNichtSetzen() throws Exception {
+        mockMvc.perform(put("/devices/7/light").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"brightness\": 70}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfLichtSetzen() throws Exception {
+        when(smartDeviceService.setLightState(eq(7L), any())).thenReturn(
+                SmartDeviceResponse.builder().id(7L).deviceType("TAPO").build());
+        mockMvc.perform(put("/devices/7/light").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"brightness\": 70}"))
                 .andExpect(status().isOk());
     }
 

@@ -3,6 +3,7 @@ package com.household.manager.tapo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
@@ -218,6 +219,55 @@ public class TapoDeviceService {
         executeLocalWithRediscovery(deviceId, ipAddress, protocol,
                 conn -> { conn.setDevicePowered(false); return null; });
         log.info("Tapo device switched off locally (deviceId={})", deviceId);
+    }
+
+    /**
+     * Sets brightness, colour and/or colour temperature on a light-capable Tapo device via
+     * {@code set_device_info}. Capability and range validation happens in
+     * {@link com.household.manager.service.SmartDeviceService#setLightState} before this is
+     * called; this method only builds the protocol request and sends it.
+     */
+    public void setLightState(String deviceId, String ipAddress, TapoAuthProtocol protocol, LightState lightState) {
+        ObjectNode params = buildSetDeviceInfoParams(lightState);
+        executeLocalWithRediscovery(deviceId, ipAddress, protocol,
+                conn -> { conn.setDeviceInfo(params); return null; });
+        log.info("Tapo light state set locally (deviceId={})", deviceId);
+    }
+
+    /**
+     * Builds the {@code set_device_info} params for a light-state change. Only the fields
+     * actually set on {@code lightState} are added to the request.
+     * <p>
+     * <b>Colour and colour-temperature are mutually exclusive modes on these bulbs</b> (verified
+     * against the real L530 protocol behaviour, see {@code TapoLocalProbeManualTest} / the
+     * tplink-leuchtmittel plan Task 1/4): setting {@code hue}/{@code saturation} while a non-zero
+     * {@code color_temp} is still active leaves the bulb in white mode instead of switching it to
+     * colour mode. A colour request must therefore explicitly send {@code color_temp: 0} alongside
+     * {@code hue}/{@code saturation}. Conversely, a pure colour-temperature request sends only
+     * {@code color_temp} and omits {@code hue}/{@code saturation} entirely, since sending either
+     * (even unset/0) risks re-triggering colour mode on some firmware. This is the single place
+     * that encodes the rule; callers just describe the desired end state via {@link LightState}.
+     */
+    private ObjectNode buildSetDeviceInfoParams(LightState lightState) {
+        ObjectNode params = objectMapper.createObjectNode();
+        if (lightState.brightness() != null) {
+            params.put("brightness", lightState.brightness());
+        }
+
+        boolean settingColor = lightState.hue() != null || lightState.saturation() != null;
+        if (settingColor) {
+            if (lightState.hue() != null) {
+                params.put("hue", lightState.hue());
+            }
+            if (lightState.saturation() != null) {
+                params.put("saturation", lightState.saturation());
+            }
+            params.put("color_temp", 0);
+        } else if (lightState.colorTemp() != null) {
+            params.put("color_temp", lightState.colorTemp());
+        }
+
+        return params;
     }
 
     public JsonNode getEnergyUsage(String deviceId) {

@@ -82,6 +82,11 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
     }
 
     @Override
+    public void setDeviceInfo(ObjectNode params) {
+        executeRequest(buildRequest("set_device_info", params));
+    }
+
+    @Override
     public JsonNode getEnergyUsage() {
         return executeRequest(buildRequest("get_energy_usage", null));
     }

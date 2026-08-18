@@ -2,6 +2,7 @@ package com.household.manager.controller;
 
 import com.household.manager.audit.AuditService;
 import com.household.manager.dto.KasaManualAddRequest;
+import com.household.manager.dto.LightStateRequest;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceScanRequest;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
@@ -121,6 +122,26 @@ public class SmartDeviceController {
         auditService.record("device.tapo.address.set", "deviceId=" + id + ", ip=" + request.getIp());
 
         log.info("Successfully set Tapo device address: {}", device.getDeviceName());
+        return ResponseEntity.ok(device);
+    }
+
+    /**
+     * Sets brightness, colour and/or colour temperature on a Tapo light. At least one field
+     * must be set; a field the device doesn't report as a capability is rejected with 400
+     * (validation and the resulting audit entry {@code device.light.set} both live in
+     * {@link SmartDeviceService#setLightState}).
+     *
+     * @param id the device ID
+     * @param request the light-state fields to set
+     * @return the updated device, with its state refreshed from the device
+     */
+    @PutMapping("/{id}/light")
+    public ResponseEntity<SmartDeviceResponse> setLightState(
+            @PathVariable Long id,
+            @Valid @RequestBody LightStateRequest request) {
+        log.info("PUT /api/devices/{}/light - Setting light state", id);
+        SmartDeviceResponse device = smartDeviceService.setLightState(id, request);
+        log.info("Successfully set light state for device: {}", device.getDeviceName());
         return ResponseEntity.ok(device);
     }
 
