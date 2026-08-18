@@ -157,7 +157,8 @@ public class TapoDeviceService {
             throw new TapoException("Tapo-Geraet unter " + ip + " ist weder ueber KLAP noch ueber AES erreichbar.");
         }
         TapoDeviceState state = TapoDeviceState.fromLocal(handshake.info(), tapoCloudService);
-        return new TapoAddressProbeResult(handshake.protocol(), state);
+        String deviceId = firstText(handshake.info(), "device_id", "deviceId");
+        return new TapoAddressProbeResult(deviceId, handshake.protocol(), state);
     }
 
     /**

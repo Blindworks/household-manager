@@ -62,6 +62,20 @@ class TapoDeviceServiceTest {
     }
 
     @Test
+    @DisplayName("probeAddress liest die deviceId aus der Geraete-Antwort, damit der Aufrufer die Identitaet pruefen kann")
+    void probeAddressExtractsDeviceId() throws Exception {
+        TapoLocalDeviceConnection klapConnection = mock(TapoLocalDeviceConnection.class);
+        when(klapConnection.getDeviceInfo()).thenReturn(
+                deviceInfo("{\"device_id\":\"ABC123\",\"nickname\":\"Flur\",\"model\":\"L530\",\"device_on\":true}"));
+        when(tapoDeviceFactory.create(eq(TapoAuthProtocol.KLAP), eq("192.168.1.114"), any(), any()))
+                .thenReturn(klapConnection);
+
+        TapoAddressProbeResult result = newService().probeAddress("192.168.1.114");
+
+        assertEquals("ABC123", result.deviceId());
+    }
+
+    @Test
     @DisplayName("probeAddress faellt auf AES zurueck, wenn KLAP fehlschlaegt")
     void probeAddressFallsBackToAes() throws Exception {
         when(tapoDeviceFactory.create(eq(TapoAuthProtocol.KLAP), eq("192.168.1.114"), any(), any()))

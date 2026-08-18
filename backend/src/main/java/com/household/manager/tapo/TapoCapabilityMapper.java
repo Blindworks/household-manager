@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <p>
  * The result is a comma-separated, order-stable string matching the existing {@code capabilities}
  * column format (e.g. {@code "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"}). Stability matters: an
- * unstable order would rewrite the DB column on every scan and fire pointless entity-state
- * change events even though nothing about the device actually changed.
+ * unstable order would rewrite the DB column on every scan/refresh even though nothing about the
+ * device actually changed.
  */
 public final class TapoCapabilityMapper {
 

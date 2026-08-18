@@ -300,11 +300,22 @@ public class SmartDeviceService {
      * The probe runs (and must succeed) before anything is persisted: a wrong IP must fail
      * loudly with a {@link TapoException} rather than being stored and silently leaving the
      * device offline.
+     * <p>
+     * <b>Identity check:</b> a successful probe alone is not proof the IP belongs to the device
+     * being edited — with nine near-identical Tapo devices on one LAN, a mistyped-but-still-valid
+     * IP would otherwise probe a completely different physical device and overwrite this row with
+     * its name/model/capabilities/power state, leaving two DB rows pointing at one device (and a
+     * later toggle of one row switching the other). The probe response's own {@code device_id} is
+     * therefore compared against {@link SmartDevice#getExternalDeviceId()} before anything is
+     * written, exactly like {@link #addKasaDeviceByIp(String)} is structurally immune to this by
+     * always keying off the probed device's own id rather than trusting the caller's IP blindly.
      *
      * @param id the device's database ID
      * @param ip the IPv4 address to probe and persist
      * @return the updated device
-     * @throws IllegalArgumentException if no device exists with this ID, or it is not a Tapo device
+     * @throws IllegalArgumentException if no device exists with this ID, it is not a Tapo device,
+     *                                   or the device answering at {@code ip} is not the one being
+     *                                   edited (device-id mismatch)
      * @throws TapoException if the device does not answer at the given IP
      */
     @Transactional
@@ -323,6 +334,17 @@ public class SmartDeviceService {
         TapoAddressProbeResult probe = tapoDeviceService.probeAddress(ip);
         TapoDeviceState state = probe.state();
 
+        // Identity check BEFORE any mutation: a probe that succeeds against the wrong physical
+        // device is worse than one that fails outright, since it would silently corrupt this row.
+        if (probe.deviceId() == null || probe.deviceId().isBlank()
+                || !probe.deviceId().equalsIgnoreCase(device.getExternalDeviceId())) {
+            throw new IllegalArgumentException(
+                    "Das Geraet unter " + ip + " meldet die Geraete-ID "
+                            + (probe.deviceId() == null || probe.deviceId().isBlank() ? "(keine)" : probe.deviceId())
+                            + ", bearbeitet wird aber Geraet " + device.getExternalDeviceId()
+                            + ". Adresse wurde nicht gespeichert - vermutlich eine Verwechslung mit einem anderen Geraet.");
+        }
+
         device.setIpAddress(ip);
         device.setOnline(true);
         device.setPoweredOn(state.poweredOn());
@@ -336,10 +358,18 @@ public class SmartDeviceService {
 
         Map<String, Object> metadata = new HashMap<>(deserializeMetadata(device.getMetadata()));
         metadata.put("authProtocol", probe.protocol().name());
+        metadata.remove("localDiscoveryError");
         applyColorTempRange(metadata, state);
         device.setMetadata(serializeMetadata(metadata));
 
         SmartDevice saved = smartDeviceRepository.save(device);
+
+        // The connection cache is keyed on deviceId:protocol and IGNORES the ipAddress argument
+        // (TapoDeviceService.getOrCreateLocalConnection) - without this, a cached connection
+        // object created against the OLD ip would keep being reused by turnOn/turnOff, silently
+        // controlling whatever device now sits at the old address instead of this one.
+        tapoDeviceService.clearLocalConnection(device.getExternalDeviceId());
+
         reportEntityState(saved);
         log.info("Successfully set Tapo device address: {} -> {}", saved.getDeviceName(), ip);
         return toResponse(saved);
@@ -569,6 +599,22 @@ public class SmartDeviceService {
      * cloud-only device behaves exactly as before; a device found <em>only</em> locally (no TP-Link
      * cloud account knows it) is adopted via {@link #upsertLocalOnlyTapoDevice} instead of being
      * silently dropped, which used to happen when this method started from the cloud list alone.
+     * Both sides are matched via {@link #normalizeTapoDeviceId(String)} (case-insensitive) — the
+     * cloud API and the device's own {@code get_device_info} are two independent, unverified
+     * sources for what should be the same id, and a bare case difference must not create a
+     * duplicate row for one physical device.
+     * <p>
+     * <b>Persistence failures are allowed to propagate</b> (not caught here): this method runs
+     * inside the caller's {@code @Transactional} boundary, and {@link SmartDevice} uses an
+     * IDENTITY primary key, so Hibernate flushes each {@code save()} immediately rather than at
+     * commit. A constraint violation on ANY device therefore already marks the whole transaction
+     * rollback-only the moment it happens — catching and logging it here would not save the other
+     * devices in this scan (they get rolled back too at commit via
+     * {@code UnexpectedRollbackException}), it would only make the log lie about which devices
+     * survived. Letting it propagate is honest and matches {@link #upsertTapoDevice}, which has
+     * never caught around its own {@code save()}. A failed <em>handshake</em> (the actually common
+     * case for a local-only device) is a different, non-transactional failure mode and is already
+     * isolated inside {@link #upsertLocalOnlyTapoDevice} before persistence is even attempted.
      */
     List<SmartDevice> scanTapoDevices() {
         List<TapoCloudDevice> discovered = tapoDeviceService.discoverCloudDevices();
@@ -578,28 +624,54 @@ public class SmartDeviceService {
         Set<String> cloudDeviceIds = discovered.stream()
                 .map(TapoCloudDevice::deviceId)
                 .filter(Objects::nonNull)
+                .map(SmartDeviceService::normalizeTapoDeviceId)
                 .collect(Collectors.toSet());
 
         List<SmartDevice> result = new ArrayList<>(discovered.stream()
-                .map(cloudDevice -> upsertTapoDevice(cloudDevice, localDeviceMap.get(cloudDevice.deviceId())))
+                .map(cloudDevice -> upsertTapoDevice(
+                        cloudDevice, localDeviceMap.get(normalizeTapoDeviceId(cloudDevice.deviceId()))))
                 .collect(Collectors.toList()));
+
+        // IPs already claimed by a device the merge above matched via its cloud deviceId. Used
+        // only to flag a suspicious case below - the merge itself already happened correctly.
+        Set<String> ipsClaimedByMatchedDevices = discovered.stream()
+                .map(TapoCloudDevice::deviceId)
+                .filter(Objects::nonNull)
+                .map(id -> localDeviceMap.get(normalizeTapoDeviceId(id)))
+                .filter(Objects::nonNull)
+                .map(TapoDiscoveryDevice::ipAddress)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
         for (Map.Entry<String, TapoDiscoveryDevice> entry : localDeviceMap.entrySet()) {
             if (cloudDeviceIds.contains(entry.getKey())) {
                 continue; // already merged into its cloud counterpart above
             }
-            try {
-                result.add(upsertLocalOnlyTapoDevice(entry.getValue()));
-            } catch (Exception ex) {
-                // A single device's persistence failing (e.g. a DB hiccup) must not abort the
-                // scan for the rest. A failed *handshake* is handled inside
-                // upsertLocalOnlyTapoDevice itself and never reaches this catch.
-                log.warn("Failed to adopt local-only Tapo device {} ({}): {}",
-                        entry.getKey(), entry.getValue().ipAddress(), ex.getMessage());
+            TapoDiscoveryDevice localOnly = entry.getValue();
+            if (localOnly.ipAddress() != null && ipsClaimedByMatchedDevices.contains(localOnly.ipAddress())) {
+                // The cloud <-> local id match is an unverified assumption (two independent
+                // sources for "the same" id). This device's id didn't match anything in the
+                // cloud list even after normalization, yet its IP is already claimed by a device
+                // that DID match - most likely the same physical device under a genuinely
+                // different id spelling, about to be adopted a second time as local-only.
+                log.warn("Lokal gefundenes Tapo-Geraet {} ({}) hat dieselbe IP wie ein bereits per "
+                                + "Cloud-Liste zugeordnetes Geraet — moeglicherweise dasselbe physische "
+                                + "Geraet unter einer abweichenden deviceId.",
+                        entry.getKey(), localOnly.ipAddress());
             }
+            result.add(upsertLocalOnlyTapoDevice(localOnly));
         }
 
         return result;
+    }
+
+    /**
+     * Case-insensitive normalization for matching a Tapo device's id across its two independent,
+     * unverified sources (TP-Link cloud API vs. the device's own {@code get_device_info}) — see
+     * {@link #scanTapoDevices()}.
+     */
+    private static String normalizeTapoDeviceId(String deviceId) {
+        return deviceId == null ? null : deviceId.toUpperCase(Locale.ROOT);
     }
 
     private Map<String, TapoDiscoveryDevice> discoverLocalTapoDevices() {
@@ -608,7 +680,7 @@ public class SmartDeviceService {
             log.info("Discovered {} Tapo local devices", localDevices.size());
             return localDevices.stream()
                     .filter(d -> d.deviceId() != null)
-                    .collect(Collectors.toMap(TapoDiscoveryDevice::deviceId, Function.identity(), (a, b) -> a));
+                    .collect(Collectors.toMap(d -> normalizeTapoDeviceId(d.deviceId()), Function.identity(), (a, b) -> a));
         } catch (Exception ex) {
             log.warn("Local Tapo discovery failed, continuing with cloud only: {}", ex.getMessage());
             return Collections.emptyMap();
@@ -700,16 +772,25 @@ public class SmartDeviceService {
     }
 
     /**
-     * Adopts a Tapo device that local discovery found but which is registered in no TP-Link
-     * cloud account reachable with the configured credentials (e.g. it was set up under a
-     * different household member's account). Without this, {@link #scanTapoDevices()} used to
-     * silently drop it, since it only ever iterated the cloud device list.
+     * Adopts a Tapo device that local discovery found but which has no matching entry in the
+     * cloud device list (by id, see {@link #normalizeTapoDeviceId(String)}) — e.g. it is
+     * registered under a different household member's TP-Link account than the one configured
+     * here. Without this, {@link #scanTapoDevices()} used to silently drop it, since it only
+     * ever iterated the cloud device list.
      * <p>
      * The device is always created/kept — a visible-but-offline record beats a device that is
-     * simply missing. A failed live probe (wrong/foreign account credentials, device gone
-     * offline between UDP discovery and this call) marks it offline with a plain-German hint in
-     * its metadata instead of throwing, so one bad device cannot abort the scan for the rest of
-     * {@link #scanTapoDevices()}.
+     * simply missing.
+     * <p>
+     * <b>Note on the live probe below:</b> reaching this method at all already required a
+     * successful authenticated handshake — {@code localDevice} only exists because
+     * {@code TapoDiscoveryService.discoverLocalDevices} performs a full {@code get_device_info}
+     * call and silently drops anything that doesn't answer with the configured credentials. So
+     * a "wrong account" is <em>not</em> a realistic failure mode for the getStatus() call below;
+     * what IS realistic is the device becoming unreachable again between that earlier discovery
+     * handshake and this follow-up probe (network hiccup, or the device only accepting one
+     * concurrent session and being mid-handshake with something else) — a genuine TOCTOU race,
+     * not an authentication problem. On such a failure the device is still persisted, marked
+     * offline with a plain-German hint, and the scan continues for the rest.
      */
     private SmartDevice upsertLocalOnlyTapoDevice(TapoDiscoveryDevice localDevice) {
         String externalId = localDevice.deviceId();
@@ -754,9 +835,9 @@ public class SmartDeviceService {
         } catch (Exception ex) {
             device.setOnline(false);
             metadata.put("localDiscoveryError",
-                    "Im lokalen Netzwerk gefunden, aber die Anmeldung ist fehlgeschlagen "
-                            + "(moeglicherweise ein anderes TP-Link-Konto). Letzter Fehler: " + ex.getMessage());
-            log.warn("Local-only Tapo device {} ({}) failed the live handshake: {}",
+                    "Im lokalen Netzwerk gefunden, ist aber beim erneuten Abfragen nicht mehr erreichbar "
+                            + "(vermutlich voruebergehend). Letzter Fehler: " + ex.getMessage());
+            log.warn("Local-only Tapo device {} ({}) was unreachable on the follow-up probe: {}",
                     externalId, localDevice.ipAddress(), ex.getMessage());
         }
 
@@ -771,6 +852,7 @@ public class SmartDeviceService {
             TapoDeviceState status = tapoDeviceService.getStatus(device.getExternalDeviceId(), ip, protocol);
             device.setOnline(status.online());
             device.setPoweredOn(status.poweredOn());
+            device.setCapabilities(status.capabilities());
             if (status.nickname() != null && !status.nickname().isBlank()) {
                 device.setDeviceName(status.nickname());
             }

@@ -424,23 +424,34 @@ class SmartDeviceServiceTest {
         assertFalse(persisted.get(0).isOnline());
     }
 
+    /**
+     * Hinweis zur Umbenennung (Review-Fund, Item 5): {@code TapoDeviceService.discoverLocalDevices}
+     * liefert ein {@link TapoDiscoveryDevice} ueberhaupt nur nach einem bereits erfolgreichen
+     * authentifizierten Handshake (siehe {@code TapoDiscoveryService.discoverLocalDevices}, das
+     * jeden Fehlschlag vorher schluckt) — "gefunden, aber falsches TP-Link-Konto" kann diesen
+     * zweiten getStatus()-Aufruf hier also strukturell gar nicht erreichen. Realistisch ist
+     * dagegen, dass das Geraet zwischen der Discovery und dieser Nachfrage kurzzeitig wieder
+     * unerreichbar ist (Netz-Aussetzer, oder das Geraet laesst nur eine gleichzeitige Verbindung
+     * zu). Der Test simuliert genau das statt einer "falsches Konto"-Erzaehlung, die der Code nie
+     * einloesen koennte.
+     */
     @Test
-    @DisplayName("Scan legt ein lokal gefundenes Geraet trotz fehlgeschlagener Anmeldung als offline an und bricht nicht ab")
-    void scanTapoKeepsLocalOnlyDeviceWithFailedHandshakeAsOfflineAndContinues() {
+    @DisplayName("Scan legt ein lokal gefundenes Geraet trotz voruebergehend nicht erreichbarer Nachfrage als offline an und bricht nicht ab")
+    void scanTapoKeepsLocalOnlyDeviceOfflineAndContinuesWhenFollowUpProbeFails() {
         when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of());
 
-        TapoDiscoveryDevice failing = new TapoDiscoveryDevice(
-                "192.168.1.130", TapoAuthProtocol.KLAP, "DEVFOREIGN", "L530", "Fremdkonto", false);
+        TapoDiscoveryDevice transientlyUnreachable = new TapoDiscoveryDevice(
+                "192.168.1.130", TapoAuthProtocol.KLAP, "DEVFLAKY", "L530", "Flackert", false);
         TapoDiscoveryDevice working = new TapoDiscoveryDevice(
                 "192.168.1.131", TapoAuthProtocol.KLAP, "DEVOWN", "L530", "Eigen", true);
-        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(failing, working));
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(transientlyUnreachable, working));
 
-        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEVFOREIGN"))
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEVFLAKY"))
                 .thenReturn(Optional.empty());
         when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEVOWN"))
                 .thenReturn(Optional.empty());
-        when(tapoDeviceService.getStatus(eq("DEVFOREIGN"), eq("192.168.1.130"), any()))
-                .thenThrow(new TapoException("Anmeldung fehlgeschlagen: anderes TP-Link-Konto"));
+        when(tapoDeviceService.getStatus(eq("DEVFLAKY"), eq("192.168.1.130"), any()))
+                .thenThrow(new TapoException("Verbindung verloren"));
         when(tapoDeviceService.getStatus(eq("DEVOWN"), eq("192.168.1.131"), any()))
                 .thenReturn(new TapoDeviceState("Eigen", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -450,8 +461,37 @@ class SmartDeviceServiceTest {
         assertEquals(2, persisted.size(), "ein fehlschlagendes Geraet darf den Scan der uebrigen nicht abbrechen");
         Map<String, SmartDevice> byId = persisted.stream()
                 .collect(java.util.stream.Collectors.toMap(SmartDevice::getExternalDeviceId, d -> d));
-        assertFalse(byId.get("DEVFOREIGN").isOnline(), "Geraet mit fehlgeschlagener Anmeldung muss offline sein, nicht fehlen");
+        assertFalse(byId.get("DEVFLAKY").isOnline(), "Geraet, das bei der Nachfrage nicht antwortet, muss offline sein, nicht fehlen");
         assertTrue(byId.get("DEVOWN").isOnline());
+    }
+
+    @Test
+    @DisplayName("Scan behandelt eine abweichende Gross-/Kleinschreibung der deviceId als dasselbe Geraet, nicht als Dopplung")
+    void scanTapoTreatsDeviceIdCaseDifferenceAsSameDevice() {
+        // Cloud-API und die Selbstauskunft des Geraets sind zwei unabhaengige Quellen fuer
+        // "dieselbe" deviceId - hier bewusst mit unterschiedlicher Gross-/Kleinschreibung.
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "dev1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+
+        TapoDiscoveryDevice localDevice = new TapoDiscoveryDevice(
+                "192.168.1.114", TapoAuthProtocol.KLAP, "DEV1", "L530", "Flur", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(localDevice));
+
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "dev1"))
+                .thenReturn(Optional.empty());
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("nicht relevant fuer diesen Test"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<SmartDevice> persisted = newService().scanTapoDevices();
+
+        assertEquals(1, persisted.size(),
+                "eine reine Gross-/Kleinschreibungs-Abweichung der deviceId darf keine zweite Zeile fuer dasselbe physische Geraet erzeugen");
+        verify(repository, times(1)).save(any());
     }
 
     // ==================== Tapo: Adresse manuell setzen (Task 3) ====================
@@ -469,7 +509,7 @@ class SmartDeviceServiceTest {
 
         TapoDeviceState state = new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP");
         when(tapoDeviceService.probeAddress("192.168.1.114"))
-                .thenReturn(new TapoAddressProbeResult(TapoAuthProtocol.KLAP, state));
+                .thenReturn(new TapoAddressProbeResult("DEV1", TapoAuthProtocol.KLAP, state));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         newService().setTapoDeviceAddress(1L, "192.168.1.114");
@@ -516,6 +556,115 @@ class SmartDeviceServiceTest {
         assertThrows(TapoException.class, () -> newService().setTapoDeviceAddress(3L, "192.168.1.200"));
 
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("setTapoDeviceAddress lehnt eine IP ab, hinter der ein ANDERES Geraet antwortet, und persistiert nichts (KRITISCH)")
+    void setTapoDeviceAddressRejectsWhenProbedDeviceIdDiffersFromEditedDevice() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setDeviceName("Flur");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        // Vertippte, aber gueltige IP: antwortet erfolgreich, ist aber ein ANDERES Tapo-Geraet.
+        TapoDeviceState otherDeviceState = new TapoDeviceState("Kueche", "P110(EU)", false, true, "SWITCH");
+        when(tapoDeviceService.probeAddress("192.168.1.199"))
+                .thenReturn(new TapoAddressProbeResult("DEV2", TapoAuthProtocol.KLAP, otherDeviceState));
+
+        assertThrows(IllegalArgumentException.class, () -> newService().setTapoDeviceAddress(1L, "192.168.1.199"));
+
+        verify(repository, never()).save(any());
+        verify(entityStateService, never()).reportState(any());
+    }
+
+    @Test
+    @DisplayName("setTapoDeviceAddress lehnt eine Probe-Antwort ohne deviceId ab, statt die Identitaet ungeprueft zu uebernehmen")
+    void setTapoDeviceAddressRejectsWhenProbeReportsNoDeviceId() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        TapoDeviceState state = new TapoDeviceState("Flur", "L530", true, true, "SWITCH");
+        when(tapoDeviceService.probeAddress("192.168.1.114"))
+                .thenReturn(new TapoAddressProbeResult(null, TapoAuthProtocol.KLAP, state));
+
+        assertThrows(IllegalArgumentException.class, () -> newService().setTapoDeviceAddress(1L, "192.168.1.114"));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("setTapoDeviceAddress invalidiert nach Erfolg den lokalen Verbindungscache (WICHTIG)")
+    void setTapoDeviceAddressClearsStaleConnectionCacheOnSuccess() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        TapoDeviceState state = new TapoDeviceState("Flur", "L530", true, true, "SWITCH");
+        when(tapoDeviceService.probeAddress("192.168.1.114"))
+                .thenReturn(new TapoAddressProbeResult("DEV1", TapoAuthProtocol.KLAP, state));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().setTapoDeviceAddress(1L, "192.168.1.114");
+
+        // Ohne das wuerde TapoDeviceService.getOrCreateLocalConnection eine gecachte Verbindung
+        // gegen die ALTE IP fuer turnOn/turnOff weiterverwenden (der Cache-Key ignoriert die IP).
+        verify(tapoDeviceService).clearLocalConnection("DEV1");
+    }
+
+    @Test
+    @DisplayName("setTapoDeviceAddress entfernt einen veralteten localDiscoveryError-Hinweis nach Erfolg")
+    void setTapoDeviceAddressRemovesStaleLocalDiscoveryErrorHint() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setMetadata("{\"localDiscoveryError\":\"war vorher nicht erreichbar\"}");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        TapoDeviceState state = new TapoDeviceState("Flur", "L530", true, true, "SWITCH");
+        when(tapoDeviceService.probeAddress("192.168.1.114"))
+                .thenReturn(new TapoAddressProbeResult("DEV1", TapoAuthProtocol.KLAP, state));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().setTapoDeviceAddress(1L, "192.168.1.114");
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        assertFalse(captor.getValue().getMetadata().contains("localDiscoveryError"),
+                "ein erfolgreich manuell gesetzter Hostname/IP darf keinen veralteten Fehlerhinweis in der UI hinterlassen");
+    }
+
+    // ==================== Tapo: Refresh aktualisiert Faehigkeiten (Review-Fund Item 7) ====================
+
+    @Test
+    @DisplayName("refreshDeviceState uebernimmt vom Geraet neu gemeldete Faehigkeiten, nicht nur online/poweredOn")
+    void refreshDeviceStateUpgradesTapoCapabilities() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setDeviceName("Flur");
+        existing.setIpAddress("192.168.1.114");
+        existing.setCapabilities("SWITCH"); // z.B. vor einem Firmware-Update ohne Lichtfelder erfasst
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.getStatus(eq("DEV1"), eq("192.168.1.114"), any()))
+                .thenReturn(new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().refreshDeviceState(1L);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        assertEquals("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", captor.getValue().getCapabilities(),
+                "die Spec verspricht Faehigkeiten-Erkennung bei Scan ODER Refresh - vorher aktualisierte refresh sie nicht");
     }
 
     // ==================== Licht-Steuerung (Task 4) ====================
