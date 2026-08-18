@@ -11,16 +11,20 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.tapo.TapoAddressProbeResult;
 import com.household.manager.tapo.TapoAuthProtocol;
 import com.household.manager.tapo.TapoCloudDevice;
 import com.household.manager.tapo.TapoDeviceService;
+import com.household.manager.tapo.TapoDeviceState;
 import com.household.manager.tapo.TapoDiscoveryDevice;
+import com.household.manager.tapo.TapoException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,8 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -263,6 +269,246 @@ class SmartDeviceServiceTest {
                 .thenThrow(new KasaCommunicationException("Failed to communicate with Kasa device at IP 192.168.1.200 after 3 attempts"));
 
         assertThrows(KasaCommunicationException.class, () -> newService().addKasaDeviceByIp("192.168.1.200"));
+
+        verify(repository, never()).save(any());
+    }
+
+    // ==================== Tapo: ohne lokale Discovery steuerbar (Task 3) ====================
+
+    @Test
+    @DisplayName("Scan setzt ein Geraet mit bekannter IP online, wenn der Live-Probe klappt, auch ohne lokalen Discovery-Treffer")
+    void scanTapoDeviceWithStoredIpGoesOnlineWhenProbeSucceedsWithoutLocalDiscoveryHit() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "DEV1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of()); // Docker-Bridge: nie ein Treffer
+
+        SmartDevice existing = new SmartDevice();
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setDeviceName("Flur");
+        existing.setIpAddress("192.168.1.114"); // manuell gesetzt (PUT /devices/{id}/address)
+        existing.setOnline(false);
+        existing.setPoweredOn(false);
+        existing.setCapabilities("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP");
+        existing.setMetadata("{\"authProtocol\":\"KLAP\"}");
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
+                .thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.getStatus(eq("DEV1"), eq("192.168.1.114"), any()))
+                .thenReturn(new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanAndPersistDevices(DeviceType.TAPO);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertTrue(saved.isOnline(), "Geraet mit erreichbarer, bekannter IP muss online werden, auch ohne lokalen Discovery-Treffer");
+        assertEquals("192.168.1.114", saved.getIpAddress());
+    }
+
+    @Test
+    @DisplayName("Scan behaelt das zuvor gespeicherte authProtocol, wenn lokale Discovery in dieser Runde nichts findet")
+    void scanTapoPreservesStoredAuthProtocolWhenLocalDiscoveryMisses() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "DEV1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of());
+
+        SmartDevice existing = new SmartDevice();
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setDeviceName("Flur");
+        existing.setIpAddress("192.168.1.114");
+        existing.setMetadata("{\"authProtocol\":\"KLAP\"}");
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
+                .thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("timeout"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanAndPersistDevices(DeviceType.TAPO);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        assertTrue(captor.getValue().getMetadata().contains("\"authProtocol\":\"KLAP\""),
+                "das zuvor per PUT /devices/{id}/address gesetzte Protokoll darf nicht verloren gehen, "
+                        + "nur weil die lokale Discovery in dieser Runde nichts gefunden hat");
+    }
+
+    @Test
+    @DisplayName("Scan legt ein nur lokal gefundenes Geraet ohne Cloud-Eintrag an")
+    void scanTapoAdoptsLocalOnlyDeviceWithoutCloudAccount() {
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of());
+
+        TapoDiscoveryDevice localOnly = new TapoDiscoveryDevice(
+                "192.168.1.120", TapoAuthProtocol.KLAP, "DEVLOCAL", "L530", "Kueche", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(localOnly));
+
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEVLOCAL"))
+                .thenReturn(Optional.empty());
+        when(tapoDeviceService.getStatus(eq("DEVLOCAL"), eq("192.168.1.120"), eq(TapoAuthProtocol.KLAP)))
+                .thenReturn(new TapoDeviceState("Kueche", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<SmartDevice> persisted = newService().scanTapoDevices();
+
+        assertEquals(1, persisted.size());
+        SmartDevice saved = persisted.get(0);
+        assertEquals("DEVLOCAL", saved.getExternalDeviceId());
+        assertEquals("Kueche", saved.getDeviceName());
+        assertEquals("L530", saved.getModel());
+        assertTrue(saved.isOnline());
+    }
+
+    @Test
+    @DisplayName("Scan legt ein in Cloud- und lokaler Liste vorhandenes Geraet genau einmal an")
+    void scanTapoCreatesDeviceInBothSourcesExactlyOnce() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "Rmx1cg==", "0", "role", "L530", "DEV1", "SMART.TAPOBULB",
+                "Flur", "1.0", "AA:BB:CC:DD:EE:FF", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+
+        TapoDiscoveryDevice localDevice = new TapoDiscoveryDevice(
+                "192.168.1.114", TapoAuthProtocol.KLAP, "DEV1", "L530", "Flur", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(localDevice));
+
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV1"))
+                .thenReturn(Optional.empty());
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("nicht relevant fuer diesen Test"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<SmartDevice> persisted = newService().scanTapoDevices();
+
+        assertEquals(1, persisted.size(), "ein Geraet in beiden Quellen darf nur einmal angelegt werden");
+        verify(repository, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("Scan behaelt cloud-only Geraete unveraendert bei (Regression fuer den Merge-Umbau)")
+    void scanTapoLeavesCloudOnlyDeviceBehaviorUnchanged() {
+        TapoCloudDevice cloudDevice = new TapoCloudDevice(
+                "R2Fyw6Fnw6U=", "0", "role", "P110(EU)", "DEV2", "SMART.TAPOPLUG",
+                "Garage", "1.0", "11:22:33:44:55:66", "1.0.0", "https://example.com");
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of(cloudDevice));
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of());
+
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEV2"))
+                .thenReturn(Optional.empty());
+        when(tapoDeviceService.getStatus(any(), any(), any()))
+                .thenThrow(new RuntimeException("no route to host"));
+        when(tapoDeviceService.decodeAlias(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(tapoDeviceService.buildMetadata(any())).thenReturn(new HashMap<>());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<SmartDevice> persisted = newService().scanTapoDevices();
+
+        assertEquals(1, persisted.size());
+        assertEquals("DEV2", persisted.get(0).getExternalDeviceId());
+        assertFalse(persisted.get(0).isOnline());
+    }
+
+    @Test
+    @DisplayName("Scan legt ein lokal gefundenes Geraet trotz fehlgeschlagener Anmeldung als offline an und bricht nicht ab")
+    void scanTapoKeepsLocalOnlyDeviceWithFailedHandshakeAsOfflineAndContinues() {
+        when(tapoDeviceService.discoverCloudDevices()).thenReturn(List.of());
+
+        TapoDiscoveryDevice failing = new TapoDiscoveryDevice(
+                "192.168.1.130", TapoAuthProtocol.KLAP, "DEVFOREIGN", "L530", "Fremdkonto", false);
+        TapoDiscoveryDevice working = new TapoDiscoveryDevice(
+                "192.168.1.131", TapoAuthProtocol.KLAP, "DEVOWN", "L530", "Eigen", true);
+        when(tapoDeviceService.discoverLocalDevices()).thenReturn(List.of(failing, working));
+
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEVFOREIGN"))
+                .thenReturn(Optional.empty());
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.TAPO, "DEVOWN"))
+                .thenReturn(Optional.empty());
+        when(tapoDeviceService.getStatus(eq("DEVFOREIGN"), eq("192.168.1.130"), any()))
+                .thenThrow(new TapoException("Anmeldung fehlgeschlagen: anderes TP-Link-Konto"));
+        when(tapoDeviceService.getStatus(eq("DEVOWN"), eq("192.168.1.131"), any()))
+                .thenReturn(new TapoDeviceState("Eigen", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP"));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<SmartDevice> persisted = newService().scanTapoDevices();
+
+        assertEquals(2, persisted.size(), "ein fehlschlagendes Geraet darf den Scan der uebrigen nicht abbrechen");
+        Map<String, SmartDevice> byId = persisted.stream()
+                .collect(java.util.stream.Collectors.toMap(SmartDevice::getExternalDeviceId, d -> d));
+        assertFalse(byId.get("DEVFOREIGN").isOnline(), "Geraet mit fehlgeschlagener Anmeldung muss offline sein, nicht fehlen");
+        assertTrue(byId.get("DEVOWN").isOnline());
+    }
+
+    // ==================== Tapo: Adresse manuell setzen (Task 3) ====================
+
+    @Test
+    @DisplayName("setTapoDeviceAddress persistiert IP, Protokoll und aktualisierten Zustand")
+    void setTapoDeviceAddressPersistsIpProtocolAndRefreshedState() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        existing.setDeviceName("Alter Name");
+        existing.setCapabilities("SWITCH");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        TapoDeviceState state = new TapoDeviceState("Flur", "L530", true, true, "SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP");
+        when(tapoDeviceService.probeAddress("192.168.1.114"))
+                .thenReturn(new TapoAddressProbeResult(TapoAuthProtocol.KLAP, state));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().setTapoDeviceAddress(1L, "192.168.1.114");
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals("192.168.1.114", saved.getIpAddress());
+        assertTrue(saved.isOnline());
+        assertTrue(saved.isPoweredOn());
+        assertEquals("Flur", saved.getDeviceName());
+        assertEquals("L530", saved.getModel());
+        assertEquals("SWITCH,BRIGHTNESS,COLOR,COLOR_TEMP", saved.getCapabilities());
+        assertTrue(saved.getMetadata().contains("\"authProtocol\":\"KLAP\""));
+        verify(entityStateService).reportState(any());
+    }
+
+    @Test
+    @DisplayName("setTapoDeviceAddress lehnt ein Nicht-Tapo-Geraet mit einer klaren Meldung ab")
+    void setTapoDeviceAddressRejectsNonTapoDevice() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(2L);
+        existing.setDeviceType(DeviceType.KASA);
+        existing.setExternalDeviceId("8006ABCDEF");
+        when(repository.findById(2L)).thenReturn(Optional.of(existing));
+
+        assertThrows(IllegalArgumentException.class, () -> newService().setTapoDeviceAddress(2L, "192.168.1.114"));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("setTapoDeviceAddress laesst die TapoException durch und persistiert nichts, wenn das Geraet nicht antwortet")
+    void setTapoDeviceAddressPropagatesFailureWithoutPersisting() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(3L);
+        existing.setDeviceType(DeviceType.TAPO);
+        existing.setExternalDeviceId("DEV1");
+        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+
+        when(tapoDeviceService.probeAddress("192.168.1.200"))
+                .thenThrow(new TapoException("Tapo-Geraet unter 192.168.1.200 ist weder ueber KLAP noch ueber AES erreichbar."));
+
+        assertThrows(TapoException.class, () -> newService().setTapoDeviceAddress(3L, "192.168.1.200"));
 
         verify(repository, never()).save(any());
     }

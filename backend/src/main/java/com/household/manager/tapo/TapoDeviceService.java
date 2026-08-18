@@ -123,27 +123,63 @@ public class TapoDeviceService {
      * Probe a statically configured device by trying KLAP, then AES.
      */
     private TapoDiscoveryDevice probeStaticDevice(TapoProperties.TapoDeviceConfig config) {
-        String ip = config.getIp();
+        LocalHandshakeResult handshake = tryLocalHandshake(config.getIp(), config.getName());
+        if (handshake == null) {
+            return null;
+        }
+        JsonNode info = handshake.info();
+        String deviceId = config.getDeviceId();
+        if (deviceId == null || deviceId.isBlank()) {
+            deviceId = firstText(info, "device_id", "deviceId");
+        }
+        return new TapoDiscoveryDevice(
+                config.getIp(), handshake.protocol(), deviceId,
+                firstText(info, "model", "device_model"),
+                firstText(info, "nickname", "alias"),
+                info.path("device_on").asBoolean(false)
+        );
+    }
+
+    /**
+     * Manually probes a device directly by IP, bypassing discovery and the connection caches
+     * entirely: tries KLAP first (current firmware default), then AES (older firmware). Used to
+     * set a device's address by hand when local UDP broadcast discovery cannot reach it (e.g. the
+     * production backend running inside a Docker bridge network) but a direct local connection
+     * works — mirrors {@link com.household.manager.kasa.KasaService#probe(String)}.
+     *
+     * @throws TapoException if the device answers neither protocol; a wrong IP must fail loudly
+     *                        instead of silently persisting an unreachable address
+     */
+    public TapoAddressProbeResult probeAddress(String ip) {
+        LocalHandshakeResult handshake = tryLocalHandshake(ip, ip);
+        if (handshake == null) {
+            throw new TapoException("Tapo-Geraet unter " + ip + " ist weder ueber KLAP noch ueber AES erreichbar.");
+        }
+        TapoDeviceState state = TapoDeviceState.fromLocal(handshake.info(), tapoCloudService);
+        return new TapoAddressProbeResult(handshake.protocol(), state);
+    }
+
+    /**
+     * Shared KLAP-then-AES probe used by {@link #probeStaticDevice} and {@link #probeAddress}.
+     * Returns the working protocol alongside the response rather than caching it on the instance:
+     * this service is a singleton bean and concurrent probes (a scheduled scan racing a manual
+     * "set address" request) must not share mutable state.
+     */
+    private LocalHandshakeResult tryLocalHandshake(String ip, String label) {
         for (TapoAuthProtocol protocol : new TapoAuthProtocol[]{TapoAuthProtocol.KLAP, TapoAuthProtocol.AES}) {
             try {
                 TapoLocalDeviceConnection conn = tapoDeviceFactory.create(protocol, ip,
                         tapoProperties.getEmail(), tapoProperties.getPassword());
                 JsonNode info = conn.getDeviceInfo();
-                String deviceId = config.getDeviceId();
-                if (deviceId == null || deviceId.isBlank()) {
-                    deviceId = firstText(info, "device_id", "deviceId");
-                }
-                return new TapoDiscoveryDevice(
-                        ip, protocol, deviceId,
-                        firstText(info, "model", "device_model"),
-                        firstText(info, "nickname", "alias"),
-                        info.path("device_on").asBoolean(false)
-                );
+                return new LocalHandshakeResult(protocol, info);
             } catch (Exception ex) {
-                log.debug("Probe {} mit {} fuer {} fehlgeschlagen: {}", ip, protocol, config.getName(), ex.getMessage());
+                log.debug("Probe {} mit {} fuer {} fehlgeschlagen: {}", ip, protocol, label, ex.getMessage());
             }
         }
         return null;
+    }
+
+    private record LocalHandshakeResult(TapoAuthProtocol protocol, JsonNode info) {
     }
 
     private static String firstText(JsonNode node, String... fields) {

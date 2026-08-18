@@ -421,4 +421,28 @@ class SecurityRulesTest {
                 .andExpect(status().isCreated());
     }
 
+    /**
+     * /devices/{id}/address faellt wie /devices/kasa auf die generische anyRequest ->
+     * MEMBER-Regel (kein eigener Matcher in SecurityConfig).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfTapoAdresseNichtSetzen() throws Exception {
+        mockMvc.perform(put("/devices/7/address").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ip\": \"192.168.1.114\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfTapoAdresseSetzen() throws Exception {
+        when(smartDeviceService.setTapoDeviceAddress(7L, "192.168.1.114")).thenReturn(
+                SmartDeviceResponse.builder().id(7L).deviceType("TAPO").build());
+        mockMvc.perform(put("/devices/7/address").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ip\": \"192.168.1.114\"}"))
+                .andExpect(status().isOk());
+    }
+
 }

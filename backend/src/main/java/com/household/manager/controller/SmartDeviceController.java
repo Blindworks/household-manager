@@ -5,6 +5,7 @@ import com.household.manager.dto.KasaManualAddRequest;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceScanRequest;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
+import com.household.manager.dto.TapoAddressRequest;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.service.SmartDeviceService;
 import jakarta.validation.Valid;
@@ -95,6 +96,32 @@ public class SmartDeviceController {
 
         log.info("Successfully added Kasa device manually: {}", device.getDeviceName());
         return ResponseEntity.status(HttpStatus.CREATED).body(device);
+    }
+
+    /**
+     * Manually set (or correct) a Tapo device's IP address by probing it directly.
+     * <p>
+     * Counterpart to {@link #addKasaDeviceByIp} for Tapo devices, whose local UDP broadcast
+     * discovery cannot reach them in environments where broadcast is blocked (e.g. the
+     * production backend running inside a Docker bridge network) even though a direct KLAP/AES
+     * connection to the device works fine. Unlike Kasa, this corrects an already-known device
+     * (identified by its cloud {@code deviceId}) rather than creating a new one.
+     *
+     * @param id the device ID
+     * @param request the IPv4 address to probe and persist
+     * @return the updated device
+     */
+    @PutMapping("/{id}/address")
+    public ResponseEntity<SmartDeviceResponse> setTapoDeviceAddress(
+            @PathVariable Long id,
+            @Valid @RequestBody TapoAddressRequest request) {
+        log.info("PUT /api/devices/{}/address - Setting Tapo device address to {}", id, request.getIp());
+
+        SmartDeviceResponse device = smartDeviceService.setTapoDeviceAddress(id, request.getIp());
+        auditService.record("device.tapo.address.set", "deviceId=" + id + ", ip=" + request.getIp());
+
+        log.info("Successfully set Tapo device address: {}", device.getDeviceName());
+        return ResponseEntity.ok(device);
     }
 
     /**

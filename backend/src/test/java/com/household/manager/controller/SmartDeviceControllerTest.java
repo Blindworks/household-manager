@@ -8,6 +8,7 @@ import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.exception.GlobalExceptionHandler;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.service.SmartDeviceService;
+import com.household.manager.tapo.TapoException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,9 +20,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -120,5 +123,75 @@ class SmartDeviceControllerTest {
                 .andExpect(status().isBadGateway());
 
         verify(smartDeviceService).addKasaDeviceByIp(any());
+    }
+
+    @Test
+    @DisplayName("PUT /devices/{id}/address setzt die IP eines Tapo-Geraets, liefert 200 und schreibt ein Audit")
+    void setsTapoDeviceAddressAndReturnsOk() throws Exception {
+        SmartDeviceResponse response = SmartDeviceResponse.builder()
+                .id(7L)
+                .deviceType("TAPO")
+                .externalDeviceId("DEV1")
+                .deviceName("Flur")
+                .model("L530")
+                .ipAddress("192.168.1.114")
+                .isOnline(true)
+                .isPoweredOn(true)
+                .build();
+        when(smartDeviceService.setTapoDeviceAddress(7L, "192.168.1.114")).thenReturn(response);
+
+        mockMvc.perform(put("/devices/7/address")
+                        .contentType("application/json")
+                        .content("{\"ip\":\"192.168.1.114\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.deviceType").value("TAPO"))
+                .andExpect(jsonPath("$.ipAddress").value("192.168.1.114"));
+
+        verify(auditService).record(eq("device.tapo.address.set"), any());
+    }
+
+    @Test
+    @DisplayName("PUT /devices/{id}/address lehnt eine leere IP mit 400 ab")
+    void rejectsBlankIpForAddressUpdateWithBadRequest() throws Exception {
+        mockMvc.perform(put("/devices/7/address")
+                        .contentType("application/json")
+                        .content("{\"ip\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /devices/{id}/address lehnt eine nicht-IPv4-Eingabe mit 400 ab")
+    void rejectsNonIpv4ValueForAddressUpdateWithBadRequest() throws Exception {
+        mockMvc.perform(put("/devices/7/address")
+                        .contentType("application/json")
+                        .content("{\"ip\":\"not-an-ip\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /devices/{id}/address liefert 400, wenn das Geraet kein Tapo-Geraet ist")
+    void rejectsAddressUpdateForNonTapoDeviceWithBadRequest() throws Exception {
+        when(smartDeviceService.setTapoDeviceAddress(7L, "192.168.1.114"))
+                .thenThrow(new IllegalArgumentException("Geraet mit ID 7 ist kein Tapo-Geraet (Typ: KASA)."));
+
+        mockMvc.perform(put("/devices/7/address")
+                        .contentType("application/json")
+                        .content("{\"ip\":\"192.168.1.114\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /devices/{id}/address liefert 502, wenn das Geraet unter der IP nicht antwortet, statt eines opaken 500")
+    void mapsTapoExceptionToBadGatewayForAddressUpdate() throws Exception {
+        when(smartDeviceService.setTapoDeviceAddress(7L, "192.168.1.200"))
+                .thenThrow(new TapoException("Tapo-Geraet unter 192.168.1.200 ist weder ueber KLAP noch ueber AES erreichbar."));
+
+        mockMvc.perform(put("/devices/7/address")
+                        .contentType("application/json")
+                        .content("{\"ip\":\"192.168.1.200\"}"))
+                .andExpect(status().isBadGateway());
+
+        verify(smartDeviceService).setTapoDeviceAddress(eq(7L), eq("192.168.1.200"));
     }
 }
