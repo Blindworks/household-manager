@@ -170,8 +170,12 @@ The application uses Liquibase for database migrations. Migration files are loca
 - **Entity Tile Visibility**: Per-entity visibility rules for dashboard tiles
   - Tile key (currently `switches`), visibility (ALWAYS / WHEN_ON / NEVER; no row = AUTO)
   - Controls which switches appear on the dashboard switch tile and in which order
-- **Switch Confirmation**: `confirm_required` flag on `entity_states`
-  - UI-only guard: the dashboard shows a confirmation dialog (with the real switch row) before toggling; flows and the API keep switching directly
+- **Switch Confirmation**: `confirm_required` flag on `entity_states`, applied in two places — the dashboard switch tile and the device page
+  - UI-only guard for switching **OFF** only: turning a guarded device ON is always direct (accidental ON is harmless, accidental OFF of a fridge or router is not). Flows, Telegram and the API keep switching directly in both directions, unchanged
+  - `GET /api/devices` enriches each device with `confirmRequired` from the mirrored switch entity, so the device page needs no second request. `SmartDeviceEntityMapper.entityId(device)` is the single definition of that entityId — both the mirroring path and this enrichment call it, so they cannot drift apart (same pattern as `TractiveHomeResolver`/`PowerConsumerQueryService.findConsumer`)
+  - The device page has its own dialog markup and styles on purpose — reusing the dashboard's would render silently unstyled, because the `lumina`-styles are encapsulated in `dashboard.component.scss` and don't reach outside it (see Tractive/Zigbee tiles above)
+  - **Accepted dashboard hole:** the guard is evaluated against the client's last-fetched state, and tiles refresh only every ~30 s. If a guarded switch is turned on elsewhere within that window, the dashboard still sees `off`, skips the dialog, and `SwitchCommandService.toggleDevice` — which picks the direction from its own current state (everything except `"on"` switches ON) — turns it off unconfirmed. This is the price of a UI-only guard; the dashboard's direction rule duplicates the backend's, so both must change together
+  - The device page has no such hole: it calls explicit `/on`/`/off` endpoints rather than a toggle, so a stale client state there can only cause a redundant turn-ON, never an unconfirmed turn-OFF
 - **Switch Power Display**: switch rows show live wattage (no schema change)
   - `GET /api/v1/switches` enriches each switch with `powerWatts` from the matching `sensor.<source>_<ref>_power` entity (same source + sourceRef)
   - Only shown while the switch is on and the reading is fresh (<5 min); display-only, no threshold logic; today effectively Meross (Shelly has no switch entities)
