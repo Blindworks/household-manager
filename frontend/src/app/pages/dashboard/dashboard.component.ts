@@ -440,12 +440,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Hintergrund-Refresh könnte ihn bereits ausgeschaltet haben (Muster wie
    * `SmartDeviceListComponent.confirmTurnOff`); ohne Neu-Aufloesung würde `executeToggle`
    * ihn dann ausgerechnet über den "Ausschalten"-Bestätigungsdialog wieder einschalten.
+   *
+   * Beide Listen können beim Aufloesen leer sein - `loadTopSwitches` leert `topSwitches`
+   * bei einem fehlgeschlagenen 30s-Refresh (WLAN-Aussetzer auf dem Wandtablet ist
+   * Alltag, kein Sonderfall), und `SWITCH_TILE_LIMIT` kann einen weiterhin an
+   * geschuetzten Schalter aus den Top 4 verdraengen, waehrend der Dialog offen ist.
+   * "Nicht gefunden" ist dabei KEIN Beleg dafuer, dass der Schalter aus ist - toggleSwitch
+   * oeffnet den Dialog ueberhaupt nur, wenn state === 'on' war, die gehaltene Referenz ist
+   * also per Konstruktion "an". Deshalb faellt die Aufloesung zuletzt auf sie zurueck,
+   * statt bei einer leeren Liste stillschweigend gar nicht zu schalten.
    */
   confirmToggle(entity: SwitchEntity): void {
     this.closeConfirmDialog();
     const current = this.allSwitches.find(s => s.entityId === entity.entityId)
-      ?? this.topSwitches.find(s => s.entityId === entity.entityId);
-    if (current?.state === 'on') {
+      ?? this.topSwitches.find(s => s.entityId === entity.entityId)
+      ?? entity;
+    if (current.state === 'on') {
       this.executeToggle(current);
     }
   }

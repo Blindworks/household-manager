@@ -238,6 +238,27 @@ describe('DashboardComponent (Schalter)', () => {
     discardPeriodicTasks();
   }));
 
+  it('schaltet trotzdem, wenn der Schalter in beiden Listen nicht mehr auffindbar ist', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const guarded = entity({ confirmRequired: true, state: 'on' });
+    fixture.componentInstance.topSwitches = [guarded];
+    fixture.componentInstance.toggleSwitch(guarded);
+
+    // Ein fehlgeschlagener 30s-Refresh leert topSwitches (catchError(() => of([])),
+    // dashboard.component.ts:1511); allSwitches bleibt hier leer, weil der grosse
+    // Dialog nicht offen ist. "Nicht gefunden" darf nicht als "ist aus" gelesen
+    // werden - toggleSwitch oeffnet den Dialog nur bei state === 'on'.
+    fixture.componentInstance.topSwitches = [];
+    fixture.componentInstance.confirmToggle(guarded);
+    tick();
+
+    expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
   it('abbrechen schliesst den Bestaetigungsdialog ohne zu schalten', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
