@@ -40,6 +40,7 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
     private final String username;
     private final String password;
     private final String host;
+    private final int[] portsToTry;
     /** URL path prefix, e.g. {@code /app} */
     private final String appPath = "/app";
 
@@ -60,10 +61,23 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             String password,
             String ipAddress
     ) {
+        this(ignoredHttpClient, objectMapper, username, password, ipAddress, PORTS_TO_TRY);
+    }
+
+    /** Package-private port seam for tests against a fake device on an ephemeral port. */
+    TapoKlapDeviceConnection(
+            HttpClient ignoredHttpClient,
+            ObjectMapper objectMapper,
+            String username,
+            String password,
+            String ipAddress,
+            int[] portsToTry
+    ) {
         this.objectMapper = objectMapper;
         this.username = username;
         this.password = password;
         this.host = ipAddress;
+        this.portsToTry = portsToTry;
     }
 
     // -------------------------------------------------------------------------
@@ -162,6 +176,18 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             return parsed.path("result");
 
         } catch (IOException ex) {
+            // The devices close idle keep-alive connections after ~1-2 minutes, well before the
+            // 300 s session TTL - a request in that window hits the dead socket as a write error
+            // (RST) or EOF. That is a stale session, not an offline device: retry exactly once
+            // with a fresh handshake, same pattern as the 403 / -1301 handling above. All
+            // commands set absolute state (device_on true/false, brightness value), so a single
+            // retry cannot double-apply anything.
+            if (retryOnAuthError) {
+                log.debug("KLAP-Socket zu {} nicht mehr verwendbar ({}), erneuere Session",
+                        host, ex.getMessage());
+                invalidateSession();
+                return executeRequestInternal(requestData, false);
+            }
             throw new TapoException("Tapo KLAP-Kommunikation fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
@@ -218,7 +244,7 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
 
         // Try each port (80 HTTP, 443 HTTPS) with each credential candidate.
         // Skip any port that is known to deny /request (e.g. port 80 on newer firmware).
-        for (int port : PORTS_TO_TRY) {
+        for (int port : portsToTry) {
             if (port == requestDeniedPort) {
                 log.debug("KLAP ueberspringe port={} (request wurde dort mit 403 abgelehnt)", port);
                 continue;
@@ -537,6 +563,12 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         private HttpRawResponse readResponse() throws IOException {
             // --- Status line ---
             String statusLine = readLine();
+            if (statusLine.isEmpty()) {
+                // Clean EOF before the status line: the device closed the keep-alive
+                // connection. Must surface as IOException so the stale-session retry in
+                // executeRequestInternal triggers - as TapoException it would bypass it.
+                throw new IOException("Verbindung wurde vom Geraet geschlossen (EOF vor der Statuszeile).");
+            }
             log.debug("KLAP HTTP Status: {}", statusLine);
             int statusCode = parseStatusCode(statusLine);
 
