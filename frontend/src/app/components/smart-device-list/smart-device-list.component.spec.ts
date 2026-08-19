@@ -11,7 +11,7 @@ describe('SmartDeviceListComponent', () => {
   const device: SmartDevice = {
     id: 1, deviceType: 'TAPO', externalDeviceId: 'DEV1', deviceName: 'Stehlampe',
     model: 'L530E(EU)', ipAddress: '192.168.1.112', isOnline: true, isPoweredOn: false,
-    capabilities: ['SWITCH'], metadata: {}, createdAt: '', updatedAt: ''
+    capabilities: ['SWITCH'], metadata: {}, confirmRequired: false, createdAt: '', updatedAt: ''
   } as SmartDevice;
 
   // Faehigkeiten gemeldet, aber noch nie live geprobt - Backend liefert kein brightness/hue/
@@ -21,7 +21,7 @@ describe('SmartDeviceListComponent', () => {
     model: 'L530(EU)', ipAddress: '192.168.1.114', isOnline: true, isPoweredOn: true,
     capabilities: ['SWITCH', 'BRIGHTNESS', 'COLOR', 'COLOR_TEMP'],
     metadata: { colorTempRangeMin: 2500, colorTempRangeMax: 6500 },
-    createdAt: '', updatedAt: ''
+    confirmRequired: false, createdAt: '', updatedAt: ''
   } as SmartDevice;
 
   // Dieselbe Lampe, aber mit einem vom Geraet tatsaechlich gemeldeten Ist-Zustand.
@@ -373,6 +373,22 @@ describe('SmartDeviceListComponent', () => {
 
       expect(serviceSpy.turnOff).not.toHaveBeenCalled();
       expect(fixture.componentInstance.confirmOffDevice?.id).toBe(9);
+    });
+
+    it('zeigt den Dialog an und schaltet ueber den Bestaetigen-Knopf', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(guardedDevice);
+      fixture.detectChanges();
+
+      const dialog: HTMLElement = fixture.nativeElement.querySelector('.confirm-dialog');
+      expect(dialog.textContent).toContain('Kuehlschrank');
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+
+      dialog.querySelector<HTMLButtonElement>('.confirm-dialog__confirm')!.click();
+
+      expect(serviceSpy.turnOff).toHaveBeenCalledWith(9);
     });
 
     it('schaltet nach Bestaetigung aus und schliesst den Dialog', () => {

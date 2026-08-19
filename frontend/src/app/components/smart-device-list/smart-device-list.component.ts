@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -311,10 +311,17 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     this.executeToggle(device);
   }
 
-  /** Bestaetigung im Dialog: schliesst ihn und schaltet aus. */
+  /**
+   * Bestaetigung im Dialog: schliesst ihn und schaltet aus. Loest das Geraet ueber seine id
+   * in `devices` neu auf statt die im Dialog gehaltene Referenz weiterzuverwenden -
+   * `updateDeviceInList` ERSETZT das Array-Element bei jedem Refresh, ein waehrend offenem
+   * Dialog eintreffender Hintergrund-Refresh wuerde die Dialog-Referenz sonst zu einer
+   * verwaisten Kopie machen (Muster wie `DashboardComponent.applySwitchState`).
+   */
   confirmTurnOff(): void {
-    const device = this.confirmOffDevice;
+    const deviceId = this.confirmOffDevice?.id;
     this.confirmOffDevice = null;
+    const device = this.devices.find(d => d.id === deviceId);
     if (device) {
       this.executeToggle(device);
     }
@@ -324,15 +331,25 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     this.confirmOffDevice = null;
   }
 
+  /** Schliesst den Bestaetigungsdialog per Escape-Taste (Muster: DashboardComponent.onEscape). */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeConfirmOffDialog();
+  }
+
   private executeToggle(device: SmartDevice): void {
     this.togglingDevices.add(device.id);
+    // Vor dem Request einfrieren, welche Richtung tatsaechlich angefordert wurde - der
+    // `next`-Handler darf beim Eintreffen der Antwort nicht einfach den dann aktuellen
+    // (moeglicherweise zwischenzeitlich durch einen Refresh veraenderten) Wert umdrehen.
+    const turningOn = !device.isPoweredOn;
     const action = device.isPoweredOn
       ? this.smartDeviceService.turnOff(device.id)
       : this.smartDeviceService.turnOn(device.id);
 
     action.subscribe({
       next: () => {
-        device.isPoweredOn = !device.isPoweredOn;
+        device.isPoweredOn = turningOn;
         this.togglingDevices.delete(device.id);
       },
       error: (error: Error) => {

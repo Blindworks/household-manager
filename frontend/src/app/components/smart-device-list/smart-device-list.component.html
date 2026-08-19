@@ -255,7 +255,8 @@
 </ng-template>
 
 <div class="confirm-backdrop" *ngIf="confirmOffDevice" (click)="closeConfirmOffDialog()">
-  <div class="confirm-dialog" (click)="$event.stopPropagation()">
+  <div class="confirm-dialog" role="dialog" aria-modal="true" aria-label="Ausschalten bestätigen"
+       (click)="$event.stopPropagation()">
     <h3 class="confirm-dialog__title">Wirklich ausschalten?</h3>
     <p class="confirm-dialog__text">
       <strong>{{ confirmOffDevice.deviceName }}</strong> ist gegen versehentliches
