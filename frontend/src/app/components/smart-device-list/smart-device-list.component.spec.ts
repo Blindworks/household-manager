@@ -383,6 +383,7 @@ describe('SmartDeviceListComponent', () => {
       fixture.detectChanges();
 
       const dialog: HTMLElement = fixture.nativeElement.querySelector('.confirm-dialog');
+      expect(dialog).not.toBeNull();
       expect(dialog.textContent).toContain('Kuehlschrank');
       expect(serviceSpy.turnOff).not.toHaveBeenCalled();
 

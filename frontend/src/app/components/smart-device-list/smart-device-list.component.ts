@@ -322,7 +322,10 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     const deviceId = this.confirmOffDevice?.id;
     this.confirmOffDevice = null;
     const device = this.devices.find(d => d.id === deviceId);
-    if (device) {
+    // Nur schalten, wenn das Geraet laut aktuellem Stand noch an ist: ein waehrend offenem
+    // Dialog eingetroffener Refresh koennte es bereits ausgeschaltet haben - executeToggle
+    // wuerde es dann ausgerechnet ueber den "Ausschalten"-Knopf wieder EINschalten.
+    if (device?.isPoweredOn) {
       this.executeToggle(device);
     }
   }
@@ -343,9 +346,9 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     // `next`-Handler darf beim Eintreffen der Antwort nicht einfach den dann aktuellen
     // (moeglicherweise zwischenzeitlich durch einen Refresh veraenderten) Wert umdrehen.
     const turningOn = !device.isPoweredOn;
-    const action = device.isPoweredOn
-      ? this.smartDeviceService.turnOff(device.id)
-      : this.smartDeviceService.turnOn(device.id);
+    const action = turningOn
+      ? this.smartDeviceService.turnOn(device.id)
+      : this.smartDeviceService.turnOff(device.id);
 
     action.subscribe({
       next: () => {
