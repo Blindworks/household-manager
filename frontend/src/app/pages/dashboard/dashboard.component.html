@@ -674,11 +674,11 @@
       class="lumina__dialog lumina__dialog--confirm"
       role="dialog"
       aria-modal="true"
-      aria-label="Schalten bestätigen"
+      aria-label="Ausschalten bestätigen"
       (click)="$event.stopPropagation()"
     >
       <header class="lumina__dialog-head">
-        <h2 class="lumina__dialog-title">Schalten bestätigen</h2>
+        <h2 class="lumina__dialog-title">Ausschalten bestätigen</h2>
         <button
           type="button"
           class="lumina__dialog-close"
@@ -690,7 +690,7 @@
       </header>
       <div class="lumina__dialog-body">
         <p class="lumina__confirm-hint">
-          Dieser Schalter erfordert eine Bestätigung. Zum Schalten den Schalter antippen.
+          Dieser Schalter erfordert eine Bestätigung zum Ausschalten. Zum Ausschalten den Schalter antippen.
         </p>
         <app-switch-list
           [switches]="confirmSwitchList"

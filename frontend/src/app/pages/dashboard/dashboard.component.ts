@@ -409,15 +409,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Schaltet einen Schalter. Bestätigungspflichtige Schalter werden nicht direkt
-   * geschaltet, sondern öffnen den Bestätigungsdialog; erst der Klick auf den
-   * Schalter im Dialog führt den Toggle aus.
+   * Schaltet einen Schalter. Geschuetzte Schalter oeffnen beim AUSschalten den
+   * Bestaetigungsdialog; erst der Klick auf den Schalter im Dialog fuehrt den Toggle
+   * aus. Einschalten laeuft immer direkt - ein versehentliches Einschalten ist
+   * harmlos, ein versehentliches Ausschalten (Kuehlschrank, Router) nicht.
    */
   toggleSwitch(entity: SwitchEntity): void {
     if (this.pendingSwitchIds.has(entity.entityId)) {
       return;
     }
-    if (entity.confirmRequired) {
+    if (entity.confirmRequired && entity.state === 'on') {
       this.confirmSwitch = entity;
       this.confirmSwitchList = [entity];
       return;

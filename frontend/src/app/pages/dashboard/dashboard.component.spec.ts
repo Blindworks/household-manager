@@ -184,7 +184,7 @@ describe('DashboardComponent (Schalter)', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true }));
+    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true, state: 'on' }));
     tick();
 
     expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
@@ -196,7 +196,7 @@ describe('DashboardComponent (Schalter)', () => {
   it('schaltet nach Bestaetigung im Dialog und schliesst ihn', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    const guarded = entity({ confirmRequired: true });
+    const guarded = entity({ confirmRequired: true, state: 'on' });
     fixture.componentInstance.toggleSwitch(guarded);
 
     fixture.componentInstance.confirmToggle(guarded);
@@ -204,6 +204,10 @@ describe('DashboardComponent (Schalter)', () => {
 
     expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
     expect(fixture.componentInstance.confirmSwitch).toBeNull();
+    // switchServiceSpy.toggle liefert im gesamten describe-Block immer eine feste
+    // Antwort mit state: 'on' (siehe beforeEach) - unabhaengig davon, was gesendet
+    // wurde. Der optimistische Zwischenzustand 'off' wird dadurch sofort wieder
+    // ueberschrieben; der real erwartete Endzustand ist deshalb 'on', nicht 'off'.
     expect(fixture.componentInstance.topSwitches[0].state).toBe('on');
 
     discardPeriodicTasks();
@@ -212,7 +216,7 @@ describe('DashboardComponent (Schalter)', () => {
   it('abbrechen schliesst den Bestaetigungsdialog ohne zu schalten', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true }));
+    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true, state: 'on' }));
 
     fixture.componentInstance.closeConfirmDialog();
     tick();
@@ -241,7 +245,7 @@ describe('DashboardComponent (Schalter)', () => {
     fixture.detectChanges();
     fixture.componentInstance.openSwitchDialog();
     tick();
-    const guarded = entity({ confirmRequired: true });
+    const guarded = entity({ confirmRequired: true, state: 'on' });
 
     fixture.componentInstance.toggleSwitch(guarded);
     expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
@@ -254,6 +258,19 @@ describe('DashboardComponent (Schalter)', () => {
     expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
     expect(fixture.componentInstance.confirmSwitch).toBeNull();
     expect(fixture.componentInstance.switchDialogOpen).toBeTrue();
+
+    discardPeriodicTasks();
+  }));
+
+  it('einschalten eines geschuetzten schalters fragt nicht nach', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleSwitch(entity({ confirmRequired: true, state: 'off' }));
+    tick();
+
+    expect(switchServiceSpy.toggle).toHaveBeenCalledWith('switch.kasa_abc');
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
 
     discardPeriodicTasks();
   }));
