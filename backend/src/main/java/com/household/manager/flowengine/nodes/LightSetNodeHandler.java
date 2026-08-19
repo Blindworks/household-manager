@@ -17,8 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Aktions-Node: setzt Helligkeit, Farbe und/oder Farbtemperatur einer Tapo-Lampe
- * ({@link SmartDeviceService#setLightState}).
+ * Aktions-Node: setzt Helligkeit, Farbe und/oder Farbtemperatur eines Tapo- oder
+ * Kasa-Leuchtmittels ({@link SmartDeviceService#setLightState}).
  * <p>
  * Anders als switch-device schluckt dieser Handler Fehler beim Ansprechen des Geraets
  * (nicht erreichbar, Faehigkeit/Bereich vom Geraet abgelehnt): eine unerreichbare Lampe

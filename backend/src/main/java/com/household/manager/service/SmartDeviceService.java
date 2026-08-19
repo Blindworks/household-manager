@@ -10,6 +10,7 @@ import com.household.manager.dto.SmartDeviceUpdateRequest;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
+import com.household.manager.kasa.KasaLightCommandResult;
 import com.household.manager.kasa.KasaService;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
 import com.household.manager.kasa.dto.KasaStatusDto;
@@ -18,7 +19,7 @@ import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
-import com.household.manager.tapo.LightState;
+import com.household.manager.smartdevice.LightState;
 import com.household.manager.tapo.TapoAddressProbeResult;
 import com.household.manager.tapo.TapoAuthProtocol;
 import com.household.manager.tapo.TapoCloudDevice;
@@ -203,7 +204,7 @@ public class SmartDeviceService {
 
         try {
             switch (device.getDeviceType()) {
-                case KASA -> kasaService.turnOn(device.getIpAddress());
+                case KASA -> kasaService.turnOn(device.getIpAddress(), isKasaBulb(device));
                 case TAPO -> {
                     String tapoIp = device.getIpAddress();
                     TapoAuthProtocol tapoProto = extractAuthProtocol(device);
@@ -239,7 +240,7 @@ public class SmartDeviceService {
 
         try {
             switch (device.getDeviceType()) {
-                case KASA -> kasaService.turnOff(device.getIpAddress());
+                case KASA -> kasaService.turnOff(device.getIpAddress(), isKasaBulb(device));
                 case TAPO -> {
                     String tapoIp = device.getIpAddress();
                     TapoAuthProtocol tapoProto = extractAuthProtocol(device);
@@ -392,10 +393,16 @@ public class SmartDeviceService {
      * @param id      the device's database ID
      * @param request the light-state fields to set; all are optional but at least one is required
      * @return the device response with its state refreshed from the device
-     * @throws IllegalArgumentException if the device doesn't exist, isn't a Tapo device, requests
-     *                                   a capability the device doesn't report, sets no field at
-     *                                   all, or sets a value outside its valid range
-     * @throws TapoException if the device does not answer
+     * @throws IllegalArgumentException if the device doesn't exist, doesn't support light control
+     *                                   (TAPO, or a KASA device whose stored {@code kasaBulb} flag
+     *                                   is set — see {@link #isKasaBulb}; a Kasa wall dimmer speaks
+     *                                   a different, unimplemented protocol and is rejected exactly
+     *                                   like a Meross device), requests a capability the device
+     *                                   doesn't report, sets no field at all, or sets a value
+     *                                   outside its valid range
+     * @throws TapoException if a Tapo device does not answer
+     * @throws com.household.manager.kasa.exception.KasaCommunicationException if a Kasa device
+     *                                   does not answer, or reports a non-zero {@code err_code}
      */
     @Transactional
     public SmartDeviceResponse setLightState(Long id, LightStateRequest request) {
@@ -403,23 +410,46 @@ public class SmartDeviceService {
 
         SmartDevice device = smartDeviceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Device not found with ID: " + id));
-        if (device.getDeviceType() != DeviceType.TAPO) {
+
+        // Gating on DeviceType.KASA alone would let a Kasa WALL DIMMER (HS220/KS220/KP405) through:
+        // those report is_dimmable:1 (see KasaCapabilityMapper) but have no light_state at all and
+        // do not speak smartlife.iot.smartbulb.lightingservice - the isKasaBulb() structural flag
+        // (persisted from light_state presence at scan/probe/refresh time, same source as the
+        // KasaCapabilityMapper gate) is what actually tells a bulb apart from a dimmer switch.
+        boolean supportsLightControl = device.getDeviceType() == DeviceType.TAPO
+                || (device.getDeviceType() == DeviceType.KASA && isKasaBulb(device));
+        if (!supportsLightControl) {
             throw new IllegalArgumentException(
-                    "Geraet mit ID " + id + " ist kein Tapo-Geraet (Typ: " + device.getDeviceType() + ").");
+                    "Geraet mit ID " + id + " unterstuetzt keine Lichtsteuerung (Typ: " + device.getDeviceType() + ").");
         }
 
         LightState lightState = validateLightStateRequest(device, request);
-
-        String ip = device.getIpAddress();
-        TapoAuthProtocol protocol = extractAuthProtocol(device);
         boolean supportsColorTemp = parseCapabilities(device.getCapabilities()).contains("COLOR_TEMP");
-        tapoDeviceService.setLightState(device.getExternalDeviceId(), ip, protocol, lightState, supportsColorTemp);
 
-        // Only reached once the device actually accepted the change: refresh and persist the
-        // display-relevant fields (online/poweredOn/name/model) from a fresh status read, the
-        // same fields a plain refresh keeps up to date. Brightness/hue/saturation/colorTemp
-        // themselves have no columns on SmartDevice - the device is the source of truth for those.
-        refreshTapoDeviceState(device);
+        if (device.getDeviceType() == DeviceType.TAPO) {
+            // Only reached once the device actually accepted the change: refresh and persist the
+            // display-relevant fields (online/poweredOn/name/model/capabilities/light values) from
+            // a fresh status read, the same fields a plain refresh keeps up to date.
+            String ip = device.getIpAddress();
+            TapoAuthProtocol protocol = extractAuthProtocol(device);
+            tapoDeviceService.setLightState(device.getExternalDeviceId(), ip, protocol, lightState, supportsColorTemp);
+            refreshTapoDeviceState(device);
+        } else {
+            // KasaService.setLightState already parses the device's OWN reported resulting state
+            // out of the same response (see its javadoc for the measured evidence that err_code:0
+            // does not prove the request's values landed) - persisting that directly, instead of
+            // issuing a second getStatus() round trip the way the Tapo branch does, is both more
+            // truthful (no assumption that the request was applied) and cheaper: Kasa devices
+            // accept only one TCP connection at a time, so a redundant read right after a write
+            // that already told us everything we need is pure waste.
+            KasaLightCommandResult result = kasaService.setLightState(device.getIpAddress(), lightState, supportsColorTemp);
+            device.setOnline(true);
+            device.setPoweredOn(result.poweredOn());
+            Map<String, Object> metadata = new HashMap<>(deserializeMetadata(device.getMetadata()));
+            applyCurrentLightState(metadata, result.lightState());
+            device.setMetadata(serializeMetadata(metadata));
+        }
+
         SmartDevice saved = smartDeviceRepository.save(device);
         reportEntityState(saved);
 
@@ -491,9 +521,14 @@ public class SmartDeviceService {
 
     /**
      * Reads the device's own {@code colorTempRangeMin}/{@code colorTempRangeMax} metadata
-     * (captured from {@code color_temp_range} on a previous scan/refresh/address-set, see
+     * (captured from Tapo's {@code color_temp_range} on a previous scan/refresh/address-set, see
      * {@link #applyColorTempRange}), falling back to a generic default range if the device never
      * reported one — e.g. it hasn't been probed since this field was added.
+     * <p>
+     * <b>Kasa bulbs always take this fallback</b>: no equivalent range field has been found in the
+     * Kasa protocol (unlike Tapo's {@code color_temp_range}), so {@code colorTempRangeMin}/{@code
+     * colorTempRangeMax} are never written for a Kasa device and a Kasa colour-temperature request
+     * is always validated against 2500-6500 Kelvin, regardless of the bulb's actual supported range.
      */
     private int[] resolveColorTempRange(SmartDevice device) {
         Map<String, Object> metadata = deserializeMetadata(device.getMetadata());
@@ -535,7 +570,16 @@ public class SmartDeviceService {
      * reported nothing) leaves whatever was previously stored untouched rather than clobbering it.
      */
     private void applyCurrentLightState(Map<String, Object> metadata, TapoDeviceState state) {
-        LightState light = state.currentLightState();
+        applyCurrentLightState(metadata, state.currentLightState());
+    }
+
+    /**
+     * Device-type-agnostic core of {@link #applyCurrentLightState(Map, TapoDeviceState)}, reused
+     * directly by the Kasa upsert/refresh paths (which have no {@code TapoDeviceState} wrapper of
+     * their own, just the four raw fields) so both platforms write the SAME metadata keys and
+     * {@link #toResponse} needs no per-platform branching to read them back.
+     */
+    private void applyCurrentLightState(Map<String, Object> metadata, LightState light) {
         if (light == null) {
             return;
         }
@@ -601,19 +645,31 @@ public class SmartDeviceService {
             log.debug("Creating new Kasa device: {}", dto.getAlias());
         }
 
-        device.setDeviceName(dto.getAlias() != null ? dto.getAlias() : "Kasa Device");
+        device.setDeviceName(
+                Optional.ofNullable(dto.getAlias()).filter(name -> !name.isBlank()).orElse("Kasa Device"));
         device.setModel(dto.getModel());
         device.setIpAddress(dto.getIp());
         device.setOnline(true);  // If discovered, it's online
         device.setPoweredOn(dto.isRelayState());
-        device.setCapabilities("SWITCH");
+        // Derived from the device's own is_dimmable/is_color/is_variable_color_temp flags
+        // (KasaCapabilityMapper) rather than hardcoded - dto is always fresh here (discover()/
+        // probe() only ever hand this a just-received sysinfo), so there is no "keep the old value
+        // on a failed probe" concern the way there is on the Tapo scan path.
+        device.setCapabilities(dto.getCapabilities() != null ? dto.getCapabilities() : "SWITCH");
 
         // Store additional metadata
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("deviceId", dto.getDeviceId());
+        metadata.put("kasaBulb", dto.isBulb());
+        applyCurrentLightState(metadata, new LightState(dto.getBrightness(), dto.getHue(), dto.getSaturation(), dto.getColorTemp()));
         device.setMetadata(serializeMetadata(metadata));
 
         return smartDeviceRepository.save(device);
+    }
+
+    /** Reads the {@code kasaBulb} flag captured at scan/probe/refresh time (see {@link #upsertKasaDevice}). */
+    private boolean isKasaBulb(SmartDevice device) {
+        return Boolean.TRUE.equals(deserializeMetadata(device.getMetadata()).get("kasaBulb"));
     }
 
     private void refreshKasaDeviceState(SmartDevice device) {
@@ -621,7 +677,18 @@ public class SmartDeviceService {
             KasaStatusDto status = kasaService.getStatus(device.getIpAddress());
             device.setOnline(true);
             device.setPoweredOn(status.relayState());
-            device.setDeviceName(status.alias() != null ? status.alias() : device.getDeviceName());
+            // Same blank-check as upsertKasaDevice: KasaSysInfoMapper.trimAlias turns a
+            // whitespace-only alias into "", and a plain != null check would happily persist that
+            // empty string as the device's display name.
+            if (status.alias() != null && !status.alias().isBlank()) {
+                device.setDeviceName(status.alias());
+            }
+            device.setCapabilities(status.capabilities());
+
+            Map<String, Object> metadata = new HashMap<>(deserializeMetadata(device.getMetadata()));
+            metadata.put("kasaBulb", status.bulb());
+            applyCurrentLightState(metadata, new LightState(status.brightness(), status.hue(), status.saturation(), status.colorTemp()));
+            device.setMetadata(serializeMetadata(metadata));
         } catch (Exception ex) {
             log.warn("Kasa device {} ({}) appears offline: {}",
                     device.getExternalDeviceId(), device.getIpAddress(), ex.getMessage());

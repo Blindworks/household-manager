@@ -7,14 +7,16 @@ import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
+import com.household.manager.kasa.KasaLightCommandResult;
 import com.household.manager.kasa.KasaService;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
+import com.household.manager.kasa.dto.KasaStatusDto;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
-import com.household.manager.tapo.LightState;
+import com.household.manager.smartdevice.LightState;
 import com.household.manager.tapo.TapoAddressProbeResult;
 import com.household.manager.tapo.TapoAuthProtocol;
 import com.household.manager.tapo.TapoCloudDevice;
@@ -193,6 +195,59 @@ class SmartDeviceServiceTest {
     }
 
     @Test
+    @DisplayName("Kasa-Scan uebernimmt Faehigkeiten, Bulb-Flag und aktuelle Lichtwerte eines Leuchtmittels statt hartkodiertem SWITCH")
+    void scanKasaBulbPersistsCapabilitiesAndCurrentLightValues() {
+        KasaDiscoveryDto dto = new KasaDiscoveryDto();
+        dto.setIp("192.168.1.101");
+        dto.setDeviceId("KL110DEVICEID");
+        dto.setModel("KL110(EU)");
+        dto.setAlias("Treppenhaus");
+        dto.setRelayState(false);
+        dto.setBulb(true);
+        dto.setCapabilities("SWITCH,BRIGHTNESS");
+        dto.setBrightness(100);
+        dto.setHue(0);
+        dto.setSaturation(0);
+        dto.setColorTemp(2700);
+        when(kasaDiscoveryService.discover()).thenReturn(List.of(dto));
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.KASA, "KL110DEVICEID"))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanAndPersistDevices(DeviceType.KASA);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals("SWITCH,BRIGHTNESS", saved.getCapabilities(),
+                "Faehigkeiten muessen aus der sysinfo abgeleitet werden, nicht hartkodiert SWITCH sein");
+        assertTrue(saved.getMetadata().contains("\"lightBrightness\":100"));
+        assertTrue(saved.getMetadata().contains("\"kasaBulb\":true"));
+    }
+
+    @Test
+    @DisplayName("Kasa-Scan legt fuer eine Steckdose (kein bulb-Flag, keine Faehigkeiten im DTO) weiterhin nur SWITCH an")
+    void scanKasaPlugStillYieldsOnlySwitchCapability() {
+        KasaDiscoveryDto dto = new KasaDiscoveryDto();
+        dto.setIp("192.168.1.116");
+        dto.setDeviceId("8006PLUG");
+        dto.setModel("HS100(EU)");
+        dto.setAlias("Kueche");
+        dto.setRelayState(true);
+        // bulb=false (Default), capabilities=null - wie eine echte KasaDiscoveryService-Antwort fuer eine Steckdose
+        when(kasaDiscoveryService.discover()).thenReturn(List.of(dto));
+        when(repository.findByDeviceTypeAndExternalDeviceId(DeviceType.KASA, "8006PLUG"))
+                .thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().scanAndPersistDevices(DeviceType.KASA);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        assertEquals("SWITCH", captor.getValue().getCapabilities());
+    }
+
+    @Test
     @DisplayName("Kasa turnOn spricht das Geraet ueber die IP-Adresse an, nicht ueber die externalDeviceId")
     void turnOnKasaUsesIpAddressForCommunication() {
         SmartDevice device = new SmartDevice();
@@ -206,7 +261,27 @@ class SmartDeviceServiceTest {
 
         newService().turnOn(5L);
 
-        verify(kasaService).turnOn("192.168.1.77");
+        verify(kasaService).turnOn("192.168.1.77", false);
+    }
+
+    @Test
+    @DisplayName("Kasa turnOn/turnOff senden fuer ein als Leuchtmittel markiertes Geraet das bulb=true-Flag")
+    void turnOnOffKasaPassesBulbFlagFromStoredMetadata() {
+        SmartDevice device = new SmartDevice();
+        device.setId(6L);
+        device.setDeviceType(DeviceType.KASA);
+        device.setExternalDeviceId("KL110DEVICEID");
+        device.setIpAddress("192.168.1.101");
+        device.setDeviceName("Treppenhaus");
+        device.setMetadata("{\"kasaBulb\":true}");
+        when(repository.findById(6L)).thenReturn(Optional.of(device));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().turnOn(6L);
+        newService().turnOff(6L);
+
+        verify(kasaService).turnOn("192.168.1.101", true);
+        verify(kasaService).turnOff("192.168.1.101", true);
     }
 
     @Test
@@ -782,6 +857,32 @@ class SmartDeviceServiceTest {
                 "die Spec verspricht Faehigkeiten-Erkennung bei Scan ODER Refresh - vorher aktualisierte refresh sie nicht");
     }
 
+    @Test
+    @DisplayName("refreshDeviceState uebernimmt fuer ein Kasa-Leuchtmittel Faehigkeiten und aktuelle Lichtwerte")
+    void refreshDeviceStateUpgradesKasaBulbCapabilitiesAndLightValues() {
+        SmartDevice existing = new SmartDevice();
+        existing.setId(1L);
+        existing.setDeviceType(DeviceType.KASA);
+        existing.setExternalDeviceId("KL110DEVICEID");
+        existing.setDeviceName("Treppenhaus");
+        existing.setIpAddress("192.168.1.101");
+        existing.setCapabilities("SWITCH"); // z.B. vor der Faehigkeiten-Erkennung erfasst
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        when(kasaService.getStatus("192.168.1.101")).thenReturn(new KasaStatusDto(
+                false, "Treppenhaus", "KL110DEVICEID", true, "SWITCH,BRIGHTNESS", 100, 0, 0, 2700));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        newService().refreshDeviceState(1L);
+
+        ArgumentCaptor<SmartDevice> captor = ArgumentCaptor.forClass(SmartDevice.class);
+        verify(repository).save(captor.capture());
+        SmartDevice saved = captor.getValue();
+        assertEquals("SWITCH,BRIGHTNESS", saved.getCapabilities());
+        assertTrue(saved.getMetadata().contains("\"lightBrightness\":100"));
+        assertTrue(saved.getMetadata().contains("\"kasaBulb\":true"));
+    }
+
     // ==================== Licht-Steuerung (Task 4) ====================
 
     private SmartDevice tapoLight(Long id, String capabilities, String metadataJson) {
@@ -872,18 +973,127 @@ class SmartDeviceServiceTest {
         verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
     }
 
+    /**
+     * KASA used to be rejected here too (Kasa bulbs did not exist yet); now that
+     * {@link DeviceType#KASA} also supports light control, MEROSS is the genuinely
+     * unsupported type this guard must still reject.
+     */
     @Test
-    @DisplayName("setLightState lehnt ein Nicht-Tapo-Geraet ab")
-    void setLightStateRejectsNonTapoDevice() {
+    @DisplayName("setLightState lehnt ein Geraet ohne Lichtsteuerung (Meross) ab")
+    void setLightStateRejectsUnsupportedDeviceType() {
         SmartDevice device = new SmartDevice();
         device.setId(5L);
-        device.setDeviceType(DeviceType.KASA);
+        device.setDeviceType(DeviceType.MEROSS);
         when(repository.findById(5L)).thenReturn(Optional.of(device));
 
         LightStateRequest request = LightStateRequest.builder().brightness(50).build();
         assertThrows(IllegalArgumentException.class, () -> newService().setLightState(5L, request));
 
         verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
+        verify(kasaService, never()).setLightState(any(), any(), anyBoolean());
+    }
+
+    private SmartDevice kasaLight(Long id, String capabilities) {
+        SmartDevice device = new SmartDevice();
+        device.setId(id);
+        device.setDeviceType(DeviceType.KASA);
+        device.setExternalDeviceId("KL110DEVICEID");
+        device.setDeviceName("Treppenhaus");
+        device.setIpAddress("192.168.1.101");
+        device.setCapabilities(capabilities);
+        device.setMetadata("{\"kasaBulb\":true}");
+        when(repository.findById(id)).thenReturn(Optional.of(device));
+        return device;
+    }
+
+    @Test
+    @DisplayName("setLightState fuer ein Kasa-Leuchtmittel persistiert die vom Geraet SELBST gemeldeten Werte (nicht die angefragten) und schreibt einen Audit-Eintrag, ohne einen zweiten getStatus()-Roundtrip")
+    void setLightStateAppliesToKasaBulb() {
+        kasaLight(10L, "SWITCH,BRIGHTNESS");
+        // KasaService.setLightState liest die tatsaechlich vom Geraet gemeldeten Werte aus derselben
+        // Schreibantwort zurueck (siehe die dortige Javadoc fuer die gemessene Begruendung) - ein
+        // zweiter kasaService.getStatus()-Aufruf ist deshalb weder noetig noch erwartet.
+        when(kasaService.setLightState(eq("192.168.1.101"), eq(new LightState(70, null, null, null)), eq(false)))
+                .thenReturn(new KasaLightCommandResult(true, new LightState(70, null, null, null)));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        LightStateRequest request = LightStateRequest.builder().brightness(70).build();
+        SmartDeviceResponse response = newService().setLightState(10L, request);
+
+        verify(kasaService).setLightState(eq("192.168.1.101"), eq(new LightState(70, null, null, null)), eq(false));
+        verify(kasaService, never()).getStatus(any());
+        verify(tapoDeviceService, never()).setLightState(any(), any(), any(), any(), anyBoolean());
+        verify(repository).save(any());
+        verify(entityStateService).reportState(any());
+        verify(auditService).record(eq("device.light.set"), anyString());
+        assertTrue(response.isPoweredOn());
+        assertEquals(70, response.getBrightness());
+    }
+
+    @Test
+    @DisplayName("setLightState persistiert den vom Geraet gemeldeten Wert, auch wenn er vom angefragten abweicht (err_code:0 beweist keine Anwendung)")
+    void setLightStatePersistsActualDeviceReportedValueEvenWhenDifferentFromRequest() {
+        // Gemessen: eine Farbanfrage an ein nicht-farbfaehiges Geraet liefert err_code:0, aber der
+        // gemeldete hue bleibt unveraendert. SmartDeviceService darf sich nicht auf den angefragten
+        // Wert verlassen, sondern muss exakt das persistieren, was KasaService.setLightState anhand
+        // der Geraeteantwort zurueckgibt.
+        kasaLight(10L, "SWITCH,BRIGHTNESS");
+        when(kasaService.setLightState(eq("192.168.1.101"), eq(new LightState(35, null, null, null)), eq(false)))
+                .thenReturn(new KasaLightCommandResult(true, new LightState(20, null, null, null)));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        LightStateRequest request = LightStateRequest.builder().brightness(35).build();
+        SmartDeviceResponse response = newService().setLightState(10L, request);
+
+        assertEquals(20, response.getBrightness(),
+                "die Antwort muss den vom Geraet tatsaechlich gemeldeten Wert (20) zeigen, nicht den angefragten (35)");
+    }
+
+    @Test
+    @DisplayName("setLightState lehnt ein Kasa-Geraet ohne Leuchtmittel-Flag ab (z.B. ein Wanddimmer) - dieselbe 400-Ablehnung wie Meross")
+    void setLightStateRejectsNonBulbKasaDevice() {
+        SmartDevice dimmer = new SmartDevice();
+        dimmer.setId(11L);
+        dimmer.setDeviceType(DeviceType.KASA);
+        dimmer.setExternalDeviceId("HS220DEVICEID");
+        dimmer.setDeviceName("Flurdimmer");
+        dimmer.setIpAddress("192.168.1.120");
+        dimmer.setCapabilities("SWITCH");
+        dimmer.setMetadata(null); // kein kasaBulb-Flag gesetzt -> isKasaBulb() muss false liefern
+        when(repository.findById(11L)).thenReturn(Optional.of(dimmer));
+
+        LightStateRequest request = LightStateRequest.builder().brightness(50).build();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> newService().setLightState(11L, request));
+        assertTrue(ex.getMessage().contains("unterstuetzt keine Lichtsteuerung"));
+
+        verify(kasaService, never()).setLightState(any(), any(), anyBoolean());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("PUT /devices/{id}/light lehnt fuer ein Kasa-Geraet eine nicht gemeldete Faehigkeit ab (400) und sendet nichts")
+    void setLightStateRejectsUnreportedCapabilityForKasa() {
+        kasaLight(10L, "SWITCH"); // keine BRIGHTNESS-Faehigkeit
+
+        LightStateRequest request = LightStateRequest.builder().brightness(50).build();
+        assertThrows(IllegalArgumentException.class, () -> newService().setLightState(10L, request));
+
+        verify(kasaService, never()).setLightState(any(), any(), anyBoolean());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("setLightState fuer ein Kasa-Leuchtmittel laesst eine KasaCommunicationException durch und persistiert nichts")
+    void setLightStatePropagatesKasaFailureWithoutPersisting() {
+        kasaLight(10L, "SWITCH,BRIGHTNESS");
+        org.mockito.Mockito.doThrow(new KasaCommunicationException("Kasa-Geraet nicht erreichbar"))
+                .when(kasaService).setLightState(eq("192.168.1.101"), any(), anyBoolean());
+
+        LightStateRequest request = LightStateRequest.builder().brightness(50).build();
+        assertThrows(KasaCommunicationException.class, () -> newService().setLightState(10L, request));
+
+        verify(repository, never()).save(any());
     }
 
     @Test

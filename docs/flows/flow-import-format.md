@@ -174,17 +174,19 @@ Web-Push-Benachrichtigung an die abonnierten Geraete eines Nutzers oder alle Ger
 | `userId` | nein | numerische Nutzer-ID; leer = alle Geraete |
 
 ### `light-set` — Licht setzen (1 Ausgang)
-Setzt Helligkeit, Farbe und/oder Farbtemperatur einer Tapo-Lampe. Mindestens eines der vier
-Lichtfelder ist Pflicht — ein Node ohne jeden Lichtwert würde beim Ausführen nichts tun und
-wird deshalb bereits beim Deploy abgelehnt. Farbe (`hue`/`saturation`) und Farbtemperatur
+Setzt Helligkeit, Farbe und/oder Farbtemperatur eines Tapo- oder Kasa-Leuchtmittels. Mindestens
+eines der vier Lichtfelder ist Pflicht — ein Node ohne jeden Lichtwert würde beim Ausführen nichts
+tun und wird deshalb bereits beim Deploy abgelehnt. Farbe (`hue`/`saturation`) und Farbtemperatur
 (`colorTemp`) sind am Gerät exklusive Modi; welche Felder ein Gerät überhaupt annimmt (Farbe
 vs. Farbtemperatur) und die gültigen Wertebereiche prüft erst der Backend-Service anhand der
 vom Gerät gemeldeten Fähigkeiten — ein unerreichbares oder ablehnendes Gerät bricht den
-Flow-Zweig nicht ab, der Fehler landet nur als Warnung im Log.
+Flow-Zweig nicht ab, der Fehler landet nur als Warnung im Log. Ein Kasa-Gerät ohne Leuchtmittel
+(z. B. ein Wanddimmer) wird genauso abgelehnt wie ein Meross-Gerät — nur ein als Bulb erkanntes
+Kasa-Gerät (siehe CLAUDE.md, Abschnitt TP-Link Kasa) nimmt diesen Node an.
 
 | config | Pflicht | Wert |
 |--------|---------|------|
-| `deviceId` | ja | numerische SmartDevice-ID eines Tapo-Geräts |
+| `deviceId` | ja | numerische SmartDevice-ID eines Tapo- oder Kasa-Leuchtmittels |
 | `brightness` | nein* | Helligkeit 1-100 |
 | `hue` | nein* | Farbton 0-360 |
 | `saturation` | nein* | Sättigung 0-100 |
