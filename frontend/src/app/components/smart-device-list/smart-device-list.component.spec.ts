@@ -350,11 +350,17 @@ describe('SmartDeviceListComponent', () => {
   });
 
   describe('Ausschalt-Bestaetigung', () => {
-    const guardedDevice: SmartDevice = {
-      ...device, id: 9, deviceName: 'Kuehlschrank', isPoweredOn: true, confirmRequired: true
-    } as SmartDevice;
+    // Frisches Objekt pro Test statt eines geteilten Consts: toggleDevice/executeToggle
+    // mutiert device.isPoweredOn direkt auf der uebergebenen Referenz - ein geteiltes Objekt
+    // wuerde bei zufaelliger (Jasmine-Standard) Testreihenfolge Zustand zwischen Tests durchsickern
+    // lassen (z. B. "schaltet nach Bestaetigung aus" schaltet isPoweredOn auf false um, wodurch
+    // ein danach laufender Dialog-Test die Wache faelschlich als nicht ausgeloest sieht).
+    let guardedDevice: SmartDevice;
 
     beforeEach(() => {
+      guardedDevice = {
+        ...device, id: 9, deviceName: 'Kuehlschrank', isPoweredOn: true, confirmRequired: true
+      } as SmartDevice;
       serviceSpy.getAllDevices.and.returnValue(of([guardedDevice]));
       serviceSpy.refreshDeviceState.and.returnValue(of(guardedDevice));
     });
