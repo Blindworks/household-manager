@@ -253,3 +253,21 @@
     </div>
   </article>
 </ng-template>
+
+<div class="confirm-backdrop" *ngIf="confirmOffDevice" (click)="closeConfirmOffDialog()">
+  <div class="confirm-dialog" (click)="$event.stopPropagation()">
+    <h3 class="confirm-dialog__title">Wirklich ausschalten?</h3>
+    <p class="confirm-dialog__text">
+      <strong>{{ confirmOffDevice.deviceName }}</strong> ist gegen versehentliches
+      Ausschalten gesichert.
+    </p>
+    <div class="confirm-dialog__actions">
+      <button type="button" class="confirm-dialog__cancel" (click)="closeConfirmOffDialog()">
+        Abbrechen
+      </button>
+      <button type="button" class="confirm-dialog__confirm" (click)="confirmTurnOff()">
+        Ausschalten
+      </button>
+    </div>
+  </div>
+</div>

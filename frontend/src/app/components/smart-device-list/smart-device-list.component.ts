@@ -70,6 +70,9 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
   togglingDevices = new Set<number>();
   viewMode: DeviceViewMode = 'normal';
 
+  /** Geraet, dessen Ausschalten gerade bestaetigt werden muss; null = kein Dialog offen. */
+  confirmOffDevice: SmartDevice | null = null;
+
   // Kasa per IP hinzufuegen
   showAddKasaForm = false;
   kasaIpInput = '';
@@ -292,11 +295,36 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Schaltet ein Geraet. Geschuetzte Geraete oeffnen beim AUSschalten erst den
+   * Bestaetigungsdialog; Einschalten laeuft immer direkt - ein versehentliches
+   * Einschalten ist harmlos, ein versehentliches Ausschalten (Kuehlschrank, Router) nicht.
+   */
   toggleDevice(device: SmartDevice): void {
     if (!device.isOnline || this.isDeviceToggling(device.id)) {
       return;
     }
+    if (device.confirmRequired && device.isPoweredOn) {
+      this.confirmOffDevice = device;
+      return;
+    }
+    this.executeToggle(device);
+  }
 
+  /** Bestaetigung im Dialog: schliesst ihn und schaltet aus. */
+  confirmTurnOff(): void {
+    const device = this.confirmOffDevice;
+    this.confirmOffDevice = null;
+    if (device) {
+      this.executeToggle(device);
+    }
+  }
+
+  closeConfirmOffDialog(): void {
+    this.confirmOffDevice = null;
+  }
+
+  private executeToggle(device: SmartDevice): void {
     this.togglingDevices.add(device.id);
     const action = device.isPoweredOn
       ? this.smartDeviceService.turnOff(device.id)

@@ -348,4 +348,69 @@ describe('SmartDeviceListComponent', () => {
       expect(hasColor && hasColorTemp).toBeFalse();
     }
   });
+
+  describe('Ausschalt-Bestaetigung', () => {
+    const guardedDevice: SmartDevice = {
+      ...device, id: 9, deviceName: 'Kuehlschrank', isPoweredOn: true, confirmRequired: true
+    } as SmartDevice;
+
+    beforeEach(() => {
+      serviceSpy.getAllDevices.and.returnValue(of([guardedDevice]));
+      serviceSpy.refreshDeviceState.and.returnValue(of(guardedDevice));
+    });
+
+    it('oeffnet beim Ausschalten den Dialog statt zu schalten', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.confirmOffDevice?.id).toBe(9);
+    });
+
+    it('schaltet nach Bestaetigung aus und schliesst den Dialog', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      fixture.componentInstance.confirmTurnOff();
+
+      expect(serviceSpy.turnOff).toHaveBeenCalledWith(9);
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('abbrechen schliesst den Dialog ohne zu schalten', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      fixture.componentInstance.closeConfirmOffDialog();
+
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('einschalten eines geschuetzten Geraets fragt nicht nach', () => {
+      const offDevice = { ...guardedDevice, isPoweredOn: false } as SmartDevice;
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(offDevice);
+
+      expect(serviceSpy.turnOn).toHaveBeenCalledWith(9);
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('ungeschuetztes Geraet schaltet weiterhin direkt aus', () => {
+      const plain = { ...device, isPoweredOn: true } as SmartDevice;
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(plain);
+
+      expect(serviceSpy.turnOff).toHaveBeenCalledWith(1);
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+  });
 });
