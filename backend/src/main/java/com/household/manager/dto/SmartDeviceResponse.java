@@ -96,6 +96,15 @@ public class SmartDeviceResponse {
     private Integer colorTemp;
 
     /**
+     * Ob dieses Geraet im UI nur nach Bestaetigung AUSgeschaltet werden darf. Kommt aus dem
+     * {@code confirm_required}-Flag der gespiegelten Switch-Entitaet, nicht aus der
+     * Geraetetabelle - gepflegt wird es auf der Entitaeten-Seite. Reiner Bedienschutz:
+     * API, Flows und Telegram schalten weiterhin ungefragt.
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("confirmRequired")
+    private boolean confirmRequired;
+
+    /**
      * Timestamp when this record was created
      */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

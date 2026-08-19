@@ -7,6 +7,9 @@ import com.household.manager.audit.AuditService;
 import com.household.manager.dto.LightStateRequest;
 import com.household.manager.dto.SmartDeviceResponse;
 import com.household.manager.dto.SmartDeviceUpdateRequest;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.SmartDeviceEntityMapper;
 import com.household.manager.kasa.KasaDiscoveryService;
@@ -17,6 +20,7 @@ import com.household.manager.kasa.dto.KasaStatusDto;
 import com.household.manager.meross.dto.MerossPlugResponse;
 import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
 import com.household.manager.smartdevice.LightState;
@@ -1090,6 +1094,7 @@ public class SmartDeviceService {
                 .isOnline(entity.isOnline())
                 .isPoweredOn(entity.isPoweredOn())
                 .capabilities(parseCapabilities(entity.getCapabilities()))
+                .confirmRequired(isConfirmRequired(entity))
                 .metadata(metadata)
                 .brightness(asInteger(metadata.get("lightBrightness")))
                 .hue(asInteger(metadata.get("lightHue")))
@@ -1110,6 +1115,27 @@ public class SmartDeviceService {
         return Arrays.stream(capabilities.split(","))
                 .map(String::trim)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Liest das Bestaetigungs-Flag aus der gespiegelten Switch-Entitaet. Die entityId wird mit
+     * exakt derselben Konstruktion gebildet wie in {@link SmartDeviceEntityMapper#map} - beide
+     * Stellen muessen dieselbe Id ergeben, sonst zeigt die Geraeteseite einen Schutz an, den es
+     * an der Entitaet nicht gibt (oder umgekehrt). Ohne gespiegelte Entitaet gilt "kein Schutz".
+     */
+    private boolean isConfirmRequired(SmartDevice device) {
+        try {
+            String entityId = EntityIds.build(EntityDomain.SWITCH,
+                    EntitySource.valueOf(device.getDeviceType().name()),
+                    device.getExternalDeviceId(), null);
+            return entityStateService.getByEntityId(entityId)
+                    .map(EntityState::isConfirmRequired)
+                    .orElse(false);
+        } catch (Exception ex) {
+            log.debug("Bestaetigungs-Flag fuer {} nicht ermittelbar: {}",
+                    device.getExternalDeviceId(), ex.getMessage());
+            return false;
+        }
     }
 
     private String serializeMetadata(Map<String, Object> metadata) {
