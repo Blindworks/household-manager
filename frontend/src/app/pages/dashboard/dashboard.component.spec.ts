@@ -197,6 +197,10 @@ describe('DashboardComponent (Schalter)', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     const guarded = entity({ confirmRequired: true, state: 'on' });
+    // confirmToggle loest den Schalter ueber die entityId in topSwitches neu auf (Schutz
+    // gegen einen zwischenzeitlichen Refresh) - die Kachel muss ihn deshalb hier schon
+    // mit state 'on' enthalten, genau wie beim echten Klick aus der Liste.
+    fixture.componentInstance.topSwitches = [guarded];
     fixture.componentInstance.toggleSwitch(guarded);
 
     fixture.componentInstance.confirmToggle(guarded);
@@ -212,6 +216,24 @@ describe('DashboardComponent (Schalter)', () => {
     // dieser Datei, dass die Service-Antwort ueberhaupt angewandt wird - nicht
     // abschwaechen oder entfernen, ohne diese Abdeckung anderswo zu ersetzen.
     expect(fixture.componentInstance.topSwitches[0].state).toBe('on');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet nicht ein, wenn ein Refresh den Schalter zwischenzeitlich als aus meldet', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const guarded = entity({ confirmRequired: true, state: 'on' });
+    fixture.componentInstance.topSwitches = [guarded];
+    fixture.componentInstance.toggleSwitch(guarded);
+
+    // Hintergrund-Refresh ERSETZT das Array-Element - hier: schon aus.
+    fixture.componentInstance.topSwitches = [{ ...guarded, state: 'off' }];
+    fixture.componentInstance.confirmToggle(guarded);
+    tick();
+
+    expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.confirmSwitch).toBeNull();
 
     discardPeriodicTasks();
   }));
@@ -249,6 +271,9 @@ describe('DashboardComponent (Schalter)', () => {
     fixture.componentInstance.openSwitchDialog();
     tick();
     const guarded = entity({ confirmRequired: true, state: 'on' });
+    // confirmToggle loest ueber die entityId in allSwitches neu auf (der Dialog laedt
+    // ueber diese Liste, nicht ueber topSwitches) - siehe Kommentar oben.
+    fixture.componentInstance.allSwitches = [guarded];
 
     fixture.componentInstance.toggleSwitch(guarded);
     expect(switchServiceSpy.toggle).not.toHaveBeenCalled();

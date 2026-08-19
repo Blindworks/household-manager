@@ -433,10 +433,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.executeToggle(entity);
   }
 
-  /** Bestätigung im Dialog: schließt ihn und führt den eigentlichen Toggle aus. */
+  /**
+   * Bestätigung im Dialog: schließt ihn und führt den eigentlichen Toggle aus. Löst den
+   * Schalter über seine entityId in `allSwitches`/`topSwitches` neu auf statt die im Dialog
+   * gehaltene Referenz weiterzuverwenden - ein während offenem Dialog eintreffender
+   * Hintergrund-Refresh könnte ihn bereits ausgeschaltet haben (Muster wie
+   * `SmartDeviceListComponent.confirmTurnOff`); ohne Neu-Aufloesung würde `executeToggle`
+   * ihn dann ausgerechnet über den "Ausschalten"-Bestätigungsdialog wieder einschalten.
+   */
   confirmToggle(entity: SwitchEntity): void {
     this.closeConfirmDialog();
-    this.executeToggle(entity);
+    const current = this.allSwitches.find(s => s.entityId === entity.entityId)
+      ?? this.topSwitches.find(s => s.entityId === entity.entityId);
+    if (current?.state === 'on') {
+      this.executeToggle(current);
+    }
   }
 
   closeConfirmDialog(): void {

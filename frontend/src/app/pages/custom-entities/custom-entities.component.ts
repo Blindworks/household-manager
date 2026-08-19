@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -59,6 +59,9 @@ export class CustomEntitiesComponent implements OnInit {
   readonly editingId = signal<string | null>(null);
   readonly editName = signal<string>('');
   readonly editIcon = signal<string>('');
+
+  /** Helfer (INPUT_BOOLEAN), dessen Ausschalten gerade bestaetigt werden muss; null = kein Dialog offen. */
+  readonly confirmOffEntity = signal<EntityState | null>(null);
 
   ngOnInit(): void {
     interval(REFRESH_INTERVAL_MS).pipe(
@@ -124,7 +127,48 @@ export class CustomEntitiesComponent implements OnInit {
     this.newUnit.set('');
   }
 
+  /**
+   * Schaltet einen Schalter-Helfer (INPUT_BOOLEAN). Geschuetzte Helfer oeffnen beim
+   * AUSschalten erst den Bestaetigungsdialog; Einschalten laeuft immer direkt - ein
+   * versehentliches Einschalten ist harmlos, ein versehentliches Ausschalten
+   * (Helfer treibt Flows, die echte Hardware schalten) nicht. Muster wie
+   * `DashboardComponent.toggleSwitch` / `SmartDeviceListComponent.toggleDevice`.
+   */
   toggle(entity: EntityState): void {
+    if (entity.confirmRequired && this.isOn(entity)) {
+      this.confirmOffEntity.set(entity);
+      return;
+    }
+    this.executeToggle(entity);
+  }
+
+  /**
+   * Bestaetigung im Dialog: schliesst ihn und schaltet aus. Loest den Helfer ueber seine
+   * entityId in der aktuellen Liste neu auf statt die im Dialog gehaltene Referenz
+   * weiterzuverwenden - ein waehrend offenem Dialog eintreffender Hintergrund-Refresh
+   * (alle 10 s) koennte ihn bereits ausgeschaltet haben; ohne Neu-Aufloesung wuerde
+   * `executeToggle` ihn dann ausgerechnet ueber den "Ausschalten"-Knopf wieder einschalten.
+   */
+  confirmTurnOff(): void {
+    const entityId = this.confirmOffEntity()?.entityId;
+    this.confirmOffEntity.set(null);
+    const current = this.entities().find(e => e.entityId === entityId);
+    if (current && this.isOn(current)) {
+      this.executeToggle(current);
+    }
+  }
+
+  closeConfirmOffDialog(): void {
+    this.confirmOffEntity.set(null);
+  }
+
+  /** Schliesst den Bestaetigungsdialog per Escape-Taste (Muster: DashboardComponent.onEscape). */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeConfirmOffDialog();
+  }
+
+  private executeToggle(entity: EntityState): void {
     this.entityStateService.toggleManualEntity(entity.entityId).subscribe({
       next: updated => this.replace(updated),
       error: err => this.error.set(err.message)

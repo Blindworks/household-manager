@@ -430,6 +430,70 @@
   }
 }
 
+/* ---- Ausschalt-Bestaetigung ---- */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  max-width: 22rem;
+  width: calc(100% - 2rem);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+
+  &__title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: var(--font-size-lg);
+  }
+
+  &__text {
+    margin: 0 0 var(--spacing-lg);
+    color: var(--color-gray);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+  }
+
+  &__cancel,
+  &__confirm {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--font-size-base);
+  }
+
+  &__cancel {
+    background: var(--color-light-gray);
+    color: var(--color-dark);
+
+    &:hover {
+      background: #dfe4ea;
+    }
+  }
+
+  &__confirm {
+    background: var(--color-error);
+    color: var(--color-white);
+
+    &:hover {
+      background: #a11414;
+    }
+  }
+}
+
 @media (max-width: 640px) {
   .create-panel__main {
     flex-direction: column;
