@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
 import com.household.manager.kasa.dto.KasaStatusDto;
 import com.household.manager.kasa.exception.KasaCommunicationException;
-import com.household.manager.tapo.LightState;
+import com.household.manager.smartdevice.LightState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -217,7 +217,7 @@ class KasaServiceTest {
     @Test
     @DisplayName("turnOn() sendet fuer ein Leuchtmittel transition_light_state statt set_relay_state")
     void turnOnSendsTransitionLightStateForBulb() throws Exception {
-        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+        when(kasaTcpClient.send(anyString(), anyString())).thenReturn(bulbResultResponse(1, ""));
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         kasaService.turnOn("192.168.1.101", true);
@@ -230,9 +230,23 @@ class KasaServiceTest {
     }
 
     @Test
+    @DisplayName("turnOn() wirft KasaCommunicationException mit err_msg, wenn das Leuchtmittel einen Fehler meldet")
+    void turnOnThrowsWithErrMsgWhenBulbReportsError() {
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn("""
+                        {"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":
+                            {"err_code":-10000,"err_msg":"Invalid input argument"}}}""");
+
+        KasaCommunicationException ex = assertThrows(KasaCommunicationException.class,
+                () -> kasaService.turnOn("192.168.1.101", true));
+        assertTrue(ex.getMessage().contains("-10000"));
+        assertTrue(ex.getMessage().contains("Invalid input argument"));
+    }
+
+    @Test
     @DisplayName("turnOff() sendet fuer ein Leuchtmittel transition_light_state mit on_off:0")
     void turnOffSendsTransitionLightStateForBulb() throws Exception {
-        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+        when(kasaTcpClient.send(anyString(), anyString())).thenReturn(bulbResultResponse(0, ""));
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         kasaService.turnOff("192.168.1.101", true);
@@ -269,10 +283,44 @@ class KasaServiceTest {
         assertEquals(1, payload.path("system").path("set_relay_state").path("state").asInt());
     }
 
+    // ==================== setLightState() - measured protocol facts (echter KL110, 2026-08-19) ====================
+
+    /**
+     * Baut eine plausible {@code transition_light_state}-Antwort. Simuliert NICHT zwangslaeufig,
+     * was das echte Geraet fuer eine gegebene Anfrage zurueckliefert - siehe die dedizierten Tests
+     * unten fuer die tatsaechlich gemessenen (teils ueberraschenden) Antworten.
+     */
+    private String bulbResultResponse(int onOff, String extraResultFields) {
+        return """
+                {"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":
+                    {"on_off":%d,%s"err_code":0}}}""".formatted(onOff, extraResultFields.isEmpty() ? "" : extraResultFields + ",");
+    }
+
+    @Test
+    @DisplayName("setLightState() sendet IMMER on_off:1 und ignore_default:1, unabhaengig davon, was der Aufrufer setzt")
+    void setLightStateAlwaysSendsOnOffAndIgnoreDefault() throws Exception {
+        // Gemessen: {"brightness":40} ohne on_off blieb ein stiller No-op (aus, unveraendert,
+        // err_code:0); {"on_off":1,"brightness":60} ohne ignore_default schaltete ein, wendete aber
+        // den geraeteseitigen Default (100) statt der angefragten 60 an (ebenfalls err_code:0). Erst
+        // {"on_off":1,"brightness":35,"ignore_default":1} liess den Wert tatsaechlich landen.
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"brightness\":70"));
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+
+        kasaService.setLightState("192.168.1.101", new LightState(70, null, null, null), true);
+
+        verify(kasaTcpClient).send(eq("192.168.1.101"), payloadCaptor.capture());
+        JsonNode state = objectMapper.readTree(payloadCaptor.getValue())
+                .path("smartlife.iot.smartbulb.lightingservice").path("transition_light_state");
+        assertEquals(1, state.path("on_off").asInt());
+        assertEquals(1, state.path("ignore_default").asInt());
+    }
+
     @Test
     @DisplayName("setLightState() mit nur Helligkeit sendet ausschliesslich brightness (kein hue/saturation/color_temp)")
     void setLightStateWithOnlyBrightnessSendsOnlyBrightness() throws Exception {
-        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"brightness\":70"));
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         kasaService.setLightState("192.168.1.101", new LightState(70, null, null, null), true);
@@ -289,7 +337,8 @@ class KasaServiceTest {
     @Test
     @DisplayName("setLightState() mit Farbe haengt bei COLOR_TEMP-faehigen Geraeten color_temp:0 an, um in den Farbmodus zu wechseln")
     void setLightStateWithColorAppendsColorTempZeroWhenDeviceSupportsColorTemp() throws Exception {
-        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"hue\":200,\"saturation\":80,\"color_temp\":0"));
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         kasaService.setLightState("192.168.1.101", new LightState(null, 200, 80, null), true);
@@ -305,7 +354,8 @@ class KasaServiceTest {
     @Test
     @DisplayName("setLightState() mit Farbe laesst color_temp weg, wenn das Geraet COLOR_TEMP nicht meldet")
     void setLightStateWithColorOmitsColorTempWhenUnsupported() throws Exception {
-        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"hue\":0,\"saturation\":0"));
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         kasaService.setLightState("192.168.1.101", new LightState(null, 200, 80, null), false);
@@ -319,7 +369,8 @@ class KasaServiceTest {
     @Test
     @DisplayName("setLightState() mit reiner Farbtemperatur sendet nur color_temp, kein hue/saturation")
     void setLightStateWithColorTempOnlySendsOnlyColorTemp() throws Exception {
-        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"color_temp\":4000"));
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
 
         kasaService.setLightState("192.168.1.101", new LightState(null, null, null, 4000), true);
@@ -330,5 +381,82 @@ class KasaServiceTest {
         assertEquals(4000, state.path("color_temp").asInt());
         assertFalse(state.has("hue"));
         assertFalse(state.has("saturation"));
+    }
+
+    @Test
+    @DisplayName("setLightState() liest die tatsaechlich vom Geraet gemeldeten Werte zurueck, nicht die angefragten (ignore_default korrekt angewendet)")
+    void setLightStateReturnsActualReportedValuesFromResponse() {
+        // Gemessen: {"on_off":1,"brightness":35,"ignore_default":1} -> {"on_off":1,"brightness":35,
+        // "err_code":0} - die Antwort spiegelt exakt den angewendeten Wert.
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"brightness\":35"));
+
+        KasaLightCommandResult result = kasaService.setLightState(
+                "192.168.1.101", new LightState(35, null, null, null), true);
+
+        assertTrue(result.poweredOn());
+        assertEquals(35, result.lightState().brightness());
+    }
+
+    @Test
+    @DisplayName("setLightState() vertraut err_code:0 NICHT als Beweis, dass der Wert ankam - liest hue unveraendert zurueck, wenn das Geraet es so meldet")
+    void setLightStateDoesNotTrustErrCodeZeroAsProofOfApplication() {
+        // Gemessen: {"on_off":1,"hue":200,"saturation":80,"color_temp":0,"ignore_default":1} an
+        // dieses NICHT farbfaehige Geraet gesendet -> Antwort err_code:0, aber hue blieb bei 0.
+        // Diese Methode darf die Anfrage (hue=200) nicht als Ergebnis zurueckgeben, sondern muss
+        // exakt das melden, was das Geraet selbst berichtet (hue=0, unveraendert).
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn(bulbResultResponse(1, "\"hue\":0,\"saturation\":0,\"color_temp\":2700,\"brightness\":100"));
+
+        KasaLightCommandResult result = kasaService.setLightState(
+                "192.168.1.101", new LightState(null, 200, 80, null), false);
+
+        assertEquals(0, result.lightState().hue(),
+                "die Rueckgabe muss den vom Geraet gemeldeten, unveraenderten hue widerspiegeln - nicht den angefragten Wert 200");
+    }
+
+    @Test
+    @DisplayName("setLightState() liest resultierende Werte aus dft_on_state, wenn das Geraet trotz Anfrage als aus meldet")
+    void setLightStateReadsResultFromDftOnStateWhenDeviceReportsOff() {
+        // Verteidigend: transition_light_state ist strukturell identisch zu get_sysinfo.light_state
+        // (siehe KasaSysInfoMapper) - dieselbe on_off/dft_on_state-Verschachtelung muss deshalb auch
+        // hier greifen, falls das Geraet trotz gesendetem on_off:1 als aus antwortet (z. B. Fehler
+        // beim Einschalten selbst trotz err_code:0 - nicht am echten KL110 beobachtet, aber die
+        // Antwortform erlaubt es strukturell).
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn("""
+                        {"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":
+                            {"on_off":0,"dft_on_state":{"brightness":100,"hue":0,"saturation":0,"color_temp":2700},"err_code":0}}}""");
+
+        KasaLightCommandResult result = kasaService.setLightState(
+                "192.168.1.101", new LightState(70, null, null, null), true);
+
+        assertFalse(result.poweredOn());
+        assertEquals(100, result.lightState().brightness());
+    }
+
+    @Test
+    @DisplayName("setLightState() wirft KasaCommunicationException mit err_code und err_msg bei einem ungueltigen Wert")
+    void setLightStateThrowsWithErrCodeAndErrMsgOnInvalidValue() {
+        // Gemessen: {"on_off":1,"brightness":150,"ignore_default":1} -> {"err_code":-10000,
+        // "err_msg":"Invalid input argument"} - das Geraet meldet echte Fehler, kein err_code:0.
+        when(kasaTcpClient.send(anyString(), anyString()))
+                .thenReturn("""
+                        {"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":
+                            {"err_code":-10000,"err_msg":"Invalid input argument"}}}""");
+
+        KasaCommunicationException ex = assertThrows(KasaCommunicationException.class,
+                () -> kasaService.setLightState("192.168.1.101", new LightState(150, null, null, null), true));
+        assertTrue(ex.getMessage().contains("-10000"));
+        assertTrue(ex.getMessage().contains("Invalid input argument"));
+    }
+
+    @Test
+    @DisplayName("setLightState() wirft KasaCommunicationException, wenn die Antwort keine transition_light_state enthaelt")
+    void setLightStateThrowsWhenResponseHasNoTransitionLightState() {
+        when(kasaTcpClient.send(anyString(), anyString())).thenReturn("{}");
+
+        assertThrows(KasaCommunicationException.class,
+                () -> kasaService.setLightState("192.168.1.101", new LightState(50, null, null, null), true));
     }
 }

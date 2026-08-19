@@ -1,6 +1,7 @@
 package com.household.manager.tapo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.household.manager.smartdevice.LightState;
 
 /**
  * @param colorTempMin      device-reported lower bound of {@code color_temp_range} (Kelvin), or

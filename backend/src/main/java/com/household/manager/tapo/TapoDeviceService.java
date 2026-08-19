@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.smartdevice.LightState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

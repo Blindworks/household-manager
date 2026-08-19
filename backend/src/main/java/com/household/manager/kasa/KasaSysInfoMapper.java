@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.household.manager.kasa.dto.KasaDiscoveryDto;
 import com.household.manager.kasa.dto.KasaStatusDto;
+import com.household.manager.smartdevice.LightState;
 
 /**
  * Shared mapping from a Kasa {@code system.get_sysinfo} JSON node to
@@ -101,14 +102,52 @@ final class KasaSysInfoMapper {
         if (!lightState.isObject()) {
             return MissingNode.getInstance();
         }
-        boolean on = lightState.path("on_off").asInt(0) == 1;
+        return currentValuesNode(lightState);
+    }
+
+    /**
+     * The ON-vs-OFF/{@code dft_on_state} split (see {@link #lightValuesSource}) is not unique to
+     * {@code get_sysinfo}: the {@code smartlife.iot.smartbulb.lightingservice.transition_light_state}
+     * WRITE response is shaped identically (measured against the real KL110, 2026-08-19) — when the
+     * resulting state is ON, values sit at the top level; when OFF, they are nested under
+     * {@code dft_on_state}. This is the shared core both {@link #lightValuesSource} and
+     * {@link #readLightState} build on, so a bulb's current values are read the same way regardless
+     * of whether the node came from a status read or a write response.
+     */
+    private static JsonNode currentValuesNode(JsonNode lightStateShapedNode) {
+        boolean on = lightStateShapedNode.path("on_off").asInt(0) == 1;
         if (!on) {
-            JsonNode dftOnState = lightState.path("dft_on_state");
+            JsonNode dftOnState = lightStateShapedNode.path("dft_on_state");
             if (dftOnState.isObject()) {
                 return dftOnState;
             }
         }
-        return lightState;
+        return lightStateShapedNode;
+    }
+
+    /**
+     * Reads brightness/hue/saturation/colour-temperature off any {@code light_state}-shaped node —
+     * used by {@link KasaService#setLightState} to read back what the device's write RESPONSE
+     * actually reports, rather than assuming the request's values were applied. Measured evidence
+     * for why that distinction matters is documented on {@link KasaService#setLightState}.
+     */
+    static LightState readLightState(JsonNode lightStateShapedNode) {
+        JsonNode values = currentValuesNode(lightStateShapedNode);
+        return new LightState(
+                intOrNull(values, "brightness"),
+                intOrNull(values, "hue"),
+                intOrNull(values, "saturation"),
+                intOrNull(values, "color_temp")
+        );
+    }
+
+    /**
+     * The resulting on/off flag from a {@code transition_light_state} write response — read
+     * separately from {@link #readLightState} because {@link com.household.manager.smartdevice.LightState}
+     * has no on/off field of its own (it only carries brightness/hue/saturation/colorTemp).
+     */
+    static boolean readOnOff(JsonNode lightStateShapedNode) {
+        return lightStateShapedNode.path("on_off").asInt(0) == 1;
     }
 
     private static Integer intOrNull(JsonNode node, String field) {

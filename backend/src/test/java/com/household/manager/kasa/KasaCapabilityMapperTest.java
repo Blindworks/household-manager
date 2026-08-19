@@ -78,4 +78,32 @@ class KasaCapabilityMapperTest {
 
         assertThat(capabilities).isEqualTo("SWITCH");
     }
+
+    @Test
+    @DisplayName("Eine Bulb-sysinfo (light_state vorhanden) OHNE is_*-Flags faellt sicher auf SWITCH zurueck (aeltere Firmware)")
+    void bulbShapedSysInfoMissingCapabilityFlagsFailsSafeToSwitch() throws Exception {
+        JsonNode sysInfo = objectMapper.readTree("""
+                {"model":"KL110(EU)",
+                  "light_state":{"on_off":0,"dft_on_state":{"brightness":100}}}
+                """);
+
+        String capabilities = KasaCapabilityMapper.deriveCapabilities(sysInfo);
+
+        assertThat(capabilities).isEqualTo("SWITCH");
+    }
+
+    @Test
+    @DisplayName("Ein Wanddimmer (is_dimmable:1, aber KEIN light_state) bekommt keine BRIGHTNESS-Faehigkeit")
+    void wallDimmerWithoutLightStateGetsNoLightCapabilities() throws Exception {
+        // HS220/KS220/KP405-Form: is_dimmable:1 direkt in sysinfo, aber kein light_state - dieses
+        // Geraet spricht nicht smartlife.iot.smartbulb.lightingservice und darf deshalb keine
+        // BRIGHTNESS-Faehigkeit (und damit keinen Frontend-Regler) bekommen, der nur 400 lieferte.
+        JsonNode sysInfo = objectMapper.readTree("""
+                {"model":"HS220(US)","is_dimmable":1,"relay_state":1}
+                """);
+
+        String capabilities = KasaCapabilityMapper.deriveCapabilities(sysInfo);
+
+        assertThat(capabilities).isEqualTo("SWITCH");
+    }
 }
