@@ -101,7 +101,6 @@ public class SmartDeviceResponse {
      * Geraetetabelle - gepflegt wird es auf der Entitaeten-Seite. Reiner Bedienschutz:
      * API, Flows und Telegram schalten weiterhin ungefragt.
      */
-    @com.fasterxml.jackson.annotation.JsonProperty("confirmRequired")
     private boolean confirmRequired;
 
     /**

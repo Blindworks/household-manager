@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -76,6 +77,21 @@ class SmartDeviceConfirmRequiredTest {
         List<SmartDeviceResponse> devices = service.getAllDevices();
 
         assertFalse(devices.get(0).isConfirmRequired());
+        // Beweist, dass der Wert tatsaechlich aus einer Entitaeten-Abfrage stammt und nicht nur
+        // zufaellig der Default eines nie aufgerufenen Codepfads ist.
+        verify(entityStateService).getByEntityId("switch.tapo_dev1");
+    }
+
+    @Test
+    @DisplayName("Fehler beim Nachschlagen der Entitaet ergibt kein Bestaetigungs-Flag statt eines Fehlers")
+    void defaultsToFalseWhenEntityLookupFails() {
+        when(repository.findAllByOrderByDeviceTypeAscDeviceNameAsc()).thenReturn(List.of(device()));
+        when(entityStateService.getByEntityId(anyString())).thenThrow(new RuntimeException("DB weg"));
+
+        List<SmartDeviceResponse> devices = service.getAllDevices();
+
+        assertFalse(devices.get(0).isConfirmRequired(),
+                "Ein Fehler beim Nachschlagen darf nur den Schutz deaktivieren, nicht die Antwort brechen");
     }
 
     private SmartDevice device() {

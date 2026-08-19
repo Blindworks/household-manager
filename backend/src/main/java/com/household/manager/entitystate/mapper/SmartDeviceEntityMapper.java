@@ -33,7 +33,7 @@ public class SmartDeviceEntityMapper {
         }
 
         return EntityStateUpdate.builder()
-                .entityId(EntityIds.build(EntityDomain.SWITCH, source, device.getExternalDeviceId(), null))
+                .entityId(entityId(device))
                 .domain(EntityDomain.SWITCH)
                 .source(source)
                 .sourceRef(device.getExternalDeviceId())
@@ -41,5 +41,12 @@ public class SmartDeviceEntityMapper {
                 .state(state)
                 .attributes(attributes)
                 .build();
+    }
+
+    /** Einzige Definition der Switch-entityId eines SmartDevice. */
+    public String entityId(SmartDevice device) {
+        return EntityIds.build(EntityDomain.SWITCH,
+                EntitySource.valueOf(device.getDeviceType().name()),
+                device.getExternalDeviceId(), null);
     }
 }
