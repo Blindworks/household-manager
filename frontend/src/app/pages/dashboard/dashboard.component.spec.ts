@@ -208,6 +208,9 @@ describe('DashboardComponent (Schalter)', () => {
     // Antwort mit state: 'on' (siehe beforeEach) - unabhaengig davon, was gesendet
     // wurde. Der optimistische Zwischenzustand 'off' wird dadurch sofort wieder
     // ueberschrieben; der real erwartete Endzustand ist deshalb 'on', nicht 'off'.
+    // Zugleich ist genau diese Zusicherung der einzige Nachweis in allen 67 Specs
+    // dieser Datei, dass die Service-Antwort ueberhaupt angewandt wird - nicht
+    // abschwaechen oder entfernen, ohne diese Abdeckung anderswo zu ersetzen.
     expect(fixture.componentInstance.topSwitches[0].state).toBe('on');
 
     discardPeriodicTasks();

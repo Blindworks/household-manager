@@ -413,6 +413,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Bestaetigungsdialog; erst der Klick auf den Schalter im Dialog fuehrt den Toggle
    * aus. Einschalten laeuft immer direkt - ein versehentliches Einschalten ist
    * harmlos, ein versehentliches Ausschalten (Kuehlschrank, Router) nicht.
+   *
+   * Die Richtung wird aus dem zuletzt geladenen Client-Zustand abgeleitet und
+   * spiegelt damit die Regel des Backends (alles ausser "on" schaltet ein,
+   * SwitchCommandService.toggleDevice) - beide Seiten muessen zusammen geaendert
+   * werden. Da die Kacheln nur alle 30 s nachladen, kann ein anderswo
+   * eingeschalteter Schalter in diesem Fenster ohne Rueckfrage ausgeschaltet
+   * werden; bewusst akzeptiert, der Schutz ist ausdruecklich UI-seitig.
    */
   toggleSwitch(entity: SwitchEntity): void {
     if (this.pendingSwitchIds.has(entity.entityId)) {
