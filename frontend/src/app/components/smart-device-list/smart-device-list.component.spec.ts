@@ -392,6 +392,20 @@ describe('SmartDeviceListComponent', () => {
       expect(serviceSpy.turnOff).toHaveBeenCalledWith(9);
     });
 
+    it('schaltet nicht ein, wenn ein Refresh das Geraet zwischenzeitlich als aus meldet', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      // Hintergrund-Refresh ERSETZT das Array-Element (updateDeviceInList) - hier: schon aus.
+      fixture.componentInstance.devices[0] = { ...guardedDevice, isPoweredOn: false };
+      fixture.componentInstance.confirmTurnOff();
+
+      expect(serviceSpy.turnOn).not.toHaveBeenCalled();
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
     it('schaltet nach Bestaetigung aus und schliesst den Dialog', () => {
       const fixture = TestBed.createComponent(SmartDeviceListComponent);
       fixture.detectChanges();
