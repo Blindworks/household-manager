@@ -58,6 +58,13 @@ import { ZigbeeHealth } from '../../models/zigbee.model';
 import { PetFoodService } from '../../services/pet-food.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
 import { iconOffVariant } from '../../shared/icon-off.util';
+import {
+  ActivationCheck,
+  buildConsumerCheck,
+  buildContactCheck,
+  failedCheck,
+  loadingCheck
+} from '../../shared/mode-activation-check.util';
 
 // LegendComponent: ohne Legende ist bei zwei Linien nicht erkennbar, welche welche ist.
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -276,6 +283,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly pendingModeIds = new Set<string>();
   modeError: string | null = null;
 
+  /**
+   * Modi mit Aktivierungs-Checks (Fenster/Türen, Großverbraucher): beim
+   * Einschalten öffnet ein Dialog statt direkt zu schalten. Reiner UI-Schutz —
+   * Telegram, Flows und API schalten unverändert direkt (Muster confirmRequired).
+   */
+  private static readonly CHECKED_MODE_IDS = new Set([
+    'input_boolean.manual_toni_allein',
+    'input_boolean.manual_abwesend'
+  ]);
+
+  /** Modus, für den der Aktivierungs-Check-Dialog offen ist; null = geschlossen. */
+  modeCheckMode: ModeEntity | null = null;
+  modeCheckContacts: ActivationCheck = loadingCheck();
+  modeCheckConsumers: ActivationCheck = loadingCheck();
+
   /** True, solange der Reboot-Bestätigungsdialog offen ist. */
   rebootConfirm = false;
   /** True ab bestätigtem Reboot bis zum automatischen Neuladen der Seite. */
@@ -392,6 +414,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeSwitchDialog();
     this.closeConfirmDialog();
     this.closeConsumerDialog();
+    this.closeModeCheckDialog();
     this.nukiConfirm = null;
     this.rebootConfirm = false;
   }
@@ -512,10 +535,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Schaltet einen Haus-Modus. Der Zustand wird optimistisch umgeschaltet und
-   * bei einem Fehler zurueckgesetzt (gleiches Muster wie {@link toggleSwitch}).
+   * Schaltet einen Haus-Modus. Beim Einschalten eines bewachten Modus
+   * ("Toni allein", "Abwesend") öffnet stattdessen der Check-Dialog —
+   * Ausschalten bleibt immer direkt.
    */
   toggleMode(mode: ModeEntity): void {
+    if (mode.state !== 'on' && DashboardComponent.CHECKED_MODE_IDS.has(mode.entityId)) {
+      this.openModeCheckDialog(mode);
+      return;
+    }
+    this.performModeToggle(mode);
+  }
+
+  /**
+   * Führt den Toggle aus. Der Zustand wird optimistisch umgeschaltet und
+   * bei einem Fehler zurueckgesetzt (gleiches Muster wie {@link toggleSwitch}).
+   */
+  private performModeToggle(mode: ModeEntity): void {
     if (this.pendingModeIds.has(mode.entityId)) {
       return;
     }
@@ -535,6 +571,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.modeError = `${mode.displayName} konnte nicht geschaltet werden.`;
       }
     });
+  }
+
+  /** Öffnet den Check-Dialog und startet beide Prüfungen parallel. */
+  private openModeCheckDialog(mode: ModeEntity): void {
+    this.modeCheckMode = mode;
+    this.modeCheckContacts = loadingCheck();
+    this.modeCheckConsumers = loadingCheck();
+
+    this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE').subscribe({
+      next: entities => this.modeCheckContacts = buildContactCheck(entities),
+      error: () => this.modeCheckContacts = failedCheck()
+    });
+    this.powerConsumerService.getConsumers().subscribe({
+      next: consumers => this.modeCheckConsumers = buildConsumerCheck(consumers),
+      error: () => this.modeCheckConsumers = failedCheck()
+    });
+  }
+
+  /**
+   * Aktiviert den Modus aus dem Check-Dialog. Der Modus wird aus der aktuellen
+   * Liste re-resolved (Muster confirmToggle): ist er inzwischen an — z. B. per
+   * Telegram oder Flow, die Liste wird alle 30 s aufgefrischt — würde der Toggle
+   * ihn ausgerechnet wieder ausschalten, also passiert dann nichts.
+   */
+  confirmModeActivation(): void {
+    const dialogMode = this.modeCheckMode;
+    this.closeModeCheckDialog();
+    if (!dialogMode) {
+      return;
+    }
+    const current = this.modes.find(item => item.entityId === dialogMode.entityId);
+    if (!current || current.state === 'on') {
+      return;
+    }
+    this.performModeToggle(current);
+  }
+
+  closeModeCheckDialog(): void {
+    this.modeCheckMode = null;
+  }
+
+  /** Material-Symbol für den Anzeige-Zustand eines Checks. */
+  modeCheckIcon(check: ActivationCheck): string {
+    if (check.status === 'ok') {
+      return 'check_circle';
+    }
+    return check.status === 'warning' ? 'warning' : 'hourglass_empty';
   }
 
   private applyModeState(entityId: string, state: string): void {

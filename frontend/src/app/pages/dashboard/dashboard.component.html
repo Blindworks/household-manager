@@ -789,6 +789,57 @@
     </div>
   </div>
 
+  <!-- Aktivierungs-Checks fuer bewachte Modi (Toni allein / Abwesend): warnt, blockiert nicht -->
+  <div
+    *ngIf="modeCheckMode"
+    class="lumina__dialog-backdrop"
+    (click)="closeModeCheckDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--confirm lumina__dialog--modecheck"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="modeCheckMode.displayName + ' aktivieren'"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">{{ modeCheckMode.displayName }} aktivieren?</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeModeCheckDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <section class="lumina__check" [attr.data-status]="modeCheckContacts.status">
+          <h3 class="lumina__check-title">
+            <span class="material-symbols-outlined">{{ modeCheckIcon(modeCheckContacts) }}</span>
+            Fenster &amp; Türen
+          </h3>
+          <p *ngIf="modeCheckContacts.status === 'loading'" class="lumina__check-line">Wird geprüft …</p>
+          <p *ngFor="let line of modeCheckContacts.lines" class="lumina__check-line">{{ line }}</p>
+        </section>
+        <section class="lumina__check" [attr.data-status]="modeCheckConsumers.status">
+          <h3 class="lumina__check-title">
+            <span class="material-symbols-outlined">{{ modeCheckIcon(modeCheckConsumers) }}</span>
+            Großverbraucher
+          </h3>
+          <p *ngIf="modeCheckConsumers.status === 'loading'" class="lumina__check-line">Wird geprüft …</p>
+          <p *ngFor="let line of modeCheckConsumers.lines" class="lumina__check-line">{{ line }}</p>
+        </section>
+        <button type="button" class="lumina__confirm-go lumina__confirm-go--mode" (click)="confirmModeActivation()">
+          Aktivieren
+        </button>
+        <button type="button" class="lumina__confirm-cancel" (click)="closeModeCheckDialog()">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Spaziergaenge-Dialog (oeffnet sich beim Klick auf die Hund-Kachel) -->
   <div
     *ngIf="walksDialogOpen"

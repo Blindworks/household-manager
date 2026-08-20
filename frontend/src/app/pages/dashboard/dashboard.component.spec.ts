@@ -1587,3 +1587,269 @@ describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
     discardPeriodicTasks();
   }));
 });
+
+describe('DashboardComponent (Aktivierungs-Checks)', () => {
+  let modeServiceSpy: jasmine.SpyObj<ModeService>;
+  let entityStateServiceSpy: jasmine.SpyObj<EntityStateService>;
+  let powerConsumerServiceSpy: jasmine.SpyObj<PowerConsumerService>;
+
+  const toniAllein = (overrides: Partial<ModeEntity> = {}): ModeEntity => ({
+    entityId: 'input_boolean.manual_toni_allein',
+    displayName: 'Toni allein',
+    icon: 'pets',
+    state: 'off',
+    ...overrides
+  });
+
+  const nachtmodus = (overrides: Partial<ModeEntity> = {}): ModeEntity => ({
+    entityId: 'input_boolean.manual_nachtmodus',
+    displayName: 'Nachtmodus',
+    icon: 'nights_stay',
+    state: 'off',
+    ...overrides
+  });
+
+  const doorContact = (entityId: string, state: string, displayName: string): EntityState => ({
+    entityId,
+    domain: 'BINARY_SENSOR',
+    source: 'ZIGBEE',
+    sourceRef: entityId,
+    friendlyName: displayName,
+    displayName,
+    state,
+    attributes: { deviceClass: 'door' },
+    lastChanged: '2026-08-20T10:00:00Z',
+    lastUpdated: '2026-08-20T10:00:00Z'
+  });
+
+  const consumer = (displayName: string, powerWatts: number | null): PowerConsumer => ({
+    entityId: `sensor.meross_${displayName.toLowerCase()}_power`,
+    displayName,
+    powerWatts,
+    unavailable: powerWatts == null
+  });
+
+  beforeEach(async () => {
+    modeServiceSpy = jasmine.createSpyObj('ModeService', ['getModes', 'toggle']);
+    modeServiceSpy.getModes.and.returnValue(of([toniAllein(), nachtmodus()]));
+    modeServiceSpy.toggle.and.returnValue(of(toniAllein({ state: 'on' })));
+
+    entityStateServiceSpy = jasmine.createSpyObj('EntityStateService', ['getEntities']);
+    entityStateServiceSpy.getEntities.and.returnValue(of([]));
+
+    powerConsumerServiceSpy = jasmine.createSpyObj('PowerConsumerService', ['getConsumers', 'getHistory']);
+    powerConsumerServiceSpy.getConsumers.and.returnValue(of([]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ModeService, useValue: modeServiceSpy },
+        { provide: EntityStateService, useValue: entityStateServiceSpy },
+        { provide: PowerConsumerService, useValue: powerConsumerServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('oeffnet beim Einschalten eines bewachten Modus den Dialog statt zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(fixture.componentInstance.modeCheckMode?.entityId).toBe('input_boolean.manual_toni_allein');
+    expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet einen bewachten Modus beim Ausschalten direkt, ohne Dialog', fakeAsync(() => {
+    modeServiceSpy.getModes.and.returnValue(of([toniAllein({ state: 'on' })]));
+    modeServiceSpy.toggle.and.returnValue(of(toniAllein({ state: 'off' })));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_toni_allein');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet einen unbewachten Modus direkt in beide Richtungen', fakeAsync(() => {
+    modeServiceSpy.toggle.and.returnValue(of(nachtmodus({ state: 'on' })));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[1]);
+    tick();
+
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_nachtmodus');
+
+    discardPeriodicTasks();
+  }));
+
+  it('baut die Checks aus den API-Antworten (offene Tuer + Grossverbraucher)', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    entityStateServiceSpy.getEntities.and.returnValue(of([
+      doorContact('binary_sensor.zigbee_kueche_contact', 'on', 'Küche Kontakt')
+    ]));
+    powerConsumerServiceSpy.getConsumers.and.returnValue(of([consumer('Waschmaschine', 800)]));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(fixture.componentInstance.modeCheckContacts.status).toBe('warning');
+    expect(fixture.componentInstance.modeCheckContacts.lines).toEqual(['Küche Kontakt ist offen.']);
+    expect(fixture.componentInstance.modeCheckConsumers.status).toBe('warning');
+    expect(fixture.componentInstance.modeCheckConsumers.lines).toEqual(['Waschmaschine: 800 W']);
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt bei einem fehlgeschlagenen Check-Request eine Warnung, der andere Check bleibt unberuehrt', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
+    powerConsumerServiceSpy.getConsumers.and.returnValue(of([]));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(fixture.componentInstance.modeCheckContacts.lines).toEqual(['Prüfung fehlgeschlagen.']);
+    expect(fixture.componentInstance.modeCheckConsumers.status).toBe('ok');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet beim Bestaetigen und schliesst den Dialog', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    fixture.componentInstance.confirmModeActivation();
+    tick();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_toni_allein');
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+    expect(fixture.componentInstance.modes[0].state).toBe('on');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet beim Bestaetigen NICHT, wenn der Modus inzwischen an ist', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    // Hintergrund-Refresh hat den Modus inzwischen eingeschaltet (z. B. via Telegram)
+    fixture.componentInstance.modes[0].state = 'on';
+    fixture.componentInstance.confirmModeActivation();
+    tick();
+
+    expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet beim Abbrechen nicht', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    fixture.componentInstance.closeModeCheckDialog();
+    tick();
+
+    expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('rendert den Dialog mit beiden Checks und Warnzeilen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    entityStateServiceSpy.getEntities.and.returnValue(of([
+      doorContact('binary_sensor.zigbee_kueche_contact', 'on', 'Küche Kontakt')
+    ]));
+    powerConsumerServiceSpy.getConsumers.and.returnValue(of([consumer('Waschmaschine', 800)]));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const dialog = host.querySelector('.lumina__dialog--modecheck');
+    expect(dialog?.textContent).toContain('Toni allein aktivieren?');
+    expect(dialog?.textContent).toContain('Küche Kontakt ist offen.');
+    expect(dialog?.textContent).toContain('Waschmaschine: 800 W');
+    const sections = host.querySelectorAll('.lumina__check[data-status="warning"]');
+    expect(sections.length).toBe(2);
+
+    discardPeriodicTasks();
+  }));
+
+  it('aktiviert ueber den Dialog-Button', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement)
+      .querySelector('.lumina__confirm-go--mode') as HTMLButtonElement;
+    button.click();
+    tick();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_toni_allein');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliesst den Dialog per Escape, ohne zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    fixture.componentInstance.onEscape();
+    tick();
+
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+    expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+});

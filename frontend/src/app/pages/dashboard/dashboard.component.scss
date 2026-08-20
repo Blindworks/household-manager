@@ -1550,6 +1550,51 @@
   }
 }
 
+// Aktivierungs-Checks der bewachten Modi (Toni allein / Abwesend)
+.lumina__check {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.04);
+
+  &[data-status='ok'] .lumina__check-title .material-symbols-outlined {
+    color: #16a34a;
+  }
+
+  &[data-status='warning'] .lumina__check-title .material-symbols-outlined {
+    color: #d97706;
+  }
+
+  &[data-status='warning'] .lumina__check-line {
+    color: #b45309;
+  }
+}
+
+.lumina__check-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.lumina__check-line {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+// Aktivieren ist keine destruktive Aktion: gruen statt des roten confirm-go
+.lumina__confirm-go--mode {
+  background: #16a34a;
+
+  &:hover {
+    background: #15803d;
+  }
+}
+
 @keyframes lumina-dialog-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
