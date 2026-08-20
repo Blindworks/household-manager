@@ -60,10 +60,21 @@ describe('buildClimateView', () => {
 
     expect(view.outdoor.length).toBe(1);
     expect(view.outdoor[0].name).toBe('Temperatur Aqara Garten');
+    expect(view.outdoor[0].shortName).toBe('Aqara Garten');
     expect(view.outdoor[0].valueLabel).toBe('11,4°');
     expect(view.outdoor[0].stale).toBe(false);
     expect(view.weatherLabel).toBe('12°');
     expect(view.rows.map(r => r.name)).toEqual(['Wohnzimmer']);
+  });
+
+  it('laesst einen Aussenfuehler ohne Temperatur-Praefix unveraendert', () => {
+    const view = buildClimateView(
+      [reading({ sensorId: 'zigbee:9', name: 'Garten', temperature: 11.4 })],
+      now,
+      ['Garten']
+    );
+
+    expect(view.outdoor[0].shortName).toBe('Garten');
   });
 
   it('erkennt den Aussenfuehler unabhaengig von Gross-/Kleinschreibung', () => {
