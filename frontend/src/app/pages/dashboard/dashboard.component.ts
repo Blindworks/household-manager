@@ -414,6 +414,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeSwitchDialog();
     this.closeConfirmDialog();
     this.closeConsumerDialog();
+    this.closeModeCheckDialog();
     this.nukiConfirm = null;
     this.rebootConfirm = false;
   }

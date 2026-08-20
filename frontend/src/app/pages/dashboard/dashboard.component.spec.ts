@@ -1797,4 +1797,59 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('rendert den Dialog mit beiden Checks und Warnzeilen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    entityStateServiceSpy.getEntities.and.returnValue(of([
+      doorContact('binary_sensor.zigbee_kueche_contact', 'on', 'Küche Kontakt')
+    ]));
+    powerConsumerServiceSpy.getConsumers.and.returnValue(of([consumer('Waschmaschine', 800)]));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const dialog = host.querySelector('.lumina__dialog--modecheck');
+    expect(dialog?.textContent).toContain('Toni allein aktivieren?');
+    expect(dialog?.textContent).toContain('Küche Kontakt ist offen.');
+    expect(dialog?.textContent).toContain('Waschmaschine: 800 W');
+    const sections = host.querySelectorAll('.lumina__check[data-status="warning"]');
+    expect(sections.length).toBe(2);
+
+    discardPeriodicTasks();
+  }));
+
+  it('aktiviert ueber den Dialog-Button', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement)
+      .querySelector('.lumina__confirm-go--mode') as HTMLButtonElement;
+    button.click();
+    tick();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_toni_allein');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliesst den Dialog per Escape, ohne zu schalten', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    fixture.componentInstance.onEscape();
+    tick();
+
+    expect(fixture.componentInstance.modeCheckMode).toBeNull();
+    expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
 });
