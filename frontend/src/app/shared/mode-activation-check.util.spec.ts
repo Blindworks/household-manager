@@ -106,6 +106,12 @@ describe('mode-activation-check.util', () => {
       expect(check.lines).toEqual(['Waschmaschine: 1235 W']);
     });
 
+    it('warnt bei exakt 50 W (Schwelle ist inklusiv)', () => {
+      const check = buildConsumerCheck([consumer('Waschmaschine', 50)]);
+      expect(check.status).toBe('warning');
+      expect(check.lines).toEqual(['Waschmaschine: 50 W']);
+    });
+
     it('ignoriert Verbraucher ohne Messwert (powerWatts null)', () => {
       const check = buildConsumerCheck([consumer('Offline-Steckdose', null)]);
       expect(check.status).toBe('ok');
