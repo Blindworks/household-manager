@@ -17,6 +17,7 @@ import com.household.manager.kasa.dto.KasaStatusDto;
 import com.household.manager.meross.dto.MerossPlugResponse;
 import com.household.manager.meross.service.MerossDeviceService;
 import com.household.manager.model.entity.DeviceType;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
 import com.household.manager.smartdevice.LightState;
@@ -1090,6 +1091,7 @@ public class SmartDeviceService {
                 .isOnline(entity.isOnline())
                 .isPoweredOn(entity.isPoweredOn())
                 .capabilities(parseCapabilities(entity.getCapabilities()))
+                .confirmRequired(confirmRequiredFor(entity))
                 .metadata(metadata)
                 .brightness(asInteger(metadata.get("lightBrightness")))
                 .hue(asInteger(metadata.get("lightHue")))
@@ -1110,6 +1112,24 @@ public class SmartDeviceService {
         return Arrays.stream(capabilities.split(","))
                 .map(String::trim)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Liest das Bestaetigungs-Flag aus der gespiegelten Switch-Entitaet. Die entityId kommt
+     * ausschliesslich von {@link SmartDeviceEntityMapper#entityId} - der einzigen Definition
+     * dieser Id. Ohne gespiegelte Entitaet gilt "kein Schutz".
+     */
+    private boolean confirmRequiredFor(SmartDevice device) {
+        try {
+            String entityId = smartDeviceEntityMapper.entityId(device);
+            return entityStateService.getByEntityId(entityId)
+                    .map(EntityState::isConfirmRequired)
+                    .orElse(false);
+        } catch (Exception ex) {
+            log.warn("Bestaetigungs-Flag fuer {} nicht ermittelbar: {}",
+                    device.getExternalDeviceId(), ex.getMessage());
+            return false;
+        }
     }
 
     private String serializeMetadata(Map<String, Object> metadata) {

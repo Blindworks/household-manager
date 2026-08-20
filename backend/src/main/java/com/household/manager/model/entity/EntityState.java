@@ -41,7 +41,8 @@ public class EntityState {
     private String customName;
 
     /**
-     * Bestätigungspflicht beim Schalten (reiner UI-Schutz im Dashboard).
+     * Bestätigungspflicht beim AUSschalten (reiner UI-Schutz in Dashboard und Geräteliste;
+     * Einschalten läuft immer direkt, Flows/Telegram/API schalten ungefragt).
      * Benutzergepflegt wie {@link #customName}; wird vom Polling-Upsert nie überschrieben.
      */
     @Column(name = "confirm_required", nullable = false)

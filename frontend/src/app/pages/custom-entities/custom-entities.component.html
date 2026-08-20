@@ -176,4 +176,29 @@
       </div>
     }
   </div>
+
+  @if (confirmOffEntity(); as confirmEntity) {
+    <div class="confirm-backdrop" (click)="closeConfirmOffDialog()">
+      <div
+        class="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-off-title"
+        (click)="$event.stopPropagation()">
+        <h3 class="confirm-dialog__title" id="confirm-off-title">Wirklich ausschalten?</h3>
+        <p class="confirm-dialog__text">
+          <strong>{{ confirmEntity.friendlyName }}</strong> ist gegen versehentliches
+          Ausschalten gesichert.
+        </p>
+        <div class="confirm-dialog__actions">
+          <button type="button" class="confirm-dialog__cancel" (click)="closeConfirmOffDialog()">
+            Abbrechen
+          </button>
+          <button type="button" class="confirm-dialog__confirm" (click)="confirmTurnOff()">
+            Ausschalten
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

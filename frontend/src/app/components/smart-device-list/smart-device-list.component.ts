@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -69,6 +69,9 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
   errorMessage: string | null = null;
   togglingDevices = new Set<number>();
   viewMode: DeviceViewMode = 'normal';
+
+  /** Geraet, dessen Ausschalten gerade bestaetigt werden muss; null = kein Dialog offen. */
+  confirmOffDevice: SmartDevice | null = null;
 
   // Kasa per IP hinzufuegen
   showAddKasaForm = false;
@@ -292,19 +295,64 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Schaltet ein Geraet. Geschuetzte Geraete oeffnen beim AUSschalten erst den
+   * Bestaetigungsdialog; Einschalten laeuft immer direkt - ein versehentliches
+   * Einschalten ist harmlos, ein versehentliches Ausschalten (Kuehlschrank, Router) nicht.
+   */
   toggleDevice(device: SmartDevice): void {
     if (!device.isOnline || this.isDeviceToggling(device.id)) {
       return;
     }
+    if (device.confirmRequired && device.isPoweredOn) {
+      this.confirmOffDevice = device;
+      return;
+    }
+    this.executeToggle(device);
+  }
 
+  /**
+   * Bestaetigung im Dialog: schliesst ihn und schaltet aus. Loest das Geraet ueber seine id
+   * in `devices` neu auf statt die im Dialog gehaltene Referenz weiterzuverwenden -
+   * `updateDeviceInList` ERSETZT das Array-Element bei jedem Refresh, ein waehrend offenem
+   * Dialog eintreffender Hintergrund-Refresh wuerde die Dialog-Referenz sonst zu einer
+   * verwaisten Kopie machen (Muster wie `DashboardComponent.applySwitchState`).
+   */
+  confirmTurnOff(): void {
+    const deviceId = this.confirmOffDevice?.id;
+    this.confirmOffDevice = null;
+    const device = this.devices.find(d => d.id === deviceId);
+    // Nur schalten, wenn das Geraet laut aktuellem Stand noch an ist: ein waehrend offenem
+    // Dialog eingetroffener Refresh koennte es bereits ausgeschaltet haben - executeToggle
+    // wuerde es dann ausgerechnet ueber den "Ausschalten"-Knopf wieder EINschalten.
+    if (device?.isPoweredOn) {
+      this.executeToggle(device);
+    }
+  }
+
+  closeConfirmOffDialog(): void {
+    this.confirmOffDevice = null;
+  }
+
+  /** Schliesst den Bestaetigungsdialog per Escape-Taste (Muster: DashboardComponent.onEscape). */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeConfirmOffDialog();
+  }
+
+  private executeToggle(device: SmartDevice): void {
     this.togglingDevices.add(device.id);
-    const action = device.isPoweredOn
-      ? this.smartDeviceService.turnOff(device.id)
-      : this.smartDeviceService.turnOn(device.id);
+    // Vor dem Request einfrieren, welche Richtung tatsaechlich angefordert wurde - der
+    // `next`-Handler darf beim Eintreffen der Antwort nicht einfach den dann aktuellen
+    // (moeglicherweise zwischenzeitlich durch einen Refresh veraenderten) Wert umdrehen.
+    const turningOn = !device.isPoweredOn;
+    const action = turningOn
+      ? this.smartDeviceService.turnOn(device.id)
+      : this.smartDeviceService.turnOff(device.id);
 
     action.subscribe({
       next: () => {
-        device.isPoweredOn = !device.isPoweredOn;
+        device.isPoweredOn = turningOn;
         this.togglingDevices.delete(device.id);
       },
       error: (error: Error) => {

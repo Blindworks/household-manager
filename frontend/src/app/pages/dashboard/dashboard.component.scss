@@ -735,7 +735,7 @@
 .lumina__hub-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   overflow-y: auto;
   padding-right: 8px;
   flex: 1;
@@ -756,8 +756,9 @@
 
 .lumina__insight {
   display: flex;
-  gap: 16px;
-  padding: 16px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
@@ -807,15 +808,22 @@
   }
 }
 
+.lumina__insight-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
 .lumina__insight-title {
-  margin: 0 0 4px;
-  font-size: 14px;
+  margin: 0 0 2px;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .lumina__insight-text {
   margin: 0;
   font-size: 12px;
+  line-height: 1.3;
   color: rgba(192, 198, 214, 0.8);
 }
 

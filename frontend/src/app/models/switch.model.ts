@@ -12,7 +12,7 @@ export interface SwitchEntity {
   available: boolean;
   /** Material-Symbols-Name. */
   icon: string;
-  /** Erfordert im Dashboard eine Bestätigung vor dem Schalten. */
+  /** Erfordert im Dashboard eine Bestätigung vor dem AUSschalten; Einschalten läuft direkt. */
   confirmRequired: boolean;
   /** Aktuelle Leistung in Watt; null/fehlend wenn keine frische Messung vorliegt. */
   powerWatts?: number | null;

@@ -21,6 +21,16 @@ export interface SmartDevice {
   saturation?: number;
   /** Aktuelle Farbtemperatur in Kelvin. Fehlt unter denselben Bedingungen wie `brightness`. */
   colorTemp?: number;
+  /**
+   * Ob dieses Geraet nur nach Bestaetigung AUSgeschaltet werden darf. Kommt aus dem
+   * `confirm_required`-Flag der gespiegelten Switch-Entitaet (gepflegt auf der
+   * Entitaeten-Seite), nicht aus der Geraetetabelle. Reiner Bedienschutz im UI.
+   * Immer gesetzt - das Backend-Feld ist ein Java-Primitive (`SmartDeviceResponse.confirmRequired`)
+   * und wird deshalb nie weggelassen (anders als `brightness`/`hue`/`saturation`/`colorTemp`
+   * oben, die auf `@JsonInclude(NON_NULL)` beruhen). Siehe `switch.model.ts` fuer denselben
+   * Backend-Begriff bei den Dashboard-Schaltern.
+   */
+  confirmRequired: boolean;
   createdAt: string;
   updatedAt: string;
 }

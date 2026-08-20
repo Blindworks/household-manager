@@ -11,7 +11,7 @@ describe('SmartDeviceListComponent', () => {
   const device: SmartDevice = {
     id: 1, deviceType: 'TAPO', externalDeviceId: 'DEV1', deviceName: 'Stehlampe',
     model: 'L530E(EU)', ipAddress: '192.168.1.112', isOnline: true, isPoweredOn: false,
-    capabilities: ['SWITCH'], metadata: {}, createdAt: '', updatedAt: ''
+    capabilities: ['SWITCH'], metadata: {}, confirmRequired: false, createdAt: '', updatedAt: ''
   } as SmartDevice;
 
   // Faehigkeiten gemeldet, aber noch nie live geprobt - Backend liefert kein brightness/hue/
@@ -21,7 +21,7 @@ describe('SmartDeviceListComponent', () => {
     model: 'L530(EU)', ipAddress: '192.168.1.114', isOnline: true, isPoweredOn: true,
     capabilities: ['SWITCH', 'BRIGHTNESS', 'COLOR', 'COLOR_TEMP'],
     metadata: { colorTempRangeMin: 2500, colorTempRangeMax: 6500 },
-    createdAt: '', updatedAt: ''
+    confirmRequired: false, createdAt: '', updatedAt: ''
   } as SmartDevice;
 
   // Dieselbe Lampe, aber mit einem vom Geraet tatsaechlich gemeldeten Ist-Zustand.
@@ -347,5 +347,107 @@ describe('SmartDeviceListComponent', () => {
       const hasColorTemp = request.colorTemp !== undefined;
       expect(hasColor && hasColorTemp).toBeFalse();
     }
+  });
+
+  describe('Ausschalt-Bestaetigung', () => {
+    // Frisches Objekt pro Test statt eines geteilten Consts: toggleDevice/executeToggle
+    // mutiert device.isPoweredOn direkt auf der uebergebenen Referenz - ein geteiltes Objekt
+    // wuerde bei zufaelliger (Jasmine-Standard) Testreihenfolge Zustand zwischen Tests durchsickern
+    // lassen (z. B. "schaltet nach Bestaetigung aus" schaltet isPoweredOn auf false um, wodurch
+    // ein danach laufender Dialog-Test die Wache faelschlich als nicht ausgeloest sieht).
+    let guardedDevice: SmartDevice;
+
+    beforeEach(() => {
+      guardedDevice = {
+        ...device, id: 9, deviceName: 'Kuehlschrank', isPoweredOn: true, confirmRequired: true
+      } as SmartDevice;
+      serviceSpy.getAllDevices.and.returnValue(of([guardedDevice]));
+      serviceSpy.refreshDeviceState.and.returnValue(of(guardedDevice));
+    });
+
+    it('oeffnet beim Ausschalten den Dialog statt zu schalten', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.confirmOffDevice?.id).toBe(9);
+    });
+
+    it('zeigt den Dialog an und schaltet ueber den Bestaetigen-Knopf', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(guardedDevice);
+      fixture.detectChanges();
+
+      const dialog: HTMLElement = fixture.nativeElement.querySelector('.confirm-dialog');
+      expect(dialog).not.toBeNull();
+      expect(dialog.textContent).toContain('Kuehlschrank');
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+
+      dialog.querySelector<HTMLButtonElement>('.confirm-dialog__confirm')!.click();
+
+      expect(serviceSpy.turnOff).toHaveBeenCalledWith(9);
+    });
+
+    it('schaltet nicht ein, wenn ein Refresh das Geraet zwischenzeitlich als aus meldet', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      // Hintergrund-Refresh ERSETZT das Array-Element (updateDeviceInList) - hier: schon aus.
+      fixture.componentInstance.devices[0] = { ...guardedDevice, isPoweredOn: false };
+      fixture.componentInstance.confirmTurnOff();
+
+      expect(serviceSpy.turnOn).not.toHaveBeenCalled();
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('schaltet nach Bestaetigung aus und schliesst den Dialog', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      fixture.componentInstance.confirmTurnOff();
+
+      expect(serviceSpy.turnOff).toHaveBeenCalledWith(9);
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('abbrechen schliesst den Dialog ohne zu schalten', () => {
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.toggleDevice(guardedDevice);
+
+      fixture.componentInstance.closeConfirmOffDialog();
+
+      expect(serviceSpy.turnOff).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('einschalten eines geschuetzten Geraets fragt nicht nach', () => {
+      const offDevice = { ...guardedDevice, isPoweredOn: false } as SmartDevice;
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(offDevice);
+
+      expect(serviceSpy.turnOn).toHaveBeenCalledWith(9);
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
+
+    it('ungeschuetztes Geraet schaltet weiterhin direkt aus', () => {
+      const plain = { ...device, isPoweredOn: true } as SmartDevice;
+      const fixture = TestBed.createComponent(SmartDeviceListComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.toggleDevice(plain);
+
+      expect(serviceSpy.turnOff).toHaveBeenCalledWith(1);
+      expect(fixture.componentInstance.confirmOffDevice).toBeNull();
+    });
   });
 });

@@ -409,15 +409,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Schaltet einen Schalter. Bestätigungspflichtige Schalter werden nicht direkt
-   * geschaltet, sondern öffnen den Bestätigungsdialog; erst der Klick auf den
-   * Schalter im Dialog führt den Toggle aus.
+   * Schaltet einen Schalter. Geschuetzte Schalter oeffnen beim AUSschalten den
+   * Bestaetigungsdialog; erst der Klick auf den Schalter im Dialog fuehrt den Toggle
+   * aus. Einschalten laeuft immer direkt - ein versehentliches Einschalten ist
+   * harmlos, ein versehentliches Ausschalten (Kuehlschrank, Router) nicht.
+   *
+   * Die Richtung wird aus dem zuletzt geladenen Client-Zustand abgeleitet und
+   * spiegelt damit die Regel des Backends (alles ausser "on" schaltet ein,
+   * SwitchCommandService.toggleDevice) - beide Seiten muessen zusammen geaendert
+   * werden. Da die Kacheln nur alle 30 s nachladen, kann ein anderswo
+   * eingeschalteter Schalter in diesem Fenster ohne Rueckfrage ausgeschaltet
+   * werden; bewusst akzeptiert, der Schutz ist ausdruecklich UI-seitig.
    */
   toggleSwitch(entity: SwitchEntity): void {
     if (this.pendingSwitchIds.has(entity.entityId)) {
       return;
     }
-    if (entity.confirmRequired) {
+    if (entity.confirmRequired && entity.state === 'on') {
       this.confirmSwitch = entity;
       this.confirmSwitchList = [entity];
       return;
@@ -425,10 +433,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.executeToggle(entity);
   }
 
-  /** Bestätigung im Dialog: schließt ihn und führt den eigentlichen Toggle aus. */
+  /**
+   * Bestätigung im Dialog: schließt ihn und führt den eigentlichen Toggle aus. Löst den
+   * Schalter über seine entityId in `allSwitches`/`topSwitches` neu auf statt die im Dialog
+   * gehaltene Referenz weiterzuverwenden - ein während offenem Dialog eintreffender
+   * Hintergrund-Refresh könnte ihn bereits ausgeschaltet haben (Muster wie
+   * `SmartDeviceListComponent.confirmTurnOff`); ohne Neu-Aufloesung würde `executeToggle`
+   * ihn dann ausgerechnet über den "Ausschalten"-Bestätigungsdialog wieder einschalten.
+   *
+   * Beide Listen können beim Aufloesen leer sein - `loadTopSwitches` leert `topSwitches`
+   * bei einem fehlgeschlagenen 30s-Refresh (WLAN-Aussetzer auf dem Wandtablet ist
+   * Alltag, kein Sonderfall), und `SWITCH_TILE_LIMIT` kann einen weiterhin an
+   * geschuetzten Schalter aus den Top 4 verdraengen, waehrend der Dialog offen ist.
+   * "Nicht gefunden" ist dabei KEIN Beleg dafuer, dass der Schalter aus ist - toggleSwitch
+   * oeffnet den Dialog ueberhaupt nur, wenn state === 'on' war, die gehaltene Referenz ist
+   * also per Konstruktion "an". Deshalb faellt die Aufloesung zuletzt auf sie zurueck,
+   * statt bei einer leeren Liste stillschweigend gar nicht zu schalten.
+   */
   confirmToggle(entity: SwitchEntity): void {
     this.closeConfirmDialog();
-    this.executeToggle(entity);
+    const current = this.allSwitches.find(s => s.entityId === entity.entityId)
+      ?? this.topSwitches.find(s => s.entityId === entity.entityId)
+      ?? entity;
+    if (current.state === 'on') {
+      this.executeToggle(current);
+    }
   }
 
   closeConfirmDialog(): void {
