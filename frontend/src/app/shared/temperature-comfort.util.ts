@@ -29,6 +29,8 @@ export interface OutdoorReading {
   /** Sensor-Id der zugrundeliegenden Messung (Schlüssel für den Detaildialog). */
   sensorId: string;
   name: string;
+  /** Name ohne fuehrendes "Temperatur"/"Temp.", z. B. "Aqara Garten". */
+  shortName: string;
   /** Temperatur, z. B. "11,4°". */
   valueLabel: string;
   stale: boolean;
@@ -144,10 +146,21 @@ export function buildSensorDetail(
   };
 }
 
+/**
+ * Kuerzt den Sensornamen fuers Kopfzeilen-Label: das fuehrende "Temperatur"
+ * bzw. "Temp." traegt dort keine Information, der Rest bleibt unangetastet.
+ * Bleibt nichts uebrig, gewinnt der volle Name.
+ */
+function shortenSensorName(name: string): string {
+  const shortened = name.replace(/^\s*(temperatur|temp\.?)\s+/i, '').trim();
+  return shortened.length > 0 ? shortened : name;
+}
+
 function toOutdoorReading(reading: CurrentTemperatureReading, nowMs: number): OutdoorReading {
   return {
     sensorId: reading.sensorId,
     name: reading.name,
+    shortName: shortenSensorName(reading.name),
     valueLabel: formatCelsius(reading.temperature, 1),
     stale: isStale(reading, nowMs)
   };

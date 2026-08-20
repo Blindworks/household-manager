@@ -204,6 +204,27 @@
   }
 }
 
+// Aussenfuehler im Kopf: sieht aus wie der Wetterblock, ist aber klickbar
+// (oeffnet den Sensor-Dialog) und wird bei veralteten Messwerten gedimmt.
+.lumina__outdoor {
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &--stale {
+    opacity: 0.45;
+  }
+}
+
 .lumina__weather-temp {
   font-family: 'Space Grotesk', 'Geist', sans-serif;
   font-size: clamp(17px, 1.7vw, 22px);
@@ -293,13 +314,6 @@
   }
 }
 
-// Aussenwerte und Verlaufs-Knopf in der Kopfzeile nebeneinander.
-.lumina__climate-head-right {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
 // ---- Schalter-Kachel -----------------------------------------------------
 .lumina__switch-tile {
   // Die Kachel ist kein einzelnes Klickziel mehr: die Zeilen darin sind es.
@@ -358,74 +372,6 @@
 .lumina__switch-error--dialog {
   margin-top: 12px;
   color: #b91c1c;
-}
-
-.lumina__climate-outdoor {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.lumina__climate-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 2px 6px;
-  border: none;
-  border-radius: var(--radius-sm, 8px);
-  background: none;
-  color: var(--on-surface);
-  font: inherit;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  &--stale {
-    opacity: 0.45;
-  }
-}
-
-.lumina__climate-primary-icon {
-  font-size: 18px;
-  color: var(--secondary);
-}
-
-.lumina__climate-primary-value {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-// Weitere Außenfühler (nach dem primären) kleiner darstellen.
-.lumina__climate-primary--secondary {
-  .lumina__climate-primary-icon {
-    font-size: 15px;
-  }
-
-  .lumina__climate-primary-value {
-    font-size: 17px;
-  }
-}
-
-.lumina__climate-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: rgba(192, 198, 214, 0.55);
-  font-size: 13px;
-}
-
-.lumina__climate-secondary-icon {
-  font-size: 14px;
-}
-
-.lumina__climate-secondary-value {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-weight: 600;
 }
 
 .lumina__climate-rows {

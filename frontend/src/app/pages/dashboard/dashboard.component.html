@@ -30,9 +30,28 @@
             <span class="material-symbols-outlined lumina__weather-icon">{{ weatherIcon }}</span>
             <div class="lumina__weather-text">
               <span class="lumina__weather-temp">{{ temperature }}°C</span>
-              <span class="lumina__label">{{ weatherLabel }}</span>
+              <span class="lumina__label">DWD · {{ weatherLabel }}</span>
             </div>
           </div>
+          <!-- Reale Aussenfuehler neben der DWD-Vorhersage; die Beschriftung
+               macht sichtbar, welcher Wert woher kommt. -->
+          <ng-container *ngFor="let outdoor of climate.outdoor">
+            <div class="lumina__divider"></div>
+            <button
+              type="button"
+              class="lumina__weather lumina__outdoor"
+              [class.lumina__outdoor--stale]="outdoor.stale"
+              [title]="outdoor.name"
+              [attr.aria-label]="outdoor.name + ' anzeigen'"
+              (click)="openSensorDialog(outdoor.sensorId)"
+            >
+              <span class="material-symbols-outlined lumina__weather-icon">yard</span>
+              <div class="lumina__weather-text">
+                <span class="lumina__weather-temp">{{ outdoor.valueLabel }}</span>
+                <span class="lumina__label">{{ outdoor.shortName }}</span>
+              </div>
+            </button>
+          </ng-container>
         </div>
       </header>
       <div class="lumina__rooms" [class.lumina__rooms--accordion]="accordionActive">
@@ -58,36 +77,14 @@
               <span class="lumina__room-toggle-title">Temperaturen</span>
               <span class="material-symbols-outlined lumina__room-chevron">expand_more</span>
             </button>
-            <div class="lumina__climate-head-right">
-              <div class="lumina__climate-outdoor">
-                <button
-                  *ngFor="let outdoor of climate.outdoor; let first = first"
-                  type="button"
-                  class="lumina__climate-primary"
-                  [class.lumina__climate-primary--secondary]="!first"
-                  [class.lumina__climate-primary--stale]="outdoor.stale"
-                  [title]="outdoor.name"
-                  [attr.aria-label]="outdoor.name + ' anzeigen'"
-                  (click)="openSensorDialog(outdoor.sensorId)"
-                >
-                  <span class="material-symbols-outlined lumina__climate-primary-icon">yard</span>
-                  <span class="lumina__climate-primary-value">{{ outdoor.valueLabel }}</span>
-                </button>
-                <div class="lumina__climate-secondary">
-                  <span class="material-symbols-outlined lumina__climate-secondary-icon">cloud</span>
-                  <span class="lumina__climate-secondary-label">DWD</span>
-                  <span class="lumina__climate-secondary-value">{{ climate.weatherLabel }}</span>
-                </div>
-              </div>
-              <a
-                routerLink="/temperatures"
-                class="lumina__switch-all"
-                title="Temperaturverlauf anzeigen"
-                aria-label="Temperaturverlauf anzeigen"
-              >
-                <span class="material-symbols-outlined">expand_content</span>
-              </a>
-            </div>
+            <a
+              routerLink="/temperatures"
+              class="lumina__switch-all"
+              title="Temperaturverlauf anzeigen"
+              aria-label="Temperaturverlauf anzeigen"
+            >
+              <span class="material-symbols-outlined">expand_content</span>
+            </a>
           </div>
           <div class="lumina__room-body" id="lumina-panel-climate">
             <h3 class="lumina__room-name">Temperaturen</h3>
