@@ -194,6 +194,16 @@ The application uses Liquibase for database migrations. Migration files are loca
   - `PowerHistoryAggregationJob` compacts to minute averages after 10 min, to hour averages after 2 days, and deletes after 30 days. It only compacts **completed** buckets (upper window bound rounded down via `truncatedTo`) — otherwise an already-compacted point would keep getting re-averaged with each newly-aged raw point and the "average" would degrade into the last value
   - `GET /api/v1/power-consumers/{entityId}/history?range=DAY|WEEK|MONTH` returns the series; clicking a consumer row on the dashboard opens the chart dialog
   - The chart is empty right after deployment and fills over time — there is no retroactive data
+- **Mode Activation Checks**: the dashboard asks before *switching on* the modes „Toni allein" and „Abwesend" (no schema change, no backend code)
+  - A dialog shows two checks — Zigbee window/door contacts closed? any consumer at or above 50 W? — and then activates on confirmation. It **warns, it never blocks**: „Aktivieren" stays clickable even while the checks are still loading or a check request failed. The point is informed consent before the dog is left alone, not a gate
+  - Turning the modes **off** stays direct, and every other mode is untouched. Like `confirm_required` this is a pure UI guard — Telegram, flows and the API keep switching both directions unchanged
+  - `frontend/src/app/shared/mode-activation-check.util.ts` is the single definition of both checks (pure functions, no Angular). The **50 W threshold lives there alone** (`HIGH_CONSUMPTION_THRESHOLD_WATTS`) — unlike the pet-food threshold, there is no second copy to keep in sync
+  - The contact check reads `GET /v1/entities?domain=BINARY_SENSOR&source=ZIGBEE`. **The Nuki front door is excluded by `source`, not by `deviceClass`** — `NukiEntityMapper` also emits `deviceClass: "door"`, so filtering on the device class alone would drag it in and warn on every departure, when the front door is open by definition. Zigbee window contacts all carry `deviceClass: "door"` too, so both are covered by one filter
+  - `unavailable` and an empty contact list both count as **warnings**, never as „all closed" — a dead sensor is no proof that a window is shut
+  - Consumers without a reading (`powerWatts: null`) are ignored on purpose. **Accepted blind spot:** `MerossElectricityPollingService` drops offline plugs from the list entirely rather than reporting `unavailable` (see Power Consumption History above), so a washing machine whose plug hiccups at that moment vanishes and the check shows green. This is the same trade-off already accepted for the history chart
+  - `confirmModeActivation` re-resolves the mode from the current list before switching and does nothing if it is already `on` — otherwise a mode switched on elsewhere during the ~30 s refresh window would be switched *off* by the confirm button (same reasoning as `confirmToggle`)
+  - The dialog markup sits **directly in `dashboard.component.html`** — the `lumina` styles are encapsulated in `dashboard.component.scss` and would silently not reach a child component (see Tractive/Zigbee tiles)
+  - Both endpoints are KIOSK-readable and the mode toggle is KIOSK-allowed, so the dialog works unchanged on the wall tablet
 
 ### Planned Entities (Phase 2)
 - **Products**: Household inventory items
