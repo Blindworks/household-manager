@@ -83,7 +83,7 @@ describe('DashboardComponent (Schalter)', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    expect(switchServiceSpy.getSwitches).toHaveBeenCalledWith(4, 'tile');
+    expect(switchServiceSpy.getSwitches).toHaveBeenCalledWith(8, 'tile');
     expect(fixture.componentInstance.topSwitches.length).toBe(1);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Stehlampe');
 
@@ -142,7 +142,7 @@ describe('DashboardComponent (Schalter)', () => {
     tick();
 
     expect(fixture.componentInstance.switchDialogOpen).toBeFalse();
-    expect(switchServiceSpy.getSwitches).toHaveBeenCalledWith(4, 'tile');
+    expect(switchServiceSpy.getSwitches).toHaveBeenCalledWith(8, 'tile');
 
     discardPeriodicTasks();
   }));

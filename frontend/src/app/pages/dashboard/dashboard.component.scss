@@ -626,6 +626,16 @@
     font-size: 19px;
   }
 
+  // Acht Schalter (oder viele Sensorzeilen) passen nicht in jede Kachelhoehe
+  // des Wandtablets - lieber innen scrollen als die Kachelzeile ueber den
+  // Bildschirmrand hinaus wachsen lassen. Ueberschreibt das overflow: hidden
+  // der Schalter-Kachel (gleiche Spezifitaet, aber spaeter im Stylesheet), das
+  // die letzten Zeilen sonst lautlos abschneiden wuerde.
+  .lumina__room-body {
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+
   // Halbe Breite: ein langer Sensorname darf die Zeile nicht umbrechen.
   .lumina__climate-name {
     min-width: 0;

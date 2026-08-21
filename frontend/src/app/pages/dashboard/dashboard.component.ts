@@ -174,7 +174,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Aktualisierungsintervall der Klima-Kachel (60 s). */
   private static readonly CLIMATE_REFRESH_MS = 60000;
   /** Anzahl der Schalter auf der Kachel; alle weiteren stehen im Dialog. */
-  private static readonly SWITCH_TILE_LIMIT = 4;
+  private static readonly SWITCH_TILE_LIMIT = 8;
   /** Aktualisierungsintervall der Schalter-Kachel (30 s). */
   private static readonly SWITCH_REFRESH_MS = 30000;
   /** Aktualisierungsintervall der Modus-Leiste (30 s; Flows schalten Modi auch von aussen). */
@@ -485,7 +485,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Beide Listen können beim Aufloesen leer sein - `loadTopSwitches` leert `topSwitches`
    * bei einem fehlgeschlagenen 30s-Refresh (WLAN-Aussetzer auf dem Wandtablet ist
    * Alltag, kein Sonderfall), und `SWITCH_TILE_LIMIT` kann einen weiterhin an
-   * geschuetzten Schalter aus den Top 4 verdraengen, waehrend der Dialog offen ist.
+   * geschuetzten Schalter aus den Top 8 verdraengen, waehrend der Dialog offen ist.
    * "Nicht gefunden" ist dabei KEIN Beleg dafuer, dass der Schalter aus ist - toggleSwitch
    * oeffnet den Dialog ueberhaupt nur, wenn state === 'on' war, die gehaltene Referenz ist
    * also per Konstruktion "an". Deshalb faellt die Aufloesung zuletzt auf sie zurueck,
