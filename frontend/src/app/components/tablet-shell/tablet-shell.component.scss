@@ -1,0 +1,203 @@
+// ============================================================================
+//  Rahmen der Tablet-Unteransichten
+//  Uhr-/Wetterzeile und Ansichtsleiste sehen aus wie im Dashboard. Die
+//  lumina-Styles dort sind gekapselt und nicht erreichbar, deshalb stehen die
+//  benoetigten Regeln hier noch einmal - bewusst nur der Kopf und die Leiste,
+//  nicht das ganze Kachel-Design.
+// ============================================================================
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.lumina {
+  --primary: #aac7ff;
+  --secondary: #53e16f;
+  --on-surface: #e4e2e4;
+  --on-surface-variant: #c0c6d6;
+
+  --gutter: 24px;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+  flex: 1;
+  min-height: 0;
+  padding: 24px 40px 28px;
+  color: var(--on-surface);
+  font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(170, 199, 255, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(83, 225, 111, 0.06), transparent 60%),
+    #050505;
+  overflow: hidden;
+}
+
+.lumina-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-xl);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lumina__label {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 16px;
+  text-transform: uppercase;
+  color: rgba(192, 198, 214, 0.7);
+}
+
+// ---- Uhr & Wetter (Kopfzeile) --------------------------------------------
+.lumina__clock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(16px, 3vw, 32px);
+  flex: 0 0 auto;
+  text-align: left;
+  padding: 0 0 4px;
+}
+
+/* Schiebt die Bedienelemente der Seite an den rechten Rand der Kopfzeile. */
+.lumina__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lumina__time {
+  margin: 0;
+  font-weight: 600;
+  font-size: clamp(34px, 4.4vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(255, 255, 255, 0.18);
+}
+
+.lumina__clock-meta {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2.5vw, 28px);
+}
+
+.lumina__date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  .lumina__label {
+    font-size: 10px;
+    line-height: 13px;
+    letter-spacing: 0.12em;
+  }
+}
+
+.lumina__date-value {
+  font-size: clamp(15px, 1.5vw, 19px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.lumina__divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lumina__weather {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lumina__weather-icon {
+  font-size: 30px;
+  color: var(--secondary);
+}
+
+.lumina__weather-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+
+  .lumina__label {
+    font-size: 10px;
+    line-height: 13px;
+    letter-spacing: 0.12em;
+  }
+}
+
+.lumina__weather-temp {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: clamp(17px, 1.7vw, 22px);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Seitentitel als gleichrangiges Element der Kopfzeile. */
+.lumina__heading {
+  margin: 0;
+  font-size: clamp(17px, 1.7vw, 22px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+// ---- Inhaltsbereich ------------------------------------------------------
+.lumina__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// ---- Ansichtsleiste ------------------------------------------------------
+.lumina__viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.lumina__viewbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  // Fingerfreundliches Ziel auf dem Wandtablet.
+  min-height: 64px;
+  padding: 0 24px;
+  border-radius: var(--radius-full);
+  color: var(--on-surface);
+  text-decoration: none;
+
+  .material-symbols-outlined {
+    font-size: 26px;
+    color: var(--secondary);
+  }
+
+  &--active {
+    border-color: rgba(170, 199, 255, 0.35);
+    color: var(--primary);
+
+    .material-symbols-outlined {
+      color: var(--primary);
+    }
+  }
+}
+
+.lumina__viewbar-label {
+  font-size: 1rem;
+  font-weight: 500;
+}

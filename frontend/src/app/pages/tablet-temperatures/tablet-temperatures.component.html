@@ -1,0 +1,54 @@
+<app-tablet-shell heading="Temperaturen">
+  <div shellActions class="tablet-temps__controls">
+    <div class="tablet-temps__ranges" role="group" aria-label="Zeitraum">
+      @for (range of ranges; track range.value) {
+        <button
+          type="button"
+          class="tablet-temps__range"
+          [class.tablet-temps__range--active]="range.value === activeRange"
+          (click)="setRange(range.value)">
+          {{ range.label }}
+        </button>
+      }
+    </div>
+    <div class="tablet-temps__ranges" role="group" aria-label="Messgrößen">
+      @for (metric of metrics; track metric.value) {
+        <button
+          type="button"
+          class="tablet-temps__range"
+          [class.tablet-temps__range--active]="isMetricActive(metric.value)"
+          [attr.aria-pressed]="isMetricActive(metric.value)"
+          (click)="toggleMetric(metric.value)">
+          {{ metric.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <section class="tablet-temps">
+    @if (isLoading && charts.length === 0) {
+      <p class="tablet-temps__status">Lade Temperaturdaten…</p>
+    } @else if (errorMessage && charts.length === 0) {
+      <p class="tablet-temps__status tablet-temps__status--error">{{ errorMessage }}</p>
+    } @else if (isEmpty) {
+      <p class="tablet-temps__status">Keine Temperatursensoren gefunden.</p>
+    } @else {
+      <div class="tablet-temps__grid" [style.grid-template-columns]="'repeat(' + columns + ', 1fr)'">
+        @for (chart of charts; track chart.sensorId) {
+          <article class="tablet-temps__card">
+            <h3 class="tablet-temps__card-title">{{ chart.name }}</h3>
+            @if (chart.empty) {
+              <p class="tablet-temps__card-empty">Keine Werte für diese Auswahl</p>
+            } @else {
+              <div
+                echarts
+                class="tablet-temps__chart"
+                [options]="chart.options"
+                [autoResize]="true"></div>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</app-tablet-shell>
