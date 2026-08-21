@@ -1,11 +1,11 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { TemperatureService } from '../../services/temperature.service';
 import { TemperatureSensorSeries, TimeRange } from '../../models/temperature.model';
 
@@ -36,7 +36,7 @@ const AXIS_COLOR = '#94a3b8';
 @Component({
   selector: 'app-tablet-temperatures',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgxEchartsDirective],
+  imports: [CommonModule, TabletShellComponent, NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './tablet-temperatures.component.html',
   styleUrl: './tablet-temperatures.component.scss'

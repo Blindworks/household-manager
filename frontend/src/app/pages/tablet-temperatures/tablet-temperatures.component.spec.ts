@@ -3,12 +3,15 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { TabletTemperaturesComponent } from './tablet-temperatures.component';
 import { TemperatureService } from '../../services/temperature.service';
+import { WeatherService } from '../../services/weather.service';
+import { WeatherOverview } from '../../models/weather.model';
 import { TemperatureSensorSeries } from '../../models/temperature.model';
 
 describe('TabletTemperaturesComponent', () => {
   let fixture: ComponentFixture<TabletTemperaturesComponent>;
   let component: TabletTemperaturesComponent;
   let serviceSpy: jasmine.SpyObj<TemperatureService>;
+  let weatherSpy: jasmine.SpyObj<WeatherService>;
 
   const withHumidity: TemperatureSensorSeries = {
     sensorId: 'zigbee:1', name: 'Wohnzimmer', source: 'ZIGBEE',
@@ -33,12 +36,17 @@ describe('TabletTemperaturesComponent', () => {
     serviceSpy = jasmine.createSpyObj('TemperatureService', ['getSeries']);
     serviceSpy.getSeries.and.returnValue(of([withHumidity, withoutHumidity]));
 
+    weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of({ current: { temperature: 18, icon: 1 } } as unknown as WeatherOverview));
+
     await TestBed.configureTestingModule({
       imports: [TabletTemperaturesComponent],
       providers: [
-        // Die Kopfzeile nutzt routerLink fuer den Zurueck-Knopf.
+        // Der Rahmen (app-tablet-shell) nutzt routerLink fuer die Ansichtsleiste
+        // und zieht das Wetter fuer die Kopfzeile.
         provideRouter([]),
-        { provide: TemperatureService, useValue: serviceSpy }
+        { provide: TemperatureService, useValue: serviceSpy },
+        { provide: WeatherService, useValue: weatherSpy }
       ]
     }).compileComponents();
 
@@ -117,8 +125,14 @@ describe('TabletTemperaturesComponent', () => {
   });
 
   it('stoppt den Auto-Refresh beim Verlassen der Seite', () => {
-    const clearSpy = spyOn(window, 'clearInterval').and.callThrough();
-    fixture.destroy();
-    expect(clearSpy).toHaveBeenCalled();
+    const timerId = 4242;
+    spyOn(window, 'setInterval').and.returnValue(timerId as unknown as ReturnType<typeof setInterval>);
+    const clearSpy = spyOn(window, 'clearInterval');
+
+    const shortLived = TestBed.createComponent(TabletTemperaturesComponent);
+    shortLived.detectChanges();
+    shortLived.destroy();
+
+    expect(clearSpy).toHaveBeenCalledWith(timerId);
   });
 });

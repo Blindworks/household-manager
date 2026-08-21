@@ -22,7 +22,8 @@ import { EnergyLive } from '../../models/energy-live.model';
 import { AnkerSolixLive } from '../../models/ankersolix.model';
 import { WeatherOverview } from '../../models/weather.model';
 import { CurrentTemperatureReading, TemperatureSensorSeries, TimeRange } from '../../models/temperature.model';
-import { weatherSymbol } from '../../shared/weather-icon.util';
+import { weatherSymbol, weatherMaterialSymbol } from '../../shared/weather-icon.util';
+import { TABLET_VIEWS } from '../../shared/tablet-views';
 import {
   ClimateView,
   SensorDetail,
@@ -113,9 +114,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Dashboard – und jede verlinkte Seite braucht einen eigenen Zurueck-Knopf.
    * Ein weiterer Eintrag kostet genau eine Zeile.
    */
-  readonly tabletViews: readonly TabletView[] = [
-    { route: '/tablet/temperatures', icon: 'thermostat', label: 'Temperaturen' }
-  ];
+  readonly tabletViews = TABLET_VIEWS;
 
   private readonly tileAccordion = inject(DashboardAccordionService);
 
@@ -1095,7 +1094,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Material-Symbol passend zum aktuellen Wetter. */
   get weatherIcon(): string {
-    return this.weatherMaterialSymbol(this.weather?.current?.icon);
+    return weatherMaterialSymbol(this.weather?.current?.icon);
   }
 
   get ringCircumference(): number {
@@ -1633,44 +1632,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
   }
 
-  /** Mappt DWD-Icon-Codes auf Material-Symbols-Namen fuer die Wetteranzeige. */
-  private weatherMaterialSymbol(icon: number | null | undefined): string {
-    switch (icon) {
-      case 1:
-        return 'sunny';
-      case 2:
-      case 3:
-        return 'partly_cloudy_day';
-      case 4:
-        return 'cloud';
-      case 5:
-      case 6:
-        return 'foggy';
-      case 7:
-      case 8:
-      case 9:
-      case 10:
-      case 14:
-      case 15:
-        return 'rainy';
-      case 11:
-      case 12:
-      case 13:
-        return 'weather_snowy';
-      case 16:
-        return 'thunderstorm';
-      default:
-        return 'device_thermostat';
-    }
-  }
-}
-
-/** Ein Eintrag der Tablet-Navigationsleiste unter dem Dashboard-Footer. */
-interface TabletView {
-  readonly route: string;
-  /** Name eines Material-Symbols. */
-  readonly icon: string;
-  readonly label: string;
 }
 
 /** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug/Einspeisung). */

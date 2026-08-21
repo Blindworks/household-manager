@@ -53,3 +53,37 @@ export function warnSeverity(level: number | null | undefined): WarnSeverity {
   if (normalized === 2) return 'moderate';
   return 'info';
 }
+
+/**
+ * Mappt denselben DWD-Icon-Code auf ein Material-Symbol (Kopfzeile von
+ * Dashboard und Tablet-Ansichten). Unbekannte Codes -> Thermometer.
+ */
+export function weatherMaterialSymbol(icon: number | null | undefined): string {
+  switch (icon) {
+    case 1:
+      return 'sunny';
+    case 2:
+    case 3:
+      return 'partly_cloudy_day';
+    case 4:
+      return 'cloud';
+    case 5:
+    case 6:
+      return 'foggy';
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+    case 14:
+    case 15:
+      return 'rainy';
+    case 11:
+    case 12:
+    case 13:
+      return 'weather_snowy';
+    case 16:
+      return 'thunderstorm';
+    default:
+      return 'device_thermostat';
+  }
+}

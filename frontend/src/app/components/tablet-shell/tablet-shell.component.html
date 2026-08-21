@@ -1,0 +1,43 @@
+<div class="lumina">
+  <header class="lumina__clock">
+    <h1 class="lumina__time">{{ clockTime }}</h1>
+    <div class="lumina__clock-meta">
+      <div class="lumina__date">
+        <span class="lumina__label">{{ weekday }}</span>
+        <span class="lumina__date-value">{{ calendarDate }}</span>
+      </div>
+      <div class="lumina__divider"></div>
+      <div class="lumina__weather">
+        <span class="material-symbols-outlined lumina__weather-icon">{{ weatherIcon }}</span>
+        <div class="lumina__weather-text">
+          <span class="lumina__weather-temp">{{ temperature }}°C</span>
+          <span class="lumina__label">DWD · {{ weatherLabel }}</span>
+        </div>
+      </div>
+      <ng-container *ngIf="heading">
+        <div class="lumina__divider"></div>
+        <h2 class="lumina__heading">{{ heading }}</h2>
+      </ng-container>
+    </div>
+  </header>
+
+  <div class="lumina__content">
+    <ng-content></ng-content>
+  </div>
+
+  <nav class="lumina__viewbar" aria-label="Ansichten">
+    <a class="lumina-card lumina__viewbar-btn" routerLink="/">
+      <span class="material-symbols-outlined">home</span>
+      <span class="lumina__viewbar-label">Dashboard</span>
+    </a>
+    <a
+      *ngFor="let view of views"
+      class="lumina-card lumina__viewbar-btn"
+      [routerLink]="view.route"
+      routerLinkActive="lumina__viewbar-btn--active"
+    >
+      <span class="material-symbols-outlined">{{ view.icon }}</span>
+      <span class="lumina__viewbar-label">{{ view.label }}</span>
+    </a>
+  </nav>
+</div>
