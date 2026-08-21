@@ -89,7 +89,6 @@
             </a>
           </div>
           <div class="lumina__room-body" id="lumina-panel-climate">
-            <h3 class="lumina__room-name">Temperaturen</h3>
             <div class="lumina__climate-rows">
               <p *ngIf="climate.rows.length === 0" class="lumina__climate-empty">
                 Keine Innensensoren verfügbar
@@ -146,7 +145,6 @@
             </button>
           </div>
           <div class="lumina__room-body" id="lumina-panel-switches">
-            <h3 class="lumina__room-name">Schalter</h3>
             <p *ngIf="topSwitches.length === 0" class="lumina__switch-empty">
               Keine Schalter
             </p>
@@ -434,6 +432,24 @@
       </div>
     </div>
   </footer>
+
+  <!-- Einstiege in die Tablet-Unteransichten. Nur im Tablet-Modus, denn dort
+       fehlt der Header und damit jede andere Navigation. -->
+  <nav
+    *ngIf="viewMode.isTabletView()"
+    class="lumina__viewbar lumina__fade"
+    style="--delay: 0.8s"
+    aria-label="Weitere Ansichten"
+  >
+    <a
+      *ngFor="let view of tabletViews"
+      class="lumina-card lumina__viewbar-btn"
+      [routerLink]="view.route"
+    >
+      <span class="material-symbols-outlined">{{ view.icon }}</span>
+      <span class="lumina__viewbar-label">{{ view.label }}</span>
+    </a>
+  </nav>
 
   <!-- Energiefluss-Dialog (oeffnet sich beim Klick auf die Energiefluss-Kachel) -->
   <div

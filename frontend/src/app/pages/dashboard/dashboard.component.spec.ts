@@ -1615,6 +1615,24 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('zeigt die Leiste mit den Tablet-Ansichten nur in der Tablet-Ansicht', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.lumina__viewbar')).toBeNull();
+
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+
+    const links: HTMLAnchorElement[] =
+      Array.from(fixture.nativeElement.querySelectorAll('.lumina__viewbar-btn'));
+    expect(links.length).toBe(fixture.componentInstance.tabletViews.length);
+    expect(links[0].getAttribute('href')).toBe('/tablet/temperatures');
+    expect(links[0].textContent).toContain('Temperaturen');
+
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Aktivierungs-Checks)', () => {

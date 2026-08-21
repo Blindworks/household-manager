@@ -312,6 +312,11 @@
     background: var(--secondary);
     color: var(--on-secondary);
   }
+
+  .lumina__room-body {
+    // Ohne Ueberschrift stoesst die erste Sensorzeile sonst direkt ans Icon.
+    padding-top: 12px;
+  }
 }
 
 // ---- Schalter-Kachel -----------------------------------------------------
@@ -328,6 +333,8 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    // Ohne Ueberschrift stoesst die erste Schalterzeile sonst direkt ans Icon.
+    padding-top: 12px;
     min-height: 0;
     overflow: hidden;
   }
@@ -962,6 +969,36 @@
   gap: 16px;
   padding: 16px 24px;
   border-radius: var(--radius-full);
+}
+
+// ---- Leiste mit den Tablet-Unteransichten --------------------------------
+.lumina__viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.lumina__viewbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  // Fingerfreundliches Ziel auf dem Wandtablet.
+  min-height: 64px;
+  padding: 0 24px;
+  border-radius: var(--radius-full);
+  color: var(--on-surface);
+  text-decoration: none;
+
+  .material-symbols-outlined {
+    font-size: 26px;
+    color: var(--secondary);
+  }
+}
+
+.lumina__viewbar-label {
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .lumina__secured-icon {

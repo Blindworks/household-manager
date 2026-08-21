@@ -1,0 +1,40 @@
+<section class="tablet-temps">
+  <header class="tablet-temps__header">
+    <a class="tablet-temps__back" routerLink="/" aria-label="Zurück zum Dashboard">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <h1 class="tablet-temps__title">Temperaturen</h1>
+    <div class="tablet-temps__ranges" role="group" aria-label="Zeitraum">
+      @for (range of ranges; track range.value) {
+        <button
+          type="button"
+          class="tablet-temps__range"
+          [class.tablet-temps__range--active]="range.value === activeRange"
+          (click)="setRange(range.value)">
+          {{ range.label }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (isLoading && charts.length === 0) {
+    <p class="tablet-temps__status">Lade Temperaturdaten…</p>
+  } @else if (errorMessage && charts.length === 0) {
+    <p class="tablet-temps__status tablet-temps__status--error">{{ errorMessage }}</p>
+  } @else if (isEmpty) {
+    <p class="tablet-temps__status">Keine Temperatursensoren gefunden.</p>
+  } @else {
+    <div class="tablet-temps__grid" [style.grid-template-columns]="'repeat(' + columns + ', 1fr)'">
+      @for (chart of charts; track chart.sensorId) {
+        <article class="tablet-temps__card">
+          <h2 class="tablet-temps__card-title">{{ chart.name }}</h2>
+          <div
+            echarts
+            class="tablet-temps__chart"
+            [options]="chart.options"
+            [autoResize]="true"></div>
+        </article>
+      }
+    </div>
+  }
+</section>

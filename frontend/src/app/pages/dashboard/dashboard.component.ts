@@ -107,6 +107,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
 
+  /**
+   * Einstiege in die Tablet-Unteransichten. In der Tablet-Ansicht fehlt der
+   * Header komplett, deshalb ist diese Leiste dort der einzige Weg weg vom
+   * Dashboard – und jede verlinkte Seite braucht einen eigenen Zurueck-Knopf.
+   * Ein weiterer Eintrag kostet genau eine Zeile.
+   */
+  readonly tabletViews: readonly TabletView[] = [
+    { route: '/tablet/temperatures', icon: 'thermostat', label: 'Temperaturen' }
+  ];
+
   private readonly tileAccordion = inject(DashboardAccordionService);
 
   /**
@@ -1653,6 +1663,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'device_thermostat';
     }
   }
+}
+
+/** Ein Eintrag der Tablet-Navigationsleiste unter dem Dashboard-Footer. */
+interface TabletView {
+  readonly route: string;
+  /** Name eines Material-Symbols. */
+  readonly icon: string;
+  readonly label: string;
 }
 
 /** Live-Gauge des Energieflusses (PV, Verbrauch, Bezug/Einspeisung). */

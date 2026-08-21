@@ -68,6 +68,12 @@ export const routes: Routes = [
     title: 'Temperaturen - Household Manager'
   },
   {
+    path: 'tablet/temperatures',
+    loadComponent: () => import('./pages/tablet-temperatures/tablet-temperatures.component').then(m => m.TabletTemperaturesComponent),
+    canActivate: [authGuard],
+    title: 'Temperaturen - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
