@@ -62,11 +62,18 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
   gap: clamp(16px, 3vw, 32px);
   flex: 0 0 auto;
   text-align: left;
   padding: 0 0 4px;
+}
+
+/* Schiebt die Bedienelemente der Seite an den rechten Rand der Kopfzeile. */
+.lumina__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .lumina__time {

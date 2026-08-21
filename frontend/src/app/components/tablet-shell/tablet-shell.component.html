@@ -19,6 +19,10 @@
         <h2 class="lumina__heading">{{ heading }}</h2>
       </ng-container>
     </div>
+    <!-- Bedienelemente der Seite, rechts in der Kopfzeile. -->
+    <div class="lumina__actions">
+      <ng-content select="[shellActions]"></ng-content>
+    </div>
   </header>
 
   <div class="lumina__content">

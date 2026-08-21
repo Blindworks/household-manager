@@ -10,7 +10,12 @@ import { TABLET_VIEWS } from '../../shared/tablet-views';
 @Component({
   standalone: true,
   imports: [TabletShellComponent],
-  template: '<app-tablet-shell heading="Temperaturen"><p class="inhalt">Seiteninhalt</p></app-tablet-shell>'
+  template: `
+    <app-tablet-shell heading="Temperaturen">
+      <button shellActions class="aktion">7 Tage</button>
+      <p class="inhalt">Seiteninhalt</p>
+    </app-tablet-shell>
+  `
 })
 class HostComponent {}
 
@@ -40,6 +45,19 @@ describe('TabletShellComponent', () => {
     expect(host.querySelector('.lumina__weather-temp')?.textContent).toContain('19°C');
     expect(host.querySelector('.lumina__heading')?.textContent).toContain('Temperaturen');
     expect(host.querySelector('.inhalt')?.textContent).toContain('Seiteninhalt');
+
+    fixture.destroy();
+  });
+
+  it('haengt projizierte Bedienelemente in die Kopfzeile', () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const action = host.querySelector('.aktion') as HTMLElement;
+    // Die Umschalter gehoeren in die Kopfzeile, nicht in den Inhalt.
+    expect(action.closest('.lumina__clock')).not.toBeNull();
+    expect(action.closest('.lumina__content')).toBeNull();
 
     fixture.destroy();
   });
