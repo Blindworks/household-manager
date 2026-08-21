@@ -4,6 +4,12 @@
 - [UI-Fallen](template-pitfalls.md) — `@for track` braucht eindeutige Keys (Laufzeitfehler!); `<label>` um mehrere Buttons leitet Klicks fehl; helle Seiten vertragen keine `rgba(255,255,255)`-Styles; **ein Fehlerfeld pro Ursache** — ein paralleler Abruf leert es sonst; `ngModel` in einem `<form>` ist im Test erst nach `await fixture.whenStable()` ans Modell gebunden.
 - Dashboard-Fussleisten-Karte (`dashboard.component.html`, `<footer class="lumina__footer">`): neue Status-Hinweiskarten koennen die vorhandenen `.lumina__secured*`-Klassen der Nuki-Karte direkt wiederverwenden (nur Icon-Farbe per Modifier ueberschreiben) — `--error`/`--primary`/`--secondary`/`--tertiary` sind CSS-Vars auf `.lumina` (dunkles Glass-Theme, `rgba(255,255,255,…)` hier bewusst richtig, anders als bei hellen Seiten). `dashboard.component.scss` ueberschreitet das 16 kB-Budget bereits vorher — nicht actionable.
 
+## Ausschalt-Bestaetigung (Task, 2026-08-19)
+- [Switch-Confirmation-Muster](switch-confirmation-pattern.md) — drei Oberflaechen (Dashboard/Geraeteseite/Helfer-Seite) folgen einem festen Skelett; Re-Resolve-Guard-Test-Falle bei frisch gebauten Fixture-Objekten; Mutation-Testing-Rezept.
+
+## Toni-allein-Aktivierungs-Checks (Task 2, 2026-08-20)
+- [Mode-Activation-Check-Muster](mode-activation-check-pattern.md) — Einschalt-Warnung (nicht Ausschalt-Bestaetigung!) fuer "Toni allein"/"Abwesend"; zwei parallele Checks, ein Fehlerfeld je Check, blockiert nie. Branch feature/toni-allein-checks, Commit 0cf6281.
+
 ## Git Safety
 - [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
 - [Kasa per IP](kasa-manual-add.md) has the recipe for committing only your own files when a parallel agent stages files elsewhere in the same index: `git commit -m "<msg>" -- <your paths...>` (pathspec after `-m`, never before).
