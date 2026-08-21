@@ -564,15 +564,21 @@
   color: var(--on-surface);
 }
 
-// ---- Akkordeon-Darstellung der Kacheln (nur Tablet-Ansicht) ---------------
-// Nebeneinander sind die drei Kacheln auf dem Wandtablet zu gedraengt: der
-// Inhalt wird beschnitten und Namen brechen um. Untereinander mit jeweils einem
-// aufklappbaren Kopf steht der geoeffneten Kachel die ganze Breite zur
-// Verfuegung. Dieser Block muss NACH den Kachel-Bloecken stehen: er
-// ueberschreibt u. a. das Raster und die aspect-ratio bei gleicher Spezifitaet.
+// ---- Kompakte Kachel-Darstellung (nur Tablet-Ansicht) --------------------
+// Zu dritt nebeneinander sind die Kacheln auf dem Wandtablet zu gedraengt: der
+// Inhalt wird beschnitten und Namen brechen um. Temperaturen und Schalter
+// stehen deshalb zu zweit nebeneinander und dauerhaft offen; alles Weitere
+// liegt darunter ueber die volle Breite und ist aufklappbar. Dieser Block muss
+// NACH den Kachel-Bloecken stehen: er ueberschreibt u. a. das Raster und die
+// aspect-ratio bei gleicher Spezifitaet.
 .lumina__rooms--accordion {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+// Aufklappbare Kacheln stehen alleine in ihrer Zeile.
+.lumina__room--collapsible {
+  grid-column: 1 / -1;
 }
 
 .lumina__room--accordion {
@@ -607,6 +613,25 @@
 
   .lumina__room-body {
     padding-top: 6px;
+  }
+}
+
+// Die dauerhaft offenen Kacheln haben keinen Aufklapp-Kopf, der ihren Titel
+// traegt – dort steht der Name wieder im Inhalt. Muss NACH .lumina__room--
+// accordion stehen, das ihn ausblendet (gleiche Spezifitaet).
+.lumina__room--static {
+  .lumina__room-name {
+    display: block;
+    margin: 0 0 2px;
+    font-size: 19px;
+  }
+
+  // Halbe Breite: ein langer Sensorname darf die Zeile nicht umbrechen.
+  .lumina__climate-name {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 

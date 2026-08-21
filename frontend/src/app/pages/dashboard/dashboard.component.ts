@@ -110,17 +110,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tileAccordion = inject(DashboardAccordionService);
 
   /**
-   * True, wenn die Kacheln Temperaturen/Schalter/Verbraucher als Akkordeon
-   * untereinander stehen. Nur in der Tablet-Ansicht – in der Website-Ansicht
-   * bleibt das dreispaltige Raster.
+   * True, wenn die Kacheln Temperaturen/Schalter/Verbraucher in der kompakten
+   * Tablet-Darstellung stehen. Nur in der Tablet-Ansicht – in der
+   * Website-Ansicht bleibt das dreispaltige Raster.
    */
   get accordionActive(): boolean {
     return this.viewMode.isTabletView();
   }
 
-  /** True, wenn der Inhalt der Kachel sichtbar ist (ausserhalb des Akkordeons immer). */
+  /**
+   * Kacheln, die in der Tablet-Ansicht dauerhaft offen nebeneinander stehen.
+   * Temperaturen und Schalter sind die beiden Kacheln, die auf dem Wandtablet
+   * gleichzeitig sichtbar sein sollen – nur was darueber hinausgeht, wird
+   * aufklappbar.
+   */
+  private static readonly ALWAYS_OPEN_TILES: readonly DashboardTileKey[] = ['climate', 'switches'];
+
+  /** True, wenn die Kachel in der Tablet-Ansicht einen Aufklapp-Kopf hat. */
+  isTileCollapsible(key: DashboardTileKey): boolean {
+    return this.accordionActive && !DashboardComponent.ALWAYS_OPEN_TILES.includes(key);
+  }
+
+  /** True, wenn die Kachel in der Tablet-Ansicht ohne Aufklapp-Kopf dauerhaft offen steht. */
+  isTileStatic(key: DashboardTileKey): boolean {
+    return this.accordionActive && !this.isTileCollapsible(key);
+  }
+
+  /** True, wenn der Inhalt der Kachel sichtbar ist (nur aufklappbare Kacheln koennen zu sein). */
   isTileOpen(key: DashboardTileKey): boolean {
-    return !this.accordionActive || this.tileAccordion.isOpen(key);
+    return !this.isTileCollapsible(key) || this.tileAccordion.isOpen(key);
   }
 
   toggleTile(key: DashboardTileKey): void {
