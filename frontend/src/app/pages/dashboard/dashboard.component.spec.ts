@@ -1482,7 +1482,7 @@ describe('DashboardComponent (Klima-Kachel: Sensor-Detaildialog)', () => {
   }));
 });
 
-describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
+describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
   const wohnzimmer: CurrentTemperatureReading = {
     sensorId: 'zigbee:1',
     name: 'Wohnzimmer',
@@ -1547,7 +1547,7 @@ describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
     discardPeriodicTasks();
   }));
 
-  it('klappt in der Tablet-Ansicht nur die gewaehlte Kachel auf', fakeAsync(() => {
+  it('zeigt in der Tablet-Ansicht Temperaturen und Schalter dauerhaft offen nebeneinander', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.componentInstance.viewMode.toggle();
     fixture.detectChanges();
@@ -1555,18 +1555,44 @@ describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
 
     expect(component.accordionActive).toBeTrue();
     expect(component.isTileOpen('climate')).toBeTrue();
-    expect(component.isTileOpen('switches')).toBeFalse();
+    expect(component.isTileOpen('switches')).toBeTrue();
+    expect(component.isTileCollapsible('climate')).toBeFalse();
+    expect(component.isTileCollapsible('switches')).toBeFalse();
 
+    // Nur die Verbraucher-Kachel hat einen Aufklapp-Kopf ...
     const toggles: HTMLButtonElement[] =
       Array.from(fixture.nativeElement.querySelectorAll('.lumina__room-toggle'));
-    expect(toggles.length).toBe(3);
+    expect(toggles.length).toBe(1);
+    expect(toggles[0].textContent).toContain('Verbraucher');
 
-    toggles[1].click();
+    // ... und ist als einzige zugeklappt und ueber die volle Breite gesetzt.
+    const collapsed = fixture.nativeElement.querySelectorAll('.lumina__room--collapsed');
+    expect(collapsed.length).toBe(1);
+    expect(collapsed[0].classList).toContain('lumina__consumer-tile');
+    expect(collapsed[0].classList).toContain('lumina__room--collapsible');
+
+    // Die beiden offenen Kacheln tragen ihren Titel wieder im Inhalt.
+    const staticTiles = fixture.nativeElement.querySelectorAll('.lumina__room--static');
+    expect(staticTiles.length).toBe(2);
+
+    discardPeriodicTasks();
+  }));
+
+  it('klappt die Verbraucher-Kachel auf, ohne die beiden anderen zu schliessen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    const toggle: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.lumina__room-toggle');
+    toggle.click();
     fixture.detectChanges();
 
+    expect(component.isTileOpen('consumers')).toBeTrue();
+    expect(component.isTileOpen('climate')).toBeTrue();
     expect(component.isTileOpen('switches')).toBeTrue();
-    expect(component.isTileOpen('climate')).toBeFalse();
-    expect(fixture.nativeElement.querySelectorAll('.lumina__room--collapsed').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
 
     discardPeriodicTasks();
   }));
@@ -1575,6 +1601,7 @@ describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.componentInstance.viewMode.toggle();
     fixture.detectChanges();
+    // Verbraucher aufklappen, danach zurueck in die Website-Ansicht.
     fixture.componentInstance.toggleTile('consumers');
     fixture.detectChanges();
 
@@ -1582,7 +1609,9 @@ describe('DashboardComponent (Kachel-Akkordeon in der Tablet-Ansicht)', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.isTileOpen('climate')).toBeTrue();
+    expect(fixture.componentInstance.isTileOpen('consumers')).toBeTrue();
     expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__room--static')).toBeNull();
 
     discardPeriodicTasks();
   }));

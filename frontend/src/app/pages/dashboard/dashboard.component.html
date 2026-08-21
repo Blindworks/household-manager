@@ -59,6 +59,8 @@
         <div
           class="lumina-card lumina__room lumina__climate-tile lumina__fade"
           [class.lumina__room--accordion]="accordionActive"
+          [class.lumina__room--static]="isTileStatic('climate')"
+          [class.lumina__room--collapsible]="isTileCollapsible('climate')"
           [class.lumina__room--collapsed]="!isTileOpen('climate')"
           style="--delay: 0.1s"
         >
@@ -67,7 +69,7 @@
               <span class="material-symbols-outlined">device_thermostat</span>
             </div>
             <button
-              *ngIf="accordionActive"
+              *ngIf="isTileCollapsible('climate')"
               type="button"
               class="lumina__room-toggle"
               [attr.aria-expanded]="isTileOpen('climate')"
@@ -113,6 +115,8 @@
         <div
           class="lumina-card lumina__room lumina__switch-tile lumina__fade"
           [class.lumina__room--accordion]="accordionActive"
+          [class.lumina__room--static]="isTileStatic('switches')"
+          [class.lumina__room--collapsible]="isTileCollapsible('switches')"
           [class.lumina__room--collapsed]="!isTileOpen('switches')"
           style="--delay: 0.2s"
         >
@@ -121,7 +125,7 @@
               <span class="material-symbols-outlined">toggle_on</span>
             </div>
             <button
-              *ngIf="accordionActive"
+              *ngIf="isTileCollapsible('switches')"
               type="button"
               class="lumina__room-toggle"
               [attr.aria-expanded]="isTileOpen('switches')"
@@ -160,6 +164,8 @@
         <div
           class="lumina-card lumina__room lumina__consumer-tile lumina__fade"
           [class.lumina__room--accordion]="accordionActive"
+          [class.lumina__room--static]="isTileStatic('consumers')"
+          [class.lumina__room--collapsible]="isTileCollapsible('consumers')"
           [class.lumina__room--collapsed]="!isTileOpen('consumers')"
           style="--delay: 0.3s"
         >
@@ -168,7 +174,7 @@
               <span class="material-symbols-outlined">bolt</span>
             </div>
             <button
-              *ngIf="accordionActive"
+              *ngIf="isTileCollapsible('consumers')"
               type="button"
               class="lumina__room-toggle"
               [attr.aria-expanded]="isTileOpen('consumers')"
