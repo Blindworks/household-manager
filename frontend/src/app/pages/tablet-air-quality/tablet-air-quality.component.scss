@@ -92,21 +92,45 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 0.5rem;
-    font-size: 1.15rem;
     font-weight: 600;
     flex: 0 0 auto;
     // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
-    // schlaegt die vererbte helle Farbe - auf schwarzem Grund waere der
-    // Sensorname sonst kaum lesbar.
+    // schlaegt die vererbte helle Farbe - auf schwarzem Grund waere die
+    // Beschriftung sonst kaum lesbar.
     color: #f4f3f5;
     letter-spacing: -0.01em;
+    min-width: 0;
+  }
+
+  /* Messgroesse gross, Sensorname klein daneben: auf der Wand sucht man erst,
+     WAS gemessen wurde, und dann WO. */
+  &__labels {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  &__metric {
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+
+  &__sensor {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(228, 226, 228, 0.65);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Der Jetzt-Wert ist auf einer Wandanzeige die eigentliche Information. */
   &__current {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     color: #f4f3f5;
 
     /* Nur der IAQ-Score hat eine allgemein gueltige Bewertung. */
@@ -121,15 +145,6 @@
     &--bad {
       color: #ffb4ab;
     }
-  }
-
-  &__card-empty {
-    flex: 1 1 auto;
-    display: grid;
-    place-items: center;
-    margin: 0;
-    color: rgba(148, 163, 184, 0.8);
-    font-size: 0.95rem;
   }
 
   &__chart {

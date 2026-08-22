@@ -11,18 +11,6 @@
         </button>
       }
     </div>
-    <div class="tablet-air__ranges" role="group" aria-label="Messgröße">
-      @for (group of groups; track group.key) {
-        <button
-          type="button"
-          class="tablet-air__range"
-          [class.tablet-air__range--active]="group.key === activeGroup.key"
-          [attr.aria-pressed]="group.key === activeGroup.key"
-          (click)="setGroup(group.key)">
-          {{ group.label }}
-        </button>
-      }
-    </div>
   </div>
 
   <section class="tablet-air">
@@ -34,29 +22,26 @@
       <p class="tablet-air__status">Keine Luftqualitätssensoren gefunden.</p>
     } @else {
       <div class="tablet-air__grid" [style.grid-template-columns]="'repeat(' + columns + ', 1fr)'">
-        @for (chart of charts; track chart.sensorId) {
+        @for (chart of charts; track chart.tileId) {
           <article class="tablet-air__card">
             <h3 class="tablet-air__card-title">
-              <span>{{ chart.name }}</span>
-              @if (chart.currentLabel) {
-                <span
-                  class="tablet-air__current"
-                  [class.tablet-air__current--good]="chart.currentLevel === 'good'"
-                  [class.tablet-air__current--moderate]="chart.currentLevel === 'moderate'"
-                  [class.tablet-air__current--bad]="chart.currentLevel === 'bad'">
-                  {{ chart.currentLabel }}
-                </span>
-              }
+              <span class="tablet-air__labels">
+                <span class="tablet-air__metric">{{ chart.metricLabel }}</span>
+                <span class="tablet-air__sensor">{{ chart.name }}</span>
+              </span>
+              <span
+                class="tablet-air__current"
+                [class.tablet-air__current--good]="chart.currentLevel === 'good'"
+                [class.tablet-air__current--moderate]="chart.currentLevel === 'moderate'"
+                [class.tablet-air__current--bad]="chart.currentLevel === 'bad'">
+                {{ chart.currentLabel }}
+              </span>
             </h3>
-            @if (chart.empty) {
-              <p class="tablet-air__card-empty">Keine Werte für diese Auswahl</p>
-            } @else {
-              <div
-                echarts
-                class="tablet-air__chart"
-                [options]="chart.options"
-                [autoResize]="true"></div>
-            }
+            <div
+              echarts
+              class="tablet-air__chart"
+              [options]="chart.options"
+              [autoResize]="true"></div>
           </article>
         }
       </div>

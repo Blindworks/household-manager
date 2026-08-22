@@ -3,37 +3,38 @@ import { CommonModule } from '@angular/common';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { AirQualitySeriesService } from '../../services/air-quality-series.service';
 import {
-  AIR_QUALITY_GROUPS,
-  AirQualityMetricGroup,
-  AirQualityMetricLine,
+  AIR_QUALITY_METRICS,
+  AirQualityMetric,
   AirQualitySensorSeries
 } from '../../models/air-quality-series.model';
-import { TimeRange } from '../../models/temperature.model';
+import { TimeValue, TimeRange } from '../../models/temperature.model';
 import { IaqLevel, iaqLevel } from '../../models/alexa-air-quality.model';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 interface RangeOption {
   value: TimeRange;
   label: string;
 }
 
-/** Eine Sensorkachel des Rasters. */
+/** Eine Kachel des Rasters: genau ein Sensor, genau eine Messgroesse. */
 interface ChartTile {
-  sensorId: string;
+  /** Eindeutig ueber Sensor UND Messgroesse - ein Sensor stellt mehrere Kacheln. */
+  tileId: string;
+  /** Name des Sensors, z. B. "Draußen". */
   name: string;
-  /** Rohserie, um die Optionen beim Gruppenwechsel ohne neuen Abruf zu bauen. */
-  series: AirQualitySensorSeries;
+  /** Name der Messgroesse, z. B. "PM2.5". */
+  metricLabel: string;
+  metric: AirQualityMetric;
+  points: TimeValue[];
   options: Record<string, unknown>;
-  /** True, wenn der Sensor zur gewaehlten Gruppe keine Werte hat. */
-  empty: boolean;
-  /** Juengster Wert der Gruppe inkl. Einheit, z. B. "8 µg/m³"; null, wenn keiner da ist. */
-  currentLabel: string | null;
+  /** Juengster Wert inkl. Einheit, z. B. "8 µg/m³". */
+  currentLabel: string;
   /** Nur beim IAQ gesetzt - nur dort gibt es eine allgemein gueltige Bewertung. */
   currentLevel: IaqLevel | null;
 }
@@ -41,9 +42,10 @@ interface ChartTile {
 const AXIS_COLOR = '#94a3b8';
 
 /**
- * Luftqualitaetsuebersicht fuer das Wandtablet: alle Sensoren gleichzeitig, ohne
- * Scrollen. Welche Messgroesse zu sehen ist, waehlt die Kopfzeile - immer genau
- * eine Gruppe, damit jede Kachel genau eine Y-Achse hat.
+ * Luftqualitaetsuebersicht fuer das Wandtablet: jede Messgroesse jedes Sensors
+ * bekommt ihren eigenen Graphen, alle gleichzeitig und ohne Scrollen. Eine
+ * gemeinsame Achse waere ohnehin nicht moeglich - die Groessen haben vier
+ * verschiedene Einheiten.
  */
 @Component({
   selector: 'app-tablet-air-quality',
@@ -66,11 +68,7 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
     { value: 'MONTH', label: '30 Tage' }
   ];
 
-  readonly groups = AIR_QUALITY_GROUPS;
-
   activeRange: TimeRange = 'WEEK';
-  /** Feinstaub ist die einzige Gruppe, die beide Quellen liefern. */
-  activeGroup: AirQualityMetricGroup = AIR_QUALITY_GROUPS[0];
   charts: ChartTile[] = [];
   isLoading = true;
   isEmpty = false;
@@ -91,18 +89,15 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Spaltenzahl des Rasters: bei vielen Sensoren lieber schmaler als scrollen. */
+  /**
+   * Spaltenzahl des Rasters. Mit einer Kachel je Sensor und Messgroesse kommen
+   * schnell zweistellige Zahlen zusammen - lieber schmaler als scrollen.
+   */
   get columns(): number {
-    return this.charts.length >= 6 ? 3 : 2;
-  }
-
-  setGroup(key: string): void {
-    const group = this.groups.find(candidate => candidate.key === key);
-    if (!group || group.key === this.activeGroup.key) {
-      return;
+    if (this.charts.length <= 2) {
+      return 2;
     }
-    this.activeGroup = group;
-    this.rebuildCharts();
+    return this.charts.length <= 6 ? 3 : 4;
   }
 
   setRange(range: TimeRange): void {
@@ -125,7 +120,7 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
     }
     this.seriesService.getSeries(range).subscribe({
       next: series => {
-        this.charts = series.map(s => this.toTile(s));
+        this.charts = series.flatMap(sensor => this.tilesFor(sensor));
         this.isEmpty = this.charts.length === 0;
         this.errorMessage = null;
         this.isLoading = false;
@@ -143,55 +138,43 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
     });
   }
 
-  private rebuildCharts(): void {
-    this.charts = this.charts.map(tile => this.toTile(tile.series));
-  }
-
-  private toTile(series: AirQualitySensorSeries): ChartTile {
-    const current = this.currentValue(series);
-    return {
-      sensorId: series.sensorId,
-      name: series.name,
-      series,
-      options: this.chartOptionsFor(series),
-      empty: this.activeLines(series).length === 0,
-      currentLabel: current === null ? null : this.formatValue(current),
-      currentLevel:
-        this.activeGroup.key === 'iaq' && current !== null ? iaqLevel(current) : null
-    };
-  }
-
-  /** Die Linien der aktiven Gruppe, zu denen dieser Sensor ueberhaupt Werte hat. */
-  private activeLines(series: AirQualitySensorSeries): AirQualityMetricLine[] {
-    return this.activeGroup.lines.filter(line => (series.metrics[line.key] ?? []).length > 0);
-  }
-
   /**
-   * Juengster Wert der Kachel: der der ersten vorhandenen Linie der Gruppe. Bei
-   * Feinstaub ist das PM2.5 - die Groesse, auf die es gesundheitlich ankommt.
+   * Eine Kachel je Messgroesse, die dieser Sensor tatsaechlich liefert. Eine
+   * Kachel ohne Werte gaebe es damit nicht - ein leeres Diagramm an der Wand
+   * sieht aus wie ein Fehler und kostet nur Platz.
    */
-  private currentValue(series: AirQualitySensorSeries): number | null {
-    const lines = this.activeLines(series);
-    if (lines.length === 0) {
-      return null;
-    }
-    const points = series.metrics[lines[0].key] ?? [];
-    return points[points.length - 1].value;
+  private tilesFor(sensor: AirQualitySensorSeries): ChartTile[] {
+    return AIR_QUALITY_METRICS
+      .filter(metric => (sensor.metrics[metric.key] ?? []).length > 0)
+      .map(metric => this.toTile(sensor, metric));
+  }
+
+  private toTile(sensor: AirQualitySensorSeries, metric: AirQualityMetric): ChartTile {
+    const points = sensor.metrics[metric.key] ?? [];
+    const current = points[points.length - 1].value;
+    const tile: ChartTile = {
+      tileId: `${sensor.sensorId}/${metric.key}`,
+      name: sensor.name,
+      metricLabel: metric.label,
+      metric,
+      points,
+      options: {},
+      currentLabel: this.formatValue(current, metric),
+      currentLevel: metric.key === 'iaq' ? iaqLevel(current) : null
+    };
+    tile.options = this.chartOptionsFor(tile);
+    return tile;
   }
 
   /** Deutsche Zahlformatierung, hoechstens eine Nachkommastelle, plus Einheit. */
-  private formatValue(value: number): string {
+  private formatValue(value: number, metric: AirQualityMetric): string {
     const formatted = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 }).format(value);
-    return this.activeGroup.unit ? `${formatted} ${this.activeGroup.unit}` : formatted;
+    return metric.unit ? `${formatted} ${metric.unit}` : formatted;
   }
 
-  /**
-   * Baut die Chart-Optionen einer Kachel: eine Y-Achse fuer die ganze Gruppe, je
-   * vorhandener Messgroesse eine Linie darauf.
-   */
-  chartOptionsFor(series: AirQualitySensorSeries): Record<string, unknown> {
+  /** Baut die Chart-Optionen einer Kachel: eine Linie auf einer Achse. */
+  chartOptionsFor(tile: ChartTile): Record<string, unknown> {
     const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
-    const lines = this.activeLines(series);
 
     return {
       grid: { left: 56, right: 16, top: 12, bottom: 28, containLabel: false },
@@ -202,20 +185,20 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
         scale: true,
         axisLabel: {
           ...axisLabel,
-          formatter: this.activeGroup.unit ? `{value} ${this.activeGroup.unit}` : '{value}'
+          formatter: tile.metric.unit ? `{value} ${tile.metric.unit}` : '{value}'
         },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       }],
-      series: lines.map(line => ({
-        name: line.label,
+      series: [{
+        name: tile.metric.label,
         type: 'line',
         smooth: true,
         showSymbol: false,
         yAxisIndex: 0,
-        data: (series.metrics[line.key] ?? []).map(point => [point.time, point.value]),
-        lineStyle: { width: 3, color: line.color },
-        itemStyle: { color: line.color }
-      }))
+        data: tile.points.map(point => [point.time, point.value]),
+        lineStyle: { width: 3, color: tile.metric.color },
+        itemStyle: { color: tile.metric.color }
+      }]
     };
   }
 }

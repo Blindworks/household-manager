@@ -30,11 +30,13 @@ describe('TabletAirQualityComponent', () => {
     }
   };
 
-  function sensors(count: number): AirQualitySensorSeries[] {
+  /** Sensoren mit je einer Messgroesse - eine Kachel pro Sensor, zum Zaehlen der Spalten. */
+  function singleMetricSensors(count: number): AirQualitySensorSeries[] {
     return Array.from({ length: count }, (_, i) => ({
-      ...indoor,
       sensorId: `alexa:${i}`,
-      name: `Monitor ${i}`
+      name: `Monitor ${i}`,
+      source: 'ALEXA' as const,
+      metrics: { iaq: [{ time: '2026-08-22T10:00:00', value: 72 }] }
     }));
   }
 
@@ -64,59 +66,54 @@ describe('TabletAirQualityComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('lädt beim Start den Standardzeitraum WEEK und baut eine Kachel je Sensor', () => {
+  it('lädt beim Start den Standardzeitraum WEEK', () => {
     expect(serviceSpy.getSeries).toHaveBeenCalledWith('WEEK');
-    expect(component.charts.length).toBe(2);
   });
 
-  it('zeigt ab Werk die Feinstaubgruppe mit genau einer Achse', () => {
-    expect(component.activeGroup.key).toBe('dust');
+  it('baut je Sensor und Messgroesse eine eigene Kachel', () => {
+    // Draussen: PM2.5 + PM10. Drinnen: IAQ, PM2.5, VOC, CO.
+    expect(component.charts.length).toBe(6);
+    expect(component.charts.map(chart => `${chart.name}/${chart.metricLabel}`)).toEqual([
+      'Draußen/PM2.5',
+      'Draußen/PM10',
+      'Wohnzimmer/Luftqualität (IAQ)',
+      'Wohnzimmer/PM2.5',
+      'Wohnzimmer/VOC',
+      'Wohnzimmer/CO'
+    ]);
+  });
 
-    const options = component.chartOptionsFor(outdoor) as {
-      series: { name: string }[];
-      yAxis: unknown[];
+  it('gibt jeder Kachel genau eine Linie und eine Achse in ihrer Einheit', () => {
+    const dust = component.charts[0];
+    const options = component.chartOptionsFor(dust) as {
+      series: { name: string; data: unknown[] }[];
+      yAxis: { axisLabel: { formatter: string } }[];
     };
-    expect(options.series.map(serie => serie.name)).toEqual(['PM2.5', 'PM10']);
+
+    expect(options.series.length).toBe(1);
+    expect(options.series[0].name).toBe('PM2.5');
+    expect(options.series[0].data).toEqual([['2026-08-22T10:00:00', 8]]);
     expect(options.yAxis.length).toBe(1);
+    expect(options.yAxis[0].axisLabel.formatter).toBe('{value} µg/m³');
   });
 
-  it('zeichnet in einer Gruppe nur die Linien, die der Sensor liefert', () => {
-    // Der Amazon-Monitor kennt kein PM10.
-    const options = component.chartOptionsFor(indoor) as { series: { name: string }[] };
-    expect(options.series.map(serie => serie.name)).toEqual(['PM2.5']);
+  it('laesst die Achsenbeschriftung beim einheitenlosen IAQ ohne Einheit', () => {
+    const iaq = component.charts[2];
+    const options = component.chartOptionsFor(iaq) as {
+      yAxis: { axisLabel: { formatter: string } }[];
+    };
+    expect(options.yAxis[0].axisLabel.formatter).toBe('{value}');
   });
 
-  it('baut die Kacheln beim Gruppenwechsel ohne neuen Abruf neu', () => {
-    serviceSpy.getSeries.calls.reset();
-    const before = component.charts[0].options;
-
-    component.setGroup('iaq');
-
-    expect(serviceSpy.getSeries).not.toHaveBeenCalled();
-    expect(component.charts[0].options).not.toBe(before);
-  });
-
-  it('meldet eine Kachel als leer, wenn der Sensor zur Gruppe nichts liefert', () => {
-    component.setGroup('iaq');
-
-    // Der Airrohr-Sensor misst keinen IAQ - statt eines leeren Diagramms
-    // zeigt die Kachel einen Hinweis.
-    expect(component.charts[0].empty).toBeTrue();
-    expect(component.charts[1].empty).toBeFalse();
-  });
-
-  it('stellt den juengsten Wert der Gruppe neben den Kachelnamen', () => {
+  it('stellt den juengsten Wert mit Einheit neben den Kachelnamen', () => {
     expect(component.charts[0].currentLabel).toBe('8 µg/m³');
-
-    component.setGroup('co');
-    expect(component.charts[1].currentLabel).toBe('0,4 ppm');
+    expect(component.charts[5].currentLabel).toBe('0,4 ppm');
   });
 
   it('faerbt nur den IAQ-Wert nach seiner Stufe', () => {
-    expect(component.charts[1].currentLevel).toBeNull();
-
-    component.setGroup('iaq');
-    expect(component.charts[1].currentLevel).toBe('good');
+    expect(component.charts[2].currentLevel).toBe('good');
+    expect(component.charts[0].currentLevel).toBeNull();
+    expect(component.charts[5].currentLevel).toBeNull();
   });
 
   it('lädt bei einem Zeitraumwechsel genau einmal nach', () => {
@@ -135,7 +132,7 @@ describe('TabletAirQualityComponent', () => {
   it('behält bei einem fehlgeschlagenen Refresh die bisherigen Daten', () => {
     serviceSpy.getSeries.and.returnValue(throwError(() => new Error('offline')));
     component.reload();
-    expect(component.charts.length).toBe(2);
+    expect(component.charts.length).toBe(6);
     expect(component.errorMessage).toBeNull();
   });
 
@@ -147,14 +144,23 @@ describe('TabletAirQualityComponent', () => {
     freshFixture.destroy();
   });
 
-  it('nutzt zwei Spalten bis fünf Sensoren und drei ab sechs', () => {
-    serviceSpy.getSeries.and.returnValue(of(sensors(5)));
+  it('meldet leer, wenn keine Sensoren Werte liefern', () => {
+    serviceSpy.getSeries.and.returnValue(of([]));
+    component.setRange('DAY');
+    expect(component.isEmpty).toBeTrue();
+  });
+
+  it('waehlt die Spaltenzahl nach der Kachelzahl', () => {
+    // 6 Kacheln aus dem Standardaufbau (2 + 4).
+    expect(component.columns).toBe(3);
+
+    serviceSpy.getSeries.and.returnValue(of(singleMetricSensors(2)));
     component.setRange('DAY');
     expect(component.columns).toBe(2);
 
-    serviceSpy.getSeries.and.returnValue(of(sensors(6)));
+    serviceSpy.getSeries.and.returnValue(of(singleMetricSensors(9)));
     component.setRange('MONTH');
-    expect(component.columns).toBe(3);
+    expect(component.columns).toBe(4);
   });
 
   it('gibt den Graphen die Bildschirmhoehe statt der Inhaltshoehe', () => {
@@ -186,10 +192,10 @@ describe('TabletAirQualityComponent', () => {
     fixture.detectChanges();
     const large = chartHeights();
 
-    expect(small.length).toBe(2);
+    expect(small.length).toBe(6);
     small.forEach(height => expect(height).toBeGreaterThan(80));
-    // 300 px mehr Bildschirm landen in der einen Rasterzeile.
-    large.forEach((height, i) => expect(height).toBeGreaterThan(small[i] + 250));
+    // 300 px mehr Bildschirm verteilen sich auf die zwei Rasterzeilen.
+    large.forEach((height, i) => expect(height).toBeGreaterThan(small[i] + 100));
 
     // Den Host zurueck in den body haengen, damit fixture.destroy() unveraendert laeuft.
     document.body.appendChild(host);
