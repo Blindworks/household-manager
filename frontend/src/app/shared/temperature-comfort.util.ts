@@ -147,11 +147,12 @@ export function buildSensorDetail(
 }
 
 /**
- * Kuerzt den Sensornamen fuers Kopfzeilen-Label: das fuehrende "Temperatur"
- * bzw. "Temp." traegt dort keine Information, der Rest bleibt unangetastet.
- * Bleibt nichts uebrig, gewinnt der volle Name.
+ * Kuerzt den Sensornamen fuers Label: das fuehrende "Temperatur" bzw. "Temp."
+ * traegt dort keine Information, der Rest bleibt unangetastet. Bleibt nichts
+ * uebrig, gewinnt der volle Name. Einzige Definition des Kurznamens - der
+ * Dashboard-Kopf und die Tablet-Temperaturansicht fragen dieselbe Funktion.
  */
-function shortenSensorName(name: string): string {
+export function shortenSensorName(name: string): string {
   const shortened = name.replace(/^\s*(temperatur|temp\.?)\s+/i, '').trim();
   return shortened.length > 0 ? shortened : name;
 }

@@ -14,7 +14,7 @@ describe('TabletTemperaturesComponent', () => {
   let weatherSpy: jasmine.SpyObj<WeatherService>;
 
   const withHumidity: TemperatureSensorSeries = {
-    sensorId: 'zigbee:1', name: 'Wohnzimmer', source: 'ZIGBEE',
+    sensorId: 'zigbee:1', name: 'Temperatur Aqara Wohnzimmer', source: 'ZIGBEE',
     temperature: [{ time: '2026-08-21T10:00:00', value: 21.5 }],
     humidity: [{ time: '2026-08-21T10:00:00', value: 48 }]
   };
@@ -192,6 +192,14 @@ describe('TabletTemperaturesComponent', () => {
     large.forEach((height, i) => expect(height).toBeGreaterThan(small[i] + 250));
 
     parent.removeAttribute('style');
+  });
+
+  it('beschriftet die Kacheln mit dem Kurznamen des Sensors', () => {
+    // "Temperatur Aqara Wohnzimmer" -> "Aqara Wohnzimmer": das fuehrende Wort
+    // traegt auf einer Wand voller Temperaturgraphen keine Information.
+    expect(component.charts[0].name).toBe('Aqara Wohnzimmer');
+    expect(component.charts[1].name).toBe('Außen');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Aqara Wohnzimmer');
   });
 
   it('zeichnet die Sensornamen hell genug fuer den schwarzen Grund', () => {

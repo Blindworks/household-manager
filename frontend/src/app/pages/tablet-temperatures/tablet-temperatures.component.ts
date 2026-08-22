@@ -8,6 +8,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { TemperatureService } from '../../services/temperature.service';
 import { TemperatureSensorSeries, TimeRange } from '../../models/temperature.model';
+import { shortenSensorName } from '../../shared/temperature-comfort.util';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -163,7 +164,8 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
   private toTile(series: TemperatureSensorSeries): ChartTile {
     return {
       sensorId: series.sensorId,
-      name: series.name,
+      // Auf der Wand zaehlt der Raum, nicht das fuehrende "Temperatur".
+      name: shortenSensorName(series.name),
       series,
       options: this.chartOptionsFor(series),
       empty: this.pointCount(series) === 0
