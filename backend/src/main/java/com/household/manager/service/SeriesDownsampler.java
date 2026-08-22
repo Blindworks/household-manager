@@ -19,19 +19,20 @@ import java.util.Map;
  * Punktzahl hat.
  *
  * <p>Bewusst quellen-agnostisch: die Klasse kennt weder Zigbee noch Wetter noch Alexa
- * und ist dadurch ohne Datenbank testbar.
+ * noch Airrohr und ist dadurch ohne Datenbank testbar. Sie bedient sowohl die
+ * Temperatur- als auch die Luftqualitätsreihen.
  *
  * <p>Leere Buckets werden ausgelassen statt mit Nullen gefüllt. Eine Funkpause ist bei
  * Temperatursensoren der Normalfall — sie melden nur bei Wertänderung — und darf nicht
  * wie ein Messausfall aussehen.
  */
 @Component
-public class TemperatureSeriesDownsampler {
+public class SeriesDownsampler {
 
     /** Nachkommastellen des gemittelten Werts; mehr täuscht eine Genauigkeit vor, die die Sensoren nicht haben. */
     private static final int SCALE = 2;
 
-    public List<TimeValue> downsample(List<TimeValue> points, TemperatureRange range) {
+    public List<TimeValue> downsample(List<TimeValue> points, SeriesRange range) {
         if (points == null || points.isEmpty()) {
             return List.of();
         }
