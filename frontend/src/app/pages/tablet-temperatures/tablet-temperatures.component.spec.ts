@@ -166,23 +166,31 @@ describe('TabletTemperaturesComponent', () => {
   });
 
   it('gibt den Graphen die Bildschirmhoehe statt der Inhaltshoehe', () => {
-    // Der Elternknoten spielt die Flex-Spalte der App-Shell nach: nur wenn die
-    // Kette vom Host bis zum Chart durchgehend ist, waechst der Graph mit dem
-    // Bildschirm - sonst bleibt er auf Inhaltshoehe stehen.
+    // Der Rahmen spielt die Flex-Spalte der App-Shell nach: nur wenn die Kette vom
+    // Host bis zum Chart durchgehend ist, waechst der Graph mit dem Bildschirm -
+    // sonst bleibt er auf Inhaltshoehe stehen.
+    //
+    // Bewusst ein EIGENER Container statt des Elternknotens: das Fixture haengt
+    // direkt im <body>, und dort stehen auch Karmas eigene Elemente und die
+    // Wurzelknoten schon gelaufener Suiten. Macht man den body zur Flex-Spalte,
+    // teilen sich all diese Geschwister die 600 px, und der Graph wird je nach
+    // Reihenfolge der Suiten winzig - der Test schlug im Gesamtlauf sporadisch fehl.
     const host = fixture.nativeElement as HTMLElement;
-    const parent = host.parentElement as HTMLElement;
-    parent.style.display = 'flex';
-    parent.style.flexDirection = 'column';
+    const frame = document.createElement('div');
+    frame.style.display = 'flex';
+    frame.style.flexDirection = 'column';
+    document.body.appendChild(frame);
+    frame.appendChild(host);
 
     const chartHeights = (): number[] =>
       Array.from(host.querySelectorAll('.tablet-temps__chart'))
         .map(chart => chart.getBoundingClientRect().height);
 
-    parent.style.height = '600px';
+    frame.style.height = '600px';
     fixture.detectChanges();
     const small = chartHeights();
 
-    parent.style.height = '900px';
+    frame.style.height = '900px';
     fixture.detectChanges();
     const large = chartHeights();
 
@@ -191,7 +199,9 @@ describe('TabletTemperaturesComponent', () => {
     // 300 px mehr Bildschirm landen in der einen Rasterzeile.
     large.forEach((height, i) => expect(height).toBeGreaterThan(small[i] + 250));
 
-    parent.removeAttribute('style');
+    // Den Host zurueck in den body haengen, damit fixture.destroy() unveraendert laeuft.
+    document.body.appendChild(host);
+    frame.remove();
   });
 
   it('beschriftet die Kacheln mit dem Kurznamen des Sensors', () => {
