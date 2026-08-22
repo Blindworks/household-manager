@@ -471,4 +471,15 @@ class SecurityRulesTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Der Luftqualitaets-Serienendpunkt braucht bewusst keine eigene Regel: das GET faellt
+     * auf die generische Regel GET /v1/** -> KIOSK. Ohne sie waere die Wandtablet-Ansicht
+     * "Luftqualitaet" leer, und zwar ohne sichtbaren Fehler.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieLuftqualitaetsReihenLesen() throws Exception {
+        mockMvc.perform(get("/v1/air-quality/series?range=WEEK")).andExpect(status().isNotFound());
+    }
+
 }
