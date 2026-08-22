@@ -153,6 +153,9 @@
   font-size: clamp(17px, 1.7vw, 22px);
   font-weight: 500;
   letter-spacing: -0.01em;
+  // Ohne diese Zeile faerbt die globale Regel h1..h6 aus styles.scss den
+  // Titel dunkel - auf dem schwarzen Grund praktisch unsichtbar.
+  color: #f4f3f5;
 }
 
 // ---- Inhaltsbereich ------------------------------------------------------

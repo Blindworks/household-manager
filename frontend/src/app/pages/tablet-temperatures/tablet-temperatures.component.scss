@@ -87,9 +87,14 @@
 
   &__card-title {
     margin: 0 0 0.35rem;
-    font-size: 1.05rem;
-    font-weight: 500;
+    font-size: 1.15rem;
+    font-weight: 600;
     flex: 0 0 auto;
+    // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
+    // schlaegt die vererbte helle Farbe - auf schwarzem Grund war der
+    // Sensorname dadurch kaum lesbar. Deshalb hier ausdruecklich hell.
+    color: #f4f3f5;
+    letter-spacing: -0.01em;
   }
 
   &__card-empty {

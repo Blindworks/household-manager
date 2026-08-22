@@ -194,6 +194,17 @@ describe('TabletTemperaturesComponent', () => {
     parent.removeAttribute('style');
   });
 
+  it('zeichnet die Sensornamen hell genug fuer den schwarzen Grund', () => {
+    // Die globale Regel h1..h6 { color: var(--color-dark) } hat den Namen
+    // schon einmal unlesbar gemacht - hier festgehalten.
+    const title = (fixture.nativeElement as HTMLElement)
+      .querySelector('.tablet-temps__card-title') as HTMLElement;
+    const channels = (getComputedStyle(title).color.match(/\d+/g) ?? []).map(Number);
+
+    expect(channels.length).toBeGreaterThanOrEqual(3);
+    channels.slice(0, 3).forEach(channel => expect(channel).toBeGreaterThan(200));
+  });
+
   it('zeigt den Leerzustand, wenn kein Sensor geliefert wird', () => {
     serviceSpy.getSeries.and.returnValue(of([]));
     component.setRange('DAY');
