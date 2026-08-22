@@ -52,9 +52,9 @@ public class TemperatureSeriesService {
     private final WeatherReadingRepository weatherRepository;
     private final AlexaAirQualityReadingRepository alexaRepository;
     private final EntityStateService entityStateService;
-    private final TemperatureSeriesDownsampler downsampler;
+    private final SeriesDownsampler downsampler;
 
-    public List<TemperatureSensorSeries> getSeries(TemperatureRange range) {
+    public List<TemperatureSensorSeries> getSeries(SeriesRange range) {
         LocalDateTime to = LocalDateTime.now();
         LocalDateTime from = to.minusDays(range.getDays());
 
@@ -86,7 +86,7 @@ public class TemperatureSeriesService {
      *
      * @throws ResourceNotFoundException wenn die sensorId keiner bekannten Quelle zuzuordnen ist
      */
-    public TemperatureSensorSeries getSensorSeries(String sensorId, TemperatureRange range) {
+    public TemperatureSensorSeries getSensorSeries(String sensorId, SeriesRange range) {
         if (sensorId == null || sensorId.isBlank()) {
             throw new ResourceNotFoundException("Sensor", "sensorId", sensorId);
         }
@@ -106,7 +106,7 @@ public class TemperatureSeriesService {
     }
 
     private TemperatureSensorSeries zigbeeSensorSeries(
-            String rawDeviceId, LocalDateTime from, LocalDateTime to, TemperatureRange range) {
+            String rawDeviceId, LocalDateTime from, LocalDateTime to, SeriesRange range) {
         long deviceId;
         try {
             deviceId = Long.parseLong(rawDeviceId);
@@ -135,7 +135,7 @@ public class TemperatureSeriesService {
     }
 
     private TemperatureSensorSeries weatherSensorSeries(
-            LocalDateTime from, LocalDateTime to, TemperatureRange range) {
+            LocalDateTime from, LocalDateTime to, SeriesRange range) {
         List<WeatherReading> readings =
                 weatherRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(from, to);
 
@@ -158,7 +158,7 @@ public class TemperatureSeriesService {
     }
 
     private TemperatureSensorSeries alexaSensorSeries(
-            String applianceId, LocalDateTime from, LocalDateTime to, TemperatureRange range) {
+            String applianceId, LocalDateTime from, LocalDateTime to, SeriesRange range) {
         List<AlexaAirQualityReading> readings = alexaRepository
                 .findByApplianceIdAndReadingTimeBetweenOrderByReadingTimeAsc(applianceId, from, to);
 

@@ -2,7 +2,7 @@ package com.household.manager.controller;
 
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
-import com.household.manager.service.TemperatureRange;
+import com.household.manager.service.SeriesRange;
 import com.household.manager.service.TemperatureSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +24,7 @@ public class TemperatureController {
 
     @GetMapping
     public List<TemperatureSensorSeries> getTemperatures(
-            @RequestParam(required = false, defaultValue = "WEEK") TemperatureRange range) {
+            @RequestParam(required = false, defaultValue = "WEEK") SeriesRange range) {
         return temperatureSeriesService.getSeries(range);
     }
 
@@ -39,7 +39,7 @@ public class TemperatureController {
     @GetMapping("/series")
     public TemperatureSensorSeries getSensorSeries(
             @RequestParam String sensorId,
-            @RequestParam(required = false, defaultValue = "DAY") TemperatureRange range) {
+            @RequestParam(required = false, defaultValue = "DAY") SeriesRange range) {
         return temperatureSeriesService.getSensorSeries(sensorId, range);
     }
 

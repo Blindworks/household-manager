@@ -42,7 +42,7 @@ class TemperatureSeriesServiceTest {
 
     @Mock private ZigbeeMeasurementRepository zigbeeRepository;
     @Mock private ZigbeeDeviceRepository zigbeeDeviceRepository;
-    @Mock private TemperatureSeriesDownsampler downsampler;
+    @Mock private SeriesDownsampler downsampler;
     @Mock private WeatherReadingRepository weatherRepository;
     @Mock private AlexaAirQualityReadingRepository alexaRepository;
     @Mock private EntityStateService entityStateService;
@@ -82,7 +82,7 @@ class TemperatureSeriesServiceTest {
         when(alexaRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any()))
                 .thenReturn(List.of());
 
-        List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.WEEK);
+        List<TemperatureSensorSeries> result = service.getSeries(SeriesRange.WEEK);
 
         assertThat(result).hasSize(1);
         TemperatureSensorSeries series = result.get(0);
@@ -107,7 +107,7 @@ class TemperatureSeriesServiceTest {
         when(alexaRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any()))
                 .thenReturn(List.of());
 
-        List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.DAY);
+        List<TemperatureSensorSeries> result = service.getSeries(SeriesRange.DAY);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSensorId()).isEqualTo("weather:outdoor");
@@ -132,7 +132,7 @@ class TemperatureSeriesServiceTest {
         when(alexaRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any()))
                 .thenReturn(List.of(a1, a2));
 
-        List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.MONTH);
+        List<TemperatureSensorSeries> result = service.getSeries(SeriesRange.MONTH);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSensorId()).isEqualTo("alexa:APP-A");
@@ -149,7 +149,7 @@ class TemperatureSeriesServiceTest {
         lenient().when(alexaRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any()))
                 .thenReturn(List.of());
 
-        List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.WEEK);
+        List<TemperatureSensorSeries> result = service.getSeries(SeriesRange.WEEK);
 
         assertThat(result).isEmpty();
     }
@@ -316,7 +316,7 @@ class TemperatureSeriesServiceTest {
                 .thenReturn(List.of());
         stubCustomName(EntitySource.ZIGBEE, "Wohnzimmer", "Couch-Sensor");
 
-        List<TemperatureSensorSeries> result = service.getSeries(TemperatureRange.WEEK);
+        List<TemperatureSensorSeries> result = service.getSeries(SeriesRange.WEEK);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("Couch-Sensor");
@@ -334,10 +334,10 @@ class TemperatureSeriesServiceTest {
                 eq(12L), eq(MeasurementType.HUMIDITY), any(), any()))
                 .thenReturn(List.of(measurement(MeasurementType.HUMIDITY, "48", at)));
         lenient().when(entityStateService.getByEntityId(any())).thenReturn(Optional.empty());
-        when(downsampler.downsample(anyList(), eq(TemperatureRange.DAY)))
+        when(downsampler.downsample(anyList(), eq(SeriesRange.DAY)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        TemperatureSensorSeries series = service.getSensorSeries("zigbee:12", TemperatureRange.DAY);
+        TemperatureSensorSeries series = service.getSensorSeries("zigbee:12", SeriesRange.DAY);
 
         assertThat(series.getSensorId()).isEqualTo("zigbee:12");
         assertThat(series.getSource()).isEqualTo("ZIGBEE");
@@ -357,7 +357,7 @@ class TemperatureSeriesServiceTest {
         lenient().when(downsampler.downsample(anyList(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        TemperatureSensorSeries series = service.getSensorSeries("zigbee:12", TemperatureRange.DAY);
+        TemperatureSensorSeries series = service.getSensorSeries("zigbee:12", SeriesRange.DAY);
 
         assertThat(series.getTemperature()).isEmpty();
         assertThat(series.getHumidity()).isEmpty();
@@ -367,15 +367,15 @@ class TemperatureSeriesServiceTest {
     void meldetUnbekannteSensorIdsAlsNichtGefunden() {
         when(zigbeeDeviceRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getSensorSeries("zigbee:99", TemperatureRange.DAY))
+        assertThatThrownBy(() -> service.getSensorSeries("zigbee:99", SeriesRange.DAY))
                 .isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.getSensorSeries("zigbee:abc", TemperatureRange.DAY))
+        assertThatThrownBy(() -> service.getSensorSeries("zigbee:abc", SeriesRange.DAY))
                 .isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.getSensorSeries("quatsch:1", TemperatureRange.DAY))
+        assertThatThrownBy(() -> service.getSensorSeries("quatsch:1", SeriesRange.DAY))
                 .isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.getSensorSeries("", TemperatureRange.DAY))
+        assertThatThrownBy(() -> service.getSensorSeries("", SeriesRange.DAY))
                 .isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.getSensorSeries(null, TemperatureRange.DAY))
+        assertThatThrownBy(() -> service.getSensorSeries(null, SeriesRange.DAY))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 }
