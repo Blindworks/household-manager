@@ -14,5 +14,6 @@ export interface TabletView {
 }
 
 export const TABLET_VIEWS: readonly TabletView[] = [
-  { route: '/tablet/temperatures', icon: 'thermostat', label: 'Temperaturen' }
+  { route: '/tablet/temperatures', icon: 'thermostat', label: 'Temperaturen' },
+  { route: '/tablet/air-quality', icon: 'air', label: 'Luftqualität' }
 ];

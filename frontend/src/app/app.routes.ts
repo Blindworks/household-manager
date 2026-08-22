@@ -74,6 +74,12 @@ export const routes: Routes = [
     title: 'Temperaturen - Household Manager'
   },
   {
+    path: 'tablet/air-quality',
+    loadComponent: () => import('./pages/tablet-air-quality/tablet-air-quality.component').then(m => m.TabletAirQualityComponent),
+    canActivate: [authGuard],
+    title: 'Luftqualitaet Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
