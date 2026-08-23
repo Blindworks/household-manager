@@ -938,14 +938,20 @@ Und diese Testfälle ans Ende der Suite hängen:
   });
 
   it('haelt die Quellen auseinander: ein Tractive-Ausfall laesst das Futter stehen', () => {
-    const component = fixture.componentInstance;
+    // Bewusst der ERSTabruf und nicht reload(): ein stiller Hintergrund-Refresh
+    // setzt absichtlich gar keine Fehlermeldung. Hier geht es darum, dass ein
+    // Ausfall der einen Quelle die andere nicht mitreisst.
     tractiveSpy.getPets.and.returnValue(throwError(() => new Error('offline')));
 
-    component.reload();
+    const fresh = TestBed.createComponent(TabletToniComponent);
+    fresh.detectChanges();
+    const component = fresh.componentInstance;
 
     expect(component.food).not.toBeNull();
     expect(component.petError).not.toBeNull();
     expect(component.foodError).toBeNull();
+
+    fresh.destroy();
   });
 
   it('behaelt bei einem fehlgeschlagenen Hintergrund-Refresh die bisherigen Werte', () => {
@@ -981,7 +987,7 @@ Erwartet: Kompilierfehler `Property 'setWalkDays' does not exist` bzw. `Property
 
 - [ ] **Step 3: Die Datenbeschaffung implementieren**
 
-`tablet-toni.component.ts` ersetzen (die Klasse; Imports und Decorator aus Task 4 bleiben, `WalkRangeDays` kommt dazu):
+`tablet-toni.component.ts` ersetzen (die Klasse; Imports und Decorator aus Task 4 bleiben, `WalkRangeDays` kommt dazu). **Der Typ gehört über den `@Component`-Decorator, nicht dazwischen** — der Decorator muss unmittelbar vor der Klasse stehen:
 
 ```ts
 /** Auswaehlbare Zeitraeume der Spaziergangs-Kachel. 30 ist die Backend-Obergrenze. */
