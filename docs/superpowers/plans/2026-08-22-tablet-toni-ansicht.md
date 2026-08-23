@@ -2032,6 +2032,11 @@ Ans Ende der Suite:
     // Der Rahmen spielt die Flex-Spalte der App-Shell nach: nur wenn die Kette vom
     // Host bis in die Kacheln durchgehend ist, waechst der Inhalt mit dem Schirm.
     //
+    // Gemessen wird bei 900 und 1200 px, nicht bei 600 - das Wandtablet ist nie so
+    // niedrig, und die Spaziergangs-Kachel traegt ueber und unter dem Graphen
+    // festen Inhalt (Zeitraumknoepfe, Klartextliste). Bei 600 px bliebe dem Graphen
+    // strukturell fast nichts, ohne dass an der Kette etwas kaputt waere.
+    //
     // Bewusst ein EIGENER Container statt des Elternknotens: das Fixture haengt
     // direkt im <body>, und dort stehen auch Karmas eigene Elemente und die
     // Wurzelknoten schon gelaufener Suiten. Macht man den body zur Flex-Spalte,
@@ -2047,11 +2052,11 @@ Ans Ende der Suite:
     const chartHeight = (): number =>
       host.querySelector('.tablet-toni__chart')!.getBoundingClientRect().height;
 
-    frame.style.height = '600px';
+    frame.style.height = '900px';
     fixture.detectChanges();
     const small = chartHeight();
 
-    frame.style.height = '900px';
+    frame.style.height = '1200px';
     fixture.detectChanges();
     const large = chartHeight();
 
@@ -2071,7 +2076,7 @@ Ans Ende der Suite:
 npm test -- --watch=false --browsers=ChromeHeadless --include='**/tablet-toni.component.spec.ts'
 ```
 
-Erwartet: grün, wenn die Kette aus Task 4 vollständig ist. Schlägt er fehl (typisch: `small` liegt unter 80), fehlt ein Glied — prüfen in dieser Reihenfolge: `:host`, `.tablet-toni`, `.tablet-toni__grid`, `.tablet-toni__card`, `.tablet-toni__chart`. Jedes braucht `flex: 1` bzw. `flex: 1 1 auto` **und** `min-height: 0`.
+Erwartet: `28 SUCCESS`, wenn die Kette aus Task 4 vollständig ist. Schlägt er fehl (typisch: `small` liegt unter 80), fehlt ein Glied — prüfen in dieser Reihenfolge: `:host`, `.tablet-toni`, `.tablet-toni__grid`, `.tablet-toni__card`, `.tablet-toni__chart`. Jedes braucht `flex: 1` bzw. `flex: 1 1 auto` **und** `min-height: 0`.
 
 - [ ] **Step 3: Gesamten Frontend-Lauf machen**
 
