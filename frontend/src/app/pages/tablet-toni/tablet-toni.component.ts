@@ -5,6 +5,7 @@ import { PetFoodService } from '../../services/pet-food.service';
 import { TractiveService } from '../../services/tractive.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
+import { PetFoodTone, petFoodBarWidth, petFoodTone } from '../../shared/pet-food-level.util';
 
 /**
  * Hundeuebersicht fuer das Wandtablet: Futtervorrat, Spaziergaenge,
@@ -63,6 +64,15 @@ export class TabletToniComponent implements OnInit, OnDestroy {
     this.load(true);
   }
 
+  /** Ton des Fuellstands; ohne Daten neutral. Regel in shared/pet-food-level.util.ts. */
+  get foodTone(): PetFoodTone {
+    return this.food ? petFoodTone(this.food) : 'ok';
+  }
+
+  get foodBarWidth(): number {
+    return this.food ? petFoodBarWidth(this.food.percent) : 0;
+  }
+
   setWalkDays(days: WalkRangeDays): void {
     if (days === this.walkDays) {
       return;
@@ -116,6 +126,10 @@ export class TabletToniComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Bewusst ohne switchMap/Request-Guard: ein langsamer Abruf koennte theoretisch
+  // nach einem schnelleren eintreffen und veraltete Runden schreiben. Auf einer
+  // Wandanzeige mit seltener Interaktion und 5-Minuten-Refresh ist die Folge
+  // harmlos und selbstheilend.
   private loadWalks(silent: boolean): void {
     const trackerId = this.pet?.trackerId;
     if (!trackerId) {

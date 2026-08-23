@@ -1,7 +1,23 @@
 <app-tablet-shell heading="Toni">
   <section class="tablet-toni">
     <div class="tablet-toni__grid">
-      <article class="tablet-toni__card tablet-toni__card--food"></article>
+      <article class="tablet-toni__card tablet-toni__card--food" [attr.data-tone]="foodTone">
+        <h3 class="tablet-toni__card-title">Futtervorrat</h3>
+        <ng-container *ngIf="food as status; else foodMissing">
+          <p class="tablet-toni__figure">
+            {{ status.cansRemaining }}<span class="tablet-toni__unit">Dosen</span>
+          </p>
+          <div class="tablet-toni__bar">
+            <div class="tablet-toni__bar-fill" [style.width.%]="foodBarWidth"></div>
+          </div>
+          <p class="tablet-toni__figure-note">
+            reicht noch ca. {{ status.daysRemaining }} Tage · Ziel {{ status.targetCans }}
+          </p>
+        </ng-container>
+        <ng-template #foodMissing>
+          <p class="tablet-toni__hint">{{ foodError ?? 'Noch keine Daten.' }}</p>
+        </ng-template>
+      </article>
       <article class="tablet-toni__card tablet-toni__card--walks"></article>
       <article class="tablet-toni__card tablet-toni__card--status"></article>
       <article class="tablet-toni__card tablet-toni__card--map"></article>

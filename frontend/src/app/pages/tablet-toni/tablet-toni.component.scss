@@ -65,4 +65,57 @@
     font-size: 1.05rem;
     text-align: center;
   }
+
+  /* Der Zahlenwert ist auf einer Wandanzeige die eigentliche Information. */
+  &__figure {
+    margin: 0.2rem 0 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: #f4f3f5;
+  }
+
+  &__unit {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: rgba(228, 226, 228, 0.65);
+  }
+
+  &__figure-note {
+    margin: 0.5rem 0 0;
+    font-size: 1rem;
+    color: rgba(228, 226, 228, 0.7);
+  }
+
+  &__bar {
+    margin-top: 0.9rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+  }
+
+  &__bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #4ade80;
+    transition: width 0.3s ease;
+  }
+
+  /* Dieselben drei Stufen wie auf der Seite /pet-food. */
+  &__card--food[data-tone='warn'] &__bar-fill {
+    background: #fbbf24;
+  }
+
+  &__card--food[data-tone='critical'] &__bar-fill {
+    background: #ffb4ab;
+  }
+
+  &__card--food[data-tone='critical'] &__figure {
+    color: #ffb4ab;
+  }
 }

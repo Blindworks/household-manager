@@ -145,4 +145,29 @@ describe('TabletToniComponent', () => {
     expect(fresh.componentInstance.food).toBeNull();
     fresh.destroy();
   });
+
+  it('zeigt Dosenzahl und Reichweite des Futtervorrats', () => {
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.tablet-toni__card--food');
+    expect(card?.textContent).toContain('34');
+    expect(card?.textContent).toContain('34 Tage');
+  });
+
+  it('faerbt den Fuellstand nach derselben Regel wie die Seite /pet-food', () => {
+    const component = fixture.componentInstance;
+    expect(component.foodTone).toBe('ok');
+
+    component.food = { cansRemaining: 6.5, targetCans: 48, percent: 14, daysRemaining: 6 };
+    expect(component.foodTone).toBe('critical');
+  });
+
+  it('zeigt statt eines leeren Balkens einen Hinweis, wenn der Vorrat fehlt', () => {
+    const component = fixture.componentInstance;
+    component.food = null;
+    component.foodError = 'Futtervorrat nicht verfügbar.';
+    fixture.detectChanges();
+
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.tablet-toni__card--food');
+    expect(card?.querySelector('.tablet-toni__hint')?.textContent)
+      .toContain('Futtervorrat nicht verfügbar.');
+  });
 });
