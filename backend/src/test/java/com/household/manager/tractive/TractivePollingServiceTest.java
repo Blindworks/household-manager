@@ -369,4 +369,24 @@ class TractivePollingServiceTest {
         assertEquals(1, captor.getValue().size());
         assertEquals("dev-9", captor.getValue().get(0).trackerId());
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void schreibtDiePositionenAuchWennDasMeldenDerEntityStatesScheitert() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        // Haelt die Reihenfolge in pollOnce fest: updates.forEach(...) laeuft ohne
+        // try/catch. Stuende der Recorder dahinter, ginge bei einem Fehler im
+        // Entity-State-Layer die gesamte Historie dieses Zyklus verloren.
+        doThrow(new RuntimeException("boom"))
+                .when(entityStateService).reportState(any());
+
+        service.poll();
+
+        ArgumentCaptor<List<TractivePetSnapshot>> captor = ArgumentCaptor.forClass(List.class);
+        verify(positionRecorder).record(captor.capture());
+        assertEquals(1, captor.getValue().size());
+    }
 }
