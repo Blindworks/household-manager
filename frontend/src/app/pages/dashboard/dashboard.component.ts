@@ -59,6 +59,7 @@ import { ZigbeeHealth } from '../../models/zigbee.model';
 import { PetFoodService } from '../../services/pet-food.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
 import { iconOffVariant } from '../../shared/icon-off.util';
+import { PetFoodTone, petFoodTone as petFoodLevelTone } from '../../shared/pet-food-level.util';
 import {
   ActivationCheck,
   buildConsumerCheck,
@@ -1470,11 +1471,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return pet.atHome ? 'home' : 'pets';
   }
 
-  petFoodTone(status: PetFoodStatus): 'ok' | 'warn' | 'critical' {
-    if (status.cansRemaining < 7) {
-      return 'critical';
-    }
-    return status.percent < 25 ? 'warn' : 'ok';
+  petFoodTone(status: PetFoodStatus): PetFoodTone {
+    return petFoodLevelTone(status);
   }
 
   /** Öffnet den Erfassungs-Dialog; die Korrektur ist mit dem aktuellen Bestand vorbelegt. */

@@ -3,6 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PetFoodService } from '../../services/pet-food.service';
 import { PetFoodStatus, PetFoodTransaction } from '../../models/pet-food.model';
+import {
+  PET_FOOD_CRITICAL_CANS,
+  PetFoodTone,
+  petFoodBarWidth,
+  petFoodTone
+} from '../../shared/pet-food-level.util';
 
 /**
  * Seite "Futtervorrat": Fuellstand des MjamMjam-Dosenlagers fuer Toni,
@@ -31,22 +37,19 @@ export class PetFoodComponent implements OnInit {
   targetCans: number | null = null;
   saving = false;
 
-  /** Muss der Flow-Schwelle "sensor.pet_food_toni_cans < 7" entsprechen. */
-  readonly criticalCans = 7;
+  /** Einzige Definition in shared/pet-food-level.util.ts. */
+  readonly criticalCans = PET_FOOD_CRITICAL_CANS;
 
   ngOnInit(): void {
     this.load();
   }
 
-  fillTone(status: PetFoodStatus): 'ok' | 'warn' | 'critical' {
-    if (status.cansRemaining < this.criticalCans) {
-      return 'critical';
-    }
-    return status.percent < 25 ? 'warn' : 'ok';
+  fillTone(status: PetFoodStatus): PetFoodTone {
+    return petFoodTone(status);
   }
 
   barWidth(status: PetFoodStatus): number {
-    return Math.max(0, Math.min(100, status.percent));
+    return petFoodBarWidth(status.percent);
   }
 
   typeLabel(type: PetFoodTransaction['type']): string {
