@@ -118,4 +118,26 @@
   &__card--food[data-tone='critical'] &__figure {
     color: #ffb4ab;
   }
+
+  &__badge {
+    align-self: flex-start;
+    margin: 0 0 0.6rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: rgba(74, 222, 128, 0.16);
+    color: #4ade80;
+
+    &--away {
+      background: rgba(251, 191, 36, 0.16);
+      color: #fbbf24;
+    }
+  }
+
+  &__charging {
+    font-size: 1.6rem;
+    color: #4ade80;
+    align-self: center;
+  }
 }

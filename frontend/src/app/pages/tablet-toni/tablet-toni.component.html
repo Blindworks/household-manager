@@ -19,7 +19,37 @@
         </ng-template>
       </article>
       <article class="tablet-toni__card tablet-toni__card--walks"></article>
-      <article class="tablet-toni__card tablet-toni__card--status"></article>
+      <article class="tablet-toni__card tablet-toni__card--status">
+        <h3 class="tablet-toni__card-title">Tracker</h3>
+        <ng-container *ngIf="pet as tracker; else petMissing">
+          <!--
+            Fehlt atHome, wird KEIN Badge gezeigt statt geraten: das Feld fehlt im
+            JSON, wenn keine Aussage moeglich ist (kein Zuhause hinterlegt oder
+            keine Position). Dasselbe Verhalten wie auf der Seite /pets.
+          -->
+          <p class="tablet-toni__badge" *ngIf="tracker.atHome != null"
+             [class.tablet-toni__badge--away]="!tracker.atHome">
+            {{ tracker.atHome ? 'Zu Hause' : 'Unterwegs' }}
+          </p>
+          <p class="tablet-toni__figure" *ngIf="tracker.batteryPercent != null">
+            {{ tracker.batteryPercent }}<span class="tablet-toni__unit">% Akku</span>
+            <span class="material-symbols-outlined tablet-toni__charging"
+                  *ngIf="tracker.charging">bolt</span>
+          </p>
+          <p class="tablet-toni__figure-note">Zone: {{ tracker.zone }}</p>
+          <!--
+            Bei einem Cloud-Ausfall liefert /v1/tractive/pets bewusst weiter die
+            letzte bekannte Position. Dieser Zeitstempel ist die einzige Stelle,
+            an der ihr Alter sichtbar wird.
+          -->
+          <p class="tablet-toni__figure-note" *ngIf="tracker.lastSeen">
+            Zuletzt gesehen: {{ tracker.lastSeen | date:'short' }}
+          </p>
+        </ng-container>
+        <ng-template #petMissing>
+          <p class="tablet-toni__hint">{{ petError ?? 'Kein Tracker gefunden.' }}</p>
+        </ng-template>
+      </article>
       <article class="tablet-toni__card tablet-toni__card--map"></article>
     </div>
   </section>

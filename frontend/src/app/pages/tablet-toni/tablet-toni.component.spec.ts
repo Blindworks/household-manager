@@ -170,4 +170,33 @@ describe('TabletToniComponent', () => {
     expect(card?.querySelector('.tablet-toni__hint')?.textContent)
       .toContain('Futtervorrat nicht verfügbar.');
   });
+
+  it('zeigt Zuhause-Badge, Akku und Zeitpunkt des letzten Berichts', () => {
+    const card = (fixture.nativeElement as HTMLElement)
+      .querySelector('.tablet-toni__card--status');
+    expect(card?.querySelector('.tablet-toni__badge')?.textContent?.trim()).toBe('Zu Hause');
+    expect(card?.textContent).toContain('78');
+    expect(card?.textContent).toContain('Zuletzt gesehen');
+  });
+
+  it('zeigt Unterwegs, wenn der Hund nicht zu Hause ist', () => {
+    fixture.componentInstance.pet = { ...toni, atHome: false };
+    fixture.detectChanges();
+
+    const badge = (fixture.nativeElement as HTMLElement)
+      .querySelector('.tablet-toni__card--status .tablet-toni__badge');
+    expect(badge?.textContent?.trim()).toBe('Unterwegs');
+  });
+
+  it('zeigt gar kein Badge, wenn keine Aussage moeglich ist', () => {
+    // atHome fehlt im JSON, wenn kein Zuhause hinterlegt ist oder keine Position
+    // vorliegt. Ein geratenes "Zu Hause" waere hier schlimmer als gar nichts.
+    const { atHome, ...ohneAussage } = toni;
+    fixture.componentInstance.pet = ohneAussage as TractivePet;
+    fixture.detectChanges();
+
+    const badge = (fixture.nativeElement as HTMLElement)
+      .querySelector('.tablet-toni__card--status .tablet-toni__badge');
+    expect(badge).toBeNull();
+  });
 });
