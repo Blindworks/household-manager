@@ -558,24 +558,56 @@ In `TractivePollingService.java` das Feld ergänzen — **unmittelbar nach `enti
 In `pollOnce()` den Aufruf **direkt nach der `for`-Schleife über `refs`** einfügen, also unmittelbar vor der Zeile `List<EntityStateUpdate> updates = new ArrayList<>();`:
 
 ```java
-            // Bewusst VOR dem Mapping: die Historie soll auch dann entstehen, wenn
-            // das Mapping der Entitaeten scheitert. Der Recorder wirft nie.
+            // Bewusst VOR dem Melden der Entity-States: updates.forEach(...) laeuft
+            // ohne try/catch, ein Fehler dort verliesse pollOnce sofort - ein danach
+            // platzierter Recorder kaeme nie zum Zug und es entstuende keine Historie.
             positionRecorder.record(snapshots);
 ```
 
-- [ ] **Step 4: Tests laufen lassen und grün sehen**
+**Warum genau diese Stelle:** Mapping-Fehler fängt `pollOnce` ohnehin je Tier ab — die Reihenfolge zählt wegen der Zeile danach. `updates.forEach(entityStateService::reportState)` steht in keinem `try/catch`; wirft der Entity-State-Layer, verlässt `pollOnce` den Block sofort, und ein dahinter platzierter Recorder käme nie zum Zug.
+
+- [ ] **Step 4: Den Reihenfolge-Regressionstest ergänzen**
+
+Der Test aus Step 1 belegt nur, **dass** der Recorder läuft, nicht **wann**. Ohne diesen zweiten Test überlebt ein Verschieben des Aufrufs ans Ende von `pollOnce()` die gesamte Suite.
+
+```java
+    @Test
+    @SuppressWarnings("unchecked")
+    void schreibtDiePositionenAuchWennDasMeldenDerEntityStatesScheitert() {
+        // Haelt die Reihenfolge in pollOnce fest: updates.forEach(...) laeuft ohne
+        // try/catch. Stuende der Recorder dahinter, ginge bei einem Fehler im
+        // Entity-State-Layer die gesamte Historie dieses Zyklus verloren.
+        doThrow(new RuntimeException("boom"))
+                .when(entityStateService).reportState(any());
+
+        service.poll();
+
+        ArgumentCaptor<List<TractivePetSnapshot>> captor = ArgumentCaptor.forClass(List.class);
+        verify(positionRecorder).record(captor.capture());
+        assertEquals(1, captor.getValue().size());
+    }
+```
+
+Den Stub-Aufbau (`givenAuthenticated()`/`givenOnePet()`/Mapper-Stub) genauso wählen wie im Test aus Step 1. `service.poll()` fängt die Ausnahme selbst ab — kein `assertThrows`.
+
+- [ ] **Step 5: Tests laufen lassen und grün sehen**
 
 ```bash
 export JAVA_HOME="/c/Program Files/Java/jdk-21.0.10" && mvn test -Dtest=TractivePollingServiceTest
 ```
 
-Erwartet: alle Tests der Klasse grün, inklusive des neuen.
+Erwartet: alle Tests der Klasse grün, inklusive der beiden neuen.
 
-- [ ] **Step 5: Mutationsprüfung**
+- [ ] **Step 6: Mutationsprüfung**
 
-Entferne die Zeile `positionRecorder.record(snapshots);` testweise wieder und lass die Klasse erneut laufen. **Der neue Test muss fehlschlagen** („Wanted but not invoked"). Halte die tatsächliche Ausgabe fest, setze die Zeile zurück und stelle sicher, dass `git status --porcelain` danach nur die beabsichtigten Änderungen zeigt.
+Zwei Mutationen, jeweils mit Zurücksetzen danach:
 
-- [ ] **Step 6: Commit**
+1. Zeile `positionRecorder.record(snapshots);` entfernen — **beide** neuen Tests müssen fehlschlagen („Wanted but not invoked").
+2. Die Zeile hinter `updates.forEach(entityStateService::reportState);` verschieben — der Reihenfolge-Test aus Step 4 **muss** fehlschlagen, der aus Step 1 darf grün bleiben.
+
+Halte die tatsächlichen Ausgaben fest und stelle sicher, dass `git status --porcelain` danach nur die beabsichtigten Änderungen zeigt.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add backend/src/main/java/com/household/manager/tractive/TractivePollingService.java backend/src/test/java/com/household/manager/tractive/TractivePollingServiceTest.java
