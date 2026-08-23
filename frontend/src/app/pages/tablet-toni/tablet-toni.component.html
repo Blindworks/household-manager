@@ -18,7 +18,38 @@
           <p class="tablet-toni__hint">{{ foodError ?? 'Noch keine Daten.' }}</p>
         </ng-template>
       </article>
-      <article class="tablet-toni__card tablet-toni__card--walks"></article>
+      <article class="tablet-toni__card tablet-toni__card--walks">
+        <h3 class="tablet-toni__card-title">
+          <span>Spaziergänge</span>
+          <span class="tablet-toni__ranges" role="group" aria-label="Zeitraum">
+            <button
+              type="button"
+              class="tablet-toni__range"
+              *ngFor="let days of walkRanges"
+              [class.tablet-toni__range--active]="days === walkDays"
+              (click)="setWalkDays(days)">
+              {{ days }} Tage
+            </button>
+          </span>
+        </h3>
+        <div
+          echarts
+          class="tablet-toni__chart"
+          [options]="walkChartOptions"
+          [autoResize]="true"></div>
+        <ul class="tablet-toni__walks" *ngIf="recentWalks.length > 0; else noWalks">
+          <li class="tablet-toni__walk" *ngFor="let walk of recentWalks">
+            <span class="tablet-toni__walk-day">{{ walk.day }}</span>
+            <span>{{ walk.timeRange }}</span>
+            <span class="tablet-toni__walk-figures">{{ walk.duration }} · {{ walk.distance }}</span>
+          </li>
+        </ul>
+        <ng-template #noWalks>
+          <p class="tablet-toni__walks-hint">
+            {{ walkError ?? 'Keine Runde in diesem Zeitraum.' }}
+          </p>
+        </ng-template>
+      </article>
       <article class="tablet-toni__card tablet-toni__card--status">
         <h3 class="tablet-toni__card-title">Tracker</h3>
         <ng-container *ngIf="pet as tracker; else petMissing">

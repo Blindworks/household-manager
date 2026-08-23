@@ -1,11 +1,25 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
+import * as echarts from 'echarts/core';
+import { BarChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { PetFoodService } from '../../services/pet-food.service';
 import { TractiveService } from '../../services/tractive.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { PetFoodTone, petFoodBarWidth, petFoodTone } from '../../shared/pet-food-level.util';
+import {
+  walkDayLabel,
+  walkDayTotals,
+  walkDistance,
+  walkDuration,
+  walkTimeRange
+} from '../../shared/walk-format.util';
+
+echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 /**
  * Hundeuebersicht fuer das Wandtablet: Futtervorrat, Spaziergaenge,
@@ -19,10 +33,22 @@ import { PetFoodTone, petFoodBarWidth, petFoodTone } from '../../shared/pet-food
 /** Auswaehlbare Zeitraeume der Spaziergangs-Kachel. 30 ist die Backend-Obergrenze. */
 export type WalkRangeDays = 7 | 14 | 30;
 
+/** Eine Runde, fertig formatiert fuer die Klartext-Liste unter dem Diagramm. */
+interface RecentWalk {
+  day: string;
+  timeRange: string;
+  duration: string;
+  distance: string;
+}
+
+const AXIS_COLOR = '#94a3b8';
+const BAR_COLOR = '#aac7ff';
+
 @Component({
   selector: 'app-tablet-toni',
   standalone: true,
-  imports: [CommonModule, TabletShellComponent],
+  imports: [CommonModule, TabletShellComponent, NgxEchartsDirective],
+  providers: [provideEchartsCore({ echarts })],
   templateUrl: './tablet-toni.component.html',
   styleUrl: './tablet-toni.component.scss'
 })
@@ -43,8 +69,11 @@ export class TabletToniComponent implements OnInit, OnDestroy {
   walks: TractiveWalk[] = [];
   walkError: string | null = null;
   walkDays: WalkRangeDays = 7;
+  walkChartOptions: Record<string, unknown> = {};
+  recentWalks: RecentWalk[] = [];
 
   ngOnInit(): void {
+    this.rebuildWalkView();
     this.load(false);
     this.refreshTimer = window.setInterval(
       () => this.reload(),
@@ -78,7 +107,42 @@ export class TabletToniComponent implements OnInit, OnDestroy {
       return;
     }
     this.walkDays = days;
+    this.rebuildWalkView();
     this.loadWalks(false);
+  }
+
+  /** Baut Diagramm und Klartext-Liste aus den gehaltenen Runden neu. */
+  rebuildWalkView(): void {
+    const now = new Date();
+    const totals = walkDayTotals(this.walks, this.walkDays, now);
+
+    this.walkChartOptions = {
+      grid: { left: 48, right: 12, top: 10, bottom: 24, containLabel: false },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'category',
+        data: totals.map(total => total.label),
+        axisLabel: { color: AXIS_COLOR, fontSize: 12 }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: AXIS_COLOR, fontSize: 12, formatter: '{value} min' },
+        splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
+      },
+      series: [{
+        type: 'bar',
+        data: totals.map(total => total.minutes),
+        itemStyle: { color: BAR_COLOR, borderRadius: [4, 4, 0, 0] }
+      }]
+    };
+
+    // Der Server liefert die neuesten Runden zuerst.
+    this.recentWalks = this.walks.slice(0, 3).map(walk => ({
+      day: walkDayLabel(walk.start, now),
+      timeRange: walkTimeRange(walk),
+      duration: walkDuration(walk),
+      distance: walkDistance(walk)
+    }));
   }
 
   /**
@@ -139,6 +203,7 @@ export class TabletToniComponent implements OnInit, OnDestroy {
       next: walks => {
         this.walks = walks;
         this.walkError = null;
+        this.rebuildWalkView();
       },
       error: (error: Error) => {
         console.error('Fehler beim Laden der Spaziergänge:', error);

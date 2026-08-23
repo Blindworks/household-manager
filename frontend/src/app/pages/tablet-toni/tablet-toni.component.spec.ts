@@ -199,4 +199,48 @@ describe('TabletToniComponent', () => {
       .querySelector('.tablet-toni__card--status .tablet-toni__badge');
     expect(badge).toBeNull();
   });
+
+  it('baut je Tag des Zeitraums einen Balken', () => {
+    const options = fixture.componentInstance.walkChartOptions as {
+      xAxis: { data: string[] };
+      series: { data: number[] }[];
+    };
+
+    expect(options.xAxis.data.length).toBe(7);
+    expect(options.series[0].data.length).toBe(7);
+  });
+
+  it('baut die Balken nach einem Zeitraumwechsel neu', () => {
+    fixture.componentInstance.setWalkDays(30);
+
+    const options = fixture.componentInstance.walkChartOptions as { xAxis: { data: string[] } };
+    expect(options.xAxis.data.length).toBe(30);
+  });
+
+  it('zeigt die letzten drei Runden im Klartext', () => {
+    const component = fixture.componentInstance;
+    expect(component.recentWalks.length).toBe(1);
+    expect(component.recentWalks[0].duration).toBe('36 min');
+    expect(component.recentWalks[0].distance).toBe('2,1 km');
+    expect(component.recentWalks[0].timeRange).toContain('Uhr');
+  });
+
+  it('kuerzt die Klartextliste auf drei Runden', () => {
+    const component = fixture.componentInstance;
+    component.walks = [runde, runde, runde, runde, runde];
+    component.rebuildWalkView();
+
+    expect(component.recentWalks.length).toBe(3);
+  });
+
+  it('zeigt einen Hinweis, wenn im Zeitraum keine Runde liegt', () => {
+    const component = fixture.componentInstance;
+    component.walks = [];
+    component.rebuildWalkView();
+    fixture.detectChanges();
+
+    const card = (fixture.nativeElement as HTMLElement)
+      .querySelector('.tablet-toni__card--walks');
+    expect(card?.textContent).toContain('Keine Runde');
+  });
 });

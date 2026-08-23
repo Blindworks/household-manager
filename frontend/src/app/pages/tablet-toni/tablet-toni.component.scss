@@ -140,4 +140,75 @@
     color: #4ade80;
     align-self: center;
   }
+
+  &__ranges {
+    display: inline-flex;
+    gap: 0.2rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 0.2rem;
+    flex: 0 0 auto;
+  }
+
+  &__range {
+    border: none;
+    background: transparent;
+    padding: 0.35rem 0.7rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: rgba(228, 226, 228, 0.75);
+
+    &--active {
+      background: rgba(170, 199, 255, 0.16);
+      color: #aac7ff;
+    }
+  }
+
+  /* Das Diagramm nimmt die Resthoehe, die Klartext-Liste bleibt darunter stehen. */
+  &__chart {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  &__walks {
+    flex: 0 0 auto;
+    list-style: none;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  &__walk {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    color: rgba(228, 226, 228, 0.8);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__walk-day {
+    min-width: 4.5rem;
+    font-weight: 600;
+    color: #f4f3f5;
+  }
+
+  &__walk-figures {
+    margin-left: auto;
+    color: #f4f3f5;
+  }
+
+  &__walks-hint {
+    flex: 0 0 auto;
+    margin: 0.4rem 0 0;
+    font-size: 0.95rem;
+    color: #94a3b8;
+  }
 }
