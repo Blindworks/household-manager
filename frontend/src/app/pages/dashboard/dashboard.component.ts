@@ -59,6 +59,13 @@ import { ZigbeeHealth } from '../../models/zigbee.model';
 import { PetFoodService } from '../../services/pet-food.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
 import { iconOffVariant } from '../../shared/icon-off.util';
+import { PetFoodTone, petFoodTone as petFoodLevelTone } from '../../shared/pet-food-level.util';
+import {
+  groupWalksByDay as groupWalks,
+  walkDistance as formatWalkDistance,
+  walkDuration as formatWalkDuration,
+  walkTimeRange as formatWalkTimeRange
+} from '../../shared/walk-format.util';
 import {
   ActivationCheck,
   buildConsumerCheck,
@@ -1470,11 +1477,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return pet.atHome ? 'home' : 'pets';
   }
 
-  petFoodTone(status: PetFoodStatus): 'ok' | 'warn' | 'critical' {
-    if (status.cansRemaining < 7) {
-      return 'critical';
-    }
-    return status.percent < 25 ? 'warn' : 'ok';
+  petFoodTone(status: PetFoodStatus): PetFoodTone {
+    return petFoodLevelTone(status);
   }
 
   /** Öffnet den Erfassungs-Dialog; die Korrektur ist mit dem aktuellen Bestand vorbelegt. */
@@ -1564,39 +1568,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.walkSections = [];
   }
 
-  /** Gruppiert nach Kalendertag; die Reihenfolge (neueste zuerst) kommt vom Server. */
+  /** Gruppiert nach Kalendertag; einzige Definition in shared/walk-format.util.ts. */
   private groupWalksByDay(walks: TractiveWalk[]): { label: string; walks: TractiveWalk[] }[] {
-    const groups: { label: string; walks: TractiveWalk[] }[] = [];
-    for (const walk of walks) {
-      const label = new Date(walk.start).toLocaleDateString('de-DE', {
-        weekday: 'long', day: 'numeric', month: 'long'
-      });
-      const last = groups[groups.length - 1];
-      if (last && last.label === label) {
-        last.walks.push(walk);
-      } else {
-        groups.push({ label, walks: [walk] });
-      }
-    }
-    return groups;
+    return groupWalks(walks);
   }
 
   walkTimeRange(walk: TractiveWalk): string {
-    const format = (iso: string) =>
-      new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    return `${format(walk.start)}–${format(walk.end)} Uhr`;
+    return formatWalkTimeRange(walk);
   }
 
   walkDuration(walk: TractiveWalk): string {
-    const hours = Math.floor(walk.durationMinutes / 60);
-    const minutes = walk.durationMinutes % 60;
-    return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+    return formatWalkDuration(walk);
   }
 
   walkDistance(walk: TractiveWalk): string {
-    return walk.distanceMeters >= 1000
-      ? `${(walk.distanceMeters / 1000).toFixed(1).replace('.', ',')} km`
-      : `${Math.round(walk.distanceMeters)} m`;
+    return formatWalkDistance(walk);
   }
 
   private executeNukiAction(lock: NukiLock, action: NukiLockActionType): void {

@@ -102,6 +102,9 @@
 ## Testing (Karma/Jasmine)
 - [Detailed testing notes](testing-notes.md) — spy patterns, HttpTestingController gotchas, worktree npm-install requirement, auth-in-spec recipe, full-suite baseline (3 pre-existing fails, reconfirmed 2026-08-17).
 
+## Toni-Tablet-Karte (Task 9, 2026-08-23)
+- [Leaflet-Karten-Kachel](leaflet-map-tile-pattern.md) — ViewChild+ngAfterViewInit statt *ngIf-Container (Reihenfolge-Falle bei /pets), gemeinsame `useLocalLeafletIcons()` in shared/leaflet-icons.util.ts. Branch feature/tablet-toni, Commit 447f87e.
+
 ## Flow Editor (Stufe 3b) — Frontend
 - [flow-editor-frontend.md](flow-editor-frontend.md) — full build history: `flow.model.ts`/`flow.service.ts` contract, ED-B3–B11, import button, `@foblex/flow` link.
 - Quick facts: routes `/flows` (list) and `/flows/:id` (editor, `unsavedChangesGuard`); error-signal convention `error.set(err.message)` + `*__error` banner div, used across all flow pages.

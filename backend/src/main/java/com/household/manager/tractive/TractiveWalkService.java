@@ -29,7 +29,15 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class TractiveWalkService {
 
-    static final int MAX_DAYS = 14;
+    /**
+     * Obergrenze des abfragbaren Zeitraums. Die Tablet-Ansicht bietet 30 Tage an.
+     *
+     * Preis: der erste 30-Tage-Abruf loest bis zu 30 einzelne Cloud-Aufrufe aus
+     * (groessere Fenster lehnt die Cloud mit Code 7500 HISTORY ab) und trifft damit
+     * realistisch das Rate-Limit - dann liefert der Service das Teilergebnis der
+     * schon geladenen Tage. Abgeschlossene Tage bleiben danach dauerhaft im Cache.
+     */
+    static final int MAX_DAYS = 30;
     /** Groesser lehnt die Cloud ab (Code 7500 HISTORY, real beobachtet bei 7 Tagen). */
     private static final Duration MAX_CHUNK = Duration.ofHours(24);
     /**

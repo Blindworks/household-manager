@@ -1,0 +1,110 @@
+<app-tablet-shell heading="Toni">
+  <section class="tablet-toni">
+    <div class="tablet-toni__grid">
+      <article class="tablet-toni__card tablet-toni__card--food" [attr.data-tone]="foodTone">
+        <h3 class="tablet-toni__card-title">Futtervorrat</h3>
+        @if (food; as status) {
+          <p class="tablet-toni__figure">
+            {{ status.cansRemaining }}<span class="tablet-toni__unit">Dosen</span>
+          </p>
+          <div class="tablet-toni__bar">
+            <div class="tablet-toni__bar-fill" [style.width.%]="foodBarWidth"></div>
+          </div>
+          <p class="tablet-toni__figure-note">
+            reicht noch ca. {{ status.daysRemaining }} Tage · Ziel {{ status.targetCans }}
+          </p>
+        } @else {
+          <p class="tablet-toni__hint">{{ foodError ?? 'Noch keine Daten.' }}</p>
+        }
+      </article>
+      <article class="tablet-toni__card tablet-toni__card--walks">
+        <h3 class="tablet-toni__card-title">
+          <span>Spaziergänge</span>
+          <span class="tablet-toni__ranges" role="group" aria-label="Zeitraum">
+            @for (days of walkRanges; track days) {
+              <button
+                type="button"
+                class="tablet-toni__range"
+                [class.tablet-toni__range--active]="days === walkDays"
+                (click)="setWalkDays(days)">
+                {{ days }} Tage
+              </button>
+            }
+          </span>
+        </h3>
+        <div
+          echarts
+          class="tablet-toni__chart"
+          [options]="walkChartOptions"
+          [autoResize]="true"></div>
+        @if (recentWalks.length > 0) {
+          <ul class="tablet-toni__walks">
+            @for (walk of recentWalks; track walk.day + walk.timeRange) {
+              <li class="tablet-toni__walk">
+                <span class="tablet-toni__walk-day">{{ walk.day }}</span>
+                <span>{{ walk.timeRange }}</span>
+                <span class="tablet-toni__walk-figures">{{ walk.duration }} · {{ walk.distance }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="tablet-toni__walks-hint">
+            {{ walkError ?? 'Keine Runde in diesem Zeitraum.' }}
+          </p>
+        }
+      </article>
+      <article class="tablet-toni__card tablet-toni__card--status">
+        <h3 class="tablet-toni__card-title">Tracker</h3>
+        @if (pet; as tracker) {
+          <!--
+            Fehlt atHome, wird KEIN Badge gezeigt statt geraten: das Feld fehlt im
+            JSON, wenn keine Aussage moeglich ist (kein Zuhause hinterlegt oder
+            keine Position). Dasselbe Verhalten wie auf der Seite /pets.
+          -->
+          @if (tracker.atHome != null) {
+            <p class="tablet-toni__badge"
+               [class.tablet-toni__badge--away]="!tracker.atHome">
+              {{ tracker.atHome ? 'Zu Hause' : 'Unterwegs' }}
+            </p>
+          }
+          @if (tracker.batteryPercent != null) {
+            <p class="tablet-toni__figure">
+              {{ tracker.batteryPercent }}<span class="tablet-toni__unit">% Akku</span>
+              @if (tracker.charging) {
+                <span class="material-symbols-outlined tablet-toni__charging">bolt</span>
+              }
+            </p>
+          }
+          <p class="tablet-toni__figure-note">Zone: {{ tracker.zone }}</p>
+          <!--
+            Bei einem Cloud-Ausfall liefert /v1/tractive/pets bewusst weiter die
+            letzte bekannte Position. Dieser Zeitstempel ist die einzige Stelle,
+            an der ihr Alter sichtbar wird.
+          -->
+          @if (tracker.lastSeen) {
+            <p class="tablet-toni__figure-note">
+              Zuletzt gesehen: {{ tracker.lastSeen | date:'short' }}
+            </p>
+          }
+        } @else {
+          <p class="tablet-toni__hint">{{ petError ?? 'Kein Tracker gefunden.' }}</p>
+        }
+      </article>
+      <article class="tablet-toni__card tablet-toni__card--map">
+        <h3 class="tablet-toni__card-title">Standort</h3>
+        <!--
+          Der Container bleibt immer im DOM; nur so ist er beim ersten
+          Positionsdatensatz sicher da. Ohne Position liegt der Hinweis darueber.
+        -->
+        <div class="tablet-toni__map-frame">
+          <div class="tablet-toni__map" #mapContainer></div>
+          @if (!hasPosition) {
+            <p class="tablet-toni__hint tablet-toni__hint--overlay">
+              {{ petError ?? 'Keine Position verfügbar.' }}
+            </p>
+          }
+        </div>
+      </article>
+    </div>
+  </section>
+</app-tablet-shell>

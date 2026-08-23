@@ -80,6 +80,12 @@ export const routes: Routes = [
     title: 'Luftqualitaet Tablet - Household Manager'
   },
   {
+    path: 'tablet/toni',
+    loadComponent: () => import('./pages/tablet-toni/tablet-toni.component').then(m => m.TabletToniComponent),
+    canActivate: [authGuard],
+    title: 'Toni Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
