@@ -11,6 +11,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -105,13 +107,9 @@ class TractiveWalkServiceTest {
 
         service.getWalks("dev-9", 7);
 
-        ArgumentCaptor<Instant> from = ArgumentCaptor.forClass(Instant.class);
-        verify(repository).findByTrackerIdAndPositionTimeGreaterThanEqualOrderByPositionTimeAsc(
-                eq("dev-9"), from.capture());
-        // 7 Tage heisst: heute plus die sechs Vortage, ab deren Mitternacht.
-        long ageDays = Duration.between(from.getValue(), Instant.now()).toDays();
-        assertTrue(ageDays >= 6 && ageDays <= 7,
-                "Abfragebeginn lag " + ageDays + " Tage zurueck");
+        // Exakt statt einer Spanne: Duration.toDays() schneidet ab, eine Toleranz
+        // von einem Tag wuerde einen Off-by-one im Offset gerade verdecken.
+        assertEquals(midnightDaysAgo(6), capturedFrom());
     }
 
     @Test
@@ -122,13 +120,19 @@ class TractiveWalkServiceTest {
 
         service.getWalks("dev-9", 99_999);
 
+        assertEquals(midnightDaysAgo(TractiveWalkService.MAX_DAYS - 1), capturedFrom());
+    }
+
+    /** Mitternacht vor N Tagen in lokaler Haushaltszeit — dieselbe Rechnung wie im Service. */
+    private Instant midnightDaysAgo(int days) {
+        return LocalDate.now(ZoneId.systemDefault()).minusDays(days)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant();
+    }
+
+    private Instant capturedFrom() {
         ArgumentCaptor<Instant> from = ArgumentCaptor.forClass(Instant.class);
         verify(repository).findByTrackerIdAndPositionTimeGreaterThanEqualOrderByPositionTimeAsc(
                 eq("dev-9"), from.capture());
-        long ageDays = Duration.between(from.getValue(), Instant.now()).toDays();
-        assertTrue(ageDays <= TractiveWalkService.MAX_DAYS,
-                "Abfragebeginn lag " + ageDays + " Tage zurueck");
-        assertTrue(ageDays >= TractiveWalkService.MAX_DAYS - 1L,
-                "Das Maximum wurde nicht ausgeschoepft: " + ageDays);
+        return from.getValue();
     }
 }
