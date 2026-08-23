@@ -118,4 +118,7 @@
     <!-- Web-Push-Subscriptions der PWA -->
     <include file="db/changelog/changes/20260817-0047-create-push-subscription-table.xml"/>
 
+    <!-- Eigene Positionshistorie der Tractive-Tracker -->
+    <include file="db/changelog/changes/20260823-0048-create-tractive-position-table.xml"/>
+
 </databaseChangeLog>
