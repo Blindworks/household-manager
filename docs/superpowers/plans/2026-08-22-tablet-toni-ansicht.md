@@ -1777,6 +1777,30 @@ Ans Ende der Suite:
     expect(card?.querySelector('.tablet-toni__hint')?.textContent).toContain('Keine Position');
     fresh.destroy();
   });
+
+  it('baut die Karte auch dann auf, wenn die Position erst nach dem Rendern eintrifft', () => {
+    // Genau dafuer steht der Kartencontainer immer im DOM. Mit einem Subject
+    // trifft die Position erst nach ngAfterViewInit ein - mit einem of(...) waere
+    // sie schon in ngOnInit da und der Test uebersaehe einen *ngIf am Container.
+    const pending = new Subject<TractivePet[]>();
+    tractiveSpy.getPets.and.returnValue(pending.asObservable());
+
+    const fresh = TestBed.createComponent(TabletToniComponent);
+    fresh.detectChanges();
+
+    pending.next([toni]);
+
+    const card = (fresh.nativeElement as HTMLElement).querySelector('.tablet-toni__card--map');
+    expect(card?.querySelector('.leaflet-container')).not.toBeNull();
+
+    pending.complete();
+    fresh.destroy();
+  });
+
+  it('blendet den Positionshinweis aus, sobald eine Position vorliegt', () => {
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.tablet-toni__card--map');
+    expect(card?.querySelector('.tablet-toni__hint--overlay')).toBeNull();
+  });
 ```
 
 - [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
@@ -1972,7 +1996,7 @@ In `tablet-toni.component.scss` innerhalb von `.tablet-toni`:
 npm test -- --watch=false --browsers=ChromeHeadless --include='**/tablet-toni.component.spec.ts'
 ```
 
-Erwartet: `25 SUCCESS`.
+Erwartet: `27 SUCCESS`.
 
 - [ ] **Step 8: Auch die /pets-Suite prüfen**
 
