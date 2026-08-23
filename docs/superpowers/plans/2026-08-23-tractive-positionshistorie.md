@@ -644,6 +644,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -738,13 +740,9 @@ class TractiveWalkServiceTest {
 
         service.getWalks("dev-9", 7);
 
-        ArgumentCaptor<Instant> from = ArgumentCaptor.forClass(Instant.class);
-        verify(repository).findByTrackerIdAndPositionTimeGreaterThanEqualOrderByPositionTimeAsc(
-                eq("dev-9"), from.capture());
-        // 7 Tage heisst: heute plus die sechs Vortage, ab deren Mitternacht.
-        long ageDays = Duration.between(from.getValue(), Instant.now()).toDays();
-        assertTrue(ageDays >= 6 && ageDays <= 7,
-                "Abfragebeginn lag " + ageDays + " Tage zurueck");
+        // Exakt statt einer Spanne: Duration.toDays() schneidet ab, eine Toleranz
+        // von einem Tag wuerde einen Off-by-one im Offset gerade verdecken.
+        assertEquals(midnightDaysAgo(6), capturedFrom());
     }
 
     @Test
@@ -755,14 +753,20 @@ class TractiveWalkServiceTest {
 
         service.getWalks("dev-9", 99_999);
 
+        assertEquals(midnightDaysAgo(TractiveWalkService.MAX_DAYS - 1), capturedFrom());
+    }
+
+    /** Mitternacht vor N Tagen in lokaler Haushaltszeit — dieselbe Rechnung wie im Service. */
+    private Instant midnightDaysAgo(int days) {
+        return LocalDate.now(ZoneId.systemDefault()).minusDays(days)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant();
+    }
+
+    private Instant capturedFrom() {
         ArgumentCaptor<Instant> from = ArgumentCaptor.forClass(Instant.class);
         verify(repository).findByTrackerIdAndPositionTimeGreaterThanEqualOrderByPositionTimeAsc(
                 eq("dev-9"), from.capture());
-        long ageDays = Duration.between(from.getValue(), Instant.now()).toDays();
-        assertTrue(ageDays <= TractiveWalkService.MAX_DAYS,
-                "Abfragebeginn lag " + ageDays + " Tage zurueck");
-        assertTrue(ageDays >= TractiveWalkService.MAX_DAYS - 1L,
-                "Das Maximum wurde nicht ausgeschoepft: " + ageDays);
+        return from.getValue();
     }
 }
 ```
@@ -882,9 +886,11 @@ Erwartet: erfolgreicher Build. Schlägt er fehl, weil eine andere Klasse `Tracti
 
 - [ ] **Step 6: Mutationsprüfung des Zeitraums**
 
-Setze `MAX_DAYS` testweise auf `30` und lass die Klasse laufen. **`klemmtDenZeitraumAufDasMaximum` muss grün bleiben** (er rechnet über die Konstante), aber halte fest, ob `fragtDenGewaehltenZeitraumAbMitternachtAb` weiterhin grün ist. Setze anschließend zurück.
+Ändere `clampedDays - 1L` testweise zu `clampedDays`. **Beide Zeitraum-Tests müssen fehlschlagen**, mit konkreten Instant-Werten in der Meldung. Setze zurück.
 
-Ändere danach `clampedDays - 1L` testweise zu `clampedDays`. **`fragtDenGewaehltenZeitraumAbMitternachtAb` muss fehlschlagen.** Halte die Ausgabe fest und setze zurück. Bestätige mit `git diff`, dass die Datei wieder dem Stand aus Step 3 entspricht.
+Setze danach `MAX_DAYS` testweise auf `30`. **Beide Tests müssen grün bleiben** — `klemmtDenZeitraumAufDasMaximum` rechnet über die Konstante, der andere prüft einen festen 7-Tage-Aufruf. Setze zurück und bestätige mit `git diff`, dass die Datei wieder dem Stand aus Step 3 entspricht.
+
+**Warum exakte Gleichheit statt einer Tagesspanne:** `Duration.toDays()` schneidet ab, deshalb deckte eine Toleranz von `[6, 7]` sowohl `minusDays(6)` als auch `minusDays(7)` ab und ließ den Off-by-one durch. Dass Test und Service dieselbe Formel rechnen, ist bei einer Datumsgrenze richtig — entscheidend ist, dass der Offset (`- 1`) explizit im Test steht und nicht aus dem Service kommt.
 
 - [ ] **Step 7: Commit**
 
