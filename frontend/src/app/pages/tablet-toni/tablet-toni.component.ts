@@ -15,6 +15,9 @@ import { TractivePet, TractiveWalk } from '../../models/tractive.model';
  * Dashboard-Dialog vorbehalten - auf dem Tablet laeuft die KIOSK-Rolle, dort
  * wuerde jede Buchung ohnehin mit 403 scheitern.
  */
+/** Auswaehlbare Zeitraeume der Spaziergangs-Kachel. 30 ist die Backend-Obergrenze. */
+export type WalkRangeDays = 7 | 14 | 30;
+
 @Component({
   selector: 'app-tablet-toni',
   standalone: true,
@@ -23,19 +26,113 @@ import { TractivePet, TractiveWalk } from '../../models/tractive.model';
   styleUrl: './tablet-toni.component.scss'
 })
 export class TabletToniComponent implements OnInit, OnDestroy {
+  /** Das Tablet haengt dauerhaft in dieser Ansicht und muss sich selbst aktualisieren. */
+  private static readonly REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
   private readonly petFoodService = inject(PetFoodService);
   private readonly tractiveService = inject(TractiveService);
+  private refreshTimer: number | null = null;
+
+  readonly walkRanges: readonly WalkRangeDays[] = [7, 14, 30];
 
   food: PetFoodStatus | null = null;
+  foodError: string | null = null;
   pet: TractivePet | null = null;
+  petError: string | null = null;
   walks: TractiveWalk[] = [];
+  walkError: string | null = null;
+  walkDays: WalkRangeDays = 7;
 
   ngOnInit(): void {
-    this.petFoodService.getStatus().subscribe({ next: food => (this.food = food) });
-    this.tractiveService.getPets().subscribe({ next: pets => (this.pet = pets[0] ?? null) });
+    this.load(false);
+    this.refreshTimer = window.setInterval(
+      () => this.reload(),
+      TabletToniComponent.REFRESH_INTERVAL_MS
+    );
   }
 
   ngOnDestroy(): void {
-    // Der Selbst-Refresh kommt in Task 5 dazu.
+    if (this.refreshTimer !== null) {
+      window.clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+  }
+
+  /** Turnusmaessige Aktualisierung: ein Fehlschlag laesst die Anzeige stehen. */
+  reload(): void {
+    this.load(true);
+  }
+
+  setWalkDays(days: WalkRangeDays): void {
+    if (days === this.walkDays) {
+      return;
+    }
+    this.walkDays = days;
+    this.loadWalks(false);
+  }
+
+  /**
+   * Die drei Quellen laufen unabhaengig: faellt Tractive aus, steht der
+   * Futtervorrat trotzdem noch da - und umgekehrt.
+   */
+  private load(silent: boolean): void {
+    this.loadFood(silent);
+    this.loadPet(silent);
+  }
+
+  private loadFood(silent: boolean): void {
+    this.petFoodService.getStatus().subscribe({
+      next: food => {
+        this.food = food;
+        this.foodError = null;
+      },
+      error: (error: Error) => {
+        console.error('Fehler beim Laden des Futtervorrats:', error);
+        // Ein misslungener Hintergrundabruf darf die zuletzt bekannten Werte nicht
+        // durch eine Fehlermeldung ersetzen - alte Zahlen sind auf einer Wandanzeige
+        // mehr wert als gar keine.
+        if (!silent) {
+          this.foodError = 'Futtervorrat nicht verfügbar.';
+        }
+      }
+    });
+  }
+
+  private loadPet(silent: boolean): void {
+    this.tractiveService.getPets().subscribe({
+      next: pets => {
+        // Bewusst das erste Tier: bei genau einem Hund ist das Toni. Mehrere Tiere
+        // waeren eine eigene Entscheidung, keine stille Erweiterung des Rasters.
+        this.pet = pets[0] ?? null;
+        this.petError = null;
+        this.loadWalks(silent);
+      },
+      error: (error: Error) => {
+        console.error('Fehler beim Laden des Trackers:', error);
+        if (!silent) {
+          this.petError = 'Tracker nicht verfügbar.';
+        }
+      }
+    });
+  }
+
+  private loadWalks(silent: boolean): void {
+    const trackerId = this.pet?.trackerId;
+    if (!trackerId) {
+      return;
+    }
+    this.tractiveService.getWalks(trackerId, this.walkDays).subscribe({
+      next: walks => {
+        this.walks = walks;
+        this.walkError = null;
+      },
+      error: (error: Error) => {
+        console.error('Fehler beim Laden der Spaziergänge:', error);
+        if (!silent) {
+          // Der haeufigste Grund ist das Rate-Limit der Tractive-Cloud.
+          this.walkError = 'Spaziergänge nicht verfügbar.';
+        }
+      }
+    });
   }
 }

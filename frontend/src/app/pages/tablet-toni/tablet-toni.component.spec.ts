@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TabletToniComponent } from './tablet-toni.component';
 import { PetFoodService } from '../../services/pet-food.service';
 import { TractiveService } from '../../services/tractive.service';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
+import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { TABLET_VIEWS } from '../../shared/tablet-views';
 
 describe('TabletToniComponent', () => {
@@ -14,14 +15,24 @@ describe('TabletToniComponent', () => {
   let tractiveSpy: jasmine.SpyObj<TractiveService>;
   let weatherSpy: jasmine.SpyObj<WeatherService>;
 
+  const toni: TractivePet = {
+    trackerId: 'dev-9', name: 'Toni', latitude: 48.2, longitude: 16.37,
+    batteryPercent: 78, charging: false, zone: 'Zuhause', atHome: true,
+    lastSeen: '2026-08-22T14:22:00Z'
+  };
+  const runde: TractiveWalk = {
+    start: '2026-08-22T05:12:00Z', end: '2026-08-22T05:48:00Z',
+    durationMinutes: 36, distanceMeters: 2100
+  };
+
   beforeEach(async () => {
     petFoodSpy = jasmine.createSpyObj('PetFoodService', ['getStatus']);
     petFoodSpy.getStatus.and.returnValue(
       of({ cansRemaining: 34, targetCans: 48, percent: 71, daysRemaining: 34 }));
 
     tractiveSpy = jasmine.createSpyObj('TractiveService', ['getPets', 'getWalks']);
-    tractiveSpy.getPets.and.returnValue(of([]));
-    tractiveSpy.getWalks.and.returnValue(of([]));
+    tractiveSpy.getPets.and.returnValue(of([toni]));
+    tractiveSpy.getWalks.and.returnValue(of([runde]));
 
     weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weatherSpy.getOverview.and.returnValue(
@@ -59,5 +70,79 @@ describe('TabletToniComponent', () => {
   it('zeigt vier Kacheln', () => {
     const cards = (fixture.nativeElement as HTMLElement).querySelectorAll('.tablet-toni__card');
     expect(cards.length).toBe(4);
+  });
+
+  it('laedt Futtervorrat und Tracker beim Start', () => {
+    expect(petFoodSpy.getStatus).toHaveBeenCalledTimes(1);
+    expect(tractiveSpy.getPets).toHaveBeenCalledTimes(1);
+  });
+
+  it('holt die Spaziergaenge des ersten Tiers mit dem Standardzeitraum', () => {
+    expect(tractiveSpy.getWalks).toHaveBeenCalledOnceWith('dev-9', 7);
+  });
+
+  it('fragt ohne Tracker gar nicht erst nach Spaziergaengen', () => {
+    tractiveSpy.getPets.and.returnValue(of([]));
+    tractiveSpy.getWalks.calls.reset();
+
+    const fresh = TestBed.createComponent(TabletToniComponent);
+    fresh.detectChanges();
+
+    expect(tractiveSpy.getWalks).not.toHaveBeenCalled();
+    fresh.destroy();
+  });
+
+  it('laedt bei einem Zeitraumwechsel genau einmal nach', () => {
+    tractiveSpy.getWalks.calls.reset();
+    fixture.componentInstance.setWalkDays(30);
+
+    expect(tractiveSpy.getWalks).toHaveBeenCalledOnceWith('dev-9', 30);
+    expect(fixture.componentInstance.walkDays).toBe(30);
+  });
+
+  it('laedt nicht nach, wenn der aktive Zeitraum erneut gewaehlt wird', () => {
+    tractiveSpy.getWalks.calls.reset();
+    fixture.componentInstance.setWalkDays(7);
+
+    expect(tractiveSpy.getWalks).not.toHaveBeenCalled();
+  });
+
+  it('haelt die Quellen auseinander: ein Tractive-Ausfall laesst das Futter stehen', () => {
+    // Bewusst der ERSTabruf und nicht reload(): ein stiller Hintergrund-Refresh
+    // setzt absichtlich gar keine Fehlermeldung. Hier geht es darum, dass ein
+    // Ausfall der einen Quelle die andere nicht mitreisst.
+    tractiveSpy.getPets.and.returnValue(throwError(() => new Error('offline')));
+
+    const fresh = TestBed.createComponent(TabletToniComponent);
+    fresh.detectChanges();
+    const component = fresh.componentInstance;
+
+    expect(component.food).not.toBeNull();
+    expect(component.petError).not.toBeNull();
+    expect(component.foodError).toBeNull();
+
+    fresh.destroy();
+  });
+
+  it('behaelt bei einem fehlgeschlagenen Hintergrund-Refresh die bisherigen Werte', () => {
+    // Auf einer Wandanzeige sind alte Zahlen mehr wert als eine Fehlermeldung.
+    const component = fixture.componentInstance;
+    petFoodSpy.getStatus.and.returnValue(throwError(() => new Error('offline')));
+
+    component.reload();
+
+    expect(component.food?.cansRemaining).toBe(34);
+    expect(component.foodError).toBeNull();
+  });
+
+  it('meldet einen Fehler, wenn schon der Erstabruf des Futters scheitert', () => {
+    petFoodSpy.getStatus.and.returnValue(throwError(() => new Error('offline')));
+
+    const fresh = TestBed.createComponent(TabletToniComponent);
+    fresh.detectChanges();
+
+    expect(fresh.componentInstance.foodError).not.toBeNull();
+    expect(fresh.componentInstance.food).toBeNull();
+    fresh.destroy();
   });
 });
