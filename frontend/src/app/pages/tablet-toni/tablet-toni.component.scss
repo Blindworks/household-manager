@@ -1,0 +1,68 @@
+// Inhalt der Tablet-Hundeansicht. Kopfzeile und Ansichtsleiste liefert
+// app-tablet-shell; hier bleibt das 2x2-Raster, das sich die Resthoehe teilt.
+
+// Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
+// bis in die Kacheln. Fehlt sie an EINER Stelle, faellt alles darunter auf
+// Inhaltshoehe zurueck und die Graphen werden winzig - deshalb traegt schon
+// das Host-Element der Seite flex: 1 (dasselbe Muster wie im Dashboard).
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tablet-toni {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.75rem;
+  color: #e4e2e4;
+
+  &__grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 1rem;
+    min-height: 0;
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &__card-title {
+    margin: 0 0 0.35rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-weight: 600;
+    flex: 0 0 auto;
+    // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
+    // schlaegt die vererbte helle Farbe - auf schwarzem Grund waere die
+    // Beschriftung sonst kaum lesbar.
+    color: #f4f3f5;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    min-width: 0;
+  }
+
+  &__hint {
+    flex: 1 1 auto;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    color: #94a3b8;
+    font-size: 1.05rem;
+    text-align: center;
+  }
+}
