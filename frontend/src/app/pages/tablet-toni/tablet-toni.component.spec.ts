@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { TabletToniComponent } from './tablet-toni.component';
 import { PetFoodService } from '../../services/pet-food.service';
 import { TractiveService } from '../../services/tractive.service';
@@ -242,5 +242,20 @@ describe('TabletToniComponent', () => {
     const card = (fixture.nativeElement as HTMLElement)
       .querySelector('.tablet-toni__card--walks');
     expect(card?.textContent).toContain('Keine Runde');
+  });
+
+  it('zeigt die neue Achsenlaenge sofort, noch vor der Antwort des Servers', () => {
+    // Genau dafuer ruft setWalkDays selbst rebuildWalkView auf. Mit einem Subject,
+    // das erst spaeter emittiert, laesst sich das ueberhaupt pruefen - ein of(...)
+    // kaeme synchron zurueck und verdeckte den Aufruf.
+    const pending = new Subject<TractiveWalk[]>();
+    tractiveSpy.getWalks.and.returnValue(pending.asObservable());
+
+    fixture.componentInstance.setWalkDays(14);
+
+    const options = fixture.componentInstance.walkChartOptions as { xAxis: { data: string[] } };
+    expect(options.xAxis.data.length).toBe(14);
+
+    pending.complete();
   });
 });
