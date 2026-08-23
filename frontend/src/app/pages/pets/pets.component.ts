@@ -3,24 +3,9 @@ import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
 import { TractiveService } from '../../services/tractive.service';
 import { TractivePet } from '../../models/tractive.model';
+import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 
-/**
- * Leaflet ermittelt die Standard-Marker-Icons ueber eine relative URL zum
- * aktuell ausgefuehrten Skript. Unter dem Angular-Bundler funktioniert diese
- * Ermittlung nicht - die Icons wuerden sonst schweigend fehlen. Die Icons
- * werden deshalb lokal aus den Angular-Assets ausgeliefert (nicht per CDN),
- * damit das Dashboard auch ohne Internetzugang funktioniert.
- */
-function fixLeafletDefaultIcon(): void {
-  const iconPrototype = L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: unknown };
-  delete iconPrototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
-    iconUrl: 'assets/leaflet/marker-icon.png',
-    shadowUrl: 'assets/leaflet/marker-shadow.png'
-  });
-}
-fixLeafletDefaultIcon();
+useLocalLeafletIcons();
 
 /**
  * Seite „Hundetracker": Karte und Kacheln je Haustier. Reiner Betrachter – die Anmeldung

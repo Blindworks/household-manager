@@ -211,4 +211,28 @@
     font-size: 0.95rem;
     color: #94a3b8;
   }
+
+  &__map-frame {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  &__map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /*
+    Deckt die Karte ab, solange keine Position vorliegt. Leaflet zeichnet in den
+    Container, sobald es ihn bekommt - der Hinweis liegt deshalb darueber statt
+    an seiner Stelle.
+  */
+  &__hint--overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
 }

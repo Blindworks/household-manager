@@ -1,16 +1,26 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  inject
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import * as L from 'leaflet';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { PetFoodService } from '../../services/pet-food.service';
 import { TractiveService } from '../../services/tractive.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { PetFoodTone, petFoodBarWidth, petFoodTone } from '../../shared/pet-food-level.util';
+import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 import {
   walkDayLabel,
   walkDayTotals,
@@ -20,6 +30,7 @@ import {
 } from '../../shared/walk-format.util';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
+useLocalLeafletIcons();
 
 /**
  * Hundeuebersicht fuer das Wandtablet: Futtervorrat, Spaziergaenge,
@@ -52,13 +63,24 @@ const BAR_COLOR = '#aac7ff';
   templateUrl: './tablet-toni.component.html',
   styleUrl: './tablet-toni.component.scss'
 })
-export class TabletToniComponent implements OnInit, OnDestroy {
+export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Das Tablet haengt dauerhaft in dieser Ansicht und muss sich selbst aktualisieren. */
   private static readonly REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
   private readonly petFoodService = inject(PetFoodService);
   private readonly tractiveService = inject(TractiveService);
   private refreshTimer: number | null = null;
+
+  /**
+   * Der Kartencontainer steht IMMER im DOM, auch ohne Position - sonst haenge
+   * der Aufbau der Karte an der Reihenfolge von Datenankunft und
+   * Change-Detection, und der erste Abruf liefe ins Leere.
+   */
+  @ViewChild('mapContainer') private mapContainer?: ElementRef<HTMLDivElement>;
+
+  private map?: L.Map;
+  private marker?: L.Marker;
+  private viewReady = false;
 
   readonly walkRanges: readonly WalkRangeDays[] = [7, 14, 30];
 
@@ -81,11 +103,19 @@ export class TabletToniComponent implements OnInit, OnDestroy {
     );
   }
 
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    this.renderMap();
+  }
+
   ngOnDestroy(): void {
     if (this.refreshTimer !== null) {
       window.clearInterval(this.refreshTimer);
       this.refreshTimer = null;
     }
+    this.map?.remove();
+    this.map = undefined;
+    this.marker = undefined;
   }
 
   /** Turnusmaessige Aktualisierung: ein Fehlschlag laesst die Anzeige stehen. */
@@ -100,6 +130,11 @@ export class TabletToniComponent implements OnInit, OnDestroy {
 
   get foodBarWidth(): number {
     return this.food ? petFoodBarWidth(this.food.percent) : 0;
+  }
+
+  /** true, sobald eine verwertbare Position vorliegt. */
+  get hasPosition(): boolean {
+    return this.pet?.latitude != null && this.pet?.longitude != null;
   }
 
   setWalkDays(days: WalkRangeDays): void {
@@ -180,6 +215,7 @@ export class TabletToniComponent implements OnInit, OnDestroy {
         this.pet = pets[0] ?? null;
         this.petError = null;
         this.loadWalks(silent);
+        this.renderMap();
       },
       error: (error: Error) => {
         console.error('Fehler beim Laden des Trackers:', error);
@@ -213,5 +249,33 @@ export class TabletToniComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  /**
+   * Baut die Karte beim ersten Datensatz auf und verschiebt danach nur den
+   * Marker - ein Neuaufbau bei jedem Refresh wuerde die Kacheln neu laden.
+   */
+  private renderMap(): void {
+    if (!this.viewReady || !this.hasPosition) {
+      return;
+    }
+    const container = this.mapContainer?.nativeElement;
+    if (!container) {
+      return;
+    }
+    const position: L.LatLngExpression = [this.pet!.latitude!, this.pet!.longitude!];
+    if (!this.map) {
+      this.map = L.map(container).setView(position, 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
+      }).addTo(this.map);
+    }
+    if (this.marker) {
+      this.marker.setLatLng(position);
+    } else {
+      this.marker = L.marker(position).addTo(this.map).bindPopup(this.pet!.name);
+    }
+    this.map.setView(position);
   }
 }

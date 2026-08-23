@@ -81,7 +81,19 @@
           <p class="tablet-toni__hint">{{ petError ?? 'Kein Tracker gefunden.' }}</p>
         </ng-template>
       </article>
-      <article class="tablet-toni__card tablet-toni__card--map"></article>
+      <article class="tablet-toni__card tablet-toni__card--map">
+        <h3 class="tablet-toni__card-title">Standort</h3>
+        <!--
+          Der Container bleibt immer im DOM; nur so ist er beim ersten
+          Positionsdatensatz sicher da. Ohne Position liegt der Hinweis darueber.
+        -->
+        <div class="tablet-toni__map-frame">
+          <div class="tablet-toni__map" #mapContainer></div>
+          <p class="tablet-toni__hint tablet-toni__hint--overlay" *ngIf="!hasPosition">
+            {{ petError ?? 'Keine Position verfügbar.' }}
+          </p>
+        </div>
+      </article>
     </div>
   </section>
 </app-tablet-shell>

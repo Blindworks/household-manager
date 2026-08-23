@@ -258,4 +258,22 @@ describe('TabletToniComponent', () => {
 
     pending.complete();
   });
+
+  it('baut die Karte auf, sobald eine Position vorliegt', () => {
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.tablet-toni__card--map');
+    // Leaflet haengt seine eigene Klasse an den Container, sobald die Karte steht.
+    expect(card?.querySelector('.leaflet-container')).not.toBeNull();
+  });
+
+  it('zeigt einen Hinweis statt einer leeren Flaeche, wenn keine Position vorliegt', () => {
+    const { latitude, longitude, ...ohnePosition } = toni;
+    tractiveSpy.getPets.and.returnValue(of([ohnePosition as TractivePet]));
+
+    const fresh = TestBed.createComponent(TabletToniComponent);
+    fresh.detectChanges();
+
+    const card = (fresh.nativeElement as HTMLElement).querySelector('.tablet-toni__card--map');
+    expect(card?.querySelector('.tablet-toni__hint')?.textContent).toContain('Keine Position');
+    fresh.destroy();
+  });
 });
