@@ -236,4 +236,18 @@ class TractiveWalkServiceTest {
         long ageDays = Duration.between(oldest, Instant.now()).toDays();
         assertTrue(ageDays <= TractiveWalkService.MAX_DAYS);
     }
+
+    @Test
+    void dreissigTageWerdenNichtMehrGeklemmt() {
+        stubHappyAuth();
+        when(apiClient.getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class))).thenReturn(List.of());
+
+        service.getWalks("dev-9", 30);
+
+        // Ein Cloud-Haeppchen je Tag: 30 angefragte Tage muessen 30 Abrufe ergeben.
+        // Vor der Anhebung von MAX_DAYS waren es 14 - ohne Fehler und ohne Hinweis.
+        verify(apiClient, times(30)).getPositionHistory(anyString(), anyString(), anyString(),
+                any(Instant.class), any(Instant.class));
+    }
 }
