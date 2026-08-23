@@ -37,6 +37,8 @@ class TractivePollingServiceTest {
     private TractiveEntityMapper mapper;
     @Mock
     private EntityStateService entityStateService;
+    @Mock
+    private TractivePositionRecorder positionRecorder;
 
     private TractiveProperties properties;
     private TractivePollingService service;
@@ -64,7 +66,8 @@ class TractivePollingServiceTest {
     @BeforeEach
     void setUp() {
         properties = new TractiveProperties();
-        service = new TractivePollingService(properties, apiClient, authService, mapper, entityStateService);
+        service = new TractivePollingService(properties, apiClient, authService, mapper,
+                entityStateService, positionRecorder);
     }
 
     private void givenAuthenticated() {
@@ -347,5 +350,43 @@ class TractivePollingServiceTest {
         assertTrue(captor.getAllValues().stream()
                 .anyMatch(update -> update.entityId().endsWith("_location")
                         && "unavailable".equals(update.state())));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void schreibtDiePositionenJedesPollZyklusMit() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        // Ohne diesen Aufruf entstuende gar keine Historie - die Cloud liefert beim
+        // Basic-Abo nur rund 24 Stunden, laengere Zeitraeume gibt es nur, weil wir
+        // selbst mitschreiben.
+        service.poll();
+
+        ArgumentCaptor<List<TractivePetSnapshot>> captor = ArgumentCaptor.forClass(List.class);
+        verify(positionRecorder).record(captor.capture());
+        assertEquals(1, captor.getValue().size());
+        assertEquals("dev-9", captor.getValue().get(0).trackerId());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void schreibtDiePositionenAuchWennDasMeldenDerEntityStatesScheitert() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        // Haelt die Reihenfolge in pollOnce fest: updates.forEach(...) laeuft ohne
+        // try/catch. Stuende der Recorder dahinter, ginge bei einem Fehler im
+        // Entity-State-Layer die gesamte Historie dieses Zyklus verloren.
+        doThrow(new RuntimeException("boom"))
+                .when(entityStateService).reportState(any());
+
+        service.poll();
+
+        ArgumentCaptor<List<TractivePetSnapshot>> captor = ArgumentCaptor.forClass(List.class);
+        verify(positionRecorder).record(captor.capture());
+        assertEquals(1, captor.getValue().size());
     }
 }

@@ -35,6 +35,7 @@ public class TractivePollingService {
     private final TractiveAuthService authService;
     private final TractiveEntityMapper mapper;
     private final EntityStateService entityStateService;
+    private final TractivePositionRecorder positionRecorder;
 
     /** Zuletzt erfolgreich gemeldete Updates; Basis fuer die unavailable-Markierung. */
     private volatile List<EntityStateUpdate> lastUpdates = List.of();
@@ -179,6 +180,10 @@ public class TractivePollingService {
                     problems.add("Objekt " + ref.id() + ": " + ex.getMessage());
                 }
             }
+            // Bewusst VOR dem Melden der Entity-States: updates.forEach(...) laeuft
+            // ohne try/catch, ein Fehler dort verliesse pollOnce sofort - ein danach
+            // platzierter Recorder kaeme nie zum Zug und es entstuende keine Historie.
+            positionRecorder.record(snapshots);
             List<EntityStateUpdate> updates = new ArrayList<>();
             for (TractivePetSnapshot snapshot : snapshots) {
                 try {

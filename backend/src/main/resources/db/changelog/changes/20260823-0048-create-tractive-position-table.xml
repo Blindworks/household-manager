@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260823-0048-create-tractive-position" author="claude">
+        <comment>
+            Eigene Positionshistorie der Tractive-Tracker. Gefuellt vom TractivePositionRecorder
+            aus dem minuetlichen Poll-Zyklus; Grundlage der Spaziergangserkennung, weil die
+            Tractive-Cloud beim Basic-Abo nur rund 24 Stunden Historie liefert.
+        </comment>
+        <createTable tableName="tractive_position">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tracker_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <!--
+                Zeitpunkt des BERICHTS, nicht des Polls. Bewusst DATETIME (fachlicher
+                Zeitstempel, wie last_used_at in push_subscription).
+            -->
+            <column name="position_time" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="latitude" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="longitude" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="accuracy" type="DOUBLE"/>
+            <column name="sensor_used" type="VARCHAR(50)"/>
+        </createTable>
+        <!--
+            Traegt doppelt: verhindert Dubletten auch bei parallelem Poll UND bedient
+            die Bereichsabfrage (tracker_id, position_time >= X) als Index.
+        -->
+        <addUniqueConstraint tableName="tractive_position"
+                             columnNames="tracker_id, position_time"
+                             constraintName="uk_tractive_position_tracker_time"/>
+    </changeSet>
+
+</databaseChangeLog>
