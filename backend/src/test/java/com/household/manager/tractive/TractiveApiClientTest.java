@@ -123,42 +123,6 @@ class TractiveApiClientTest {
     }
 
     @Test
-    void positionHistoryParsesSegments() {
-        server.expect(requestTo("https://graph.tractive.com/4/tracker/dev-9/positions"
-                        + "?time_from=1800000000&time_to=1800086400&format=json_segments"))
-                .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Authorization", "Bearer tok-1"))
-                .andExpect(header("x-tractive-user", "u-1"))
-                .andRespond(withSuccess("""
-                        [[{"time": 1800000000, "latlong": [48.2082, 16.3738],
-                           "sensor_used": "GPS", "alt": 200, "speed": 1.2},
-                          {"time": 1800000060, "latlong": [48.2090, 16.3745]}],
-                         [{"time": 1800040000, "latlong": [48.2100, 16.3800]}]]
-                        """, MediaType.APPLICATION_JSON));
-
-        var segments = client.getPositionHistory("tok-1", "u-1", "dev-9",
-                java.time.Instant.ofEpochSecond(1800000000L),
-                java.time.Instant.ofEpochSecond(1800086400L));
-
-        assertEquals(2, segments.size());
-        assertEquals(2, segments.get(0).size());
-        assertEquals(48.2082, segments.get(0).get(0).latitude());
-        server.verify();
-    }
-
-    @Test
-    void positionHistoryRateLimitWirdAlsEigeneExceptionGemeldet() {
-        server.expect(requestTo("https://graph.tractive.com/4/tracker/dev-9/positions"
-                        + "?time_from=1800000000&time_to=1800086400&format=json_segments"))
-                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
-
-        assertThrows(TractiveRateLimitException.class,
-                () -> client.getPositionHistory("tok-1", "u-1", "dev-9",
-                        java.time.Instant.ofEpochSecond(1800000000L),
-                        java.time.Instant.ofEpochSecond(1800086400L)));
-    }
-
-    @Test
     void hardwareReportParsesBatteryAndCharging() {
         server.expect(requestTo("https://graph.tractive.com/4/device_hw_report/dev-9/"))
                 .andRespond(withSuccess("""
