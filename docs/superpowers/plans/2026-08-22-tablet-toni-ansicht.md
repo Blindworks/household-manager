@@ -1454,6 +1454,22 @@ Ans Ende der Suite:
     expect(options.xAxis.data.length).toBe(30);
   });
 
+  it('zeigt die neue Achsenlaenge sofort, noch vor der Antwort des Servers', () => {
+    // Genau dafuer ruft setWalkDays selbst rebuildWalkView auf. Mit einem Subject,
+    // das erst spaeter emittiert, laesst sich das ueberhaupt pruefen - ein of(...)
+    // kaeme synchron zurueck und verdeckte den Aufruf: der Test darueber bliebe
+    // auch dann gruen, wenn setWalkDays gar nicht selbst neu baut.
+    const pending = new Subject<TractiveWalk[]>();
+    tractiveSpy.getWalks.and.returnValue(pending.asObservable());
+
+    fixture.componentInstance.setWalkDays(14);
+
+    const options = fixture.componentInstance.walkChartOptions as { xAxis: { data: string[] } };
+    expect(options.xAxis.data.length).toBe(14);
+
+    pending.complete();
+  });
+
   it('zeigt die letzten drei Runden im Klartext', () => {
     const component = fixture.componentInstance;
     expect(component.recentWalks.length).toBe(1);
@@ -1716,7 +1732,7 @@ In `tablet-toni.component.scss` innerhalb von `.tablet-toni`:
 npm test -- --watch=false --browsers=ChromeHeadless --include='**/tablet-toni.component.spec.ts'
 ```
 
-Erwartet: `22 SUCCESS`.
+Erwartet: `23 SUCCESS`.
 
 - [ ] **Step 7: Commit**
 
@@ -1956,7 +1972,7 @@ In `tablet-toni.component.scss` innerhalb von `.tablet-toni`:
 npm test -- --watch=false --browsers=ChromeHeadless --include='**/tablet-toni.component.spec.ts'
 ```
 
-Erwartet: `24 SUCCESS`.
+Erwartet: `25 SUCCESS`.
 
 - [ ] **Step 8: Auch die /pets-Suite prüfen**
 
