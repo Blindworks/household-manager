@@ -6,23 +6,9 @@ import * as L from 'leaflet';
 import { TractiveService } from '../../services/tractive.service';
 import { TractiveHomeSettings } from '../../models/tractive-home-settings.model';
 import { TractiveAuthStatus } from '../../models/tractive.model';
+import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 
-/**
- * Leaflet ermittelt die Standard-Marker-Icons ueber eine relative URL zum aktuell
- * ausgefuehrten Skript; unter dem Angular-Bundler schlaegt das schweigend fehl. Die
- * Icons kommen deshalb lokal aus den Angular-Assets, nie per CDN – die Anzeige muss
- * auch ohne Internetzugang funktionieren.
- */
-function fixLeafletDefaultIcon(): void {
-  const iconPrototype = L.Icon.Default.prototype as L.Icon.Default & { _getIconUrl?: unknown };
-  delete iconPrototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
-    iconUrl: 'assets/leaflet/marker-icon.png',
-    shadowUrl: 'assets/leaflet/marker-shadow.png'
-  });
-}
-fixLeafletDefaultIcon();
+useLocalLeafletIcons();
 
 /** Mitte Deutschlands – nur der Startausschnitt, solange nichts konfiguriert ist. */
 const FALLBACK_CENTER: L.LatLngExpression = [51.1657, 10.4515];

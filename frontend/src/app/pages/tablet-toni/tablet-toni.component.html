@@ -39,7 +39,7 @@
           [autoResize]="true"></div>
         @if (recentWalks.length > 0) {
           <ul class="tablet-toni__walks">
-            @for (walk of recentWalks; track walk) {
+            @for (walk of recentWalks; track walk.day + walk.timeRange) {
               <li class="tablet-toni__walk">
                 <span class="tablet-toni__walk-day">{{ walk.day }}</span>
                 <span>{{ walk.timeRange }}</span>
