@@ -139,6 +139,9 @@ public class MeterReadingController {
     @GetMapping("/series")
     public ResponseEntity<List<MeterConsumptionSeries>> getConsumptionSeries(
             @RequestParam(required = false, defaultValue = "WEEKS_26") ConsumptionRange range) {
+        // Bewusst debug statt info wie die uebrigen Endpunkte dieser Datei: das
+        // Wandtablet ruft diese Reihe alle fuenf Minuten dauerhaft ab und wuerde das
+        // Log sonst zumuellen.
         log.debug("Received request for consumption series, range: {}", range);
         return ResponseEntity.ok(meterConsumptionSeriesService.getSeries(range));
     }
