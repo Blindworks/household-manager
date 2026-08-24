@@ -15,13 +15,15 @@ import java.time.LocalDateTime;
  * Speedtest-Ergebnisse. Laeuft nachts um 03:20 (bewusst nicht zur vollen Stunde,
  * dort laeuft der Speedtest).
  *
- * <p>Bewusst KEIN {@code @Transactional} auf {@link #retain()}: die abgeleiteten
- * {@code deleteBy...Before}-Methoden der Repositories sind ueber die
- * Spring-Data-Repository-Proxy-Infrastruktur bereits selbst transaktional (jede
- * in ihrer eigenen Transaktion). Eine gemeinsame aeussere Transaktion wuerde bei
- * einer gefangenen Exception im ersten Pfad als rollback-only markiert und den
- * zweiten, an sich unabhaengigen Loeschpfad mitkippen. Ohne aeussere Transaktion
- * und mit je einem eigenen try/catch bleiben beide Pfade wirklich unabhaengig.
+ * <p>Bewusst KEIN {@code @Transactional} auf {@link #retain()} oder den privaten
+ * Loesch-Methoden: {@code deleteBySampledAtBefore}/{@code deleteByTestedAtBefore} sind als
+ * {@code @Modifying}-Bulk-Deletes direkt am Repository transaktional annotiert (Muster
+ * {@code WasteCollectionEventRepository.deleteFromDateOnwards}) und bringen damit ihre eigene,
+ * in sich abgeschlossene Transaktion mit. Eine zusaetzliche aeussere Transaktion um beide
+ * Aufrufe waere nicht nur ueberfluessig, sondern gefaehrlich: eine hier gefangene Exception aus
+ * dem ersten Pfad wuerde eine gemeinsame Transaktion als rollback-only markieren und den
+ * zweiten, an sich unabhaengigen Loeschpfad mitkippen. Ohne aeussere Transaktion und mit je
+ * einem eigenen try/catch bleiben beide Pfade wirklich unabhaengig voneinander.
  */
 @Component
 @Slf4j
@@ -46,7 +48,7 @@ public class NetworkHistoryRetentionJob {
     private void deleteOldConnectivitySamples() {
         try {
             LocalDateTime cutoff = LocalDateTime.now(clock).minusDays(CONNECTIVITY_RETENTION_DAYS);
-            long deleted = connectivitySampleRepository.deleteBySampledAtBefore(cutoff);
+            int deleted = connectivitySampleRepository.deleteBySampledAtBefore(cutoff);
             logDeletion("Connectivity-Samples", deleted);
         } catch (Exception e) {
             log.warn("Retention der Connectivity-Samples fehlgeschlagen", e);
@@ -56,7 +58,7 @@ public class NetworkHistoryRetentionJob {
     private void deleteOldSpeedtestResults() {
         try {
             LocalDateTime cutoff = LocalDateTime.now(clock).minusDays(SPEEDTEST_RETENTION_DAYS);
-            long deleted = speedtestResultRepository.deleteByTestedAtBefore(cutoff);
+            int deleted = speedtestResultRepository.deleteByTestedAtBefore(cutoff);
             logDeletion("Speedtest-Ergebnisse", deleted);
         } catch (Exception e) {
             log.warn("Retention der Speedtest-Ergebnisse fehlgeschlagen", e);
