@@ -63,18 +63,60 @@ export function compareToPrevious(
   if (points.length < 2) {
     return null;
   }
-  const previous = points[points.length - 2].consumption;
-  const current = points[points.length - 1].consumption;
-  if (previous === 0) {
+  const previousPoint = points[points.length - 2];
+  const currentPoint = points[points.length - 1];
+  if (previousPoint.consumption === 0) {
     return null;
   }
-  const percent = Math.round(((current - previous) / previous) * 100);
+  const percent = Math.round(
+    ((currentPoint.consumption - previousPoint.consumption) / previousPoint.consumption) * 100
+  );
   const sign = percent >= 0 ? '+' : '';
-  return `${sign}${percent} % ggü. ${PREVIOUS_LABEL[resolution]}`;
+  const reference = isAdjacent(previousPoint, currentPoint, resolution)
+    ? PREVIOUS_LABEL[resolution]
+    : GAPPED_LABEL;
+  return `${sign}${percent} % ggü. ${reference}`;
 }
+
+/** Bezeichnung, wenn zwischen den beiden Balken Perioden fehlen. */
+const GAPPED_LABEL = 'letztem Wert';
+
+/** Toleranz fuer eine Ablesewoche: 7 Tage plus Spielraum fuer einen verschobenen Ablesetag. */
+const MAX_ADJACENT_WEEK_DAYS = 8;
+
+/**
+ * Sind die beiden Balken tatsaechlich benachbarte Perioden?
+ *
+ * Der Serien-Endpunkt laesst Perioden ohne Ablesung ganz weg, statt eine erfundene
+ * Null zu liefern. Die letzten beiden Punkte einer Reihe koennen also weit
+ * auseinanderliegen - dann waere "ggue. Vormonat" schlicht falsch.
+ */
+function isAdjacent(
+  previous: ConsumptionPoint,
+  current: ConsumptionPoint,
+  resolution: ConsumptionResolution
+): boolean {
+  const from = new Date(previous.periodStart);
+  const to = new Date(current.periodStart);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+    // Ohne verwertbares Datum lieber die vage, aber richtige Aussage.
+    return false;
+  }
+  if (resolution === 'WEEK') {
+    const days = (to.getTime() - from.getTime()) / MILLIS_PER_DAY;
+    return days <= MAX_ADJACENT_WEEK_DAYS;
+  }
+  const months =
+    (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+  return months === 1;
+}
+
+const MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Verbrauchswert mit Einheit, eine Nachkommastelle, deutsches Komma. */
 export function formatConsumption(value: number | null, unit: string): string {
+  // Die undefined-Pruefung ist bewusst da, obwohl der Typ sie ausschliesst: der Wert
+  // stammt aus einer JSON-Antwort, und TypeScript-Typen gelten zur Laufzeit nicht.
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '–';
   }
