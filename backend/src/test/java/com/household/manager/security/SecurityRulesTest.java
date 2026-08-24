@@ -482,4 +482,31 @@ class SecurityRulesTest {
         mockMvc.perform(get("/v1/air-quality/series?range=WEEK")).andExpect(status().isNotFound());
     }
 
+    /**
+     * Die Verbrauchsreihe des Wandtablets braucht bewusst keine eigene Regel: das GET
+     * faellt auf die generische Regel GET /v1/** -> KIOSK. 404 statt 403 belegt, dass
+     * die Regel durchlaesst (der Controller steht nicht in diesem Slice).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieVerbrauchsreiheLesen() throws Exception {
+        mockMvc.perform(get("/v1/meter-readings/series?range=WEEKS_26"))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * Schreiben bleibt MEMBER (anyRequest-Regel) - das Wandtablet darf Zaehlerstaende
+     * lesen, aber keine erfassen.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeineAblesungAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/meter-readings")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"meterType\":\"ELECTRICITY\",\"readingValue\":1,"
+                                + "\"readingDate\":\"2026-08-21T00:00:00\"}"))
+                .andExpect(status().isForbidden());
+    }
+
 }

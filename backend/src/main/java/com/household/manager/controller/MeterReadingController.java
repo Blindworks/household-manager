@@ -1,12 +1,15 @@
 package com.household.manager.controller;
 
 import com.household.manager.dto.ConsumptionResponse;
+import com.household.manager.dto.MeterConsumptionSeries;
 import com.household.manager.dto.MeterReadingCreateResponse;
 import com.household.manager.dto.MeterReadingImportResponse;
 import com.household.manager.dto.MeterReadingRequest;
 import com.household.manager.dto.MeterReadingResponse;
 import com.household.manager.importer.MeterReadingCsvImporter;
 import com.household.manager.model.entity.MeterType;
+import com.household.manager.service.ConsumptionRange;
+import com.household.manager.service.MeterConsumptionSeriesService;
 import com.household.manager.service.MeterReadingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,7 @@ public class MeterReadingController {
 
     private final MeterReadingService meterReadingService;
     private final MeterReadingCsvImporter meterReadingCsvImporter;
+    private final MeterConsumptionSeriesService meterConsumptionSeriesService;
 
     /**
      * Create a new meter reading.
@@ -119,6 +123,24 @@ public class MeterReadingController {
         log.info("Received request to calculate consumption for type: {}", type);
         ConsumptionResponse consumption = meterReadingService.calculateConsumption(type);
         return ResponseEntity.ok(consumption);
+    }
+
+    /**
+     * Consumption series for the wall tablet view, aggregated per week or month.
+     * <p>
+     * GET /api/v1/meter-readings/series?range=WEEKS_26
+     * <p>
+     * The resolution (week or month) is part of the range value, so a single
+     * parameter cannot express an impossible combination such as "8 weeks, monthly".
+     *
+     * @param range the selected time window, defaults to 26 weeks
+     * @return one series per meter type that has readings in the window
+     */
+    @GetMapping("/series")
+    public ResponseEntity<List<MeterConsumptionSeries>> getConsumptionSeries(
+            @RequestParam(required = false, defaultValue = "WEEKS_26") ConsumptionRange range) {
+        log.debug("Received request for consumption series, range: {}", range);
+        return ResponseEntity.ok(meterConsumptionSeriesService.getSeries(range));
     }
 
     /**
