@@ -6,6 +6,7 @@ import com.household.manager.model.entity.MeterReading;
 import com.household.manager.model.entity.MeterType;
 import com.household.manager.repository.MeterReadingRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,13 @@ public class MeterConsumptionSeriesService {
     /** Injizierbar, damit Tests ein festes "heute" setzen koennen. */
     private final Supplier<LocalDate> today;
 
+    /**
+     * Der Konstruktor fuer Spring. Das {@code @Autowired} ist Pflicht, nicht Zierde:
+     * die Klasse hat zwei Konstruktoren, und Spring waehlt nur dann selbsttaetig
+     * einen aus, wenn es genau einer ist - sonst sucht es den Default-Konstruktor
+     * und der Anwendungsstart bricht ab.
+     */
+    @Autowired
     public MeterConsumptionSeriesService(MeterReadingRepository repository) {
         this(repository, LocalDate::now);
     }

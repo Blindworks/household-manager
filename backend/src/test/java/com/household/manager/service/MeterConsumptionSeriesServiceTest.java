@@ -4,6 +4,7 @@ import com.household.manager.dto.MeterConsumptionSeries;
 import com.household.manager.model.entity.MeterReading;
 import com.household.manager.model.entity.MeterType;
 import com.household.manager.repository.MeterReadingRepository;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -272,5 +273,29 @@ class MeterConsumptionSeriesServiceTest {
         assertThat(series.points())
                 .extracting(p -> p.periodStart())
                 .containsExactly(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 8, 1));
+    }
+
+    /**
+     * Die Klasse hat zwei Konstruktoren: einen fuer Spring und einen fuer die Tests
+     * mit festem "heute". Spring waehlt nur dann selbsttaetig einen aus, wenn es
+     * genau EINER ist - sonst sucht es den Default-Konstruktor und der gesamte
+     * Anwendungsstart bricht ab (real passiert 2026-08-24).
+     *
+     * <p>Kein Unit-Test faengt das, weil sie den Service selbst bauen, und kein
+     * WebMvcTest faengt es, weil der den Service mockt. Deshalb hier ein echter,
+     * winziger Spring-Kontext.
+     */
+    @Test
+    void laesstSichVonSpringInstanziieren() {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.registerBean(MeterReadingRepository.class, () -> repository);
+            context.registerBean(MeterConsumptionSeriesService.class);
+            context.refresh();
+
+            // Den Bean auch benutzen: das belegt zugleich, dass Spring ihm das
+            // Repository gereicht hat, und haelt den Repository-Stub in Gebrauch.
+            assertThat(context.getBean(MeterConsumptionSeriesService.class)
+                    .getSeries(ConsumptionRange.WEEKS_8)).isEmpty();
+        }
     }
 }
