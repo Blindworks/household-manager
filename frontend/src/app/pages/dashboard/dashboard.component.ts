@@ -348,6 +348,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly pendingNukiIds = new Set<number>();
   /** Zu bestätigende Aktion (Entsperren/Tür öffnen); null = kein Dialog offen. */
   nukiConfirm: { lock: NukiLock; action: NukiLockActionType } | null = null;
+  /**
+   * True, solange die Türschloss-Kachel ausgefahren ist. Sie steht standardmäßig
+   * zusammengeschrumpft (nur Symbol), fährt per Klick aus und klappt danach von
+   * selbst wieder zu. Kein Timer beim Start: ein offener setTimeout aus ngOnInit
+   * würde jeden fakeAsync-Test des Dashboards mit "timer still in the queue" brechen.
+   */
+  nukiExpanded = false;
+  /** Wartezeit, bis die ausgefahrene Türschloss-Kachel von selbst wieder zuklappt. */
+  private static readonly NUKI_COLLAPSE_DELAY_MS = 6000;
+  private nukiCollapseTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Haustiere fuer die Zu-Hause-Kachel; leer = Kachel wird nicht gerendert. */
   pets: TractivePet[] = [];
@@ -409,6 +419,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.doorSubscription?.unsubscribe();
     this.petFoodSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
+    this.clearNukiCollapseTimer();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -988,9 +999,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Klappt die Türschloss-Kachel auf oder zu. Ausgefahren läuft ein Timer, der sie
+   * wieder zusammenklappt; zugeklappt gibt es nichts zu warten.
+   */
+  toggleNukiCard(): void {
+    this.nukiExpanded = !this.nukiExpanded;
+    if (this.nukiExpanded) {
+      this.scheduleNukiCollapse();
+    } else {
+      this.clearNukiCollapseTimer();
+    }
+  }
+
+  /** Startet die Wartezeit bis zum automatischen Zusammenklappen neu. */
+  private scheduleNukiCollapse(): void {
+    this.clearNukiCollapseTimer();
+    this.nukiCollapseTimer = setTimeout(() => {
+      this.nukiCollapseTimer = null;
+      this.nukiExpanded = false;
+    }, DashboardComponent.NUKI_COLLAPSE_DELAY_MS);
+  }
+
+  private clearNukiCollapseTimer(): void {
+    if (this.nukiCollapseTimer !== null) {
+      clearTimeout(this.nukiCollapseTimer);
+      this.nukiCollapseTimer = null;
+    }
+  }
+
+  /**
    * Verriegeln läuft ohne Rückfrage; Entsperren/Tür öffnen erst nach Bestätigung.
    */
   onNukiAction(lock: NukiLock, action: NukiLockActionType): void {
+    // Wer gerade schaltet, soll das Ergebnis noch sehen: Wartezeit neu starten.
+    if (this.nukiExpanded) {
+      this.scheduleNukiCollapse();
+    }
     if (this.pendingNukiIds.has(lock.smartlockId)) {
       return;
     }

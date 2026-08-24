@@ -971,6 +971,60 @@
   border-radius: var(--radius-full);
 }
 
+// Nur die Tuerschloss-Kachel klappt zusammen: Der Abstand zum Symbol steckt
+// im einklappbaren Bereich, sonst bliebe eingeklappt ein leerer Spalt stehen.
+.lumina__lock-card {
+  // Eingeklappt bleibt nur das Symbol stehen: quadratisches Feld ohne Abstand
+  // daneben, sonst sitzt es sichtbar aus der Mitte der runden Kachel.
+  gap: 0;
+  padding: 16px;
+  cursor: pointer;
+  transition:
+    padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    gap 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+
+  .lumina__secured-icon {
+    width: 24px;
+    height: 24px;
+
+    // Ohne feste Zeilenhoehe macht die Standardzeilenhoehe der Symbolschrift
+    // das Feld hoeher als breit – die eingeklappte Kachel waere ein Ei.
+    .material-symbols-outlined {
+      line-height: 1;
+    }
+  }
+
+  &.lumina__secured--expanded {
+    gap: 16px;
+    padding: 16px 24px;
+  }
+}
+
+// Klappmechanik: 0fr -> 1fr laesst sich animieren, width: auto nicht.
+// Das min-width: 0 am Inneren ist zwingend, sonst haelt die Mindestbreite
+// des Inhalts die Spalte offen und es passiert sichtbar nichts.
+.lumina__lock-collapsible {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-columns 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+}
+
+.lumina__secured--expanded .lumina__lock-collapsible {
+  grid-template-columns: 1fr;
+  opacity: 1;
+}
+
+.lumina__lock-collapsible-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
 // ---- Leiste mit den Tablet-Unteransichten --------------------------------
 .lumina__viewbar {
   display: flex;
@@ -1004,6 +1058,7 @@
 .lumina__secured-icon {
   position: relative;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   color: var(--secondary);
@@ -1489,6 +1544,11 @@
 
   .lumina__fade {
     opacity: 1;
+  }
+
+  .lumina__lock-card,
+  .lumina__lock-collapsible {
+    transition: none;
   }
 }
 

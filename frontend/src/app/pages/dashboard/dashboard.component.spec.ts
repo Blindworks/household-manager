@@ -1041,6 +1041,73 @@ describe('DashboardComponent (Nuki-Tuerschloss)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('startet zusammengeschrumpft und faehrt beim Klick auf die Kachel aus', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const card: HTMLElement = fixture.nativeElement.querySelector('.lumina__lock-card');
+
+    expect(fixture.componentInstance.nukiExpanded).toBeFalse();
+    expect(card.classList).not.toContain('lumina__secured--expanded');
+
+    card.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.nukiExpanded).toBeTrue();
+    expect(card.classList).toContain('lumina__secured--expanded');
+
+    tick(6000);
+    discardPeriodicTasks();
+  }));
+
+  it('klappt die ausgefahrene Kachel nach der Wartezeit von selbst wieder zu', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleNukiCard();
+    tick(5999);
+    expect(fixture.componentInstance.nukiExpanded).toBeTrue();
+
+    tick(1);
+    expect(fixture.componentInstance.nukiExpanded).toBeFalse();
+
+    discardPeriodicTasks();
+  }));
+
+  it('haelt die Kachel nach einer Schaltaktion weiter offen, statt mitten im Ergebnis zuzuklappen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleNukiCard();
+    tick(5000);
+    fixture.componentInstance.onNukiAction(lock(), 'LOCK');
+    tick(5000);
+
+    expect(fixture.componentInstance.nukiExpanded).toBeTrue();
+
+    tick(1000);
+    expect(fixture.componentInstance.nukiExpanded).toBeFalse();
+
+    discardPeriodicTasks();
+  }));
+
+  it('klick auf einen Schalt-Knopf klappt die Kachel nicht zu', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleNukiCard();
+    fixture.detectChanges();
+
+    const lockButton: HTMLElement = fixture.nativeElement.querySelector('.lumina__lock-btn');
+    lockButton.click();
+    tick();
+    fixture.detectChanges();
+
+    expect(nukiServiceSpy.sendAction).toHaveBeenCalledWith(1, 'LOCK');
+    expect(fixture.componentInstance.nukiExpanded).toBeTrue();
+
+    tick(6000);
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Verbraucher-Kachel)', () => {
