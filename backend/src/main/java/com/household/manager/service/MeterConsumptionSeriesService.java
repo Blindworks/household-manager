@@ -11,9 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -90,12 +94,59 @@ public class MeterConsumptionSeriesService {
             weekly.add(new ConsumptionPoint(date, weekLabel(date), consumption,
                     current.isEstimated()));
         }
-        return weekly;
+        return aggregateByPeriod(weekly, range.getResolution());
+    }
+
+    /**
+     * Fasst Wochenbalken zu Perioden zusammen - noetig, weil zwei Ablesungen in
+     * derselbe ISO-Woche fallen koennen (Korrekturablesung) und weil bei
+     * {@link ConsumptionResolution#MONTH} mehrere Wochen einen Monatsbalken bilden.
+     * Beide Faelle sind dieselbe Operation: Perioden-Schluessel bilden, Verbrauch
+     * summieren, "estimated" verodern. Die Eingabe ist bereits aufsteigend sortiert,
+     * die {@link LinkedHashMap} erhaelt diese Reihenfolge.
+     */
+    private static List<ConsumptionPoint> aggregateByPeriod(List<ConsumptionPoint> weekly,
+                                                              ConsumptionResolution resolution) {
+        Map<String, List<ConsumptionPoint>> groupedByPeriod = new LinkedHashMap<>();
+        for (ConsumptionPoint point : weekly) {
+            String key = periodKey(point.periodStart(), resolution);
+            groupedByPeriod.computeIfAbsent(key, k -> new ArrayList<>()).add(point);
+        }
+
+        List<ConsumptionPoint> result = new ArrayList<>();
+        for (List<ConsumptionPoint> group : groupedByPeriod.values()) {
+            result.add(mergeGroup(group, resolution));
+        }
+        return result;
+    }
+
+    private static String periodKey(LocalDate date, ConsumptionResolution resolution) {
+        return resolution == ConsumptionResolution.WEEK
+                ? date.get(WeekFields.ISO.weekBasedYear()) + "-" + date.get(WeekFields.ISO.weekOfWeekBasedYear())
+                : date.getYear() + "-" + date.getMonthValue();
+    }
+
+    private static ConsumptionPoint mergeGroup(List<ConsumptionPoint> group, ConsumptionResolution resolution) {
+        ConsumptionPoint first = group.get(0);
+        BigDecimal consumption = group.stream()
+                .map(ConsumptionPoint::consumption)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        boolean estimated = group.stream().anyMatch(ConsumptionPoint::estimated);
+
+        if (resolution == ConsumptionResolution.WEEK) {
+            return new ConsumptionPoint(first.periodStart(), first.label(), consumption, estimated);
+        }
+        LocalDate periodStart = first.periodStart().withDayOfMonth(1);
+        return new ConsumptionPoint(periodStart, MONTH_LABEL.format(periodStart), consumption, estimated);
     }
 
     private static String weekLabel(LocalDate date) {
         return "KW " + date.get(WeekFields.ISO.weekOfWeekBasedYear());
     }
+
+    /** "Jul 26" - kurz genug fuer eine Drittelspalte auf dem Wandtablet. */
+    private static final DateTimeFormatter MONTH_LABEL =
+            DateTimeFormatter.ofPattern("MMM yy", Locale.GERMAN);
 
     private static String unitOf(MeterType type) {
         return type == MeterType.ELECTRICITY ? "kWh" : "m³";

@@ -9,8 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,7 +19,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class MeterConsumptionSeriesServiceTest {
 
     @Mock
@@ -186,5 +183,94 @@ class MeterConsumptionSeriesServiceTest {
                 .filteredOn(s -> s.meterType() == MeterType.WATER)
                 .extracting(MeterConsumptionSeries::unit)
                 .containsExactly("m³");
+    }
+
+    /**
+     * Zwei Ablesungen derselben ISO-Woche (Freitagsablesung plus eine Korrektur am
+     * Samstag) traegen dasselbe Label. Das Frontend zeichnet daraus eine
+     * Kategorienachse - bei doppeltem Kategorienamen landen beide Werte auf derselben
+     * Position und ein Balken verschwaende lautlos. Deshalb werden sie zusammengefasst.
+     */
+    @Test
+    void fasstZweiAblesungenDerselbenWocheZusammen() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 8, 7), "1000", false),
+                reading(LocalDate.of(2026, 8, 14), "1030", false),
+                reading(LocalDate.of(2026, 8, 15), "1038", true));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.WEEKS_8);
+
+        assertThat(series.points()).hasSize(1);
+        assertThat(series.points().get(0).label()).isEqualTo("KW 33");
+        assertThat(series.points().get(0).periodStart()).isEqualTo(LocalDate.of(2026, 8, 14));
+        assertThat(series.points().get(0).consumption()).isEqualByComparingTo("38");
+        assertThat(series.points().get(0).estimated()).isTrue();
+    }
+
+    @Test
+    void fasstWochenZuKalendermonatenZusammen() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 7, 3), "1000", false),
+                reading(LocalDate.of(2026, 7, 10), "1010", false),
+                reading(LocalDate.of(2026, 7, 17), "1030", false),
+                reading(LocalDate.of(2026, 8, 7), "1075", false));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+
+        assertThat(series.points()).hasSize(2);
+        assertThat(series.points().get(0).periodStart()).isEqualTo(LocalDate.of(2026, 7, 1));
+        assertThat(series.points().get(0).label()).isEqualTo("Juli 26");
+        assertThat(series.points().get(0).consumption()).isEqualByComparingTo("30");
+        assertThat(series.points().get(1).periodStart()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(series.points().get(1).consumption()).isEqualByComparingTo("45");
+    }
+
+    /**
+     * Eine Ablesewoche liegt oft quer ueber den Monatswechsel. Sie zaehlt vollstaendig
+     * in den Monat ihres Ablesedatums - der Balken entspricht so weiterhin echten
+     * Ablesungen.
+     */
+    @Test
+    void schlaegtEineWocheUeberDemMonatswechselDemAblesemonatZu() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 6, 26), "1000", false),
+                reading(LocalDate.of(2026, 7, 3), "1020", false));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+
+        assertThat(series.points()).hasSize(1);
+        assertThat(series.points().get(0).periodStart()).isEqualTo(LocalDate.of(2026, 7, 1));
+        assertThat(series.points().get(0).consumption()).isEqualByComparingTo("20");
+    }
+
+    /**
+     * Sonst verschwaende eine geschaetzte Woche in einem sonst echten Monat spurlos.
+     */
+    @Test
+    void markiertEinenMonatSobaldEineWocheGeschaetztWar() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 7, 3), "1000", false),
+                reading(LocalDate.of(2026, 7, 10), "1010", true),
+                reading(LocalDate.of(2026, 7, 17), "1030", false));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+
+        assertThat(series.points()).hasSize(1);
+        assertThat(series.points().get(0).estimated()).isTrue();
+    }
+
+    @Test
+    void erzeugtKeineMonatsbalkenOhneAblesung() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 5, 1), "900", false),
+                reading(LocalDate.of(2026, 5, 8), "920", false),
+                reading(LocalDate.of(2026, 8, 7), "1075", false));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+
+        // Mai (20) und August (155) - Juni und Juli fehlen ganz, statt als 0 dazustehen.
+        assertThat(series.points())
+                .extracting(p -> p.periodStart())
+                .containsExactly(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 8, 1));
     }
 }
