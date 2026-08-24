@@ -31,5 +31,7 @@ public enum EntitySource {
     /** Toni-Futtervorrat (interner Bestand, sensor.pet_food_toni_cans). */
     PET_FOOD,
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
-    MANUAL
+    MANUAL,
+    /** Internet-Konnektivitäts- und Latenzmessung (interner Poller, kein externes Quellsystem). */
+    NETWORK
 }
