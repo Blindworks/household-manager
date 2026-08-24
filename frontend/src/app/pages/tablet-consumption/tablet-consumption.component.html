@@ -1,0 +1,63 @@
+<app-tablet-shell heading="Verbrauch">
+  <div shellActions class="tablet-consumption__controls">
+    <div class="tablet-consumption__group" role="group" aria-label="Auflösung">
+      @for (resolution of resolutions; track resolution.value) {
+        <button
+          type="button"
+          class="tablet-consumption__btn"
+          [class.tablet-consumption__btn--active]="resolution.value === activeResolution"
+          [attr.aria-pressed]="resolution.value === activeResolution"
+          (click)="setResolution(resolution.value)">
+          {{ resolution.label }}
+        </button>
+      }
+    </div>
+    <div class="tablet-consumption__group" role="group" aria-label="Zeitraum">
+      @for (range of ranges; track range.value) {
+        <button
+          type="button"
+          class="tablet-consumption__btn"
+          [class.tablet-consumption__btn--active]="range.value === activeRange"
+          (click)="setRange(range.value)">
+          {{ range.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <section class="tablet-consumption">
+    @if (isLoading && tiles.length === 0) {
+      <p class="tablet-consumption__status">Lade Verbrauchsdaten…</p>
+    } @else if (errorMessage && tiles.length === 0) {
+      <p class="tablet-consumption__status tablet-consumption__status--error">
+        {{ errorMessage }}
+      </p>
+    } @else if (isEmpty) {
+      <p class="tablet-consumption__status">Keine Zählerablesungen im gewählten Zeitraum.</p>
+    } @else {
+      <div class="tablet-consumption__grid">
+        @for (tile of tiles; track tile.key) {
+          <article class="tablet-consumption__card">
+            <header class="tablet-consumption__card-head">
+              <h3 class="tablet-consumption__card-title">{{ tile.name }}</h3>
+              <div class="tablet-consumption__figures">
+                <span class="tablet-consumption__current">{{ tile.currentLabel }}</span>
+                @if (tile.comparison) {
+                  <span class="tablet-consumption__comparison">{{ tile.comparison }}</span>
+                }
+              </div>
+            </header>
+            <div
+              echarts
+              class="tablet-consumption__chart"
+              [options]="tile.options"
+              [autoResize]="true"></div>
+            @if (tile.hasEstimated) {
+              <p class="tablet-consumption__legend">Blasse Balken sind Schätzwerte</p>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</app-tablet-shell>
