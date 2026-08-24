@@ -84,7 +84,9 @@ public class NetworkSpeedtestService {
 
     /**
      * Manueller Trigger (Controller-Pfad). Darf werfen - {@code TooManyRequestsException} bei
-     * Cooldown-Verstoss, {@code IllegalStateException} ohne Internet.
+     * Cooldown-Verstoss, {@code IllegalStateException} ohne Internet. Liefert das gerade
+     * gemessene und gespeicherte Ergebnis zurueck, damit der Controller es direkt beantworten
+     * kann, ohne den Speedtest-Repository-Zugriff selbst zu duplizieren.
      * <p>
      * Der Cooldown-Slot wird VOR {@link #runMeasurement()} atomar reserviert (compareAndSet),
      * nicht erst danach: sonst koennten zwei fast gleichzeitige Aufrufe (Doppelklick, zwei Tabs)
@@ -93,12 +95,12 @@ public class NetworkSpeedtestService {
      * der Slot trotzdem reserviert (bewusst in Kauf genommen, statt den Cooldown zurueckzurollen -
      * verhindert, dass ein kaputtes Ziel im Sekundentakt erneut angefragt wird).
      */
-    public void runManual() {
+    public NetworkSpeedtestResult runManual() {
         if (isOffline()) {
             throw new IllegalStateException("Kein Internet — Speedtest nicht möglich.");
         }
         reserveManualSlot();
-        runMeasurement();
+        return runMeasurement();
     }
 
     private void reserveManualSlot() {
@@ -124,7 +126,7 @@ public class NetworkSpeedtestService {
                 .orElse(false);
     }
 
-    private void runMeasurement() {
+    private NetworkSpeedtestResult runMeasurement() {
         BigDecimal download = null;
         BigDecimal upload = null;
         String downloadError = null;
@@ -161,6 +163,8 @@ public class NetworkSpeedtestService {
         if (upload != null) {
             mirrorEntity(UPLOAD_ENTITY_ID, "Upload-Geschwindigkeit", upload);
         }
+
+        return result;
     }
 
     private static String combineErrors(String downloadError, String uploadError) {
