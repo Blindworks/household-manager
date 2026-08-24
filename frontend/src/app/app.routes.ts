@@ -80,6 +80,12 @@ export const routes: Routes = [
     title: 'Luftqualitaet Tablet - Household Manager'
   },
   {
+    path: 'tablet/consumption',
+    loadComponent: () => import('./pages/tablet-consumption/tablet-consumption.component').then(m => m.TabletConsumptionComponent),
+    canActivate: [authGuard],
+    title: 'Verbrauch Tablet - Household Manager'
+  },
+  {
     path: 'tablet/toni',
     loadComponent: () => import('./pages/tablet-toni/tablet-toni.component').then(m => m.TabletToniComponent),
     canActivate: [authGuard],
