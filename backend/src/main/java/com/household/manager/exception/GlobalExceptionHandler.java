@@ -4,6 +4,7 @@ import com.household.manager.alexa.AlexaException;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.exception.MerossAuthException;
 import com.household.manager.meross.exception.MerossException;
+import com.household.manager.network.TooManyRequestsException;
 import com.household.manager.nuki.NukiException;
 import com.household.manager.shelly.ShellyException;
 import com.household.manager.system.RebooterException;
@@ -365,6 +366,26 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Tractive rate limit: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
+    }
+
+    /**
+     * Ein manueller Speedtest wurde innerhalb der Cooldown-Frist erneut angefragt -
+     * 429 statt 400 (Muster: {@link TractiveRateLimitException}).
+     */
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequestsException(
+            TooManyRequestsException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                .error("Too Many Requests")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Speedtest rate limit: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
     }
 
