@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
@@ -64,6 +65,8 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
 
   private readonly seriesService = inject(MeterConsumptionSeriesService);
   private refreshTimer: number | null = null;
+  /** Laufender Abruf, damit ein neuer den alten ablösen kann. */
+  private pendingRequest: Subscription | null = null;
 
   readonly resolutions: ResolutionOption[] = [
     { value: 'WEEK', label: 'Woche' },
@@ -90,6 +93,8 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
       window.clearInterval(this.refreshTimer);
       this.refreshTimer = null;
     }
+    this.pendingRequest?.unsubscribe();
+    this.pendingRequest = null;
   }
 
   /** Die Zeitraumknoepfe der aktiven Aufloesung. */
@@ -130,7 +135,12 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
       this.errorMessage = null;
     }
     const resolution = this.activeResolution;
-    this.seriesService.getSeries(range).subscribe({
+    // Einen noch laufenden Abruf abbestellen, bevor der naechste startet. Ohne das
+    // koennte eine aeltere, langsamere Antwort nach einer neueren eintreffen und die
+    // bereits richtigen Kacheln mit Zahlen zum falschen Zeitraum ueberschreiben -
+    // auf einer Wandanzeige faellt so etwas niemandem auf.
+    this.pendingRequest?.unsubscribe();
+    this.pendingRequest = this.seriesService.getSeries(range).subscribe({
       next: series => {
         this.tiles = series.map(s => this.toTile(s, resolution));
         this.isEmpty = this.tiles.length === 0;

@@ -147,6 +147,30 @@ describe('TabletConsumptionComponent', () => {
     expect(component.tiles.length).toBe(1);
   });
 
+  /**
+   * Zwei schnell aufeinanderfolgende Umschaltungen: trifft die AELTERE Antwort
+   * zuletzt ein, darf sie die schon richtigen Kacheln nicht ueberschreiben. Auf
+   * einer Wandanzeige stuenden sonst Zahlen zum falschen Zeitraum, ohne dass es
+   * jemandem auffiele.
+   */
+  it('ignoriert eine ueberholte Antwort eines abgeloesten Abrufs', () => {
+    const erster = new Subject<MeterConsumptionSeries[]>();
+    const zweiter = new Subject<MeterConsumptionSeries[]>();
+
+    serviceSpy.getSeries.and.returnValue(erster.asObservable());
+    component.setRange('WEEKS_52');
+
+    serviceSpy.getSeries.and.returnValue(zweiter.asObservable());
+    component.setRange('WEEKS_8');
+
+    zweiter.next([wasser]);
+    expect(component.tiles.map(t => t.name)).toEqual(['Wasser']);
+
+    // Die abgeloeste Antwort trifft verspaetet ein und muss wirkungslos bleiben.
+    erster.next([strom, wasser]);
+    expect(component.tiles.map(t => t.name)).toEqual(['Wasser']);
+  });
+
   it('behält bei einem fehlgeschlagenen Refresh die bisherigen Daten', () => {
     serviceSpy.getSeries.and.returnValue(throwError(() => new Error('offline')));
     component.reload();
