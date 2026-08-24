@@ -298,40 +298,54 @@
 
   <!-- Status & Modi -->
   <footer class="lumina__footer lumina__fade" style="--delay: 0.7s">
-    <div class="lumina-card lumina__secured" [class.lumina__secured--open]="nukiLocks[0] && nukiLocks[0].state !== 'locked' && nukiLocks[0].state !== 'unavailable'">
+    <div class="lumina-card lumina__secured lumina__lock-card"
+         [class.lumina__secured--open]="nukiLocks[0] && nukiLocks[0].state !== 'locked' && nukiLocks[0].state !== 'unavailable'"
+         [class.lumina__secured--expanded]="nukiExpanded"
+         role="button"
+         tabindex="0"
+         [attr.aria-expanded]="nukiExpanded"
+         aria-label="Türschloss-Kachel ein- oder ausklappen"
+         (click)="toggleNukiCard()"
+         (keydown.enter)="toggleNukiCard()"
+         (keydown.space)="$event.preventDefault(); toggleNukiCard()">
       <div class="lumina__secured-icon">
         <span class="lumina__pulse-ring"></span>
         <span class="material-symbols-outlined">{{ nukiLocks[0] ? nukiStateIcon(nukiLocks[0]) : 'security' }}</span>
       </div>
-      <div class="lumina__lock-info">
-        <ng-container *ngIf="nukiLocks[0] as lock; else nukiEmpty">
-          <h4 class="lumina__label lumina__label--secondary">{{ lock.name }}</h4>
-          <p class="lumina__secured-detail">
-            {{ nukiStateLabel(lock) }}<ng-container *ngIf="lock.doorState"> • Tür {{ lock.doorState === 'on' ? 'offen' : 'zu' }}</ng-container>
-            <span *ngIf="lock.batteryCritical" class="lumina__lock-battery-warn">
-              <span class="material-symbols-outlined">battery_alert</span>{{ lock.batteryCharge }}%
-            </span>
-          </p>
-          <p *ngIf="nukiError" class="lumina__lock-error">{{ nukiError }}</p>
-        </ng-container>
-        <ng-template #nukiEmpty>
-          <h4 class="lumina__label lumina__label--secondary">Türschloss</h4>
-          <p class="lumina__secured-detail">{{ nukiLoading ? 'Lädt…' : (nukiError ?? 'Kein Schloss gefunden') }}</p>
-        </ng-template>
-      </div>
-      <div *ngIf="nukiLocks[0] as lock" class="lumina__lock-actions">
-        <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)"
-                (click)="onNukiAction(lock, 'LOCK')" aria-label="Verriegeln">
-          <span class="material-symbols-outlined">lock</span>
-        </button>
-        <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)"
-                (click)="onNukiAction(lock, 'UNLOCK')" aria-label="Aufsperren">
-          <span class="material-symbols-outlined">lock_open</span>
-        </button>
-        <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)"
-                (click)="onNukiAction(lock, 'UNLATCH')" aria-label="Tür öffnen">
-          <span class="material-symbols-outlined">door_open</span>
-        </button>
+      <!-- Klappt beim Zusammenschrumpfen auf Breite 0; das Symbol bleibt stehen. -->
+      <div class="lumina__lock-collapsible" [attr.aria-hidden]="!nukiExpanded">
+        <div class="lumina__lock-collapsible-inner">
+          <div class="lumina__lock-info">
+            <ng-container *ngIf="nukiLocks[0] as lock; else nukiEmpty">
+              <h4 class="lumina__label lumina__label--secondary">{{ lock.name }}</h4>
+              <p class="lumina__secured-detail">
+                {{ nukiStateLabel(lock) }}<ng-container *ngIf="lock.doorState"> • Tür {{ lock.doorState === 'on' ? 'offen' : 'zu' }}</ng-container>
+                <span *ngIf="lock.batteryCritical" class="lumina__lock-battery-warn">
+                  <span class="material-symbols-outlined">battery_alert</span>{{ lock.batteryCharge }}%
+                </span>
+              </p>
+              <p *ngIf="nukiError" class="lumina__lock-error">{{ nukiError }}</p>
+            </ng-container>
+            <ng-template #nukiEmpty>
+              <h4 class="lumina__label lumina__label--secondary">Türschloss</h4>
+              <p class="lumina__secured-detail">{{ nukiLoading ? 'Lädt…' : (nukiError ?? 'Kein Schloss gefunden') }}</p>
+            </ng-template>
+          </div>
+          <div *ngIf="nukiLocks[0] as lock" class="lumina__lock-actions">
+            <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)" [attr.tabindex]="nukiExpanded ? null : -1"
+                    (click)="$event.stopPropagation(); onNukiAction(lock, 'LOCK')" aria-label="Verriegeln">
+              <span class="material-symbols-outlined">lock</span>
+            </button>
+            <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)" [attr.tabindex]="nukiExpanded ? null : -1"
+                    (click)="$event.stopPropagation(); onNukiAction(lock, 'UNLOCK')" aria-label="Aufsperren">
+              <span class="material-symbols-outlined">lock_open</span>
+            </button>
+            <button type="button" class="lumina__lock-btn" [disabled]="!nukiActionable(lock)" [attr.tabindex]="nukiExpanded ? null : -1"
+                    (click)="$event.stopPropagation(); onNukiAction(lock, 'UNLATCH')" aria-label="Tür öffnen">
+              <span class="material-symbols-outlined">door_open</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
