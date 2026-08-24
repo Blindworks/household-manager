@@ -12,8 +12,8 @@ und `/tablet/air-quality`, aber auf einer grundlegend anderen Datenlage.
 ## Datenlage
 
 Zählerstände werden **wöchentlich von Hand** erfasst (freitags; verpasste Freitage
-erzeugt das Backend als Schätzwerte mit `estimated: true`). Jede Ablesung trägt ein
-bereits berechnetes `consumption`-Feld — den Verbrauch seit der Vorablesung.
+erzeugt das Backend als Schätzwerte mit `estimated: true`). Gespeichert wird jeweils
+der **Zählerstand**; der Verbrauch einer Woche ist die Differenz zur Vorablesung.
 
 Daraus folgt: Es gibt keine hochauflösende Zeitreihe wie bei Temperatur oder
 Luftqualität. Die kleinste sinnvolle Einheit ist **eine Ablesewoche**.
@@ -60,9 +60,19 @@ und Wasser).
 
 ### Aggregation
 
-- Der Service **summiert nur** das vorhandene `consumption` je Ablesung. Er rechnet
-  keine Zählerstandsdifferenzen neu — die Verbrauchsberechnung bleibt an genau einer
-  Stelle im bestehenden `MeterReadingService`.
+- Der Service **bildet die Differenzen selbst** aus aufeinanderfolgenden Ablesungen
+  desselben Typs (`readingValue[n] - readingValue[n-1]`) und summiert sie je Periode.
+
+  Das ist eine Korrektur gegenüber der ersten Entwurfsfassung: Das `consumption`-Feld
+  in `MeterReadingResponse` ist **nur bei der jeweils neuesten Ablesung** eines Typs
+  gefüllt (`MeterReadingService.convertToResponseWithConsumption` prüft
+  `lastTwoReadings.get(0).getId().equals(reading.getId())`), und
+  `getAllMeterReadings` beschränkt zusätzlich auf das laufende Kalenderjahr — über
+  die bestehende Liste wären 52 Wochen oder 24 Monate gar nicht lieferbar.
+
+  Die Differenzbildung selbst ist eine Subtraktion zweier Nachbarwerte, kein
+  duplizierter Algorithmus. Sie in `MeterReadingService` auszulagern hieße, dort eine
+  Methode nur für diesen einen Aufrufer einzuziehen; das wäre keine echte DRY-Ersparnis.
 - Bei `resolution=WEEK` ist ein Punkt eine Ablesung.
 - Bei `resolution=MONTH` gehört eine Woche in den Monat ihres **Ablesedatums**. Eine
   Woche, die über den Monatswechsel reicht (z. B. 29.09.–06.10.), zählt also
@@ -75,10 +85,14 @@ und Wasser).
 
 ### Randfälle
 
-- Die **allererste Ablesung** eines Typs hat kein `consumption` (kein Vorgänger) und
-  fällt aus der Serie.
+- Die **allererste Ablesung** eines Typs hat keinen Vorgänger, aus dem sich ein
+  Verbrauch bilden ließe, und fällt aus der Serie.
 - Ein Typ **ohne jede Ablesung** fehlt in der Antwort — es wird keine leere Serie
   geliefert, damit das Frontend keine leeren Diagramme zeichnen muss.
+- Eine **negative Differenz** (Zählertausch oder -reset) wird verworfen und als
+  Warnung geloggt, statt einen Balken ins Minus laufen zu lassen. Beim Anlegen über die
+  API verhindert `validateReadingValue` solche Werte bereits; der CSV-Import ist der
+  Weg, auf dem sie trotzdem in der Tabelle landen können.
 - Ein Fehler bei einem Typ ist **isoliert** (Muster `TemperatureSeriesService.safe`):
   Wasser fällt nicht aus, weil Gas scheitert.
 
@@ -169,7 +183,8 @@ Host-Element die Regel zunächst nicht hatte.
 - Monats-Aggregation inklusive der Woche über den Monatswechsel (zählt in den Monat
   des Ablesedatums)
 - `estimated` einer Woche schlägt auf den Monatsbalken durch
-- Erste Ablesung ohne `consumption` fällt aus der Serie
+- Erste Ablesung (ohne Vorgänger) fällt aus der Serie
+- Negative Differenz (Zählertausch) wird verworfen statt als Minus-Balken gezeigt
 - Typ ohne Ablesungen fehlt in der Antwort
 - Ein Fehler bei einem Typ kippt die anderen nicht
 
