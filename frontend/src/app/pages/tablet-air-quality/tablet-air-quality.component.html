@@ -31,9 +31,8 @@
               </span>
               <span
                 class="tablet-air__current"
-                [class.tablet-air__current--good]="chart.currentLevel === 'good'"
-                [class.tablet-air__current--moderate]="chart.currentLevel === 'moderate'"
-                [class.tablet-air__current--bad]="chart.currentLevel === 'bad'">
+                [style.color]="chart.currentColor"
+                [title]="chart.currentLevelLabel">
                 {{ chart.currentLabel }}
               </span>
             </h3>

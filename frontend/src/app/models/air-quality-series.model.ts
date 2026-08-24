@@ -14,13 +14,18 @@ export interface AirQualitySensorSeries {
   metrics: Partial<Record<AirQualityMetricKey, TimeValue[]>>;
 }
 
-/** Anzeige-Eigenschaften einer Messgroesse. */
+/**
+ * Anzeige-Eigenschaften einer Messgroesse.
+ *
+ * Bewusst OHNE eigene Farbe: die Linie wird nach den Grenzwerten der Messgroesse
+ * eingefaerbt (`shared/air-quality-thresholds.util.ts`), nicht nach ihrer Identitaet.
+ * Eine Farbe pro Groesse waere bloss bunt und truege keine Aussage.
+ */
 export interface AirQualityMetric {
   key: AirQualityMetricKey;
   label: string;
   /** Einheit der Y-Achse; leer beim einheitenlosen IAQ-Score. */
   unit: string;
-  color: string;
 }
 
 /**
@@ -32,9 +37,9 @@ export interface AirQualityMetric {
  * Einzelgroessen.
  */
 export const AIR_QUALITY_METRICS: readonly AirQualityMetric[] = [
-  { key: 'iaq', label: 'Luftqualität (IAQ)', unit: '', color: '#22c55e' },
-  { key: 'pm25', label: 'PM2.5', unit: 'µg/m³', color: '#f59e0b' },
-  { key: 'pm10', label: 'PM10', unit: 'µg/m³', color: '#a855f7' },
-  { key: 'voc', label: 'VOC', unit: 'ppb', color: '#38bdf8' },
-  { key: 'co', label: 'CO', unit: 'ppm', color: '#fb7185' }
+  { key: 'iaq', label: 'Luftqualität (IAQ)', unit: '' },
+  { key: 'pm25', label: 'PM2.5', unit: 'µg/m³' },
+  { key: 'pm10', label: 'PM10', unit: 'µg/m³' },
+  { key: 'voc', label: 'VOC', unit: 'ppb' },
+  { key: 'co', label: 'CO', unit: 'ppm' }
 ];

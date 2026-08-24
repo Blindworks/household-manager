@@ -125,26 +125,15 @@
     white-space: nowrap;
   }
 
-  /* Der Jetzt-Wert ist auf einer Wandanzeige die eigentliche Information. */
+  /* Der Jetzt-Wert ist auf einer Wandanzeige die eigentliche Information. Seine
+     Farbe kommt aus der Grenzwertstufe und wird deshalb im Template gesetzt -
+     eine einzige Definition der Ampel in air-quality-thresholds.util.ts. */
   &__current {
     font-size: 1.25rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     color: #f4f3f5;
-
-    /* Nur der IAQ-Score hat eine allgemein gueltige Bewertung. */
-    &--good {
-      color: #4ade80;
-    }
-
-    &--moderate {
-      color: #fbbf24;
-    }
-
-    &--bad {
-      color: #ffb4ab;
-    }
   }
 
   &__chart {

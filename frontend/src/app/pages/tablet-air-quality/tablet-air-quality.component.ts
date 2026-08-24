@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { AirQualitySeriesService } from '../../services/air-quality-series.service';
@@ -13,9 +13,15 @@ import {
   AirQualitySensorSeries
 } from '../../models/air-quality-series.model';
 import { TimeValue, TimeRange } from '../../models/temperature.model';
-import { IaqLevel, iaqLevel } from '../../models/alexa-air-quality.model';
+import {
+  airQualityColorPieces,
+  airQualityLevel,
+  airQualityLevelColor,
+  AIR_QUALITY_LEVEL_LABELS,
+  AirQualityLevel
+} from '../../shared/air-quality-thresholds.util';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, VisualMapComponent, CanvasRenderer]);
 
 interface RangeOption {
   value: TimeRange;
@@ -35,8 +41,11 @@ interface ChartTile {
   options: Record<string, unknown>;
   /** Juengster Wert inkl. Einheit, z. B. "8 µg/m³". */
   currentLabel: string;
-  /** Nur beim IAQ gesetzt - nur dort gibt es eine allgemein gueltige Bewertung. */
-  currentLevel: IaqLevel | null;
+  /** Bewertungsstufe des juengsten Werts - faerbt die Zahl in der Kachel. */
+  currentLevel: AirQualityLevel;
+  currentColor: string;
+  /** Klartext der Stufe, z. B. "Mäßig" - als Titel am Wert. */
+  currentLevelLabel: string;
 }
 
 const AXIS_COLOR = '#94a3b8';
@@ -160,7 +169,9 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
       points,
       options: {},
       currentLabel: this.formatValue(current, metric),
-      currentLevel: metric.key === 'iaq' ? iaqLevel(current) : null
+      currentLevel: airQualityLevel(metric.key, current),
+      currentColor: airQualityLevelColor(metric.key, current),
+      currentLevelLabel: AIR_QUALITY_LEVEL_LABELS[airQualityLevel(metric.key, current)]
     };
     tile.options = this.chartOptionsFor(tile);
     return tile;
@@ -172,7 +183,12 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
     return metric.unit ? `${formatted} ${metric.unit}` : formatted;
   }
 
-  /** Baut die Chart-Optionen einer Kachel: eine Linie auf einer Achse. */
+  /**
+   * Baut die Chart-Optionen einer Kachel: eine Linie auf einer Achse, eingefaerbt
+   * nach den Grenzwerten ihrer Messgroesse. Die visualMap faerbt jeden Abschnitt
+   * nach seinem eigenen Wert - man sieht damit im Verlauf, wann es kritisch wurde,
+   * ohne dass die Kachel eine eigene Signalfarbe traegt.
+   */
   chartOptionsFor(tile: ChartTile): Record<string, unknown> {
     const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
 
@@ -180,6 +196,14 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
       grid: { left: 56, right: 16, top: 12, bottom: 28, containLabel: false },
       tooltip: { trigger: 'axis' },
       xAxis: { type: 'time', axisLabel },
+      visualMap: {
+        show: false,
+        type: 'piecewise',
+        seriesIndex: 0,
+        // Dimension 1 ist der Messwert; Dimension 0 ist die Zeit.
+        dimension: 1,
+        pieces: airQualityColorPieces(tile.metric.key)
+      },
       yAxis: [{
         type: 'value',
         scale: true,
@@ -196,8 +220,8 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
         showSymbol: false,
         yAxisIndex: 0,
         data: tile.points.map(point => [point.time, point.value]),
-        lineStyle: { width: 3, color: tile.metric.color },
-        itemStyle: { color: tile.metric.color }
+        // Farbe kommt aus der visualMap; hier steht nur die Strichstaerke.
+        lineStyle: { width: 2.5 }
       }]
     };
   }

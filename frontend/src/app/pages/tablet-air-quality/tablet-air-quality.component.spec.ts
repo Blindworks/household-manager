@@ -6,6 +6,7 @@ import { AirQualitySeriesService } from '../../services/air-quality-series.servi
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { AirQualitySensorSeries } from '../../models/air-quality-series.model';
+import { AIR_QUALITY_LEVEL_COLORS } from '../../shared/air-quality-thresholds.util';
 
 describe('TabletAirQualityComponent', () => {
   let fixture: ComponentFixture<TabletAirQualityComponent>;
@@ -86,7 +87,7 @@ describe('TabletAirQualityComponent', () => {
   it('gibt jeder Kachel genau eine Linie und eine Achse in ihrer Einheit', () => {
     const dust = component.charts[0];
     const options = component.chartOptionsFor(dust) as {
-      series: { name: string; data: unknown[] }[];
+      series: { name: string; data: unknown[]; lineStyle: Record<string, unknown> }[];
       yAxis: { axisLabel: { formatter: string } }[];
     };
 
@@ -95,6 +96,21 @@ describe('TabletAirQualityComponent', () => {
     expect(options.series[0].data).toEqual([['2026-08-22T10:00:00', 8]]);
     expect(options.yAxis.length).toBe(1);
     expect(options.yAxis[0].axisLabel.formatter).toBe('{value} µg/m³');
+    // Die Linie traegt keine eigene Farbe - die kommt aus den Grenzwerten.
+    expect(options.series[0].lineStyle['color']).toBeUndefined();
+  });
+
+  it('faerbt die Linie ueber die Grenzwerte der Messgroesse', () => {
+    const options = component.chartOptionsFor(component.charts[0]) as {
+      visualMap: { dimension: number; pieces: { lte?: number; color: string }[] };
+    };
+
+    // PM2.5: das unterste Band endet laut EEA bei 10 µg/m³.
+    expect(options.visualMap.dimension).toBe(1);
+    expect(options.visualMap.pieces[0]).toEqual({
+      lte: 10,
+      color: AIR_QUALITY_LEVEL_COLORS[0]
+    });
   });
 
   it('laesst die Achsenbeschriftung beim einheitenlosen IAQ ohne Einheit', () => {
@@ -110,10 +126,24 @@ describe('TabletAirQualityComponent', () => {
     expect(component.charts[5].currentLabel).toBe('0,4 ppm');
   });
 
-  it('faerbt nur den IAQ-Wert nach seiner Stufe', () => {
-    expect(component.charts[2].currentLevel).toBe('good');
-    expect(component.charts[0].currentLevel).toBeNull();
-    expect(component.charts[5].currentLevel).toBeNull();
+  it('faerbt jeden Jetzt-Wert nach seiner Grenzwertstufe', () => {
+    // Draussen PM2.5 = 8 µg/m³ -> unterstes Band; IAQ 72 -> gut; CO 0,4 ppm -> gut.
+    expect(component.charts[0].currentColor).toBe(AIR_QUALITY_LEVEL_COLORS[0]);
+    expect(component.charts[0].currentLevelLabel).toBe('Gut');
+    expect(component.charts[2].currentColor).toBe(AIR_QUALITY_LEVEL_COLORS[0]);
+    expect(component.charts[5].currentColor).toBe(AIR_QUALITY_LEVEL_COLORS[0]);
+  });
+
+  it('zeigt einen schlechten Wert in der Warnfarbe seiner Stufe', () => {
+    serviceSpy.getSeries.and.returnValue(of([{
+      ...outdoor,
+      metrics: { pm25: [{ time: '2026-08-22T10:00:00', value: 60 }] }
+    }]));
+    component.setRange('DAY');
+
+    // 60 µg/m³ PM2.5 liegt oberhalb des obersten EEA-Bands.
+    expect(component.charts[0].currentColor).toBe(AIR_QUALITY_LEVEL_COLORS[4]);
+    expect(component.charts[0].currentLevelLabel).toBe('Sehr schlecht');
   });
 
   it('lädt bei einem Zeitraumwechsel genau einmal nach', () => {
