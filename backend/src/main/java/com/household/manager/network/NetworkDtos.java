@@ -5,7 +5,6 @@ import com.household.manager.model.entity.NetworkDevice;
 import com.household.manager.model.entity.NetworkSpeedtestResult;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,7 +25,7 @@ public final class NetworkDtos {
         }
     }
 
-    public record DeviceStatusResponse(Long id, String name, String host, boolean reachable, Instant lastSeenAt) {
+    public record DeviceStatusResponse(Long id, String name, String host, boolean reachable, LocalDateTime lastSeenAt) {
     }
 
     public record SpeedtestSummary(LocalDateTime testedAt, BigDecimal downloadMbps, BigDecimal uploadMbps,

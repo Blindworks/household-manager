@@ -13,8 +13,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +25,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class NetworkStatusServiceTest {
+
+    private static final ZoneId ZONE = ZoneId.of("Europe/Berlin");
 
     @Mock
     private NetworkConnectivitySampleRepository connectivityRepository;
@@ -37,7 +41,8 @@ class NetworkStatusServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new NetworkStatusService(connectivityRepository, speedtestRepository, deviceRepository, monitor);
+        Clock clock = Clock.fixed(Instant.parse("2026-08-24T10:00:00Z"), ZONE);
+        service = new NetworkStatusService(connectivityRepository, speedtestRepository, deviceRepository, monitor, clock);
     }
 
     @Test
@@ -123,7 +128,7 @@ class NetworkStatusServiceTest {
         assertThat(routerStatus.name()).isEqualTo("Router");
         assertThat(routerStatus.host()).isEqualTo("192.168.1.1");
         assertThat(routerStatus.reachable()).isTrue();
-        assertThat(routerStatus.lastSeenAt()).isEqualTo(lastSeen);
+        assertThat(routerStatus.lastSeenAt()).isEqualTo(LocalDateTime.ofInstant(lastSeen, ZONE));
 
         NetworkDtos.DeviceStatusResponse printerStatus = status.devices().get(1);
         assertThat(printerStatus.reachable()).isFalse();

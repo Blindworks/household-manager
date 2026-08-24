@@ -9,7 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Baut den aktuellen Netzwerk-Status aus dem juengsten Connectivity-Sample, dem juengsten
@@ -24,6 +27,7 @@ public class NetworkStatusService {
     private final NetworkSpeedtestResultRepository speedtestRepository;
     private final NetworkDeviceRepository deviceRepository;
     private final NetworkDeviceStatusMonitor monitor;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public NetworkDtos.StatusResponse getStatus() {
@@ -53,7 +57,7 @@ public class NetworkStatusService {
                 .orElse(null);
     }
 
-    private java.util.List<NetworkDtos.DeviceStatusResponse> devices() {
+    private List<NetworkDtos.DeviceStatusResponse> devices() {
         return deviceRepository.findByActiveTrueOrderBySortOrderAscIdAsc().stream()
                 .map(this::toDeviceStatus)
                 .toList();
@@ -63,8 +67,19 @@ public class NetworkStatusService {
         return monitor.statusOf(device.getId())
                 .map(status -> new NetworkDtos.DeviceStatusResponse(
                         device.getId(), device.getName(), device.getHost(),
-                        status.reachable(), status.lastSeenAt()))
+                        status.reachable(), toLocalDateTime(status.lastSeenAt())))
                 .orElseGet(() -> new NetworkDtos.DeviceStatusResponse(
-                        device.getId(), device.getName(), device.getHost(), false, (Instant) null));
+                        device.getId(), device.getName(), device.getHost(), false, null));
+    }
+
+    /**
+     * {@code NetworkDeviceStatusMonitor} haelt {@code lastSeenAt} als {@code Instant} (reiner
+     * Speicher, Muster {@code ZigbeeStreamMonitor}); die API antwortet aber durchgehend mit
+     * lokaler Haushaltszeit wie {@code lastCheckedAt} und {@code testedAt} - sonst muesste das
+     * Frontend zwei Zeitformate im selben Antwortbaum parsen. Die injizierte {@link Clock} traegt
+     * die massgebliche Zone, nicht hart Europe/Berlin.
+     */
+    private LocalDateTime toLocalDateTime(Instant instant) {
+        return instant == null ? null : LocalDateTime.ofInstant(instant, clock.getZone());
     }
 }
