@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Drei getrennte Changesets, eines je Tabelle: MariaDB committet jedes DDL implizit,
+        ein gebuendeltes Changeset stuende nach einem Abbruch in der Mitte halb angewendet da
+        (siehe Kommentar in 20260727-0044-calendar-categories.xml).
+    -->
+
+    <changeSet id="20260824-0049-a-create-network-connectivity-sample" author="claude">
+        <comment>Minuetliche Internet-Erreichbarkeits-/Latenzmessungen des Netzwerk-Monitorings.</comment>
+
+        <createTable tableName="network_connectivity_sample">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sampled_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ONLINE ist in MariaDB ein (nicht-reserviertes, aber kontextabhaengiges) Schluesselwort
+                 (z. B. ALTER TABLE ... ONLINE); die Spalte heisst deshalb is_online statt online. -->
+            <column name="is_online" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="latency_ms" type="INT"/>
+            <column name="gateway_reachable" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_network_connectivity_sampled_at" tableName="network_connectivity_sample">
+            <column name="sampled_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="network_connectivity_sample"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260824-0049-b-create-network-speedtest-result" author="claude">
+        <comment>Stuendliche Cloudflare-Speedtest-Ergebnisse des Netzwerk-Monitorings.</comment>
+
+        <createTable tableName="network_speedtest_result">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tested_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="download_mbps" type="DECIMAL(9,2)"/>
+            <column name="upload_mbps" type="DECIMAL(9,2)"/>
+            <column name="success" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error_message" type="VARCHAR(500)"/>
+        </createTable>
+
+        <createIndex indexName="idx_network_speedtest_tested_at" tableName="network_speedtest_result">
+            <column name="tested_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="network_speedtest_result"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260824-0049-c-create-network-device" author="claude">
+        <comment>Stammdaten der ueberwachten LAN-Geraete des Netzwerk-Monitorings.</comment>
+
+        <createTable tableName="network_device">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="host" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tcp_port" type="INT"/>
+            <column name="sort_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="network_device"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

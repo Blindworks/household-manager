@@ -121,4 +121,7 @@
     <!-- Eigene Positionshistorie der Tractive-Tracker -->
     <include file="db/changelog/changes/20260823-0048-create-tractive-position-table.xml"/>
 
+    <!-- Netzwerk-Monitoring: Connectivity-, Speedtest- und Geraete-Tabellen -->
+    <include file="db/changelog/changes/20260824-0049-create-network-tables.xml"/>
+
 </databaseChangeLog>
