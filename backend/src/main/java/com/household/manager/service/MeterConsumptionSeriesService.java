@@ -144,7 +144,11 @@ public class MeterConsumptionSeriesService {
         return "KW " + date.get(WeekFields.ISO.weekOfWeekBasedYear());
     }
 
-    /** "Jul 26" - kurz genug fuer eine Drittelspalte auf dem Wandtablet. */
+    /**
+     * "Mai 26", "Juli 26", "Dez. 26" - kurz genug fuer eine Drittelspalte auf dem
+     * Wandtablet. Nicht jeder deutsche Monat hat laut CLDR eine Kurzform: Mai bis
+     * Juli kuerzen sich gar nicht, die uebrigen tragen einen Punkt.
+     */
     private static final DateTimeFormatter MONTH_LABEL =
             DateTimeFormatter.ofPattern("MMM yy", Locale.GERMAN);
 
