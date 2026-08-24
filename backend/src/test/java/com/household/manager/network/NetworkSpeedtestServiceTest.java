@@ -192,6 +192,24 @@ class NetworkSpeedtestServiceTest {
     }
 
     @Test
+    void runManual_secondCallWhileFirstStillMeasuring_throwsImmediately() throws Exception {
+        // Der Cooldown-Slot muss VOR runMeasurement() reserviert werden, nicht erst danach -
+        // sonst laesst ein zweiter Aufruf, der eintrifft waehrend der erste noch misst (Doppelklick,
+        // zwei Tabs), beide durch den Cooldown-Check und misst doppelt. Simuliert durch einen
+        // verschachtelten Aufruf aus der Mitte der ersten Messung heraus statt echter Nebenlaeufigkeit.
+        when(speedtestClient.measureDownloadMbps(BUDGET)).thenAnswer(invocation -> {
+            assertThatThrownBy(() -> service.runManual())
+                    .isInstanceOf(TooManyRequestsException.class);
+            return new BigDecimal("10.00");
+        });
+        when(speedtestClient.measureUploadMbps(BUDGET)).thenReturn(new BigDecimal("5.00"));
+
+        service.runManual();
+
+        verify(repository, times(1)).save(any());
+    }
+
+    @Test
     void runManual_afterCooldownElapsed_isAllowedAgain() throws Exception {
         when(speedtestClient.measureDownloadMbps(BUDGET)).thenReturn(new BigDecimal("10.00"));
         when(speedtestClient.measureUploadMbps(BUDGET)).thenReturn(new BigDecimal("5.00"));

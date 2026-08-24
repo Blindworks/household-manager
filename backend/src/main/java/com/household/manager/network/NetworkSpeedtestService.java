@@ -85,19 +85,34 @@ public class NetworkSpeedtestService {
     /**
      * Manueller Trigger (Controller-Pfad). Darf werfen - {@code TooManyRequestsException} bei
      * Cooldown-Verstoss, {@code IllegalStateException} ohne Internet.
+     * <p>
+     * Der Cooldown-Slot wird VOR {@link #runMeasurement()} atomar reserviert (compareAndSet),
+     * nicht erst danach: sonst koennten zwei fast gleichzeitige Aufrufe (Doppelklick, zwei Tabs)
+     * beide denselben alten Stand lesen, beide den Check passieren und beide messen - genau das
+     * soll der Cooldown verhindern. Schlaegt {@link #runMeasurement()} anschliessend fehl, bleibt
+     * der Slot trotzdem reserviert (bewusst in Kauf genommen, statt den Cooldown zurueckzurollen -
+     * verhindert, dass ein kaputtes Ziel im Sekundentakt erneut angefragt wird).
      */
     public void runManual() {
+        if (isOffline()) {
+            throw new IllegalStateException("Kein Internet — Speedtest nicht möglich.");
+        }
+        reserveManualSlot();
+        runMeasurement();
+    }
+
+    private void reserveManualSlot() {
         Instant now = Instant.now(clock);
         Instant last = lastManualRun.get();
         if (last != null && Duration.between(last, now).compareTo(MANUAL_COOLDOWN) < 0) {
             throw new TooManyRequestsException(
                     "Speedtest wurde erst vor Kurzem ausgefuehrt - bitte kurz warten.");
         }
-        if (isOffline()) {
-            throw new IllegalStateException("Kein Internet — Speedtest nicht möglich.");
+        if (!lastManualRun.compareAndSet(last, now)) {
+            // Ein paralleler Aufruf hat den Slot zwischen unserem Lesen und Reservieren belegt.
+            throw new TooManyRequestsException(
+                    "Speedtest wurde erst vor Kurzem ausgefuehrt - bitte kurz warten.");
         }
-        runMeasurement();
-        lastManualRun.set(now);
     }
 
     /**
