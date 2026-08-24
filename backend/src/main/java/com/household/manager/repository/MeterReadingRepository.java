@@ -29,6 +29,17 @@ public interface MeterReadingRepository extends JpaRepository<MeterReading, Long
     List<MeterReading> findByMeterTypeOrderByReadingDateDesc(MeterType meterType);
 
     /**
+     * Find all meter readings for a specific meter type, oldest first.
+     * <p>
+     * Used by the consumption series: consumption is the difference between two
+     * consecutive readings, which is only expressible in ascending order.
+     *
+     * @param meterType the type of meter to filter by
+     * @return list of meter readings for the specified type, sorted by date (oldest first)
+     */
+    List<MeterReading> findByMeterTypeOrderByReadingDateAsc(MeterType meterType);
+
+    /**
      * Find the most recent meter reading for a specific meter type.
      * <p>
      * Useful for retrieving the latest reading value to calculate consumption

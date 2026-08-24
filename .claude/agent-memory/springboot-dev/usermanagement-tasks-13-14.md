@@ -36,6 +36,13 @@ nach der erfolgreichen Aktion aufrufen:
   401 statt des erwarteten Status. Fix: globaler `@BeforeEach`-Stub
   `lenient().when(appUserRepository.findByUsername(anyString())).thenReturn(Optional.of(<enabled AppUser>))`.
   Das gilt fuer jeden `@WebMvcTest`-Slice, der `DisabledUserSessionFilter` importiert.
+- **Dritter Fallstrick (2026-08-24, Verbrauchsreihe-Endpunkt):** auch ein `@WebMvcTest(controllers =
+  EinController.class)` MIT `@AutoConfigureMockMvc(addFilters = false)` laedt `DisabledUserSessionFilter`
+  und `ServiceTokenAuthFilter` als normale Beans (Spring Security scannt sie unabhaengig von den
+  Servlet-Filtern, `addFilters=false` schaltet nur die Filterkette ab, nicht die Bean-Definition) —
+  der Kontext scheitert beim Hochfahren mit `UnsatisfiedDependencyException` fuer `AppUserRepository`
+  UND `ServiceTokenService`, wenn diese nicht als `@MockitoBean` im Slice stehen. Beide muessen ergaenzt
+  werden, auch wenn der Test gar keine Security prueft und `addFilters=false` gesetzt ist.
 - **Zweiter Fallstrick:** `GlobalExceptionHandler`s `@ExceptionHandler(Exception.class)`-Catch-all
   (siehe [response-status-exception-handler.md](response-status-exception-handler.md)) faengt auch
   Springs `NoResourceFoundException` fuer Pfade ohne registrierten Controller ab und macht daraus
