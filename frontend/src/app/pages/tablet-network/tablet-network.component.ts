@@ -71,6 +71,18 @@ export class TabletNetworkComponent implements OnInit, OnDestroy {
 
   historyData: NetworkHistoryResponse | null = null;
   historyError: string | null = null;
+  /**
+   * Einmalig aus historyData berechnete Chart-Optionen. Bewusst als Feld statt
+   * als Methodenaufruf im Template: `[options]="speedChartOptions()"` liefert
+   * bei JEDER Change-Detection eine neue Objektreferenz, und
+   * NgxEchartsDirective.ngOnChanges reagiert darauf mit `setOption(...,
+   * notMerge: true)` - ein kompletter Redraw bei jedem CD-Zyklus, sichtbares
+   * Flackern auf dem dauerlaufenden Wandtablet. Die drei Schwesteransichten
+   * (tablet-air-quality, tablet-consumption, tablet-toni) berechnen ihre
+   * Optionen ebenfalls nur bei Datenaenderung.
+   */
+  speedChartOptions: Record<string, unknown> | null = null;
+  latencyChartOptions: Record<string, unknown> | null = null;
 
   speedtestRunning = false;
   speedtestError: string | null = null;
@@ -170,6 +182,10 @@ export class TabletNetworkComponent implements OnInit, OnDestroy {
       next: history => {
         this.historyData = history;
         this.historyError = null;
+        // Nur hier, bei tatsaechlicher Datenaenderung, neu berechnen - nicht bei
+        // jeder Change-Detection (siehe Kommentar an den Feldern oben).
+        this.speedChartOptions = this.buildSpeedChartOptions(history);
+        this.latencyChartOptions = this.buildLatencyChartOptions(history, range);
       },
       error: (error: HttpErrorResponse) => {
         console.error('Fehler beim Laden der Netzwerkhistorie:', error);
@@ -194,8 +210,8 @@ export class TabletNetworkComponent implements OnInit, OnDestroy {
     return this.statusData.online ? 'Online' : 'Offline';
   }
 
-  speedChartOptions(): Record<string, unknown> {
-    const points = this.historyData?.speedtests ?? [];
+  private buildSpeedChartOptions(history: NetworkHistoryResponse): Record<string, unknown> {
+    const points = history.speedtests;
     const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
 
     return {
@@ -234,9 +250,11 @@ export class TabletNetworkComponent implements OnInit, OnDestroy {
     };
   }
 
-  latencyChartOptions(): Record<string, unknown> {
-    const points = this.historyData?.latency ?? [];
-    const gapAware = insertGaps(points, BUCKET_MINUTES[this.activeRange]);
+  private buildLatencyChartOptions(
+    history: NetworkHistoryResponse,
+    range: TimeRange
+  ): Record<string, unknown> {
+    const gapAware = insertGaps(history.latency, BUCKET_MINUTES[range]);
     const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
 
     return {

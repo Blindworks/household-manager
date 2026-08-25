@@ -175,6 +175,16 @@ describe('TabletNetworkComponent', () => {
     expect(insertGaps(points, 30).length).toBe(2);
   });
 
+  it('fuegt bei einer Luecke von GENAU der dreifachen Bucketlaenge keinen null-Punkt ein', () => {
+    // Grenzfall: die Pruefung ist strikt "groesser als", das exakte Dreifache
+    // (hier 90 min bei 30-min-Buckets) zaehlt noch als normaler Abstand.
+    const points = [
+      { time: '2026-08-25T09:00:00', value: 10 },
+      { time: '2026-08-25T10:30:00', value: 12 }
+    ];
+    expect(insertGaps(points, 30).length).toBe(2);
+  });
+
   it('startet einen Speedtest und laedt bei Erfolg den Status neu', () => {
     const result: SpeedtestSummary = {
       testedAt: '2026-08-25T11:00:00',

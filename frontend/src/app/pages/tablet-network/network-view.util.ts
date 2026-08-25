@@ -14,9 +14,11 @@ export interface GapAwareValue {
 
 /**
  * Fuegt vor dem Zeichnen null-Punkte ein, wo der Abstand zweier Nachbarpunkte
- * mehr als das Dreifache der Bucket-Laenge des Zeitraums betraegt - so entsteht
- * bei einem Offline-Fenster eine echte Luecke im Diagramm (`connectNulls: false`)
- * statt einer irrefuehrenden geraden Verbindungslinie ueber die Ausfallzeit.
+ * ueber dem Dreifachen der Bucket-Laenge des Zeitraums liegt (strikt groesser -
+ * genau die dreifache Bucket-Laenge zaehlt noch als normaler Abstand und bricht
+ * die Linie NICHT) - so entsteht bei einem Offline-Fenster eine echte Luecke im
+ * Diagramm (`connectNulls: false`) statt einer irrefuehrenden geraden
+ * Verbindungslinie ueber die Ausfallzeit.
  */
 export function insertGaps(points: TimeValue[], bucketMinutes: number): GapAwareValue[] {
   if (points.length === 0) {

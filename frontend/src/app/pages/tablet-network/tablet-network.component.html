@@ -54,11 +54,11 @@
 
       <article class="tablet-network__card tablet-network__card--speed">
         <h3 class="tablet-network__card-title">Speed-Verlauf</h3>
-        @if (historyData) {
+        @if (speedChartOptions; as options) {
           <div
             echarts
             class="tablet-network__chart"
-            [options]="speedChartOptions()"
+            [options]="options"
             [autoResize]="true"></div>
         } @else {
           <p class="tablet-network__hint">{{ historyError ?? 'Lade Verlaufsdaten…' }}</p>
@@ -67,11 +67,11 @@
 
       <article class="tablet-network__card tablet-network__card--latency">
         <h3 class="tablet-network__card-title">Latenz-Verlauf</h3>
-        @if (historyData) {
+        @if (latencyChartOptions; as options) {
           <div
             echarts
             class="tablet-network__chart"
-            [options]="latencyChartOptions()"
+            [options]="options"
             [autoResize]="true"></div>
         } @else {
           <p class="tablet-network__hint">{{ historyError ?? 'Lade Verlaufsdaten…' }}</p>
