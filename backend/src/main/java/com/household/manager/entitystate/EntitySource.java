@@ -33,5 +33,7 @@ public enum EntitySource {
     /** Vom Benutzer im UI angelegte Entität (kein externes Quellsystem). */
     MANUAL,
     /** Internet-Konnektivitäts- und Latenzmessung (interner Poller, kein externes Quellsystem). */
-    NETWORK
+    NETWORK,
+    /** Anwesenheitserkennung pro Person (TCP-Probe gegen Handy-IPs im WLAN). */
+    PRESENCE
 }
