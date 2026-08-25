@@ -994,7 +994,7 @@ class PresencePollingServiceTest {
 
     @BeforeEach
     void setUp() {
-        monitor = new PresenceMonitor(CLOCK);
+        monitor = new PresenceMonitor();
         service = new PresencePollingService(deviceRepository, userRepository, probe,
                 monitor, evaluator, entityStateService, CLOCK);
         lenient().when(userRepository.findById(5L)).thenReturn(Optional.of(
@@ -1207,11 +1207,7 @@ public class PresencePollingService {
     }
 
     private void reportPersonState(Long userId, PresenceEvaluator.PersonPresence presence) {
-        String state = switch (presence.state()) {
-            case PRESENT -> "on";
-            case AWAY -> "off";
-            default -> "unavailable";
-        };
+        String state = PresenceEvaluator.entityState(presence.state());
         Map<String, Object> attributes = new LinkedHashMap<>();
         attributes.put("deviceClass", "presence");
         attributes.put("personUserId", userId);
@@ -1254,6 +1250,8 @@ public class PresencePollingService {
 ```
 
 **Hinweis für den Umsetzer:** Sollte `EntityStateUpdate` keine Lombok-Getter wie `getEntityId()` haben (Builder-Pattern prüfen!), die Assertions im Test an die tatsächlichen Accessoren anpassen — `TabletPresenceService` zeigt die Builder-Feldnamen, die Accessoren zeigt die Klasse selbst.
+
+**`PresenceEvaluator.entityState` muss `static` sein** (Anpassung aus dem Task-5-Review): Der Poller-Test mockt den `PresenceEvaluator`. Wäre `entityState` eine Instanzmethode, lieferte der Mock `null` und der Test prüfte am Ende eine gestubbte Abbildung statt der echten. Als statische Methode kann Mockito sie nicht abfangen — beide Konsumenten benutzen zwangsläufig die eine echte Definition. Die Methode ist eine reine Funktion ohne Abhängigkeiten, gehört also ohnehin nicht an die Instanz.
 
 - [ ] **Step 4: Test laufen lassen**
 
@@ -1617,7 +1615,7 @@ class PresenceStatusServiceTest {
 
     @BeforeEach
     void setUp() {
-        monitor = new PresenceMonitor(CLOCK);
+        monitor = new PresenceMonitor();
         service = new PresenceStatusService(deviceRepository, userRepository, monitor,
                 evaluator, CLOCK);
         lenient().when(userRepository.findById(5L)).thenReturn(Optional.of(
@@ -1734,7 +1732,7 @@ public class PresenceStatusService {
             persons.add(new PresenceDtos.PersonStatus(
                     userId,
                     displayNameOf(userId),
-                    stateText(presence.state()),
+                    PresenceEvaluator.entityState(presence.state()),
                     toLocal(presence.lastSeenAt()),
                     devices.stream().map(this::deviceStatus).toList()));
         });
@@ -1749,15 +1747,6 @@ public class PresenceStatusService {
                 device.getId(), device.getName(), device.getHost(), device.isActive(),
                 status == null ? null : toLocal(status.lastSeenAt()),
                 status == null ? null : toLocal(status.lastCheckedAt()));
-    }
-
-    private String stateText(PresenceEvaluator.PersonState state) {
-        return switch (state) {
-            case PRESENT -> "on";
-            case AWAY -> "off";
-            case UNAVAILABLE -> "unavailable";
-            case UNKNOWN -> "unknown";
-        };
     }
 
     private String displayNameOf(Long userId) {
