@@ -10,5 +10,11 @@ import java.util.List;
  */
 public interface PresenceProbe {
 
+    /**
+     * @param timeoutPerPort muss positiv sein und deutlich unter dem Kernel-Connect-Timeout
+     *                       liegen (Sekundenbereich): 0 hiesse "unendlich", und ein Timeout
+     *                       oberhalb des SYN-Retry-Fensters wuerde einen OS-Timeout als
+     *                       ConnectException und damit faelschlich als Antwort werten
+     */
     ProbeResult probe(String host, List<Integer> ports, Duration timeoutPerPort);
 }
