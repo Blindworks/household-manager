@@ -1026,26 +1026,40 @@
 }
 
 // ---- Leiste mit den Tablet-Unteransichten --------------------------------
+// Bewusst NICHT umbrechend - siehe dieselbe Begruendung in
+// tablet-shell.component.scss (zweite, eigenstaendige Kopie wegen der
+// lumina-Kapselung): mit fuenf Unteransichten (+ "Dashboard") wuerde eine
+// umbrechende Leiste bei schmalem Bildschirm zweizeilig und der Kachelfuss
+// darunter enger.
 .lumina__viewbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-wrap: nowrap;
+  gap: 10px;
   padding-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .lumina__viewbar-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  // Fingerfreundliches Ziel auf dem Wandtablet.
-  min-height: 64px;
-  padding: 0 24px;
+  gap: 8px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  // Fingerfreundliches Ziel auf dem Wandtablet, aber kompakter als zuvor -
+  // sechs Eintraege muessen einzeilig nebeneinander passen.
+  min-height: 56px;
+  padding: 0 18px;
   border-radius: var(--radius-full);
   color: var(--on-surface);
   text-decoration: none;
 
   .material-symbols-outlined {
-    font-size: 26px;
+    font-size: 24px;
     color: var(--secondary);
   }
 }
