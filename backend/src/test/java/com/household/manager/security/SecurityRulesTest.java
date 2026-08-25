@@ -509,4 +509,61 @@ class SecurityRulesTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Der Netzwerkstatus braucht bewusst keine eigene Regel: das GET faellt auf die
+     * generische Regel GET /v1/** -> KIOSK. Kein NetworkController im Slice: 404 statt
+     * 403 belegt, dass die Regel durchlaesst.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenNetzwerkstatusLesen() throws Exception {
+        mockMvc.perform(get("/v1/network/status")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Der Speedtest zieht nur Daten, er schaltet nichts — ohne die KIOSK-Whitelist-Zeile
+     * waere der Speedtest-Knopf auf dem Wandtablet tot.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenSpeedtestAusloesen() throws Exception {
+        mockMvc.perform(post("/v1/network/speedtest").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * Netzwerkgeraete pflegen ist ADMIN-only. KIOSK und MEMBER duerfen nicht anlegen —
+     * beide Rollen muessen es aus eigenem Test belegen, sonst faellt ein zu laxer
+     * Matcher fuer die jeweils andere Rolle niemandem auf.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeinNetzwerkgeraetAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/network/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinNetzwerkgeraetAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/network/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnNetzwerkgeraetePflegenVorbei() throws Exception {
+        // Kein NetworkController im Slice: 404 statt 403 belegt, dass die Regeln durchlaessen.
+        mockMvc.perform(post("/v1/network/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/network/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/network/devices/1").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
 }

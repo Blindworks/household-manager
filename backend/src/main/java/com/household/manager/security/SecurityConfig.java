@@ -155,6 +155,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/calendar/categories").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/calendar/categories/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/calendar/categories/*").hasRole("ADMIN")
+                        // Netzwerkgeraete pflegen ist ADMIN, lesen darf jeder Angemeldete ueber die
+                        // generische GET-Regel weiter unten. Methodenspezifisch aus demselben Grund
+                        // wie bei den Kalender-Kategorien: das Wandtablet soll weiter lesen duerfen.
+                        .requestMatchers(HttpMethod.POST, "/v1/network/devices").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/v1/network/devices/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/network/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet
@@ -163,10 +169,12 @@ public class SecurityConfig {
                         // (LOCK-only fuer KIOSK erzwingt der NukiController)
                         // /v1/tractive/pets/refresh schaltet nichts, es zieht nur Daten —
                         // ohne KIOSK waere der Aktualisieren-Knopf auf dem Wandtablet tot.
+                        // /v1/network/speedtest ebenso: zieht nur Daten, schaltet nichts —
+                        // sonst waere der Speedtest-Knopf auf dem Wandtablet tot.
                         .requestMatchers(HttpMethod.POST, "/v1/switches/*/toggle",
                                 "/v1/modes/*/toggle", "/v1/nuki/locks/*/actions",
                                 "/v1/auth/password", "/v1/tractive/pets/refresh",
-                                "/v1/system/reboot").hasRole("KIOSK")
+                                "/v1/system/reboot", "/v1/network/speedtest").hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
                         // Alles Uebrige (Geraete schalten, Kalender/Zaehler pflegen, Ansagen ...)
