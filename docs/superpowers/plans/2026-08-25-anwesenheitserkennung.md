@@ -2154,10 +2154,14 @@ export interface PresenceDeviceRequest {
   active: boolean;
 }
 
+/**
+ * Kein `host`: `GET /status` ist KIOSK-lesbar (Dashboard-Kachel auf dem
+ * Wandtablet), die Geräte-Stammdaten sind bewusst ADMIN. Die Admin-Seite holt
+ * die Adresse aus `GET /devices` und verknüpft über `id`.
+ */
 export interface PresenceDeviceStatus {
   id: number;
   name: string;
-  host: string;
   active: boolean;
   lastSeenAt: string | null;
   lastCheckedAt: string | null;
@@ -2298,9 +2302,21 @@ describe('AdminPresenceComponent', () => {
 
   afterEach(() => httpMock.verify());
 
+  const STATUS = {
+    householdState: 'on',
+    persons: [{
+      userId: 5, displayName: 'Benedikt', state: 'on', lastSeenAt: '2026-08-25T10:00:00',
+      devices: [{
+        id: 1, name: 'iPhone Benedikt', active: true,
+        lastSeenAt: '2026-08-25T10:00:00', lastCheckedAt: '2026-08-25T10:00:30'
+      }]
+    }]
+  };
+
   function flushInitialRequests(): void {
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/presence/devices').flush(DEVICES);
+    httpMock.expectOne('/api/v1/presence/status').flush(STATUS);
     httpMock.expectOne('/api/v1/users').flush(USERS);
     httpMock.expectOne('/api/v1/presence/settings').flush({ awayGraceMinutes: 10 });
     fixture.detectChanges();
@@ -2311,6 +2327,25 @@ describe('AdminPresenceComponent', () => {
     expect(component.devices().length).toBe(1);
     expect(component.users().length).toBe(2);
     expect(component.graceMinutes).toBe(10);
+  });
+
+  it('zeigt den Zuletzt-gesehen-Zeitpunkt aus dem Status zum passenden Geraet', () => {
+    flushInitialRequests();
+    expect(component.lastSeenOf(DEVICES[0])).toBe('2026-08-25T10:00:00');
+  });
+
+  it('laesst die Geraeteliste stehen, wenn der Status-Abruf fehlschlaegt', () => {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/presence/devices').flush(DEVICES);
+    httpMock.expectOne('/api/v1/presence/status')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('/api/v1/users').flush(USERS);
+    httpMock.expectOne('/api/v1/presence/settings').flush({ awayGraceMinutes: 10 });
+    fixture.detectChanges();
+
+    expect(component.devices().length).toBe(1);
+    expect(component.lastSeenOf(DEVICES[0])).toBeNull();
+    expect(component.errorMessage()).toBeNull();
   });
 
   it('legt ein Geraet mit Person an', () => {
@@ -2426,8 +2461,20 @@ export class AdminPresenceComponent implements OnInit {
   /** Karenzzeit-Formularwert; null solange noch nichts geladen ist. */
   graceMinutes: number | null = null;
 
+  /**
+   * „Zuletzt gesehen" je Gerät, geschlüsselt nach Geräte-Id.
+   *
+   * Kommt aus `GET /status` und nicht aus der Geräteliste: der Zeitpunkt lebt nur
+   * im Speicher des Backends. Er ist die **einzige** Stelle, an der ein Handy
+   * auffällt, dessen WLAN-Adresse gewechselt hat (siehe Spec) — deshalb steht er
+   * hier, obwohl die Seite sonst reine Stammdatenpflege ist. Schlägt der Abruf
+   * fehl, bleibt die Spalte leer; die Pflege muss trotzdem funktionieren.
+   */
+  readonly lastSeenByDeviceId = signal<Map<number, string | null>>(new Map());
+
   ngOnInit(): void {
     this.load();
+    this.loadLastSeen();
     this.userApi.list().subscribe({
       next: users => this.users.set(users.filter(user => user.enabled)),
       error: () => this.errorMessage.set('Die Haushaltsmitglieder konnten nicht geladen werden.')
@@ -2436,6 +2483,27 @@ export class AdminPresenceComponent implements OnInit {
       next: settings => (this.graceMinutes = settings.awayGraceMinutes),
       error: () => this.settingsMessage.set('Die Karenzzeit konnte nicht geladen werden.')
     });
+  }
+
+  private loadLastSeen(): void {
+    this.presenceApi.getStatus().subscribe({
+      next: status => {
+        const seen = new Map<number, string | null>();
+        for (const person of status.persons) {
+          for (const device of person.devices) {
+            seen.set(device.id, device.lastSeenAt);
+          }
+        }
+        this.lastSeenByDeviceId.set(seen);
+      },
+      // Bewusst stumm: die Spalte ist Diagnose-Beiwerk, ein Fehler hier darf die
+      // Geräteliste nicht mit einer Meldung überlagern.
+      error: () => this.lastSeenByDeviceId.set(new Map())
+    });
+  }
+
+  lastSeenOf(device: PresenceDeviceAdmin): string | null {
+    return this.lastSeenByDeviceId().get(device.id) ?? null;
   }
 
   load(afterLoad?: () => void): void {
@@ -2615,13 +2683,17 @@ export class AdminPresenceComponent implements OnInit {
 
     <table *ngIf="!loading() && !loadFailed()">
       <thead>
-        <tr><th>Person</th><th>Name</th><th>IP-Adresse</th><th>Aktiv</th><th></th></tr>
+        <tr>
+          <th>Person</th><th>Name</th><th>IP-Adresse</th>
+          <th>Zuletzt gesehen</th><th>Aktiv</th><th></th>
+        </tr>
       </thead>
       <tbody>
         <tr *ngFor="let device of devices()">
           <td>{{ displayNameOf(device.userId) }}</td>
           <td>{{ device.name }}</td>
           <td>{{ device.host }}</td>
+          <td>{{ lastSeenOf(device) ? (lastSeenOf(device) | date:'dd.MM. HH:mm':undefined:'de') : '–' }}</td>
           <td>
             <input type="checkbox" [checked]="device.active"
                    (change)="setActive(device, !device.active)" />
@@ -2632,7 +2704,7 @@ export class AdminPresenceComponent implements OnInit {
           </td>
         </tr>
         <tr *ngIf="devices().length === 0">
-          <td colspan="5">Noch keine Geräte angelegt.</td>
+          <td colspan="6">Noch keine Geräte angelegt.</td>
         </tr>
       </tbody>
     </table>
