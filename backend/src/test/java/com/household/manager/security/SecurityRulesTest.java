@@ -553,6 +553,21 @@ class SecurityRulesTest {
     }
 
     @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinNetzwerkgeraetAendern() throws Exception {
+        mockMvc.perform(put("/v1/network/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinNetzwerkgeraetLoeschen() throws Exception {
+        mockMvc.perform(delete("/v1/network/devices/1").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void adminKommtAnNetzwerkgeraetePflegenVorbei() throws Exception {
         // Kein NetworkController im Slice: 404 statt 403 belegt, dass die Regeln durchlaessen.
