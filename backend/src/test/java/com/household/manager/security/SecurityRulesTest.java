@@ -581,4 +581,69 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Der Anwesenheits-Status braucht bewusst keine eigene Regel: das GET faellt auf die
+     * generische Regel GET /v1/** -> KIOSK (Dashboard-Kachel auf dem Wandtablet). Kein
+     * PresenceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenAnwesenheitsStatusLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/status")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Die Karenzzeit-Einstellung ist ADMIN-only, auch lesend — der Matcher ist methodenlos
+     * und steht VOR der generischen GET-Regel (Muster tractive/home-settings).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieAnwesenheitsEinstellungenNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/settings")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieAnwesenheitsEinstellungenLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/settings")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Anwesenheits-Geraete pflegen ist ADMIN-only. KIOSK und MEMBER muessen es je aus
+     * eigenem Test belegen (Muster Netzwerk-Geraete).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeinAnwesenheitsGeraetAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/presence/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinAnwesenheitsGeraetAnlegenAendernOderLoeschen() throws Exception {
+        mockMvc.perform(post("/v1/presence/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/presence/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/v1/presence/devices/1").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnAnwesenheitsGeraetePflegenVorbei() throws Exception {
+        // Kein PresenceController im Slice: 404 statt 403 belegt, dass die Regeln durchlaessen.
+        mockMvc.perform(post("/v1/presence/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/presence/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/presence/devices/1").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
 }

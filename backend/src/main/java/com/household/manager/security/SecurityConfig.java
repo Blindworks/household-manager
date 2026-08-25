@@ -147,7 +147,7 @@ public class SecurityConfig {
                         // unten stehen, sonst duerfte das Kiosk-Tablet die Home-Definition lesen.
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
                                 "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout",
-                                "/v1/tractive/home-settings").hasRole("ADMIN")
+                                "/v1/tractive/home-settings", "/v1/presence/settings").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
@@ -161,6 +161,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/network/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/network/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/network/devices/*").hasRole("ADMIN")
+                        // Anwesenheits-Geraete pflegen ist ADMIN, lesen darf jeder Angemeldete
+                        // ueber die generische GET-Regel weiter unten (Muster Netzwerk-Geraete).
+                        .requestMatchers(HttpMethod.POST, "/v1/presence/devices").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/v1/presence/devices/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/presence/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet
