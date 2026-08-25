@@ -2791,8 +2791,22 @@ Methoden (nach `startPetFoodRefresh`, gleiches Muster — ein Fehler behält den
     return this.presence?.persons ?? [];
   }
 
+  /**
+   * `unknown` bekommt ein eigenes Symbol und darf NICHT wie „abwesend" aussehen:
+   * nach jedem Backend-Neustart steht jede Person bis zum Ablauf der Karenzzeit
+   * auf `unknown` (die Messwerte leben nur im Speicher). Faltete man das in
+   * „abwesend", zeigte das Wandtablet nach jedem Deploy minutenlang einen
+   * leeren Haushalt an.
+   */
   presenceIcon(person: PresencePersonStatus): string {
-    return person.state === 'on' ? 'home' : 'directions_walk';
+    switch (person.state) {
+      case 'on':
+        return 'home';
+      case 'off':
+        return 'directions_walk';
+      default:
+        return 'help';
+    }
   }
 
   presenceLabel(person: PresencePersonStatus): string {
@@ -2823,7 +2837,7 @@ In `dashboard.component.html` direkt **nach** der schließenden `</div>` der `lu
       <div class="lumina__pets-info">
         <h4 class="lumina__label lumina__label--secondary">Anwesenheit</h4>
         <p class="lumina__secured-detail" *ngFor="let person of presencePersons"
-           [class.lumina__presence--away]="person.state !== 'on'">
+           [class.lumina__presence--away]="person.state === 'off'">
           <span class="material-symbols-outlined">{{ presenceIcon(person) }}</span>
           {{ person.displayName }} • {{ presenceLabel(person) }}
         </p>
