@@ -24,34 +24,52 @@ import java.util.Random;
 @Component
 public class CloudflareSpeedtestClient implements SpeedtestClient {
 
-    private static final URI DOWNLOAD_URI = URI.create("https://speed.cloudflare.com/__down?bytes=250000000");
+    // Gemessen (2026-08-25, echtes PROD-Netz): bytes=100000000/200000000/250000000 liefern
+    // 403 Forbidden mit Content-Length: 1 statt der vollen Nutzlast; bytes=25000000/50000000/90000000
+    // liefern 200 OK mit vollem Body. <100 MB ist damit das beobachtete Limit dieses Endpunkts.
+    // 50 MB liegt sicher darunter; die Schleife in measureDownloadMbps holt bei Bedarf mehrere
+    // Bloecke nach, bis das Zeitbudget ausgeschoepft ist.
+    private static final URI DOWNLOAD_URI = URI.create("https://speed.cloudflare.com/__down?bytes=50000000");
     private static final URI UPLOAD_URI = URI.create("https://speed.cloudflare.com/__up");
     private static final int BUFFER_SIZE = 64 * 1024;
 
     @Override
     public BigDecimal measureDownloadMbps(Duration budget) throws IOException, InterruptedException {
         HttpClient client = newClient();
-        HttpRequest request = HttpRequest.newBuilder(DOWNLOAD_URI)
-                .timeout(budget.plusSeconds(10))
-                .GET()
-                .build();
-        HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-        byte[] buffer = new byte[BUFFER_SIZE];
         long totalBytes = 0;
         long startNanos = -1;
         long deadlineNanos = -1;
-        try (InputStream body = response.body()) {
-            int read;
-            while ((read = body.read(buffer)) != -1) {
-                if (startNanos < 0) {
-                    startNanos = System.nanoTime();
-                    deadlineNanos = startNanos + budget.toNanos();
+        while (true) {
+            HttpRequest request = HttpRequest.newBuilder(DOWNLOAD_URI)
+                    .timeout(budget.plusSeconds(10))
+                    .GET()
+                    .build();
+            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            // Ohne diese Pruefung wird eine Cloudflare-Fehlseite (403 bei zu grossem bytes=,
+            // Content-Length: 1) als winzige, aber "erfolgreiche" Messung verbucht - genau das hat
+            // den PROD-Vorfall vom 2026-08-25 verursacht (Download 0.01 Mbit/s bei 1000er Glasfaser).
+            if (response.statusCode() >= 400) {
+                throw new IOException("Cloudflare-Speedtest antwortete HTTP " + response.statusCode());
+            }
+
+            try (InputStream body = response.body()) {
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int read;
+                while ((read = body.read(buffer)) != -1) {
+                    if (startNanos < 0) {
+                        startNanos = System.nanoTime();
+                        deadlineNanos = startNanos + budget.toNanos();
+                    }
+                    totalBytes += read;
+                    if (System.nanoTime() >= deadlineNanos) {
+                        long elapsedNanos = System.nanoTime() - startNanos;
+                        return mbps(totalBytes, elapsedNanos);
+                    }
                 }
-                totalBytes += read;
-                if (System.nanoTime() >= deadlineNanos) {
-                    break;
-                }
+            }
+            if (deadlineNanos >= 0 && System.nanoTime() >= deadlineNanos) {
+                break;
             }
         }
         long elapsedNanos = startNanos < 0 ? 0 : System.nanoTime() - startNanos;
@@ -66,7 +84,10 @@ public class CloudflareSpeedtestClient implements SpeedtestClient {
                 .timeout(budget.plusSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofInputStream(() -> body))
                 .build();
-        client.send(request, HttpResponse.BodyHandlers.discarding());
+        HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+        if (response.statusCode() >= 400) {
+            throw new IOException("Cloudflare-Speedtest antwortete HTTP " + response.statusCode());
+        }
         return mbps(body.bytesSent(), body.elapsedNanos());
     }
 
