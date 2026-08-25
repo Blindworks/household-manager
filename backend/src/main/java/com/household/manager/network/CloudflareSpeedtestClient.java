@@ -53,10 +53,12 @@ public class CloudflareSpeedtestClient implements SpeedtestClient {
                 throw new IOException("Cloudflare-Speedtest antwortete HTTP " + response.statusCode());
             }
 
+            boolean receivedAnyByte = false;
             try (InputStream body = response.body()) {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int read;
                 while ((read = body.read(buffer)) != -1) {
+                    receivedAnyByte = true;
                     if (startNanos < 0) {
                         startNanos = System.nanoTime();
                         deadlineNanos = startNanos + budget.toNanos();
@@ -67,6 +69,13 @@ public class CloudflareSpeedtestClient implements SpeedtestClient {
                         return mbps(totalBytes, elapsedNanos);
                     }
                 }
+            }
+            // Ein 2xx-Status ohne ein einziges gelesenes Byte (z.B. kaputter Proxy) hielte
+            // startNanos/deadlineNanos sonst dauerhaft auf -1 - die Abbruchbedingung darunter
+            // wuerde nie wahr und die Schleife stellte ungebremst weitere Requests, ohne Budget
+            // und ohne Ende. Ein leerer Body bei einem 50-MB-Download ist immer abnormal.
+            if (!receivedAnyByte) {
+                throw new IOException("Cloudflare-Speedtest lieferte einen leeren Body");
             }
             if (deadlineNanos >= 0 && System.nanoTime() >= deadlineNanos) {
                 break;
