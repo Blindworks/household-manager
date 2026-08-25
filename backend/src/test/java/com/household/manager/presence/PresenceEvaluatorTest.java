@@ -120,11 +120,14 @@ class PresenceEvaluatorTest {
 
     @Test
     void neuesGeraetInEigenerProbezeitBleibtUnbekanntTrotzLangeUeberfaelligemZweitgeraet() {
-        // Geraet 2 ist laengst durch seine eigene Probezeit (erste Pruefung liegt
-        // eine Stunde zurueck), Geraet 1 ist gerade erst zum ersten Mal (still)
-        // geprueft worden. Die Probezeit gilt PRO Geraet, nicht global.
-        monitor.update(2L, false, START.minusSeconds(3600));
-        Instant now = START.plusSeconds(5 * 60);
+        // Prozess laeuft seit Stunden, Geraet 2 ist laengst durch seine eigene
+        // Probezeit (erste Pruefung liegt drei Stunden zurueck und war schon
+        // damals still - fuer sich allein waere es AWAY), Geraet 1 wurde gerade
+        // erst hinzugefuegt und zum ersten Mal (still) geprueft. Die Probezeit
+        // gilt PRO Geraet, nicht ab einem Prozess-Start: das laengst ueberfaellige
+        // Geraet 2 darf das frische Geraet 1 nicht "mitziehen".
+        Instant now = START.plusSeconds(3 * 60 * 60);
+        monitor.update(2L, false, START);
         monitor.update(1L, false, now);
 
         PresenceEvaluator.PersonPresence result =
@@ -179,9 +182,9 @@ class PresenceEvaluatorTest {
 
     @Test
     void entityStateBildetAlleZustaendeAb() {
-        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.PRESENT)).isEqualTo("on");
-        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.AWAY)).isEqualTo("off");
-        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.UNAVAILABLE)).isEqualTo("unavailable");
-        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.UNKNOWN)).isEqualTo("unknown");
+        assertThat(PresenceEvaluator.entityState(PresenceEvaluator.PersonState.PRESENT)).isEqualTo("on");
+        assertThat(PresenceEvaluator.entityState(PresenceEvaluator.PersonState.AWAY)).isEqualTo("off");
+        assertThat(PresenceEvaluator.entityState(PresenceEvaluator.PersonState.UNAVAILABLE)).isEqualTo("unavailable");
+        assertThat(PresenceEvaluator.entityState(PresenceEvaluator.PersonState.UNKNOWN)).isEqualTo("unknown");
     }
 }

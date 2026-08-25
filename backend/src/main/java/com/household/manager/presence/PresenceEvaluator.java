@@ -26,6 +26,11 @@ import java.util.Optional;
  * geliefert und der Aufrufer meldet nichts — die Entitaet behaelt ihren
  * letzten DB-Wert statt zu raten. Das gilt gleichermassen fuer ein frisch
  * angelegtes Geraet wie fuer den Zustand direkt nach einem Backend-Neustart.
+ * Die Probezeit wird dabei nur konsultiert, solange NOCH KEIN aktives Geraet
+ * je geantwortet hat ({@code lastSeen == null}) — hat mindestens eines schon
+ * geantwortet, entscheidet allein dessen Stille gegen die Karenzzeit, auch
+ * wenn ein danach hinzugefuegtes zweites Geraet noch in seiner eigenen
+ * Probezeit steckt.
  */
 @Component
 @RequiredArgsConstructor
@@ -98,28 +103,33 @@ public class PresenceEvaluator {
             return Optional.empty();
         }
         if (states.contains(PersonState.PRESENT)) {
-            return Optional.of("on");
+            return Optional.of(entityState(PersonState.PRESENT));
         }
         if (states.stream().allMatch(state -> state == PersonState.AWAY)) {
-            return Optional.of("off");
+            return Optional.of(entityState(PersonState.AWAY));
         }
         if (states.stream().allMatch(state -> state == PersonState.UNAVAILABLE)) {
-            return Optional.of("unavailable");
+            return Optional.of(entityState(PersonState.UNAVAILABLE));
         }
         return Optional.empty();
     }
 
     /**
      * Bildet einen Personenzustand auf den Entity-State-String ab — die
-     * einzige Definition, damit Poller und Status-API nicht je eine eigene,
-     * womoeglich widerspruechliche Abbildung mitbringen. UNKNOWN wird von den
-     * Aufrufern nicht gemeldet (die Entitaet behaelt ihren zuletzt bekannten
-     * DB-Wert), bekommt hier aber trotzdem einen Text, damit niemand ihn selbst
-     * erfinden muss. Bewusst OHNE {@code default}-Zweig: eine kuenftige fuenfte
-     * Konstante muss ein Compilerfehler werden, statt still zu "unavailable"
-     * zu werden.
+     * einzige Definition, damit Poller, Status-API und {@link #aggregateState}
+     * nicht je eine eigene, womoeglich widerspruechliche Abbildung mitbringen.
+     * UNKNOWN wird von den Aufrufern nicht gemeldet (die Entitaet behaelt ihren
+     * zuletzt bekannten DB-Wert), bekommt hier aber trotzdem einen Text, damit
+     * niemand ihn selbst erfinden muss. Bewusst OHNE {@code default}-Zweig: eine
+     * kuenftige fuenfte Konstante muss ein Compilerfehler werden, statt still zu
+     * "unavailable" zu werden.
+     *
+     * <p>Bewusst {@code static}: der Poller mockt {@link PresenceEvaluator} als
+     * Ganzes, eine Instanzmethode wuerde dort {@code null} liefern und der Test
+     * pruefte am Ende eine gestubbte statt der echten Abbildung. Als statische,
+     * abhaengigkeitsfreie Funktion kann Mockito sie nicht abfangen.
      */
-    public String entityState(PersonState state) {
+    public static String entityState(PersonState state) {
         return switch (state) {
             case PRESENT -> "on";
             case AWAY -> "off";

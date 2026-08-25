@@ -33,12 +33,17 @@ public class PresenceMonitor {
      * {@code lastSeenAt} nur bei {@code responded == true} — bei Stille bleibt es
      * auf dem letzten Antwortzeitpunkt stehen (oder {@code null}, wenn das
      * Geraet noch nie geantwortet hat).
+     *
+     * <p>Ueber {@link Map#compute} statt get-dann-put: so bleibt das
+     * Schreibe-einmal-Invariant von {@code firstCheckedAt} auch dann intakt,
+     * wenn der Poller Geraete je einmal parallel probt statt sequentiell.
      */
     public void update(Long deviceId, boolean responded, Instant now) {
-        DeviceProbeStatus previous = statuses.get(deviceId);
-        Instant firstCheckedAt = previous != null ? previous.firstCheckedAt() : now;
-        Instant lastSeenAt = responded ? now : (previous != null ? previous.lastSeenAt() : null);
-        statuses.put(deviceId, new DeviceProbeStatus(firstCheckedAt, lastSeenAt, now));
+        statuses.compute(deviceId, (id, previous) -> {
+            Instant firstCheckedAt = previous != null ? previous.firstCheckedAt() : now;
+            Instant lastSeenAt = responded ? now : (previous != null ? previous.lastSeenAt() : null);
+            return new DeviceProbeStatus(firstCheckedAt, lastSeenAt, now);
+        });
     }
 
     public Optional<DeviceProbeStatus> statusOf(Long deviceId) {
