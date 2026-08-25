@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Collection;
@@ -214,7 +215,7 @@ class PresencePollingServiceTest {
                 new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
         when(evaluator.evaluate(argThat(devices -> forUser(devices, 6L)), any())).thenReturn(
                 new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.AWAY, null));
-        lenient().when(userRepository.findById(6L)).thenReturn(Optional.of(
+        when(userRepository.findById(6L)).thenReturn(Optional.of(
                 AppUser.builder().id(6L).username("anna").displayName("Anna").passwordHash("x").build()));
 
         service.poll();
@@ -263,5 +264,52 @@ class PresencePollingServiceTest {
 
         verifyNoInteractions(entityStateService);
         verify(evaluator, never()).aggregateState(any());
+    }
+
+    // -- Timeout-Klemmung (presence.probe-timeout-ms) --------------------------
+    //
+    // 0 bedeutet fuer Socket.connect "unendlich" (ein unerreichbares Handy
+    // bloeckte einen der wenigen geteilten Scheduler-Threads minutenlang), und
+    // ein negativer oder zu grosser Wert (der (int)-Cast in SocketPresenceProbe
+    // liefe ueber) laesst JEDE Probe mit IllegalArgumentException scheitern -
+    // SocketPresenceProbe schluckt das zu SILENT, jede Person meldete dauerhaft
+    // "off", ohne einen einzigen Log-Eintrag oberhalb von debug. Ein falsch
+    // konfigurierter Wert darf deshalb nicht durchgereicht, sondern muss auf
+    // einen plausiblen Bereich geklemmt werden (Muster PresenceSettingsService:
+    // defensiver Fallback statt Anwendungsabsturz).
+
+    private Duration probedTimeout(long configuredProbeTimeoutMs) {
+        PresencePollingService clampedService = new PresencePollingService(deviceRepository, userRepository,
+                probe, monitor, evaluator, entityStateService, CLOCK, configuredProbeTimeoutMs);
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, true)));
+        when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
+        when(evaluator.evaluate(anyList(), any())).thenReturn(
+                new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
+
+        clampedService.poll();
+
+        ArgumentCaptor<Duration> captor = ArgumentCaptor.forClass(Duration.class);
+        verify(probe).probe(anyString(), anyList(), captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
+    void nullWirdAufMindestwertGeklemmt() {
+        assertThat(probedTimeout(0L)).isEqualTo(Duration.ofMillis(100));
+    }
+
+    @Test
+    void negativerWertWirdAufMindestwertGeklemmt() {
+        assertThat(probedTimeout(-500L)).isEqualTo(Duration.ofMillis(100));
+    }
+
+    @Test
+    void zuGrosserWertWirdAufHoechstwertGeklemmt() {
+        assertThat(probedTimeout(Long.MAX_VALUE)).isEqualTo(Duration.ofSeconds(30));
+    }
+
+    @Test
+    void plausiblerWertBleibtUnveraendert() {
+        assertThat(probedTimeout(1500L)).isEqualTo(Duration.ofMillis(1500));
     }
 }

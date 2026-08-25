@@ -61,6 +61,22 @@ public class PresencePollingService {
     private static final String HOUSEHOLD_REF = "household";
     private static final String HOUSEHOLD_FRIENDLY_NAME = "Jemand zu Hause";
 
+    /**
+     * Klemm-Bereich fuer {@code presence.probe-timeout-ms}: 0 bedeutet fuer
+     * {@code Socket.connect} "unendlich" (ein unerreichbares Handy bloeckte
+     * einen der wenigen geteilten Scheduler-Threads minutenlang, dreimal ueber
+     * die drei {@link #PROBE_PORTS}), und ein negativer oder ueber
+     * {@code Integer.MAX_VALUE} liegender Wert laesst den {@code (int)}-Cast in
+     * {@code SocketPresenceProbe} ueberlaufen bzw. {@code Socket.connect} mit
+     * {@link IllegalArgumentException} scheitern — die dort gefangen und zu
+     * {@link ProbeResult#SILENT} wird: JEDE Person meldete dauerhaft "off",
+     * ohne einen einzigen Log-Eintrag oberhalb von debug. Ein Tippfehler in
+     * der Konfiguration darf das nicht auslösen (Muster
+     * {@code PresenceSettingsService}: defensiver Fallback statt Absturz).
+     */
+    private static final long MIN_PROBE_TIMEOUT_MS = 100;
+    private static final long MAX_PROBE_TIMEOUT_MS = 30_000;
+
     private final PresenceDeviceRepository deviceRepository;
     private final AppUserRepository userRepository;
     private final PresenceProbe probe;
@@ -94,7 +110,16 @@ public class PresencePollingService {
         this.evaluator = evaluator;
         this.entityStateService = entityStateService;
         this.clock = clock;
-        this.probeTimeout = Duration.ofMillis(probeTimeoutMs);
+        this.probeTimeout = Duration.ofMillis(clampProbeTimeoutMs(probeTimeoutMs));
+    }
+
+    private static long clampProbeTimeoutMs(long probeTimeoutMs) {
+        long clamped = Math.max(MIN_PROBE_TIMEOUT_MS, Math.min(probeTimeoutMs, MAX_PROBE_TIMEOUT_MS));
+        if (clamped != probeTimeoutMs) {
+            log.warn("Unplausibler Wert '{}' fuer presence.probe-timeout-ms, nutze {}",
+                    probeTimeoutMs, clamped);
+        }
+        return clamped;
     }
 
     @Scheduled(fixedDelayString = "${presence.poll-interval-ms:30000}")

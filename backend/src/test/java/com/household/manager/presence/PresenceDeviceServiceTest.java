@@ -131,4 +131,21 @@ class PresenceDeviceServiceTest {
 
         verify(monitor, never()).remove(any());
     }
+
+    @Test
+    void whitespaceImGespeichertenHostZaehltNichtAlsAenderung() {
+        // Der gespeicherte Host traegt Rand-Leerzeichen (nur ueber einen Schreibweg
+        // ausserhalb dieses Service erreichbar, z. B. ein direktes DB-Update) - der
+        // Vergleich muss trotzdem "gleich" erkennen, sonst startet eine neue
+        // Probezeit fuer eine Adresse, die sich gar nicht geaendert hat.
+        PresenceDevice device = PresenceDevice.builder().id(7L).userId(5L)
+                .name("iPhone").host(" 192.168.1.50 ").active(true).build();
+        when(repository.findById(7L)).thenReturn(Optional.of(device));
+        when(userRepository.existsById(5L)).thenReturn(true);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.update(7L, request(5L, "iPhone Neu", "192.168.1.50"));
+
+        verify(monitor, never()).remove(any());
+    }
 }

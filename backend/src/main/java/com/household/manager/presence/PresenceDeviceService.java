@@ -50,13 +50,13 @@ public class PresenceDeviceService {
     public PresenceDtos.DeviceAdminResponse update(Long id, PresenceDtos.DeviceRequest request) {
         PresenceDevice device = findOrThrow(id);
         validate(request);
-        String previousHost = device.getHost();
+        String previousHost = trimOrNull(device.getHost());
         device.setUserId(request.userId());
         device.setName(request.name().trim());
         device.setHost(request.host().trim());
         device.setActive(activeOrDefault(request));
         PresenceDevice saved = repository.save(device);
-        if (!Objects.equals(previousHost, saved.getHost())) {
+        if (!Objects.equals(previousHost, trimOrNull(saved.getHost()))) {
             // Der Monitor ist per Id geschluesselt, nicht per Adresse: ohne diesen
             // Reset erbte eine korrigierte IP das firstCheckedAt/lastSeenAt der alten
             // Adresse und die Karenz waere fuer die neue Adresse bereits verbraucht.
@@ -77,6 +77,11 @@ public class PresenceDeviceService {
     private PresenceDevice findOrThrow(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PresenceDevice", "id", id));
+    }
+
+    /** Null-sicher, damit der Host-Vergleich beim Update Gleiches mit Gleichem vergleicht. */
+    private String trimOrNull(String value) {
+        return value == null ? null : value.trim();
     }
 
     private String auditDetail(PresenceDevice device) {
