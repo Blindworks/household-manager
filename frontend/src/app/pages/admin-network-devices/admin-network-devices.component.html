@@ -1,0 +1,111 @@
+<div class="admin-network-devices">
+  <h1>Netzwerk-Geräte</h1>
+
+  <p class="admin-network-devices__hint">
+    Diese Geräte prüft das Backend minütlich per TCP-Verbindung. Ein leerer Port lässt das
+    Backend automatisch prüfen (ICMP/Standardport). Ein deaktiviertes Gerät wird nicht mehr
+    überwacht, bleibt aber angelegt.
+  </p>
+
+  @if (errorMessage()) {
+    <div class="admin-network-devices__error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <form class="admin-network-devices__form" (ngSubmit)="save()">
+    <h2 class="admin-network-devices__form-title">
+      {{ editing ? 'Gerät bearbeiten' : 'Neues Gerät' }}
+    </h2>
+
+    <div class="admin-network-devices__fields">
+      <label class="admin-network-devices__field">
+        <span>Name</span>
+        <input type="text" name="name" maxlength="100" [(ngModel)]="form.name" placeholder="z. B. Router">
+      </label>
+
+      <label class="admin-network-devices__field">
+        <span>Host</span>
+        <input type="text" name="host" maxlength="255" [(ngModel)]="form.host" placeholder="z. B. 192.168.1.1">
+      </label>
+
+      <label class="admin-network-devices__field admin-network-devices__field--narrow">
+        <span>Port</span>
+        <input
+          type="number"
+          name="tcpPort"
+          min="1"
+          max="65535"
+          [(ngModel)]="form.tcpPort"
+          placeholder="automatisch">
+      </label>
+
+      <label class="admin-network-devices__field admin-network-devices__field--narrow">
+        <span>Reihenfolge</span>
+        <input type="number" name="sortOrder" [(ngModel)]="form.sortOrder">
+      </label>
+
+      <label class="admin-network-devices__checkbox">
+        <input type="checkbox" name="active" [(ngModel)]="form.active">
+        <span>Aktiv</span>
+      </label>
+    </div>
+
+    <div class="admin-network-devices__form-actions">
+      <button type="submit" [disabled]="saving()">
+        {{ saving() ? 'Speichert …' : (editing ? 'Änderungen speichern' : 'Anlegen') }}
+      </button>
+      @if (editing) {
+        <button type="button" class="admin-network-devices__secondary ghost" (click)="resetForm()">
+          Abbrechen
+        </button>
+      }
+    </div>
+  </form>
+
+  @if (loading()) {
+    <p>Wird geladen …</p>
+  } @else if (loadFailed()) {
+    <!-- Keine Tabelle bei Ladefehler: eine leere Liste saehe aus wie „es gibt keine". -->
+    <p>Die Geräte konnten nicht geladen werden. Bitte die Seite neu laden.</p>
+  } @else {
+    <table class="admin-network-devices__table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Host</th>
+          <th scope="col">Port</th>
+          <th scope="col">Reihenfolge</th>
+          <th scope="col">Aktiv</th>
+          <th scope="col"><span class="admin-network-devices__sr-only">Aktionen</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (device of devices(); track device.id) {
+          <tr [class.admin-network-devices__row--inactive]="!device.active">
+            <td>{{ device.name }}</td>
+            <td>{{ device.host }}</td>
+            <td>{{ device.tcpPort ?? 'automatisch' }}</td>
+            <td>{{ device.sortOrder }}</td>
+            <td>{{ device.active ? 'Ja' : 'Nein' }}</td>
+            <td class="admin-network-devices__actions">
+              <button type="button" (click)="startEdit(device)">Bearbeiten</button>
+              <button
+                type="button"
+                class="admin-network-devices__toggle-active ghost"
+                (click)="setActive(device, !device.active)">
+                {{ device.active ? 'Deaktivieren' : 'Aktivieren' }}
+              </button>
+              <button
+                type="button"
+                class="admin-network-devices__delete danger"
+                (click)="remove(device)">
+                Löschen
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6">Noch keine Geräte angelegt.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

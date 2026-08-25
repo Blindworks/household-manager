@@ -1,0 +1,108 @@
+.admin-network-devices {
+  padding: var(--spacing-lg);
+
+  &__hint {
+    max-width: 70ch;
+    margin-bottom: var(--spacing-md);
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  &__error {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+
+  &__form {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  &__form-title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1.1rem;
+  }
+
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--spacing-md);
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+
+    input {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border: 1px solid var(--color-light-gray);
+      border-radius: var(--radius-sm, 6px);
+      font-size: 0.95rem;
+    }
+
+    &--narrow input {
+      width: 7rem;
+    }
+  }
+
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    font-size: 0.9rem;
+  }
+
+  &__form-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+  }
+
+  /*
+   * Die Button-Optik kommt aus dem globalen Admin-Scope in styles.scss
+   * (default = primaer, .ghost, .danger); hier stehen nur noch Layout-Regeln.
+   */
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--spacing-sm);
+      border-bottom: 1px solid var(--color-light-gray);
+      text-align: left;
+      vertical-align: middle;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  /** Deaktivierte Geraete bleiben sichtbar, treten aber zurueck. */
+  &__row--inactive {
+    opacity: 0.55;
+  }
+
+  &__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

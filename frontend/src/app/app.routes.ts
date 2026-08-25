@@ -166,6 +166,13 @@ export const routes: Routes = [
     title: 'Hundetracker-Einstellungen - Household Manager'
   },
   {
+    path: 'admin/network-devices',
+    loadComponent: () => import('./pages/admin-network-devices/admin-network-devices.component')
+      .then(m => m.AdminNetworkDevicesComponent),
+    canActivate: [adminGuard],
+    title: 'Netzwerk-Geräte - Household Manager'
+  },
+  {
     path: 'admin/audit-log',
     loadComponent: () => import('./pages/admin-audit-log/admin-audit-log.component').then(m => m.AdminAuditLogComponent),
     canActivate: [adminGuard],
