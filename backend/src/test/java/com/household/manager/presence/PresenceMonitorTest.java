@@ -42,4 +42,17 @@ class PresenceMonitorTest {
         monitor.remove(3L);
         assertThat(monitor.statusOf(3L)).isEmpty();
     }
+
+    @Test
+    void erholungNachStilleAktualisiertLastSeen() {
+        Instant t1 = START.plusSeconds(30);
+        Instant t2 = START.plusSeconds(60);
+        Instant t3 = START.plusSeconds(90);
+
+        monitor.update(4L, true, t1);
+        monitor.update(4L, false, t2);
+        monitor.update(4L, true, t3);
+
+        assertThat(monitor.statusOf(4L).orElseThrow().lastSeenAt()).isEqualTo(t3);
+    }
 }

@@ -27,6 +27,12 @@ public class PresenceMonitor {
         this.startedAt = clock.instant();
     }
 
+    /**
+     * Traegt das Ergebnis einer Probe nach. {@code lastCheckedAt} wird immer auf
+     * {@code now} gesetzt; {@code lastSeenAt} nur bei {@code responded == true} —
+     * bei Stille bleibt es auf dem letzten Antwortzeitpunkt stehen (oder
+     * {@code null}, wenn das Geraet noch nie geantwortet hat).
+     */
     public void update(Long deviceId, boolean responded, Instant now) {
         Instant previousLastSeenAt = Optional.ofNullable(statuses.get(deviceId))
                 .map(DeviceProbeStatus::lastSeenAt)
@@ -43,6 +49,14 @@ public class PresenceMonitor {
         return startedAt;
     }
 
+    /**
+     * Entfernt den Status eines geloeschten Geraets. Akzeptierter Wettlauf: ein
+     * Poll-Zyklus, der die Geraeteliste vor dem Loeschen geladen hat, kann den
+     * Eintrag danach per {@link #update} wieder einfuegen — ein verwaister
+     * Eintrag bis zum naechsten Neustart, der nie gelesen wird (alle Lesepfade
+     * zaehlen Geraete aus der DB auf), bewusst akzeptiert (Muster
+     * {@code NetworkDeviceStatusMonitor}).
+     */
     public void remove(Long deviceId) {
         statuses.remove(deviceId);
     }
