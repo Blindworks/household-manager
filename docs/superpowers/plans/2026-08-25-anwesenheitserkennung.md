@@ -1163,6 +1163,10 @@ public class PresencePollingService {
 
         for (PresenceDevice device : devices) {
             if (!device.isActive()) {
+                // Messwert vergessen, nicht nur ueberspringen: sonst erbt das Geraet beim
+                // Wiedereinschalten sein altes firstCheckedAt und waere nach einer einzigen
+                // stillen Probe "abwesend", ohne je Probezeit gehabt zu haben.
+                monitor.remove(device.getId());
                 continue;
             }
             monitor.update(device.getId(), probeSafely(device), clock.instant());
