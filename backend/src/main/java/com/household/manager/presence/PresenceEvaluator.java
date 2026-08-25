@@ -18,10 +18,14 @@ import java.util.Optional;
  * Flow-Trigger nicht auseinanderlaufen koennen.
  *
  * <p>Regeln: Antwort eines aktiven Geraets => sofort anwesend. Abwesend erst,
- * wenn ALLE aktiven Geraete laenger als die Karenzzeit still sind. Nach einem
- * Neustart (lastSeen ist nur im Speicher) gilt die Karenz ab Startzeitpunkt:
- * bis dahin wird bei Stille UNKNOWN geliefert und der Aufrufer meldet nichts —
- * die Entitaet behaelt ihren letzten DB-Wert statt zu raten.
+ * wenn ALLE aktiven Geraete laenger als die Karenzzeit still sind. Hat noch
+ * KEIN aktives Geraet je geantwortet, greift die Probezeit je Geraet (siehe
+ * {@link PresenceMonitor}): solange irgendein aktives Geraet noch keinen
+ * Monitor-Eintrag hat (noch nie geprueft) oder seine eigene {@code
+ * firstCheckedAt} noch keine volle Karenzzeit zurueckliegt, wird UNKNOWN
+ * geliefert und der Aufrufer meldet nichts — die Entitaet behaelt ihren
+ * letzten DB-Wert statt zu raten. Das gilt gleichermassen fuer ein frisch
+ * angelegtes Geraet wie fuer den Zustand direkt nach einem Backend-Neustart.
  */
 @Component
 @RequiredArgsConstructor
@@ -57,9 +61,18 @@ public class PresenceEvaluator {
             return new PersonPresence(state, lastSeen);
         }
 
-        // Noch nie gesehen seit dem Start: Anlauf-Karenz — erst danach ist
-        // Stille ein Beleg fuer Abwesenheit.
-        if (Duration.between(monitor.startedAt(), now).compareTo(grace) < 0) {
+        // Noch nie gesehen: solange irgendein aktives Geraet noch in seiner
+        // eigenen Probezeit steckt (kein Eintrag, oder firstCheckedAt liegt noch
+        // keine volle Karenzzeit zurueck), ist Stille kein Beleg fuer Abwesenheit.
+        boolean anyDeviceStillInProbeGrace = active.stream().anyMatch(device -> {
+            Optional<PresenceMonitor.DeviceProbeStatus> status = monitor.statusOf(device.getId());
+            if (status.isEmpty()) {
+                return true;
+            }
+            Instant firstCheckedAt = status.get().firstCheckedAt();
+            return Duration.between(firstCheckedAt, now).compareTo(grace) < 0;
+        });
+        if (anyDeviceStillInProbeGrace) {
             return new PersonPresence(PersonState.UNKNOWN, null);
         }
         return new PersonPresence(PersonState.AWAY, null);
@@ -70,6 +83,15 @@ public class PresenceEvaluator {
      * wenn ALLE erfassten Personen abwesend sind; unavailable nur, wenn alle
      * blind sind. Jede Mischung ohne PRESENT ergibt keine Aussage — dann wird
      * bewusst nichts gemeldet.
+     *
+     * <p><strong>Stille Falle:</strong> Eine dauerhaft {@code UNAVAILABLE}
+     * gemeldete Person (deaktiviertes oder geloeschtes Handy) laesst eine
+     * Mischung wie {@code [AWAY, UNAVAILABLE]} auf {@link Optional#empty()}
+     * fallen — es wird nichts gemeldet, und {@code binary_sensor.
+     * presence_household} friert dauerhaft auf seinem letzten Wert ein, ohne
+     * Log und ohne Fehler. Die Regel ist bewusst so (die sichere Richtung),
+     * aber wer das Handy einer Person deaktiviert, schaltet damit
+     * stillschweigend einen darauf gebauten "Alle weg"-Flow ab.
      */
     public Optional<String> aggregateState(Collection<PersonState> states) {
         if (states.isEmpty()) {
@@ -85,5 +107,24 @@ public class PresenceEvaluator {
             return Optional.of("unavailable");
         }
         return Optional.empty();
+    }
+
+    /**
+     * Bildet einen Personenzustand auf den Entity-State-String ab — die
+     * einzige Definition, damit Poller und Status-API nicht je eine eigene,
+     * womoeglich widerspruechliche Abbildung mitbringen. UNKNOWN wird von den
+     * Aufrufern nicht gemeldet (die Entitaet behaelt ihren zuletzt bekannten
+     * DB-Wert), bekommt hier aber trotzdem einen Text, damit niemand ihn selbst
+     * erfinden muss. Bewusst OHNE {@code default}-Zweig: eine kuenftige fuenfte
+     * Konstante muss ein Compilerfehler werden, statt still zu "unavailable"
+     * zu werden.
+     */
+    public String entityState(PersonState state) {
+        return switch (state) {
+            case PRESENT -> "on";
+            case AWAY -> "off";
+            case UNAVAILABLE -> "unavailable";
+            case UNKNOWN -> "unknown";
+        };
     }
 }

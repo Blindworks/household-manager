@@ -2,22 +2,14 @@ package com.household.manager.presence;
 
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PresenceMonitorTest {
 
     private static final Instant START = Instant.parse("2026-08-25T10:00:00Z");
-    private final PresenceMonitor monitor =
-            new PresenceMonitor(Clock.fixed(START, ZoneId.of("Europe/Berlin")));
-
-    @Test
-    void merktSichDenStartzeitpunkt() {
-        assertThat(monitor.startedAt()).isEqualTo(START);
-    }
+    private final PresenceMonitor monitor = new PresenceMonitor();
 
     @Test
     void lastSeenBleibtBeiStilleAufDemLetztenAntwortZeitpunktStehen() {
@@ -54,5 +46,18 @@ class PresenceMonitorTest {
         monitor.update(4L, true, t3);
 
         assertThat(monitor.statusOf(4L).orElseThrow().lastSeenAt()).isEqualTo(t3);
+    }
+
+    @Test
+    void firstCheckedAtWirdEinmaligBeimErstenUpdateGesetztUndBleibtDanachUnveraendert() {
+        Instant first = START.plusSeconds(10);
+        monitor.update(5L, true, first);
+        assertThat(monitor.statusOf(5L).orElseThrow().firstCheckedAt()).isEqualTo(first);
+
+        // Weitere Aufrufe, auch mit wechselndem responded, duerfen firstCheckedAt nicht mehr aendern.
+        monitor.update(5L, false, START.plusSeconds(20));
+        monitor.update(5L, true, START.plusSeconds(30));
+
+        assertThat(monitor.statusOf(5L).orElseThrow().firstCheckedAt()).isEqualTo(first);
     }
 }

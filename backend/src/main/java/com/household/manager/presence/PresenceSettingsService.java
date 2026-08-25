@@ -29,7 +29,13 @@ public class PresenceSettingsService {
     private final AuditService auditService;
 
     public long getAwayGraceMinutes() {
-        String raw = applicationSettings.getSettingsByCategory(CATEGORY).get(KEY_AWAY_GRACE);
+        String raw;
+        try {
+            raw = applicationSettings.getSettingsByCategory(CATEGORY).get(KEY_AWAY_GRACE);
+        } catch (Exception ex) {
+            log.warn("Karenzzeit konnte nicht gelesen werden, nutze {}", DEFAULT_AWAY_GRACE_MINUTES, ex);
+            return DEFAULT_AWAY_GRACE_MINUTES;
+        }
         if (raw == null || raw.isBlank()) {
             return DEFAULT_AWAY_GRACE_MINUTES;
         }

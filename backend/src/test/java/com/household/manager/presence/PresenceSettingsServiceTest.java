@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class PresenceSettingsServiceTest {
@@ -50,6 +51,12 @@ class PresenceSettingsServiceTest {
 
         when(applicationSettings.getSettingsByCategory("PRESENCE"))
                 .thenReturn(Map.of("away_grace_minutes", "abc"));
+        assertThat(service.getAwayGraceMinutes()).isEqualTo(10L);
+    }
+
+    @Test
+    void dbFehlerBeimLesenFaelltAufDenDefaultZurueckStattZuWerfen() {
+        doThrow(new RuntimeException("DB weg")).when(applicationSettings).getSettingsByCategory("PRESENCE");
         assertThat(service.getAwayGraceMinutes()).isEqualTo(10L);
     }
 

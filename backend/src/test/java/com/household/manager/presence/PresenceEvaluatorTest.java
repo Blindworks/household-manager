@@ -6,19 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
-import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PresenceEvaluatorTest {
 
     private static final Instant START = Instant.parse("2026-08-25T10:00:00Z");
@@ -31,7 +27,7 @@ class PresenceEvaluatorTest {
 
     @BeforeEach
     void setUp() {
-        monitor = new PresenceMonitor(Clock.fixed(START, ZoneId.of("Europe/Berlin")));
+        monitor = new PresenceMonitor();
         evaluator = new PresenceEvaluator(monitor, settings);
         lenient().when(settings.getAwayGraceMinutes()).thenReturn(10L);
     }
@@ -63,6 +59,16 @@ class PresenceEvaluatorTest {
     }
 
     @Test
+    void stilleGenauAufDerKarenzgrenzeIstNochAnwesend() {
+        Instant seen = START.plusSeconds(60);
+        monitor.update(1L, true, seen);
+        Instant now = seen.plus(Duration.ofMinutes(10)); // exakt grace
+
+        assertThat(evaluator.evaluate(List.of(device(1, true)), now).state())
+                .isEqualTo(PresenceEvaluator.PersonState.PRESENT);
+    }
+
+    @Test
     void stilleJenseitsDerKarenzIstAbwesend() {
         Instant seen = START.plusSeconds(60);
         monitor.update(1L, true, seen);
@@ -74,8 +80,21 @@ class PresenceEvaluatorTest {
     }
 
     @Test
+    void abweichendeKarenzzeitWirdBeachtet() {
+        // Mit dem Default (10 min) waere das AWAY - mit 30 min noch PRESENT.
+        lenient().when(settings.getAwayGraceMinutes()).thenReturn(30L);
+        Instant seen = START.plusSeconds(60);
+        monitor.update(1L, true, seen);
+        Instant now = seen.plusSeconds(20 * 60);
+
+        assertThat(evaluator.evaluate(List.of(device(1, true)), now).state())
+                .isEqualTo(PresenceEvaluator.PersonState.PRESENT);
+    }
+
+    @Test
     void nieGesehenWaehrendDerAnlaufKarenzIstUnbekannt() {
-        // Kein Update seit Start: die Entitaet soll ihren DB-Wert behalten (nie raten).
+        // Kein Update seit Anlegen des Geraets (kein Monitor-Eintrag): die Entitaet
+        // soll ihren DB-Wert behalten (nie raten).
         Instant now = START.plusSeconds(5 * 60);
         assertThat(evaluator.evaluate(List.of(device(1, true)), now).state())
                 .isEqualTo(PresenceEvaluator.PersonState.UNKNOWN);
@@ -83,9 +102,34 @@ class PresenceEvaluatorTest {
 
     @Test
     void nieGesehenNachDerAnlaufKarenzIstAbwesend() {
+        monitor.update(1L, false, START); // erste Pruefung, keine Antwort
         Instant now = START.plusSeconds(11 * 60);
+
         assertThat(evaluator.evaluate(List.of(device(1, true)), now).state())
                 .isEqualTo(PresenceEvaluator.PersonState.AWAY);
+    }
+
+    @Test
+    void probezeitGenauAufDerGrenzeIstSchonAbwesend() {
+        monitor.update(1L, false, START); // erste Pruefung, keine Antwort
+        Instant now = START.plus(Duration.ofMinutes(10)); // exakt grace seit firstCheckedAt
+
+        assertThat(evaluator.evaluate(List.of(device(1, true)), now).state())
+                .isEqualTo(PresenceEvaluator.PersonState.AWAY);
+    }
+
+    @Test
+    void neuesGeraetInEigenerProbezeitBleibtUnbekanntTrotzLangeUeberfaelligemZweitgeraet() {
+        // Geraet 2 ist laengst durch seine eigene Probezeit (erste Pruefung liegt
+        // eine Stunde zurueck), Geraet 1 ist gerade erst zum ersten Mal (still)
+        // geprueft worden. Die Probezeit gilt PRO Geraet, nicht global.
+        monitor.update(2L, false, START.minusSeconds(3600));
+        Instant now = START.plusSeconds(5 * 60);
+        monitor.update(1L, false, now);
+
+        PresenceEvaluator.PersonPresence result =
+                evaluator.evaluate(List.of(device(1, true), device(2, true)), now);
+        assertThat(result.state()).isEqualTo(PresenceEvaluator.PersonState.UNKNOWN);
     }
 
     @Test
@@ -131,5 +175,13 @@ class PresenceEvaluatorTest {
                 PresenceEvaluator.PersonState.AWAY, PresenceEvaluator.PersonState.UNKNOWN)))
                 .isEmpty();
         assertThat(evaluator.aggregateState(List.of())).isEmpty();
+    }
+
+    @Test
+    void entityStateBildetAlleZustaendeAb() {
+        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.PRESENT)).isEqualTo("on");
+        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.AWAY)).isEqualTo("off");
+        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.UNAVAILABLE)).isEqualTo("unavailable");
+        assertThat(evaluator.entityState(PresenceEvaluator.PersonState.UNKNOWN)).isEqualTo("unknown");
     }
 }
