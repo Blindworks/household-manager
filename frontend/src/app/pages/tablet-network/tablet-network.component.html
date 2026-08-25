@@ -1,0 +1,104 @@
+<app-tablet-shell heading="Netzwerk">
+  <div shellActions class="tablet-network__controls">
+    <div class="tablet-network__ranges" role="group" aria-label="Zeitraum">
+      @for (range of ranges; track range.value) {
+        <button
+          type="button"
+          class="tablet-network__range"
+          [class.tablet-network__range--active]="range.value === activeRange"
+          (click)="setRange(range.value)">
+          {{ range.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <section class="tablet-network">
+    <div class="tablet-network__grid">
+      <article class="tablet-network__card tablet-network__card--status">
+        <h3 class="tablet-network__card-title">Status</h3>
+        @if (statusData; as status) {
+          <p class="tablet-network__online" [style.color]="statusColor">{{ statusLabel }}</p>
+          @if (status.lastCheckedAt !== null) {
+            <p class="tablet-network__figure-note">
+              Latenz: {{ status.latencyMs !== null ? (status.latencyMs + ' ms') : '–' }}
+            </p>
+            <p class="tablet-network__figure-note">
+              Gateway: {{ status.gatewayReachable ? 'erreichbar' : 'nicht erreichbar' }}
+            </p>
+          }
+          @if (status.lastSpeedtest; as speedtest) {
+            <p class="tablet-network__figure-note">
+              Letzter Speedtest: {{ speedtest.testedAt | date:'short' }}
+              @if (speedtest.downloadMbps !== null && speedtest.uploadMbps !== null) {
+                · {{ speedtest.downloadMbps }} / {{ speedtest.uploadMbps }} Mbit/s
+              }
+            </p>
+          } @else {
+            <p class="tablet-network__figure-note">Noch kein Speedtest.</p>
+          }
+          <button
+            type="button"
+            class="tablet-network__test-btn"
+            [disabled]="speedtestRunning"
+            (click)="runSpeedtest()">
+            {{ speedtestRunning ? 'Testet…' : 'Jetzt testen' }}
+          </button>
+          @if (speedtestError) {
+            <p class="tablet-network__status-error">{{ speedtestError }}</p>
+          }
+        } @else {
+          <p class="tablet-network__hint">{{ statusError ?? 'Lade Netzwerkstatus…' }}</p>
+        }
+      </article>
+
+      <article class="tablet-network__card tablet-network__card--speed">
+        <h3 class="tablet-network__card-title">Speed-Verlauf</h3>
+        @if (historyData) {
+          <div
+            echarts
+            class="tablet-network__chart"
+            [options]="speedChartOptions()"
+            [autoResize]="true"></div>
+        } @else {
+          <p class="tablet-network__hint">{{ historyError ?? 'Lade Verlaufsdaten…' }}</p>
+        }
+      </article>
+
+      <article class="tablet-network__card tablet-network__card--latency">
+        <h3 class="tablet-network__card-title">Latenz-Verlauf</h3>
+        @if (historyData) {
+          <div
+            echarts
+            class="tablet-network__chart"
+            [options]="latencyChartOptions()"
+            [autoResize]="true"></div>
+        } @else {
+          <p class="tablet-network__hint">{{ historyError ?? 'Lade Verlaufsdaten…' }}</p>
+        }
+      </article>
+
+      <article class="tablet-network__card tablet-network__card--devices">
+        <h3 class="tablet-network__card-title">Geräte</h3>
+        @if (devices.length > 0) {
+          <ul class="tablet-network__devices">
+            @for (device of devices; track device.id) {
+              <li class="tablet-network__device">
+                <span
+                  class="tablet-network__dot"
+                  [class.tablet-network__dot--offline]="!device.reachable"
+                  [attr.title]="deviceStatusLabel(device)"></span>
+                <span class="tablet-network__device-name">{{ device.name }}</span>
+                <span class="tablet-network__device-seen">
+                  zuletzt gesehen: {{ deviceLastSeenLabel(device) }}
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="tablet-network__hint">{{ statusError ?? 'Keine Geräte hinterlegt.' }}</p>
+        }
+      </article>
+    </div>
+  </section>
+</app-tablet-shell>

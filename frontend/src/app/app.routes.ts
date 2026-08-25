@@ -92,6 +92,12 @@ export const routes: Routes = [
     title: 'Toni Tablet - Household Manager'
   },
   {
+    path: 'tablet/network',
+    loadComponent: () => import('./pages/tablet-network/tablet-network.component').then(m => m.TabletNetworkComponent),
+    canActivate: [authGuard],
+    title: 'Netzwerk Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],

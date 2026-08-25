@@ -17,5 +17,6 @@ export const TABLET_VIEWS: readonly TabletView[] = [
   { route: '/tablet/temperatures', icon: 'thermostat', label: 'Temperaturen' },
   { route: '/tablet/air-quality', icon: 'air', label: 'Luftqualität' },
   { route: '/tablet/consumption', icon: 'electric_meter', label: 'Verbrauch' },
-  { route: '/tablet/toni', icon: 'pets', label: 'Toni' }
+  { route: '/tablet/toni', icon: 'pets', label: 'Toni' },
+  { route: '/tablet/network', icon: 'wifi', label: 'Netzwerk' }
 ];
