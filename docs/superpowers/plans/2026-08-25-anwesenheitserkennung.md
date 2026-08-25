@@ -2252,6 +2252,8 @@ git commit -m "feat(presence): Frontend-Modell und REST-Service"
 
 Muster: `pages/admin-network-devices/` (**flache** Ablage `pages/admin-presence/`, NICHT `pages/admin/presence/`). Zusätzlich zur Geräteliste: Karenzzeit-Formular und Personen-Dropdown aus `HouseholdUserService` (`GET /v1/users`).
 
+**Kein „online"-Punkt je Gerät.** `DeviceStatusResponse` trägt bewusst nur Zeitstempel und keine Erreichbarkeits-Flagge (anders als beim Netzwerk-Monitoring). Ein Punkt im Frontend müsste `lastSeenAt` gegen die Karenzzeit rechnen — also genau die Regel in TypeScript nachbauen, für die `PresenceEvaluator` per Entwurf die einzige Definition ist. Die Seite zeigt deshalb den **serverseitig** berechneten Zustand der Person und daneben die rohen Zeitstempel der Geräte. Wer je einen Punkt je Gerät will, lässt ihn vom Server mitliefern.
+
 **Files:**
 - Create: `frontend/src/app/pages/admin-presence/admin-presence.component.ts`
 - Create: `frontend/src/app/pages/admin-presence/admin-presence.component.html`
