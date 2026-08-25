@@ -21,7 +21,14 @@ public final class PresenceDtos {
         }
     }
 
-    public record DeviceStatusResponse(Long id, String name, String host, boolean active,
+    /**
+     * Bewusst OHNE {@code host}: {@code GET /v1/presence/status} ist KIOSK-lesbar
+     * (Dashboard-Kachel auf dem Wandtablet), waehrend die Geraete-Stammdaten
+     * (inklusive IP) laut Spec ADMIN sind. Wer die IP braucht (Admin-Seite),
+     * holt sie ueber {@code GET /v1/presence/devices} und verknuepft ueber
+     * {@code id} — nicht "der Vollstaendigkeit halber" hier ergaenzen.
+     */
+    public record DeviceStatusResponse(Long id, String name, boolean active,
                                         LocalDateTime lastSeenAt, LocalDateTime lastCheckedAt) {
     }
 
@@ -29,6 +36,16 @@ public final class PresenceDtos {
                                 LocalDateTime lastSeenAt, List<DeviceStatusResponse> devices) {
     }
 
+    /**
+     * {@code householdState} traegt dasselbe Vokabular wie {@link PersonStatus#state}
+     * ({@code on}/{@code off}/{@code unavailable}/{@code unknown} —
+     * {@link PresenceEvaluator#entityState}). {@code unknown} fasst dabei ZWEI
+     * verschiedene Ursachen zusammen: "keine Personen erfasst" (keine Geraete in
+     * der DB) und "Personen erfasst, aber keine Aussage moeglich" (Anlauf-Karenz
+     * oder eingefrorenes Aggregat, siehe {@link PresenceStatusService}). Das
+     * Frontend unterscheidet ueber {@code persons.isEmpty()}, nicht ueber den
+     * Wert von {@code householdState} selbst.
+     */
     public record StatusResponse(String householdState, List<PersonStatus> persons) {
     }
 

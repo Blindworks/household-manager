@@ -84,9 +84,20 @@ public class PresencePollingService {
      * ohne einen einzigen Log-Eintrag oberhalb von debug. Ein Tippfehler in
      * der Konfiguration darf das nicht auslösen (Muster
      * {@code PresenceSettingsService}: defensiver Fallback statt Absturz).
+     *
+     * <p><strong>Obergrenze 5 s, nicht 30 s:</strong> ein Zyklus probt alle
+     * aktiven Geraete sequentiell auf einem einzigen Scheduler-Thread, jedes
+     * Geraet wiederum sequentiell ueber alle drei {@link #PROBE_PORTS} — die
+     * Kosten eines abwesenden Geraets sind also {@code Ports x Timeout}, und
+     * eines ganzen Zyklus {@code Geraete x Ports x Timeout}. 30 s Timeout
+     * ergaeben schon bei einem einzigen unerreichbaren Handy 90 s (3 Ports),
+     * genau das Vielfache eines geteilten Threads, das diese Klemme verhindern
+     * soll. 5 s begrenzt zusaetzlich den wahrscheinlichsten Tippfehler — eine
+     * Null zu viel, {@code 20000} statt {@code 2000} — der bei 30 s Obergrenze
+     * unveraendert durchgegangen waere.
      */
     private static final long MIN_PROBE_TIMEOUT_MS = 100;
-    private static final long MAX_PROBE_TIMEOUT_MS = 30_000;
+    private static final long MAX_PROBE_TIMEOUT_MS = 5_000;
 
     private final PresenceDeviceRepository deviceRepository;
     private final AppUserRepository userRepository;

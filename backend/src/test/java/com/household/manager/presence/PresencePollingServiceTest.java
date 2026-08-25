@@ -344,12 +344,26 @@ class PresencePollingServiceTest {
 
     @Test
     void zuGrosserWertWirdAufHoechstwertGeklemmt() {
-        assertThat(probedTimeout(Long.MAX_VALUE)).isEqualTo(Duration.ofSeconds(30));
+        assertThat(probedTimeout(Long.MAX_VALUE)).isEqualTo(Duration.ofMillis(5000));
     }
 
     @Test
     void plausiblerWertBleibtUnveraendert() {
         assertThat(probedTimeout(1500L)).isEqualTo(Duration.ofMillis(1500));
+    }
+
+    // Grenzwerte exakt am Rand: ein vertauschtes Math.max/Math.min wuerde von den
+    // beiden Tests oben nicht zuverlaessig entdeckt (manche vertauschten Werte
+    // treffen zufaellig den erwarteten Wert), faellt hier aber garantiert auf -
+    // siehe Rechnung am Javadoc von MAX_PROBE_TIMEOUT_MS.
+    @Test
+    void mindestwertBleibtUnveraendert() {
+        assertThat(probedTimeout(100L)).isEqualTo(Duration.ofMillis(100));
+    }
+
+    @Test
+    void hoechstwertBleibtUnveraendert() {
+        assertThat(probedTimeout(5000L)).isEqualTo(Duration.ofMillis(5000));
     }
 
     // -- Verwaiste Personen (letzte Geraetezeile geloescht) ---------------------
