@@ -1,11 +1,14 @@
 package com.household.manager.presence;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AppUser;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.PresenceDevice;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.PresenceDeviceRepository;
@@ -21,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -46,10 +50,17 @@ import java.util.stream.Collectors;
  * Netzwerkausfall nicht von echter Abwesenheit unterscheiden; die Absicherung
  * gehoert auf Flow-Ebene (Bedingung auf die Netzwerk-Entitaeten des
  * {@code network}-Moduls), nicht in diesen Service.
+ *
+ * <p>Verliert eine Person ihre letzte Geraetezeile (geloescht statt nur
+ * deaktiviert, auch direkt in der DB oder waehrend die Anwendung stand), faellt
+ * sie aus der Gruppierung und wird deshalb hier — nicht im CRUD-Service —
+ * separat als "unavailable" gemeldet, ohne ins Aggregat einzugehen.
  */
 @Service
 @Slf4j
 public class PresencePollingService {
+
+    private static final String STATE_UNAVAILABLE = "unavailable";
 
     /**
      * 62078 (lockdownd) antwortet auf iPhones fast immer; 80/443 sind Fallbacks.
@@ -83,6 +94,7 @@ public class PresencePollingService {
     private final PresenceMonitor monitor;
     private final PresenceEvaluator evaluator;
     private final EntityStateService entityStateService;
+    private final ObjectMapper objectMapper;
     private final Clock clock;
     private final Duration probeTimeout;
 
@@ -101,6 +113,7 @@ public class PresencePollingService {
             PresenceMonitor monitor,
             PresenceEvaluator evaluator,
             EntityStateService entityStateService,
+            ObjectMapper objectMapper,
             Clock clock,
             @Value("${presence.probe-timeout-ms:2000}") long probeTimeoutMs) {
         this.deviceRepository = deviceRepository;
@@ -109,6 +122,7 @@ public class PresencePollingService {
         this.monitor = monitor;
         this.evaluator = evaluator;
         this.entityStateService = entityStateService;
+        this.objectMapper = objectMapper;
         this.clock = clock;
         this.probeTimeout = Duration.ofMillis(clampProbeTimeoutMs(probeTimeoutMs));
     }
@@ -194,6 +208,80 @@ public class PresencePollingService {
         });
 
         evaluator.aggregateState(states).ifPresent(this::reportHouseholdState);
+
+        try {
+            cleanupOrphanedPersons(byUser.keySet());
+        } catch (Exception e) {
+            log.warn("Aufraeumen verwaister Personen-Entitaeten fehlgeschlagen", e);
+        }
+    }
+
+    /**
+     * Meldet Personen-Entitaeten als unavailable, deren letzte Geraetezeile in
+     * diesem Zyklus fehlt (geloescht statt nur deaktiviert — der Deaktivieren-Pfad
+     * behaelt seine Zeile, hier gibt es gar keine mehr). Ohne diesen Schritt wuerde
+     * eine solche Person komplett aus der Gruppierung fallen und ihre Entitaet
+     * fuer immer auf ihrem letzten Wert einfrieren, ohne Log und ohne Fehler.
+     *
+     * <p>Bewusst NICHT ins Aggregat aufgenommen (siehe
+     * {@link PresenceEvaluator#aggregateState}): eine hier gemeldete
+     * UNAVAILABLE-Person wuerde dort mit PRESENT/AWAY-Personen gemischt dauerhaft
+     * {@code Optional.empty()} ergeben und das Haushalts-Aggregat einfrieren —
+     * genau die im Evaluator-Javadoc dokumentierte stille Falle, die wir hier
+     * nicht selbst ausloesen duerfen.
+     */
+    private void cleanupOrphanedPersons(Set<Long> userIdsWithDeviceRows) {
+        for (EntityState entity : entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE)) {
+            Long userId = parsePersonUserId(entity.getSourceRef());
+            if (userId == null) {
+                // Die Haushalts-Entitaet traegt sourceRef "household" (keine Zahl)
+                // und gehoert nicht zu den Personen-Entitaeten.
+                continue;
+            }
+            if (userIdsWithDeviceRows.contains(userId)) {
+                continue;
+            }
+            if (STATE_UNAVAILABLE.equals(entity.getState())) {
+                continue;
+            }
+            entityStateService.reportState(EntityStateUpdate.builder()
+                    .entityId(entity.getEntityId())
+                    .domain(entity.getDomain())
+                    .source(EntitySource.PRESENCE)
+                    .sourceRef(entity.getSourceRef())
+                    .friendlyName(entity.getFriendlyName())
+                    .state(STATE_UNAVAILABLE)
+                    .attributes(readAttributes(entity))
+                    .build());
+        }
+    }
+
+    private Long parsePersonUserId(String sourceRef) {
+        try {
+            return Long.valueOf(sourceRef);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * EntityStateWriter.upsert ueberschreibt die Attribute bei JEDEM Update
+     * (Muster {@code ZigbeeAvailabilityWatchdog}). Ohne das Zurueckreichen der
+     * gespeicherten Attribute verloere die Entitaet deviceClass/personUserId/
+     * lastSeenAt beim Aufraeumen.
+     */
+    private Map<String, Object> readAttributes(EntityState entity) {
+        String raw = entity.getAttributes();
+        if (raw == null || raw.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(raw, new TypeReference<LinkedHashMap<String, Object>>() {});
+        } catch (Exception ex) {
+            log.warn("Attribute von {} nicht lesbar, werden beim Aufraeumen verworfen: {}",
+                    entity.getEntityId(), ex.getMessage());
+            return Map.of();
+        }
     }
 
     private void reportPersonState(Long userId, PresenceEvaluator.PersonPresence presence) {

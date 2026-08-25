@@ -1,10 +1,12 @@
 package com.household.manager.presence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AppUser;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.PresenceDevice;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.PresenceDeviceRepository;
@@ -20,7 +22,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -54,13 +59,15 @@ class PresencePollingServiceTest {
     private EntityStateService entityStateService;
 
     private PresenceMonitor monitor;
+    private ObjectMapper objectMapper;
     private PresencePollingService service;
 
     @BeforeEach
     void setUp() {
         monitor = new PresenceMonitor();
+        objectMapper = new ObjectMapper();
         service = new PresencePollingService(deviceRepository, userRepository, probe,
-                monitor, evaluator, entityStateService, CLOCK, PROBE_TIMEOUT_MS);
+                monitor, evaluator, entityStateService, objectMapper, CLOCK, PROBE_TIMEOUT_MS);
         // Nicht jeder Test erreicht reportPersonState fuer Person 5 (z. B. UNKNOWN
         // oder ein frueherer Abbruch) bzw. ruft aggregateState ueberhaupt auf
         // (z. B. beim DB-Fehler) - deshalb gezielt lenient statt strict zu brechen.
@@ -68,6 +75,38 @@ class PresencePollingServiceTest {
                 AppUser.builder().id(5L).username("benedikt").displayName("Benedikt")
                         .passwordHash("x").build()));
         lenient().when(evaluator.aggregateState(any())).thenReturn(Optional.empty());
+        // Kein Test dieser Klasse befasst sich mit verwaisten Personen, es sei denn er
+        // stubt find() explizit anders - Default: keine gespeicherten Entitaeten.
+        lenient().when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of());
+    }
+
+    private EntityState personEntity(long userId, String state, Map<String, Object> attributes) {
+        try {
+            return EntityState.builder()
+                    .entityId("binary_sensor.presence_" + userId + "_home")
+                    .domain(EntityDomain.BINARY_SENSOR)
+                    .source(EntitySource.PRESENCE)
+                    .sourceRef(String.valueOf(userId))
+                    .friendlyName("Person " + userId + " anwesend")
+                    .state(state)
+                    .attributes(objectMapper.writeValueAsString(attributes))
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private EntityState householdEntity(String state) {
+        return EntityState.builder()
+                .entityId("binary_sensor.presence_household")
+                .domain(EntityDomain.BINARY_SENSOR)
+                .source(EntitySource.PRESENCE)
+                .sourceRef("household")
+                .friendlyName("Jemand zu Hause")
+                .state(state)
+                .attributes("{\"deviceClass\":\"presence\"}")
+                .build();
     }
 
     private PresenceDevice device(long id, boolean active) {
@@ -191,7 +230,7 @@ class PresencePollingServiceTest {
         Instant later = NOW.plusSeconds(3600);
         Clock laterClock = Clock.fixed(later, ZoneId.of("Europe/Berlin"));
         PresencePollingService laterService = new PresencePollingService(deviceRepository, userRepository, probe,
-                monitor, evaluator, entityStateService, laterClock, PROBE_TIMEOUT_MS);
+                monitor, evaluator, entityStateService, objectMapper, laterClock, PROBE_TIMEOUT_MS);
         when(deviceRepository.findAll()).thenReturn(List.of(device(1, true)));
         when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.SILENT);
         when(evaluator.evaluate(anyList(), any())).thenReturn(
@@ -280,7 +319,7 @@ class PresencePollingServiceTest {
 
     private Duration probedTimeout(long configuredProbeTimeoutMs) {
         PresencePollingService clampedService = new PresencePollingService(deviceRepository, userRepository,
-                probe, monitor, evaluator, entityStateService, CLOCK, configuredProbeTimeoutMs);
+                probe, monitor, evaluator, entityStateService, objectMapper, CLOCK, configuredProbeTimeoutMs);
         when(deviceRepository.findAll()).thenReturn(List.of(device(1, true)));
         when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
         when(evaluator.evaluate(anyList(), any())).thenReturn(
@@ -311,5 +350,87 @@ class PresencePollingServiceTest {
     @Test
     void plausiblerWertBleibtUnveraendert() {
         assertThat(probedTimeout(1500L)).isEqualTo(Duration.ofMillis(1500));
+    }
+
+    // -- Verwaiste Personen (letzte Geraetezeile geloescht) ---------------------
+
+    @Test
+    void verwaistePersonOhneGeraeteWirdUnavailableMitErhaltenenAttributen() {
+        // Keine Geraetezeile mehr fuer Person 5 - weder aktiv noch inaktiv.
+        when(deviceRepository.findAll()).thenReturn(List.of());
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("deviceClass", "presence");
+        attributes.put("personUserId", 5);
+        attributes.put("lastSeenAt", "2026-08-25T09:00:00Z");
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(personEntity(5, "on", attributes)));
+
+        service.poll();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, times(1)).reportState(captor.capture());
+        EntityStateUpdate update = captor.getValue();
+        assertThat(update.entityId()).isEqualTo("binary_sensor.presence_5_home");
+        assertThat(update.domain()).isEqualTo(EntityDomain.BINARY_SENSOR);
+        assertThat(update.source()).isEqualTo(EntitySource.PRESENCE);
+        assertThat(update.sourceRef()).isEqualTo("5");
+        assertThat(update.state()).isEqualTo("unavailable");
+        assertThat(update.attributes())
+                .containsEntry("deviceClass", "presence")
+                .containsEntry("personUserId", 5)
+                .containsEntry("lastSeenAt", "2026-08-25T09:00:00Z");
+    }
+
+    @Test
+    void verwaistePersonWirdNichtInsAggregatUebernommen() {
+        // Person 5 hat noch ein aktives Geraet, Person 6 keine Geraetezeile mehr.
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, 5L, true)));
+        when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
+        when(evaluator.evaluate(anyList(), any())).thenReturn(
+                new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
+        Map<String, Object> attributes = Map.of("deviceClass", "presence");
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(personEntity(6, "off", attributes)));
+
+        service.poll();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<PresenceEvaluator.PersonState>> statesCaptor =
+                ArgumentCaptor.forClass(Collection.class);
+        verify(evaluator).aggregateState(statesCaptor.capture());
+        assertThat(statesCaptor.getValue()).containsExactly(PresenceEvaluator.PersonState.PRESENT);
+
+        // Person 6 wird trotzdem als unavailable gemeldet - nur eben nicht im Aggregat.
+        verify(entityStateService).reportState(argThat(u -> u.entityId().equals("binary_sensor.presence_6_home")
+                && u.state().equals("unavailable")));
+    }
+
+    @Test
+    void haushaltsEntitaetWirdVonAufraeumenNichtAngefasst() {
+        when(deviceRepository.findAll()).thenReturn(List.of());
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(householdEntity("on")));
+
+        service.poll();
+
+        // Keine Geraete -> kein regulaerer Bericht; die Haushalts-Entitaet hat
+        // sourceRef "household" (keine Zahl) und darf vom Aufraeumen nicht als
+        // verwaiste Person missverstanden werden.
+        verify(entityStateService, never()).reportState(any());
+    }
+
+    @Test
+    void personMitGeraetenWirdNichtFaelschlichAufgeraeumt() {
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, 5L, true)));
+        when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
+        when(evaluator.evaluate(anyList(), any())).thenReturn(
+                new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
+        Map<String, Object> attributes = Map.of("deviceClass", "presence");
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(personEntity(5, "on", attributes)));
+
+        service.poll();
+
+        verify(entityStateService, never()).reportState(argThat(u -> "unavailable".equals(u.state())));
     }
 }

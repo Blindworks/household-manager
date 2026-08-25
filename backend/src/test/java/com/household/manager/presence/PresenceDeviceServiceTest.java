@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +42,39 @@ class PresenceDeviceServiceTest {
     }
 
     @Test
+    void listeLiefertGeraeteInAufsteigenderIdReihenfolge() {
+        PresenceDevice first = PresenceDevice.builder().id(1L).userId(5L)
+                .name("iPhone").host("192.168.1.50").active(true).build();
+        PresenceDevice second = PresenceDevice.builder().id(2L).userId(6L)
+                .name("Pixel").host("192.168.1.51").active(false).build();
+        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(first, second));
+
+        List<PresenceDtos.DeviceAdminResponse> result = service.list();
+
+        assertThat(result).extracting(PresenceDtos.DeviceAdminResponse::id)
+                .containsExactly(1L, 2L);
+        assertThat(result).extracting(PresenceDtos.DeviceAdminResponse::active)
+                .containsExactly(true, false);
+    }
+
+    @Test
+    void createEntferntMonitorEintragFuerDieNeueId() {
+        // AUTO_INCREMENT kann nach einem Neustart eine geloeschte Id neu vergeben
+        // (siehe PresenceMonitor.remove Javadoc) - ein Waisen-Eintrag im Monitor
+        // duerfte dem neuen Geraet sonst ein falsches PRESENT vererben.
+        when(userRepository.existsById(5L)).thenReturn(true);
+        when(repository.save(any())).thenAnswer(inv -> {
+            PresenceDevice device = inv.getArgument(0);
+            device.setId(3L);
+            return device;
+        });
+
+        service.create(request(5L, "iPhone", "192.168.1.50"));
+
+        verify(monitor).remove(3L);
+    }
+
+    @Test
     void createLegtGeraetAnUndAuditiert() {
         when(userRepository.existsById(5L)).thenReturn(true);
         when(repository.save(any())).thenAnswer(inv -> {
@@ -66,12 +100,47 @@ class PresenceDeviceServiceTest {
     }
 
     @Test
-    void createLehntLeereFelderAb() {
+    void createLehntLeerenNamenAb() {
         assertThatThrownBy(() -> service.create(request(5L, " ", "192.168.1.50")))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createLehntLeeresHostAb() {
         assertThatThrownBy(() -> service.create(request(5L, "iPhone", " ")))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createLehntFehlendeUserIdAb() {
         assertThatThrownBy(() -> service.create(request(null, "iPhone", "192.168.1.50")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createLehntZuLangenNamenAb() {
+        String tooLong = "x".repeat(101);
+        assertThatThrownBy(() -> service.create(request(5L, tooLong, "192.168.1.50")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("100");
+    }
+
+    @Test
+    void createLehntZuLangenHostAb() {
+        String tooLong = "1".repeat(256);
+        assertThatThrownBy(() -> service.create(request(5L, "iPhone", tooLong)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createLehntHostMitLeerzeichenImInnernAb() {
+        assertThatThrownBy(() -> service.create(request(5L, "iPhone", "192.168. 1.50")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createLehntHostMitEingebettetemZeilenumbruchAb() {
+        assertThatThrownBy(() -> service.create(request(5L, "iPhone", "192.168.1.50\n.5")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -97,6 +166,30 @@ class PresenceDeviceServiceTest {
         verify(repository).delete(device);
         verify(monitor).remove(7L);
         verify(auditService).record(eq("presence.device.delete"), anyString());
+    }
+
+    @Test
+    void updateAuditiert() {
+        PresenceDevice device = PresenceDevice.builder().id(7L).userId(5L)
+                .name("iPhone").host("192.168.1.50").active(true).build();
+        when(repository.findById(7L)).thenReturn(Optional.of(device));
+        when(userRepository.existsById(5L)).thenReturn(true);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.update(7L, request(5L, "iPhone Neu", "192.168.1.50"));
+
+        verify(auditService).record(eq("presence.device.update"), anyString());
+    }
+
+    @Test
+    void updateLehntZuLangenNamenAb() {
+        PresenceDevice device = PresenceDevice.builder().id(7L).userId(5L)
+                .name("iPhone").host("192.168.1.50").active(true).build();
+        when(repository.findById(7L)).thenReturn(Optional.of(device));
+        String tooLong = "x".repeat(101);
+        assertThatThrownBy(() -> service.update(7L, request(5L, tooLong, "192.168.1.50")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("100");
     }
 
     @Test

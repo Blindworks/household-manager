@@ -20,6 +20,11 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class PresenceDeviceService {
 
+    /** Muss zur Spaltenlaenge von {@code PresenceDevice#name} passen. */
+    private static final int MAX_NAME_LENGTH = 100;
+    /** Muss zur Spaltenlaenge von {@code PresenceDevice#host} passen. */
+    private static final int MAX_HOST_LENGTH = 255;
+
     private final PresenceDeviceRepository repository;
     private final AppUserRepository userRepository;
     private final PresenceMonitor monitor;
@@ -42,6 +47,10 @@ public class PresenceDeviceService {
                 .active(activeOrDefault(request))
                 .build();
         PresenceDevice saved = repository.save(device);
+        // MariaDB berechnet AUTO_INCREMENT nach einem Neustart neu (siehe
+        // PresenceMonitor.remove Javadoc): eine wiedervergebene Id duerfte einen
+        // Waisen-Eintrag des Monitors sonst als falsches PRESENT erben.
+        monitor.remove(saved.getId());
         auditService.record("presence.device.create", auditDetail(saved));
         return PresenceDtos.DeviceAdminResponse.from(saved);
     }
@@ -100,11 +109,32 @@ public class PresenceDeviceService {
         if (request.name() == null || request.name().isBlank()) {
             throw new IllegalArgumentException("Der Name darf nicht leer sein.");
         }
+        if (request.name().trim().length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Der Name darf hoechstens %d Zeichen lang sein.".formatted(MAX_NAME_LENGTH));
+        }
         if (request.host() == null || request.host().isBlank()) {
             throw new IllegalArgumentException("Die IP-Adresse darf nicht leer sein.");
+        }
+        String trimmedHost = request.host().trim();
+        if (trimmedHost.length() > MAX_HOST_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Die IP-Adresse darf hoechstens %d Zeichen lang sein.".formatted(MAX_HOST_LENGTH));
+        }
+        // trim() entfernt nur Rand-Whitespace. Anders als beim Netzwerk-Monitoring
+        // (dort zeigt ein unerreichbares Geraet nur einen roten Punkt) fuehrt ein
+        // unaufloesbarer Host hier zu STILLE ueber die Karenzzeit hinweg - und
+        // Stille wird als "abwesend" gedeutet und loest Flows aus. Keine
+        // IP-Format-Pruefung: Hostnamen sind eine legitime Eingabe.
+        if (containsWhitespace(trimmedHost)) {
+            throw new IllegalArgumentException("Die IP-Adresse darf keine Leerzeichen enthalten.");
         }
         if (!userRepository.existsById(request.userId())) {
             throw new IllegalArgumentException("Der Benutzer existiert nicht.");
         }
+    }
+
+    private boolean containsWhitespace(String value) {
+        return value.chars().anyMatch(Character::isWhitespace);
     }
 }
