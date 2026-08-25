@@ -1,6 +1,6 @@
-import { TimeRange } from './temperature.model';
+import { TimeRange, TimeValue } from './temperature.model';
 
-export type { TimeRange };
+export type { TimeRange, TimeValue };
 
 /** Ergebnis eines Speedtests. */
 export interface SpeedtestSummary {
@@ -30,12 +30,6 @@ export interface NetworkStatusResponse {
   devices: NetworkDeviceStatus[];
 }
 
-/** Ein Zeit/Wert-Punkt der Latenz-Historie. */
-export interface NetworkLatencyPoint {
-  time: string;
-  value: number;
-}
-
 /** Ein Speedtest-Punkt der Historie. */
 export interface NetworkSpeedtestPoint {
   time: string;
@@ -45,7 +39,7 @@ export interface NetworkSpeedtestPoint {
 
 /** Historie von Latenz und Speedtests über einen Zeitraum. */
 export interface NetworkHistoryResponse {
-  latency: NetworkLatencyPoint[];
+  latency: TimeValue[];
   speedtests: NetworkSpeedtestPoint[];
 }
 
