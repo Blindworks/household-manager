@@ -48,6 +48,11 @@ public class PresenceSettingsService {
         }
     }
 
+    /**
+     * Persistiert ohne eigene Bereichspruefung — die Validierung ist Aufgabe der
+     * API-Grenze (Controller); ein direkter Aufruf umgeht sie (Muster
+     * {@code TractiveHomeSettingsService}).
+     */
     public void saveAwayGraceMinutes(long minutes) {
         applicationSettings.saveSettings(CATEGORY, Map.of(KEY_AWAY_GRACE, String.valueOf(minutes)));
         auditService.record("presence.settings.update", KEY_AWAY_GRACE + "=" + minutes);
