@@ -26,6 +26,15 @@ function emptyForm(): DeviceFormState {
 }
 
 /**
+ * Eine waehlbare Person im Dropdown; das Label traegt ein etwaiges
+ * "(deaktiviert)"-Suffix bereits (Muster Kalender-Termindialog).
+ */
+interface UserOption {
+  id: number;
+  label: string;
+}
+
+/**
  * Admin-Seite „Anwesenheit": Karenzzeit plus die Handys, die das Backend alle
  * 30 s per TCP probt. Muster/Interaktionsform: Admin-Seite „Netzwerk-Geräte".
  */
@@ -41,13 +50,33 @@ export class AdminPresenceComponent implements OnInit {
   private readonly userApi = inject(HouseholdUserService);
 
   readonly devices = signal<PresenceDeviceAdmin[]>([]);
+  /** Alle Haushaltsmitglieder, aktiv UND deaktiviert (siehe {@link displayNameOf}). */
   readonly users = signal<HouseholdUser[]>([]);
+  /**
+   * Nur der erste Abruf blendet die Tabelle aus. Spaetere Aktualisierungen lassen sie
+   * stehen, sonst springt das Layout bei jeder Aktion.
+   */
   readonly loading = signal(true);
+  /**
+   * Bei fehlgeschlagenem Laden bleibt die Tabelle verborgen. Sonst behauptete sie mit
+   * „Noch keine Geräte angelegt." das Gegenteil dessen, was der Fall ist.
+   */
   readonly loadFailed = signal(false);
   readonly saving = signal(false);
+  /** Fehler rund um die Geraeteliste (Laden/Anlegen/Aendern/Loeschen/Umschalten). */
   readonly errorMessage = signal<string | null>(null);
+  /**
+   * Eigenes Signal fuer einen fehlgeschlagenen Nutzer-Abruf. Bewusst getrennt von
+   * `errorMessage`: teilten sich beide ein Signal, wuerde ein Klick auf irgendeine
+   * Geraete-Aktion (die `errorMessage` vorsorglich auf null setzt) die einzige
+   * Erklaerung dafuer loeschen, warum die Personenauswahl leer ist.
+   */
+  readonly usersMessage = signal<string | null>(null);
   readonly settingsMessage = signal<string | null>(null);
+  readonly settingsMessageType = signal<'success' | 'error' | null>(null);
   readonly settingsSaving = signal(false);
+  /** Id des Geraets, dessen Aktiv-Umschalter gerade einen PUT laufen hat. */
+  readonly togglingDeviceId = signal<number | null>(null);
 
   form: DeviceFormState = emptyForm();
   /** Karenzzeit-Formularwert; null solange noch nichts geladen ist. */
@@ -58,22 +87,24 @@ export class AdminPresenceComponent implements OnInit {
    *
    * Kommt aus `GET /status` und nicht aus der Geräteliste: der Zeitpunkt lebt nur
    * im Speicher des Backends. Er ist die **einzige** Stelle, an der ein Handy
-   * auffällt, dessen WLAN-Adresse gewechselt hat (siehe Spec) — deshalb steht er
-   * hier, obwohl die Seite sonst reine Stammdatenpflege ist. Schlägt der Abruf
-   * fehl, bleibt die Spalte leer; die Pflege muss trotzdem funktionieren.
+   * auffällt, dessen WLAN-Adresse gewechselt hat (siehe Spec) — deshalb wird er bei
+   * jedem {@link load} erneut geholt, nicht nur einmal beim Seitenaufbau. Schlägt
+   * der Abruf fehl, bleibt die Spalte leer; die Pflege muss trotzdem funktionieren.
    */
   readonly lastSeenByDeviceId = signal<Map<number, string | null>>(new Map());
 
   ngOnInit(): void {
     this.load();
-    this.loadLastSeen();
     this.userApi.list().subscribe({
-      next: users => this.users.set(users.filter(user => user.enabled)),
-      error: () => this.errorMessage.set('Die Haushaltsmitglieder konnten nicht geladen werden.')
+      next: users => this.users.set(users),
+      error: () => this.usersMessage.set('Die Haushaltsmitglieder konnten nicht geladen werden.')
     });
     this.presenceApi.getSettings().subscribe({
       next: settings => (this.graceMinutes = settings.awayGraceMinutes),
-      error: () => this.settingsMessage.set('Die Karenzzeit konnte nicht geladen werden.')
+      error: () => {
+        this.settingsMessageType.set('error');
+        this.settingsMessage.set('Die Karenzzeit konnte nicht geladen werden.');
+      }
     });
   }
 
@@ -98,6 +129,13 @@ export class AdminPresenceComponent implements OnInit {
     return this.lastSeenByDeviceId().get(device.id) ?? null;
   }
 
+  /**
+   * Laedt Geraeteliste und „Zuletzt gesehen" neu. `afterLoad` laeuft, sobald die
+   * Geraete-Antwort da ist — auch im Fehlerfall.
+   *
+   * `loading` wird hier bewusst nicht wieder auf true gesetzt: es markiert nur den
+   * allerersten Abruf.
+   */
   load(afterLoad?: () => void): void {
     this.presenceApi.getDevices().subscribe({
       next: devices => {
@@ -113,14 +151,47 @@ export class AdminPresenceComponent implements OnInit {
         afterLoad?.();
       }
     });
+    this.loadLastSeen();
   }
 
   get editing(): boolean {
     return this.form.id !== null;
   }
 
+  /**
+   * Waehlbare Personen im Formular: alle aktiven plus — falls das Formular gerade
+   * eine inzwischen deaktivierte Person traegt — genau diese eine, mit Suffix.
+   * Ohne den Sonderfall haette ein bearbeitetes Geraet, dessen Besitzer deaktiviert
+   * wurde, im Select keine passende `<option>` mehr: das Feld renderte leer und der
+   * Wert wuerde beim Speichern trotzdem still weitergeschrieben (Muster Kalender-
+   * Termindialog, `personOptions`).
+   */
+  get userOptions(): UserOption[] {
+    const active = this.users()
+      .filter(user => user.enabled)
+      .map((user): UserOption => ({ id: user.id, label: user.displayName }));
+    const selectedId = this.form.userId;
+    if (selectedId === null || active.some(option => option.id === selectedId)) {
+      return active;
+    }
+    const retired = this.users().find(user => user.id === selectedId);
+    return retired
+      ? [...active, { id: retired.id, label: `${retired.displayName} (deaktiviert)` }]
+      : active;
+  }
+
+  /**
+   * Name zu einer Nutzer-Id, mit „(deaktiviert)"-Suffix falls zutreffend. Fragt
+   * bewusst die VOLLE Liste ab, nicht nur die aktiven Nutzer — sonst zeigte die
+   * Tabelle fuer ein Geraet eines deaktivierten Mitglieds nur noch „Person 5",
+   * obwohl das Backend den echten Namen laengst kennt.
+   */
   displayNameOf(userId: number): string {
-    return this.users().find(user => user.id === userId)?.displayName ?? `Person ${userId}`;
+    const user = this.users().find(candidate => candidate.id === userId);
+    if (!user) {
+      return `Person ${userId}`;
+    }
+    return user.enabled ? user.displayName : `${user.displayName} (deaktiviert)`;
   }
 
   startEdit(device: PresenceDeviceAdmin): void {
@@ -134,8 +205,13 @@ export class AdminPresenceComponent implements OnInit {
     };
   }
 
-  resetForm(): void {
+  /** Nur der Formularzustand; laesst eine gerade gesetzte Fehlermeldung stehen. */
+  private clearFormState(): void {
     this.form = emptyForm();
+  }
+
+  resetForm(): void {
+    this.clearFormState();
     this.errorMessage.set(null);
   }
 
@@ -160,9 +236,12 @@ export class AdminPresenceComponent implements OnInit {
       ? this.presenceApi.createDevice(request)
       : this.presenceApi.updateDevice(id, request);
     call.subscribe({
+      // Nur der Formularzustand wird zurueckgesetzt: schlaegt der Reload danach fehl,
+      // hat `load()` bereits eine Fehlermeldung gesetzt — die darf hier nicht wieder
+      // verschwinden (ein `resetForm()` wuerde sie mit loeschen).
       next: () => this.load(() => {
         this.saving.set(false);
-        this.resetForm();
+        this.clearFormState();
       }),
       error: (error: HttpErrorResponse) => {
         this.saving.set(false);
@@ -175,8 +254,16 @@ export class AdminPresenceComponent implements OnInit {
    * Sendet IMMER den kompletten Request: ein fehlendes `active` liest der
    * Server als „aktiv", ein Teil-PUT reaktivierte ein deaktiviertes Geraet
    * stillschweigend (Muster Netzwerk-Geräte).
+   *
+   * `togglingDeviceId` sperrt gegen Doppelklicks: ohne sie sendeten zwei schnelle
+   * Klicks zweimal denselben Request, deren Antworten in beliebiger Reihenfolge
+   * eintreffen koennten.
    */
   setActive(device: PresenceDeviceAdmin, active: boolean): void {
+    if (this.togglingDeviceId() === device.id) {
+      return;
+    }
+    this.togglingDeviceId.set(device.id);
     this.errorMessage.set(null);
     this.presenceApi.updateDevice(device.id, {
       userId: device.userId,
@@ -185,12 +272,16 @@ export class AdminPresenceComponent implements OnInit {
       active
     }).subscribe({
       next: () => {
+        this.togglingDeviceId.set(null);
         if (this.form.id === device.id) {
           this.form.active = active;
         }
         this.load();
       },
-      error: (error: HttpErrorResponse) => this.errorMessage.set(this.messageFrom(error))
+      error: (error: HttpErrorResponse) => {
+        this.togglingDeviceId.set(null);
+        this.errorMessage.set(this.messageFrom(error));
+      }
     });
   }
 
@@ -211,20 +302,24 @@ export class AdminPresenceComponent implements OnInit {
   }
 
   saveSettings(): void {
-    if (this.graceMinutes === null || this.graceMinutes < 1) {
-      this.settingsMessage.set('Die Karenzzeit muss mindestens 1 Minute betragen.');
+    if (this.graceMinutes === null || this.graceMinutes < 1 || this.graceMinutes > 1440) {
+      this.settingsMessageType.set('error');
+      this.settingsMessage.set('Die Karenzzeit muss zwischen 1 und 1440 Minuten liegen.');
       return;
     }
     this.settingsSaving.set(true);
     this.settingsMessage.set(null);
+    this.settingsMessageType.set(null);
     this.presenceApi.updateSettings({ awayGraceMinutes: this.graceMinutes }).subscribe({
       next: settings => {
         this.graceMinutes = settings.awayGraceMinutes;
         this.settingsSaving.set(false);
+        this.settingsMessageType.set('success');
         this.settingsMessage.set('Gespeichert.');
       },
       error: (error: HttpErrorResponse) => {
         this.settingsSaving.set(false);
+        this.settingsMessageType.set('error');
         this.settingsMessage.set(this.messageFrom(error));
       }
     });

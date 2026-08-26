@@ -15,6 +15,14 @@
     border-radius: var(--radius-sm, 6px);
   }
 
+  &__settings-form {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+  }
+
   &__error {
     margin-bottom: var(--spacing-md);
     padding: var(--spacing-sm);
@@ -24,10 +32,23 @@
     color: var(--color-error);
   }
 
+  &__field-error {
+    margin-top: 4px;
+    color: var(--color-error);
+    font-size: 0.8rem;
+  }
+
   &__message {
-    margin-left: var(--spacing-sm);
     color: var(--color-gray);
     font-size: 0.85rem;
+  }
+
+  &__message--success {
+    color: var(--color-success, #2e8b1f);
+  }
+
+  &__message--error {
+    color: var(--color-error);
   }
 
   &__form {
@@ -37,13 +58,57 @@
     border-radius: var(--radius-sm, 6px);
   }
 
-  &__actions {
+  &__form-title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1.1rem;
+  }
+
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--spacing-md);
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+
+    input,
+    select {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border: 1px solid var(--color-light-gray);
+      border-radius: var(--radius-sm, 6px);
+      font-size: 0.95rem;
+    }
+
+    &--narrow input {
+      width: 7rem;
+    }
+  }
+
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    font-size: 0.9rem;
+  }
+
+  &__form-actions {
     display: flex;
     gap: var(--spacing-sm);
     margin-top: var(--spacing-md);
   }
 
-  table {
+  /*
+   * Die Button-Optik kommt aus dem globalen Admin-Scope in styles.scss
+   * (default = primaer, .ghost, .danger); hier stehen nur noch Layout-Regeln.
+   */
+
+  &__table {
     width: 100%;
     border-collapse: collapse;
 
@@ -56,19 +121,23 @@
     }
   }
 
-  label {
+  &__actions {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: var(--spacing-sm);
-    font-size: 0.85rem;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
 
-    input,
-    select {
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border: 1px solid var(--color-light-gray);
-      border-radius: var(--radius-sm, 6px);
-      font-size: 0.95rem;
-    }
+  /** Deaktivierte Geraete bleiben sichtbar, treten aber zurueck. */
+  &__row--inactive {
+    opacity: 0.55;
+  }
+
+  &__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }

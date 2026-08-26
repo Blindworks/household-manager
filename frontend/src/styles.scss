@@ -571,7 +571,7 @@ $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
    default = primary, .ghost = neutral outline, .danger = red outline.
    ============================================================ */
 
-$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories, .vision, .pets-page';
+$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories, .vision, .pets-page, .admin-presence';
 
 #{$admin-scopes} {
 

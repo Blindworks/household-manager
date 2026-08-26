@@ -2,79 +2,131 @@
   <h1>Anwesenheit</h1>
   <p class="admin-presence__hint">
     Erkannt wird über TCP-Antworten der Handys im WLAN. Voraussetzung: feste
-    DHCP-Reservierung im Router und iOS-Einstellung „Private WLAN-Adresse: Fest"
-    (nicht „Rotierend") für das Heim-WLAN.
+    DHCP-Reservierung im Router und iOS-Einstellung „Private WLAN-Adresse: Fest“
+    (nicht „Rotierend“) für das Heim-WLAN.
   </p>
 
   <section class="admin-presence__settings">
     <h2>Karenzzeit</h2>
-    <p>„Abwesend" gilt erst, wenn alle Geräte einer Person so lange still sind.</p>
-    <form (ngSubmit)="saveSettings()">
-      <label>
-        Minuten
-        <input type="number" name="graceMinutes" [(ngModel)]="graceMinutes" min="1" max="1440" />
+    <p>„Abwesend“ gilt erst, wenn alle Geräte einer Person so lange still sind.</p>
+    <form class="admin-presence__settings-form" (ngSubmit)="saveSettings()">
+      <label class="admin-presence__field admin-presence__field--narrow">
+        <span>Minuten</span>
+        <input type="number" name="graceMinutes" [(ngModel)]="graceMinutes" min="1" max="1440">
       </label>
       <button type="submit" [disabled]="settingsSaving()">Speichern</button>
-      <span class="admin-presence__message" *ngIf="settingsMessage() as message">{{ message }}</span>
+      @if (settingsMessage()) {
+        <span
+          class="admin-presence__message"
+          [class.admin-presence__message--error]="settingsMessageType() === 'error'"
+          [class.admin-presence__message--success]="settingsMessageType() === 'success'">
+          {{ settingsMessage() }}
+        </span>
+      }
     </form>
   </section>
 
   <section>
     <h2>Geräte</h2>
-    <p class="admin-presence__error" *ngIf="errorMessage() as message">{{ message }}</p>
 
-    <table *ngIf="!loading() && !loadFailed()">
-      <thead>
-        <tr>
-          <th>Person</th><th>Name</th><th>IP-Adresse</th>
-          <th>Zuletzt gesehen</th><th>Aktiv</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let device of devices()">
-          <td>{{ displayNameOf(device.userId) }}</td>
-          <td>{{ device.name }}</td>
-          <td>{{ device.host }}</td>
-          <td>{{ lastSeenOf(device) ? (lastSeenOf(device) | date:'dd.MM. HH:mm':undefined:'de') : '–' }}</td>
-          <td>
-            <input type="checkbox" [checked]="device.active"
-                   (change)="setActive(device, !device.active)" />
-          </td>
-          <td>
-            <button type="button" (click)="startEdit(device)">Bearbeiten</button>
-            <button type="button" (click)="remove(device)">Löschen</button>
-          </td>
-        </tr>
-        <tr *ngIf="devices().length === 0">
-          <td colspan="6">Noch keine Geräte angelegt.</td>
-        </tr>
-      </tbody>
-    </table>
+    @if (errorMessage()) {
+      <div class="admin-presence__error" role="alert">{{ errorMessage() }}</div>
+    }
 
     <form class="admin-presence__form" (ngSubmit)="save()">
-      <h3>{{ editing ? 'Gerät bearbeiten' : 'Gerät anlegen' }}</h3>
-      <label>
-        Person
-        <select name="userId" [(ngModel)]="form.userId">
-          <option [ngValue]="null" disabled>Bitte wählen…</option>
-          <option *ngFor="let user of users()" [ngValue]="user.id">{{ user.displayName }}</option>
-        </select>
-      </label>
-      <label>
-        Name
-        <input type="text" name="name" [(ngModel)]="form.name" placeholder="iPhone Benedikt" />
-      </label>
-      <label>
-        IP-Adresse
-        <input type="text" name="host" [(ngModel)]="form.host" placeholder="192.168.1.50" />
-      </label>
-      <label>
-        <input type="checkbox" name="active" [(ngModel)]="form.active" /> Aktiv
-      </label>
-      <div class="admin-presence__actions">
-        <button type="submit" [disabled]="saving()">{{ editing ? 'Speichern' : 'Anlegen' }}</button>
-        <button type="button" *ngIf="editing" (click)="resetForm()">Abbrechen</button>
+      <h3 class="admin-presence__form-title">
+        {{ editing ? 'Gerät bearbeiten' : 'Gerät anlegen' }}
+      </h3>
+
+      <div class="admin-presence__fields">
+        <label class="admin-presence__field">
+          <span>Person</span>
+          <select name="userId" [(ngModel)]="form.userId">
+            <option [ngValue]="null" disabled>Bitte wählen…</option>
+            @for (option of userOptions; track option.id) {
+              <option [ngValue]="option.id">{{ option.label }}</option>
+            }
+          </select>
+          @if (usersMessage()) {
+            <span class="admin-presence__field-error" role="alert">{{ usersMessage() }}</span>
+          }
+        </label>
+
+        <label class="admin-presence__field">
+          <span>Name</span>
+          <input type="text" name="name" [(ngModel)]="form.name" placeholder="iPhone Benedikt">
+        </label>
+
+        <label class="admin-presence__field">
+          <span>IP-Adresse</span>
+          <input type="text" name="host" [(ngModel)]="form.host" placeholder="192.168.1.50">
+        </label>
+
+        <label class="admin-presence__checkbox">
+          <input type="checkbox" name="active" [(ngModel)]="form.active">
+          <span>Aktiv</span>
+        </label>
+      </div>
+
+      <div class="admin-presence__form-actions">
+        <button type="submit" [disabled]="saving()">
+          {{ saving() ? 'Speichert …' : (editing ? 'Änderungen speichern' : 'Anlegen') }}
+        </button>
+        @if (editing) {
+          <button type="button" class="admin-presence__secondary ghost" (click)="resetForm()">
+            Abbrechen
+          </button>
+        }
       </div>
     </form>
+
+    @if (loading()) {
+      <p>Wird geladen …</p>
+    } @else if (loadFailed()) {
+      <!-- Keine Tabelle bei Ladefehler: eine leere Liste saehe aus wie „es gibt keine". -->
+      <p>Die Geräte konnten nicht geladen werden. Bitte die Seite neu laden.</p>
+    } @else {
+      <table class="admin-presence__table">
+        <thead>
+          <tr>
+            <th scope="col">Person</th>
+            <th scope="col">Name</th>
+            <th scope="col">IP-Adresse</th>
+            <th scope="col">Zuletzt gesehen</th>
+            <th scope="col">Aktiv</th>
+            <th scope="col"><span class="admin-presence__sr-only">Aktionen</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (device of devices(); track device.id) {
+            <tr [class.admin-presence__row--inactive]="!device.active">
+              <td>{{ displayNameOf(device.userId) }}</td>
+              <td>{{ device.name }}</td>
+              <td>{{ device.host }}</td>
+              <td>{{ lastSeenOf(device) ? (lastSeenOf(device) | date:'dd.MM. HH:mm') : '–' }}</td>
+              <td>{{ device.active ? 'Ja' : 'Nein' }}</td>
+              <td class="admin-presence__actions">
+                <button type="button" (click)="startEdit(device)">Bearbeiten</button>
+                <button
+                  type="button"
+                  class="admin-presence__toggle-active ghost"
+                  [disabled]="togglingDeviceId() === device.id"
+                  (click)="setActive(device, !device.active)">
+                  {{ device.active ? 'Deaktivieren' : 'Aktivieren' }}
+                </button>
+                <button
+                  type="button"
+                  class="admin-presence__delete danger"
+                  (click)="remove(device)">
+                  Löschen
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6">Noch keine Geräte angelegt.</td></tr>
+          }
+        </tbody>
+      </table>
+    }
   </section>
 </div>
