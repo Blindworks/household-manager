@@ -33,6 +33,20 @@
       <div class="admin-presence__error" role="alert">{{ errorMessage() }}</div>
     }
 
+    <div class="admin-presence__refresh">
+      <button type="button" [disabled]="refreshing()" (click)="refresh()">
+        {{ refreshing() ? 'Prüft …' : 'Jetzt prüfen' }}
+      </button>
+      <span class="admin-presence__hint admin-presence__hint--inline">
+        Prüft alle Geräte sofort, statt bis zu 30 Sekunden auf den nächsten Durchlauf zu warten.
+      </span>
+      @if (refreshMessage()) {
+        <span class="admin-presence__message admin-presence__message--error" role="alert">
+          {{ refreshMessage() }}
+        </span>
+      }
+    </div>
+
     <form class="admin-presence__form" (ngSubmit)="save()">
       <h3 class="admin-presence__form-title">
         {{ editing ? 'Gerät bearbeiten' : 'Gerät anlegen' }}

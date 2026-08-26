@@ -9,6 +9,7 @@ const DEVICES_URL = '/api/v1/presence/devices';
 const STATUS_URL = '/api/v1/presence/status';
 const USERS_URL = '/api/v1/users';
 const SETTINGS_URL = '/api/v1/presence/settings';
+const REFRESH_URL = '/api/v1/presence/refresh';
 
 const BENEDIKT: HouseholdUser = { id: 5, displayName: 'Benedikt', enabled: true };
 const PARTNERIN: HouseholdUser = { id: 6, displayName: 'Partnerin', enabled: true };
@@ -124,6 +125,10 @@ describe('AdminPresenceComponent', () => {
 
   function deleteButtonOf(row: HTMLElement): HTMLButtonElement {
     return row.querySelector('.admin-presence__delete') as HTMLButtonElement;
+  }
+
+  function refreshButton(): HTMLButtonElement {
+    return el.querySelector('.admin-presence__refresh button') as HTMLButtonElement;
   }
 
   it('laedt Geraete, Personen und Karenzzeit und zeigt sie an', async () => {
@@ -416,5 +421,60 @@ describe('AdminPresenceComponent', () => {
 
     httpMock.expectNone(SETTINGS_URL);
     expect(el.querySelector('.admin-presence__message--error')).toBeTruthy();
+  });
+
+  it('stoesst per Klick auf "Jetzt pruefen" einen manuellen Abruf an und uebernimmt die frische "Zuletzt gesehen"-Spalte', async () => {
+    await loadWith([DEVICE_BENEDIKT], statusWithLastSeen(1, '2026-08-25T10:00:00'));
+    expect(rows()[0].textContent).toContain('10:00');
+
+    refreshButton().click();
+
+    const request = httpMock.expectOne(REFRESH_URL);
+    expect(request.request.method).toBe('POST');
+    request.flush(statusWithLastSeen(1, '2026-08-26T09:15:00'));
+    fixture.detectChanges();
+
+    expect(rows()[0].textContent).toContain('09:15');
+    // Kein zweiter Geraete-/Status-Roundtrip: die Antwort traegt den frischen Status bereits.
+    httpMock.expectNone(DEVICES_URL);
+  });
+
+  it('sperrt den "Jetzt pruefen"-Knopf waehrend des Requests und entsperrt ihn danach wieder - auch nach einem Fehler', async () => {
+    await loadWith([DEVICE_BENEDIKT]);
+
+    const button = refreshButton();
+    expect(button.disabled).toBeFalse();
+
+    button.click();
+    fixture.detectChanges();
+    expect(button.disabled).toBeTrue();
+
+    httpMock.expectOne(REFRESH_URL)
+      .flush({ message: 'Fehler.' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(button.disabled).toBeFalse();
+
+    button.click();
+    fixture.detectChanges();
+    expect(button.disabled).toBeTrue();
+
+    httpMock.expectOne(REFRESH_URL).flush(statusWithLastSeen(1, '2026-08-26T09:15:00'));
+    fixture.detectChanges();
+
+    expect(button.disabled).toBeFalse();
+  });
+
+  it('zeigt bei 429 eine eigene Meldung, die die Geraete-Fehlermeldung unberuehrt laesst', async () => {
+    await loadWith([DEVICE_BENEDIKT]);
+
+    refreshButton().click();
+    httpMock.expectOne(REFRESH_URL)
+      .flush({ message: 'Es laeuft bereits ein Abruf.' }, { status: 429, statusText: 'Too Many Requests' });
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-presence__refresh .admin-presence__message--error')?.textContent)
+      .toContain('Es laeuft bereits ein Abruf.');
+    expect(el.querySelector('.admin-presence__error')).toBeFalsy();
   });
 });

@@ -32,6 +32,19 @@
     color: var(--color-error);
   }
 
+  &__refresh {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__hint--inline {
+    margin-bottom: 0;
+    max-width: none;
+  }
+
   &__field-error {
     margin-top: 4px;
     color: var(--color-error);

@@ -18,6 +18,15 @@ export class PresenceService {
     return this.http.get<PresenceStatusResponse>(`${this.baseUrl}/status`);
   }
 
+  /**
+   * Stoesst einen sofortigen Probe-Zyklus an (statt bis zu 30 s auf den
+   * naechsten Scheduler-Lauf zu warten) und liefert den frischen Status in
+   * derselben Antwort - ein Folge-`getStatus()` ist nicht noetig.
+   */
+  refresh(): Observable<PresenceStatusResponse> {
+    return this.http.post<PresenceStatusResponse>(`${this.baseUrl}/refresh`, {});
+  }
+
   getDevices(): Observable<PresenceDeviceAdmin[]> {
     return this.http.get<PresenceDeviceAdmin[]>(`${this.baseUrl}/devices`);
   }

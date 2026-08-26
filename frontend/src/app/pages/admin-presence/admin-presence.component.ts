@@ -5,7 +5,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { PresenceService } from '../../services/presence.service';
 import { HouseholdUserService } from '../../services/household-user.service';
 import { HouseholdUser } from '../../models/household-user.model';
-import { PresenceDeviceAdmin, PresenceDeviceRequest } from '../../models/presence.model';
+import {
+  PresenceDeviceAdmin,
+  PresenceDeviceRequest,
+  PresenceStatusResponse
+} from '../../models/presence.model';
 
 /**
  * Zustand des Anlege-/Bearbeiten-Formulars. Bewusst nicht `extends Request`:
@@ -77,6 +81,15 @@ export class AdminPresenceComponent implements OnInit {
   readonly settingsSaving = signal(false);
   /** Id des Geraets, dessen Aktiv-Umschalter gerade einen PUT laufen hat. */
   readonly togglingDeviceId = signal<number | null>(null);
+  /** Laeuft gerade ein manueller Abruf (POST /refresh)? Sperrt den Knopf gegen Doppelklicks. */
+  readonly refreshing = signal(false);
+  /**
+   * Eigenes Signal fuer den manuellen Abruf. Bewusst getrennt von `errorMessage`:
+   * ein Fehlschlag hier bedeutet nicht, dass die Geraeteliste kaputt ist, und ein
+   * Klick auf eine Geraete-Aktion darf diese Meldung nicht mit weglöschen (Muster
+   * `usersMessage`).
+   */
+  readonly refreshMessage = signal<string | null>(null);
 
   form: DeviceFormState = emptyForm();
   /** Karenzzeit-Formularwert; null solange noch nichts geladen ist. */
@@ -108,20 +121,47 @@ export class AdminPresenceComponent implements OnInit {
     });
   }
 
+  /** Einzige Definition der Status- -> "Zuletzt gesehen"-Abbildung (auch fuer {@link refresh}). */
+  private static lastSeenMapOf(status: PresenceStatusResponse): Map<number, string | null> {
+    const seen = new Map<number, string | null>();
+    for (const person of status.persons) {
+      for (const device of person.devices) {
+        seen.set(device.id, device.lastSeenAt);
+      }
+    }
+    return seen;
+  }
+
   private loadLastSeen(): void {
     this.presenceApi.getStatus().subscribe({
-      next: status => {
-        const seen = new Map<number, string | null>();
-        for (const person of status.persons) {
-          for (const device of person.devices) {
-            seen.set(device.id, device.lastSeenAt);
-          }
-        }
-        this.lastSeenByDeviceId.set(seen);
-      },
+      next: status => this.lastSeenByDeviceId.set(AdminPresenceComponent.lastSeenMapOf(status)),
       // Bewusst stumm: die Spalte ist Diagnose-Beiwerk, ein Fehler hier darf die
       // Geräteliste nicht mit einer Meldung überlagern.
       error: () => this.lastSeenByDeviceId.set(new Map())
+    });
+  }
+
+  /**
+   * Stoesst den Backend-Probe-Zyklus sofort an, statt bis zu 30 s auf den naechsten
+   * Scheduler-Lauf zu warten. Die Antwort traegt den frischen Status bereits mit -
+   * ein zweiter Roundtrip (`load()`) ist nicht noetig, nur die "Zuletzt gesehen"-Spalte
+   * wird aktualisiert.
+   */
+  refresh(): void {
+    if (this.refreshing()) {
+      return;
+    }
+    this.refreshing.set(true);
+    this.refreshMessage.set(null);
+    this.presenceApi.refresh().subscribe({
+      next: status => {
+        this.refreshing.set(false);
+        this.lastSeenByDeviceId.set(AdminPresenceComponent.lastSeenMapOf(status));
+      },
+      error: (error: HttpErrorResponse) => {
+        this.refreshing.set(false);
+        this.refreshMessage.set(this.messageFrom(error));
+      }
     });
   }
 
