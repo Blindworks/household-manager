@@ -7,10 +7,10 @@ import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
+import com.household.manager.exception.TooManyRequestsException;
 import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.PresenceDevice;
-import com.household.manager.network.TooManyRequestsException;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.PresenceDeviceRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -179,16 +179,37 @@ public class PresencePollingService {
      * Manueller Trigger (Controller-Pfad, Admin-Seite „Anwesenheit"). Durchlaeuft denselben
      * Probe-/Meldezyklus wie {@link #poll()} — ueber {@link #runCycle} geteilt, damit das
      * Ergebnis eines manuellen Abrufs nie von dem des naechsten geplanten Zyklus abweichen
-     * kann. Unterscheidet sich in zwei Punkten, weil hier jemand am anderen Ende wartet statt
+     * kann. Unterscheidet sich in drei Punkten, weil hier jemand am anderen Ende wartet statt
      * niemand zuzusehen:
      * <ul>
-     *   <li>Ein Ladefehler wird NICHT verschluckt (anders als {@link #poll()}), sondern als
-     *   {@link IllegalStateException} nach aussen gereicht — wer den Knopf drueckt, soll
-     *   erfahren, dass etwas nicht geladen werden konnte.</li>
+     *   <li>Ein Ladefehler der Geraeteliste wird NICHT verschluckt (anders als {@link #poll()}),
+     *   sondern als {@link IllegalStateException} nach aussen gereicht — wer den Knopf drueckt,
+     *   soll erfahren, dass etwas nicht geladen werden konnte. Diese Zusage gilt nur fuer diesen
+     *   einen Ladeschritt: Fehler INNERHALB von {@link #runCycle} ({@code evaluateAndReport},
+     *   {@code cleanupOrphanedEntities}) werden weiterhin geloggt und verschluckt (wie bei
+     *   {@link #poll()}), und ein Fehlschlag von {@code entityStateService.reportState} selbst
+     *   wird von diesem bewusst nicht weitergereicht. Ein Aufrufer bekommt bei einem
+     *   solchen Teil-Fehlschlag also 200 mit einem Status, der lueckenhaft sein kann, ohne dass
+     *   das aus der Antwort hervorgeht.</li>
+     *   <li>Die 429/400-Fehlerabbildung ist eine bewusste Entscheidung, kein Standardverhalten:
+     *   der Catch-all des {@code GlobalExceptionHandler} wuerde die deutsche Meldung sonst durch
+     *   „An unexpected error occurred" ersetzen, und das Frontend zeigt {@code error.error.message}
+     *   unveraendert an — der Admin verloere den einzigen Satz, der sagt, was fehlgeschlagen ist.
+     *   Ein eigener 503-Typ waere der erste dieser Art im Projekt; {@code TractivePollingService.refreshNow()}
+     *   setzt mit derselben {@code IllegalStateException}-Abbildung bereits den Praezedenzfall.</li>
      *   <li>Zwei ueberlappende manuelle Aufrufe werden abgelehnt ({@link TooManyRequestsException},
      *   429) statt beide gleichzeitig zu proben. Eine Ueberlappung mit dem GEPLANTEN Zyklus ist
-     *   dagegen unbedenklich und braucht keinen Schutz — {@link PresenceMonitor#update} ist
-     *   ueber {@code compute} atomar.</li>
+     *   dagegen bewusst ungeschuetzt — {@link PresenceMonitor#update} ist ueber {@code compute}
+     *   atomar, das deckt aber nur den Monitor ab. Die Melde-Haelfte (Aufruf von
+     *   {@link #evaluateAndReport} bzw. {@link #cleanupOrphanedEntities}, insbesondere
+     *   {@code entityStateService.reportState}) ist zwischen zwei gleichzeitigen Zyklen NICHT
+     *   geordnet: ueberschneiden sich beide genau um einen Anwesenheitswechsel, kann die
+     *   Reihenfolge der beiden Meldungen vertauschen, sodass das Aggregat bis zum naechsten
+     *   geplanten Zyklus auf dem aelteren Wert stehen bleibt — und weil {@code reportState} bei
+     *   einer Aenderung ein {@code EntityStateChangedEvent} feuert, kann das einen geplanten
+     *   „Abwesend"-Modus-Flow ein zusaetzliches Mal ausloesen. Akzeptierter Preis: der Knopf ist
+     *   ADMIN-only, beide Zyklen lesen denselben Monitor, und der naechste geplante Durchlauf
+     *   heilt den Zustand von selbst.</li>
      * </ul>
      *
      * <p><strong>Kostenrechnung:</strong> die Probes laufen sequentiell auf dem Request-Thread,

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.household.manager.dto.TimeValue;
 import com.household.manager.exception.GlobalExceptionHandler;
+import com.household.manager.exception.TooManyRequestsException;
 import com.household.manager.model.entity.NetworkSpeedtestResult;
 import com.household.manager.service.SeriesRange;
 import org.junit.jupiter.api.BeforeEach;

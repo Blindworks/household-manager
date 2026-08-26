@@ -5,10 +5,10 @@ import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
+import com.household.manager.exception.TooManyRequestsException;
 import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.PresenceDevice;
-import com.household.manager.network.TooManyRequestsException;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.PresenceDeviceRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -632,7 +633,13 @@ class PresencePollingServiceTest {
         when(evaluator.evaluate(anyList(), any())).thenReturn(
                 new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
 
+        // Ohne dieses Capture wuerde ein Fehlschlag im ersten Aufruf (z. B. eine geworfene
+        // Exception VOR dem erwarteten TooManyRequestsException-Fenster) unbemerkt bleiben: die
+        // 429-Assertion unten, der join() und der abschliessende freie-Flag-Aufruf waeren alle
+        // gruen, obwohl der eigentliche Test - zwei ECHT ueberlappende Aufrufe - nie stattfand.
+        AtomicReference<Throwable> firstCallError = new AtomicReference<>();
         Thread first = new Thread(service::refreshNow);
+        first.setUncaughtExceptionHandler((t, e) -> firstCallError.set(e));
         first.start();
         assertThat(probeStarted.await(5, TimeUnit.SECONDS)).isTrue();
 
@@ -642,6 +649,7 @@ class PresencePollingServiceTest {
         releaseProbe.countDown();
         first.join(5000);
         assertThat(first.isAlive()).isFalse();
+        assertThat(firstCallError.get()).isNull();
 
         // Nach Abschluss des ersten Aufrufs ist das Flag wieder frei.
         service.refreshNow();
