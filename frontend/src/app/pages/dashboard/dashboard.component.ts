@@ -1588,8 +1588,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Anwesenheits-Kachel. Ein fehlgeschlagener Refresh behaelt den letzten Stand
-   * (null = kein Update) statt die Kachel verschwinden zu lassen.
+   * Anwesenheitsanzeige in der Kopfzeile. Ein fehlgeschlagener Refresh
+   * behaelt den letzten Stand (null = kein Update) statt die Anzeige
+   * verschwinden zu lassen.
    */
   private startPresenceRefresh(): void {
     this.presenceSubscription = interval(DashboardComponent.PRESENCE_REFRESH_MS)
@@ -1605,9 +1606,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Nur Personen mit erfassten Geraeten; ohne sie bleibt die Kachel weg. */
+  /** Nur Personen mit erfassten Geraeten; ohne sie bleibt die Anzeige weg. */
   get presencePersons(): PresencePersonStatus[] {
     return this.presence?.persons ?? [];
+  }
+
+  /** `trackBy` fuer die Personenkreise: Objekte kommen alle 30 s frisch vom
+   *  Refresh, ohne Identitaet ueber `userId` risse Angular auf dem dauerhaft
+   *  laufenden Wandtablet bei jedem Poll alle Kreise ab und baute sie neu. */
+  trackByPersonId(_index: number, person: PresencePersonStatus): number {
+    return person.userId;
   }
 
   /**
@@ -1663,17 +1671,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Leerzeichen statt eines naiven `split(' ')`, das bei mehrfachen/
    * fuehrenden/nachgestellten Leerzeichen leere Teilstuecke liefern wuerde.
    * Ein einzelnes Wort ergibt genau eine Initiale statt einer zweiten aus
-   * dem letzten Buchstaben.
+   * dem letzten Buchstaben. Der erste Buchstabe kommt ueber ein Array-Spread
+   * (`[...wort][0]`) statt `charAt(0)` — Letzteres zerlegt ein Zeichen
+   * ausserhalb der Basic Multilingual Plane (z. B. ein fuehrendes Emoji) in
+   * sein Ersatzzeichen-Hälftenpaar und liefert nur eine kaputte Haelfte.
    */
   presenceInitials(person: PresencePersonStatus): string {
     const parts = person.displayName.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) {
       return '?';
     }
+    const firstLetterOf = (word: string): string => [...word][0].toUpperCase();
     if (parts.length === 1) {
-      return parts[0].charAt(0).toUpperCase();
+      return firstLetterOf(parts[0]);
     }
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    return firstLetterOf(parts[0]) + firstLetterOf(parts[parts.length - 1]);
   }
 
   /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */

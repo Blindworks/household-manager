@@ -53,18 +53,27 @@
             </button>
           </ng-container>
           <!-- Anwesenheit: nur Personen, die `/v1/presence/status` liefert
-               (das sind bereits nur die mit erfasstem Geraet). -->
+               (das sind bereits nur die mit erfasstem Geraet). Der Name steht
+               sichtbar unter dem Kreis (das Wandtablet hat weder Zeiger noch
+               Screenreader, `title`/`aria-label` waeren dort unerreichbar) -
+               nur der Zustandstext bleibt im Tooltip. -->
           <ng-container *ngIf="presencePersons.length > 0">
             <div class="lumina__divider"></div>
             <div class="lumina__presence-group" role="group" aria-label="Anwesenheit">
               <div
-                class="lumina__presence-circle"
-                *ngFor="let person of presencePersons"
-                [ngClass]="presenceRingClass(person)"
-                [attr.aria-label]="presenceAriaLabel(person)"
-                [title]="presenceAriaLabel(person)"
+                class="lumina__presence-person"
+                *ngFor="let person of presencePersons; trackBy: trackByPersonId"
               >
-                {{ presenceInitials(person) }}
+                <div
+                  class="lumina__presence-circle"
+                  role="img"
+                  [ngClass]="presenceRingClass(person)"
+                  [attr.aria-label]="presenceAriaLabel(person)"
+                  [title]="presenceAriaLabel(person)"
+                >
+                  {{ presenceInitials(person) }}
+                </div>
+                <span class="lumina__presence-name">{{ person.displayName }}</span>
               </div>
             </div>
           </ng-container>

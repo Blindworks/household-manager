@@ -1977,7 +1977,7 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
   }));
 });
 
-describe('DashboardComponent (Anwesenheits-Kachel)', () => {
+describe('DashboardComponent (Anwesenheit in der Kopfzeile)', () => {
   let presenceServiceSpy: jasmine.SpyObj<PresenceService>;
 
   const person = (overrides: Partial<PresencePersonStatus> = {}): PresencePersonStatus => ({
@@ -2030,7 +2030,7 @@ describe('DashboardComponent (Anwesenheits-Kachel)', () => {
     }).compileComponents();
   });
 
-  it('rendert die Personen als Kreise in der Kopfzeile', fakeAsync(() => {
+  it('rendert die Personen als Kreise mit sichtbarem Namen in der Kopfzeile', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
@@ -2042,7 +2042,18 @@ describe('DashboardComponent (Anwesenheits-Kachel)', () => {
     expect(circle).withContext('Kreis fehlt im Header').not.toBeNull();
     expect(circle?.textContent?.trim()).toBe('B');
     expect(circle?.getAttribute('title')).toBe('Benedikt • Zu Hause');
+    expect(circle?.getAttribute('aria-label')).toBe('Benedikt • Zu Hause');
+    // role="img" macht das aria-label ueberhaupt erst wirksam - ein rollenloses
+    // <div> (role="generic") darf laut ARIA nicht benannt werden, Screenreader
+    // wuerden nur den nackten Buchstaben vorlesen.
+    expect(circle?.getAttribute('role')).toBe('img');
     expect(circle?.classList).toContain('lumina__presence-circle--on');
+
+    // `title`/`aria-label` sind auf dem zeiger- und screenreaderlosen
+    // KIOSK-Wandtablet unerreichbar - der Name muss deshalb als sichtbarer
+    // Text neben dem Kreis stehen, nicht nur im Tooltip.
+    const name = header?.querySelector<HTMLElement>('.lumina__presence-name');
+    expect(name?.textContent?.trim()).toBe('Benedikt');
 
     discardPeriodicTasks();
   }));
@@ -2094,6 +2105,12 @@ describe('DashboardComponent (Anwesenheits-Kachel)', () => {
     // Ein naives `split(' ')` liefert bei mehrfachen/fuehrenden/nachgestellten
     // Leerzeichen leere Teilstuecke ("" statt eines echten zweiten Namens).
     expect(dashboard.presenceInitials(person({ displayName: '  Anna   Maria  ' }))).toBe('AM');
+    // Leerer bzw. nur aus Leerzeichen bestehender Name: `filter(Boolean)` nach
+    // dem Split liefert dann ein leeres Array, kein Wort mit leerem String.
+    // Dieser Zweig ist leicht als "kann nicht vorkommen" wegzuvereinfachen -
+    // der Test haelt ihn deshalb explizit fest.
+    expect(dashboard.presenceInitials(person({ displayName: '' }))).toBe('?');
+    expect(dashboard.presenceInitials(person({ displayName: '   ' }))).toBe('?');
   });
 
   it('nennt bei `off` mit `lastSeenAt` die Uhrzeit auf Deutsch', fakeAsync(() => {
