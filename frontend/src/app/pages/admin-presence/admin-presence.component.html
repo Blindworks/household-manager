@@ -1,0 +1,80 @@
+<div class="admin-presence">
+  <h1>Anwesenheit</h1>
+  <p class="admin-presence__hint">
+    Erkannt wird über TCP-Antworten der Handys im WLAN. Voraussetzung: feste
+    DHCP-Reservierung im Router und iOS-Einstellung „Private WLAN-Adresse: Fest"
+    (nicht „Rotierend") für das Heim-WLAN.
+  </p>
+
+  <section class="admin-presence__settings">
+    <h2>Karenzzeit</h2>
+    <p>„Abwesend" gilt erst, wenn alle Geräte einer Person so lange still sind.</p>
+    <form (ngSubmit)="saveSettings()">
+      <label>
+        Minuten
+        <input type="number" name="graceMinutes" [(ngModel)]="graceMinutes" min="1" max="1440" />
+      </label>
+      <button type="submit" [disabled]="settingsSaving()">Speichern</button>
+      <span class="admin-presence__message" *ngIf="settingsMessage() as message">{{ message }}</span>
+    </form>
+  </section>
+
+  <section>
+    <h2>Geräte</h2>
+    <p class="admin-presence__error" *ngIf="errorMessage() as message">{{ message }}</p>
+
+    <table *ngIf="!loading() && !loadFailed()">
+      <thead>
+        <tr>
+          <th>Person</th><th>Name</th><th>IP-Adresse</th>
+          <th>Zuletzt gesehen</th><th>Aktiv</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let device of devices()">
+          <td>{{ displayNameOf(device.userId) }}</td>
+          <td>{{ device.name }}</td>
+          <td>{{ device.host }}</td>
+          <td>{{ lastSeenOf(device) ? (lastSeenOf(device) | date:'dd.MM. HH:mm':undefined:'de') : '–' }}</td>
+          <td>
+            <input type="checkbox" [checked]="device.active"
+                   (change)="setActive(device, !device.active)" />
+          </td>
+          <td>
+            <button type="button" (click)="startEdit(device)">Bearbeiten</button>
+            <button type="button" (click)="remove(device)">Löschen</button>
+          </td>
+        </tr>
+        <tr *ngIf="devices().length === 0">
+          <td colspan="6">Noch keine Geräte angelegt.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <form class="admin-presence__form" (ngSubmit)="save()">
+      <h3>{{ editing ? 'Gerät bearbeiten' : 'Gerät anlegen' }}</h3>
+      <label>
+        Person
+        <select name="userId" [(ngModel)]="form.userId">
+          <option [ngValue]="null" disabled>Bitte wählen…</option>
+          <option *ngFor="let user of users()" [ngValue]="user.id">{{ user.displayName }}</option>
+        </select>
+      </label>
+      <label>
+        Name
+        <input type="text" name="name" [(ngModel)]="form.name" placeholder="iPhone Benedikt" />
+      </label>
+      <label>
+        IP-Adresse
+        <input type="text" name="host" [(ngModel)]="form.host" placeholder="192.168.1.50" />
+      </label>
+      <label>
+        <input type="checkbox" name="active" [(ngModel)]="form.active" /> Aktiv
+      </label>
+      <div class="admin-presence__actions">
+        <button type="submit" [disabled]="saving()">{{ editing ? 'Speichern' : 'Anlegen' }}</button>
+        <button type="button" *ngIf="editing" (click)="resetForm()">Abbrechen</button>
+      </div>
+    </form>
+  </section>
+</div>

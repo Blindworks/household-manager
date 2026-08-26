@@ -1,0 +1,74 @@
+.admin-presence {
+  padding: var(--spacing-lg);
+
+  &__hint {
+    max-width: 70ch;
+    margin-bottom: var(--spacing-md);
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  &__settings {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  &__error {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+
+  &__message {
+    margin-left: var(--spacing-sm);
+    color: var(--color-gray);
+    font-size: 0.85rem;
+  }
+
+  &__form {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--spacing-sm);
+      border-bottom: 1px solid var(--color-light-gray);
+      text-align: left;
+      vertical-align: middle;
+    }
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.85rem;
+
+    input,
+    select {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border: 1px solid var(--color-light-gray);
+      border-radius: var(--radius-sm, 6px);
+      font-size: 0.95rem;
+    }
+  }
+}
