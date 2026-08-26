@@ -1977,7 +1977,7 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
   }));
 });
 
-describe('DashboardComponent (Anwesenheits-Kachel)', () => {
+describe('DashboardComponent (Anwesenheit in der Kopfzeile)', () => {
   let presenceServiceSpy: jasmine.SpyObj<PresenceService>;
 
   const person = (overrides: Partial<PresencePersonStatus> = {}): PresencePersonStatus => ({
@@ -2030,54 +2030,88 @@ describe('DashboardComponent (Anwesenheits-Kachel)', () => {
     }).compileComponents();
   });
 
-  it('rendert die Personen der Kachel', fakeAsync(() => {
+  it('rendert die Personen als Kreise mit sichtbarem Namen in der Kopfzeile', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
     expect(presenceServiceSpy.getStatus).toHaveBeenCalled();
     expect(fixture.componentInstance.presencePersons.length).toBe(1);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Benedikt');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Zu Hause');
+
+    const header = (fixture.nativeElement as HTMLElement).querySelector('header.lumina__clock');
+    const circle = header?.querySelector<HTMLElement>('.lumina__presence-circle');
+    expect(circle).withContext('Kreis fehlt im Header').not.toBeNull();
+    expect(circle?.textContent?.trim()).toBe('B');
+    expect(circle?.getAttribute('title')).toBe('Benedikt • Zu Hause');
+    expect(circle?.getAttribute('aria-label')).toBe('Benedikt • Zu Hause');
+    // role="img" macht das aria-label ueberhaupt erst wirksam - ein rollenloses
+    // <div> (role="generic") darf laut ARIA nicht benannt werden, Screenreader
+    // wuerden nur den nackten Buchstaben vorlesen.
+    expect(circle?.getAttribute('role')).toBe('img');
+    expect(circle?.classList).toContain('lumina__presence-circle--on');
+
+    // `title`/`aria-label` sind auf dem zeiger- und screenreaderlosen
+    // KIOSK-Wandtablet unerreichbar - der Name muss deshalb als sichtbarer
+    // Text neben dem Kreis stehen, nicht nur im Tooltip.
+    const name = header?.querySelector<HTMLElement>('.lumina__presence-name');
+    expect(name?.textContent?.trim()).toBe('Benedikt');
 
     discardPeriodicTasks();
   }));
 
-  it('bildet alle vier Zustaende auf eigene Symbole und Texte ab', fakeAsync(() => {
+  it('bildet alle vier Zustaende auf eigene Ring-Farben und Texte ab', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     const dashboard = fixture.componentInstance;
 
-    expect(dashboard.presenceIcon(person({ state: 'on' }))).toBe('home');
+    expect(dashboard.presenceRingClass(person({ state: 'on' }))).toBe('lumina__presence-circle--on');
     expect(dashboard.presenceLabel(person({ state: 'on' }))).toBe('Zu Hause');
 
-    expect(dashboard.presenceIcon(person({ state: 'off', lastSeenAt: null }))).toBe('directions_walk');
+    expect(dashboard.presenceRingClass(person({ state: 'off', lastSeenAt: null }))).toBe('lumina__presence-circle--off');
     expect(dashboard.presenceLabel(person({ state: 'off', lastSeenAt: null }))).toBe('Abwesend');
 
-    expect(dashboard.presenceIcon(person({ state: 'unavailable' }))).toBe('signal_disconnected');
+    expect(dashboard.presenceRingClass(person({ state: 'unavailable' }))).toBe('lumina__presence-circle--neutral');
     expect(dashboard.presenceLabel(person({ state: 'unavailable' }))).toBe('Keine aktiven Geräte');
 
-    expect(dashboard.presenceIcon(person({ state: 'unknown' }))).toBe('help');
+    expect(dashboard.presenceRingClass(person({ state: 'unknown' }))).toBe('lumina__presence-circle--neutral');
     expect(dashboard.presenceLabel(person({ state: 'unknown' }))).toBe('Unbekannt');
 
     discardPeriodicTasks();
   }));
 
-  it('rendert `unknown` NICHT als abwesend', fakeAsync(() => {
+  it('rendert `unknown` NICHT wie `off` (kein roter Ring)', fakeAsync(() => {
     // Nach jedem Backend-Neustart steht jede Person bis zum Ablauf der
-    // Karenzzeit auf `unknown` (die Messwerte leben nur im Speicher). Faltete
-    // man das in „abwesend", zeigte das Wandtablet nach jedem Deploy
-    // minutenlang einen leeren Haushalt.
+    // Karenzzeit auf `unknown` (die Messwerte leben nur im Speicher). Faerbte
+    // man das rot wie „abwesend", zeigte das Wandtablet nach jedem Deploy
+    // minutenlang einen komplett abwesenden Haushalt.
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     const dashboard = fixture.componentInstance;
     const unbekannt = person({ state: 'unknown' });
 
-    expect(dashboard.presenceIcon(unbekannt))
-      .not.toBe(dashboard.presenceIcon(person({ state: 'off' })));
+    expect(dashboard.presenceRingClass(unbekannt))
+      .not.toBe(dashboard.presenceRingClass(person({ state: 'off' })));
+    expect(dashboard.presenceRingClass(unbekannt)).toBe('lumina__presence-circle--neutral');
     expect(dashboard.presenceLabel(unbekannt).toLowerCase()).not.toContain('abwesend');
 
     discardPeriodicTasks();
   }));
+
+  it('leitet Initialen ab, auch aus Einzelwort- und mehrfach-leerzeichigen Namen', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const dashboard = fixture.componentInstance;
+
+    expect(dashboard.presenceInitials(person({ displayName: 'Benedikt' }))).toBe('B');
+    expect(dashboard.presenceInitials(person({ displayName: 'Anna Maria' }))).toBe('AM');
+    // Ein naives `split(' ')` liefert bei mehrfachen/fuehrenden/nachgestellten
+    // Leerzeichen leere Teilstuecke ("" statt eines echten zweiten Namens).
+    expect(dashboard.presenceInitials(person({ displayName: '  Anna   Maria  ' }))).toBe('AM');
+    // Leerer bzw. nur aus Leerzeichen bestehender Name: `filter(Boolean)` nach
+    // dem Split liefert dann ein leeres Array, kein Wort mit leerem String.
+    // Dieser Zweig ist leicht als "kann nicht vorkommen" wegzuvereinfachen -
+    // der Test haelt ihn deshalb explizit fest.
+    expect(dashboard.presenceInitials(person({ displayName: '' }))).toBe('?');
+    expect(dashboard.presenceInitials(person({ displayName: '   ' }))).toBe('?');
+  });
 
   it('nennt bei `off` mit `lastSeenAt` die Uhrzeit auf Deutsch', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
@@ -2101,7 +2135,8 @@ describe('DashboardComponent (Anwesenheits-Kachel)', () => {
 
     expect(fixture.componentInstance.presencePersons.length).toBe(1);
     expect(fixture.componentInstance.presencePersons[0].state).toBe('on');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Benedikt');
+    const circle = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.lumina__presence-circle');
+    expect(circle?.getAttribute('title')).toBe('Benedikt • Zu Hause');
 
     discardPeriodicTasks();
   }));

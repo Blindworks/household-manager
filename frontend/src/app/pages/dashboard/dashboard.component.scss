@@ -151,7 +151,9 @@
 .lumina__clock-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: clamp(16px, 2.5vw, 28px);
+  row-gap: 12px;
   margin-top: 0;
 }
 
@@ -223,6 +225,76 @@
   &--stale {
     opacity: 0.45;
   }
+}
+
+// Anwesenheit als Personenkreise im Kopf. Ring-Farbe ist tristate
+// (siehe presenceRingClass): gruen = anwesend, rot = abwesend, neutral =
+// unknown/unavailable, die NIE wie abwesend aussehen duerfen. `off` traegt
+// zusaetzlich reduzierte Deckkraft als zweite, farbunabhaengige Ebene (Gruen/
+// Rot allein unterscheiden sich bei Rot-Gruen-Sehschwaeche kaum). `flex-wrap`
+// auf Gruppe UND aeusserer Meta-Zeile, damit eine fuenfte Person umbricht
+// statt am rechten Rand von `.lumina { overflow: hidden }` abgeschnitten zu
+// werden (Praezedenzfall `.lumina__viewbar`).
+.lumina__presence-group {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  row-gap: 10px;
+}
+
+.lumina__presence-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 44px;
+}
+
+.lumina__presence-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  border: 2px solid rgba(192, 198, 214, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--on-surface);
+  cursor: default;
+
+  &--on {
+    border-color: var(--secondary);
+  }
+
+  &--off {
+    border-color: var(--error);
+    opacity: 0.5;
+  }
+
+  &--neutral {
+    border-color: rgba(192, 198, 214, 0.55);
+  }
+}
+
+// Sichtbarer Name unter dem Kreis: `title`/`aria-label` brauchen einen
+// Zeiger bzw. Screenreader, beides fehlt auf dem KIOSK-Wandtablet - ohne
+// diese Beschriftung waeren zwei Personen mit gleicher Initiale (Benedikt/
+// Bettina) dort nicht auseinanderzuhalten.
+.lumina__presence-name {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  color: rgba(192, 198, 214, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .lumina__weather-temp {
@@ -1139,10 +1211,6 @@
 
 .lumina__pet--away {
   color: var(--tertiary);
-}
-
-.lumina__presence--away {
-  opacity: 0.55;
 }
 
 .lumina__pets--clickable {
