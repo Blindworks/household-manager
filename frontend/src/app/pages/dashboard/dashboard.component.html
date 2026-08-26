@@ -399,6 +399,20 @@
       </div>
     </div>
 
+    <div class="lumina-card lumina__presence" *ngIf="presencePersons.length > 0">
+      <div class="lumina__secured-icon">
+        <span class="material-symbols-outlined">home_pin</span>
+      </div>
+      <div class="lumina__pets-info">
+        <h4 class="lumina__label lumina__label--secondary">Anwesenheit</h4>
+        <p class="lumina__secured-detail" *ngFor="let person of presencePersons"
+           [class.lumina__presence--away]="person.state === 'off'">
+          <span class="material-symbols-outlined">{{ presenceIcon(person) }}</span>
+          {{ person.displayName }} • {{ presenceLabel(person) }}
+        </p>
+      </div>
+    </div>
+
     <div class="lumina__modes-area">
       <div class="lumina__modes">
         <button
