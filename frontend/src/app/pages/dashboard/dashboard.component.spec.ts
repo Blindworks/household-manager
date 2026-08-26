@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { registerLocaleData } from '@angular/common';
+import localeDe from '@angular/common/locales/de';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -24,6 +26,13 @@ import { CalendarOccurrence } from '../../models/calendar-event.model';
 import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
+import { PresenceService } from '../../services/presence.service';
+import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
+
+// `presenceLabel` formatiert die Abwesenheitszeit ueber `formatDate(..., 'de')`.
+// Karma laedt `main.ts` nicht, das Locale muss hier also selbst registriert
+// werden — sonst wirft genau dieser Zweig „Missing locale data for 'de'".
+registerLocaleData(localeDe);
 
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
@@ -1963,6 +1972,136 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
 
     expect(fixture.componentInstance.modeCheckMode).toBeNull();
     expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Anwesenheits-Kachel)', () => {
+  let presenceServiceSpy: jasmine.SpyObj<PresenceService>;
+
+  const person = (overrides: Partial<PresencePersonStatus> = {}): PresencePersonStatus => ({
+    userId: 1,
+    displayName: 'Benedikt',
+    state: 'on',
+    lastSeenAt: '2026-08-26T07:15:00',
+    devices: [],
+    ...overrides
+  });
+
+  const status = (...persons: PresencePersonStatus[]): PresenceStatusResponse => ({
+    householdState: persons.some(p => p.state === 'on') ? 'on' : 'off',
+    persons
+  });
+
+  beforeEach(async () => {
+    presenceServiceSpy = jasmine.createSpyObj('PresenceService', ['getStatus']);
+    presenceServiceSpy.getStatus.and.returnValue(of(status(person())));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PresenceService, useValue: presenceServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('rendert die Personen der Kachel', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(presenceServiceSpy.getStatus).toHaveBeenCalled();
+    expect(fixture.componentInstance.presencePersons.length).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Benedikt');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Zu Hause');
+
+    discardPeriodicTasks();
+  }));
+
+  it('bildet alle vier Zustaende auf eigene Symbole und Texte ab', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const dashboard = fixture.componentInstance;
+
+    expect(dashboard.presenceIcon(person({ state: 'on' }))).toBe('home');
+    expect(dashboard.presenceLabel(person({ state: 'on' }))).toBe('Zu Hause');
+
+    expect(dashboard.presenceIcon(person({ state: 'off', lastSeenAt: null }))).toBe('directions_walk');
+    expect(dashboard.presenceLabel(person({ state: 'off', lastSeenAt: null }))).toBe('Abwesend');
+
+    expect(dashboard.presenceIcon(person({ state: 'unavailable' }))).toBe('signal_disconnected');
+    expect(dashboard.presenceLabel(person({ state: 'unavailable' }))).toBe('Keine aktiven Geräte');
+
+    expect(dashboard.presenceIcon(person({ state: 'unknown' }))).toBe('help');
+    expect(dashboard.presenceLabel(person({ state: 'unknown' }))).toBe('Unbekannt');
+
+    discardPeriodicTasks();
+  }));
+
+  it('rendert `unknown` NICHT als abwesend', fakeAsync(() => {
+    // Nach jedem Backend-Neustart steht jede Person bis zum Ablauf der
+    // Karenzzeit auf `unknown` (die Messwerte leben nur im Speicher). Faltete
+    // man das in „abwesend", zeigte das Wandtablet nach jedem Deploy
+    // minutenlang einen leeren Haushalt.
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const dashboard = fixture.componentInstance;
+    const unbekannt = person({ state: 'unknown' });
+
+    expect(dashboard.presenceIcon(unbekannt))
+      .not.toBe(dashboard.presenceIcon(person({ state: 'off' })));
+    expect(dashboard.presenceLabel(unbekannt).toLowerCase()).not.toContain('abwesend');
+
+    discardPeriodicTasks();
+  }));
+
+  it('nennt bei `off` mit `lastSeenAt` die Uhrzeit auf Deutsch', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.presenceLabel(
+      person({ state: 'off', lastSeenAt: '2026-08-26T07:15:00' })))
+      .toBe('Abwesend seit 07:15');
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaelt bei einem fehlgeschlagenen Refresh den letzten Stand', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.presencePersons[0].state).toBe('on');
+
+    presenceServiceSpy.getStatus.and.returnValue(throwError(() => new Error('kaputt')));
+    tick(30000);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.presencePersons.length).toBe(1);
+    expect(fixture.componentInstance.presencePersons[0].state).toBe('on');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Benedikt');
 
     discardPeriodicTasks();
   }));

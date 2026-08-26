@@ -1616,6 +1616,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * auf `unknown` (die Messwerte leben nur im Speicher). Faltete man das in
    * „abwesend", zeigte das Wandtablet nach jedem Deploy minutenlang einen
    * leeren Haushalt an.
+   *
+   * Beide Abbildungen zaehlen jeden Zustand einzeln auf und haben bewusst KEIN
+   * `default` — mit `noImplicitReturns` wird eine kuenftige fuenfte Auspraegung
+   * von `PresencePersonState` dadurch zum Compilerfehler statt still auf dem
+   * falschen Symbol zu landen (Gegenstueck zu `PresenceEvaluator.entityState`
+   * im Backend, das aus demselben Grund ohne `default` geschrieben ist).
    */
   presenceIcon(person: PresencePersonStatus): string {
     switch (person.state) {
@@ -1623,7 +1629,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'home';
       case 'off':
         return 'directions_walk';
-      default:
+      case 'unavailable':
+        return 'signal_disconnected';
+      case 'unknown':
         return 'help';
     }
   }
@@ -1638,7 +1646,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           : 'Abwesend';
       case 'unavailable':
         return 'Keine aktiven Geräte';
-      default:
+      case 'unknown':
         return 'Unbekannt';
     }
   }
