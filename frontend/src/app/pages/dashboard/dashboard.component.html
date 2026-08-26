@@ -71,7 +71,7 @@
                   [attr.aria-label]="presenceAriaLabel(person)"
                   [title]="presenceAriaLabel(person)"
                 >
-                  {{ presenceInitials(person) }}
+                  <span class="material-symbols-outlined lumina__presence-icon" aria-hidden="true">{{ presenceIcon(person) }}</span>
                 </div>
                 <span class="lumina__presence-name">{{ person.displayName }}</span>
               </div>
