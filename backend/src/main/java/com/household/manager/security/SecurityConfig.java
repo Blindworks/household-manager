@@ -147,7 +147,7 @@ public class SecurityConfig {
                         // unten stehen, sonst duerfte das Kiosk-Tablet die Home-Definition lesen.
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
                                 "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout",
-                                "/v1/tractive/home-settings").hasRole("ADMIN")
+                                "/v1/tractive/home-settings", "/v1/presence/settings").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
@@ -161,6 +161,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/network/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/network/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/network/devices/*").hasRole("ADMIN")
+                        // Anwesenheits-Geraete pflegen ist ADMIN. Anders als bei den
+                        // Netzwerk-Geraeten (dort liest die Wandtablet-Netzwerkansicht die Liste)
+                        // ist hier auch das LESEN ADMIN: keine Tablet-Ansicht braucht die
+                        // Geraeteliste (die Dashboard-Kachel spricht nur GET /status), und die
+                        // Zeilen tragen die privaten Handy-IPs der Haushaltsmitglieder — die
+                        // Matcher-Reihenfolge (vor der generischen GET-Regel) ist hier deshalb
+                        // tragend, nicht nur Stil.
+                        .requestMatchers(HttpMethod.GET, "/v1/presence/devices").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/v1/presence/devices").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/v1/presence/devices/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/presence/devices/*").hasRole("ADMIN")
+                        // Manueller Abruf lebt bewusst NICHT in der KIOSK-POST-Whitelist weiter
+                        // unten (anders als /v1/tractive/pets/refresh oder /v1/network/speedtest):
+                        // er sitzt nur auf der Admin-Seite und kann als sequentielle Probe aller
+                        // aktiven Geraete mehrere Sekunden des Request-Threads belegen.
+                        .requestMatchers(HttpMethod.POST, "/v1/presence/refresh").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet

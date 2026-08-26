@@ -4,7 +4,6 @@ import com.household.manager.alexa.AlexaException;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.exception.MerossAuthException;
 import com.household.manager.meross.exception.MerossException;
-import com.household.manager.network.TooManyRequestsException;
 import com.household.manager.nuki.NukiException;
 import com.household.manager.shelly.ShellyException;
 import com.household.manager.system.RebooterException;
@@ -370,7 +369,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Ein manueller Speedtest wurde innerhalb der Cooldown-Frist erneut angefragt -
+     * Ein manueller Trigger wurde abgelehnt - entweder laeuft bereits ein gleichartiger Lauf
+     * (Ueberlappungs-Schutz, z. B. {@code PresencePollingService.refreshNow}) oder eine
+     * Cooldown-Frist ist noch nicht abgelaufen (z. B. {@code NetworkSpeedtestService}) -
      * 429 statt 400 (Muster: {@link TractiveRateLimitException}).
      */
     @ExceptionHandler(TooManyRequestsException.class)
@@ -385,7 +386,7 @@ public class GlobalExceptionHandler {
                 .path(request.getDescription(false).replace("uri=", ""))
                 .build();
 
-        log.warn("Speedtest rate limit: {}", ex.getMessage());
+        log.warn("Manueller Trigger abgelehnt (Rate Limit): {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
     }
 

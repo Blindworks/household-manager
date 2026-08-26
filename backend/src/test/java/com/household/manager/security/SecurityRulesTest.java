@@ -581,4 +581,155 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Der Anwesenheits-Status braucht bewusst keine eigene Regel: das GET faellt auf die
+     * generische Regel GET /v1/** -> KIOSK (Dashboard-Kachel auf dem Wandtablet). Kein
+     * PresenceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenAnwesenheitsStatusLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/status")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Die Karenzzeit-Einstellung ist ADMIN-only, auch lesend — der Matcher ist methodenlos
+     * und steht VOR der generischen GET-Regel (Muster tractive/home-settings).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieAnwesenheitsEinstellungenNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/settings")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieAnwesenheitsEinstellungenLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/settings")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Der Settings-Matcher ist methodenlos und deckt damit auch PUT ab (Muster
+     * tractive/home-settings). Ohne diesen Test wuerde eine spaetere Verengung auf
+     * {@code HttpMethod.GET} unbemerkt bleiben: PUT faellt dann auf die generische
+     * {@code anyRequest().hasRole("MEMBER")} durch, und jedes Haushaltsmitglied koennte
+     * die Karenzzeit umschreiben — genau die Einstellung, an der die Abwesend-Flows haengen.
+     */
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDieKarenzzeitNichtSchreiben() throws Exception {
+        mockMvc.perform(put("/v1/presence/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"awayGraceMinutes\": 20}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieKarenzzeitSchreiben() throws Exception {
+        // Kein PresenceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(put("/v1/presence/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"awayGraceMinutes\": 20}"))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * Anwesenheits-Geraete pflegen ist ADMIN-only. KIOSK und MEMBER muessen es je aus
+     * eigenem Test belegen (Muster Netzwerk-Geraete).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeinAnwesenheitsGeraetAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/presence/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /**
+     * Anders als bei /v1/network/devices (dort liest das Wandtablet die Geraeteliste fuer
+     * die Netzwerkansicht) ist hier auch das Lesen ADMIN-only: die Zeilen tragen die
+     * Handy-IPs der Haushaltsmitglieder, und keine Tablet-Ansicht braucht diese Liste
+     * (die Dashboard-Kachel fragt nur GET /status). KIOSK und MEMBER muessen das je aus
+     * eigenem Test belegen, sonst faellt ein zu laxer Matcher fuer die jeweils andere
+     * Rolle niemandem auf.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieAnwesenheitsGeraeteNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/devices")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDieAnwesenheitsGeraeteNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/presence/devices")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieAnwesenheitsGeraeteLesen() throws Exception {
+        // Kein PresenceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(get("/v1/presence/devices")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Anlegen, Aendern und Loeschen haengen an je einem eigenen methodenspezifischen
+     * Matcher (Muster Netzwerk-Geraete) — jede der drei Zeilen braucht ihren eigenen
+     * Test, sonst faellt der Wegfall einer davon niemandem auf.
+     */
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinAnwesenheitsGeraetAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/presence/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinAnwesenheitsGeraetAendern() throws Exception {
+        mockMvc.perform(put("/v1/presence/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinAnwesenheitsGeraetLoeschen() throws Exception {
+        mockMvc.perform(delete("/v1/presence/devices/1").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnAnwesenheitsGeraetePflegenVorbei() throws Exception {
+        // Kein PresenceController im Slice: 404 statt 403 belegt, dass die Regeln durchlaessen.
+        mockMvc.perform(post("/v1/presence/devices").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/presence/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/presence/devices/1").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * Der manuelle Abruf lebt bewusst NICHT in der KIOSK-POST-Whitelist (anders als der
+     * Tractive-Refresh und der Speedtest): er sitzt nur auf der Admin-Seite und kann einen
+     * Request-Thread mehrere Sekunden belegen (sequentielles Proben aller aktiven Geraete).
+     */
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeineManuelleAnwesenheitsAbfrageAusloesen() throws Exception {
+        mockMvc.perform(post("/v1/presence/refresh").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnDerManuellenAnwesenheitsAbfrageVorbei() throws Exception {
+        // Kein PresenceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(post("/v1/presence/refresh").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
 }

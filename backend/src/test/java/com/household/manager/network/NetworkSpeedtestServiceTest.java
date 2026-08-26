@@ -3,6 +3,7 @@ package com.household.manager.network;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
+import com.household.manager.exception.TooManyRequestsException;
 import com.household.manager.model.entity.NetworkConnectivitySample;
 import com.household.manager.model.entity.NetworkSpeedtestResult;
 import com.household.manager.repository.NetworkConnectivitySampleRepository;

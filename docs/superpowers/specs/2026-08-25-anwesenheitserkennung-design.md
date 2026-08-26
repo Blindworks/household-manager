@@ -104,10 +104,18 @@ bleibt frisch, Flows feuern nur bei echten Wertwechseln):
   `on`, sobald mindestens eine erfasste Person `on` ist; `off`, wenn alle
   erfassten Personen `off` sind; `unavailable` nur, wenn *alle* erfassten
   Personen `unavailable` sind („erfasst" = mindestens eine
-  `presence_device`-Zeile; gibt es gar keine erfasste Person, wird das
-  Aggregat nicht gemeldet). Die Aggregation läuft **in Java im selben Poll-Zyklus**, nicht als
-  Flow — sie ist Fachlogik, und ein Flow-Umweg würde eine Zyklus-Verzögerung
-  einbauen.
+  `presence_device`-Zeile). Gibt es gar keine erfasste Person mehr (letzte
+  Geraetezeile des ganzen Haushalts geloescht), meldet der
+  Aufraeum-Schritt in `PresencePollingService` das Aggregat als
+  `unavailable` — aber nur, wenn die Entitaet bereits existiert; auf einem
+  Haushalt, der das Feature nie eingerichtet hat, entsteht dadurch keine
+  neue Entitaet. Ohne diese Regel wuerde das Aggregat fuer immer auf seinem
+  letzten Wert (typischerweise `on`) einfrieren, ohne Log und ohne Fehler,
+  waehrend `GET /status` ehrlich `unknown` meldet — ein eingefrorenes `on`
+  ist fuer die Abwesend-Flows die gefaehrlichere Richtung als ein ehrliches
+  `unavailable`. Die Aggregation selbst läuft **in Java im selben
+  Poll-Zyklus**, nicht als Flow — sie ist Fachlogik, und ein Flow-Umweg
+  würde eine Zyklus-Verzögerung einbauen.
 
 ## Modus-Automatik „Abwesend" — Flows, kein Java
 
@@ -195,6 +203,28 @@ entschieden — bewusst Flow-Ebene, nicht Teil dieses Designs.
 - Erkennung hängt an festen IPs; wechselt ein iPhone die MAC (rotierende
   private WLAN-Adresse), fällt die Person still auf „abwesend" — sichtbar
   nur am `lastSeenAt` auf der Admin-Seite.
+- **Ein Netzwerkausfall ist von echter Abwesenheit nicht unterscheidbar.**
+  Verliert der Server seine LAN-Anbindung, schweigen alle Geräte, alle
+  Personen laufen nach der Karenzzeit auf `off`, und das Aggregat meldet
+  „niemand zu Hause" — obwohl niemand gegangen ist. Der Poller kann das
+  prinzipiell nicht erkennen. **Der „Alle weg"-Flow bekommt deshalb eine
+  Bedingung auf die Netzwerk-Entitäten** (`binary_sensor.network_internet`
+  bzw. dessen `gatewayReachable`-Attribut aus dem Netzwerk-Monitoring); die
+  Absicherung gehört auf Flow-Ebene, nicht in den Service — sonst hinge die
+  Presence-Logik am Netzwerkmodul.
+- **Ein Aktiv-Toggle erzeugt eine echte `unavailable`-Flanke.** Deaktiviert
+  man das einzige Gerät der einzigen erfassten Person, läuft das Aggregat
+  `on → unavailable → off`. Die Flow-Engine unterdrückt nur den Übergang
+  *nach* `unavailable`, die Erholungsflanke feuert normal — der „Alle
+  weg"-Flow löst also auf eine Admin-Aktion hin aus. Das ist der Preis
+  dafür, dass die Erholungsflanke feuern *muss* (siehe die Begründung beim
+  Feuer-Verdachts-Flow im Bestand).
+- **Ein deaktiviertes Gerät verliert sein `lastSeenAt`** (der Poller
+  vergisst den Messwert, damit ein wieder eingeschaltetes Gerät erneut
+  Probezeit bekommt). Die Status-API zeigt dafür dauerhaft „–". Bewusst so:
+  ein deaktiviertes Gerät wird nicht mehr gemessen, und ein eingefrorener
+  Wert wäre irreführender als gar keiner — zumal die Messwerte im Speicher
+  ohnehin keinen Neustart überleben.
 
 ## Rollout-Reihenfolge
 
@@ -205,4 +235,6 @@ entschieden — bewusst Flow-Ebene, nicht Teil dieses Designs.
 4. Einige Tage beobachten (Dashboard-Kachel/`lastSeenAt`), ob nächtliche
    Aussetzer auftreten; Karenzzeit ggf. nachziehen.
 5. **Erst danach** die beiden Modus-Flows via flow-mcp anlegen
-   (create → deploy → enable).
+   (create → deploy → enable). Der „Alle weg"-Flow bekommt dabei die
+   Netzwerk-Bedingung aus den v1-Grenzen — sonst schaltet der nächste
+   LAN-Aussetzer den Haushalt auf „Abwesend", während alle zu Hause sind.

@@ -124,4 +124,7 @@
     <!-- Netzwerk-Monitoring: Connectivity-, Speedtest- und Geraete-Tabellen -->
     <include file="db/changelog/changes/20260824-0049-create-network-tables.xml"/>
 
+    <!-- Anwesenheitserkennung (WLAN) -->
+    <include file="db/changelog/changes/20260825-0050-create-presence-device-table.xml"/>
+
 </databaseChangeLog>

@@ -58,6 +58,9 @@ import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeHealth } from '../../models/zigbee.model';
 import { PetFoodService } from '../../services/pet-food.service';
 import { PetFoodStatus } from '../../models/pet-food.model';
+import { PresenceService } from '../../services/presence.service';
+import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
+import { formatDate } from '@angular/common';
 import { iconOffVariant } from '../../shared/icon-off.util';
 import { PetFoodTone, petFoodTone as petFoodLevelTone } from '../../shared/pet-food-level.util';
 import {
@@ -111,6 +114,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly zigbeeService = inject(ZigbeeService);
   private readonly entityStateService = inject(EntityStateService);
   private readonly petFoodService = inject(PetFoodService);
+  private readonly presenceService = inject(PresenceService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
   readonly viewMode = inject(ViewModeService);
@@ -178,6 +182,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private zigbeeHealthSubscription?: Subscription;
   private doorSubscription?: Subscription;
   private petFoodSubscription?: Subscription;
+  private presenceSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -219,6 +224,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly ZIGBEE_HEALTH_REFRESH_MS = 60000;
   /** Aktualisierungsintervall der Futtervorrat-Kachel (10 min; der Bestand aendert sich zweimal am Tag). */
   private static readonly PET_FOOD_REFRESH_MS = 600000;
+  /** Anwesenheits-Kachel: 30-s-Rhythmus wie der Backend-Poller. */
+  private static readonly PRESENCE_REFRESH_MS = 30000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -383,6 +390,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   petFoodSaving = false;
   petFoodError: string | null = null;
 
+  /** Anwesenheits-Status; null = Kachel wird nicht gerendert. */
+  presence: PresenceStatusResponse | null = null;
+
   ngOnInit(): void {
     this.startClock();
     this.loadWeather();
@@ -399,6 +409,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startZigbeeHealthRefresh();
     this.startDoorRefresh();
     this.startPetFoodRefresh();
+    this.startPresenceRefresh();
   }
 
   ngOnDestroy(): void {
@@ -418,6 +429,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.zigbeeHealthSubscription?.unsubscribe();
     this.doorSubscription?.unsubscribe();
     this.petFoodSubscription?.unsubscribe();
+    this.presenceSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.clearNukiCollapseTimer();
     this.closeFlowDialog();
@@ -1573,6 +1585,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.petFoodError = err.message;
       }
     });
+  }
+
+  /**
+   * Anwesenheits-Kachel. Ein fehlgeschlagener Refresh behaelt den letzten Stand
+   * (null = kein Update) statt die Kachel verschwinden zu lassen.
+   */
+  private startPresenceRefresh(): void {
+    this.presenceSubscription = interval(DashboardComponent.PRESENCE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.presenceService.getStatus()
+          .pipe(catchError(() => of<PresenceStatusResponse | null>(null))))
+      )
+      .subscribe(status => {
+        if (status) {
+          this.presence = status;
+        }
+      });
+  }
+
+  /** Nur Personen mit erfassten Geraeten; ohne sie bleibt die Kachel weg. */
+  get presencePersons(): PresencePersonStatus[] {
+    return this.presence?.persons ?? [];
+  }
+
+  /**
+   * `unknown` bekommt ein eigenes Symbol und darf NICHT wie „abwesend" aussehen:
+   * nach jedem Backend-Neustart steht jede Person bis zum Ablauf der Karenzzeit
+   * auf `unknown` (die Messwerte leben nur im Speicher). Faltete man das in
+   * „abwesend", zeigte das Wandtablet nach jedem Deploy minutenlang einen
+   * leeren Haushalt an.
+   *
+   * Beide Abbildungen zaehlen jeden Zustand einzeln auf und haben bewusst KEIN
+   * `default` — mit `noImplicitReturns` wird eine kuenftige fuenfte Auspraegung
+   * von `PresencePersonState` dadurch zum Compilerfehler statt still auf dem
+   * falschen Symbol zu landen (Gegenstueck zu `PresenceEvaluator.entityState`
+   * im Backend, das aus demselben Grund ohne `default` geschrieben ist).
+   */
+  presenceIcon(person: PresencePersonStatus): string {
+    switch (person.state) {
+      case 'on':
+        return 'home';
+      case 'off':
+        return 'directions_walk';
+      case 'unavailable':
+        return 'signal_disconnected';
+      case 'unknown':
+        return 'help';
+    }
+  }
+
+  presenceLabel(person: PresencePersonStatus): string {
+    switch (person.state) {
+      case 'on':
+        return 'Zu Hause';
+      case 'off':
+        return person.lastSeenAt
+          ? `Abwesend seit ${formatDate(person.lastSeenAt, 'HH:mm', 'de')}`
+          : 'Abwesend';
+      case 'unavailable':
+        return 'Keine aktiven Geräte';
+      case 'unknown':
+        return 'Unbekannt';
+    }
   }
 
   /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */

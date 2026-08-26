@@ -173,6 +173,13 @@ export const routes: Routes = [
     title: 'Netzwerk-Geräte - Household Manager'
   },
   {
+    path: 'admin/presence',
+    loadComponent: () => import('./pages/admin-presence/admin-presence.component')
+      .then(m => m.AdminPresenceComponent),
+    canActivate: [adminGuard],
+    title: 'Anwesenheit - Household Manager'
+  },
+  {
     path: 'admin/audit-log',
     loadComponent: () => import('./pages/admin-audit-log/admin-audit-log.component').then(m => m.AdminAuditLogComponent),
     canActivate: [adminGuard],

@@ -994,7 +994,7 @@ class PresencePollingServiceTest {
 
     @BeforeEach
     void setUp() {
-        monitor = new PresenceMonitor(CLOCK);
+        monitor = new PresenceMonitor();
         service = new PresencePollingService(deviceRepository, userRepository, probe,
                 monitor, evaluator, entityStateService, CLOCK);
         lenient().when(userRepository.findById(5L)).thenReturn(Optional.of(
@@ -1163,6 +1163,10 @@ public class PresencePollingService {
 
         for (PresenceDevice device : devices) {
             if (!device.isActive()) {
+                // Messwert vergessen, nicht nur ueberspringen: sonst erbt das Geraet beim
+                // Wiedereinschalten sein altes firstCheckedAt und waere nach einer einzigen
+                // stillen Probe "abwesend", ohne je Probezeit gehabt zu haben.
+                monitor.remove(device.getId());
                 continue;
             }
             monitor.update(device.getId(), probeSafely(device), clock.instant());
@@ -1207,11 +1211,7 @@ public class PresencePollingService {
     }
 
     private void reportPersonState(Long userId, PresenceEvaluator.PersonPresence presence) {
-        String state = switch (presence.state()) {
-            case PRESENT -> "on";
-            case AWAY -> "off";
-            default -> "unavailable";
-        };
+        String state = PresenceEvaluator.entityState(presence.state());
         Map<String, Object> attributes = new LinkedHashMap<>();
         attributes.put("deviceClass", "presence");
         attributes.put("personUserId", userId);
@@ -1254,6 +1254,8 @@ public class PresencePollingService {
 ```
 
 **Hinweis für den Umsetzer:** Sollte `EntityStateUpdate` keine Lombok-Getter wie `getEntityId()` haben (Builder-Pattern prüfen!), die Assertions im Test an die tatsächlichen Accessoren anpassen — `TabletPresenceService` zeigt die Builder-Feldnamen, die Accessoren zeigt die Klasse selbst.
+
+**`PresenceEvaluator.entityState` muss `static` sein** (Anpassung aus dem Task-5-Review): Der Poller-Test mockt den `PresenceEvaluator`. Wäre `entityState` eine Instanzmethode, lieferte der Mock `null` und der Test prüfte am Ende eine gestubbte Abbildung statt der echten. Als statische Methode kann Mockito sie nicht abfangen — beide Konsumenten benutzen zwangsläufig die eine echte Definition. Die Methode ist eine reine Funktion ohne Abhängigkeiten, gehört also ohnehin nicht an die Instanz.
 
 - [ ] **Step 4: Test laufen lassen**
 
@@ -1617,7 +1619,7 @@ class PresenceStatusServiceTest {
 
     @BeforeEach
     void setUp() {
-        monitor = new PresenceMonitor(CLOCK);
+        monitor = new PresenceMonitor();
         service = new PresenceStatusService(deviceRepository, userRepository, monitor,
                 evaluator, CLOCK);
         lenient().when(userRepository.findById(5L)).thenReturn(Optional.of(
@@ -1734,7 +1736,7 @@ public class PresenceStatusService {
             persons.add(new PresenceDtos.PersonStatus(
                     userId,
                     displayNameOf(userId),
-                    stateText(presence.state()),
+                    PresenceEvaluator.entityState(presence.state()),
                     toLocal(presence.lastSeenAt()),
                     devices.stream().map(this::deviceStatus).toList()));
         });
@@ -1749,15 +1751,6 @@ public class PresenceStatusService {
                 device.getId(), device.getName(), device.getHost(), device.isActive(),
                 status == null ? null : toLocal(status.lastSeenAt()),
                 status == null ? null : toLocal(status.lastCheckedAt()));
-    }
-
-    private String stateText(PresenceEvaluator.PersonState state) {
-        return switch (state) {
-            case PRESENT -> "on";
-            case AWAY -> "off";
-            case UNAVAILABLE -> "unavailable";
-            case UNKNOWN -> "unknown";
-        };
     }
 
     private String displayNameOf(Long userId) {
@@ -2161,10 +2154,14 @@ export interface PresenceDeviceRequest {
   active: boolean;
 }
 
+/**
+ * Kein `host`: `GET /status` ist KIOSK-lesbar (Dashboard-Kachel auf dem
+ * Wandtablet), die Geräte-Stammdaten sind bewusst ADMIN. Die Admin-Seite holt
+ * die Adresse aus `GET /devices` und verknüpft über `id`.
+ */
 export interface PresenceDeviceStatus {
   id: number;
   name: string;
-  host: string;
   active: boolean;
   lastSeenAt: string | null;
   lastCheckedAt: string | null;
@@ -2259,6 +2256,8 @@ git commit -m "feat(presence): Frontend-Modell und REST-Service"
 
 Muster: `pages/admin-network-devices/` (**flache** Ablage `pages/admin-presence/`, NICHT `pages/admin/presence/`). Zusätzlich zur Geräteliste: Karenzzeit-Formular und Personen-Dropdown aus `HouseholdUserService` (`GET /v1/users`).
 
+**Kein „online"-Punkt je Gerät.** `DeviceStatusResponse` trägt bewusst nur Zeitstempel und keine Erreichbarkeits-Flagge (anders als beim Netzwerk-Monitoring). Ein Punkt im Frontend müsste `lastSeenAt` gegen die Karenzzeit rechnen — also genau die Regel in TypeScript nachbauen, für die `PresenceEvaluator` per Entwurf die einzige Definition ist. Die Seite zeigt deshalb den **serverseitig** berechneten Zustand der Person und daneben die rohen Zeitstempel der Geräte. Wer je einen Punkt je Gerät will, lässt ihn vom Server mitliefern.
+
 **Files:**
 - Create: `frontend/src/app/pages/admin-presence/admin-presence.component.ts`
 - Create: `frontend/src/app/pages/admin-presence/admin-presence.component.html`
@@ -2303,9 +2302,21 @@ describe('AdminPresenceComponent', () => {
 
   afterEach(() => httpMock.verify());
 
+  const STATUS = {
+    householdState: 'on',
+    persons: [{
+      userId: 5, displayName: 'Benedikt', state: 'on', lastSeenAt: '2026-08-25T10:00:00',
+      devices: [{
+        id: 1, name: 'iPhone Benedikt', active: true,
+        lastSeenAt: '2026-08-25T10:00:00', lastCheckedAt: '2026-08-25T10:00:30'
+      }]
+    }]
+  };
+
   function flushInitialRequests(): void {
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/presence/devices').flush(DEVICES);
+    httpMock.expectOne('/api/v1/presence/status').flush(STATUS);
     httpMock.expectOne('/api/v1/users').flush(USERS);
     httpMock.expectOne('/api/v1/presence/settings').flush({ awayGraceMinutes: 10 });
     fixture.detectChanges();
@@ -2316,6 +2327,25 @@ describe('AdminPresenceComponent', () => {
     expect(component.devices().length).toBe(1);
     expect(component.users().length).toBe(2);
     expect(component.graceMinutes).toBe(10);
+  });
+
+  it('zeigt den Zuletzt-gesehen-Zeitpunkt aus dem Status zum passenden Geraet', () => {
+    flushInitialRequests();
+    expect(component.lastSeenOf(DEVICES[0])).toBe('2026-08-25T10:00:00');
+  });
+
+  it('laesst die Geraeteliste stehen, wenn der Status-Abruf fehlschlaegt', () => {
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/presence/devices').flush(DEVICES);
+    httpMock.expectOne('/api/v1/presence/status')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('/api/v1/users').flush(USERS);
+    httpMock.expectOne('/api/v1/presence/settings').flush({ awayGraceMinutes: 10 });
+    fixture.detectChanges();
+
+    expect(component.devices().length).toBe(1);
+    expect(component.lastSeenOf(DEVICES[0])).toBeNull();
+    expect(component.errorMessage()).toBeNull();
   });
 
   it('legt ein Geraet mit Person an', () => {
@@ -2431,8 +2461,20 @@ export class AdminPresenceComponent implements OnInit {
   /** Karenzzeit-Formularwert; null solange noch nichts geladen ist. */
   graceMinutes: number | null = null;
 
+  /**
+   * „Zuletzt gesehen" je Gerät, geschlüsselt nach Geräte-Id.
+   *
+   * Kommt aus `GET /status` und nicht aus der Geräteliste: der Zeitpunkt lebt nur
+   * im Speicher des Backends. Er ist die **einzige** Stelle, an der ein Handy
+   * auffällt, dessen WLAN-Adresse gewechselt hat (siehe Spec) — deshalb steht er
+   * hier, obwohl die Seite sonst reine Stammdatenpflege ist. Schlägt der Abruf
+   * fehl, bleibt die Spalte leer; die Pflege muss trotzdem funktionieren.
+   */
+  readonly lastSeenByDeviceId = signal<Map<number, string | null>>(new Map());
+
   ngOnInit(): void {
     this.load();
+    this.loadLastSeen();
     this.userApi.list().subscribe({
       next: users => this.users.set(users.filter(user => user.enabled)),
       error: () => this.errorMessage.set('Die Haushaltsmitglieder konnten nicht geladen werden.')
@@ -2441,6 +2483,27 @@ export class AdminPresenceComponent implements OnInit {
       next: settings => (this.graceMinutes = settings.awayGraceMinutes),
       error: () => this.settingsMessage.set('Die Karenzzeit konnte nicht geladen werden.')
     });
+  }
+
+  private loadLastSeen(): void {
+    this.presenceApi.getStatus().subscribe({
+      next: status => {
+        const seen = new Map<number, string | null>();
+        for (const person of status.persons) {
+          for (const device of person.devices) {
+            seen.set(device.id, device.lastSeenAt);
+          }
+        }
+        this.lastSeenByDeviceId.set(seen);
+      },
+      // Bewusst stumm: die Spalte ist Diagnose-Beiwerk, ein Fehler hier darf die
+      // Geräteliste nicht mit einer Meldung überlagern.
+      error: () => this.lastSeenByDeviceId.set(new Map())
+    });
+  }
+
+  lastSeenOf(device: PresenceDeviceAdmin): string | null {
+    return this.lastSeenByDeviceId().get(device.id) ?? null;
   }
 
   load(afterLoad?: () => void): void {
@@ -2620,13 +2683,17 @@ export class AdminPresenceComponent implements OnInit {
 
     <table *ngIf="!loading() && !loadFailed()">
       <thead>
-        <tr><th>Person</th><th>Name</th><th>IP-Adresse</th><th>Aktiv</th><th></th></tr>
+        <tr>
+          <th>Person</th><th>Name</th><th>IP-Adresse</th>
+          <th>Zuletzt gesehen</th><th>Aktiv</th><th></th>
+        </tr>
       </thead>
       <tbody>
         <tr *ngFor="let device of devices()">
           <td>{{ displayNameOf(device.userId) }}</td>
           <td>{{ device.name }}</td>
           <td>{{ device.host }}</td>
+          <td>{{ lastSeenOf(device) ? (lastSeenOf(device) | date:'dd.MM. HH:mm':undefined:'de') : '–' }}</td>
           <td>
             <input type="checkbox" [checked]="device.active"
                    (change)="setActive(device, !device.active)" />
@@ -2637,7 +2704,7 @@ export class AdminPresenceComponent implements OnInit {
           </td>
         </tr>
         <tr *ngIf="devices().length === 0">
-          <td colspan="5">Noch keine Geräte angelegt.</td>
+          <td colspan="6">Noch keine Geräte angelegt.</td>
         </tr>
       </tbody>
     </table>
@@ -2796,8 +2863,22 @@ Methoden (nach `startPetFoodRefresh`, gleiches Muster — ein Fehler behält den
     return this.presence?.persons ?? [];
   }
 
+  /**
+   * `unknown` bekommt ein eigenes Symbol und darf NICHT wie „abwesend" aussehen:
+   * nach jedem Backend-Neustart steht jede Person bis zum Ablauf der Karenzzeit
+   * auf `unknown` (die Messwerte leben nur im Speicher). Faltete man das in
+   * „abwesend", zeigte das Wandtablet nach jedem Deploy minutenlang einen
+   * leeren Haushalt an.
+   */
   presenceIcon(person: PresencePersonStatus): string {
-    return person.state === 'on' ? 'home' : 'directions_walk';
+    switch (person.state) {
+      case 'on':
+        return 'home';
+      case 'off':
+        return 'directions_walk';
+      default:
+        return 'help';
+    }
   }
 
   presenceLabel(person: PresencePersonStatus): string {
@@ -2828,7 +2909,7 @@ In `dashboard.component.html` direkt **nach** der schließenden `</div>` der `lu
       <div class="lumina__pets-info">
         <h4 class="lumina__label lumina__label--secondary">Anwesenheit</h4>
         <p class="lumina__secured-detail" *ngFor="let person of presencePersons"
-           [class.lumina__presence--away]="person.state !== 'on'">
+           [class.lumina__presence--away]="person.state === 'off'">
           <span class="material-symbols-outlined">{{ presenceIcon(person) }}</span>
           {{ person.displayName }} • {{ presenceLabel(person) }}
         </p>
@@ -2878,13 +2959,18 @@ git commit -m "feat(presence): Anwesenheits-Kachel im Dashboard-Footer"
 ### Anwesenheitserkennung (WLAN)
 - Modul `backend/src/main/java/com/household/manager/presence/`; Spec: `docs/superpowers/specs/2026-08-25-anwesenheitserkennung-design.md`. Erste Quelle: iPhones im WLAN, TCP-Probe alle 30 s gegen feste IPs (`presence_device`, FK auf `app_user` mit `ON DELETE CASCADE`)
 - **Jede TCP-Antwort zählt als anwesend, auch „Connection refused"** (RST beweist: der Host lebt) — deshalb eigene Drei-Zustands-Probe (`PresenceProbe`), NICHT der `TcpPortProbe` des network-Moduls (für den sind refused und timeout beides „zu"). Ports 62078 (iPhone lockdownd), 80, 443; erste Antwort gewinnt
-- **`PresenceEvaluator` ist die einzige Definition von „anwesend"** (Muster `TractiveHomeResolver`): Poller und `GET /v1/presence/status` fragen dieselbe Klasse. Anwesend sofort mit der ersten Antwort; abwesend erst, wenn ALLE aktiven Geräte einer Person länger als die Karenzzeit still sind (`application_settings` Kategorie `PRESENCE`, `away_grace_minutes`, Default 10, defensives Lesen wirft nie)
-- **Neustart-Verhalten:** `lastSeen` lebt nur im Speicher (`PresenceMonitor`, Muster `NetworkDeviceStatusMonitor` plus `startedAt`). Bis seit dem Start die Karenzzeit verstrichen ist, wird bei Stille KEIN Update gemeldet — die Entität behält ihren DB-Wert (nie raten). Person ohne Geräte-Zeilen: keine Entität; alle Geräte deaktiviert: `unavailable`
-- Entitäten (`EntitySource.PRESENCE`): `binary_sensor.presence_<userId>_home` je Person (`deviceClass: presence`, Attribute `personUserId`, `lastSeenAt` — Schlüssel fehlt statt null) und Aggregat `binary_sensor.presence_household` („Jemand zu Hause"): `on` sobald irgendwer da ist, `off` nur wenn alle abwesend, `unavailable` nur wenn alle blind; jede Mischung ohne PRESENT meldet NICHTS
-- **Modus-Automatik „Abwesend" sind Flows, kein Java** (beim Rollout via flow-mcp): Trigger `presence_household` → off ⇒ Modus an, → on ⇒ Modus aus. Ein Flow schaltet den Modus DIREKT — die Dashboard-Aktivierungs-Checks laufen dabei nicht (konsistent mit dem Bestand, bewusst so)
-- Security: `/v1/presence/settings` ist ein methodenloser ADMIN-Matcher VOR der generischen GET-Regel (Muster tractive/home-settings); Geräte-CRUD drei methodenspezifische ADMIN-Matcher (Muster Netzwerk-Geräte); `GET /status` KIOSK über die generische Regel (Dashboard-Kachel auf dem Wandtablet). Audit: `presence.device.create/update/delete`, `presence.settings.update`
-- Frontend: Admin-Seite „Anwesenheit" (`pages/admin-presence/`, Route `admin/presence`) mit Karenzzeit + Geräteliste (Personen-Dropdown aus `GET /v1/users`); Dashboard-Footer-Kachel direkt in `dashboard.component.html` (lumina-Kapselung), Refresh 30 s, Fehler behalten den letzten Stand
-- **Rollout:** Deploy → DHCP-Reservierungen prüfen + iOS „Private WLAN-Adresse: Fest" (nicht „Rotierend", seit iOS 18) → Geräte auf der Admin-Seite erfassen → einige Tage `lastSeenAt` beobachten (nächtliche Aussetzer?), Karenzzeit ggf. nachziehen → ERST DANN die beiden Modus-Flows via flow-mcp anlegen. Wechselt ein iPhone die MAC (rotierende private Adresse), fällt die Person still auf „abwesend" — sichtbar nur am `lastSeenAt` der Admin-Seite
+- **`PresenceEvaluator` ist die einzige Definition von „anwesend"** (Muster `TractiveHomeResolver`): Poller und `GET /v1/presence/status` fragen dieselbe Klasse, und `PresenceEvaluator.entityState(...)` ist die einzige Abbildung auf die Zustandstexte. Sie ist **`static`**, damit ein gemockter Evaluator sie im Test nicht überschreiben kann — sonst prüfte der Poller-Test eine gestubbte Abbildung statt der echten
+- **Karenzzeit je Gerät, nicht ab Prozessstart** (`application_settings`, Kategorie `PRESENCE`, `away_grace_minutes`, Default 10, defensives Lesen wirft nie): anwesend sofort mit der ersten Antwort; abwesend erst, wenn ALLE aktiven Geräte einer Person länger als die Karenzzeit still sind. Hat ein Gerät noch nie geantwortet, zählt seine **eigene** Probezeit ab dem ersten Prüfversuch (`DeviceProbeStatus.firstCheckedAt`, einmalig gesetzt). Das deckt den Neustart mit ab — eine prozessweite Startzeit gibt es bewusst **nicht** mehr: mit ihr bekam ein neu angelegtes oder wieder aktiviertes Gerät null Karenz und kippte nach einer einzigen stillen Probe auf „abwesend"
+- **Der Poller vergisst den Messwert eines deaktivierten Geräts** (`monitor.remove`), damit ein Wiedereinschalten erneut Probezeit bekommt; `PresenceDeviceService` tut dasselbe beim **Löschen**, beim **Anlegen** (Id-Wiederverwendung nach DB-Neustart) und bei einer **geänderten IP** — der Monitor ist über die Geräte-Id geschlüsselt, eine korrigierte Adresse erbte sonst Probezeit und „zuletzt gesehen" der alten. Preis: für ein deaktiviertes Gerät zeigt die Admin-Seite dauerhaft „–"
+- **`lastSeen` lebt nur im Speicher** und überlebt keinen Neustart. Nach jedem Deploy steht deshalb jede Person bis zum Ablauf der Karenzzeit auf `unknown` — die Entität behält ihren DB-Wert (nie raten), und die **Dashboard-Kachel darf `unknown` nicht als „abwesend" rendern**, sonst zeigt das Wandtablet nach jedem Deploy minutenlang einen leeren Haushalt
+- Entitäten (`EntitySource.PRESENCE`): `binary_sensor.presence_<userId>_home` je Person (`deviceClass: presence`, Attribute `personUserId`, `lastSeenAt` als `Instant` — Schlüssel fehlt statt null) und Aggregat `binary_sensor.presence_household` („Jemand zu Hause"): `on` sobald irgendwer da ist, `off` nur wenn alle abwesend, `unavailable` nur wenn alle blind; **jede Mischung ohne PRESENT meldet NICHTS** und friert die Entität auf ihrem letzten Wert ein — die „stille Falle": wer das einzige Handy einer Person deaktiviert, schaltet damit den „Alle weg"-Flow stumm
+- **Verwaiste Entitäten werden aufgeräumt:** löscht man das letzte Gerät einer Person, fiele sie aus der Gruppierung und ihre Entität bliebe für immer auf dem letzten Wert stehen — ohne Fehler, ohne Log. Der Poller meldet solche Entitäten (Personen wie Aggregat) deshalb `unavailable`, **mit erhaltenen Attributen** (`EntityStateWriter.upsert` überschreibt `attributes` sonst komplett, Muster `ZigbeeAvailabilityWatchdog`), nimmt sie aber **nicht** ins Aggregat auf — sonst blockierte eine gelöschte Person das „niemand zu Hause" dauerhaft
+- **Ein Netzwerkausfall ist von echter Abwesenheit nicht unterscheidbar:** verliert der Server die LAN-Anbindung, schweigen alle Geräte und das Aggregat läuft auf `off`, obwohl niemand gegangen ist. Der „Alle weg"-Flow bekommt deshalb beim Rollout **zwingend** eine Bedingung auf die Netzwerk-Entitäten; die Absicherung gehört auf Flow-Ebene, nicht in den Service
+- **Modus-Automatik „Abwesend" sind Flows, kein Java** (beim Rollout via flow-mcp): Trigger `presence_household` → off ⇒ Modus an, → on ⇒ Modus aus. Ein Flow schaltet den Modus DIREKT — die Dashboard-Aktivierungs-Checks laufen dabei nicht (konsistent mit dem Bestand, bewusst so). Ein Aktiv-Toggle erzeugt eine echte `unavailable`-Flanke; die Erholungsflanke feuert, der Flow löst also auch auf eine Admin-Aktion hin aus
+- Konfiguration: `presence.poll-interval-ms` (30000) und `presence.probe-timeout-ms` (2000). Der Timeout wird beim Start auf 100 ms … 5 s **geklemmt** (Warnung im Log, nie eine Ausnahme): `0` hieße ein unendlicher Socket-Timeout, ein negativer Wert ließe jede Probe scheitern — und `SocketPresenceProbe` verschluckt das zu „still", womit **jede Person dauerhaft „abwesend"** wäre, ohne Log oberhalb von debug. Die Obergrenze weist zudem den naheliegenden Tippfehler `20000` ab; sie folgt aus `Geräte × Ports × Timeout` bei sequenzieller Prüfung in einem 30-s-Zyklus
+- Security: `/v1/presence/settings` ist ein **methodenloser** ADMIN-Matcher VOR der generischen GET-Regel (Muster tractive/home-settings) — ohne das dürfte das Wandtablet die Karenzzeit lesen. **Auch `GET /v1/presence/devices` ist ADMIN** (abweichend vom Netzwerk-Muster: dort listet die Tablet-Ansicht die Geräte, hier braucht sie niemand, und die Zeilen tragen die Handy-Adressen der Haushaltsmitglieder), dazu die drei methodenspezifischen Schreib-Matcher. Nur `GET /status` ist KIOSK — deshalb trägt `DeviceStatusResponse` **kein** `host`. Audit: `presence.device.create/update/delete`, `presence.settings.update`
+- Frontend: Admin-Seite „Anwesenheit" (`pages/admin-presence/`, Route `admin/presence`) mit Karenzzeit, Geräteliste (Personen-Dropdown aus `GET /v1/users`) und der Spalte „Zuletzt gesehen" aus `GET /status`; schlägt dieser Abruf fehl, bleibt die Spalte leer, ohne die Pflege zu blockieren. Dashboard-Footer-Kachel direkt in `dashboard.component.html` (lumina-Kapselung), Refresh 30 s, ein fehlgeschlagener Refresh behält den letzten Stand
+- **Rollout:** Deploy → DHCP-Reservierungen prüfen + iOS „Private WLAN-Adresse: Fest" (nicht „Rotierend", seit iOS 18) → Geräte auf der Admin-Seite erfassen → einige Tage `lastSeenAt` beobachten (nächtliche Aussetzer?), Karenzzeit ggf. nachziehen → ERST DANN die beiden Modus-Flows via flow-mcp anlegen, den „Alle weg"-Flow mit der Netzwerk-Bedingung. Wechselt ein iPhone die MAC (rotierende private Adresse), fällt die Person still auf „abwesend" — sichtbar nur am „Zuletzt gesehen" der Admin-Seite
 ```
 
 - [ ] **Step 2: Voller Backend-Testlauf**
