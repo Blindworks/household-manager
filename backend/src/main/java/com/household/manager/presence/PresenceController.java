@@ -17,9 +17,10 @@ import java.util.List;
 
 /**
  * Status-, Geraete- und Einstellungs-API der Anwesenheitserkennung. Bewusst
- * duenn — alle Logik steckt in den Services. Der Zugriff auf /settings ist
- * ueber die Matcher-Reihenfolge in {@code SecurityConfig} auf ADMIN
- * beschraenkt; /status bleibt KIOSK-lesbar (Dashboard-Kachel auf dem Tablet).
+ * duenn — alle Logik steckt in den Services. Der Zugriff auf /settings und
+ * /refresh ist ueber die Matcher-Reihenfolge in {@code SecurityConfig} auf
+ * ADMIN beschraenkt; /status bleibt KIOSK-lesbar (Dashboard-Kachel auf dem
+ * Tablet).
  */
 @RestController
 @RequestMapping("/v1/presence")
@@ -29,9 +30,23 @@ public class PresenceController {
     private final PresenceStatusService statusService;
     private final PresenceDeviceService deviceService;
     private final PresenceSettingsService settingsService;
+    private final PresencePollingService pollingService;
 
     @GetMapping("/status")
     public ResponseEntity<PresenceDtos.StatusResponse> status() {
+        return ResponseEntity.ok(statusService.getStatus());
+    }
+
+    /**
+     * Manuelle Abfrage aller Geraete statt auf den naechsten 30-s-Zyklus zu warten
+     * (Admin-Seite „Anwesenheit"). Liefert den FRISCHEN Status in einem Roundtrip, damit die
+     * Seite nicht extra nachladen muss. {@link PresencePollingService#refreshNow()} wirft bei
+     * einem Ladefehler oder einer Ueberlappung — beides landet ueber den
+     * {@code GlobalExceptionHandler} als 400 bzw. 429 beim Aufrufer.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<PresenceDtos.StatusResponse> refresh() {
+        pollingService.refreshNow();
         return ResponseEntity.ok(statusService.getStatus());
     }
 

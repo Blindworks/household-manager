@@ -10,6 +10,7 @@ import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.PresenceDevice;
+import com.household.manager.network.TooManyRequestsException;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.PresenceDeviceRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -113,6 +115,15 @@ public class PresencePollingService {
     private final Duration probeTimeout;
 
     /**
+     * Reserviert VOR der Arbeit (Muster {@code NetworkSpeedtestService.reserveManualSlot}),
+     * nicht erst danach: sonst koennten zwei fast gleichzeitige manuelle Aufrufe beide den
+     * freien Zustand lesen, beide den Check passieren und beide gleichzeitig proben. Freigabe
+     * in einem {@code finally} — auch nach einem fehlgeschlagenen Abruf muss der Knopf wieder
+     * bedienbar sein.
+     */
+    private final AtomicBoolean manualRefreshInProgress = new AtomicBoolean(false);
+
+    /**
      * Einziger Konstruktor mit allen Abhaengigkeiten inklusive dem
      * {@code @Value}-Parameter (Muster {@code NetworkConnectivityPollingService}):
      * Spring waehlt bei genau einem Konstruktor automatisch diesen, und Tests
@@ -161,7 +172,57 @@ public class PresencePollingService {
             log.warn("Laden der Anwesenheits-Geraete fehlgeschlagen, Zyklus uebersprungen", e);
             return;
         }
+        runCycle(devices);
+    }
 
+    /**
+     * Manueller Trigger (Controller-Pfad, Admin-Seite „Anwesenheit"). Durchlaeuft denselben
+     * Probe-/Meldezyklus wie {@link #poll()} — ueber {@link #runCycle} geteilt, damit das
+     * Ergebnis eines manuellen Abrufs nie von dem des naechsten geplanten Zyklus abweichen
+     * kann. Unterscheidet sich in zwei Punkten, weil hier jemand am anderen Ende wartet statt
+     * niemand zuzusehen:
+     * <ul>
+     *   <li>Ein Ladefehler wird NICHT verschluckt (anders als {@link #poll()}), sondern als
+     *   {@link IllegalStateException} nach aussen gereicht — wer den Knopf drueckt, soll
+     *   erfahren, dass etwas nicht geladen werden konnte.</li>
+     *   <li>Zwei ueberlappende manuelle Aufrufe werden abgelehnt ({@link TooManyRequestsException},
+     *   429) statt beide gleichzeitig zu proben. Eine Ueberlappung mit dem GEPLANTEN Zyklus ist
+     *   dagegen unbedenklich und braucht keinen Schutz — {@link PresenceMonitor#update} ist
+     *   ueber {@code compute} atomar.</li>
+     * </ul>
+     *
+     * <p><strong>Kostenrechnung:</strong> die Probes laufen sequentiell auf dem Request-Thread,
+     * nicht auf einem der geteilten Scheduler-Threads — im ungluecklichsten Fall
+     * {@code aktive Geraete x 3 Ports x Timeout} (Default 2 s, also 6 s je stillem Geraet).
+     * Deshalb ist der Endpunkt bewusst nicht in der KIOSK-POST-Whitelist (er waere fuer das
+     * Wandtablet ein mehrere Sekunden blockierender Knopf) und deshalb werden ueberlappende
+     * Aufrufe abgelehnt statt in eine Warteschlange gestellt.
+     */
+    public void refreshNow() {
+        if (!manualRefreshInProgress.compareAndSet(false, true)) {
+            throw new TooManyRequestsException(
+                    "Es laeuft bereits eine manuelle Anwesenheitsabfrage. Bitte kurz warten.");
+        }
+        try {
+            List<PresenceDevice> devices;
+            try {
+                devices = deviceRepository.findAll();
+            } catch (Exception e) {
+                throw new IllegalStateException(
+                        "Die Anwesenheits-Geraete konnten nicht geladen werden.", e);
+            }
+            runCycle(devices);
+        } finally {
+            manualRefreshInProgress.set(false);
+        }
+    }
+
+    /**
+     * Der eigentliche Probe-/Auswertungs-/Aufraeum-Zyklus, geteilt zwischen {@link #poll()} und
+     * {@link #refreshNow()} — beide muessen exakt dasselbe tun, sonst koennte ein manueller
+     * Abruf ein anderes Ergebnis melden als der naechste geplante Zyklus.
+     */
+    private void runCycle(List<PresenceDevice> devices) {
         // Ein Instant fuer den ganzen Zyklus (Muster NetworkDevicePollingService,
         // Lehre aus der Tractive-Integration: nie ein Instant.now() pro Geraet).
         Instant now = clock.instant();

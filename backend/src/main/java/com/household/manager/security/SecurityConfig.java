@@ -172,6 +172,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/presence/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/presence/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/presence/devices/*").hasRole("ADMIN")
+                        // Manueller Abruf lebt bewusst NICHT in der KIOSK-POST-Whitelist weiter
+                        // unten (anders als /v1/tractive/pets/refresh oder /v1/network/speedtest):
+                        // er sitzt nur auf der Admin-Seite und kann als sequentielle Probe aller
+                        // aktiven Geraete mehrere Sekunden des Request-Threads belegen.
+                        .requestMatchers(HttpMethod.POST, "/v1/presence/refresh").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet

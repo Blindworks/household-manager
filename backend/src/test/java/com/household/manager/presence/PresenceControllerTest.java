@@ -17,10 +17,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +36,8 @@ class PresenceControllerTest {
     private PresenceDeviceService deviceService;
     @Mock
     private PresenceSettingsService settingsService;
+    @Mock
+    private PresencePollingService pollingService;
 
     private MockMvc mockMvc;
 
@@ -43,7 +47,7 @@ class PresenceControllerTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new PresenceController(statusService, deviceService, settingsService))
+                        new PresenceController(statusService, deviceService, settingsService, pollingService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
@@ -57,6 +61,25 @@ class PresenceControllerTest {
         mockMvc.perform(get("/v1/presence/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.householdState").value("on"));
+    }
+
+    /**
+     * Der Endpunkt muss die Abfrage ANSTOSSEN und danach den FRISCHEN Status zurueckgeben -
+     * nicht bloss einen bereits vorher zwischengespeicherten. Die InOrder-Pruefung belegt die
+     * Reihenfolge (erst refreshNow(), dann getStatus()), die ein reines "beide wurden
+     * aufgerufen" nicht sehen wuerde.
+     */
+    @Test
+    void refreshLoestDenManuellenAbrufAusUndLiefertDenFrischenStatus() throws Exception {
+        when(statusService.getStatus()).thenReturn(new PresenceDtos.StatusResponse("on", List.of()));
+
+        mockMvc.perform(post("/v1/presence/refresh"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.householdState").value("on"));
+
+        org.mockito.InOrder inOrder = inOrder(pollingService, statusService);
+        inOrder.verify(pollingService).refreshNow();
+        inOrder.verify(statusService).getStatus();
     }
 
     @Test

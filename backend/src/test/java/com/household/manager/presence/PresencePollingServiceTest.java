@@ -8,6 +8,7 @@ import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.PresenceDevice;
+import com.household.manager.network.TooManyRequestsException;
 import com.household.manager.repository.AppUserRepository;
 import com.household.manager.repository.PresenceDeviceRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,12 +27,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -547,5 +553,97 @@ class PresencePollingServiceTest {
         service.poll();
 
         verify(entityStateService, never()).reportState(argThat(u -> "unavailable".equals(u.state())));
+    }
+
+    // -- Manueller Abruf (refreshNow) --------------------------------------
+    //
+    // refreshNow() muss denselben Probe-/Meldezyklus wie poll() durchlaufen
+    // (kein zweiter Probierpfad), sich aber in zwei Punkten unterscheiden:
+    // es wirft bei einem Ladefehler statt still zu ueberspringen, und ein
+    // zweiter gleichzeitiger Aufruf wird abgelehnt.
+
+    @Test
+    void refreshNowFuehrtDenselbenProbeUndMeldezyklusAusWiePoll() {
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, true)));
+        when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
+        when(evaluator.evaluate(anyList(), any())).thenReturn(
+                new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
+
+        service.refreshNow();
+
+        verify(probe).probe(eq("192.168.1.50"), anyList(), any());
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService).reportState(captor.capture());
+        EntityStateUpdate update = captor.getValue();
+        assertThat(update.entityId()).isEqualTo("binary_sensor.presence_5_home");
+        assertThat(update.state()).isEqualTo("on");
+        assertThat(update.attributes()).containsEntry("personUserId", 5L);
+    }
+
+    /**
+     * Anders als {@code poll()} (siehe {@code dbFehlerUeberspringtDenZyklusOhneZuWerfen}) darf
+     * ein manueller Abruf einen Ladefehler nicht verschlucken - wer den Knopf drueckt, soll
+     * erfahren, dass etwas nicht geladen werden konnte.
+     */
+    @Test
+    void dbFehlerBeimManuellenAbrufWirdDurchgereicht() {
+        when(deviceRepository.findAll()).thenThrow(new RuntimeException("DB weg"));
+
+        assertThatThrownBy(() -> service.refreshNow())
+                .isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(entityStateService);
+    }
+
+    /**
+     * Ein Bug im Freigeben des Reservierungs-Flags (z. B. Release nur im Erfolgsfall statt in
+     * einem finally) wuerde den Knopf nach dem allerersten Fehlschlag dauerhaft blockieren -
+     * genau das soll dieser Test verhindern.
+     */
+    @Test
+    void flagWirdAuchNachFehlgeschlagenemAbrufWiederFreigegeben() {
+        when(deviceRepository.findAll()).thenThrow(new RuntimeException("DB weg"));
+        assertThatThrownBy(() -> service.refreshNow()).isInstanceOf(IllegalStateException.class);
+
+        // doReturn(...).when(...) statt when(...).thenReturn(...): Letzteres wuerde
+        // deviceRepository.findAll() zum Aufsetzen der Stubbing real aufrufen und damit den noch
+        // aktiven thenThrow-Stub sofort erneut ausloesen, statt ihn zu ersetzen.
+        doReturn(List.of()).when(deviceRepository).findAll();
+
+        // Kein TooManyRequestsException mehr - das Flag wurde im finally freigegeben.
+        service.refreshNow();
+    }
+
+    /**
+     * Ein zweiter, ueberlappender manueller Abruf muss abgelehnt werden, WAEHREND der erste noch
+     * laeuft - dafuer braucht es echte Nebenlaeufigkeit (ein reines compareAndSet-Unit-Assert
+     * koennte das Reservieren-vor-der-Arbeit nicht von Reservieren-danach unterscheiden).
+     */
+    @Test
+    void zweiterGleichzeitigerAbrufWirdAbgelehnt() throws InterruptedException {
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, true)));
+        CountDownLatch probeStarted = new CountDownLatch(1);
+        CountDownLatch releaseProbe = new CountDownLatch(1);
+        when(probe.probe(anyString(), anyList(), any())).thenAnswer(invocation -> {
+            probeStarted.countDown();
+            assertThat(releaseProbe.await(5, TimeUnit.SECONDS)).isTrue();
+            return ProbeResult.RESPONDED;
+        });
+        when(evaluator.evaluate(anyList(), any())).thenReturn(
+                new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
+
+        Thread first = new Thread(service::refreshNow);
+        first.start();
+        assertThat(probeStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+        assertThatThrownBy(() -> service.refreshNow())
+                .isInstanceOf(TooManyRequestsException.class);
+
+        releaseProbe.countDown();
+        first.join(5000);
+        assertThat(first.isAlive()).isFalse();
+
+        // Nach Abschluss des ersten Aufrufs ist das Flag wieder frei.
+        service.refreshNow();
     }
 }

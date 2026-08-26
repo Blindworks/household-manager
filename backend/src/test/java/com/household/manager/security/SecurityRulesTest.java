@@ -712,4 +712,24 @@ class SecurityRulesTest {
         mockMvc.perform(delete("/v1/presence/devices/1").with(csrf()))
                 .andExpect(status().isNotFound());
     }
+
+    /**
+     * Der manuelle Abruf lebt bewusst NICHT in der KIOSK-POST-Whitelist (anders als der
+     * Tractive-Refresh und der Speedtest): er sitzt nur auf der Admin-Seite und kann einen
+     * Request-Thread mehrere Sekunden belegen (sequentielles Proben aller aktiven Geraete).
+     */
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeineManuelleAnwesenheitsAbfrageAusloesen() throws Exception {
+        mockMvc.perform(post("/v1/presence/refresh").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnDerManuellenAnwesenheitsAbfrageVorbei() throws Exception {
+        // Kein PresenceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(post("/v1/presence/refresh").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
 }
