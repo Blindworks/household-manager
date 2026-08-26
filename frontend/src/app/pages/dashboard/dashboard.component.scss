@@ -225,6 +225,45 @@
   }
 }
 
+// Anwesenheit als Personenkreise im Kopf. Ring-Farbe ist tristate
+// (siehe presenceRingClass): gruen = anwesend, rot = abwesend, neutral =
+// unknown/unavailable, die NIE wie abwesend aussehen duerfen.
+.lumina__presence-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lumina__presence-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  border: 2px solid rgba(192, 198, 214, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--on-surface);
+  cursor: default;
+
+  &--on {
+    border-color: var(--secondary);
+  }
+
+  &--off {
+    border-color: var(--error);
+  }
+
+  &--neutral {
+    border-color: rgba(192, 198, 214, 0.4);
+  }
+}
+
 .lumina__weather-temp {
   font-family: 'Space Grotesk', 'Geist', sans-serif;
   font-size: clamp(17px, 1.7vw, 22px);
@@ -1139,10 +1178,6 @@
 
 .lumina__pet--away {
   color: var(--tertiary);
-}
-
-.lumina__presence--away {
-  opacity: 0.55;
 }
 
 .lumina__pets--clickable {

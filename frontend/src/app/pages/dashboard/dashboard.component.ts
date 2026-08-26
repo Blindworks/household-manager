@@ -1611,28 +1611,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * `unknown` bekommt ein eigenes Symbol und darf NICHT wie „abwesend" aussehen:
-   * nach jedem Backend-Neustart steht jede Person bis zum Ablauf der Karenzzeit
-   * auf `unknown` (die Messwerte leben nur im Speicher). Faltete man das in
-   * „abwesend", zeigte das Wandtablet nach jedem Deploy minutenlang einen
-   * leeren Haushalt an.
+   * `unknown` bekommt einen eigenen (neutralen) Ring und darf NICHT wie
+   * „abwesend" aussehen: nach jedem Backend-Neustart steht jede Person bis
+   * zum Ablauf der Karenzzeit auf `unknown` (die Messwerte leben nur im
+   * Speicher). Faltete man das in „abwesend", zeigte das Wandtablet nach
+   * jedem Deploy minutenlang einen leeren Haushalt als komplett rot an.
+   * `unavailable` (keine aktiven Geraete) ist ebenfalls keine Aussage ueber
+   * Anwesenheit und bekommt deshalb denselben neutralen Ring wie `unknown`.
    *
-   * Beide Abbildungen zaehlen jeden Zustand einzeln auf und haben bewusst KEIN
-   * `default` — mit `noImplicitReturns` wird eine kuenftige fuenfte Auspraegung
-   * von `PresencePersonState` dadurch zum Compilerfehler statt still auf dem
-   * falschen Symbol zu landen (Gegenstueck zu `PresenceEvaluator.entityState`
-   * im Backend, das aus demselben Grund ohne `default` geschrieben ist).
+   * Beide Abbildungen (diese und `presenceLabel`) zaehlen jeden Zustand
+   * einzeln auf und haben bewusst KEIN `default` — mit `noImplicitReturns`
+   * wird eine kuenftige fuenfte Auspraegung von `PresencePersonState` dadurch
+   * zum Compilerfehler statt still auf dem falschen Ring zu landen
+   * (Gegenstueck zu `PresenceEvaluator.entityState` im Backend, das aus
+   * demselben Grund ohne `default` geschrieben ist).
    */
-  presenceIcon(person: PresencePersonStatus): string {
+  presenceRingClass(person: PresencePersonStatus): string {
     switch (person.state) {
       case 'on':
-        return 'home';
+        return 'lumina__presence-circle--on';
       case 'off':
-        return 'directions_walk';
+        return 'lumina__presence-circle--off';
       case 'unavailable':
-        return 'signal_disconnected';
       case 'unknown':
-        return 'help';
+        return 'lumina__presence-circle--neutral';
     }
   }
 
@@ -1649,6 +1651,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'unknown':
         return 'Unbekannt';
     }
+  }
+
+  /** Voller Name + Zustand auf Deutsch, fuer `aria-label`/`title` der Kreise. */
+  presenceAriaLabel(person: PresencePersonStatus): string {
+    return `${person.displayName} • ${this.presenceLabel(person)}`;
+  }
+
+  /**
+   * Initialen fuer die Personenkreise. `trim()` + Split auf beliebig viele
+   * Leerzeichen statt eines naiven `split(' ')`, das bei mehrfachen/
+   * fuehrenden/nachgestellten Leerzeichen leere Teilstuecke liefern wuerde.
+   * Ein einzelnes Wort ergibt genau eine Initiale statt einer zweiten aus
+   * dem letzten Buchstaben.
+   */
+  presenceInitials(person: PresencePersonStatus): string {
+    const parts = person.displayName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return '?';
+    }
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   }
 
   /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */

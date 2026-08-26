@@ -52,6 +52,22 @@
               </div>
             </button>
           </ng-container>
+          <!-- Anwesenheit: nur Personen, die `/v1/presence/status` liefert
+               (das sind bereits nur die mit erfasstem Geraet). -->
+          <ng-container *ngIf="presencePersons.length > 0">
+            <div class="lumina__divider"></div>
+            <div class="lumina__presence-group" role="group" aria-label="Anwesenheit">
+              <div
+                class="lumina__presence-circle"
+                *ngFor="let person of presencePersons"
+                [ngClass]="presenceRingClass(person)"
+                [attr.aria-label]="presenceAriaLabel(person)"
+                [title]="presenceAriaLabel(person)"
+              >
+                {{ presenceInitials(person) }}
+              </div>
+            </div>
+          </ng-container>
         </div>
       </header>
       <div class="lumina__rooms" [class.lumina__rooms--accordion]="accordionActive">
@@ -396,20 +412,6 @@
         <div class="lumina__petfood-track">
           <div class="lumina__petfood-fill" [style.width.%]="food.percent > 100 ? 100 : food.percent"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="lumina-card lumina__presence" *ngIf="presencePersons.length > 0">
-      <div class="lumina__secured-icon">
-        <span class="material-symbols-outlined">home_pin</span>
-      </div>
-      <div class="lumina__pets-info">
-        <h4 class="lumina__label lumina__label--secondary">Anwesenheit</h4>
-        <p class="lumina__secured-detail" *ngFor="let person of presencePersons"
-           [class.lumina__presence--away]="person.state === 'off'">
-          <span class="material-symbols-outlined">{{ presenceIcon(person) }}</span>
-          {{ person.displayName }} • {{ presenceLabel(person) }}
-        </p>
       </div>
     </div>
 
