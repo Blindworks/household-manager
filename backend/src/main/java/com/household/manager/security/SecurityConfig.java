@@ -161,8 +161,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/network/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/network/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/network/devices/*").hasRole("ADMIN")
-                        // Anwesenheits-Geraete pflegen ist ADMIN, lesen darf jeder Angemeldete
-                        // ueber die generische GET-Regel weiter unten (Muster Netzwerk-Geraete).
+                        // Anwesenheits-Geraete pflegen ist ADMIN. Anders als bei den
+                        // Netzwerk-Geraeten (dort liest die Wandtablet-Netzwerkansicht die Liste)
+                        // ist hier auch das LESEN ADMIN: keine Tablet-Ansicht braucht die
+                        // Geraeteliste (die Dashboard-Kachel spricht nur GET /status), und die
+                        // Zeilen tragen die privaten Handy-IPs der Haushaltsmitglieder — die
+                        // Matcher-Reihenfolge (vor der generischen GET-Regel) ist hier deshalb
+                        // tragend, nicht nur Stil.
+                        .requestMatchers(HttpMethod.GET, "/v1/presence/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/v1/presence/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/presence/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/presence/devices/*").hasRole("ADMIN")

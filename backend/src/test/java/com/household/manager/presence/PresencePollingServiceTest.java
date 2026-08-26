@@ -32,7 +32,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -301,8 +300,33 @@ class PresencePollingServiceTest {
 
         service.poll();
 
-        verifyNoInteractions(entityStateService);
+        // Keine ReportState-Meldung fuer die (fehlgeschlagene) Auswertung selbst -
+        // aber anders als frueher NICHT laenger "keinerlei Interaktion mit
+        // entityStateService", denn der Aufraeum-Schritt (Task D) liegt jetzt
+        // AUSSERHALB von evaluateAndReport und laeuft trotzdem: er fragt
+        // entityStateService.find() ab (per Default-Stub leere Liste, siehe
+        // setUp), findet nichts zum Aufraeumen und meldet deshalb ebenfalls nichts.
+        verify(entityStateService, never()).reportState(any());
         verify(evaluator, never()).aggregateState(any());
+    }
+
+    @Test
+    void aufraeumenLaeuftAuchWennAuswertungEinerPersonWirft() {
+        // Regression fuer genau die Kopplung, die Task D behebt: cleanupOrphanedEntities
+        // durfte nicht mehr INNERHALB von evaluateAndReport haengen (dort waere ein
+        // Auswertungsfehler bei Person 5 dem gesamten Try/Catch zum Verhaengnis
+        // geworden) - eine laengst verwaiste Person 6 muss trotzdem aufgeraeumt werden.
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, 5L, true)));
+        when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
+        when(evaluator.evaluate(anyList(), any())).thenThrow(new RuntimeException("Auswertung kaputt"));
+        Map<String, Object> attributes = Map.of("deviceClass", "presence");
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(personEntity(6, "off", attributes)));
+
+        service.poll();
+
+        verify(entityStateService).reportState(argThat(u -> u.entityId().equals("binary_sensor.presence_6_home")
+                && u.state().equals("unavailable")));
     }
 
     // -- Timeout-Klemmung (presence.probe-timeout-ms) --------------------------
@@ -420,17 +444,94 @@ class PresencePollingServiceTest {
     }
 
     @Test
-    void haushaltsEntitaetWirdVonAufraeumenNichtAngefasst() {
+    void verwaisteHaushaltsEntitaetWirdUnavailableMitErhaltenenAttributen() {
+        // Keine einzige Geraetezeile mehr im ganzen Haushalt (nicht nur bei einer
+        // einzelnen Person) - das Aggregat friert sonst fuer immer auf "on" ein,
+        // waehrend /status ehrlich "unknown" meldet.
         when(deviceRepository.findAll()).thenReturn(List.of());
         when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
                 .thenReturn(List.of(householdEntity("on")));
 
         service.poll();
 
-        // Keine Geraete -> kein regulaerer Bericht; die Haushalts-Entitaet hat
-        // sourceRef "household" (keine Zahl) und darf vom Aufraeumen nicht als
-        // verwaiste Person missverstanden werden.
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, times(1)).reportState(captor.capture());
+        EntityStateUpdate update = captor.getValue();
+        assertThat(update.entityId()).isEqualTo("binary_sensor.presence_household");
+        assertThat(update.domain()).isEqualTo(EntityDomain.BINARY_SENSOR);
+        assertThat(update.source()).isEqualTo(EntitySource.PRESENCE);
+        assertThat(update.sourceRef()).isEqualTo("household");
+        assertThat(update.friendlyName()).isEqualTo("Jemand zu Hause");
+        assertThat(update.state()).isEqualTo("unavailable");
+        assertThat(update.attributes()).containsEntry("deviceClass", "presence");
+    }
+
+    @Test
+    void haushaltsEntitaetBleibtUnangetastetWennPersonenErfasstSind() {
+        // Person 5 hat noch ein aktives Geraet - der Haushalt hat also weiterhin
+        // erfasste Personen, das Aggregat bleibt dem normalen Auswertungspfad
+        // ueberlassen. Zusaetzlich steckt in derselben find()-Antwort ein echter
+        // Personen-Waise (Person 6, keine Geraetezeile mehr): faellt der
+        // userId==null-Sonderfall fuer die Haushalts-Entitaet einer Mutante zum
+        // Opfer, wirft die Verarbeitung eine NPE, die cleanupOrphanedEntities in
+        // sein eigenes catch schluckt - dann bliebe auch Person 6 unangetastet,
+        // und ein reiner never()-Check auf die Haushalts-Entitaet wuerde das
+        // nicht bemerken.
+        when(deviceRepository.findAll()).thenReturn(List.of(device(1, 5L, true)));
+        when(probe.probe(anyString(), anyList(), any())).thenReturn(ProbeResult.RESPONDED);
+        when(evaluator.evaluate(anyList(), any())).thenReturn(
+                new PresenceEvaluator.PersonPresence(PresenceEvaluator.PersonState.PRESENT, NOW));
+        Map<String, Object> orphanAttributes = Map.of("deviceClass", "presence");
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(householdEntity("on"), personEntity(6, "off", orphanAttributes)));
+
+        service.poll();
+
+        verify(entityStateService, never())
+                .reportState(argThat(u -> u.entityId().equals("binary_sensor.presence_household")));
+        verify(entityStateService).reportState(argThat(u -> u.entityId().equals("binary_sensor.presence_6_home")
+                && u.state().equals("unavailable")));
+    }
+
+    @Test
+    void keineHaushaltsEntitaetGespeichertNichtsWirdGemeldet() {
+        // Ein Haushalt, der das Feature nie eingerichtet hat, soll durch das
+        // Aufraeumen keine Anwesenheits-Entitaet neu bekommen.
+        when(deviceRepository.findAll()).thenReturn(List.of());
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of());
+
+        service.poll();
+
         verify(entityStateService, never()).reportState(any());
+    }
+
+    @Test
+    void nichtLesbareAttributeWerdenBeimAufraeumenAlsLeerGemeldet() {
+        // Die gespeicherten Attribute sind kaputtes JSON (z. B. durch einen
+        // direkten DB-Zugriff ausserhalb dieses Service) - readAttributes()
+        // faengt das ab: die State-Meldung landet trotzdem, nur eben ohne
+        // Attribute statt den Zyklus mit einer Exception abzubrechen.
+        when(deviceRepository.findAll()).thenReturn(List.of());
+        EntityState entity = EntityState.builder()
+                .entityId("binary_sensor.presence_5_home")
+                .domain(EntityDomain.BINARY_SENSOR)
+                .source(EntitySource.PRESENCE)
+                .sourceRef("5")
+                .friendlyName("Benedikt anwesend")
+                .state("on")
+                .attributes("{nicht valides json")
+                .build();
+        when(entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE))
+                .thenReturn(List.of(entity));
+
+        service.poll();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, times(1)).reportState(captor.capture());
+        assertThat(captor.getValue().entityId()).isEqualTo("binary_sensor.presence_5_home");
+        assertThat(captor.getValue().state()).isEqualTo("unavailable");
+        assertThat(captor.getValue().attributes()).isEmpty();
     }
 
     @Test

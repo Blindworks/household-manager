@@ -59,8 +59,12 @@ public class PresenceMonitor {
      * {@code NetworkDeviceStatusMonitor}). Theoretische Zuspitzung: MariaDB/
      * InnoDB berechnet AUTO_INCREMENT beim Neustart neu, eine geloeschte Id
      * koennte also neu vergeben werden, solange der Prozess mit seinem
-     * Waisen-Eintrag lebt — Richtung waere dann ein falsches PRESENT; Szenario
-     * exotisch genug, um ebenfalls bewusst akzeptiert zu werden.
+     * Waisen-Eintrag lebt — Richtung waere dann ein falsches PRESENT.
+     * <strong>Mittlerweile entschaerft</strong>: {@code PresenceDeviceService.create}
+     * ruft nach jedem Anlegen {@code monitor.remove(saved.getId())} fuer genau die neu
+     * vergebene Id, bevor der erste Poll-Zyklus sie ueberhaupt sehen kann — ein
+     * wiederverwendeter Waisen-Eintrag kann ein frisch angelegtes Geraet also nicht
+     * mehr anstecken.
      */
     public void remove(Long deviceId) {
         statuses.remove(deviceId);

@@ -70,13 +70,18 @@ class PresenceControllerTest {
 
     @Test
     void settingsSchreibenValidiertUndSpeichert() throws Exception {
-        when(settingsService.getAwayGraceMinutes()).thenReturn(15L);
+        // Stub liefert bewusst einen ANDEREN Wert (20) als der Request-Body (15):
+        // die Antwort muss den ECHT ZURUECKGELESENEN Wert zeigen, nicht bloss den
+        // Request-Body widerspiegeln. Mit gleichen Werten koennte der Controller
+        // den Body durchreichen, statt den Round-Trip ueber den Service zu machen,
+        // und der Test wuerde das nicht bemerken.
+        when(settingsService.getAwayGraceMinutes()).thenReturn(20L);
 
         mockMvc.perform(put("/v1/presence/settings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"awayGraceMinutes\": 15}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.awayGraceMinutes").value(15));
+                .andExpect(jsonPath("$.awayGraceMinutes").value(20));
         verify(settingsService).saveAwayGraceMinutes(eq(15L));
     }
 
@@ -90,10 +95,21 @@ class PresenceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"awayGraceMinutes\": 100000}"))
                 .andExpect(status().isBadRequest());
+        verify(settingsService, never()).saveAwayGraceMinutes(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    /**
+     * Ein fehlender Wert ist kein "ausserhalb des Bereichs" - die alte Fehlermeldung
+     * ("muss zwischen 1 und ... liegen") beschwerte sich ueber einen Bereich bei einem
+     * Wert, der gar nicht da ist. Eigene Meldung fuer den Fall.
+     */
+    @Test
+    void fehlendeKarenzzeitWirdMitEigenerMeldungAbgelehnt() throws Exception {
         mockMvc.perform(put("/v1/presence/settings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Die Karenzzeit fehlt."));
         verify(settingsService, never()).saveAwayGraceMinutes(org.mockito.ArgumentMatchers.anyLong());
     }
 }

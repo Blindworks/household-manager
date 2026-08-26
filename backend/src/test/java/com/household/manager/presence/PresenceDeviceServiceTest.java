@@ -117,6 +117,34 @@ class PresenceDeviceServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /**
+     * Grenzwert exakt am Rand: ein vertauschtes {@code >} zu {@code >=} in der
+     * Laengenpruefung wuerde von den "zu lang"-Tests unten nicht zuverlaessig
+     * entdeckt (101 Zeichen scheitern bei beiden Varianten), faellt hier aber
+     * garantiert auf.
+     */
+    @Test
+    void createAkzeptiertNamenMitGenau100Zeichen() {
+        when(userRepository.existsById(5L)).thenReturn(true);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        String exactly100 = "x".repeat(100);
+
+        PresenceDtos.DeviceAdminResponse response = service.create(request(5L, exactly100, "192.168.1.50"));
+
+        assertThat(response.name()).hasSize(100);
+    }
+
+    @Test
+    void createAkzeptiertHostMitGenau255Zeichen() {
+        when(userRepository.existsById(5L)).thenReturn(true);
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        String exactly255 = "1".repeat(255);
+
+        PresenceDtos.DeviceAdminResponse response = service.create(request(5L, "iPhone", exactly255));
+
+        assertThat(response.host()).hasSize(255);
+    }
+
     @Test
     void createLehntZuLangenNamenAb() {
         String tooLong = "x".repeat(101);

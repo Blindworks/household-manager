@@ -54,7 +54,10 @@ import java.util.stream.Collectors;
  * <p>Verliert eine Person ihre letzte Geraetezeile (geloescht statt nur
  * deaktiviert, auch direkt in der DB oder waehrend die Anwendung stand), faellt
  * sie aus der Gruppierung und wird deshalb hier — nicht im CRUD-Service —
- * separat als "unavailable" gemeldet, ohne ins Aggregat einzugehen.
+ * separat als "unavailable" gemeldet, ohne ins Aggregat einzugehen. Verliert
+ * der ganze Haushalt seine letzte Geraetezeile (keine Person mehr erfasst),
+ * trifft dasselbe Problem das Aggregat selbst — siehe
+ * {@link #cleanupOrphanedEntities}.
  */
 @Service
 @Slf4j
@@ -187,6 +190,21 @@ public class PresencePollingService {
         } catch (Exception e) {
             log.warn("Auswertung der Anwesenheit fehlgeschlagen", e);
         }
+
+        // Ausserhalb des obigen try/catch (und ausserhalb von evaluateAndReport):
+        // ein DB-Hickup beim Auswerten EINER Person darf den Aufraeum-Schritt
+        // nicht mit abreissen, sonst bleibt ein Waisen-Eintrag fuer die ganze
+        // Dauer eines solchen Ausfalls eingefroren, obwohl die Geraeteliste hier
+        // laengst geladen ist. Die userIds kommen direkt aus der oben geladenen
+        // Liste, nicht aus evaluateAndReport — die darf scheitern, ohne dass das
+        // hier mitgerissen wird.
+        try {
+            cleanupOrphanedEntities(devices.stream()
+                    .map(PresenceDevice::getUserId)
+                    .collect(Collectors.toSet()));
+        } catch (Exception e) {
+            log.warn("Aufraeumen verwaister Anwesenheits-Entitaeten fehlgeschlagen", e);
+        }
     }
 
     private boolean probeSafely(PresenceDevice device) {
@@ -219,37 +237,56 @@ public class PresencePollingService {
         });
 
         evaluator.aggregateState(states).ifPresent(this::reportHouseholdState);
-
-        try {
-            cleanupOrphanedPersons(byUser.keySet());
-        } catch (Exception e) {
-            log.warn("Aufraeumen verwaister Personen-Entitaeten fehlgeschlagen", e);
-        }
     }
 
     /**
-     * Meldet Personen-Entitaeten als unavailable, deren letzte Geraetezeile in
-     * diesem Zyklus fehlt (geloescht statt nur deaktiviert — der Deaktivieren-Pfad
-     * behaelt seine Zeile, hier gibt es gar keine mehr). Ohne diesen Schritt wuerde
-     * eine solche Person komplett aus der Gruppierung fallen und ihre Entitaet
-     * fuer immer auf ihrem letzten Wert einfrieren, ohne Log und ohne Fehler.
+     * Meldet zwei Sorten eingefrorener Anwesenheits-Entitaeten als unavailable —
+     * beide entstehen, weil {@link #evaluateAndReport} nur ueber Personen mit
+     * mindestens einer Geraetezeile iteriert und deshalb nie von selbst darauf
+     * stoesst, dass eine Zeile ganz verschwunden ist:
      *
-     * <p>Bewusst NICHT ins Aggregat aufgenommen (siehe
-     * {@link PresenceEvaluator#aggregateState}): eine hier gemeldete
-     * UNAVAILABLE-Person wuerde dort mit PRESENT/AWAY-Personen gemischt dauerhaft
-     * {@code Optional.empty()} ergeben und das Haushalts-Aggregat einfrieren —
-     * genau die im Evaluator-Javadoc dokumentierte stille Falle, die wir hier
-     * nicht selbst ausloesen duerfen.
+     * <ul>
+     *   <li><strong>Personen-Entitaeten</strong>, deren letzte Geraetezeile in
+     *   diesem Zyklus fehlt (geloescht statt nur deaktiviert — der
+     *   Deaktivieren-Pfad behaelt seine Zeile, hier gibt es gar keine mehr).
+     *   Bewusst NICHT ins Aggregat aufgenommen (siehe
+     *   {@link PresenceEvaluator#aggregateState}): eine hier gemeldete
+     *   UNAVAILABLE-Person wuerde dort mit PRESENT/AWAY-Personen gemischt
+     *   dauerhaft {@code Optional.empty()} ergeben und das Haushalts-Aggregat
+     *   einfrieren — genau die im Evaluator-Javadoc dokumentierte stille Falle,
+     *   die wir hier nicht selbst ausloesen duerfen.</li>
+     *   <li><strong>Die Haushalts-Entitaet</strong>, wenn {@code
+     *   userIdsWithDeviceRows} komplett leer ist (keine einzige Geraetezeile
+     *   mehr in der DB — nicht bloss eine einzelne Person ohne Geraete): dann
+     *   iteriert {@code byUser} in {@link #evaluateAndReport} ueber gar nichts,
+     *   {@code states} bleibt leer und {@link PresenceEvaluator#aggregateState}
+     *   liefert {@code Optional.empty()} — das Aggregat wuerde sonst fuer immer
+     *   auf seinem letzten Wert (typischerweise {@code "on"}) stehen bleiben,
+     *   ohne Log und ohne Fehler, obwohl {@code /status} ehrlich {@code
+     *   "unknown"} meldet. Ein eingefrorenes {@code "on"} ist fuer die
+     *   Abwesend-Flows die gefaehrlichere Richtung als ein ehrliches {@code
+     *   unavailable} — deshalb wird hier gemeldet, sobald die Entitaet bereits
+     *   existiert. Existiert sie NICHT, wird sie hier auch nicht neu angelegt:
+     *   ein Haushalt, der das Feature nie eingerichtet hat, soll dadurch keine
+     *   Anwesenheits-Entitaet bekommen. Sind hingegen Personen erfasst (auch
+     *   nur eine), bleibt das Aggregat unangetastet — dann pflegt der normale
+     *   Auswertungspfad es weiter, inklusive der bewusst in Kauf genommenen
+     *   Einfrier-Faelle oben.</li>
+     * </ul>
      */
-    private void cleanupOrphanedPersons(Set<Long> userIdsWithDeviceRows) {
+    private void cleanupOrphanedEntities(Set<Long> userIdsWithDeviceRows) {
+        boolean noPersonAtAllErfasst = userIdsWithDeviceRows.isEmpty();
         for (EntityState entity : entityStateService.find(EntityDomain.BINARY_SENSOR, EntitySource.PRESENCE)) {
             Long userId = parsePersonUserId(entity.getSourceRef());
-            if (userId == null) {
-                // Die Haushalts-Entitaet traegt sourceRef "household" (keine Zahl)
-                // und gehoert nicht zu den Personen-Entitaeten.
-                continue;
-            }
-            if (userIdsWithDeviceRows.contains(userId)) {
+            boolean isHouseholdEntity = userId == null;
+            if (isHouseholdEntity) {
+                if (!noPersonAtAllErfasst) {
+                    // Personen sind erfasst - das Aggregat wird vom normalen
+                    // Auswertungspfad gepflegt (inkl. seiner bekannten
+                    // Einfrier-Faelle, siehe Klassen-Javadoc oben).
+                    continue;
+                }
+            } else if (userIdsWithDeviceRows.contains(userId)) {
                 continue;
             }
             if (STATE_UNAVAILABLE.equals(entity.getState())) {

@@ -67,8 +67,10 @@ public class PresenceController {
     public ResponseEntity<PresenceDtos.SettingsDto> updateSettings(
             @RequestBody PresenceDtos.SettingsDto request) {
         Long minutes = request.awayGraceMinutes();
-        if (minutes == null || minutes < 1
-                || minutes > PresenceSettingsService.MAX_AWAY_GRACE_MINUTES) {
+        if (minutes == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Die Karenzzeit fehlt.");
+        }
+        if (minutes < 1 || minutes > PresenceSettingsService.MAX_AWAY_GRACE_MINUTES) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Die Karenzzeit muss zwischen 1 und "
                             + PresenceSettingsService.MAX_AWAY_GRACE_MINUTES + " Minuten liegen.");

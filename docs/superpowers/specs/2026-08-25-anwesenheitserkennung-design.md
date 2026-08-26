@@ -104,10 +104,18 @@ bleibt frisch, Flows feuern nur bei echten Wertwechseln):
   `on`, sobald mindestens eine erfasste Person `on` ist; `off`, wenn alle
   erfassten Personen `off` sind; `unavailable` nur, wenn *alle* erfassten
   Personen `unavailable` sind („erfasst" = mindestens eine
-  `presence_device`-Zeile; gibt es gar keine erfasste Person, wird das
-  Aggregat nicht gemeldet). Die Aggregation läuft **in Java im selben Poll-Zyklus**, nicht als
-  Flow — sie ist Fachlogik, und ein Flow-Umweg würde eine Zyklus-Verzögerung
-  einbauen.
+  `presence_device`-Zeile). Gibt es gar keine erfasste Person mehr (letzte
+  Geraetezeile des ganzen Haushalts geloescht), meldet der
+  Aufraeum-Schritt in `PresencePollingService` das Aggregat als
+  `unavailable` — aber nur, wenn die Entitaet bereits existiert; auf einem
+  Haushalt, der das Feature nie eingerichtet hat, entsteht dadurch keine
+  neue Entitaet. Ohne diese Regel wuerde das Aggregat fuer immer auf seinem
+  letzten Wert (typischerweise `on`) einfrieren, ohne Log und ohne Fehler,
+  waehrend `GET /status` ehrlich `unknown` meldet — ein eingefrorenes `on`
+  ist fuer die Abwesend-Flows die gefaehrlichere Richtung als ein ehrliches
+  `unavailable`. Die Aggregation selbst läuft **in Java im selben
+  Poll-Zyklus**, nicht als Flow — sie ist Fachlogik, und ein Flow-Umweg
+  würde eine Zyklus-Verzögerung einbauen.
 
 ## Modus-Automatik „Abwesend" — Flows, kein Java
 
