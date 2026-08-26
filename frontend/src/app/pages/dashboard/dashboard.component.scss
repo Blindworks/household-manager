@@ -227,14 +227,19 @@
   }
 }
 
-// Anwesenheit als Personenkreise im Kopf. Ring-Farbe ist tristate
-// (siehe presenceRingClass): gruen = anwesend, rot = abwesend, neutral =
-// unknown/unavailable, die NIE wie abwesend aussehen duerfen. `off` traegt
-// zusaetzlich reduzierte Deckkraft als zweite, farbunabhaengige Ebene (Gruen/
-// Rot allein unterscheiden sich bei Rot-Gruen-Sehschwaeche kaum). `flex-wrap`
-// auf Gruppe UND aeusserer Meta-Zeile, damit eine fuenfte Person umbricht
-// statt am rechten Rand von `.lumina { overflow: hidden }` abgeschnitten zu
-// werden (Praezedenzfall `.lumina__viewbar`).
+// Anwesenheit als Personenkreise im Kopf (Variante "Aura", 2026-08-26: getoente
+// Flaeche + weicher Schein statt hartem Ring). Zustand bleibt tristate (siehe
+// presenceRingClass): "on" leuchtet nach aussen, "neutral" (unknown/unavailable)
+// bleibt ein leiser Ring OHNE Schein und darf NIE wie "off" aussehen (nach
+// jedem Backend-Neustart sitzt jede Person hier, bis die Karenzzeit ablaeuft -
+// ein rotes "off" wuerde dem Wandtablet nach jedem Deploy "alle weg" vorgaukeln).
+// `off` hat deshalb bewusst KEINEN Schein und zusaetzlich gedimmten Namen/
+// Initialen als zweite, farbunabhaengige Ebene (Gruen/Rot unterscheiden sich
+// bei Rot-Gruen-Sehschwaeche in diesem Palette kaum). `flex-wrap` auf Gruppe
+// UND aeusserer Meta-Zeile, damit eine fuenfte Person umbricht statt am
+// rechten Rand von `.lumina { overflow: hidden }` abgeschnitten zu werden
+// (Praezedenzfall `.lumina__viewbar`); `.lumina__presence-person` ist breiter
+// als der Kreis (34 -> 46px), sonst wuerde der Kreis selbst beschnitten.
 .lumina__presence-group {
   display: flex;
   align-items: flex-start;
@@ -248,53 +253,74 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 44px;
+  width: 52px;
 }
 
 .lumina__presence-circle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
   flex: 0 0 auto;
   border-radius: var(--radius-full);
-  border: 2px solid rgba(192, 198, 214, 0.55);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--on-surface);
   cursor: default;
+  transition: 0.3s ease;
 
   &--on {
-    border-color: var(--secondary);
+    // Werte = --secondary (#53e16f) als Flaechen-/Schein-Ton; die Textfarbe
+    // ist ein von Hand aufgehellter --secondary-Ton fuer Lesbarkeit im Glow.
+    background: rgba(83, 225, 111, 0.13);
+    color: #c9f7d3;
+    box-shadow:
+      inset 0 0 0 1.5px rgba(83, 225, 111, 0.55),
+      0 0 22px -6px rgba(83, 225, 111, 0.85);
   }
 
   &--off {
-    border-color: var(--error);
-    opacity: 0.5;
+    // Kein Schein (Konstruktionsprinzip dieser Variante: Ruhe statt
+    // Warnfarbe) - Werte = --error (#ffb4ab) in Alpha-Abstufungen.
+    background: rgba(255, 180, 171, 0.07);
+    color: rgba(255, 180, 171, 0.75);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 180, 171, 0.32);
   }
 
   &--neutral {
-    border-color: rgba(192, 198, 214, 0.55);
+    // Nur ein leiser Ring, keine Flaechentoenung, kein Schein - darf nie wie
+    // --off aussehen. Werte = --on-surface-variant (#c0c6d6) / --on-surface
+    // (#e4e2e4).
+    box-shadow: inset 0 0 0 1.5px rgba(192, 198, 214, 0.22);
+    color: rgba(228, 226, 228, 0.5);
   }
 }
 
 // Sichtbarer Name unter dem Kreis: `title`/`aria-label` brauchen einen
 // Zeiger bzw. Screenreader, beides fehlt auf dem KIOSK-Wandtablet - ohne
 // diese Beschriftung waeren zwei Personen mit gleicher Initiale (Benedikt/
-// Bettina) dort nicht auseinanderzuhalten.
+// Bettina) dort nicht auseinanderzuhalten. Unter einem "off"-Kreis zusaetzlich
+// gedimmt (siehe Kommentar oben, farbunabhaengige zweite Ebene).
 .lumina__presence-name {
-  font-size: 10px;
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   line-height: 1.2;
   text-align: center;
-  color: rgba(192, 198, 214, 0.85);
+  color: var(--on-surface-variant);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+
+  .lumina__presence-circle--off ~ & {
+    opacity: 0.55;
+  }
 }
 
 .lumina__weather-temp {
