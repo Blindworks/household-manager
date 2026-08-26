@@ -34,14 +34,24 @@
     }
 
     <div class="admin-presence__refresh">
-      <button type="button" [disabled]="refreshing()" (click)="refresh()">
+      <button
+        type="button"
+        [disabled]="refreshing()"
+        [attr.aria-busy]="refreshing()"
+        aria-describedby="admin-presence-refresh-hint"
+        (click)="refresh()">
         {{ refreshing() ? 'Prüft …' : 'Jetzt prüfen' }}
       </button>
-      <span class="admin-presence__hint admin-presence__hint--inline">
-        Prüft alle Geräte sofort, statt bis zu 30 Sekunden auf den nächsten Durchlauf zu warten.
+      <span id="admin-presence-refresh-hint" class="admin-presence__hint admin-presence__hint--inline">
+        Prüft alle Geräte direkt, statt auf den nächsten Durchlauf zu warten – je nach
+        Anzahl der Geräte kann das ein paar Sekunden dauern.
       </span>
       @if (refreshMessage()) {
-        <span class="admin-presence__message admin-presence__message--error" role="alert">
+        <span
+          class="admin-presence__message"
+          [class.admin-presence__message--error]="refreshMessageType() === 'error'"
+          [class.admin-presence__message--success]="refreshMessageType() === 'success'"
+          role="status">
           {{ refreshMessage() }}
         </span>
       }

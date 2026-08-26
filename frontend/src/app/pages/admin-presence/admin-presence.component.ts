@@ -90,6 +90,8 @@ export class AdminPresenceComponent implements OnInit {
    * `usersMessage`).
    */
   readonly refreshMessage = signal<string | null>(null);
+  /** Faerbung von {@link refreshMessage} (Muster `settingsMessageType`). */
+  readonly refreshMessageType = signal<'success' | 'error' | null>(null);
 
   form: DeviceFormState = emptyForm();
   /** Karenzzeit-Formularwert; null solange noch nichts geladen ist. */
@@ -142,10 +144,10 @@ export class AdminPresenceComponent implements OnInit {
   }
 
   /**
-   * Stoesst den Backend-Probe-Zyklus sofort an, statt bis zu 30 s auf den naechsten
-   * Scheduler-Lauf zu warten. Die Antwort traegt den frischen Status bereits mit -
-   * ein zweiter Roundtrip (`load()`) ist nicht noetig, nur die "Zuletzt gesehen"-Spalte
-   * wird aktualisiert.
+   * Stoesst den Backend-Probe-Zyklus sofort an, statt auf den naechsten Scheduler-Lauf
+   * zu warten. Die Antwort traegt den frischen Status bereits mit - ein zweiter
+   * Roundtrip (`load()`) ist nicht noetig, nur die "Zuletzt gesehen"-Spalte wird
+   * aktualisiert.
    */
   refresh(): void {
     if (this.refreshing()) {
@@ -153,13 +155,17 @@ export class AdminPresenceComponent implements OnInit {
     }
     this.refreshing.set(true);
     this.refreshMessage.set(null);
+    this.refreshMessageType.set(null);
     this.presenceApi.refresh().subscribe({
       next: status => {
         this.refreshing.set(false);
         this.lastSeenByDeviceId.set(AdminPresenceComponent.lastSeenMapOf(status));
+        this.refreshMessageType.set('success');
+        this.refreshMessage.set('Geprüft.');
       },
       error: (error: HttpErrorResponse) => {
         this.refreshing.set(false);
+        this.refreshMessageType.set('error');
         this.refreshMessage.set(this.messageFrom(error));
       }
     });

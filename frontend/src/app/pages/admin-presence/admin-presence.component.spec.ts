@@ -476,5 +476,28 @@ describe('AdminPresenceComponent', () => {
     expect(el.querySelector('.admin-presence__refresh .admin-presence__message--error')?.textContent)
       .toContain('Es laeuft bereits ein Abruf.');
     expect(el.querySelector('.admin-presence__error')).toBeFalsy();
+
+    // Die eigentliche Trennung: eine NACHFOLGENDE Geraete-Aktion (die errorMessage
+    // zuruecksetzt) darf die Abruf-Meldung nicht mit weglöschen. Ohne eigenes Signal
+    // (Muster `usersMessage`) fiele eine Zusammenlegung mit errorMessage hier nicht auf.
+    toggleButtonOf(rows()[0]).click();
+    httpMock.expectOne(`${DEVICES_URL}/1`).flush({ ...DEVICE_BENEDIKT, active: false });
+    flushReload([{ ...DEVICE_BENEDIKT, active: false }]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-presence__refresh .admin-presence__message--error')?.textContent)
+      .toContain('Es laeuft bereits ein Abruf.');
+  });
+
+  it('zeigt nach erfolgreichem manuellen Abruf eine Erfolgsmeldung', async () => {
+    await loadWith([DEVICE_BENEDIKT]);
+
+    refreshButton().click();
+    httpMock.expectOne(REFRESH_URL).flush(statusWithLastSeen(1, '2026-08-26T09:15:00'));
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-presence__refresh .admin-presence__message--success')?.textContent)
+      .toContain('Geprüft.');
+    expect(el.querySelector('.admin-presence__refresh .admin-presence__message--error')).toBeFalsy();
   });
 });
