@@ -228,18 +228,25 @@
 }
 
 // Anwesenheit als Personenkreise im Kopf (Variante "Aura", 2026-08-26: getoente
-// Flaeche + weicher Schein statt hartem Ring). Zustand bleibt tristate (siehe
+// Flaeche + weicher Schein statt hartem Ring; 2026-08-26 Nachbesserung:
+// Status-Icon statt Initiale). Zustand bleibt tristate (siehe
 // presenceRingClass): "on" leuchtet nach aussen, "neutral" (unknown/unavailable)
 // bleibt ein leiser Ring OHNE Schein und darf NIE wie "off" aussehen (nach
 // jedem Backend-Neustart sitzt jede Person hier, bis die Karenzzeit ablaeuft -
 // ein rotes "off" wuerde dem Wandtablet nach jedem Deploy "alle weg" vorgaukeln).
-// `off` hat deshalb bewusst KEINEN Schein und zusaetzlich gedimmten Namen/
-// Initialen als zweite, farbunabhaengige Ebene (Gruen/Rot unterscheiden sich
-// bei Rot-Gruen-Sehschwaeche in diesem Palette kaum). `flex-wrap` auf Gruppe
+// `off` hat deshalb bewusst KEINEN Schein und zusaetzlich gedimmten Namen als
+// zweite, farbunabhaengige Ebene (Gruen/Rot unterscheiden sich bei
+// Rot-Gruen-Sehschwaeche in diesem Palette kaum) - eine DRITTE, ebenfalls
+// farbunabhaengige Ebene ist seit der Icon-Umstellung die Glyphenform selbst
+// (`presenceIcon`): "unavailable" und "unknown" teilen sich zwar weiterhin
+// den neutralen Ring, tragen aber unterschiedliche Symbole, sichtbar auch
+// ohne Zeiger/Screenreader auf dem KIOSK-Wandtablet. `flex-wrap` auf Gruppe
 // UND aeusserer Meta-Zeile, damit eine fuenfte Person umbricht statt am
 // rechten Rand von `.lumina { overflow: hidden }` abgeschnitten zu werden
-// (Praezedenzfall `.lumina__viewbar`); `.lumina__presence-person` ist breiter
-// als der Kreis (34 -> 46px), sonst wuerde der Kreis selbst beschnitten.
+// (Praezedenzfall `.lumina__viewbar`); `.lumina__presence-person` hat eine
+// `min-width` in Kreisbreite (46px) statt einer festen Breite, damit ein
+// laengerer Name das Element verbreitern darf, statt beschnitten zu werden -
+// der Name ist die einzige "wer ist das"-Aussage ohne Tooltip.
 .lumina__presence-group {
   display: flex;
   align-items: flex-start;
@@ -253,7 +260,8 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 52px;
+  min-width: 46px;
+  max-width: 110px;
 }
 
 .lumina__presence-circle {
@@ -265,10 +273,6 @@
   flex: 0 0 auto;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.05);
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
   color: var(--on-surface);
   cursor: default;
   transition: 0.3s ease;
@@ -298,6 +302,15 @@
     box-shadow: inset 0 0 0 1.5px rgba(192, 198, 214, 0.22);
     color: rgba(228, 226, 228, 0.5);
   }
+}
+
+// Status-Icon im Kreis (46px), Nachfolger der 16px-Initiale. 20px ist die
+// Groesse, die `.lumina__lock-btn` fuer sein fast gleich grosses 44px-Rund
+// verwendet - ein Material Symbol braucht bei gleicher gefuehlter Groesse
+// etwas mehr Platz als eine Buchstaben-Initiale. Die Farbe kommt vom Elternteil
+// (`.lumina__presence-circle--on/--off/--neutral`), das Icon selbst setzt keine.
+.lumina__presence-icon {
+  font-size: 20px;
 }
 
 // Sichtbarer Name unter dem Kreis: `title`/`aria-label` brauchen einen

@@ -1667,25 +1667,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Initialen fuer die Personenkreise. `trim()` + Split auf beliebig viele
-   * Leerzeichen statt eines naiven `split(' ')`, das bei mehrfachen/
-   * fuehrenden/nachgestellten Leerzeichen leere Teilstuecke liefern wuerde.
-   * Ein einzelnes Wort ergibt genau eine Initiale statt einer zweiten aus
-   * dem letzten Buchstaben. Der erste Buchstabe kommt ueber ein Array-Spread
-   * (`[...wort][0]`) statt `charAt(0)` — Letzteres zerlegt ein Zeichen
-   * ausserhalb der Basic Multilingual Plane (z. B. ein fuehrendes Emoji) in
-   * sein Ersatzzeichen-Hälftenpaar und liefert nur eine kaputte Haelfte.
+   * Material-Symbol je Zustand fuer die Personenkreise, statt einer Initiale.
+   * `unavailable` und `unknown` teilen weiterhin den neutralen Ring
+   * (`presenceRingClass`), bekommen hier aber bewusst UNTERSCHIEDLICHE
+   * Glyphen: das war vorher nur ueber den fuer das KIOSK-Wandtablet
+   * unerreichbaren Tooltip unterscheidbar, jetzt auch auf einen Blick.
+   * Exhaustiver `switch` ohne `default` — mit `noImplicitReturns` wird eine
+   * kuenftige fuenfte Auspraegung von `PresencePersonState` dadurch zum
+   * Compilerfehler statt still auf dem falschen Symbol zu landen (gleiche
+   * Absicherung wie `presenceRingClass`/`presenceLabel`).
    */
-  presenceInitials(person: PresencePersonStatus): string {
-    const parts = person.displayName.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return '?';
+  presenceIcon(person: PresencePersonStatus): string {
+    switch (person.state) {
+      case 'on':
+        return 'home';
+      case 'off':
+        return 'directions_walk';
+      case 'unavailable':
+        return 'signal_disconnected';
+      case 'unknown':
+        return 'help';
     }
-    const firstLetterOf = (word: string): string => [...word][0].toUpperCase();
-    if (parts.length === 1) {
-      return firstLetterOf(parts[0]);
-    }
-    return firstLetterOf(parts[0]) + firstLetterOf(parts[parts.length - 1]);
   }
 
   /** Öffnet den Spaziergänge-Dialog und lädt die letzten 7 Tage pro Hund. */

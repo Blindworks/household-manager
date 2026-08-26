@@ -2040,12 +2040,17 @@ describe('DashboardComponent (Anwesenheit in der Kopfzeile)', () => {
     const header = (fixture.nativeElement as HTMLElement).querySelector('header.lumina__clock');
     const circle = header?.querySelector<HTMLElement>('.lumina__presence-circle');
     expect(circle).withContext('Kreis fehlt im Header').not.toBeNull();
-    expect(circle?.textContent?.trim()).toBe('B');
+    // Statt einer Initiale steht seit der Icon-Umstellung ein Material-Symbol
+    // im Kreis, das den Zustand zeigt ("on" -> "home"); dekorativ (aria-hidden),
+    // die zugaengliche Beschriftung traegt weiterhin role="img"/aria-label.
+    const icon = circle?.querySelector<HTMLElement>('.lumina__presence-icon');
+    expect(icon?.textContent?.trim()).toBe('home');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
     expect(circle?.getAttribute('title')).toBe('Benedikt • Zu Hause');
     expect(circle?.getAttribute('aria-label')).toBe('Benedikt • Zu Hause');
     // role="img" macht das aria-label ueberhaupt erst wirksam - ein rollenloses
     // <div> (role="generic") darf laut ARIA nicht benannt werden, Screenreader
-    // wuerden nur den nackten Buchstaben vorlesen.
+    // wuerden sonst nur die (dekorative) Ligatur vorlesen.
     expect(circle?.getAttribute('role')).toBe('img');
     expect(circle?.classList).toContain('lumina__presence-circle--on');
 
@@ -2096,21 +2101,21 @@ describe('DashboardComponent (Anwesenheit in der Kopfzeile)', () => {
     discardPeriodicTasks();
   }));
 
-  it('leitet Initialen ab, auch aus Einzelwort- und mehrfach-leerzeichigen Namen', () => {
+  it('gibt `unavailable` und `unknown` unterschiedliche Icons trotz gleichem Ring', () => {
+    // Der eigentliche Zweck dieser Aenderung: beide teilen sich weiterhin den
+    // neutralen Ring (presenceRingClass - keiner darf wie "off" aussehen),
+    // waren bisher aber nur ueber den fuer das KIOSK-Wandtablet unerreichbaren
+    // Tooltip unterscheidbar. Das Icon macht sie jetzt auch ohne Zeiger/
+    // Screenreader auseinanderhaltbar.
     const fixture = TestBed.createComponent(DashboardComponent);
     const dashboard = fixture.componentInstance;
+    const unavailable = person({ state: 'unavailable' });
+    const unknown = person({ state: 'unknown' });
 
-    expect(dashboard.presenceInitials(person({ displayName: 'Benedikt' }))).toBe('B');
-    expect(dashboard.presenceInitials(person({ displayName: 'Anna Maria' }))).toBe('AM');
-    // Ein naives `split(' ')` liefert bei mehrfachen/fuehrenden/nachgestellten
-    // Leerzeichen leere Teilstuecke ("" statt eines echten zweiten Namens).
-    expect(dashboard.presenceInitials(person({ displayName: '  Anna   Maria  ' }))).toBe('AM');
-    // Leerer bzw. nur aus Leerzeichen bestehender Name: `filter(Boolean)` nach
-    // dem Split liefert dann ein leeres Array, kein Wort mit leerem String.
-    // Dieser Zweig ist leicht als "kann nicht vorkommen" wegzuvereinfachen -
-    // der Test haelt ihn deshalb explizit fest.
-    expect(dashboard.presenceInitials(person({ displayName: '' }))).toBe('?');
-    expect(dashboard.presenceInitials(person({ displayName: '   ' }))).toBe('?');
+    expect(dashboard.presenceRingClass(unavailable)).toBe(dashboard.presenceRingClass(unknown));
+    expect(dashboard.presenceIcon(unavailable)).not.toBe(dashboard.presenceIcon(unknown));
+    expect(dashboard.presenceIcon(unavailable)).toBe('signal_disconnected');
+    expect(dashboard.presenceIcon(unknown)).toBe('help');
   });
 
   it('nennt bei `off` mit `lastSeenAt` die Uhrzeit auf Deutsch', fakeAsync(() => {
