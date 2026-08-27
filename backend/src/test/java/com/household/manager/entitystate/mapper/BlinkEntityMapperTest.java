@@ -65,4 +65,60 @@ class BlinkEntityMapperTest {
                 .map(EntityStateUpdate::entityId))
                 .contains("binary_sensor.blink_sync_buero_sued_armed");
     }
+
+    /**
+     * Bewusst KEIN "deviceClass": "door" wuerde diese Kamera-Entitaet in den
+     * Fenster-/Tuerkontakt-Check von mode-activation-check.util.ts hineinziehen (Filter
+     * auf === 'door') und beim Aktivieren von "Abwesend" jedes Mal einen Fehlalarm
+     * ausloesen. Der erklaerende Kommentar an der Codestelle allein ueberlebt ein
+     * "Konsistenz zu Nuki/Tractive herstellen"-Refactoring nicht zuverlaessig — dieser
+     * Test schon.
+     */
+    @Test
+    void kameraEntitaetHatKeinDeviceClassSonstFehlalarmImAbwesendCheck() {
+        List<EntityStateUpdate> updates = mapper.map(List.of(DOOR));
+
+        EntityStateUpdate camera = updates.stream()
+                .filter(u -> u.entityId().equals("binary_sensor.blink_123_armed"))
+                .findFirst().orElseThrow();
+        assertThat(camera.attributes()).doesNotContainKey("deviceClass");
+    }
+
+    /** Dieselbe Falle wie oben gilt fuer die Sync-Modul-Entitaet. */
+    @Test
+    void syncEntitaetHatKeinDeviceClassSonstFehlalarmImAbwesendCheck() {
+        List<EntityStateUpdate> updates = mapper.map(List.of(DOOR));
+
+        EntityStateUpdate sync = updates.stream()
+                .filter(u -> u.entityId().equals("binary_sensor.blink_sync_zuhause_armed"))
+                .findFirst().orElseThrow();
+        assertThat(sync.attributes()).doesNotContainKey("deviceClass");
+    }
+
+    @Test
+    void zweiVerschiedeneSyncModuleErgebenZweiSystemEntitaeten() {
+        var otherModule = new SidecarCamera("789", "Garage", "", true, "ok", "Garage", false);
+
+        List<EntityStateUpdate> updates = mapper.map(List.of(DOOR, otherModule));
+
+        List<String> syncIds = updates.stream()
+                .filter(u -> u.entityId().startsWith("binary_sensor.blink_sync_"))
+                .map(EntityStateUpdate::entityId)
+                .toList();
+        assertThat(syncIds).containsExactlyInAnyOrder(
+                "binary_sensor.blink_sync_zuhause_armed",
+                "binary_sensor.blink_sync_garage_armed");
+    }
+
+    @Test
+    void fehlenderAkkustandFehltInAttributenStattAlsNullDazustehen() {
+        var noBattery = new SidecarCamera("321", "Garten", "", true, null, "Zuhause", true);
+
+        List<EntityStateUpdate> updates = mapper.map(List.of(noBattery));
+
+        EntityStateUpdate camera = updates.stream()
+                .filter(u -> u.entityId().equals("binary_sensor.blink_321_armed"))
+                .findFirst().orElseThrow();
+        assertThat(camera.attributes()).doesNotContainKey("battery");
+    }
 }
