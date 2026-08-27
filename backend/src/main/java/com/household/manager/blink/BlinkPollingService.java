@@ -49,6 +49,12 @@ public class BlinkPollingService {
     }
 
     private void poll(boolean force) {
+        // Bewusst VisionProperties: es ist derselbe Sidecar-Prozess, ein zweiter
+        // Schalter waere eine Luege. Kehrseite, die der Property-Name nicht
+        // verraet: wer die Gesichtserkennung abschaltet (etwa aus Datenschutz-
+        // gruenden), legt damit auch die Kamera-Entitaeten still — und jeden
+        // Flow, der darauf triggert. Soll je nur eines von beiden abschaltbar
+        // sein, braucht es ein eigenes blink.enabled.
         if (!properties.isEnabled()) {
             return;
         }
