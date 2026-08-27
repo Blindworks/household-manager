@@ -145,21 +145,49 @@ describe('TabletCamerasComponent', () => {
     // REVISION 2026-08-27: Schalter sind jetzt erlaubt (Nutzerentscheidung,
     // Spec blink-bewegung-und-tablet-schalten). Die Whitelist bleibt das
     // Schutzprinzip: jedes UNBEKANNTE Bedienelement laesst den Test scheitern.
+    //
+    // Nachbesserung (Review): der Suchbereich ist NICHT `.camera-groups` -
+    // Bestaetigungsdialog (`.confirm-overlay`) und Clip-Player (`.clip-player`)
+    // liegen als Geschwister ausserhalb davon und waeren sonst unbeobachtet
+    // geblieben (genau das sicherheitsrelevanteste Element der Seite). Alle
+    // drei Container liegen jedoch gemeinsam im projizierten Seiteninhalt
+    // `.lumina__content` der tablet-shell - die Ansichtsleiste und die
+    // Kopfzeilen-Aktionen der Shell liegen DAVOR/DANACH ausserhalb dieses
+    // Divs und bleiben damit bewusst ausgenommen.
     blinkService.getClips.and.returnValue(of([CLIP]));
+    blinkService.clipUrl.and.callFake((camId, clipId) => `/api/v1/blink/cameras/${camId}/clips/${clipId}`);
     fixture.detectChanges();
     const component = fixture.componentInstance;
+
+    // Clip-Liste UND Clip-Player oeffnen, damit deren Knoepfe im DOM stehen.
     component.toggleClips(DOOR);
+    fixture.detectChanges();
+    component.playClip(DOOR, CLIP);
+    fixture.detectChanges();
+
+    // UND den Bestaetigungsdialog oeffnen - er wird nur bei gesetztem
+    // pendingDisarm gerendert, sonst prueft der Test ins Leere.
+    component.requestDisarm({ kind: 'camera', id: DOOR.cameraId, name: DOOR.name });
     fixture.detectChanges();
 
     const allowed = ['snapshot', 'clips-toggle', 'clip-entry', 'player-close',
                      'camera-arm-toggle', 'system-arm-toggle', 'last-motion',
                      'dialog-cancel', 'dialog-confirm'];
-    const content = fixture.nativeElement.querySelector('.camera-groups') as HTMLElement;
+    const content = fixture.nativeElement.querySelector('.lumina__content') as HTMLElement;
+    expect(content)
+      .withContext('.lumina__content nicht gefunden - hat sich das Shell-Markup geaendert?')
+      .not.toBeNull();
+
     const controls = Array.from(content.querySelectorAll('button, a, input'));
     for (const control of controls) {
       const matches = allowed.some(cls => control.classList.contains(cls));
       expect(matches).withContext(`Unbekanntes Bedienelement: ${control.outerHTML}`).toBeTrue();
     }
+    // Belegt, dass wirklich alle drei Container etwas beigesteuert haben -
+    // sonst koennte der Test trivial gruen sein, ohne den Dialog/Player je
+    // tatsaechlich zu durchsuchen.
+    expect(content.querySelector('.player-close')).not.toBeNull();
+    expect(content.querySelector('.dialog-confirm')).not.toBeNull();
     expect(controls.length).toBeGreaterThan(0);
   });
 });
