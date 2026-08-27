@@ -16,7 +16,11 @@ import java.util.List;
 /**
  * REST-API des Blink-Kamera-Dashboards. Medien (Standbilder, Clips) werden vom
  * Sidecar durchgestreamt — das Frontend spricht nie direkt mit ihm.
- * Rollen: Lesen + Schnappschuss KIOSK, Scharf/Unscharf MEMBER (SecurityConfig, eigener Task).
+ * Rollen (SecurityConfig): Lesen, Schnappschuss und — seit der Revision
+ * 2026-08-27 — auch Scharf/Unscharf sind KIOSK; der Schutz gegen ein
+ * versehentliches Unscharfschalten ist der Bestaetigungsdialog der
+ * Tablet-Ansicht, nicht mehr der Server. {@code POST /motion} ist dagegen
+ * ein reiner Maschinen-Endpunkt (SERVICE-Authority, Sidecar-Token).
  */
 @RestController
 @RequestMapping("/v1/blink")
