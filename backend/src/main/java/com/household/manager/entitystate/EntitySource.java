@@ -35,5 +35,7 @@ public enum EntitySource {
     /** Internet-Konnektivitäts- und Latenzmessung (interner Poller, kein externes Quellsystem). */
     NETWORK,
     /** Anwesenheitserkennung pro Person (TCP-Probe gegen Handy-IPs im WLAN). */
-    PRESENCE
+    PRESENCE,
+    /** Blink-Kameras (Scharf-Status via blink-vision-Sidecar). */
+    BLINK
 }

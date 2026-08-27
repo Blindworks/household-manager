@@ -1,0 +1,150 @@
+.cameras-page {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+
+  a {
+    margin-left: 0.5rem;
+    color: #b91c1c;
+    text-decoration: underline;
+  }
+}
+
+.sync-group {
+  margin-bottom: 2rem;
+}
+
+.sync-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.camera-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+
+  img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: #0f172a;
+    display: block;
+  }
+}
+
+.camera-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.badge {
+  font-size: 0.75rem;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.battery.low {
+  color: #b45309;
+}
+
+.camera-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.arm-toggle {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  background: #f8fafc;
+  cursor: pointer;
+
+  &.armed {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+}
+
+.snapshot,
+.clips-toggle {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.clip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+
+  button {
+    background: none;
+    border: none;
+    color: #2563eb;
+    cursor: pointer;
+    padding: 0.25rem 0;
+  }
+}
+
+.clip-player {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  z-index: 50;
+
+  video {
+    max-width: min(90vw, 960px);
+    max-height: 75vh;
+  }
+
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.25rem;
+    background: #fff;
+    cursor: pointer;
+  }
+}
+
+.empty {
+  color: #64748b;
+}

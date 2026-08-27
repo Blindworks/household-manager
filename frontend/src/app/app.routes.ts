@@ -98,6 +98,12 @@ export const routes: Routes = [
     title: 'Netzwerk Tablet - Household Manager'
   },
   {
+    path: 'tablet/cameras',
+    loadComponent: () => import('./pages/tablet-cameras/tablet-cameras.component').then(m => m.TabletCamerasComponent),
+    canActivate: [authGuard],
+    title: 'Kameras Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
@@ -268,6 +274,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/pet-food/pet-food.component').then(m => m.PetFoodComponent),
     canActivate: [authGuard],
     title: 'Futtervorrat - Household Manager'
+  },
+  {
+    path: 'cameras',
+    loadComponent: () => import('./pages/cameras/cameras.component').then(m => m.CamerasComponent),
+    canActivate: [authGuard],
+    title: 'Kameras - Household Manager'
   },
   {
     path: 'notifications',

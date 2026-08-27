@@ -187,10 +187,15 @@ public class SecurityConfig {
                         // ohne KIOSK waere der Aktualisieren-Knopf auf dem Wandtablet tot.
                         // /v1/network/speedtest ebenso: zieht nur Daten, schaltet nichts —
                         // sonst waere der Speedtest-Knopf auf dem Wandtablet tot.
+                        // /v1/blink/cameras/*/snapshot zieht nur ein Standbild, es
+                        // schaltet nichts — sonst waere der Schnappschuss-Knopf auf
+                        // dem Wandtablet tot. Scharf/Unscharf faellt bewusst auf
+                        // anyRequest -> MEMBER durch.
                         .requestMatchers(HttpMethod.POST, "/v1/switches/*/toggle",
                                 "/v1/modes/*/toggle", "/v1/nuki/locks/*/actions",
                                 "/v1/auth/password", "/v1/tractive/pets/refresh",
-                                "/v1/system/reboot", "/v1/network/speedtest").hasRole("KIOSK")
+                                "/v1/system/reboot", "/v1/network/speedtest",
+                                "/v1/blink/cameras/*/snapshot").hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
                         // Alles Uebrige (Geraete schalten, Kalender/Zaehler pflegen, Ansagen ...)

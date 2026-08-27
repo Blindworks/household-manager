@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app import backend_client, config
 from app.analyzer import FaceAnalyzer
 from app.blink_client import BlinkClient
+from app.cameras import build_router as build_camera_router
 from app.persons import PersonStore
 from app.poller import Poller
 
@@ -78,6 +79,9 @@ async def _supervised_sidecar() -> None:
 
 
 app = FastAPI(title="blink-vision", lifespan=lifespan)
+
+# Kamera-Dashboard: eigene Datei, damit main.py der Gesichtserkennungs-Pfad bleibt.
+app.include_router(build_camera_router(blink))
 
 
 def _require_analyzer() -> FaceAnalyzer:

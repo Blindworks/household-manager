@@ -1,6 +1,7 @@
 package com.household.manager.exception;
 
 import com.household.manager.alexa.AlexaException;
+import com.household.manager.blink.BlinkException;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.exception.MerossAuthException;
 import com.household.manager.meross.exception.MerossException;
@@ -451,6 +452,23 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Vision communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    /** Blink-Kamera-Fehler (Sidecar nicht erreichbar, Blink-Cloud-Fehler) -> 502. */
+    @ExceptionHandler(BlinkException.class)
+    public ResponseEntity<ErrorResponse> handleBlinkException(
+            BlinkException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Blink communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 
