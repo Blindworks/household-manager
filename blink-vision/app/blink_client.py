@@ -1,5 +1,6 @@
 """Duenner Wrapper um blinkpy: Login (2FA), Kamera-Auswahl, neue Local-Storage-Clips.
 Alle blinkpy-Spezifika leben HIER - verifiziert gegen blinkpy 0.25.9 (siehe BLINKPY-API.md)."""
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -18,9 +19,58 @@ SECRET_KEYS = ("username", "password")
 # camera_type der Blink-Tuerklingel; Innenraumkameras melden hier einen leeren Wert.
 DOORBELL_TYPE = "doorbell"
 
+# Ein Schnappschuss braucht real einige Sekunden (Aufnahme + Upload zur Cloud).
+# 12 x 2 s = 24 s Zeitbudget; der Backend-Client wartet bis zu 60 s.
+SNAPSHOT_POLL_SECONDS = 2
+SNAPSHOT_MAX_POLLS = 12
+
 
 class BlinkLoginError(RuntimeError):
     """Login/2FA von der Blink-Cloud abgelehnt."""
+
+
+class BlinkNotLoggedInError(RuntimeError):
+    """Aktion verlangt eine aktive Blink-Anmeldung."""
+
+
+def _camera_summary(name: str, cam, sync_name: str, sync_armed: bool) -> dict:
+    """Reines Mapping BlinkCamera -> API-Dict (testbar ohne Cloud).
+
+    ACHTUNG Blink Mini: BlinkCameraMini.arm ist ueberschrieben und liefert
+    sync.arm statt der eigenen motion_enabled (camera.py:560ff), waehrend
+    async_arm() sehr wohl die einzelne Kamera schaltet. Bei einer Mini zeigt
+    'armed' also den Systemzustand, und ein Einzelschalt-Befehl schlaegt sich
+    dort NICHT in der Anzeige nieder. Nicht wegoptimieren - das ist blinkpy-
+    Verhalten, keine Nachlaessigkeit hier.
+    """
+    battery = getattr(cam, "battery", None)
+    return {
+        "cameraId": str(cam.camera_id),
+        "name": name,
+        "type": str(getattr(cam, "camera_type", "") or ""),
+        "armed": bool(cam.arm),
+        "battery": str(battery) if battery is not None else None,
+        "syncName": sync_name,
+        "syncArmed": bool(sync_armed),
+    }
+
+
+def _clip_summary(item) -> dict:
+    return {
+        "clipId": str(item.id),
+        "createdAt": item.created_at.isoformat(),
+        "sizeBytes": getattr(item, "size", None),
+    }
+
+
+def _find_in_syncs(syncs, camera_id: str):
+    """Sucht eine Kamera ueber die stabile camera_id (Namen sind umbenennbar).
+    Liefert (name, camera, sync) oder None."""
+    for sync in syncs.values():
+        for name, cam in sync.cameras.items():
+            if str(cam.camera_id) == camera_id:
+                return name, cam, sync
+    return None
 
 
 class BlinkClient:
@@ -178,6 +228,112 @@ class BlinkClient:
                     continue
                 results.append((clip_id, path))
         return results
+
+    # ==================== Kamera-Dashboard ====================
+
+    def _require_login(self):
+        if not self.logged_in:
+            raise BlinkNotLoggedInError("Nicht bei Blink angemeldet.")
+        return self._blink
+
+    def _require_camera(self, camera_id: str):
+        """Loest die camera_id auf oder wirft - der immer gleiche Einstieg der
+        Dashboard-Methoden."""
+        blink = self._require_login()
+        found = _find_in_syncs(blink.sync, camera_id)
+        if found is None:
+            raise KeyError(f"Kamera {camera_id} nicht gefunden")
+        name, cam, _ = found
+        return blink, name, cam
+
+    async def list_cameras(self) -> list[dict]:
+        """Alle Kameras aller Sync-Module (auch Minis/Owls - BlinkOwl erbt von
+        BlinkSyncModule und taucht in blink.sync auf). refresh() ist intern
+        ueber refresh_rate gedrosselt, wiederholte Aufrufe kosten die Cloud nichts."""
+        blink = self._require_login()
+        await blink.refresh()
+        result: list[dict] = []
+        for sync_name, sync in blink.sync.items():
+            for cam_name, cam in sync.cameras.items():
+                result.append(_camera_summary(cam_name, cam, sync_name, bool(sync.arm)))
+        return result
+
+    async def set_camera_armed(self, camera_id: str, armed: bool) -> None:
+        _, _, cam = self._require_camera(camera_id)
+        await cam.async_arm(armed)
+
+    async def set_sync_armed(self, sync_name: str, armed: bool) -> None:
+        blink = self._require_login()
+        if sync_name not in blink.sync:  # CaseInsensitiveDict
+            raise KeyError(f"Sync-Modul {sync_name} nicht gefunden")
+        await blink.sync[sync_name].async_arm(armed)
+
+    async def snapshot(self, camera_id: str) -> bytes:
+        """Loest ein neues Standbild aus und wartet, bis es wirklich da ist.
+
+        snap_picture() weist die Kamera nur an, ein Bild zu machen; das Hochladen
+        dauert Sekunden. blinkpy laedt das Bild neu, sobald sich cam.thumbnail
+        (die Bild-URL) aendert (camera.py:415) - genau daran erkennen wir ein
+        FRISCHES Bild. Ohne diese Warteschleife lieferte der Schnappschuss-Knopf
+        stillschweigend das alte Bild zurueck, und niemand saehe den Unterschied.
+        """
+        blink, _, cam = self._require_camera(camera_id)
+        previous_url = cam.thumbnail
+        await cam.snap_picture()
+        for _ in range(SNAPSHOT_MAX_POLLS):
+            await asyncio.sleep(SNAPSHOT_POLL_SECONDS)
+            await blink.refresh(force=True)
+            if cam.thumbnail != previous_url and cam.image_from_cache:
+                return cam.image_from_cache
+        # Zeitbudget aufgebraucht: lieber ein ehrlicher Fehler als das alte Bild
+        # als "neuer Schnappschuss" auszugeben.
+        raise TimeoutError("Blink hat kein neues Standbild geliefert")
+
+    async def thumbnail(self, camera_id: str) -> bytes:
+        blink, _, cam = self._require_camera(camera_id)
+        image = cam.image_from_cache
+        if not image:
+            await blink.refresh(force=True)
+            image = cam.image_from_cache
+        if not image:
+            raise RuntimeError("Kein Standbild verfuegbar")
+        return image
+
+    async def list_clips(self, camera_id: str) -> list[dict]:
+        """Clips der Kamera aus dem Local-Storage-Manifest, neueste zuerst.
+        WICHTIG: liest nur - der Dedupe-Store des Erkennungs-Pollers bleibt unberuehrt."""
+        blink, cam_name, _ = self._require_camera(camera_id)
+        clips: list[dict] = []
+        for sync in blink.sync.values():
+            if not sync.local_storage:
+                continue
+            await sync.refresh()
+            manifest = sync._local_storage.get("manifest") or []
+            # SortedSet aufsteigend nach created_at -> rueckwaerts = neueste zuerst
+            for item in reversed(manifest):
+                if item.name == cam_name:
+                    clips.append(_clip_summary(item))
+        return clips
+
+    async def fetch_clip(self, camera_id: str, clip_id: str, cache_dir: str) -> str:
+        """Laedt einen Clip in den Cache (einmal pro clip_id) und liefert den Pfad."""
+        blink, cam_name, _ = self._require_camera(camera_id)
+        target = Path(cache_dir) / f"clip-{clip_id}.mp4"
+        if target.exists():
+            return str(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        for sync in blink.sync.values():
+            if not sync.local_storage:
+                continue
+            await sync.refresh()
+            manifest = sync._local_storage.get("manifest") or []
+            for item in reversed(manifest):
+                if str(item.id) == clip_id and item.name == cam_name:
+                    await item.prepare_download(blink)
+                    if not await item.download_video(blink, str(target)):
+                        raise RuntimeError(f"Clip {clip_id} konnte nicht geladen werden")
+                    return str(target)
+        raise KeyError(f"Clip {clip_id} nicht gefunden")
 
     def _save_session(self) -> None:
         """Persistiert die Session OHNE Zugangsdaten (siehe SECRET_KEYS)."""
