@@ -147,4 +147,78 @@ class VentilationRecommendationServiceTest {
                 reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
         assertThat(service.assess().recommended()).isFalse();
     }
+
+    @Test
+    void aussenfuehlerZaehltNichtAlsRaum() {
+        // Der Garten haengt an derselben Zigbee-Quelle wie die Raumsensoren: ohne
+        // Ausschluss wuerde er mit dem DWD-Wert verglichen und "Lueften lohnt sich" melden.
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
+                reading("WEATHER", "Außen", "27.0", 5),
+                reading("ZIGBEE", "Temperatur Aqara Garten", "31.0", 5)));
+
+        VentilationAssessment result = service.assess();
+
+        assertThat(result.recommended()).isFalse();
+        assertThat(result.rooms()).isEmpty();
+    }
+
+    @Test
+    void aussenfuehlerLiefertDieAussentemperaturVorDemDwdWert() {
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
+                reading("WEATHER", "Außen", "21.0", 5),
+                reading("ZIGBEE", " temperatur aqara GARTEN ", "27.0", 5),
+                reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
+
+        VentilationAssessment result = service.assess();
+
+        // Draussen (Gartenfuehler) waermer als der Raum: kein Lueften, obwohl der DWD-Wert
+        // 5 Grad tiefer liegt. Name case-insensitiv und mit Rand-Leerzeichen erkannt.
+        assertThat(result.outdoorTemperature()).isEqualByComparingTo("27.0");
+        assertThat(result.recommended()).isFalse();
+    }
+
+    @Test
+    void dwdWertGreiftWennDerAussenfuehlerVeraltetIst() {
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
+                reading("WEATHER", "Außen", "21.0", 5),
+                reading("ZIGBEE", "Temperatur Aqara Garten", "27.0", 45),
+                reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
+
+        VentilationAssessment result = service.assess();
+
+        assertThat(result.outdoorTemperature()).isEqualByComparingTo("21.0");
+        assertThat(result.recommended()).isTrue();
+    }
+
+    @Test
+    void ersterKonfigurierterAussenfuehlerGewinnt() {
+        VentilationProperties properties = new VentilationProperties();
+        properties.setOutdoorSensorNames(List.of("Terrasse", "Temperatur Aqara Garten"));
+        service = new VentilationRecommendationService(temperatureSeriesService, properties);
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
+                reading("WEATHER", "Außen", "21.0", 5),
+                reading("ZIGBEE", "Temperatur Aqara Garten", "23.0", 5),
+                reading("ZIGBEE", "Terrasse", "22.0", 5),
+                reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
+
+        VentilationAssessment result = service.assess();
+
+        assertThat(result.outdoorTemperature()).isEqualByComparingTo("22.0");
+        assertThat(result.rooms()).extracting(r -> r.name()).containsExactly("Schlafzimmer");
+    }
+
+    @Test
+    void ohneKonfigurierteAussenfuehlerBleibtNurDerDwdWert() {
+        VentilationProperties properties = new VentilationProperties();
+        properties.setOutdoorSensorNames(List.of());
+        service = new VentilationRecommendationService(temperatureSeriesService, properties);
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
+                reading("WEATHER", "Außen", "21.0", 5),
+                reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
+
+        VentilationAssessment result = service.assess();
+
+        assertThat(result.outdoorTemperature()).isEqualByComparingTo("21.0");
+        assertThat(result.recommended()).isTrue();
+    }
 }
