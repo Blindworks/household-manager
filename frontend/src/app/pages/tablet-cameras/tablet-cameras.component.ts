@@ -20,7 +20,16 @@ import { BlinkCamera, BlinkClip } from '../../models/blink.model';
 export class TabletCamerasComponent implements OnInit, OnDestroy {
   private static readonly REFRESH_INTERVAL_MS = 60 * 1000;
 
-  private readonly blinkService = inject(BlinkService);
+  /**
+   * Bewusst nur die lesenden Faehigkeiten plus Schnappschuss: setCameraArmed und
+   * setSystemArmed sind hier NICHT erreichbar, ein versehentlicher Aufruf
+   * scheitert schon beim Compilieren. Das Wandtablet laeuft als KIOSK und ist
+   * frei zugaenglich - die Kameras duerfen von dort nicht unscharf geschaltet
+   * werden (Muster Nuki: das Tablet darf nur verriegeln, nie oeffnen).
+   */
+  private readonly blinkService: Pick<
+    BlinkService, 'getCameras' | 'getClips' | 'takeSnapshot' | 'thumbnailUrl' | 'clipUrl'
+  > = inject(BlinkService);
   private refreshTimer: number | null = null;
 
   cameras: BlinkCamera[] = [];
