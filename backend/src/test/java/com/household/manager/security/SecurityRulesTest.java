@@ -746,25 +746,24 @@ class SecurityRulesTest {
     }
 
     /**
-     * Scharf/Unscharf ist MEMBER (anyRequest-Regel): ein Fremder vor dem
-     * Wandtablet darf die Kameras nicht unscharf schalten (Muster Nuki:
-     * KIOSK darf nur verriegeln).
+     * REVISION 2026-08-27 (Spec blink-bewegung-und-tablet-schalten): Das
+     * Wandtablet darf die Kameras jetzt in BEIDE Richtungen schalten — auf
+     * ausdruecklichen Nutzerwunsch. Der Schutz gegen Versehen ist der
+     * Bestaetigungsdialog beim Unscharfschalten in der Tablet-Ansicht
+     * (UI-Schutz, Muster confirm_required); eine serverseitige Sperre gegen
+     * Fremde vor dem frei zugaenglichen Tablet gibt es damit bewusst nicht mehr.
+     * Vorher galt: KIOSK darf nicht schalten (Muster Nuki).
      */
     @Test
     @WithMockUser(roles = "KIOSK")
-    void kioskDarfKeineBlinkKameraSchalten() throws Exception {
-        mockMvc.perform(post("/v1/blink/cameras/123/disarm").with(csrf()))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(post("/v1/blink/system/Zuhause/disarm").with(csrf()))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(roles = "MEMBER")
-    void memberDarfBlinkKamerasSchalten() throws Exception {
+    void kioskDarfBlinkKamerasSchalten() throws Exception {
         mockMvc.perform(post("/v1/blink/cameras/123/arm").with(csrf()))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/blink/cameras/123/disarm").with(csrf()))
+                .andExpect(status().isNotFound());
         mockMvc.perform(post("/v1/blink/system/Zuhause/arm").with(csrf()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/blink/system/Zuhause/disarm").with(csrf()))
                 .andExpect(status().isNotFound());
     }
 
