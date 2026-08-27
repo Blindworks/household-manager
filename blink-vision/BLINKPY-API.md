@@ -35,6 +35,28 @@ Zusätzlich nützlich und vorhanden: `item.url(manifest_id=None)` (`sync_module.
 `item.delete_video(blink)` (`:714`), `item.size` (`:687`), `sync.local_storage_manifest_ready`
 (`sync_module.py:119`), `sync.serial` (`:37`).
 
+## Ergänzung Kamera-Dashboard (2026-08-27)
+
+| Erwarteter Bezeichner | Existiert | Tatsächlicher Name / Signatur | Fundstelle |
+| --- | --- | --- | --- |
+| `cam.arm` | ja | `@property arm` → `bool` (`self.motion_enabled`) | `camera.py:130` |
+| `cam.async_arm(value)` | ja | `async async_arm(value)`; `value` wahrheitswertig → `request_motion_detection_enable`/`_disable(camera_type=self.camera_type)` | `camera.py:134` |
+| `cam.battery` | ja | `@property battery` → `str` (`self.battery_state`, z. B. `"ok"`), befüllt aus `config["battery_state"]`/`config["battery"]` in `update()` | `camera.py:83`, `camera.py:307` |
+| `cam.snap_picture()` | ja (Semantik abweichend) | `async snap_picture()` → gibt die Antwort von `request_new_image` zurück, **nicht** das Bild; lädt intern zusätzlich per `get_media()` das neue Thumbnail nach und cached es in `self._cached_image` | `camera.py:267` |
+| `cam.image_from_cache` | ja | `@property image_from_cache` → `bytes` oder `None` (`self._cached_image`) | `camera.py:101` |
+| `sync.arm` / `sync.async_arm(value)` | ja | `@property arm` → `bool`/`None` (`network_info["network"]["armed"]`, setzt bei Fehler zusätzlich `self.available = False`); `async async_arm(value)` → `request_system_arm`/`_disarm` | `sync_module.py:106`, `sync_module.py:124` |
+| `sync.cameras` | ja | `CaseInsensitiveDict` Name → `BlinkCamera`-Instanz (bzw. `BlinkCameraMini`/`BlinkDoorbell`) | `sync_module.py:45` |
+| `blink.refresh(force=...)` | ja | `async refresh(force=False, force_cache=False)` → `bool`; ohne `force`/`force_cache` gedrosselt über `check_if_ok_to_update()` gegen `refresh_rate` (Default `DEFAULT_REFRESH = 30` Sekunden) | `blinkpy.py:126`, `helpers/constants.py:39` |
+
+### Konsequenzen für die Folge-Tasks
+
+- **`snap_picture()` liefert nicht das Bild.** Ein Aufruf muss als zweischrittiger Ablauf implementiert werden: `await cam.snap_picture()` auslösen, danach `cam.image_from_cache` lesen. `snap_picture()` selbst füllt `_cached_image` bereits intern (über den eingebauten `get_media()`-Aufruf), ein zusätzlicher expliziter Download-Schritt ist dafür nicht nötig — die Bytes stehen nach dem Await in `cam.image_from_cache`.
+- **`image_from_cache` ist nicht exklusiv an `snap_picture()` gekoppelt.** Ein normaler `sync.refresh()`/`blink.refresh()`-Zyklus füllt dasselbe Feld über `update_images()` (`camera.py:337`ff., Zeile `426`). Ein UI, das „letztes Bild" anzeigen will, kann also auch ohne expliziten Schnappschuss ein (ggf. älteres) Bild bekommen; wichtig für die Erwartungshaltung, ob ein angezeigtes Bild wirklich frisch ist.
+- **`BlinkCameraMini.arm` weicht semantisch von `BlinkCamera.arm` ab.** Bei einer Blink Mini liest `cam.arm` NICHT `motion_enabled` der Kamera selbst, sondern gibt `self.sync.arm` zurück (den Scharf-Status des ganzen Sync-Moduls) — überschrieben in `camera.py:568`. `async_arm(value)` ist dagegen bei der Mini **nicht** überschrieben und schaltet weiterhin individuell per Kamera-`camera_id`. Für ein UI heißt das: das Anzeigen des Scharf-Status einer Mini nach `arm` kann inkonsistent zu dem wirken, was ein individueller `async_arm()`-Aufruf gerade bewirkt hat — ein direkter Soll/Ist-Vergleich über `cam.arm` nach `cam.async_arm(...)` ist für Minis nicht zuverlässig, ein Refresh des Sync-Moduls ist vorzuziehen.
+- **Es gibt keine `BlinkWiredFloodlight`-Klasse.** Der Plan ging von einer eigenen Unterklasse aus; tatsächlich ist Flutlicht ein Verhalten der Basisklasse `BlinkCamera` selbst, gesteuert über `async_set_floodlight(enable)` und gültig, wenn `product_type == "superior"` ist (nur eine Warnung im Log, kein harter Fehler, wenn der Typ abweicht) — `camera.py:197`. Nur `BlinkCameraMini` (`camera_type = "mini"`) und `BlinkDoorbell` (`camera_type = "doorbell"`) existieren als tatsächliche Unterklassen von `BlinkCamera`; daneben gibt es keine weitere Kamera-Subklasse in dieser Version.
+- **`sync.arm` hat einen Seiteneffekt bei Fehlern.** Fehlt `network_info` (z. B. vor dem ersten erfolgreichen `start()`/`refresh()`), liefert `sync.arm` nicht nur `None`, sondern setzt zusätzlich `self.available = False`. Ein Poller, der `sync.arm` blind zur Statusanzeige abfragt, kann dadurch ungewollt den Verfügbarkeits-Status der Anbindung kippen.
+- **`blink.refresh()` ohne `force=True` kann stillschweigend nichts tun** (liefert dann `False`, wenn innerhalb der 30-Sekunden-Drossel aufgerufen). Ein Endpunkt „Jetzt aktualisieren" braucht `force=True`, sonst wirkt ein Klick kurz nach dem letzten automatischen Poll wortlos wie ein No-Op.
+
 ## Vorgenommene Korrekturen an `probe.py`
 
 1. **2FA-Ablauf umgestellt.** Statt `blink.key_required` / `auth.send_auth_key(blink, key)`
