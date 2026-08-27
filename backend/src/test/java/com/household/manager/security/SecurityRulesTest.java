@@ -732,4 +732,47 @@ class SecurityRulesTest {
         mockMvc.perform(post("/v1/presence/refresh").with(csrf()))
                 .andExpect(status().isNotFound());
     }
+
+    /**
+     * Der Schnappschuss zieht nur ein Bild, er schaltet nichts — ohne die
+     * KIOSK-Whitelist-Zeile waere der Knopf auf dem Wandtablet tot
+     * (Muster Speedtest/Tractive-Refresh).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfBlinkSchnappschussAusloesen() throws Exception {
+        mockMvc.perform(post("/v1/blink/cameras/123/snapshot").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * Scharf/Unscharf ist MEMBER (anyRequest-Regel): ein Fremder vor dem
+     * Wandtablet darf die Kameras nicht unscharf schalten (Muster Nuki:
+     * KIOSK darf nur verriegeln).
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeineBlinkKameraSchalten() throws Exception {
+        mockMvc.perform(post("/v1/blink/cameras/123/disarm").with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/v1/blink/system/Zuhause/disarm").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfBlinkKamerasSchalten() throws Exception {
+        mockMvc.perform(post("/v1/blink/cameras/123/arm").with(csrf()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/blink/system/Zuhause/arm").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /** Lesen laeuft ueber die generische GET-Regel — bewusst keine eigene Zeile. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfBlinkKamerasLesen() throws Exception {
+        mockMvc.perform(get("/v1/blink/cameras")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/blink/cameras/123/clips")).andExpect(status().isNotFound());
+    }
 }
