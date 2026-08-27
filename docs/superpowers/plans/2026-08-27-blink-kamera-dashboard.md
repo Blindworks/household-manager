@@ -149,13 +149,29 @@ Expected: FAIL / ImportError (`_camera_summary` existiert nicht).
 
 Ans Modulende (vor der Klasse die Modul-Helfer, die Methoden in die Klasse `BlinkClient`):
 
+Zusätzlich oben in der Datei `import asyncio` ergänzen und die Konstanten setzen:
+
 ```python
+# Ein Schnappschuss braucht real einige Sekunden (Aufnahme + Upload zur Cloud).
+# 12 x 2 s = 24 s Zeitbudget; der Backend-Client wartet bis zu 60 s.
+SNAPSHOT_POLL_SECONDS = 2
+SNAPSHOT_MAX_POLLS = 12
+
+
 class BlinkNotLoggedInError(RuntimeError):
     """Aktion verlangt eine aktive Blink-Anmeldung."""
 
 
 def _camera_summary(name: str, cam, sync_name: str, sync_armed: bool) -> dict:
-    """Reines Mapping BlinkCamera -> API-Dict (testbar ohne Cloud)."""
+    """Reines Mapping BlinkCamera -> API-Dict (testbar ohne Cloud).
+
+    ACHTUNG Blink Mini: BlinkCameraMini.arm ist ueberschrieben und liefert
+    sync.arm statt der eigenen motion_enabled (camera.py:560ff), waehrend
+    async_arm() sehr wohl die einzelne Kamera schaltet. Bei einer Mini zeigt
+    'armed' also den Systemzustand, und ein Einzelschalt-Befehl schlaegt sich
+    dort NICHT in der Anzeige nieder. Nicht wegoptimieren - das ist blinkpy-
+    Verhalten, keine Nachlaessigkeit hier.
+    """
     battery = getattr(cam, "battery", None)
     return {
         "cameraId": str(cam.camera_id),
@@ -223,19 +239,29 @@ Methoden in `BlinkClient` (nach `fetch_new_clips`):
         await blink.sync[sync_name].async_arm(armed)
 
     async def snapshot(self, camera_id: str) -> bytes:
-        """Loest ein neues Standbild aus und liefert es zurueck. Der force-Refresh
-        umgeht die refresh_rate-Drossel, sonst kaeme noch das alte Bild."""
+        """Loest ein neues Standbild aus und wartet, bis es wirklich da ist.
+
+        snap_picture() weist die Kamera nur an, ein Bild zu machen; das Hochladen
+        dauert Sekunden. blinkpy laedt das Bild neu, sobald sich cam.thumbnail
+        (die Bild-URL) aendert (camera.py:415) - genau daran erkennen wir ein
+        FRISCHES Bild. Ohne diese Warteschleife lieferte der Schnappschuss-Knopf
+        stillschweigend das alte Bild zurueck, und niemand saehe den Unterschied.
+        """
         blink = self._require_login()
         found = _find_in_syncs(blink.sync, camera_id)
         if found is None:
             raise KeyError(f"Kamera {camera_id} nicht gefunden")
         _, cam, _ = found
+        previous_url = cam.thumbnail
         await cam.snap_picture()
-        await blink.refresh(force=True)
-        image = cam.image_from_cache
-        if not image:
-            raise RuntimeError("Blink hat kein neues Standbild geliefert")
-        return image
+        for _ in range(SNAPSHOT_MAX_POLLS):
+            await asyncio.sleep(SNAPSHOT_POLL_SECONDS)
+            await blink.refresh(force=True)
+            if cam.thumbnail != previous_url and cam.image_from_cache:
+                return cam.image_from_cache
+        # Zeitbudget aufgebraucht: lieber ein ehrlicher Fehler als das alte Bild
+        # als "neuer Schnappschuss" auszugeben.
+        raise TimeoutError("Blink hat kein neues Standbild geliefert")
 
     async def thumbnail(self, camera_id: str) -> bytes:
         blink = self._require_login()
