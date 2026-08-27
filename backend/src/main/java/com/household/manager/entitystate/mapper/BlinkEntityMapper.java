@@ -49,6 +49,14 @@ public class BlinkEntityMapper {
             attributes.put("battery", camera.battery());
         }
         attributes.put("syncName", camera.syncName());
+        // Bewusst KEIN "deviceClass": anders als bei Nuki/Tractive gibt es fuer "scharf/unscharf"
+        // keinen passenden Home-Assistant-Standardwert ("safety" trifft es nicht), und ein
+        // erfundener Wert waere schlechter als keiner. Vor allem aber ist deviceClass hier eine
+        // Falle: "door" wuerde diese Kamera-Entitaeten in den Fenster-/Tuerkontakt-Check von
+        // mode-activation-check.ts (Zeile ~36, Filter auf === 'door') hineinziehen und bei jeder
+        // Aktivierung von "Abwesend" eine unsinnige Warnung ausloesen. Wer hier "Konsistenz zu
+        // den anderen Mappern herstellen" will, ist genau einen Schritt von diesem schwer
+        // auffindbaren Fehlalarm entfernt.
         return EntityStateUpdate.builder()
                 .entityId(EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.BLINK, camera.cameraId(), "armed"))
                 .domain(EntityDomain.BINARY_SENSOR)
@@ -65,6 +73,10 @@ public class BlinkEntityMapper {
         // (umbenennbaren) Namen. EntityIds.build sluggt ihn (Locale.ROOT, Umlaute
         // transliteriert) genau wie an jeder anderen Stelle im Projekt (siehe
         // CalendarCategoryKeyGenerator) — keine eigene Slug-Implementierung noetig.
+        // Zwei Sync-Module, deren Namen ausschliesslich aus Sonderzeichen bestehen, wuerden auf
+        // derselben Entity-Id kollidieren (der Slug-Rest waere in beiden Faellen leer); das ist
+        // bei von Menschen vergebenen Blink-Modulnamen praktisch ausgeschlossen und deshalb
+        // bewusst nicht abgefangen.
         String syncRef = SYNC_REF_PREFIX + camera.syncName();
         return EntityStateUpdate.builder()
                 .entityId(EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.BLINK, syncRef, "armed"))
