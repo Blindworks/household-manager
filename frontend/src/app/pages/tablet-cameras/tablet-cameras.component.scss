@@ -15,14 +15,38 @@
   padding: 0.5rem 1rem;
 }
 
+.camera-groups {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+.sync-group {
+  margin-bottom: 1rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.sync-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.15rem 0.5rem;
+
+  h2 {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 1.1rem;
+  }
+}
+
 .camera-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
-  padding: 0.75rem;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
   align-content: start;
 }
 
@@ -41,6 +65,21 @@
   }
 }
 
+.thumbnail-placeholder {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: #020617;
+  color: #94a3b8;
+
+  .placeholder-icon {
+    font-size: 1.6rem;
+  }
+}
+
 .tile-header {
   display: flex;
   align-items: center;
@@ -54,17 +93,43 @@
   }
 }
 
-.status-badge {
-  font-size: 0.8rem;
+// Scharf/Unscharf-Schalter fuer Kamera und System — im Stil der uebrigen
+// Tile-Buttons, gruen eingefaerbt wenn scharf (ersetzt den frueheren
+// separaten status-badge, der Schalter zeigt den Zustand jetzt selbst).
+.camera-arm-toggle,
+.system-arm-toggle {
+  border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 999px;
-  padding: 0.15rem 0.6rem;
   background: rgba(148, 163, 184, 0.25);
   color: #cbd5e1;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.85rem;
 
   &.armed {
     background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.4);
     color: #86efac;
   }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.system-arm-toggle {
+  padding: 0.35rem 1rem;
+}
+
+.last-motion {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #93c5fd;
+  cursor: pointer;
+  padding: 0.2rem 0.75rem 0;
+  font-size: 0.8rem;
+  text-align: left;
 }
 
 .tile-actions {
@@ -115,6 +180,59 @@
     border-radius: 10px;
     padding: 0.6rem 1.5rem;
     background: #e2e8f0;
+  }
+}
+
+// Bestaetigungsdialog beim Unscharfschalten (Muster confirm_required):
+// statischer Warntext + rote Bestaetigung, kein interaktiver Schalter im
+// Dialog selbst.
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+
+.confirm-dialog {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  max-width: 26rem;
+  color: #e2e8f0;
+
+  h3 {
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    margin: 0 0 1rem;
+    color: #cbd5e1;
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+
+  button {
+    border: none;
+    border-radius: 10px;
+    padding: 0.55rem 1.1rem;
+  }
+
+  .dialog-cancel {
+    background: rgba(148, 163, 184, 0.25);
+    color: #e2e8f0;
+  }
+
+  .dialog-confirm {
+    background: #dc2626;
+    color: #fff;
   }
 }
 

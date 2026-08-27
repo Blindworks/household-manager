@@ -9,7 +9,8 @@ import { WeatherOverview } from '../../models/weather.model';
 
 const DOOR: BlinkCamera = {
   cameraId: '123', name: 'Haustuer', type: 'doorbell', armed: true,
-  battery: 'ok', syncName: 'Zuhause', syncArmed: true
+  battery: 'ok', syncName: 'Zuhause', syncArmed: true,
+  lastMotionAt: '2026-08-27T12:00:00', lastMotionClipId: '42'
 };
 
 const CLIP: BlinkClip = { clipId: 'c1', createdAt: '2026-08-01T10:00:00', sizeBytes: null };
@@ -20,7 +21,8 @@ describe('TabletCamerasComponent', () => {
 
   beforeEach(async () => {
     blinkService = jasmine.createSpyObj('BlinkService',
-      ['getCameras', 'takeSnapshot', 'getClips', 'thumbnailUrl', 'clipUrl']);
+      ['getCameras', 'setCameraArmed', 'setSystemArmed', 'takeSnapshot', 'getClips',
+       'thumbnailUrl', 'clipUrl']);
     blinkService.getCameras.and.returnValue(of([DOOR]));
     blinkService.thumbnailUrl.and.callFake((id, key) => `/api/v1/blink/cameras/${id}/thumbnail?t=${key}`);
 
@@ -49,48 +51,11 @@ describe('TabletCamerasComponent', () => {
     expect(text).toContain('Scharf');
   });
 
-  it('erlaubt in der Kamera-Ansicht nur die vier bekannten Bedienelemente (Whitelist statt Blacklist)', () => {
-    // Eine Blacklist ("kein .arm-toggle", "kein Text 'unscharf schalten'")
-    // prueft nur die eine Auspraegung, die es heute nicht gibt - ein kuenftiger
-    // Schalter mit anderem Klassennamen oder anderer Beschriftung (oder ein
-    // reines Icon ohne Text) liefe unbemerkt durch. Diese KIOSK-Ansicht ist die
-    // einzige Barriere gegen Scharf/Unscharf, solange die serverseitige
-    // Sperre fuer die Rolle noch aussteht - deshalb hier eine Whitelist: JEDES
-    // Bedienelement muss einer der vier erlaubten Kategorien angehoeren
-    // (Schnappschuss, Clips-Umschalter, ein Clip-Eintrag, Player-Schliessen).
-    // Ein unbekanntes fuenftes Element laesst den Test scheitern, unabhaengig
-    // davon, wie es heisst oder beschriftet ist.
-    blinkService.getClips.and.returnValue(of([CLIP]));
+  it('gruppiert die Kameras nach Sync-Modul', () => {
     fixture.detectChanges();
-
-    const component = fixture.componentInstance;
-    // Clip-Liste UND Clip-Player oeffnen, damit auch deren Knoepfe im DOM
-    // stehen - sonst waeren sie von der Whitelist nie erfasst.
-    component.toggleClips(DOOR);
-    fixture.detectChanges();
-    component.playClip(DOOR, CLIP);
-    fixture.detectChanges();
-
-    // Nur der projizierte Seiteninhalt (.lumina__content), NICHT die
-    // Ansichtsleiste der tablet-shell - die bringt eigene Navigations-Knoepfe
-    // mit, die nichts mit dieser Ansicht zu tun haben.
-    const content = (fixture.nativeElement as HTMLElement).querySelector('.lumina__content');
-    expect(content)
-      .withContext('.lumina__content nicht gefunden - hat sich das Shell-Markup geaendert?')
-      .not.toBeNull();
-
-    const interactive = Array.from(content!.querySelectorAll('button, a, input'));
-    expect(interactive.length).toBeGreaterThan(0);
-
-    interactive.forEach(element => {
-      const isSnapshot = element.classList.contains('snapshot');
-      const isClipsToggle = element.classList.contains('clips-toggle');
-      const isClipEntry = element.closest('.clip-list') !== null;
-      const isPlayerClose = element.closest('.clip-player') !== null;
-      expect(isSnapshot || isClipsToggle || isClipEntry || isPlayerClose)
-        .withContext(`Unerwartetes Bedienelement in der Kamera-Ansicht: ${element.outerHTML}`)
-        .toBeTrue();
-    });
+    expect(fixture.componentInstance.groups.length).toBe(1);
+    expect(fixture.componentInstance.groups[0].syncName).toBe('Zuhause');
+    expect(fixture.componentInstance.groups[0].cameras).toEqual([DOOR]);
   });
 
   it('hat einen Schnappschuss-Knopf', () => {
@@ -102,5 +67,99 @@ describe('TabletCamerasComponent', () => {
     blinkService.getCameras.and.returnValue(throwError(() => new Error('down')));
     fixture.detectChanges();
     expect(fixture.componentInstance.error).toBeTruthy();
+  });
+
+  it('zeigt Schalter fuer Kamera und System (Revision: Tablet darf schalten)', () => {
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.camera-arm-toggle')).not.toBeNull();
+    expect(host.querySelector('.system-arm-toggle')).not.toBeNull();
+  });
+
+  it('scharf schalten geht direkt, ohne Dialog', () => {
+    blinkService.getCameras.and.returnValue(of([{ ...DOOR, armed: false }]));
+    blinkService.setCameraArmed.and.returnValue(of(void 0));
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.camera-arm-toggle') as HTMLButtonElement).click();
+
+    expect(blinkService.setCameraArmed).toHaveBeenCalledWith('123', true);
+    expect(fixture.componentInstance.pendingDisarm).toBeNull();
+  });
+
+  it('unscharf schalten oeffnet erst den Bestaetigungsdialog', () => {
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.camera-arm-toggle') as HTMLButtonElement).click();
+
+    expect(blinkService.setCameraArmed).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.pendingDisarm).not.toBeNull();
+  });
+
+  it('der Dialog schaltet nur, wenn die Kamera laut aktueller Liste noch scharf ist', () => {
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.requestDisarm({ kind: 'camera', id: '123', name: 'Frontdoor' });
+
+    // Hintergrund-Refresh hat die Kamera inzwischen unscharf geliefert:
+    blinkService.getCameras.and.returnValue(of([{ ...DOOR, armed: false }]));
+    component['load'](true);
+    blinkService.setCameraArmed.and.returnValue(of(void 0));
+
+    component.confirmDisarm();
+
+    expect(blinkService.setCameraArmed).not.toHaveBeenCalled();
+    expect(component.pendingDisarm).toBeNull();
+  });
+
+  it('zeigt die letzte Bewegung an und spielt ihren Clip bei Klick', () => {
+    blinkService.clipUrl.and.callFake((camId, clipId) => `/api/v1/blink/cameras/${camId}/clips/${clipId}`);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const motion = host.querySelector('.last-motion') as HTMLButtonElement;
+    expect(motion).not.toBeNull();
+    expect(motion.textContent).toContain('Letzte Bewegung');
+
+    motion.click();
+    expect(fixture.componentInstance.playingClipUrl).toBe('/api/v1/blink/cameras/123/clips/42');
+  });
+
+  it('ohne bekannte Bewegung fehlt die Zeile wortlos', () => {
+    blinkService.getCameras.and.returnValue(of([{ ...DOOR, lastMotionAt: null, lastMotionClipId: null }]));
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.last-motion')).toBeNull();
+  });
+
+  it('ein Bildfehler blendet den Platzhalter ein, ein Schnappschuss setzt ihn zurueck', () => {
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.onThumbnailError('123');
+    expect(component.hasThumbnailError('123')).toBeTrue();
+
+    blinkService.takeSnapshot.and.returnValue(of(new Blob()));
+    component.takeSnapshot(DOOR);
+    expect(component.hasThumbnailError('123')).toBeFalse();
+  });
+
+  it('gerenderte Bedienelemente bleiben auf der Whitelist', () => {
+    // REVISION 2026-08-27: Schalter sind jetzt erlaubt (Nutzerentscheidung,
+    // Spec blink-bewegung-und-tablet-schalten). Die Whitelist bleibt das
+    // Schutzprinzip: jedes UNBEKANNTE Bedienelement laesst den Test scheitern.
+    blinkService.getClips.and.returnValue(of([CLIP]));
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.toggleClips(DOOR);
+    fixture.detectChanges();
+
+    const allowed = ['snapshot', 'clips-toggle', 'clip-entry', 'player-close',
+                     'camera-arm-toggle', 'system-arm-toggle', 'last-motion',
+                     'dialog-cancel', 'dialog-confirm'];
+    const content = fixture.nativeElement.querySelector('.camera-groups') as HTMLElement;
+    const controls = Array.from(content.querySelectorAll('button, a, input'));
+    for (const control of controls) {
+      const matches = allowed.some(cls => control.classList.contains(cls));
+      expect(matches).withContext(`Unbekanntes Bedienelement: ${control.outerHTML}`).toBeTrue();
+    }
+    expect(controls.length).toBeGreaterThan(0);
   });
 });

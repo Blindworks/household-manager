@@ -3,39 +3,67 @@
     <p class="error">{{ error }}</p>
   }
 
-  <div class="camera-grid">
-    @for (camera of cameras; track camera.cameraId) {
-      <article class="camera-tile">
-        <img [src]="thumbnailUrl(camera)" [alt]="camera.name" />
-        <div class="tile-header">
-          <h3>{{ camera.name }}</h3>
-          <span class="status-badge" [class.armed]="camera.armed">
-            {{ camera.armed ? 'Scharf' : 'Unscharf' }}
-          </span>
-        </div>
-        <div class="tile-actions">
-          <button type="button" class="snapshot" [disabled]="isSnapshotBusy(camera.cameraId)"
-                  (click)="takeSnapshot(camera)">
-            {{ isSnapshotBusy(camera.cameraId) ? 'Nimmt auf…' : 'Schnappschuss' }}
+  <div class="camera-groups">
+    @for (group of groups; track group.syncName) {
+      <section class="sync-group">
+        <header class="sync-header">
+          <h2>{{ group.syncName }}</h2>
+          <button type="button" class="system-arm-toggle" [class.armed]="group.syncArmed"
+                  [disabled]="isArmBusy('sync:' + group.syncName)" (click)="toggleSystem(group)">
+            {{ group.syncArmed ? 'System: Scharf' : 'System: Unscharf' }}
           </button>
-          <button type="button" class="clips-toggle" (click)="toggleClips(camera)">
-            Clips
-          </button>
-        </div>
-        @if (expandedCameras.has(camera.cameraId)) {
-          <ul class="clip-list">
-            @for (clip of clips.get(camera.cameraId) ?? []; track clip.clipId) {
-              <li>
-                <button type="button" (click)="playClip(camera, clip)">
-                  {{ clip.createdAt | date:'dd.MM. HH:mm' }}
+        </header>
+
+        <div class="camera-grid">
+          @for (camera of group.cameras; track camera.cameraId) {
+            <article class="camera-tile">
+              @if (hasThumbnailError(camera.cameraId)) {
+                <div class="thumbnail-placeholder" aria-hidden="true">
+                  <span class="placeholder-icon">📷</span>
+                  <span>Noch kein Standbild</span>
+                </div>
+              } @else {
+                <img [src]="thumbnailUrl(camera)" [alt]="camera.name"
+                     (error)="onThumbnailError(camera.cameraId)" />
+              }
+              <div class="tile-header">
+                <h3>{{ camera.name }}</h3>
+                <button type="button" class="camera-arm-toggle" [class.armed]="camera.armed"
+                        [disabled]="isArmBusy(camera.cameraId)" (click)="toggleCamera(camera)">
+                  {{ camera.armed ? 'Scharf' : 'Unscharf' }}
                 </button>
-              </li>
-            } @empty {
-              <li class="empty">Keine Clips.</li>
-            }
-          </ul>
-        }
-      </article>
+              </div>
+              @if (camera.lastMotionAt) {
+                <button type="button" class="last-motion" (click)="playLastMotion(camera)">
+                  Letzte Bewegung: {{ camera.lastMotionAt | date:'dd.MM. HH:mm' }}
+                </button>
+              }
+              <div class="tile-actions">
+                <button type="button" class="snapshot" [disabled]="isSnapshotBusy(camera.cameraId)"
+                        (click)="takeSnapshot(camera)">
+                  {{ isSnapshotBusy(camera.cameraId) ? 'Nimmt auf…' : 'Schnappschuss' }}
+                </button>
+                <button type="button" class="clips-toggle" (click)="toggleClips(camera)">
+                  Clips
+                </button>
+              </div>
+              @if (expandedCameras.has(camera.cameraId)) {
+                <ul class="clip-list">
+                  @for (clip of clips.get(camera.cameraId) ?? []; track clip.clipId) {
+                    <li>
+                      <button type="button" class="clip-entry" (click)="playClip(camera, clip)">
+                        {{ clip.createdAt | date:'dd.MM. HH:mm' }}
+                      </button>
+                    </li>
+                  } @empty {
+                    <li class="empty">Keine Clips.</li>
+                  }
+                </ul>
+              }
+            </article>
+          }
+        </div>
+      </section>
     } @empty {
       @if (!error) {
         <p class="empty">Keine Kameras gefunden.</p>
@@ -46,7 +74,24 @@
   @if (playingClipUrl) {
     <div class="clip-player" (click)="closePlayer()">
       <video [src]="playingClipUrl" controls autoplay (click)="$event.stopPropagation()"></video>
-      <button type="button" (click)="closePlayer()">Schließen</button>
+      <button type="button" class="player-close" (click)="closePlayer()">Schließen</button>
+    </div>
+  }
+
+  @if (pendingDisarm) {
+    <div class="confirm-overlay" (click)="cancelDisarm()">
+      <div class="confirm-dialog" (click)="$event.stopPropagation()">
+        <h3>Wirklich unscharf schalten?</h3>
+        <p>
+          {{ pendingDisarm.kind === 'system'
+              ? 'Das gesamte System „' + pendingDisarm.name + '" zeichnet dann keine Bewegungen mehr auf.'
+              : 'Die Kamera „' + pendingDisarm.name + '" zeichnet dann keine Bewegungen mehr auf.' }}
+        </p>
+        <div class="confirm-actions">
+          <button type="button" class="dialog-cancel" (click)="cancelDisarm()">Abbrechen</button>
+          <button type="button" class="dialog-confirm" (click)="confirmDisarm()">Unscharf schalten</button>
+        </div>
+      </div>
     </div>
   }
 </app-tablet-shell>
