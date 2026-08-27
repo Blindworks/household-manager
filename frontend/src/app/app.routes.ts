@@ -270,6 +270,12 @@ export const routes: Routes = [
     title: 'Futtervorrat - Household Manager'
   },
   {
+    path: 'cameras',
+    loadComponent: () => import('./pages/cameras/cameras.component').then(m => m.CamerasComponent),
+    canActivate: [authGuard],
+    title: 'Kameras - Household Manager'
+  },
+  {
     path: 'notifications',
     loadComponent: () => import('./pages/notifications/notifications.component').then(m => m.NotificationsComponent),
     canActivate: [authGuard],

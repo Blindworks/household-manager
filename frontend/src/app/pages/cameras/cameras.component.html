@@ -1,0 +1,81 @@
+<div class="cameras-page">
+  <h1>Kameras</h1>
+
+  @if (error) {
+    <div class="error-banner">
+      {{ error }}
+      @if (notLoggedIn) {
+        <a routerLink="/vision">Zur Blink-Anmeldung (Gesichtserkennung)</a>
+      }
+    </div>
+  }
+
+  @for (group of groups; track group.syncName) {
+    <section class="sync-group">
+      <header class="sync-header">
+        <h2>{{ group.syncName }}</h2>
+        <button type="button" class="arm-toggle" [class.armed]="group.syncArmed"
+                [disabled]="isArmBusy('sync:' + group.syncName)"
+                (click)="toggleSystem(group)">
+          {{ group.syncArmed ? 'System scharf – unscharf schalten' : 'System unscharf – scharf schalten' }}
+        </button>
+      </header>
+
+      <div class="camera-grid">
+        @for (camera of group.cameras; track camera.cameraId) {
+          <article class="camera-card">
+            <img [src]="thumbnailUrl(camera)" [alt]="camera.name" loading="lazy" />
+            <div class="camera-meta">
+              <h3>{{ camera.name }}</h3>
+              @if (camera.type === 'doorbell') {
+                <span class="badge">Türklingel</span>
+              }
+              @if (camera.battery) {
+                <span class="battery" [class.low]="camera.battery !== 'ok'">
+                  Batterie: {{ camera.battery === 'ok' ? 'OK' : camera.battery }}
+                </span>
+              }
+            </div>
+            <div class="camera-actions">
+              <button type="button" class="arm-toggle" [class.armed]="camera.armed"
+                      [disabled]="isArmBusy(camera.cameraId)" (click)="toggleCamera(camera)">
+                {{ camera.armed ? 'Scharf' : 'Unscharf' }}
+              </button>
+              <button type="button" class="snapshot" [disabled]="isSnapshotBusy(camera.cameraId)"
+                      (click)="takeSnapshot(camera)">
+                {{ isSnapshotBusy(camera.cameraId) ? 'Nimmt auf…' : 'Schnappschuss' }}
+              </button>
+              <button type="button" class="clips-toggle" (click)="toggleClips(camera)">
+                Clips {{ expandedCameras.has(camera.cameraId) ? 'ausblenden' : 'anzeigen' }}
+              </button>
+            </div>
+            @if (expandedCameras.has(camera.cameraId)) {
+              <ul class="clip-list">
+                @for (clip of clips.get(camera.cameraId) ?? []; track clip.clipId) {
+                  <li>
+                    <button type="button" (click)="playClip(camera, clip)">
+                      {{ clip.createdAt | date:'dd.MM.yyyy HH:mm' }}
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="empty">Keine Clips vorhanden.</li>
+                }
+              </ul>
+            }
+          </article>
+        }
+      </div>
+    </section>
+  } @empty {
+    @if (!error) {
+      <p class="empty">Keine Kameras gefunden.</p>
+    }
+  }
+
+  @if (playingClipUrl) {
+    <div class="clip-player" (click)="closePlayer()">
+      <video [src]="playingClipUrl" controls autoplay (click)="$event.stopPropagation()"></video>
+      <button type="button" (click)="closePlayer()">Schließen</button>
+    </div>
+  }
+</div>
