@@ -430,6 +430,78 @@ def test_fetch_clip_raises_when_the_download_fails(tmp_path):
         asyncio.run(_client_with(blink).fetch_clip("123", "10", str(tmp_path)))
 
 
+# ==================== manifest_snapshot ====================
+#
+# Datenquelle des Bewegungs-Waechters: nur Metadaten, kein Download. Deshalb
+# pruefen die Tests hier ausdruecklich AUCH, dass nichts heruntergeladen wird -
+# ein Griff in den Download-Pfad waere ein Eingriff in die Gesichtserkennung.
+
+
+def _snapshot_blink() -> _FakeBlink:
+    """Zwei Sync-Module: 'Zuhause' (Local Storage, 2 Kameras) und 'Garage' (ohne)."""
+    return _FakeBlink({
+        "Zuhause": _FakeSync(
+            {"Frontdoor": _FakeCamera(camera_id="1"),
+             "Wohnzimmer": _FakeCamera(camera_id="2")},
+            manifest=[_FakeItem(10, "Frontdoor", minute=0),
+                      _FakeItem(11, "Wohnzimmer", minute=10),
+                      _FakeItem(12, "Frontdoor", minute=20)]),
+        "Garage": _FakeSync({"Aussen": _FakeCamera(camera_id="3")},
+                            arm=False, local_storage=False,
+                            manifest=[_FakeItem(30, "Aussen", minute=30)]),
+    })
+
+
+def test_manifest_snapshot_resolves_camera_ids_and_sorts_newest_first():
+    snapshot = asyncio.run(_client_with(_snapshot_blink()).manifest_snapshot())
+
+    assert [entry["clipId"] for entry in snapshot] == ["12", "11", "10"]
+    assert snapshot[0] == {
+        "cameraId": "1",
+        "cameraName": "Frontdoor",
+        "clipId": "12",
+        "createdAt": "2026-08-27T14:20:00",
+    }
+
+
+def test_manifest_snapshot_skips_clips_of_unknown_cameras():
+    """Ein Clip einer inzwischen entfernten Kamera hat keine camera_id mehr -
+    er wird verworfen statt mit geratener Zuordnung gemeldet."""
+    blink = _snapshot_blink()
+    blink.sync["Zuhause"]._local_storage["manifest"].append(
+        _FakeItem(99, "GeloeschteKamera", minute=30))
+
+    snapshot = asyncio.run(_client_with(blink).manifest_snapshot())
+
+    assert all(entry["clipId"] != "99" for entry in snapshot)
+
+
+def test_manifest_snapshot_ignores_sync_modules_without_local_storage():
+    """Ohne Local Storage gibt es kein Manifest - der Clip der Garage darf
+    nicht auftauchen, obwohl er im Fake hinterlegt ist."""
+    snapshot = asyncio.run(_client_with(_snapshot_blink()).manifest_snapshot())
+
+    assert all(entry["cameraId"] != "3" for entry in snapshot)
+
+
+def test_manifest_snapshot_reads_metadata_only():
+    """Kein prepare_download/download_video - der Waechter fasst den
+    Download-Pfad der Gesichtserkennung nicht an."""
+    blink = _snapshot_blink()
+    items = blink.sync["Zuhause"]._local_storage["manifest"]
+
+    asyncio.run(_client_with(blink).manifest_snapshot())
+
+    assert all(not item.prepared and item.downloaded_to is None for item in items)
+
+
+def test_manifest_snapshot_requires_login():
+    client = BlinkClient(data_dir=".", camera_name="")
+
+    with pytest.raises(blink_client.BlinkNotLoggedInError):
+        asyncio.run(client.manifest_snapshot())
+
+
 # ==================== Regressionsschutz fuer fetch_new_clips ====================
 #
 # fetch_new_clips ist Bestandscode des Gesichtserkennungs-Pfads und war bis zum
