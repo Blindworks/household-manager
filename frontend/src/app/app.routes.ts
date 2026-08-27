@@ -98,6 +98,12 @@ export const routes: Routes = [
     title: 'Netzwerk Tablet - Household Manager'
   },
   {
+    path: 'tablet/cameras',
+    loadComponent: () => import('./pages/tablet-cameras/tablet-cameras.component').then(m => m.TabletCamerasComponent),
+    canActivate: [authGuard],
+    title: 'Kameras Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],

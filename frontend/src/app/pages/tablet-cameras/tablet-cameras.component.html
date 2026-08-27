@@ -1,0 +1,52 @@
+<app-tablet-shell heading="Kameras">
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <div class="camera-grid">
+    @for (camera of cameras; track camera.cameraId) {
+      <article class="camera-tile">
+        <img [src]="thumbnailUrl(camera)" [alt]="camera.name" />
+        <div class="tile-header">
+          <h3>{{ camera.name }}</h3>
+          <span class="status-badge" [class.armed]="camera.armed">
+            {{ camera.armed ? 'Scharf' : 'Unscharf' }}
+          </span>
+        </div>
+        <div class="tile-actions">
+          <button type="button" class="snapshot" [disabled]="isSnapshotBusy(camera.cameraId)"
+                  (click)="takeSnapshot(camera)">
+            {{ isSnapshotBusy(camera.cameraId) ? 'Nimmt auf…' : 'Schnappschuss' }}
+          </button>
+          <button type="button" class="clips-toggle" (click)="toggleClips(camera)">
+            Clips
+          </button>
+        </div>
+        @if (expandedCameras.has(camera.cameraId)) {
+          <ul class="clip-list">
+            @for (clip of clips.get(camera.cameraId) ?? []; track clip.clipId) {
+              <li>
+                <button type="button" (click)="playClip(camera, clip)">
+                  {{ clip.createdAt | date:'dd.MM. HH:mm' }}
+                </button>
+              </li>
+            } @empty {
+              <li class="empty">Keine Clips.</li>
+            }
+          </ul>
+        }
+      </article>
+    } @empty {
+      @if (!error) {
+        <p class="empty">Keine Kameras gefunden.</p>
+      }
+    }
+  </div>
+
+  @if (playingClipUrl) {
+    <div class="clip-player" (click)="closePlayer()">
+      <video [src]="playingClipUrl" controls autoplay (click)="$event.stopPropagation()"></video>
+      <button type="button" (click)="closePlayer()">Schließen</button>
+    </div>
+  }
+</app-tablet-shell>

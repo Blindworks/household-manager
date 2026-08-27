@@ -1,0 +1,124 @@
+// Inhalt der Tablet-Kameraansicht. Kopfzeile und Ansichtsleiste liefert
+// app-tablet-shell; hier bleibt nur das Kamera-Kachelraster.
+
+// Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
+// bis zu dieser Seite. Fehlt sie hier, faellt der Inhalt auf Inhaltshoehe
+// zurueck (Muster: tablet-network, tablet-toni).
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.error {
+  color: #fca5a5;
+  padding: 0.5rem 1rem;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+.camera-tile {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    background: #020617;
+  }
+}
+
+.tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem 0;
+
+  h3 {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 1.05rem;
+  }
+}
+
+.status-badge {
+  font-size: 0.8rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+
+  &.armed {
+    background: rgba(34, 197, 94, 0.25);
+    color: #86efac;
+  }
+}
+
+.tile-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem 0.75rem;
+
+  button {
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    border-radius: 10px;
+    background: rgba(30, 41, 59, 0.8);
+    color: #e2e8f0;
+    padding: 0.45rem 0.9rem;
+  }
+}
+
+.clip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+
+  button {
+    background: none;
+    border: none;
+    color: #93c5fd;
+    padding: 0.3rem 0;
+  }
+}
+
+.clip-player {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  z-index: 50;
+
+  video {
+    max-width: 92vw;
+    max-height: 70vh;
+  }
+
+  button {
+    border: none;
+    border-radius: 10px;
+    padding: 0.6rem 1.5rem;
+    background: #e2e8f0;
+  }
+}
+
+.empty {
+  color: #94a3b8;
+  padding: 0.5rem 1rem;
+}
