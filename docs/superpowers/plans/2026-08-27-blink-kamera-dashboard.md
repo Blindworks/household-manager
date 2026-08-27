@@ -385,8 +385,12 @@ def build_router(blink: BlinkClient) -> APIRouter:
             raise HTTPException(status_code=502, detail={"error": f"Blink-Fehler: {ex}"})
 
     @router.get("/cameras")
-    async def list_cameras():
-        return await _call(blink.list_cameras())
+    async def list_cameras(force: bool = False):
+        # force=true umgeht die 30-s-Drossel von blinkpy. Noetig nach einer
+        # Schaltaktion: async_arm() aendert den lokalen Zustand NICHT, der neue
+        # Wert kommt erst mit dem naechsten echten Refresh. Ohne force zeigt das
+        # Dashboard direkt nach dem Schalten weiter den alten Zustand.
+        return await _call(blink.list_cameras(force=force))
 
     @router.post("/cameras/{camera_id}/arm")
     async def arm_camera(camera_id: str):
@@ -1018,7 +1022,7 @@ class BlinkPollingServiceTest {
 
     @Test
     void meldetKameraUndSyncEntitaet() {
-        when(client.listCameras()).thenReturn(List.of(DOOR));
+        when(client.listCameras(anyBoolean())).thenReturn(List.of(DOOR));
 
         service.poll();
 
@@ -1032,11 +1036,11 @@ class BlinkPollingServiceTest {
 
     @Test
     void sidecarFehlerMarkiertZuletztGemeldeteUnavailableMitErhaltenenAttributen() {
-        when(client.listCameras()).thenReturn(List.of(DOOR));
+        when(client.listCameras(anyBoolean())).thenReturn(List.of(DOOR));
         service.poll();
         clearInvocations(entityStateService);
 
-        when(client.listCameras()).thenThrow(new BlinkException("down"));
+        when(client.listCameras(anyBoolean())).thenThrow(new BlinkException("down"));
         service.poll();
 
         ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
@@ -1049,11 +1053,11 @@ class BlinkPollingServiceTest {
 
     @Test
     void nichtAngemeldetZaehltEbenfallsAlsAusfall() {
-        when(client.listCameras()).thenReturn(List.of(DOOR));
+        when(client.listCameras(anyBoolean())).thenReturn(List.of(DOOR));
         service.poll();
         clearInvocations(entityStateService);
 
-        when(client.listCameras()).thenThrow(new IllegalStateException("nicht angemeldet"));
+        when(client.listCameras(anyBoolean())).thenThrow(new IllegalStateException("nicht angemeldet"));
         service.poll();
 
         verify(entityStateService, times(2)).reportState(any());
@@ -1070,7 +1074,7 @@ class BlinkPollingServiceTest {
 
     @Test
     void pollWirftNie() {
-        when(client.listCameras()).thenThrow(new RuntimeException("boom"));
+        when(client.listCameras(anyBoolean())).thenThrow(new RuntimeException("boom"));
         service.poll();
         // kein Throw = bestanden; ohne vorherige Updates gibt es nichts zu markieren
         verifyNoInteractions(entityStateService);
@@ -1124,11 +1128,25 @@ public class BlinkPollingService {
     @Scheduled(fixedDelayString = "${blink.poll-interval-ms:60000}",
             initialDelayString = "${blink.initial-delay-ms:20000}")
     public synchronized void poll() {
+        poll(false);
+    }
+
+    /**
+     * Nachpollen direkt nach einer Schaltaktion. Muss erzwungen sein:
+     * blinkpys {@code async_arm()} aendert den lokalen Zustand nicht, und ein
+     * ungezwungener Refresh laeuft in die 30-Sekunden-Drossel — das Dashboard
+     * zeigte sonst nach dem Schalten weiter den alten Zustand.
+     */
+    public synchronized void pollForced() {
+        poll(true);
+    }
+
+    private void poll(boolean force) {
         if (!properties.isEnabled()) {
             return;
         }
         try {
-            List<EntityStateUpdate> updates = mapper.map(client.listCameras());
+            List<EntityStateUpdate> updates = mapper.map(client.listCameras(force));
             updates.forEach(entityStateService::reportState);
             lastUpdates = List.copyOf(updates);
         } catch (Exception ex) {
@@ -1208,7 +1226,7 @@ class BlinkCameraServiceTest {
         InOrder order = inOrder(client, auditService, pollingService);
         order.verify(client).setCameraArmed("123", true);
         order.verify(auditService).record("blink.camera.arm", "123");
-        order.verify(pollingService).poll();
+        order.verify(pollingService).pollForced();
     }
 
     @Test
@@ -1224,7 +1242,7 @@ class BlinkCameraServiceTest {
         InOrder order = inOrder(client, auditService, pollingService);
         order.verify(client).setSyncArmed("Zuhause", false);
         order.verify(auditService).record("blink.system.disarm", "Zuhause");
-        order.verify(pollingService).poll();
+        order.verify(pollingService).pollForced();
     }
 
     @Test
@@ -1232,7 +1250,7 @@ class BlinkCameraServiceTest {
         when(client.snapshot("123")).thenReturn(new byte[]{1});
         service.snapshot("123");
         verifyNoInteractions(auditService);
-        verify(pollingService, never()).poll();
+        verify(pollingService, never()).pollForced();
     }
 }
 ```
@@ -1276,19 +1294,21 @@ public class BlinkCameraService {
     private final AuditService auditService;
 
     public List<SidecarCamera> listCameras() {
-        return client.listCameras();
+        return client.listCameras(false);
     }
 
     public void setCameraArmed(String cameraId, boolean armed) {
         client.setCameraArmed(cameraId, armed);
         auditService.record(armed ? "blink.camera.arm" : "blink.camera.disarm", cameraId);
-        pollingService.poll();
+        // pollForced, nicht poll: async_arm() aendert den lokalen Zustand nicht,
+        // und ein ungezwungener Refresh laeuft in blinkpys 30-s-Drossel.
+        pollingService.pollForced();
     }
 
     public void setSystemArmed(String syncName, boolean armed) {
         client.setSyncArmed(syncName, armed);
         auditService.record(armed ? "blink.system.arm" : "blink.system.disarm", syncName);
-        pollingService.poll();
+        pollingService.pollForced();
     }
 
     public byte[] snapshot(String cameraId) {
