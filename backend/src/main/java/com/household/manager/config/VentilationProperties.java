@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Schwellen der Lüftungsempfehlung. Bewusst in application.properties statt in der DB
@@ -15,6 +16,17 @@ import java.math.BigDecimal;
 @Data
 public class VentilationProperties {
 
+    /**
+     * Sensoren, die trotz Quelle ZIGBEE/ALEXA draußen hängen (Pendant zum DWD-Wert).
+     * Sie zählen nie als Raum und liefern — in dieser Reihenfolge, erster frischer
+     * gewinnt — die Außentemperatur; erst wenn keiner davon frisch meldet, greift der
+     * DWD-Wert als Fallback. Vergleich über den Anzeigenamen, case-insensitiv.
+     *
+     * <p>Zweite Kopie: das Frontend führt dieselbe Liste in
+     * {@code shared/temperature-comfort.util.ts} (OUTDOOR_SENSOR_NAMES) für die
+     * Außenfühler-Chips im Dashboard-Kopf. Ein neuer Außenfühler gehört an beide Stellen.
+     */
+    private List<String> outdoorSensorNames = List.of("Temperatur Aqara Garten");
     /** Ab dieser Raumtemperatur gilt ein Raum als "zu warm". */
     private BigDecimal roomThresholdCelsius = new BigDecimal("24");
     /** Draußen muss es mindestens so viel kühler sein, damit die Empfehlung entsteht. */
