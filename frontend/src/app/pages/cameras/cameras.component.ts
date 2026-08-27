@@ -44,6 +44,8 @@ export class CamerasComponent implements OnInit, OnDestroy {
   readonly expandedCameras = new Set<string>();
   /** Gerade abgespielter Clip (URL fuers <video>). */
   playingClipUrl: string | null = null;
+  /** Kameras, deren Standbild-Abruf fehlgeschlagen ist (Platzhalter statt kaputtem Bild). */
+  private readonly thumbnailErrors = new Set<string>();
 
   ngOnInit(): void {
     this.load(false);
@@ -120,6 +122,8 @@ export class CamerasComponent implements OnInit, OnDestroy {
       next: () => {
         this.snapshotBusy.delete(camera.cameraId);
         this.cacheKeys.set(camera.cameraId, this.cacheKey(camera.cameraId) + 1);
+        // Ein frischer Schnappschuss ist der Weg zum ersten Bild — der Platzhalter muss weichen.
+        this.thumbnailErrors.delete(camera.cameraId);
       },
       error: () => {
         // Altes Standbild bleibt stehen (kein Cache-Buster-Update).
@@ -143,6 +147,20 @@ export class CamerasComponent implements OnInit, OnDestroy {
 
   playClip(camera: BlinkCamera, clip: BlinkClip): void {
     this.playingClipUrl = this.blinkService.clipUrl(camera.cameraId, clip.clipId);
+  }
+
+  onThumbnailError(cameraId: string): void {
+    this.thumbnailErrors.add(cameraId);
+  }
+
+  hasThumbnailError(cameraId: string): boolean {
+    return this.thumbnailErrors.has(cameraId);
+  }
+
+  playLastMotion(camera: BlinkCamera): void {
+    if (camera.lastMotionClipId) {
+      this.playingClipUrl = this.blinkService.clipUrl(camera.cameraId, camera.lastMotionClipId);
+    }
   }
 
   closePlayer(): void {
