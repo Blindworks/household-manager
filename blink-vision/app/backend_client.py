@@ -13,10 +13,19 @@ log = logging.getLogger(__name__)
 # enthaelt nur Host und Port, der Kontextpfad gehoert zur Anwendung und steht hier.
 API_PREFIX = "/api/v1/vision"
 
+# Die Bewegungsmeldung ist kein Vision-Ereignis (keine Gesichtserkennung im
+# Spiel) und haengt deshalb unter einem eigenen Praefix.
+BLINK_API_PREFIX = "/api/v1/blink"
+
 
 def url(path: str) -> str:
     """Vollstaendige Backend-URL fuer einen Vision-Endpunkt, z. B. '/heartbeat'."""
     return f"{config.BACKEND_URL.rstrip('/')}{API_PREFIX}{path}"
+
+
+def blink_url(path: str) -> str:
+    """Backend-URL fuer einen Blink-Endpunkt (gleicher /api-Kontextpfad wie Vision)."""
+    return f"{config.BACKEND_URL.rstrip('/')}{BLINK_API_PREFIX}{path}"
 
 
 def _headers() -> dict:
@@ -38,6 +47,14 @@ async def post_recognition(persons: list[dict], unknown_faces: int, thumbnail: b
 async def post_heartbeat() -> None:
     async with httpx.AsyncClient(timeout=10, headers=_headers()) as client:
         response = await client.post(url("/heartbeat"))
+        response.raise_for_status()
+
+
+async def post_motion(events: list[dict]) -> None:
+    """Meldet neue Local-Storage-Clips als Bewegungen. Wirft bei Fehlschlag —
+    der Waechter behaelt daraufhin seine Marke und wiederholt im naechsten Zyklus."""
+    async with httpx.AsyncClient(timeout=30, headers=_headers()) as client:
+        response = await client.post(blink_url("/motion"), json=events)
         response.raise_for_status()
 
 

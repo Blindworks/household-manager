@@ -10,6 +10,7 @@ from pathlib import Path
 from app import backend_client, config
 from app.cooldown import Cooldown
 from app.matcher import best_match
+from app.motion import MotionWatcher
 
 log = logging.getLogger(__name__)
 
@@ -46,10 +47,13 @@ class Poller:
         Path(config.DATA_DIR).mkdir(parents=True, exist_ok=True)
         self._dedupe = ClipDedupe(os.path.join(config.DATA_DIR, "processed-clips.json"))
         self._cooldown = Cooldown(config.COOLDOWN_SECONDS)
+        # sink ist das backend_client-Modul selbst (hat post_motion) — im Test ersetzbar.
+        self._motion = MotionWatcher(blink_client, backend_client)
         self.last_poll_at: str | None = None
 
     async def run_forever(self):
         heartbeat_due = 0.0
+        motion_due = 0.0
         while True:
             # Heartbeat und Clip-Abholung sind getrennt abgesichert: ein kurzzeitig
             # nicht erreichbares Backend darf das Blink-Polling nicht aussetzen.
@@ -59,6 +63,11 @@ class Poller:
                     heartbeat_due = time.monotonic() + config.HEARTBEAT_SECONDS
                 except Exception as ex:
                     log.warning("Heartbeat fehlgeschlagen: %s", ex)
+            # Bewegungs-Check in eigenem, langsamerem Takt und eigener Absicherung:
+            # ein Fehler hier darf die Gesichtserkennung nicht aussetzen (und umgekehrt).
+            if self._blink.logged_in and time.monotonic() >= motion_due:
+                await self._motion.check()   # wirft nie (eigene Absicherung im Watcher)
+                motion_due = time.monotonic() + config.MOTION_POLL_SECONDS
             try:
                 if self._blink.logged_in:
                     await self._poll_once()
