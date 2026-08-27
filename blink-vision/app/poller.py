@@ -63,16 +63,25 @@ class Poller:
                     heartbeat_due = time.monotonic() + config.HEARTBEAT_SECONDS
                 except Exception as ex:
                     log.warning("Heartbeat fehlgeschlagen: %s", ex)
-            # Bewegungs-Check in eigenem, langsamerem Takt und eigener Absicherung:
-            # ein Fehler hier darf die Gesichtserkennung nicht aussetzen (und umgekehrt).
-            if self._blink.logged_in and time.monotonic() >= motion_due:
-                await self._motion.check()   # wirft nie (eigene Absicherung im Watcher)
-                motion_due = time.monotonic() + config.MOTION_POLL_SECONDS
             try:
                 if self._blink.logged_in:
                     await self._poll_once()
             except Exception as ex:
                 log.warning("Poll-Durchlauf fehlgeschlagen: %s", ex)
+            # Bewegungs-Check in eigenem, langsamerem Takt und eigener Absicherung:
+            # ein Fehler hier darf die Gesichtserkennung nicht aussetzen (und umgekehrt).
+            #
+            # Die Reihenfolge ist NICHT beliebig: der Check kostet einen
+            # Cloud-Roundtrip und im Fundfall einen POST mit 30-s-Timeout. Stuende
+            # er vorn, verzoegerte er jeden dritten Erkennungszyklus um diese Zeit —
+            # und an der Erkennung haengt der Auto-Unlock, wo Latenz das Einzige
+            # ist, was zaehlt. Hinten verzoegert er stattdessen die Bewegungsmeldung,
+            # die ohnehin mit 15-60 s veranschlagt ist. Nicht zurueck sortieren.
+            # (Bewusst sequenziell statt nebenlaeufig: beide Pfade greifen ueber
+            # dieselben blinkpy-Objekte auf sync.refresh() zu.)
+            if self._blink.logged_in and time.monotonic() >= motion_due:
+                await self._motion.check()   # wirft nie (eigene Absicherung im Watcher)
+                motion_due = time.monotonic() + config.MOTION_POLL_SECONDS
             await asyncio.sleep(config.POLL_SECONDS)
 
     async def _poll_once(self):

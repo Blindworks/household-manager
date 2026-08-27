@@ -1,7 +1,9 @@
 """Bewegungs-Waechter: Hochwassermarken, Erststart ohne Feuern, Webhook-Wiederholung."""
 import asyncio
 
+from app import backend_client, config
 from app.motion import MotionWatcher
+from app.poller import Poller
 
 
 def _entry(camera_id, clip_id, created_at):
@@ -89,6 +91,72 @@ def test_snapshot_error_does_not_raise():
             raise RuntimeError("cloud down")
     watcher = MotionWatcher(_BrokenSource(), _FakeSink())
     _run(watcher)  # darf nicht werfen
+
+
+def test_malformed_entry_does_not_raise_and_leaves_marks_untouched():
+    """check() verspricht "wirft nie" — das muss auch die Auswertung einschliessen.
+
+    Heute garantiert manifest_snapshot() die Form der Eintraege; das Versprechen
+    soll aber auch fuer eine spaeter eingespeiste Quelle gelten. Ein unbrauchbarer
+    Eintrag laesst den Durchlauf aus, ohne halb gesetzte Marken zu hinterlassen —
+    der naechste Durchlauf holt die Bewegung damit nach.
+    """
+    source, sink = _FakeSource(), _FakeSink()
+    source.snapshots = [
+        [_entry("1", "10", "2026-08-27T10:00:00")],
+        [{"cameraId": "1"}],                                    # kein createdAt
+        [_entry("1", "12", "2026-08-27T12:00:00"), _entry("1", "10", "2026-08-27T10:00:00")],
+    ]
+    watcher = MotionWatcher(source, sink)
+    _run(watcher)          # initialisiert
+    _run(watcher)          # kaputter Eintrag: darf nicht werfen
+    _run(watcher)          # Marke von Durchlauf 1 muss noch stehen
+    assert [e["clipId"] for e in sink.calls[0]] == ["12"]
+
+
+def test_recognition_runs_before_motion_check():
+    """Reihenfolge im Poll-Loop: erst Erkennung, dann Bewegungs-Check.
+
+    Umgekehrt verzoegerte der Cloud-Roundtrip des Checks die zeitkritische
+    Gesichtserkennung, an der der Auto-Unlock haengt.
+    """
+    order: list[str] = []
+
+    class _FakeBlink:
+        logged_in = True
+
+        async def fetch_new_clips(self, is_new, data_dir):
+            order.append("recognition")
+            return []
+
+        async def manifest_snapshot(self):
+            order.append("motion")
+            return []
+
+    async def _fake_heartbeat():
+        pass
+
+    original = (config.POLL_SECONDS, config.MOTION_POLL_SECONDS,
+                backend_client.post_heartbeat)
+    config.POLL_SECONDS = 0
+    config.MOTION_POLL_SECONDS = 0
+    backend_client.post_heartbeat = _fake_heartbeat
+    try:
+        async def _run_briefly():
+            task = asyncio.create_task(Poller(_FakeBlink(), None, None).run_forever())
+            await asyncio.sleep(0.05)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        asyncio.run(_run_briefly())
+    finally:
+        (config.POLL_SECONDS, config.MOTION_POLL_SECONDS,
+         backend_client.post_heartbeat) = original
+
+    assert "recognition" in order and "motion" in order
+    assert order.index("recognition") < order.index("motion")
 
 
 def test_multiple_new_clips_all_fire_and_mark_advances_to_newest():

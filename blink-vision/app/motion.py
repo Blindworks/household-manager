@@ -25,6 +25,13 @@ class MotionWatcher:
     angehaengten Mikrosekunden sortieren korrekt, weil '.' unter allen Ziffern
     liegt. Wer die Quelle je auf ein anderes Format umstellt (gemischt naiv und
     zonenbehaftet etwa), muss hier auf echte Datumsobjekte umstellen.
+
+    Bewusste Vereinfachung: der Vergleich ist strikt (`>`). Zwei Clips mit
+    IDENTISCHEM Zeitstempel — zwei Aufnahmen in derselben Sekunde, deren
+    Zeitstempel keine Mikrosekunden traegt — gelten als derselbe Stand, der
+    zweite wird also nie gemeldet. Bei Bewegungsclips ist das unwahrscheinlich
+    genug, um es nicht mit einer Clip-Id-Buchfuehrung je Sekunde aufzuwiegen;
+    wer es doch braucht, faengt hier an.
     """
 
     def __init__(self, source, sink):
@@ -40,15 +47,27 @@ class MotionWatcher:
             log.warning("Bewegungs-Check: Manifest nicht lesbar: %s", ex)
             return
 
-        # Juengster Zeitstempel je Kamera. Vorab in einem eigenen Durchgang, weil
-        # das Manifest nur JE SYNC-MODUL absteigend sortiert ist — auf eine
-        # Reihenfolge darf sich hier nichts verlassen.
-        newest: dict[str, str] = {}
-        for entry in snapshot:
-            camera_id = entry["cameraId"]
-            newest[camera_id] = max(entry["createdAt"], newest.get(camera_id, ""))
+        # Auch die Auswertung ist abgesichert: das "wirft nie" oben soll auch dann
+        # noch stimmen, wenn jemand spaeter eine Quelle einspeist, die die Form der
+        # Eintraege nicht so garantiert wie manifest_snapshot(). Sie mutiert dabei
+        # bewusst NICHTS — ein unbrauchbarer Eintrag laesst den ganzen Durchlauf
+        # aus, statt halb gesetzte Marken zu hinterlassen; der naechste wiederholt.
+        try:
+            # Juengster Zeitstempel je Kamera. Vorab in einem eigenen Durchgang, weil
+            # das Manifest nur JE SYNC-MODUL absteigend sortiert ist — auf eine
+            # Reihenfolge darf sich hier nichts verlassen.
+            newest: dict[str, str] = {}
+            for entry in snapshot:
+                camera_id = entry["cameraId"]
+                newest[camera_id] = max(entry["createdAt"], newest.get(camera_id, ""))
 
-        known = set(self._marks)
+            known = set(self._marks)
+            events = [entry for entry in snapshot
+                      if entry["cameraId"] in known
+                      and entry["createdAt"] > self._marks[entry["cameraId"]]]
+        except Exception as ex:
+            log.warning("Bewegungs-Check: Manifest-Eintrag unbrauchbar: %s", ex)
+            return
 
         # Erste Sichtung einer Kamera: nur die Marke setzen, nicht feuern. Das
         # braucht keinen Webhook und wird deshalb sofort uebernommen.
@@ -56,9 +75,6 @@ class MotionWatcher:
             if camera_id not in known:
                 self._marks[camera_id] = created_at
 
-        events = [entry for entry in snapshot
-                  if entry["cameraId"] in known
-                  and entry["createdAt"] > self._marks[entry["cameraId"]]]
         if not events:
             return
 
