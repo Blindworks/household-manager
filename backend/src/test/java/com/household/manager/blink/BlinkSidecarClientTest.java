@@ -11,6 +11,26 @@ class BlinkSidecarClientTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
+    /**
+     * Regressionsschutz: Mit dem Default HTTP_2 versucht der JDK-Client bei http://-URLs
+     * ein h2c-Upgrade und schickt die Anfrage OHNE Body — uvicorn verarbeitet sie trotzdem
+     * und sieht einen leeren Request (Muster VisionSidecarClientTest, dort real aufgetreten).
+     */
+    @Test
+    void httpClientIsPinnedToHttp11() {
+        assertThat(BlinkSidecarClient.createHttpClient().version())
+                .isEqualTo(java.net.http.HttpClient.Version.HTTP_1_1);
+    }
+
+    @Test
+    void haengtQueryParameterNurBeiErzwungenemRefreshAn() {
+        // blinkpys async_arm() aendert den lokalen Zustand nicht, ein ungezwungener
+        // refresh() laeuft in eine 30-s-Drossel - force=true umgeht sie fuers Nachpollen
+        // nach Scharf-/Unscharf-Schalten.
+        assertThat(BlinkSidecarClient.camerasPath(true)).isEqualTo("/cameras?force=true");
+        assertThat(BlinkSidecarClient.camerasPath(false)).isEqualTo("/cameras");
+    }
+
     @Test
     void parstKameralisteMitAllenFeldern() throws Exception {
         var json = mapper.readTree("""

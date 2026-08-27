@@ -36,10 +36,19 @@ public class BlinkSidecarClient {
     public BlinkSidecarClient(VisionProperties properties, ObjectMapper mapper) {
         this.properties = properties;
         this.mapper = mapper;
-        // HTTP/1.1 ist Pflicht: der Default HTTP_2 versucht bei http:// ein
-        // h2c-Upgrade und schickt die Anfrage ohne Body - uvicorn sieht dann
-        // einen leeren Request (siehe VisionSidecarClient).
-        this.httpClient = HttpClient.newBuilder()
+        this.httpClient = createHttpClient();
+    }
+
+    /**
+     * Der Client MUSS auf HTTP/1.1 festgelegt sein: Der Default HTTP_2 versucht bei
+     * http://-URLs ein h2c-Upgrade und schickt die Anfrage dabei OHNE Body. uvicorn
+     * lehnt das Upgrade ab, verarbeitet die Anfrage aber trotzdem — und sieht einen
+     * leeren Body. Als eigene Methode statt Inline-Code im Konstruktor, damit ein
+     * Regressionstest die Pinnung direkt pruefen kann (Muster VisionSidecarClient,
+     * wo genau dieser Fehler real passiert ist und Stunden gekostet hat).
+     */
+    static HttpClient createHttpClient() {
+        return HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();
@@ -52,8 +61,24 @@ public class BlinkSidecarClient {
     /** Clip-Metadaten aus dem Local-Storage-Manifest. */
     public record SidecarClip(String clipId, String createdAt, Long sizeBytes) {}
 
+    /**
+     * @param force true erzwingt einen frischen Abruf beim Sidecar (Query-Parameter
+     *              {@code ?force=true}). Noetig, weil blinkpys {@code async_arm()} den
+     *              lokalen Zustand nicht selbst aktualisiert und ein ungezwungener
+     *              {@code refresh()} in eine 30-s-Drossel des Sidecars laeuft — ohne
+     *              den Parameter saehe ein Nachpoll nach dem Scharf-/Unscharf-Schalten
+     *              weiterhin den alten Zustand. Deshalb NICHT entfernen, auch wenn er
+     *              wie ein No-op aussieht: der spaetere Poller ruft ausschliesslich
+     *              {@code listCameras(true)} direkt nach jeder Zustandsaenderung auf,
+     *              die Fachschicht sonst {@code listCameras(false)}.
+     */
+    public List<SidecarCamera> listCameras(boolean force) {
+        return parseCameras(getJson(camerasPath(force)));
+    }
+
+    /** Bequemlichkeits-Ueberladung fuer den Normalfall (kein erzwungener Refresh). */
     public List<SidecarCamera> listCameras() {
-        return parseCameras(getJson("/cameras"));
+        return listCameras(false);
     }
 
     public void setCameraArmed(String cameraId, boolean armed) {
@@ -80,6 +105,11 @@ public class BlinkSidecarClient {
         return sendBytes("GET", "/cameras/" + encode(cameraId) + "/clips/" + encode(clipId));
     }
 
+    /** Pfad fuer den Kamera-Abruf; eigene, testbare Methode statt Inline-String-Bau in listCameras. */
+    static String camerasPath(boolean force) {
+        return force ? "/cameras?force=true" : "/cameras";
+    }
+
     // ==================== Parsing (testbar) ====================
 
     static List<SidecarCamera> parseCameras(JsonNode root) {
@@ -90,7 +120,7 @@ public class BlinkSidecarClient {
                     node.path("name").asText(),
                     node.path("type").asText(""),
                     node.path("armed").asBoolean(false),
-                    node.path("battery").isNull() ? null : node.path("battery").asText(null),
+                    node.path("battery").asText(null),
                     node.path("syncName").asText(),
                     node.path("syncArmed").asBoolean(false)));
         }
