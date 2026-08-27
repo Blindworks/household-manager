@@ -139,7 +139,8 @@ public class SecurityConfig {
                         .requestMatchers("/v1/health/**").permitAll()
                         // Maschinen-Endpunkte: beliebiger gueltiger Service-Token
                         .requestMatchers(HttpMethod.POST,
-                                "/v1/vision/recognitions", "/v1/vision/heartbeat").hasAuthority(SERVICE_AUTHORITY)
+                                "/v1/vision/recognitions", "/v1/vision/heartbeat",
+                                "/v1/blink/motion").hasAuthority(SERVICE_AUTHORITY)
                         .requestMatchers(HttpMethod.GET, "/v1/vision/embeddings").hasAuthority(SERVICE_AUTHORITY)
                         .requestMatchers("/v1/tablet-presence/**").hasAuthority(SERVICE_AUTHORITY)
                         // Admin-Bereiche (inkl. bestehender /v1/admin/*-Polling-Controller)

@@ -72,4 +72,15 @@ class BlinkMotionServiceTest {
 
         assertThat(service.lastMotion("123")).isPresent();
     }
+
+    @Test
+    void unvollstaendigeMeldungWirdUebersprungenOhneDieUebrigenZuVerlieren() {
+        service.processMotions(java.util.Arrays.asList(
+                new MotionReport("123", null, "42", "2026-08-27T12:00:00"),
+                new MotionReport("456", "Garage", "43", "2026-08-27T12:05:00")));
+
+        verify(entityStateService, times(1)).reportEvent(any());
+        assertThat(service.lastMotion("123")).isEmpty();
+        assertThat(service.lastMotion("456")).isPresent();
+    }
 }

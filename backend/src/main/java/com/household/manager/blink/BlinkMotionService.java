@@ -45,6 +45,13 @@ public class BlinkMotionService {
 
     public void processMotions(List<MotionReport> motions) {
         for (MotionReport motion : motions) {
+            if (isIncomplete(motion)) {
+                // Eine unvollstaendige Meldung ueberspringen statt den ganzen
+                // Aufruf kippen zu lassen: die uebrigen Bewegungen desselben
+                // Webhooks sollen ankommen. Map.of wuerde bei null werfen.
+                log.warn("Unvollstaendige Bewegungsmeldung verworfen: {}", motion);
+                continue;
+            }
             fireEventSafely(motion);
             lastMotions.put(motion.cameraId(),
                     new LastMotion(motion.createdAt(), motion.clipId()));
@@ -53,6 +60,11 @@ public class BlinkMotionService {
 
     public Optional<LastMotion> lastMotion(String cameraId) {
         return Optional.ofNullable(lastMotions.get(cameraId));
+    }
+
+    private static boolean isIncomplete(MotionReport motion) {
+        return motion == null || motion.cameraId() == null || motion.cameraName() == null
+                || motion.clipId() == null || motion.createdAt() == null;
     }
 
     /** Muster VisionRecognitionService.fireEventSafely: ein Event-Fehler darf

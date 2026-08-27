@@ -22,9 +22,23 @@ public class BlinkCameraService {
     private final BlinkSidecarClient client;
     private final BlinkPollingService pollingService;
     private final AuditService auditService;
+    private final BlinkMotionService motionService;
 
-    public List<SidecarCamera> listCameras() {
-        return client.listCameras(false);
+    /** Kamera fuer das Frontend: Sidecar-Daten plus letzte Bewegung (null = keine bekannt). */
+    public record CameraResponse(String cameraId, String name, String type, boolean armed,
+                                  String battery, String syncName, boolean syncArmed,
+                                  String lastMotionAt, String lastMotionClipId) {}
+
+    public List<CameraResponse> listCameras() {
+        return client.listCameras(false).stream().map(this::toResponse).toList();
+    }
+
+    private CameraResponse toResponse(SidecarCamera camera) {
+        var last = motionService.lastMotion(camera.cameraId()).orElse(null);
+        return new CameraResponse(camera.cameraId(), camera.name(), camera.type(),
+                camera.armed(), camera.battery(), camera.syncName(), camera.syncArmed(),
+                last == null ? null : last.createdAt(),
+                last == null ? null : last.clipId());
     }
 
     public void setCameraArmed(String cameraId, boolean armed) {

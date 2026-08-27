@@ -1,11 +1,12 @@
 package com.household.manager.controller;
 
 import com.household.manager.blink.BlinkCameraService;
-import com.household.manager.blink.BlinkSidecarClient.SidecarCamera;
+import com.household.manager.blink.BlinkMotionService;
 import com.household.manager.blink.BlinkSidecarClient.SidecarClip;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +24,18 @@ import java.util.List;
 public class BlinkController {
 
     private final BlinkCameraService cameraService;
+    private final BlinkMotionService motionService;
 
     @GetMapping("/cameras")
-    public List<SidecarCamera> getCameras() {
+    public List<BlinkCameraService.CameraResponse> getCameras() {
         return cameraService.listCameras();
+    }
+
+    /** Maschinen-Endpunkt: Bewegungsmeldungen des Sidecars (SERVICE-Authority). */
+    @PostMapping("/motion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reportMotion(@RequestBody List<BlinkMotionService.MotionReport> motions) {
+        motionService.processMotions(motions);
     }
 
     @PostMapping("/cameras/{cameraId}/arm")

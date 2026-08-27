@@ -775,4 +775,22 @@ class SecurityRulesTest {
         mockMvc.perform(get("/v1/blink/cameras")).andExpect(status().isNotFound());
         mockMvc.perform(get("/v1/blink/cameras/123/clips")).andExpect(status().isNotFound());
     }
+
+    /** Der Motion-Webhook ist ein Maschinen-Endpunkt (Sidecar mit Service-Token) —
+     *  eine Browser-Session kommt nicht ran (Muster /v1/vision/recognitions). */
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void selbstAdminSessionDarfKeineBewegungMelden() throws Exception {
+        mockMvc.perform(post("/v1/blink/motion").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("[]"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = SecurityConfig.SERVICE_AUTHORITY)
+    void serviceTokenDarfBewegungMelden() throws Exception {
+        mockMvc.perform(post("/v1/blink/motion").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("[]"))
+                .andExpect(status().isNotFound());
+    }
 }
