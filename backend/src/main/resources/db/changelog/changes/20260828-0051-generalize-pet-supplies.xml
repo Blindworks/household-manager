@@ -145,11 +145,14 @@
     <changeSet id="20260828-0051-make-supply-id-auto" author="claude">
         <comment>
             Die Id war als Singleton fest vergeben; kuenftig vergibt sie die Datenbank.
-            Bewusst NACH dem Seed der VomiSan-Zeile, damit deren feste id=2 nicht mit
-            dem Zaehler kollidiert — ein dritter Vorrat bekommt die 3.
+            Bewusst NACH dem Seed der VomiSan-Zeile: MariaDB setzt den Zaehler beim
+            Einschalten selbst auf max(id)+1, ein dritter Vorrat bekommt also die 3.
+            KEIN startWith/incrementBy — incrementBy lehnt Liquibase auf MariaDB ab,
+            und zwar schon in der VALIDIERUNG, also bevor ein einziges Changeset
+            laeuft: der Anwendungsstart bricht dann komplett ab (real passiert
+            2026-08-28), die Datenbank bleibt aber unberuehrt.
         </comment>
-        <addAutoIncrement tableName="pet_supply" columnName="id" columnDataType="BIGINT"
-                          startWith="3" incrementBy="1"/>
+        <addAutoIncrement tableName="pet_supply" columnName="id" columnDataType="BIGINT"/>
     </changeSet>
 
 </databaseChangeLog>
