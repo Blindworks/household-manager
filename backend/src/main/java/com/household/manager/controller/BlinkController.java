@@ -1,11 +1,12 @@
 package com.household.manager.controller;
 
 import com.household.manager.blink.BlinkCameraService;
-import com.household.manager.blink.BlinkSidecarClient.SidecarCamera;
+import com.household.manager.blink.BlinkMotionService;
 import com.household.manager.blink.BlinkSidecarClient.SidecarClip;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,11 @@ import java.util.List;
 /**
  * REST-API des Blink-Kamera-Dashboards. Medien (Standbilder, Clips) werden vom
  * Sidecar durchgestreamt — das Frontend spricht nie direkt mit ihm.
- * Rollen: Lesen + Schnappschuss KIOSK, Scharf/Unscharf MEMBER (SecurityConfig, eigener Task).
+ * Rollen (SecurityConfig): Lesen, Schnappschuss und — seit der Revision
+ * 2026-08-27 — auch Scharf/Unscharf sind KIOSK; der Schutz gegen ein
+ * versehentliches Unscharfschalten ist der Bestaetigungsdialog der
+ * Tablet-Ansicht, nicht mehr der Server. {@code POST /motion} ist dagegen
+ * ein reiner Maschinen-Endpunkt (SERVICE-Authority, Sidecar-Token).
  */
 @RestController
 @RequestMapping("/v1/blink")
@@ -23,10 +28,18 @@ import java.util.List;
 public class BlinkController {
 
     private final BlinkCameraService cameraService;
+    private final BlinkMotionService motionService;
 
     @GetMapping("/cameras")
-    public List<SidecarCamera> getCameras() {
+    public List<BlinkCameraService.CameraResponse> getCameras() {
         return cameraService.listCameras();
+    }
+
+    /** Maschinen-Endpunkt: Bewegungsmeldungen des Sidecars (SERVICE-Authority). */
+    @PostMapping("/motion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reportMotion(@RequestBody List<BlinkMotionService.MotionReport> motions) {
+        motionService.processMotions(motions);
     }
 
     @PostMapping("/cameras/{cameraId}/arm")

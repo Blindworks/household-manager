@@ -54,6 +54,7 @@
 
 .camera-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem 0;
@@ -62,6 +63,33 @@
     margin: 0;
     font-size: 1rem;
   }
+}
+
+.thumbnail-placeholder {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: #0f172a;
+  color: #94a3b8;
+  font-size: 0.85rem;
+
+  .placeholder-icon {
+    font-size: 1.6rem;
+  }
+}
+
+.last-motion {
+  flex-basis: 100%;
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.85rem;
+  text-align: left;
 }
 
 .badge {

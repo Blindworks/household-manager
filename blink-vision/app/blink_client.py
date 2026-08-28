@@ -346,6 +346,40 @@ class BlinkClient:
                 return str(target)
         raise KeyError(f"Clip {clip_id} nicht gefunden")
 
+    async def manifest_snapshot(self) -> list[dict]:
+        """Manifest-Metadaten ALLER Kameras, neueste zuerst - Datenquelle des
+        Bewegungs-Waechters.
+
+        Liest ausschliesslich Metadaten: kein prepare_download/download_video und
+        kein Kontakt zum Dedupe-Store der Gesichtserkennung. Beides waere ein
+        Eingriff in den Pfad, an dem der Auto-Unlock haengt - ein hier
+        heruntergeladener Clip koennte dort als "schon gesehen" fehlen.
+
+        Die Kamera wird ueber ihre stabile camera_id ausgewiesen; das Manifest
+        kennt nur Namen. Ein Clip einer Kamera, die im Sync-Modul nicht (mehr)
+        existiert, wird verworfen statt geraten - eine falsche Zuordnung wuerde
+        eine Bewegung der falschen Kamera melden.
+
+        Die Reihenfolge ist NUR je Sync-Modul absteigend, modulweit nicht global.
+        Der Waechter fuehrt Hochwassermarken je Kamera, fuer ihn ist das
+        gleichgueltig; wer hier je eine globale Ordnung braucht, muss sortieren.
+        """
+        blink = self._require_login()
+        snapshot: list[dict] = []
+        for sync in blink.sync.values():
+            names_to_ids = {name: str(cam.camera_id) for name, cam in sync.cameras.items()}
+            for item in await _manifest_newest_first(sync):
+                camera_id = names_to_ids.get(item.name)
+                if camera_id is None:
+                    continue
+                snapshot.append({
+                    "cameraId": camera_id,
+                    "cameraName": item.name,
+                    "clipId": str(item.id),
+                    "createdAt": item.created_at.isoformat(),
+                })
+        return snapshot
+
     def _save_session(self) -> None:
         """Persistiert die Session OHNE Zugangsdaten (siehe SECRET_KEYS)."""
         if self._blink is None:

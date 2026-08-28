@@ -24,7 +24,15 @@
       <div class="camera-grid">
         @for (camera of group.cameras; track camera.cameraId) {
           <article class="camera-card">
-            <img [src]="thumbnailUrl(camera)" [alt]="camera.name" loading="lazy" />
+            @if (hasThumbnailError(camera.cameraId)) {
+              <div class="thumbnail-placeholder" aria-hidden="true">
+                <span class="placeholder-icon">📷</span>
+                <span>Noch kein Standbild</span>
+              </div>
+            } @else {
+              <img [src]="thumbnailUrl(camera)" [alt]="camera.name" loading="lazy"
+                   (error)="onThumbnailError(camera.cameraId)" />
+            }
             <div class="camera-meta">
               <h3>{{ camera.name }}</h3>
               @if (camera.type === 'doorbell') {
@@ -34,6 +42,11 @@
                 <span class="battery" [class.low]="camera.battery !== 'ok'">
                   Batterie: {{ camera.battery === 'ok' ? 'OK' : camera.battery }}
                 </span>
+              }
+              @if (camera.lastMotionAt) {
+                <button type="button" class="last-motion" (click)="playLastMotion(camera)">
+                  Letzte Bewegung: {{ camera.lastMotionAt | date:'dd.MM. HH:mm' }}
+                </button>
               }
             </div>
             <div class="camera-actions">

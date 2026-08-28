@@ -676,6 +676,51 @@ mvn test -Dtest="BlinkCameraServiceTest,SecurityRulesTest"
     }
 ```
 
+**Pflichtfeld-Prüfung im Webhook-Pfad (Nachtrag nach Task 3):** `Map.of(...)` in
+`BlinkMotionService.fireEventSafely` wirft bei einem `null`-Wert eine
+`NullPointerException`. Der Endpunkt nimmt fremde Eingaben entgegen, also ist
+das ein realer Pfad. Eine unvollständige Meldung darf aber weder den Aufruf
+kippen noch die **übrigen** Meldungen desselben Aufrufs verschlucken — deshalb
+wird sie übersprungen und geloggt. In `BlinkMotionService.processMotions` vor
+die Verarbeitung setzen:
+
+```java
+        for (MotionReport motion : motions) {
+            if (isIncomplete(motion)) {
+                // Eine unvollstaendige Meldung ueberspringen statt den ganzen
+                // Aufruf kippen zu lassen: die uebrigen Bewegungen desselben
+                // Webhooks sollen ankommen. Map.of wuerde bei null werfen.
+                log.warn("Unvollstaendige Bewegungsmeldung verworfen: {}", motion);
+                continue;
+            }
+            fireEventSafely(motion);
+            lastMotions.put(motion.cameraId(),
+                    new LastMotion(motion.createdAt(), motion.clipId()));
+        }
+```
+
+```java
+    private static boolean isIncomplete(MotionReport motion) {
+        return motion == null || motion.cameraId() == null || motion.cameraName() == null
+                || motion.clipId() == null || motion.createdAt() == null;
+    }
+```
+
+Dazu ein Test in `BlinkMotionServiceTest`:
+
+```java
+    @Test
+    void unvollstaendigeMeldungWirdUebersprungenOhneDieUebrigenZuVerlieren() {
+        service.processMotions(java.util.Arrays.asList(
+                new MotionReport("123", null, "42", "2026-08-27T12:00:00"),
+                new MotionReport("456", "Garage", "43", "2026-08-27T12:05:00")));
+
+        verify(entityStateService, times(1)).reportEvent(any());
+        assertThat(service.lastMotion("123")).isEmpty();
+        assertThat(service.lastMotion("456")).isPresent();
+    }
+```
+
 `BlinkController` — Rückgabetyp von `getCameras()` auf `List<BlinkCameraService.CameraResponse>` umstellen (Import ergänzen) und den Webhook aufnehmen:
 
 ```java

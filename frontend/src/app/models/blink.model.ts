@@ -7,6 +7,10 @@ export interface BlinkCamera {
   battery: string | null;
   syncName: string;
   syncArmed: boolean;
+  /** Letzte erkannte Bewegung (ISO-Zeitstempel) — null/fehlend, wenn keine bekannt. */
+  lastMotionAt?: string | null;
+  /** Clip der letzten Bewegung; zusammen mit clipUrl direkt abspielbar. */
+  lastMotionClipId?: string | null;
 }
 
 /** Clip-Metadaten aus dem Local-Storage-Manifest der Kamera. */
