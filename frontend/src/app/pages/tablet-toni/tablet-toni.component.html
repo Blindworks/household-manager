@@ -1,20 +1,24 @@
 <app-tablet-shell heading="Toni">
   <section class="tablet-toni">
     <div class="tablet-toni__grid">
-      <article class="tablet-toni__card tablet-toni__card--food" [attr.data-tone]="foodTone">
-        <h3 class="tablet-toni__card-title">Futtervorrat</h3>
-        @if (food; as status) {
-          <p class="tablet-toni__figure">
-            {{ status.cansRemaining }}<span class="tablet-toni__unit">Dosen</span>
-          </p>
-          <div class="tablet-toni__bar">
-            <div class="tablet-toni__bar-fill" [style.width.%]="foodBarWidth"></div>
-          </div>
-          <p class="tablet-toni__figure-note">
-            reicht noch ca. {{ status.daysRemaining }} Tage · Ziel {{ status.targetCans }}
-          </p>
+      <article class="tablet-toni__card tablet-toni__card--food" [attr.data-tone]="suppliesTone">
+        <h3 class="tablet-toni__card-title">Vorräte</h3>
+        @if (supplies.length) {
+          @for (supply of supplies; track supply.key) {
+            <div class="tablet-toni__supply" [attr.data-tone]="supplyTone(supply)">
+              <p class="tablet-toni__figure">
+                {{ supply.amountRemaining }}<span class="tablet-toni__unit">{{ supply.unit }}</span>
+              </p>
+              <div class="tablet-toni__bar">
+                <div class="tablet-toni__bar-fill" [style.width.%]="barWidth(supply)"></div>
+              </div>
+              <p class="tablet-toni__figure-note">
+                reicht noch ca. {{ supply.daysRemaining }} Tage · Ziel {{ supply.targetAmount }}
+              </p>
+            </div>
+          }
         } @else {
-          <p class="tablet-toni__hint">{{ foodError ?? 'Noch keine Daten.' }}</p>
+          <p class="tablet-toni__hint">{{ suppliesError ?? 'Noch keine Daten.' }}</p>
         }
       </article>
       <article class="tablet-toni__card tablet-toni__card--walks">

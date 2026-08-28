@@ -2,7 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { TabletToniComponent } from './tablet-toni.component';
-import { PetFoodService } from '../../services/pet-food.service';
+import { PetSupplyService } from '../../services/pet-supply.service';
+import { PetSupply } from '../../models/pet-supply.model';
 import { TractiveService } from '../../services/tractive.service';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
@@ -11,7 +12,7 @@ import { TABLET_VIEWS } from '../../shared/tablet-views';
 
 describe('TabletToniComponent', () => {
   let fixture: ComponentFixture<TabletToniComponent>;
-  let petFoodSpy: jasmine.SpyObj<PetFoodService>;
+  let petSupplySpy: jasmine.SpyObj<PetSupplyService>;
   let tractiveSpy: jasmine.SpyObj<TractiveService>;
   let weatherSpy: jasmine.SpyObj<WeatherService>;
 
@@ -20,15 +21,24 @@ describe('TabletToniComponent', () => {
     batteryPercent: 78, charging: false, zone: 'Zuhause', atHome: true,
     lastSeen: '2026-08-22T14:22:00Z'
   };
+  const FUTTER: PetSupply = {
+    key: 'toni_cans', name: 'Futtervorrat', unit: 'Dosen',
+    amountRemaining: 34, targetAmount: 48, step: 0.5, perDay: 1,
+    percent: 71, daysRemaining: 34
+  };
+  const TABLETTEN: PetSupply = {
+    key: 'toni_vomisan', name: 'VomiSan-Tabletten', unit: 'Tabletten',
+    amountRemaining: 30, targetAmount: 60, step: 1, perDay: 2,
+    percent: 50, daysRemaining: 15
+  };
   const runde: TractiveWalk = {
     start: '2026-08-22T05:12:00Z', end: '2026-08-22T05:48:00Z',
     durationMinutes: 36, distanceMeters: 2100
   };
 
   beforeEach(async () => {
-    petFoodSpy = jasmine.createSpyObj('PetFoodService', ['getStatus']);
-    petFoodSpy.getStatus.and.returnValue(
-      of({ cansRemaining: 34, targetCans: 48, percent: 71, daysRemaining: 34 }));
+    petSupplySpy = jasmine.createSpyObj('PetSupplyService', ['getSupplies']);
+    petSupplySpy.getSupplies.and.returnValue(of([FUTTER, TABLETTEN]));
 
     tractiveSpy = jasmine.createSpyObj('TractiveService', ['getPets', 'getWalks']);
     tractiveSpy.getPets.and.returnValue(of([toni]));
@@ -44,7 +54,7 @@ describe('TabletToniComponent', () => {
         // Der Rahmen (app-tablet-shell) nutzt routerLink fuer die Ansichtsleiste
         // und zieht das Wetter fuer die Kopfzeile.
         provideRouter([]),
-        { provide: PetFoodService, useValue: petFoodSpy },
+        { provide: PetSupplyService, useValue: petSupplySpy },
         { provide: TractiveService, useValue: tractiveSpy },
         { provide: WeatherService, useValue: weatherSpy }
       ]
@@ -73,7 +83,7 @@ describe('TabletToniComponent', () => {
   });
 
   it('laedt Futtervorrat und Tracker beim Start', () => {
-    expect(petFoodSpy.getStatus).toHaveBeenCalledTimes(1);
+    expect(petSupplySpy.getSupplies).toHaveBeenCalledTimes(1);
     expect(tractiveSpy.getPets).toHaveBeenCalledTimes(1);
   });
 
@@ -117,9 +127,9 @@ describe('TabletToniComponent', () => {
     fresh.detectChanges();
     const component = fresh.componentInstance;
 
-    expect(component.food).not.toBeNull();
+    expect(component.supplies.length).toBe(2);
     expect(component.petError).not.toBeNull();
-    expect(component.foodError).toBeNull();
+    expect(component.suppliesError).toBeNull();
 
     fresh.destroy();
   });
@@ -127,48 +137,54 @@ describe('TabletToniComponent', () => {
   it('behaelt bei einem fehlgeschlagenen Hintergrund-Refresh die bisherigen Werte', () => {
     // Auf einer Wandanzeige sind alte Zahlen mehr wert als eine Fehlermeldung.
     const component = fixture.componentInstance;
-    petFoodSpy.getStatus.and.returnValue(throwError(() => new Error('offline')));
+    petSupplySpy.getSupplies.and.returnValue(throwError(() => new Error('offline')));
 
     component.reload();
 
-    expect(component.food?.cansRemaining).toBe(34);
-    expect(component.foodError).toBeNull();
+    expect(component.supplies[0].amountRemaining).toBe(34);
+    expect(component.suppliesError).toBeNull();
   });
 
-  it('meldet einen Fehler, wenn schon der Erstabruf des Futters scheitert', () => {
-    petFoodSpy.getStatus.and.returnValue(throwError(() => new Error('offline')));
+  it('meldet einen Fehler, wenn schon der Erstabruf der Vorraete scheitert', () => {
+    petSupplySpy.getSupplies.and.returnValue(throwError(() => new Error('offline')));
 
     const fresh = TestBed.createComponent(TabletToniComponent);
     fresh.detectChanges();
 
-    expect(fresh.componentInstance.foodError).not.toBeNull();
-    expect(fresh.componentInstance.food).toBeNull();
+    expect(fresh.componentInstance.suppliesError).not.toBeNull();
+    expect(fresh.componentInstance.supplies.length).toBe(0);
     fresh.destroy();
   });
 
-  it('zeigt Dosenzahl und Reichweite des Futtervorrats', () => {
+  it('zeigt beide Vorraete mit ihrer eigenen Einheit und Reichweite', () => {
     const card = (fixture.nativeElement as HTMLElement).querySelector('.tablet-toni__card--food');
-    expect(card?.textContent).toContain('34');
+    expect(card?.querySelectorAll('.tablet-toni__supply').length).toBe(2);
+    expect(card?.textContent).toContain('Dosen');
     expect(card?.textContent).toContain('34 Tage');
+    expect(card?.textContent).toContain('Tabletten');
+    expect(card?.textContent).toContain('15 Tage');
   });
 
-  it('faerbt den Fuellstand nach derselben Regel wie die Seite /pet-food', () => {
+  it('nimmt fuer die Kachel den schlechtesten Vorrat', () => {
     const component = fixture.componentInstance;
-    expect(component.foodTone).toBe('ok');
+    expect(component.suppliesTone).toBe('ok');
 
-    component.food = { cansRemaining: 6.5, targetCans: 48, percent: 14, daysRemaining: 6 };
-    expect(component.foodTone).toBe('critical');
+    // Ein leerer Tablettenvorrat darf nicht hinter einem vollen Futterlager
+    // verschwinden - beide teilen sich eine Kachel.
+    component.supplies = [FUTTER, { ...TABLETTEN, amountRemaining: 6, percent: 10, daysRemaining: 3 }];
+    expect(component.suppliesTone).toBe('critical');
+    expect(component.supplyTone(FUTTER)).toBe('ok');
   });
 
-  it('zeigt statt eines leeren Balkens einen Hinweis, wenn der Vorrat fehlt', () => {
+  it('zeigt statt leerer Balken einen Hinweis, wenn die Vorraete fehlen', () => {
     const component = fixture.componentInstance;
-    component.food = null;
-    component.foodError = 'Futtervorrat nicht verfügbar.';
+    component.supplies = [];
+    component.suppliesError = 'Vorräte nicht verfügbar.';
     fixture.detectChanges();
 
     const card = (fixture.nativeElement as HTMLElement).querySelector('.tablet-toni__card--food');
     expect(card?.querySelector('.tablet-toni__hint')?.textContent)
-      .toContain('Futtervorrat nicht verfügbar.');
+      .toContain('Vorräte nicht verfügbar.');
   });
 
   it('zeigt Zuhause-Badge, Akku und Zeitpunkt des letzten Berichts', () => {

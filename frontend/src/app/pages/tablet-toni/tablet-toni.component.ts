@@ -15,11 +15,16 @@ import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import * as L from 'leaflet';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
-import { PetFoodService } from '../../services/pet-food.service';
+import { PetSupplyService } from '../../services/pet-supply.service';
 import { TractiveService } from '../../services/tractive.service';
-import { PetFoodStatus } from '../../models/pet-food.model';
+import { PetSupply } from '../../models/pet-supply.model';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
-import { PetFoodTone, petFoodBarWidth, petFoodTone } from '../../shared/pet-food-level.util';
+import {
+  PetSupplyTone,
+  petSupplyBarWidth,
+  petSupplyTone,
+  worstPetSupplyTone
+} from '../../shared/pet-supply-level.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 import {
   walkDayLabel,
@@ -33,7 +38,7 @@ echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
 useLocalLeafletIcons();
 
 /**
- * Hundeuebersicht fuer das Wandtablet: Futtervorrat, Spaziergaenge,
+ * Hundeuebersicht fuer das Wandtablet: Vorraete, Spaziergaenge,
  * Tracker-Status und Position in einem 2x2-Raster, alles gleichzeitig sichtbar
  * und ohne Scrollen.
  *
@@ -67,7 +72,7 @@ export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Das Tablet haengt dauerhaft in dieser Ansicht und muss sich selbst aktualisieren. */
   private static readonly REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
-  private readonly petFoodService = inject(PetFoodService);
+  private readonly petSupplyService = inject(PetSupplyService);
   private readonly tractiveService = inject(TractiveService);
   private refreshTimer: number | null = null;
 
@@ -84,8 +89,8 @@ export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly walkRanges: readonly WalkRangeDays[] = [7, 14, 30];
 
-  food: PetFoodStatus | null = null;
-  foodError: string | null = null;
+  supplies: PetSupply[] = [];
+  suppliesError: string | null = null;
   pet: TractivePet | null = null;
   petError: string | null = null;
   walks: TractiveWalk[] = [];
@@ -123,13 +128,23 @@ export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
     this.load(true);
   }
 
-  /** Ton des Fuellstands; ohne Daten neutral. Regel in shared/pet-food-level.util.ts. */
-  get foodTone(): PetFoodTone {
-    return this.food ? petFoodTone(this.food) : 'ok';
+  /**
+   * Ton der ganzen Kachel: der SCHLECHTESTE der Vorraete. Beide teilen sich
+   * eine Kachel, ein leerer Tablettenvorrat darf nicht hinter einem vollen
+   * Futterlager verschwinden. Ohne Daten neutral.
+   * Regel in shared/pet-supply-level.util.ts.
+   */
+  get suppliesTone(): PetSupplyTone {
+    return worstPetSupplyTone(this.supplies);
   }
 
-  get foodBarWidth(): number {
-    return this.food ? petFoodBarWidth(this.food.percent) : 0;
+  /** Ton EINES Vorrats - faerbt seine eigene Zeile innerhalb der Kachel. */
+  supplyTone(supply: PetSupply): PetSupplyTone {
+    return petSupplyTone(supply);
+  }
+
+  barWidth(supply: PetSupply): number {
+    return petSupplyBarWidth(supply.percent);
   }
 
   /** true, sobald eine verwertbare Position vorliegt. */
@@ -185,23 +200,23 @@ export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
    * Futtervorrat trotzdem noch da - und umgekehrt.
    */
   private load(silent: boolean): void {
-    this.loadFood(silent);
+    this.loadSupplies(silent);
     this.loadPet(silent);
   }
 
-  private loadFood(silent: boolean): void {
-    this.petFoodService.getStatus().subscribe({
-      next: food => {
-        this.food = food;
-        this.foodError = null;
+  private loadSupplies(silent: boolean): void {
+    this.petSupplyService.getSupplies().subscribe({
+      next: supplies => {
+        this.supplies = supplies;
+        this.suppliesError = null;
       },
       error: (error: Error) => {
-        console.error('Fehler beim Laden des Futtervorrats:', error);
+        console.error('Fehler beim Laden der Vorraete:', error);
         // Ein misslungener Hintergrundabruf darf die zuletzt bekannten Werte nicht
         // durch eine Fehlermeldung ersetzen - alte Zahlen sind auf einer Wandanzeige
         // mehr wert als gar keine.
         if (!silent) {
-          this.foodError = 'Futtervorrat nicht verfügbar.';
+          this.suppliesError = 'Vorräte nicht verfügbar.';
         }
       }
     });

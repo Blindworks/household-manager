@@ -106,16 +106,37 @@
     transition: width 0.3s ease;
   }
 
-  /* Dieselben drei Stufen wie auf der Seite /pet-food. */
-  &__card--food[data-tone='warn'] &__bar-fill {
+  /*
+   * Zwei Vorraete in EINER Kachel: die Zeilen teilen sich die Hoehe, und die
+   * Zahl faellt kleiner aus als bei der frueheren Ein-Vorrats-Kachel, damit
+   * beide ohne Scrollen passen.
+   */
+  &__supply {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    .tablet-toni__figure { font-size: 2.2rem; }
+    .tablet-toni__figure-note { font-size: 0.9rem; }
+    .tablet-toni__bar { margin-top: 0.6rem; height: 0.9rem; }
+  }
+
+  /*
+   * Dieselben drei Stufen wie auf der Seite /pet-food, aber je ZEILE: der
+   * Kachel-Ton (worstPetSupplyTone) faerbt nur den Rahmen, sonst saehe ein
+   * voller Futtervorrat neben leeren Tabletten faelschlich kritisch aus.
+   */
+  &__supply[data-tone='warn'] .tablet-toni__bar-fill {
     background: #fbbf24;
   }
 
-  &__card--food[data-tone='critical'] &__bar-fill {
+  &__supply[data-tone='critical'] .tablet-toni__bar-fill {
     background: #ffb4ab;
   }
 
-  &__card--food[data-tone='critical'] &__figure {
+  &__supply[data-tone='critical'] .tablet-toni__figure {
     color: #ffb4ab;
   }
 

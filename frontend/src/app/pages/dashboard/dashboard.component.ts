@@ -56,13 +56,13 @@ import { TractiveService } from '../../services/tractive.service';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeHealth } from '../../models/zigbee.model';
-import { PetFoodService } from '../../services/pet-food.service';
-import { PetFoodStatus } from '../../models/pet-food.model';
+import { PetSupplyService } from '../../services/pet-supply.service';
+import { PetSupply } from '../../models/pet-supply.model';
 import { PresenceService } from '../../services/presence.service';
 import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
 import { formatDate } from '@angular/common';
 import { iconOffVariant } from '../../shared/icon-off.util';
-import { PetFoodTone, petFoodTone as petFoodLevelTone } from '../../shared/pet-food-level.util';
+import { PetSupplyTone, petSupplyTone as petSupplyLevelTone } from '../../shared/pet-supply-level.util';
 import {
   groupWalksByDay as groupWalks,
   walkDistance as formatWalkDistance,
@@ -113,7 +113,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tractiveService = inject(TractiveService);
   private readonly zigbeeService = inject(ZigbeeService);
   private readonly entityStateService = inject(EntityStateService);
-  private readonly petFoodService = inject(PetFoodService);
+  private readonly petSupplyService = inject(PetSupplyService);
   private readonly presenceService = inject(PresenceService);
 
   /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
@@ -181,7 +181,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private petSubscription?: Subscription;
   private zigbeeHealthSubscription?: Subscription;
   private doorSubscription?: Subscription;
-  private petFoodSubscription?: Subscription;
+  private petSupplySubscription?: Subscription;
   private presenceSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
@@ -222,8 +222,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PETS_REFRESH_MS = 60000;
   /** Aktualisierungsintervall der Zigbee-Health-Kachel (60 s; das Wandtablet laedt die Seite nur einmal). */
   private static readonly ZIGBEE_HEALTH_REFRESH_MS = 60000;
-  /** Aktualisierungsintervall der Futtervorrat-Kachel (10 min; der Bestand aendert sich zweimal am Tag). */
-  private static readonly PET_FOOD_REFRESH_MS = 600000;
+  /** Aktualisierungsintervall der Vorrats-Kacheln (10 min; die Bestaende aendern sich zweimal am Tag). */
+  private static readonly PET_SUPPLY_REFRESH_MS = 600000;
   /** Anwesenheits-Kachel: 30-s-Rhythmus wie der Backend-Poller. */
   private static readonly PRESENCE_REFRESH_MS = 30000;
 
@@ -379,16 +379,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
   zigbeeHealth: ZigbeeHealth | null = null;
 
   /** Toni-Futtervorrat; null = Kachel wird nicht gerendert. */
-  petFood: PetFoodStatus | null = null;
+  petSupplies: PetSupply[] = [];
 
-  /** Erfassungs-Dialog der Futtervorrat-Kachel (Einkauf zubuchen, Bestand korrigieren). */
-  petFoodDialogOpen = false;
-  petFoodPurchaseCans: number | null = null;
-  petFoodPurchaseNote = '';
-  petFoodCorrectionCans: number | null = null;
-  petFoodCorrectionNote = '';
-  petFoodSaving = false;
-  petFoodError: string | null = null;
+  /** Erfassungs-Dialog der Vorrats-Kacheln (Einkauf zubuchen, Bestand korrigieren). */
+  /**
+   * Der Dialog haelt nur den SCHLUESSEL, nicht das Vorratsobjekt: der
+   * 10-Minuten-Refresh laeuft weiter, waehrend der Dialog offen ist, und eine
+   * festgehaltene Kopie waere danach veraltet (Regel aus confirmToggle).
+   */
+  petSupplyDialogKey: string | null = null;
+  petSupplyPurchaseAmount: number | null = null;
+  petSupplyPurchaseNote = '';
+  petSupplyCorrectionAmount: number | null = null;
+  petSupplyCorrectionNote = '';
+  petSupplySaving = false;
+  petSupplyError: string | null = null;
 
   /** Anwesenheits-Status; null = Kachel wird nicht gerendert. */
   presence: PresenceStatusResponse | null = null;
@@ -408,7 +413,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
     this.startDoorRefresh();
-    this.startPetFoodRefresh();
+    this.startPetSupplyRefresh();
     this.startPresenceRefresh();
   }
 
@@ -428,7 +433,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.petSubscription?.unsubscribe();
     this.zigbeeHealthSubscription?.unsubscribe();
     this.doorSubscription?.unsubscribe();
-    this.petFoodSubscription?.unsubscribe();
+    this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.clearNukiCollapseTimer();
@@ -1501,21 +1506,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Haelt die Futtervorrat-Kachel aktuell (Muster {@link startPetRefresh}; startWith(0)
+   * Haelt die Vorrats-Kacheln aktuell (Muster {@link startPetRefresh}; startWith(0)
    * uebernimmt den initialen Load). Das Wandtablet laedt die Seite genau einmal — ohne
    * Polling bliebe die Kachel wochenlang auf dem Stand des Seitenladens. 10 Minuten
    * reichen, der Bestand aendert sich nur zweimal am Tag. Ein fehlgeschlagener Abruf
-   * behaelt den letzten Stand (null = kein Update) statt die Kachel verschwinden zu lassen.
+   * behaelt den letzten Stand (null = kein Update) statt die Kacheln verschwinden zu lassen.
    */
-  private startPetFoodRefresh(): void {
-    this.petFoodSubscription = interval(DashboardComponent.PET_FOOD_REFRESH_MS)
+  private startPetSupplyRefresh(): void {
+    this.petSupplySubscription = interval(DashboardComponent.PET_SUPPLY_REFRESH_MS)
       .pipe(
         startWith(0),
-        switchMap(() => this.petFoodService.getStatus().pipe(catchError(() => of<PetFoodStatus | null>(null))))
+        switchMap(() => this.petSupplyService.getSupplies().pipe(catchError(() => of<PetSupply[] | null>(null))))
       )
-      .subscribe(status => {
-        if (status) {
-          this.petFood = status;
+      .subscribe(supplies => {
+        if (supplies) {
+          this.petSupplies = supplies;
         }
       });
   }
@@ -1533,56 +1538,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return pet.atHome ? 'home' : 'pets';
   }
 
-  petFoodTone(status: PetFoodStatus): PetFoodTone {
-    return petFoodLevelTone(status);
+  petSupplyTone(supply: PetSupply): PetSupplyTone {
+    return petSupplyLevelTone(supply);
+  }
+
+  /**
+   * Der Vorrat des offenen Dialogs, JEDES MAL frisch aus der aktuellen Liste
+   * aufgeloest — ein Hintergrund-Refresh bei offenem Dialog darf nicht dazu
+   * fuehren, dass auf einem veralteten Stand gebucht wird.
+   */
+  get petSupplyDialogSupply(): PetSupply | null {
+    if (this.petSupplyDialogKey === null) {
+      return null;
+    }
+    return this.petSupplies.find(supply => supply.key === this.petSupplyDialogKey) ?? null;
   }
 
   /** Öffnet den Erfassungs-Dialog; die Korrektur ist mit dem aktuellen Bestand vorbelegt. */
-  openPetFoodDialog(): void {
-    this.petFoodDialogOpen = true;
-    this.petFoodError = null;
-    this.petFoodPurchaseCans = null;
-    this.petFoodPurchaseNote = '';
-    this.petFoodCorrectionCans = this.petFood?.cansRemaining ?? null;
-    this.petFoodCorrectionNote = '';
+  openPetSupplyDialog(supply: PetSupply): void {
+    this.petSupplyDialogKey = supply.key;
+    this.petSupplyError = null;
+    this.petSupplyPurchaseAmount = null;
+    this.petSupplyPurchaseNote = '';
+    this.petSupplyCorrectionAmount = supply.amountRemaining;
+    this.petSupplyCorrectionNote = '';
   }
 
-  closePetFoodDialog(): void {
-    this.petFoodDialogOpen = false;
+  closePetSupplyDialog(): void {
+    this.petSupplyDialogKey = null;
   }
 
-  submitPetFoodPurchase(): void {
-    if (this.petFoodPurchaseCans == null || this.petFoodPurchaseCans <= 0) {
+  submitPetSupplyPurchase(): void {
+    const supply = this.petSupplyDialogSupply;
+    if (supply === null || this.petSupplyPurchaseAmount == null || this.petSupplyPurchaseAmount <= 0) {
       return;
     }
-    this.mutatePetFood(
-      this.petFoodService.recordPurchase(this.petFoodPurchaseCans, this.petFoodPurchaseNote),
-      () => { this.petFoodPurchaseCans = null; this.petFoodPurchaseNote = ''; });
+    this.mutatePetSupply(
+      this.petSupplyService.recordPurchase(supply.key, this.petSupplyPurchaseAmount, this.petSupplyPurchaseNote),
+      () => { this.petSupplyPurchaseAmount = null; this.petSupplyPurchaseNote = ''; });
   }
 
-  submitPetFoodCorrection(): void {
-    if (this.petFoodCorrectionCans == null || this.petFoodCorrectionCans < 0) {
+  submitPetSupplyCorrection(): void {
+    const supply = this.petSupplyDialogSupply;
+    if (supply === null || this.petSupplyCorrectionAmount == null || this.petSupplyCorrectionAmount < 0) {
       return;
     }
-    this.mutatePetFood(
-      this.petFoodService.correctStock(this.petFoodCorrectionCans, this.petFoodCorrectionNote),
-      () => { this.petFoodCorrectionNote = ''; });
+    this.mutatePetSupply(
+      this.petSupplyService.correctStock(supply.key, this.petSupplyCorrectionAmount, this.petSupplyCorrectionNote),
+      () => { this.petSupplyCorrectionNote = ''; });
   }
 
   /** Der Dialog bleibt nach dem Buchen offen, damit der neue Füllstand sofort sichtbar ist. */
-  private mutatePetFood(request: Observable<PetFoodStatus>, onSuccess: () => void): void {
-    this.petFoodSaving = true;
-    this.petFoodError = null;
+  private mutatePetSupply(request: Observable<PetSupply>, onSuccess: () => void): void {
+    this.petSupplySaving = true;
+    this.petSupplyError = null;
     request.subscribe({
-      next: status => {
-        this.petFoodSaving = false;
-        this.petFood = status;
-        this.petFoodCorrectionCans = status.cansRemaining;
+      next: updated => {
+        this.petSupplySaving = false;
+        this.petSupplies = this.petSupplies.map(supply => supply.key === updated.key ? updated : supply);
+        this.petSupplyCorrectionAmount = updated.amountRemaining;
         onSuccess();
       },
       error: (err: Error) => {
-        this.petFoodSaving = false;
-        this.petFoodError = err.message;
+        this.petSupplySaving = false;
+        this.petSupplyError = err.message;
       }
     });
   }
