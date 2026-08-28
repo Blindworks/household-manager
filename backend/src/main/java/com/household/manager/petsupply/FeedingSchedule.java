@@ -1,4 +1,4 @@
-package com.household.manager.petfood;
+package com.household.manager.petsupply;
 
 import java.time.Instant;
 import java.time.LocalDate;

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+      Aus dem Ein-Zeilen-Futtervorrat wird eine Vorratstabelle mit einer Zeile je
+      Artikel (Futter, VomiSan-Tabletten). Bewusst in EINZELNE Changesets zerlegt:
+      MariaDB committet jedes DDL implizit, ein gebuendeltes Changeset stuende nach
+      einem Abbruch halb angewendet in der Tabelle, aber nicht in DATABASECHANGELOG
+      — und waere dauerhaft nicht mehr wiederholbar (siehe 20260727-0044).
+
+      Der Bestand des Futters, seine Abzugsmarke und das gesamte Journal bleiben
+      dabei erhalten; die Futterzeile behaelt id=1 und bekommt den Schluessel
+      'toni_cans', aus dem die unveraenderte Entity-Id sensor.pet_food_toni_cans
+      abgeleitet wird.
+    -->
+
+    <changeSet id="20260828-0051-rename-stock-table" author="claude">
+        <comment>pet_food_stock wird zur generischen Vorratstabelle pet_supply</comment>
+        <renameTable oldTableName="pet_food_stock" newTableName="pet_supply"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-rename-amount-column" author="claude">
+        <comment>cans_remaining haelt kuenftig auch Tabletten</comment>
+        <renameColumn tableName="pet_supply" oldColumnName="cans_remaining"
+                      newColumnName="amount_remaining" columnDataType="DECIMAL(6,1)"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-rename-target-column" author="claude">
+        <comment>target_cans haelt kuenftig auch Tabletten</comment>
+        <renameColumn tableName="pet_supply" oldColumnName="target_cans"
+                      newColumnName="target_amount" columnDataType="DECIMAL(6,1)"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-add-supply-columns" author="claude">
+        <comment>Artikel-Merkmale: Schluessel, Name, Einheit, Verbrauch je Fuetterung, Eingaberaster</comment>
+        <addColumn tableName="pet_supply">
+            <column name="supply_key" type="VARCHAR(50)"/>
+            <column name="name" type="VARCHAR(100)"/>
+            <column name="unit" type="VARCHAR(20)"/>
+            <column name="per_feeding" type="DECIMAL(6,1)"/>
+            <column name="step_size" type="DECIMAL(6,1)"/>
+            <column name="display_order" type="INT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260828-0051-fill-food-row" author="claude">
+        <comment>Bestandszeile wird zum Vorrat 'toni_cans' — der Schluessel ergibt die bisherige Entity-Id</comment>
+        <update tableName="pet_supply">
+            <column name="supply_key" value="toni_cans"/>
+            <column name="name" value="Futtervorrat"/>
+            <column name="unit" value="Dosen"/>
+            <column name="per_feeding" valueNumeric="0.5"/>
+            <column name="step_size" valueNumeric="0.5"/>
+            <column name="display_order" valueNumeric="1"/>
+            <where>id = 1</where>
+        </update>
+    </changeSet>
+
+    <changeSet id="20260828-0051-supply-columns-not-null" author="claude">
+        <comment>Pflichtfelder erst nach dem Befuellen der Bestandszeile</comment>
+        <addNotNullConstraint tableName="pet_supply" columnName="supply_key" columnDataType="VARCHAR(50)"/>
+        <addNotNullConstraint tableName="pet_supply" columnName="name" columnDataType="VARCHAR(100)"/>
+        <addNotNullConstraint tableName="pet_supply" columnName="unit" columnDataType="VARCHAR(20)"/>
+        <addNotNullConstraint tableName="pet_supply" columnName="per_feeding" columnDataType="DECIMAL(6,1)"/>
+        <addNotNullConstraint tableName="pet_supply" columnName="step_size" columnDataType="DECIMAL(6,1)"/>
+        <addNotNullConstraint tableName="pet_supply" columnName="display_order" columnDataType="INT"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-supply-key-unique" author="claude">
+        <comment>Der Schluessel adressiert den Vorrat in der API und traegt die Entity-Id</comment>
+        <addUniqueConstraint tableName="pet_supply" columnNames="supply_key"
+                             constraintName="uk_pet_supply_key"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-rename-transaction-table" author="claude">
+        <comment>Journal gilt kuenftig fuer alle Vorraete</comment>
+        <renameTable oldTableName="pet_food_transaction" newTableName="pet_supply_transaction"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-rename-transaction-amount-after" author="claude">
+        <comment>cans_after haelt kuenftig auch Tabletten</comment>
+        <renameColumn tableName="pet_supply_transaction" oldColumnName="cans_after"
+                      newColumnName="amount_after" columnDataType="DECIMAL(6,1)"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-add-transaction-supply-id" author="claude">
+        <comment>Zuordnung der Buchung zu ihrem Vorrat</comment>
+        <addColumn tableName="pet_supply_transaction">
+            <column name="supply_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20260828-0051-assign-existing-transactions" author="claude">
+        <comment>Alle Bestandsbuchungen gehoeren zum Futtervorrat</comment>
+        <update tableName="pet_supply_transaction">
+            <column name="supply_id" valueNumeric="1"/>
+        </update>
+    </changeSet>
+
+    <changeSet id="20260828-0051-transaction-supply-id-not-null" author="claude">
+        <comment>Erst nach dem Befuellen der Bestandszeilen</comment>
+        <addNotNullConstraint tableName="pet_supply_transaction" columnName="supply_id"
+                              columnDataType="BIGINT"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-transaction-supply-fk" author="claude">
+        <comment>Kaskade raeumt das Journal mit, falls je ein Vorrat entfernt wird</comment>
+        <addForeignKeyConstraint baseTableName="pet_supply_transaction" baseColumnNames="supply_id"
+                                 constraintName="fk_pet_supply_tx_supply"
+                                 referencedTableName="pet_supply" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="20260828-0051-transaction-supply-index" author="claude">
+        <comment>Das Journal wird immer je Vorrat und absteigend nach Zeitpunkt gelesen</comment>
+        <createIndex tableName="pet_supply_transaction" indexName="idx_pet_supply_tx_supply_occurred">
+            <column name="supply_id"/>
+            <column name="occurred_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260828-0051-seed-vomisan" author="claude">
+        <comment>
+            VomiSan-Magentabletten: 2 Stueck taeglich (1 je Fuetterung), ganze Stueck.
+            Bestand 0 und Marke NULL — der erste Scheduler-Lauf setzt nur die Marke und
+            zieht nichts ab; der reale Bestand wird nach dem Deploy per Korrektur erfasst.
+        </comment>
+        <insert tableName="pet_supply">
+            <column name="id" valueNumeric="2"/>
+            <column name="amount_remaining" valueNumeric="0"/>
+            <column name="target_amount" valueNumeric="60"/>
+            <column name="supply_key" value="toni_vomisan"/>
+            <column name="name" value="VomiSan-Tabletten"/>
+            <column name="unit" value="Tabletten"/>
+            <column name="per_feeding" valueNumeric="1"/>
+            <column name="step_size" valueNumeric="1"/>
+            <column name="display_order" valueNumeric="2"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="20260828-0051-make-supply-id-auto" author="claude">
+        <comment>
+            Die Id war als Singleton fest vergeben; kuenftig vergibt sie die Datenbank.
+            Bewusst NACH dem Seed der VomiSan-Zeile, damit deren feste id=2 nicht mit
+            dem Zaehler kollidiert — ein dritter Vorrat bekommt die 3.
+        </comment>
+        <addAutoIncrement tableName="pet_supply" columnName="id" columnDataType="BIGINT"
+                          startWith="3" incrementBy="1"/>
+    </changeSet>
+
+</databaseChangeLog>

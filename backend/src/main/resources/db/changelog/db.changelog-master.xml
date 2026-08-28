@@ -127,4 +127,7 @@
     <!-- Anwesenheitserkennung (WLAN) -->
     <include file="db/changelog/changes/20260825-0050-create-presence-device-table.xml"/>
 
+    <!-- Toni-Vorraete: Futter und VomiSan-Tabletten in einer generischen Tabelle -->
+    <include file="db/changelog/changes/20260828-0051-generalize-pet-supplies.xml"/>
+
 </databaseChangeLog>

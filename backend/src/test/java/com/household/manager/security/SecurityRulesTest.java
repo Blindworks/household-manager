@@ -16,8 +16,8 @@ import com.household.manager.model.entity.ServiceToken;
 import com.household.manager.model.entity.UserRole;
 import com.household.manager.nuki.NukiController;
 import com.household.manager.nuki.NukiLockService;
-import com.household.manager.petfood.PetFoodController;
-import com.household.manager.petfood.PetFoodService;
+import com.household.manager.petsupply.PetSupplyController;
+import com.household.manager.petsupply.PetSupplyService;
 import com.household.manager.push.PushController;
 import com.household.manager.push.PushNotificationService;
 import com.household.manager.push.PushSubscriptionService;
@@ -69,7 +69,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
-        HouseholdUserController.class, SystemController.class, PetFoodController.class,
+        HouseholdUserController.class, SystemController.class, PetSupplyController.class,
         PushController.class, SmartDeviceController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
@@ -102,7 +102,7 @@ class SecurityRulesTest {
     @MockitoBean
     private AppUserDetailsService appUserDetailsService;
     @MockitoBean
-    private PetFoodService petFoodService;
+    private PetSupplyService petSupplyService;
     @MockitoBean
     private VapidKeyService vapidKeyService;
     @MockitoBean
@@ -333,43 +333,52 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
-    void kioskDarfFuttervorratLesen() throws Exception {
-        mockMvc.perform(get("/v1/pet-food")).andExpect(status().isOk());
+    void kioskDarfVorraeteLesen() throws Exception {
+        mockMvc.perform(get("/v1/pet-supplies")).andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(roles = "KIOSK")
     void kioskDarfKeinenEinkaufBuchen() throws Exception {
-        mockMvc.perform(post("/v1/pet-food/purchases").with(csrf())
+        mockMvc.perform(post("/v1/pet-supplies/toni_cans/purchases").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cans\": 24}"))
+                        .content("{\"amount\": 24}"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "KIOSK")
     void kioskDarfKeineBestandskorrekturBuchen() throws Exception {
-        mockMvc.perform(post("/v1/pet-food/corrections").with(csrf())
+        mockMvc.perform(post("/v1/pet-supplies/toni_vomisan/corrections").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cansRemaining\": 10}"))
+                        .content("{\"amountRemaining\": 10}"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "MEMBER")
     void memberDarfEinkaufBuchen() throws Exception {
-        mockMvc.perform(post("/v1/pet-food/purchases").with(csrf())
+        mockMvc.perform(post("/v1/pet-supplies/toni_cans/purchases").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cans\": 24}"))
+                        .content("{\"amount\": 24}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfTablettenKorrigieren() throws Exception {
+        mockMvc.perform(post("/v1/pet-supplies/toni_vomisan/corrections").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amountRemaining\": 42}"))
                 .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(roles = "MEMBER")
     void memberDarfZielbestandAendern() throws Exception {
-        mockMvc.perform(put("/v1/pet-food/target").with(csrf())
+        mockMvc.perform(put("/v1/pet-supplies/toni_cans/target").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"targetCans\": 60}"))
+                        .content("{\"targetAmount\": 60}"))
                 .andExpect(status().isOk());
     }
 
