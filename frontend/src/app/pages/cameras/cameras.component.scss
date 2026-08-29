@@ -176,3 +176,32 @@
 .empty {
   color: #64748b;
 }
+
+/* Ladeanzeige im Scharf-Schalter: die Aktion laeuft ueber zwei Sidecar-
+   Roundtrips (schalten, dann erzwungen nachpollen) und dauert damit spuerbar.
+   Ohne sichtbaren Ladezustand wirkt der Knopf nach dem Klick tot. */
+.spinner {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.4em;
+  vertical-align: -0.1em;
+  border: 2px solid rgba(100, 116, 139, 0.3);
+  border-top-color: #475569;
+  border-radius: 50%;
+  animation: spinner-turn 0.7s linear infinite;
+}
+
+@keyframes spinner-turn {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: spinner-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes spinner-pulse {
+    50% { opacity: 0.35; }
+  }
+}

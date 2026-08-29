@@ -17,7 +17,10 @@
         <button type="button" class="arm-toggle" [class.armed]="group.syncArmed"
                 [disabled]="isArmBusy('sync:' + group.syncName)"
                 (click)="toggleSystem(group)">
-          {{ group.syncArmed ? 'System scharf – unscharf schalten' : 'System unscharf – scharf schalten' }}
+          @if (isArmBusy('sync:' + group.syncName)) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          {{ group.syncArmed ? 'System aktiviert – deaktivieren' : 'System deaktiviert – aktivieren' }}
         </button>
       </header>
 
@@ -52,7 +55,10 @@
             <div class="camera-actions">
               <button type="button" class="arm-toggle" [class.armed]="camera.armed"
                       [disabled]="isArmBusy(camera.cameraId)" (click)="toggleCamera(camera)">
-                {{ camera.armed ? 'Scharf' : 'Unscharf' }}
+                @if (isArmBusy(camera.cameraId)) {
+                  <span class="spinner" aria-hidden="true"></span>
+                }
+                {{ camera.armed ? 'Aktiviert' : 'Deaktiviert' }}
               </button>
               <button type="button" class="snapshot" [disabled]="isSnapshotBusy(camera.cameraId)"
                       (click)="takeSnapshot(camera)">

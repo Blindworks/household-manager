@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { TabletCamerasComponent } from './tablet-cameras.component';
 import { BlinkService } from '../../services/blink.service';
 import { BlinkCamera, BlinkClip } from '../../models/blink.model';
@@ -44,11 +44,11 @@ describe('TabletCamerasComponent', () => {
     fixture = TestBed.createComponent(TabletCamerasComponent);
   });
 
-  it('zeigt die Kameras mit Scharf-Badge', () => {
+  it('zeigt die Kameras mit Aktiviert-Beschriftung', () => {
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Haustuer');
-    expect(text).toContain('Scharf');
+    expect(text).toContain('Aktiviert');
   });
 
   it('gruppiert die Kameras nach Sync-Modul', () => {
@@ -85,6 +85,30 @@ describe('TabletCamerasComponent', () => {
 
     expect(blinkService.setCameraArmed).toHaveBeenCalledWith('123', true);
     expect(fixture.componentInstance.pendingDisarm).toBeNull();
+  });
+
+  it('zeigt waehrend des Schaltens einen Spinner und sperrt den Knopf', () => {
+    // Bewusst ein Subject statt of(...): nur so ist der Zwischenzustand
+    // beobachtbar. Ein synchroner Stub waere schon fertig, bevor der Test
+    // hinsehen kann, und der Spinner nie zu sehen.
+    const armed$ = new Subject<void>();
+    blinkService.getCameras.and.returnValue(of([{ ...DOOR, armed: false }]));
+    blinkService.setCameraArmed.and.returnValue(armed$.asObservable());
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector('.camera-arm-toggle') as HTMLButtonElement;
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.camera-arm-toggle .spinner')).not.toBeNull();
+    expect((fixture.nativeElement.querySelector('.camera-arm-toggle') as HTMLButtonElement).disabled)
+      .toBeTrue();
+
+    armed$.next();
+    armed$.complete();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.camera-arm-toggle .spinner')).toBeNull();
   });
 
   it('unscharf schalten oeffnet erst den Bestaetigungsdialog', () => {
