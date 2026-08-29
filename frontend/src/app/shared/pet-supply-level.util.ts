@@ -29,6 +29,15 @@ export function petSupplyTone(supply: { daysRemaining: number; percent: number }
   return supply.percent < PET_SUPPLY_WARN_PERCENT ? 'warn' : 'ok';
 }
 
+/**
+ * Material-Symbol je Vorrat. Entschieden wird ueber die EINHEIT, nicht ueber
+ * den Schluessel: Tabletten sind Medizin, alles uebrige ist Futter. So bekommt
+ * auch ein spaeter ergaenzter Vorrat ohne Codeaenderung ein passendes Symbol.
+ */
+export function petSupplyIcon(supply: { unit: string }): string {
+  return /tablett|kapsel|pille/i.test(supply.unit) ? 'medication' : 'pet_supplies';
+}
+
 /** Breite des Fuellstandsbalkens in Prozent, geklemmt auf 0..100. */
 export function petSupplyBarWidth(percent: number): number {
   return Math.max(0, Math.min(100, percent));
