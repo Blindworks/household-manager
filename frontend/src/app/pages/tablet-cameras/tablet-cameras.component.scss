@@ -240,3 +240,34 @@
   color: #94a3b8;
   padding: 0.5rem 1rem;
 }
+
+/* Ladeanzeige im Scharf-Schalter: die Aktion laeuft ueber zwei Sidecar-
+   Roundtrips (schalten, dann erzwungen nachpollen) und dauert damit spuerbar.
+   Ohne sichtbaren Ladezustand wirkt der Knopf nach dem Tippen tot. */
+.spinner {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.4em;
+  vertical-align: -0.1em;
+  border: 2px solid rgba(226, 232, 240, 0.35);
+  border-top-color: #e2e8f0;
+  border-radius: 50%;
+  animation: spinner-turn 0.7s linear infinite;
+}
+
+@keyframes spinner-turn {
+  to { transform: rotate(360deg); }
+}
+
+/* Wer "reduzierte Bewegung" eingestellt hat, bekommt statt der Drehung einen
+   ruhigen Puls — der Ladezustand bleibt sichtbar, ohne zu rotieren. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: spinner-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes spinner-pulse {
+    50% { opacity: 0.35; }
+  }
+}

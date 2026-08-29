@@ -10,7 +10,10 @@
           <h2>{{ group.syncName }}</h2>
           <button type="button" class="system-arm-toggle" [class.armed]="group.syncArmed"
                   [disabled]="isArmBusy('sync:' + group.syncName)" (click)="toggleSystem(group)">
-            {{ group.syncArmed ? 'System: Scharf' : 'System: Unscharf' }}
+            @if (isArmBusy('sync:' + group.syncName)) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
+            {{ group.syncArmed ? 'System: Aktiviert' : 'System: Deaktiviert' }}
           </button>
         </header>
 
@@ -30,7 +33,10 @@
                 <h3>{{ camera.name }}</h3>
                 <button type="button" class="camera-arm-toggle" [class.armed]="camera.armed"
                         [disabled]="isArmBusy(camera.cameraId)" (click)="toggleCamera(camera)">
-                  {{ camera.armed ? 'Scharf' : 'Unscharf' }}
+                  @if (isArmBusy(camera.cameraId)) {
+                    <span class="spinner" aria-hidden="true"></span>
+                  }
+                  {{ camera.armed ? 'Aktiviert' : 'Deaktiviert' }}
                 </button>
               </div>
               @if (camera.lastMotionAt) {
@@ -81,7 +87,7 @@
   @if (pendingDisarm) {
     <div class="confirm-overlay" (click)="cancelDisarm()">
       <div class="confirm-dialog" (click)="$event.stopPropagation()">
-        <h3>Wirklich unscharf schalten?</h3>
+        <h3>Wirklich deaktivieren?</h3>
         <p>
           {{ pendingDisarm.kind === 'system'
               ? 'Das gesamte System „' + pendingDisarm.name + '" zeichnet dann keine Bewegungen mehr auf.'
@@ -89,7 +95,7 @@
         </p>
         <div class="confirm-actions">
           <button type="button" class="dialog-cancel" (click)="cancelDisarm()">Abbrechen</button>
-          <button type="button" class="dialog-confirm" (click)="confirmDisarm()">Unscharf schalten</button>
+          <button type="button" class="dialog-confirm" (click)="confirmDisarm()">Deaktivieren</button>
         </div>
       </div>
     </div>
