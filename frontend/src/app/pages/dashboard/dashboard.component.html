@@ -374,52 +374,73 @@
       </div>
     </div>
 
-    <div
-      class="lumina-card lumina__pets lumina__pets--clickable"
-      *ngIf="petsWithVerdict.length > 0"
-      role="button"
-      tabindex="0"
-      (click)="openWalksDialog()"
-      (keydown.enter)="openWalksDialog()"
-      (keydown.space)="$event.preventDefault(); openWalksDialog()"
-      aria-label="Spaziergänge anzeigen"
-    >
+    <!-- Toni: Hund und Vorraete in einer Kachel, Klappmechanik wie beim Tuerschloss. -->
+    <div class="lumina-card lumina__secured lumina__toni-card"
+         *ngIf="hasToniCard"
+         [attr.data-tone]="toniTone"
+         [class.lumina__secured--expanded]="toniExpanded"
+         role="button"
+         tabindex="0"
+         [attr.aria-expanded]="toniExpanded"
+         aria-label="Toni-Kachel ein- oder ausklappen"
+         (click)="toggleToniCard()"
+         (keydown.enter)="toggleToniCard()"
+         (keydown.space)="$event.preventDefault(); toggleToniCard()">
       <div class="lumina__secured-icon">
         <span class="material-symbols-outlined">pets</span>
+        <!-- Zweite, farbunabhaengige Ebene: die Faerbung allein waere bei
+             Rot-Gruen-Sehschwaeche kein Hinweis. -->
+        <span class="lumina__toni-alert" *ngIf="toniTone === 'critical'" aria-hidden="true"></span>
       </div>
-      <div class="lumina__pets-info">
-        <h4 class="lumina__label lumina__label--secondary">
-          {{ petsWithVerdict.length > 1 ? 'Haustiere' : 'Hund' }}
-        </h4>
-        <p class="lumina__secured-detail" *ngFor="let pet of petsWithVerdict"
-           [class.lumina__pet--away]="!pet.atHome">
-          <span class="material-symbols-outlined">{{ petStatusIcon(pet) }}</span>
-          {{ pet.name }} • {{ petStatusLabel(pet) }}
-        </p>
-      </div>
-    </div>
+      <!-- Klappt beim Zusammenschrumpfen auf Breite 0; das Symbol bleibt stehen. -->
+      <div class="lumina__lock-collapsible" [attr.aria-hidden]="!toniExpanded">
+        <div class="lumina__lock-collapsible-inner">
+          <div
+            class="lumina__toni-item lumina__pets"
+            *ngIf="petsWithVerdict.length > 0"
+            role="button"
+            [attr.tabindex]="toniExpanded ? 0 : -1"
+            (click)="$event.stopPropagation(); openWalksDialog()"
+            (keydown.enter)="$event.stopPropagation(); openWalksDialog()"
+            (keydown.space)="$event.preventDefault(); $event.stopPropagation(); openWalksDialog()"
+            aria-label="Spaziergänge anzeigen"
+          >
+            <div class="lumina__pets-info">
+              <h4 class="lumina__label lumina__label--secondary">
+                {{ petsWithVerdict.length > 1 ? 'Haustiere' : 'Hund' }}
+              </h4>
+              <p class="lumina__secured-detail" *ngFor="let pet of petsWithVerdict"
+                 [class.lumina__pet--away]="!pet.atHome">
+                <span class="material-symbols-outlined">{{ petStatusIcon(pet) }}</span>
+                {{ pet.name }} • {{ petStatusLabel(pet) }}
+              </p>
+            </div>
+          </div>
 
-    <div
-      class="lumina-card lumina__petfood"
-      *ngFor="let supply of petSupplies"
-      role="button"
-      tabindex="0"
-      [attr.data-tone]="petSupplyTone(supply)"
-      (click)="openPetSupplyDialog(supply)"
-      (keydown.enter)="openPetSupplyDialog(supply)"
-      (keydown.space)="$event.preventDefault(); openPetSupplyDialog(supply)"
-      [attr.aria-label]="supply.name + ' erfassen'"
-    >
-      <div class="lumina__secured-icon">
-        <span class="material-symbols-outlined">pet_supplies</span>
-      </div>
-      <div class="lumina__lock-info">
-        <h4 class="lumina__label lumina__label--secondary">{{ supply.name }}</h4>
-        <p class="lumina__secured-detail">
-          {{ supply.amountRemaining | number:'1.0-1':'de' }} {{ supply.unit }} • {{ supply.percent }} % • ~{{ supply.daysRemaining }} Tage
-        </p>
-        <div class="lumina__petfood-track">
-          <div class="lumina__petfood-fill" [style.width.%]="supply.percent > 100 ? 100 : supply.percent"></div>
+          <div
+            class="lumina__toni-item lumina__petfood"
+            *ngFor="let supply of petSupplies"
+            role="button"
+            [attr.tabindex]="toniExpanded ? 0 : -1"
+            [attr.data-tone]="petSupplyTone(supply)"
+            (click)="$event.stopPropagation(); openPetSupplyDialog(supply)"
+            (keydown.enter)="$event.stopPropagation(); openPetSupplyDialog(supply)"
+            (keydown.space)="$event.preventDefault(); $event.stopPropagation(); openPetSupplyDialog(supply)"
+            [attr.aria-label]="supply.name + ' erfassen'"
+          >
+            <div class="lumina__secured-icon">
+              <span class="material-symbols-outlined">{{ petSupplyIcon(supply) }}</span>
+            </div>
+            <div class="lumina__lock-info">
+              <h4 class="lumina__label lumina__label--secondary">{{ supply.name }}</h4>
+              <p class="lumina__secured-detail">
+                {{ supply.amountRemaining | number:'1.0-1':'de' }} {{ supply.unit }} • {{ supply.percent }} % • ~{{ supply.daysRemaining }} Tage
+              </p>
+              <div class="lumina__petfood-track">
+                <div class="lumina__petfood-fill" [style.width.%]="supply.percent > 100 ? 100 : supply.percent"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

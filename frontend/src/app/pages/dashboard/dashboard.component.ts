@@ -62,7 +62,7 @@ import { PresenceService } from '../../services/presence.service';
 import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
 import { formatDate } from '@angular/common';
 import { iconOffVariant } from '../../shared/icon-off.util';
-import { PetSupplyTone, petSupplyTone as petSupplyLevelTone } from '../../shared/pet-supply-level.util';
+import { PetSupplyTone, petSupplyIcon as petSupplyLevelIcon, petSupplyTone as petSupplyLevelTone, worstPetSupplyTone } from '../../shared/pet-supply-level.util';
 import {
   groupWalksByDay as groupWalks,
   walkDistance as formatWalkDistance,
@@ -362,9 +362,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * würde jeden fakeAsync-Test des Dashboards mit "timer still in the queue" brechen.
    */
   nukiExpanded = false;
-  /** Wartezeit, bis die ausgefahrene Türschloss-Kachel von selbst wieder zuklappt. */
-  private static readonly NUKI_COLLAPSE_DELAY_MS = 6000;
+  /** Wartezeit, bis eine ausgefahrene Fusszeilen-Kachel von selbst wieder zuklappt. */
+  private static readonly CARD_COLLAPSE_DELAY_MS = 6000;
   private nukiCollapseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * True, solange die Toni-Kachel ausgefahren ist. Sie fasst Hund und Vorraete
+   * zusammen und verhaelt sich wie die Tuerschloss-Kachel: zusammengeschrumpft
+   * nur das Symbol, per Klick aus, danach von selbst wieder zu. Kein Timer beim
+   * Start - siehe nukiExpanded.
+   */
+  toniExpanded = false;
+  private toniCollapseTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Haustiere fuer die Zu-Hause-Kachel; leer = Kachel wird nicht gerendert. */
   pets: TractivePet[] = [];
@@ -437,6 +446,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.presenceSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.clearNukiCollapseTimer();
+    this.clearToniCollapseTimer();
     this.closeFlowDialog();
     this.energyLiveService.disconnect();
   }
@@ -1034,13 +1044,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.nukiCollapseTimer = setTimeout(() => {
       this.nukiCollapseTimer = null;
       this.nukiExpanded = false;
-    }, DashboardComponent.NUKI_COLLAPSE_DELAY_MS);
+    }, DashboardComponent.CARD_COLLAPSE_DELAY_MS);
   }
 
   private clearNukiCollapseTimer(): void {
     if (this.nukiCollapseTimer !== null) {
       clearTimeout(this.nukiCollapseTimer);
       this.nukiCollapseTimer = null;
+    }
+  }
+
+  /** True, sobald es etwas zu zeigen gibt; sonst entfaellt die Toni-Kachel ganz. */
+  get hasToniCard(): boolean {
+    return this.petsWithVerdict.length > 0 || this.petSupplies.length > 0;
+  }
+
+  /**
+   * Schlechtester Vorratston - er faerbt das Pfoten-Symbol, damit die
+   * EINGEKLAPPTE Kachel den Stand ueberhaupt verraet. Ohne Vorraete bleibt es
+   * beim neutralen "ok": eine leere Liste ist kein Notstand.
+   */
+  get toniTone(): PetSupplyTone {
+    return worstPetSupplyTone(this.petSupplies);
+  }
+
+  /** Klappt die Toni-Kachel auf oder zu (Gegenstueck zu toggleNukiCard). */
+  toggleToniCard(): void {
+    this.toniExpanded = !this.toniExpanded;
+    if (this.toniExpanded) {
+      this.scheduleToniCollapse();
+    } else {
+      this.clearToniCollapseTimer();
+    }
+  }
+
+  private scheduleToniCollapse(): void {
+    this.clearToniCollapseTimer();
+    this.toniCollapseTimer = setTimeout(() => {
+      this.toniCollapseTimer = null;
+      this.toniExpanded = false;
+    }, DashboardComponent.CARD_COLLAPSE_DELAY_MS);
+  }
+
+  private clearToniCollapseTimer(): void {
+    if (this.toniCollapseTimer !== null) {
+      clearTimeout(this.toniCollapseTimer);
+      this.toniCollapseTimer = null;
     }
   }
 
@@ -1536,6 +1585,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   petStatusIcon(pet: TractivePet): string {
     return pet.atHome ? 'home' : 'pets';
+  }
+
+  /** Symbol der Vorrats-Kachel; siehe petSupplyIcon fuer die Zuordnung. */
+  petSupplyIcon(supply: PetSupply): string {
+    return petSupplyLevelIcon(supply);
   }
 
   petSupplyTone(supply: PetSupply): PetSupplyTone {
