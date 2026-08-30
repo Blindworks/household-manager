@@ -202,15 +202,27 @@
             </div>
           </div>
           <div
-            *ngFor="let item of insights"
+            *ngFor="let item of insights; trackBy: trackByInsight"
             class="lumina__insight"
             [ngClass]="'lumina__insight--' + item.tone"
+            [class.lumina__insight--clickable]="!!item.dismissEntityId"
+            [attr.role]="item.dismissEntityId ? 'button' : null"
+            [attr.tabindex]="item.dismissEntityId ? 0 : null"
+            [attr.aria-label]="item.dismissEntityId ? item.title + ' als erledigt markieren' : null"
+            (click)="activateInsight(item)"
+            (keydown.enter)="activateInsight(item)"
+            (keydown.space)="$event.preventDefault(); activateInsight(item)"
           >
             <span class="material-symbols-outlined lumina__insight-icon">{{ item.icon }}</span>
             <div>
               <p class="lumina__insight-title">{{ item.title }}</p>
               <p class="lumina__insight-text">{{ item.text }}</p>
             </div>
+            <span
+              *ngIf="item.dismissEntityId"
+              class="material-symbols-outlined lumina__insight-dismiss"
+              aria-hidden="true"
+            >done</span>
           </div>
         </div>
       </div>

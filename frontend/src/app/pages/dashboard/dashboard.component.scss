@@ -781,11 +781,16 @@
   padding: 10px 12px;
   border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.05);
-  cursor: pointer;
   transition: background-color 0.3s ease;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
+  // Nur wirklich antippbare Karten (mit dismissEntityId) sollen sich so anfuehlen —
+  // sonst waeren reine Anzeige-Karten optisch nicht von schaltbaren zu unterscheiden.
+  &--clickable {
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
   }
 
   &--primary {
@@ -831,6 +836,15 @@
 .lumina__insight-icon {
   font-size: 20px;
   line-height: 1;
+}
+
+// Sichtbarer Hinweis, dass diese Karte sich wegtippen laesst. Die Karte selbst
+// traegt bereits cursor/hover, es fehlt nur die Erkennbarkeit.
+.lumina__insight-dismiss {
+  margin-left: auto;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.55;
 }
 
 .lumina__insight-title {

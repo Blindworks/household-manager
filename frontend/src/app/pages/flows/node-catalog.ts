@@ -8,7 +8,7 @@
 export type NodeCategory = 'trigger' | 'logic' | 'action';
 
 /** Nicht-Trigger-Typen, die als „Aktion" gelten (Rest ist „Logik"). */
-const ACTION_TYPES = new Set(['alexa-announce', 'switch-device', 'nuki-lock-action', 'telegram-send', 'push-send', 'light-set']);
+const ACTION_TYPES = new Set(['alexa-announce', 'switch-device', 'nuki-lock-action', 'telegram-send', 'push-send', 'light-set', 'helper-set']);
 
 /** Menschenlesbare Beschriftungen je Node-Typ. */
 const LABELS: Record<string, string> = {
@@ -24,7 +24,8 @@ const LABELS: Record<string, string> = {
   'nuki-lock-action': 'Türschloss steuern',
   'telegram-send': 'Telegram-Nachricht',
   'push-send': 'Push-Nachricht',
-  'light-set': 'Licht setzen'
+  'light-set': 'Licht setzen',
+  'helper-set': 'Helfer setzen'
 };
 
 /** Ordnet einen Node-Typ seiner Kategorie zu (Trigger schlägt Aktion/Logik). */

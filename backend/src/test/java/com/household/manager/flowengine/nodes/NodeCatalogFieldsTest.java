@@ -86,4 +86,14 @@ class NodeCatalogFieldsTest {
         assertTrue(field(fields, "action").required());
         assertEquals(List.of("lock", "unlock", "unlatch"), field(fields, "action").options());
     }
+
+    @Test
+    void helperSetHasEntityRefAndOnOffAction() {
+        var h = new HelperSetNodeHandler(null, null);
+        var fields = h.fields();
+        assertEquals(NodeFieldType.ENTITY_REF, field(fields, "entityId").type());
+        assertTrue(field(fields, "entityId").required());
+        assertEquals(List.of("on", "off"), field(fields, "action").options());
+        assertEquals(List.of("Ausgang"), h.portLabels());
+    }
 }

@@ -75,13 +75,14 @@ Katalog aus `flow_node_types`, der sich aus `fields()` speist.
 | „Waschmaschine fertig" | `input_boolean.manual_waschmaschine_fertig`  | `local_laundry_service` |
 | „Spülmaschine fertig"  | `input_boolean.manual_spuelmaschine_fertig`  | `dishwasher_gen`        |
 
-Die IDs entstehen über `EntityIds.build` aus dem Namen; **Umbenennen ändert die ID
-nicht** (`ManualEntityService.rename` lässt sie stehen), Löschen und Neuanlegen dagegen
-schon — dann laufen Flow und Hub-Karte still ins Leere.
+Die IDs entstehen deterministisch über `EntityIds.build` aus dem Namen und überleben
+sowohl ein Umbenennen (`ManualEntityService.rename` lässt sie stehen) als auch ein
+Löschen mit Neuanlegen. **Bindend ist damit der Name:** ein Tippfehler oder Zusatz
+beim Anlegen erzeugt eine andere ID, und Flow wie Hub-Karte laufen still ins Leere.
 
 Beide bekommen für die Kachel `switches` die Sichtbarkeit `NEVER`
 (`PUT /v1/entities/{id}/tiles/switches`). Ohne das erschienen sie zusätzlich als
-gewöhnliche Schalter auf dem Dashboard und in der Schalterliste — die Karte im Hub ist
+gewöhnliche Schalter auf dem Dashboard — die Karte im Hub ist
 die gewollte Darstellung, ein zweiter Schalter daneben wäre Rauschen.
 
 ### 3. Flows

@@ -1,5 +1,6 @@
 import { EntityState } from '../models/entity-state.model';
 import { HubInsight } from './hub-insight.model';
+import { sinceText } from './insight-time.util';
 
 /**
  * Ueberwachte Tuerkontakte: Entity-ID des Zigbee-Kontakts → Name der Tuer im Hub.
@@ -32,27 +33,8 @@ export function buildDoorInsights(entities: EntityState[], nowMs: number): HubIn
       icon: 'door_open',
       tone: 'tertiary',
       title: `${door.label} offen`,
-      text: openSinceText(entity.lastChanged, nowMs)
+      text: sinceText(entity.lastChanged, nowMs, 'Offen', 'Die Tür ist gerade offen.')
     });
   }
   return insights;
-}
-
-function openSinceText(lastChanged: string, nowMs: number): string {
-  const since = new Date(lastChanged);
-  if (isNaN(since.getTime())) {
-    return 'Die Tür ist gerade offen.';
-  }
-  const time = since.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  if (isSameLocalDay(since, new Date(nowMs))) {
-    return `Offen seit ${time} Uhr.`;
-  }
-  const date = since.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-  return `Offen seit ${date}, ${time} Uhr.`;
-}
-
-function isSameLocalDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate();
 }
