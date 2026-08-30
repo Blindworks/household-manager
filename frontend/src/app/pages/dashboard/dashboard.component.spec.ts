@@ -72,7 +72,7 @@ describe('DashboardComponent (Schalter)', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
-        // Das Dashboard nutzt routerLink (Klima-Kachel) und braucht daher einen Router.
+        // Das Dashboard nutzt routerLink und braucht daher einen Router.
         provideRouter([]),
         // Das Dashboard zieht fuer die Hub-Meldung den WasteCollectionService, der
         // HttpClient injiziert. Hier gegen das Test-Backend gelegt statt gestubbt:
@@ -1409,7 +1409,7 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
   }));
 });
 
-describe('DashboardComponent (Klima-Kachel: Sensor-Detaildialog)', () => {
+describe('DashboardComponent (Sensor-Detaildialog)', () => {
   let temperatureServiceSpy: jasmine.SpyObj<TemperatureService>;
 
   const wohnzimmer: CurrentTemperatureReading = {
@@ -1460,12 +1460,11 @@ describe('DashboardComponent (Klima-Kachel: Sensor-Detaildialog)', () => {
     }).compileComponents();
   });
 
-  it('oeffnet per Klick auf eine Sensorzeile den Dialog mit Temperatur und Feuchte', fakeAsync(() => {
+  it('zeigt im Dialog Temperatur und Feuchte des gewaehlten Sensors', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    const row: HTMLButtonElement = fixture.nativeElement.querySelector('.lumina__climate-row');
-    row.click();
+    fixture.componentInstance.openSensorDialog('zigbee:1');
     fixture.detectChanges();
 
     const detail = fixture.componentInstance.sensorDetail;
@@ -1608,13 +1607,12 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
     localStorage.removeItem('household-manager-view-mode');
   });
 
-  it('zeigt in der Website-Ansicht alle drei Kacheln offen und ohne Aufklapp-Kopf', fakeAsync(() => {
+  it('zeigt in der Website-Ansicht beide Kacheln offen und ohne Aufklapp-Kopf', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
 
     expect(component.accordionActive).toBeFalse();
-    expect(component.isTileOpen('climate')).toBeTrue();
     expect(component.isTileOpen('switches')).toBeTrue();
     expect(component.isTileOpen('consumers')).toBeTrue();
     expect(fixture.nativeElement.querySelector('.lumina__room-toggle')).toBeNull();
@@ -1623,16 +1621,14 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
     discardPeriodicTasks();
   }));
 
-  it('zeigt in der Tablet-Ansicht Temperaturen und Schalter dauerhaft offen nebeneinander', fakeAsync(() => {
+  it('zeigt in der Tablet-Ansicht die Schalter dauerhaft offen', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.componentInstance.viewMode.toggle();
     fixture.detectChanges();
     const component = fixture.componentInstance;
 
     expect(component.accordionActive).toBeTrue();
-    expect(component.isTileOpen('climate')).toBeTrue();
     expect(component.isTileOpen('switches')).toBeTrue();
-    expect(component.isTileCollapsible('climate')).toBeFalse();
     expect(component.isTileCollapsible('switches')).toBeFalse();
 
     // Nur die Verbraucher-Kachel hat einen Aufklapp-Kopf ...
@@ -1647,14 +1643,14 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
     expect(collapsed[0].classList).toContain('lumina__consumer-tile');
     expect(collapsed[0].classList).toContain('lumina__room--collapsible');
 
-    // Die beiden offenen Kacheln tragen ihren Titel wieder im Inhalt.
+    // Die dauerhaft offene Kachel traegt ihren Titel wieder im Inhalt.
     const staticTiles = fixture.nativeElement.querySelectorAll('.lumina__room--static');
-    expect(staticTiles.length).toBe(2);
+    expect(staticTiles.length).toBe(1);
 
     discardPeriodicTasks();
   }));
 
-  it('klappt die Verbraucher-Kachel auf, ohne die beiden anderen zu schliessen', fakeAsync(() => {
+  it('klappt die Verbraucher-Kachel auf, ohne die Schalter zu schliessen', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.componentInstance.viewMode.toggle();
     fixture.detectChanges();
@@ -1666,7 +1662,6 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
     fixture.detectChanges();
 
     expect(component.isTileOpen('consumers')).toBeTrue();
-    expect(component.isTileOpen('climate')).toBeTrue();
     expect(component.isTileOpen('switches')).toBeTrue();
     expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
 
@@ -1684,7 +1679,7 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
     fixture.componentInstance.viewMode.toggle();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.isTileOpen('climate')).toBeTrue();
+    expect(fixture.componentInstance.isTileOpen('switches')).toBeTrue();
     expect(fixture.componentInstance.isTileOpen('consumers')).toBeTrue();
     expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lumina__room--static')).toBeNull();

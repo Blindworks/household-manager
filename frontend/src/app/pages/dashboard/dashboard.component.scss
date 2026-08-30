@@ -29,6 +29,31 @@
   --gutter: 24px;
   --radius-xl: 1rem;
   --radius-full: 9999px;
+  // ---- Knoepfe nach dem Tesla-Styleguide (tesla_styleguide.md) ------------
+  // Primaerknopf: heller Fuellton, dunkle Schrift, 1 px Rand, 4 px Ecken,
+  // 40 px hoch, 14/20 in Schriftschnitt 500, KEIN Schatten. Ausgewaehlte
+  // Zustaende tragen als einzige das Tesla-Blau ("use blue only for the
+  // strongest call to action, selected states, or brand emphasis").
+  //
+  // Bewusste Abweichung: der Guide fordert 236 px Mindestbreite. Das gilt fuer
+  // Marketing-CTAs; sechs Ansichtsknoepfe kaemen damit auf ueber 1400 px und
+  // waeren auf dem 1280 px breiten Wandtablet nicht mehr gleichzeitig
+  // sichtbar. Die Leisten uebernehmen deshalb alles ausser der Mindestbreite.
+  --radius-btn: 4px;
+  --btn-height: 40px;
+  --btn-padding: 4px 24px;
+  --btn-font: 500 14px/20px 'Universal Sans Text', -apple-system, Arial, sans-serif;
+  --btn-bg: #f4f4f4;
+  --btn-fg: #393c41;
+  --btn-border: #d0d1d2;
+  --btn-selected-bg: #3e6ae1;
+  --btn-selected-fg: #ffffff;
+  --btn-danger-bg: #d32f2f;
+  // Abgeleitete Toene fuer Inhalt AUF hellem Knopfgrund: die Dashboard-Toene
+  // (Gruen #53e16f, Gelb #e9c400, Rot #ffb4ab) sind fuer dunkle Flaechen
+  // gemacht und waeren auf #f4f4f4 kaum lesbar.
+  --btn-fg-muted: rgba(57, 60, 65, 0.72);
+  --btn-warn-fg: #a86b00;
 
   position: relative;
   display: flex;
@@ -54,11 +79,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--btn-height);
+  height: var(--btn-height);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-btn);
   background: rgba(255, 255, 255, 0.03);
   color: var(--on-surface-variant);
   cursor: pointer;
@@ -377,7 +402,7 @@
 // ---- Raum-Kacheln --------------------------------------------------------
 .lumina__rooms {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gutter);
   min-width: 0;
 }
@@ -401,32 +426,6 @@
 
   &:active {
     transform: scale(0.97);
-  }
-}
-
-// ---- Klima-Kachel (Innentemperaturen vs. Aussen) -------------------------
-.lumina__climate-tile {
-  // Die Kachel ist kein einzelnes Klickziel mehr: die Sensorzeilen darin sind es.
-  cursor: default;
-
-  &:hover,
-  &:active {
-    transform: none;
-  }
-
-  .lumina__room-icon {
-    background: rgba(83, 225, 111, 0.1);
-    color: var(--secondary);
-  }
-
-  &:hover .lumina__room-icon {
-    background: var(--secondary);
-    color: var(--on-secondary);
-  }
-
-  .lumina__room-body {
-    // Ohne Ueberschrift stoesst die erste Sensorzeile sonst direkt ans Icon.
-    padding-top: 12px;
   }
 }
 
@@ -455,10 +454,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--btn-height);
+  height: var(--btn-height);
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-btn);
   background: rgba(255, 255, 255, 0.05);
   color: rgba(192, 198, 214, 0.7);
   cursor: pointer;
@@ -490,76 +489,6 @@
 .lumina__switch-error--dialog {
   margin-top: 12px;
   color: #b91c1c;
-}
-
-.lumina__climate-rows {
-  display: flex;
-  flex-direction: column;
-  margin-top: 14px;
-}
-
-.lumina__climate-empty {
-  margin: 6px 0 0;
-  font-size: 14px;
-  color: rgba(192, 198, 214, 0.5);
-}
-
-.lumina__climate-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 11px 0;
-  width: 100%;
-  background: none;
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  &--stale {
-    opacity: 0.45;
-  }
-}
-
-.lumina__climate-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-  align-self: center;
-
-  &--cool { background: #60a5fa; }
-  &--comfortable { background: var(--secondary); }
-  &--warm { background: #fbbf24; }
-  &--hot { background: var(--error); }
-  &--stale { background: rgba(192, 198, 214, 0.4); }
-}
-
-.lumina__climate-name {
-  font-size: 15px;
-  color: rgba(192, 198, 214, 0.85);
-}
-
-.lumina__climate-status {
-  margin-left: auto;
-  font-size: 12px;
-  color: rgba(192, 198, 214, 0.5);
-}
-
-.lumina__climate-value {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--on-surface);
-  min-width: 60px;
-  text-align: right;
-  white-space: nowrap;
 }
 
 // ---- Verbraucher-Kachel & -Dialog (Top-4-Stromverbraucher) ---------------
@@ -683,14 +612,14 @@
 }
 
 // ---- Kompakte Kachel-Darstellung (nur Tablet-Ansicht) --------------------
-// Zu dritt nebeneinander sind die Kacheln auf dem Wandtablet zu gedraengt: der
-// Inhalt wird beschnitten und Namen brechen um. Temperaturen und Schalter
-// stehen deshalb zu zweit nebeneinander und dauerhaft offen; alles Weitere
-// liegt darunter ueber die volle Breite und ist aufklappbar. Dieser Block muss
+// Nebeneinander sind die Kacheln auf dem Wandtablet zu gedraengt: der Inhalt
+// wird beschnitten und Namen brechen um. Die Schalter stehen deshalb allein
+// ueber die volle Breite und dauerhaft offen; alles Weitere liegt darunter,
+// ebenfalls ueber die volle Breite, und ist aufklappbar. Dieser Block muss
 // NACH den Kachel-Bloecken stehen: er ueberschreibt u. a. das Raster und die
 // aspect-ratio bei gleicher Spezifitaet.
 .lumina__rooms--accordion {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -752,14 +681,6 @@
   .lumina__room-body {
     max-height: 46vh;
     overflow-y: auto;
-  }
-
-  // Halbe Breite: ein langer Sensorname darf die Zeile nicht umbrechen.
-  .lumina__climate-name {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
 }
 
@@ -1081,8 +1002,37 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 24px;
-  border-radius: var(--radius-xl);
+  min-height: var(--btn-height);
+  padding: 4px 24px;
+  border-radius: var(--radius-btn);
+  // Gleiche Optik wie die Modus-Knoepfe: heller Fuellton, dunkle Schrift,
+  // 1 px Rand, kein Schatten und keine Glas-Optik.
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 1px solid var(--btn-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  &:hover {
+    background: #ffffff;
+    border-color: var(--btn-border);
+    box-shadow: none;
+  }
+
+  // Symbol und Beschriftungen erben den dunklen Knopfton; die Farbe steht nur
+  // dort, wo sie eine Aussage traegt (Warnung, Stoerung).
+  .lumina__secured-icon {
+    color: inherit;
+  }
+
+  .lumina__label--secondary {
+    color: var(--btn-fg);
+  }
+
+  .lumina__secured-detail {
+    color: var(--btn-fg-muted);
+  }
 }
 
 // Nur die Tuerschloss-Kachel klappt zusammen: Der Abstand zum Symbol steckt
@@ -1091,7 +1041,7 @@
   // Eingeklappt bleibt nur das Symbol stehen: quadratisches Feld ohne Abstand
   // daneben, sonst sitzt es sichtbar aus der Mitte der runden Kachel.
   gap: 0;
-  padding: 16px;
+  padding: 8px;
   cursor: pointer;
   transition:
     padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1110,14 +1060,14 @@
 
   &.lumina__secured--expanded {
     gap: 16px;
-    padding: 16px 24px;
+    padding: 12px 24px;
   }
 }
 
 // Die Toni-Kachel klappt genauso: eingeklappt nur das Pfoten-Symbol.
 .lumina__toni-card {
   gap: 0;
-  padding: 16px;
+  padding: 8px;
   cursor: pointer;
   transition:
     padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1136,18 +1086,18 @@
 
   &.lumina__secured--expanded {
     gap: 16px;
-    padding: 16px 24px;
+    padding: 12px 24px;
   }
 
   // Eingeklappt ist das Pfoten-Symbol der einzige Traeger der Aussage: es
   // uebernimmt deshalb den schlechtesten Vorratston. Nur das DIREKTE Kind -
   // die Symbole der Vorratsbereiche faerbt weiter .lumina__petfood.
   &[data-tone='warn'] > .lumina__secured-icon {
-    color: #ffca28;
+    color: var(--btn-warn-fg);
   }
 
   &[data-tone='critical'] > .lumina__secured-icon {
-    color: var(--error);
+    color: var(--btn-danger-bg);
   }
 }
 
@@ -1170,11 +1120,11 @@
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(192, 198, 214, 0.08);
+    background: rgba(57, 60, 65, 0.06);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--secondary);
+    outline: 2px solid var(--btn-selected-bg);
     outline-offset: 2px;
   }
 }
@@ -1234,26 +1184,54 @@
 .lumina__viewbar-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex: 0 0 auto;
   white-space: nowrap;
-  // Fingerfreundliches Ziel auf dem Wandtablet, aber kompakter als zuvor -
-  // sechs Eintraege muessen einzeilig nebeneinander passen.
-  min-height: 56px;
-  padding: 0 18px;
-  border-radius: var(--radius-full);
-  color: var(--on-surface);
+  min-height: var(--btn-height);
+  padding: var(--btn-padding);
+  border-radius: var(--radius-btn);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 1px solid var(--btn-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
-  .material-symbols-outlined {
-    font-size: 24px;
-    color: var(--secondary);
+  .lumina__viewbar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+
+    .material-symbols-outlined {
+      font-size: 20px;
+    }
+  }
+
+  &:hover {
+    background: #ffffff;
+    border-color: var(--btn-border);
+    box-shadow: none;
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 }
 
 .lumina__viewbar-label {
-  font-size: 1rem;
-  font-weight: 500;
+  font: var(--btn-font);
+  letter-spacing: 0;
+}
+
+.lumina__viewbar-label {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  transition: color 0.3s ease;
 }
 
 .lumina__secured-icon {
@@ -1269,15 +1247,6 @@
   }
 }
 
-.lumina__pulse-ring {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  border: 2px solid rgba(83, 225, 111, 0.3);
-  animation: lumina-pulse-ring 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
 .lumina__secured-detail {
   margin: 4px 0 0;
   font-size: 12px;
@@ -1285,7 +1254,7 @@
 }
 
 .lumina__secured--open .lumina__secured-icon {
-  color: var(--tertiary);
+  color: var(--btn-warn-fg);
 }
 
 .lumina__lock-info {
@@ -1294,10 +1263,10 @@
 }
 
 .lumina__zigbee-outage {
-  border-color: rgba(255, 180, 171, 0.4);
+  border-color: var(--btn-danger-bg);
 
   .lumina__secured-icon {
-    color: var(--error);
+    color: var(--btn-danger-bg);
   }
 }
 
@@ -1324,7 +1293,7 @@
 }
 
 .lumina__pet--away {
-  color: var(--tertiary);
+  color: var(--btn-warn-fg);
 }
 
 .lumina__petfood {
@@ -1335,10 +1304,10 @@
   padding: 8px 12px;
   cursor: pointer;
 
-  &[data-tone='ok'] .lumina__petfood-fill { background: #66bb6a; }
-  &[data-tone='warn'] .lumina__petfood-fill { background: #ffca28; }
-  &[data-tone='critical'] .lumina__petfood-fill { background: #ef5350; }
-  &[data-tone='critical'] .lumina__secured-icon { color: var(--error); }
+  &[data-tone='ok'] .lumina__petfood-fill { background: #2e7d32; }
+  &[data-tone='warn'] .lumina__petfood-fill { background: var(--btn-warn-fg); }
+  &[data-tone='critical'] .lumina__petfood-fill { background: var(--btn-danger-bg); }
+  &[data-tone='critical'] .lumina__secured-icon { color: var(--btn-danger-bg); }
 }
 
 // Am unteren Kachelrand statt im Textblock: so bleibt die Kachel exakt so hoch
@@ -1350,7 +1319,7 @@
   bottom: 4px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(57, 60, 65, 0.15);
   overflow: hidden;
 }
 
@@ -1411,7 +1380,7 @@
   button {
     align-self: flex-start;
     padding: 8px 16px;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-btn);
     border: none;
     cursor: pointer;
     background: var(--secondary);
@@ -1480,7 +1449,7 @@
   align-items: center;
   gap: 2px;
   margin-left: 8px;
-  color: #fca5a5;
+  color: var(--btn-danger-bg);
 
   .material-symbols-outlined {
     font-size: 14px;
@@ -1490,7 +1459,7 @@
 .lumina__lock-error {
   margin: 4px 0 0;
   font-size: 12px;
-  color: #fca5a5;
+  color: var(--btn-danger-bg);
 }
 
 .lumina__lock-actions {
@@ -1503,17 +1472,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(192, 198, 214, 0.25);
-  border-radius: var(--radius-full);
-  background: rgba(192, 198, 214, 0.08);
-  color: inherit;
+  width: var(--btn-height);
+  height: var(--btn-height);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--radius-btn);
+  background: #ffffff;
+  color: var(--btn-fg);
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(192, 198, 214, 0.18);
+    background: var(--btn-bg);
   }
 
   &:disabled {
@@ -1549,27 +1518,38 @@
 .lumina__mode {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 24px;
-  border-radius: var(--radius-full);
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--btn-height);
+  padding: var(--btn-padding);
+  border-radius: var(--radius-btn);
   cursor: pointer;
-  color: var(--on-surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  // Der Guide verlangt flache Knoepfe ohne Schatten; die Glas-Optik der
+  // .lumina-card wird hier deshalb vollstaendig abgeschaltet.
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 1px solid var(--btn-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: #ffffff;
+    border-color: var(--btn-border);
+    box-shadow: none;
+  }
 
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 }
 
 .lumina__mode-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: color 0.3s ease;
 
   .material-symbols-outlined {
     font-size: 20px;
@@ -1577,12 +1557,8 @@
 }
 
 .lumina__mode-label {
-  font-family: 'Space Grotesk', 'Geist', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  transition: color 0.3s ease;
+  font: var(--btn-font);
+  letter-spacing: 0;
 }
 
 // Waehrend ein Schaltbefehl laeuft, keine weiteren Klicks annehmen.
@@ -1591,47 +1567,43 @@
   pointer-events: none;
 }
 
-// Modus-Farbvarianten (aktiv = Hover-Optik dauerhaft)
-.lumina__mode--primary {
-  border-color: rgba(170, 199, 255, 0.2);
-  .lumina__mode-icon { background: rgba(170, 199, 255, 0.1); color: var(--primary); }
-  &:hover,
-  &.lumina__mode--active {
-    border-color: rgba(170, 199, 255, 0.5);
-    .lumina__mode-icon { background: var(--primary); color: var(--on-primary); }
-    .lumina__mode-label { color: var(--primary); }
+// Der Guide kennt keine semantische Farbskala ("don't introduce bright
+// secondary hues or complex semantic color systems"): alle Modi sehen gleich
+// aus, ausgewaehlt ist blau. Die Tonklassen aus dem Markup (--primary,
+// --tertiary, --neutral) bleiben bestehen, tragen aber keine eigene Farbe mehr.
+.lumina__mode--active {
+  background: var(--btn-selected-bg);
+  border-color: var(--btn-selected-bg);
+  color: var(--btn-selected-fg);
+
+  .lumina__mode-icon,
+  .lumina__mode-label {
+    color: var(--btn-selected-fg);
+  }
+
+  &:hover {
+    background: var(--btn-selected-bg);
+    border-color: var(--btn-selected-bg);
   }
 }
 
-.lumina__mode--tertiary {
-  border-color: rgba(233, 196, 0, 0.2);
-  .lumina__mode-icon { background: rgba(233, 196, 0, 0.1); color: var(--tertiary); }
-  &:hover,
-  &.lumina__mode--active {
-    border-color: rgba(233, 196, 0, 0.5);
-    .lumina__mode-icon { background: var(--tertiary); color: var(--on-tertiary); }
-    .lumina__mode-label { color: var(--tertiary); }
+// Reboot ist die einzige zerstoerende Aktion. Der Guide will Fehlerfarben
+// "rare and utilitarian", deshalb faerbt sie nur die Schrift - erst beim
+// Druecken fuellt sie den Knopf.
+.lumina__mode--reboot {
+  .lumina__mode-icon,
+  .lumina__mode-label {
+    color: var(--btn-danger-bg);
   }
-}
 
-.lumina__mode--neutral {
-  .lumina__mode-icon { background: rgba(255, 255, 255, 0.05); color: var(--on-surface); }
-  &:hover,
-  &.lumina__mode--active {
-    border-color: rgba(255, 255, 255, 0.4);
-    .lumina__mode-icon { background: #fff; color: #131315; }
-    .lumina__mode-label { color: #fff; }
-  }
-}
+  &:hover {
+    background: var(--btn-danger-bg);
+    border-color: var(--btn-danger-bg);
 
-.lumina__mode--error {
-  border-color: rgba(255, 180, 171, 0.2);
-  .lumina__mode-icon { background: rgba(255, 180, 171, 0.1); color: var(--error); }
-  &:hover,
-  &.lumina__mode--active {
-    border-color: rgba(255, 180, 171, 0.5);
-    .lumina__mode-icon { background: var(--error); color: var(--on-error); }
-    .lumina__mode-label { color: var(--error); }
+    .lumina__mode-icon,
+    .lumina__mode-label {
+      color: var(--btn-selected-fg);
+    }
   }
 }
 
@@ -1652,12 +1624,6 @@
 @keyframes lumina-status-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.6; transform: scale(0.95); }
-}
-
-@keyframes lumina-pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.05); opacity: 0.4; }
-  100% { transform: scale(0.95); opacity: 0.8; }
 }
 
 @keyframes lumina-gauge-breathe {
@@ -1716,8 +1682,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .lumina__fade,
-  .lumina__ring-svg,
-  .lumina__pulse-ring {
+  .lumina__ring-svg {
     animation: none;
   }
 
@@ -1799,10 +1764,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--btn-height);
+  height: var(--btn-height);
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-btn);
   background: rgba(15, 23, 42, 0.05);
   color: #475569;
   cursor: pointer;
@@ -1993,7 +1958,7 @@
 .lumina__history-range {
   padding: 7px 14px;
   border: 1px solid rgba(15, 23, 42, 0.15);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-btn);
   background: none;
   font: inherit;
   font-size: 13px;
