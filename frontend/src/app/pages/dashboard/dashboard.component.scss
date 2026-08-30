@@ -833,6 +833,15 @@
   line-height: 1;
 }
 
+// Sichtbarer Hinweis, dass diese Karte sich wegtippen laesst. Die Karte selbst
+// traegt bereits cursor/hover, es fehlt nur die Erkennbarkeit.
+.lumina__insight-dismiss {
+  margin-left: auto;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.55;
+}
+
 .lumina__insight-title {
   margin: 0 0 2px;
   font-size: 13px;

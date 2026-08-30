@@ -2264,4 +2264,63 @@ describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('schaltet den Helfer aus, wenn die Karte angetippt wird', fakeAsync(() => {
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'on')]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    insightCards(fixture)[0].click();
+    fixture.detectChanges();
+
+    expect(switchServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_waschmaschine_fertig');
+    const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    expect(texts).not.toContain('Waschmaschine fertig');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet nicht, wenn der Helfer inzwischen nicht mehr auf on steht', fakeAsync(() => {
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'on')]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    // Hintergrund-Refresh bei offener Karte: der Helfer wurde woanders abgeraeumt.
+    // Ohne die Neuaufloesung wuerde der Toggle ihn wieder EINschalten.
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'off')]);
+    tick(30000);
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as { dismissInsight(id: string): void })
+      .dismissInsight('input_boolean.manual_waschmaschine_fertig');
+
+    expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  it('laesst die Karte stehen, wenn das Schalten fehlschlaegt', fakeAsync(() => {
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'on')]);
+    switchServiceSpy.toggle.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    insightCards(fixture)[0].click();
+    fixture.detectChanges();
+
+    const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    expect(texts).toContain('Waschmaschine fertig');
+
+    discardPeriodicTasks();
+  }));
+
+  it('macht Karten ohne dismissEntityId nicht antippbar', fakeAsync(() => {
+    entitiesReturning([]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    // Ohne Hinweise steht im Hub die Ruhemeldung "Alles ruhig" — sie darf kein Button sein.
+    expect(insightCards(fixture)[0].getAttribute('role')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
 });

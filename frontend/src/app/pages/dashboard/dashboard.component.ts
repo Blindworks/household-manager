@@ -1471,6 +1471,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Klick/Tastatur auf eine Hub-Karte; nur antippbare Karten tun etwas. */
+  activateInsight(item: HubInsight): void {
+    if (item.dismissEntityId) {
+      this.dismissInsight(item.dismissEntityId);
+    }
+  }
+
+  /**
+   * Raeumt eine antippbare Hub-Karte weg, indem der zugehoerige Helfer ausgeschaltet
+   * wird.
+   *
+   * <p>Der Endpunkt ist ein *Toggle* und die Helfer-Liste bis zu 30 s alt: ohne die
+   * Neuaufloesung aus dem aktuellen Stand wuerde ein Klick auf eine inzwischen
+   * anderswo abgeraeumte Karte den Helfer wieder EINschalten (Regel aus
+   * {@link confirmToggle}). Schlaegt das Schalten fehl, bleibt die Karte stehen —
+   * sie ist die ehrliche Anzeige des Serverzustands.
+   */
+  dismissInsight(entityId: string): void {
+    const current = this.applianceEntities.find(entity => entity.entityId === entityId);
+    if (current?.state !== 'on') {
+      this.refreshApplianceInsights();
+      return;
+    }
+    this.switchService.toggle(entityId).subscribe({
+      next: () => {
+        this.applianceEntities = this.applianceEntities.map(entity =>
+          entity.entityId === entityId ? { ...entity, state: 'off' } : entity);
+        this.refreshApplianceInsights();
+      },
+      error: () => { /* Karte bleibt stehen, bis der naechste Refresh die Wahrheit bringt. */ }
+    });
+  }
+
+  private refreshApplianceInsights(): void {
+    this.applianceInsights = buildApplianceInsights(this.applianceEntities, Date.now());
+    this.rebuildInsights();
+  }
+
   /** Komponiert den Hub: offene Tueren voran, dann fertige Maschinen, Muell, Termine, Lueften, Tracker-Akku. */
   private rebuildInsights(): void {
     this.insights = [
@@ -1517,8 +1555,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       )
       .subscribe(entities => {
         this.applianceEntities = entities;
-        this.applianceInsights = buildApplianceInsights(entities, Date.now());
-        this.rebuildInsights();
+        this.refreshApplianceInsights();
       });
   }
 
