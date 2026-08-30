@@ -1,10 +1,10 @@
 import { Injectable, signal } from '@angular/core';
 
-/** Die drei aufklappbaren Kacheln des Dashboards. */
-export type DashboardTileKey = 'climate' | 'switches' | 'consumers';
+/** Die aufklappbaren Kacheln des Dashboards. */
+export type DashboardTileKey = 'switches' | 'consumers';
 
 /**
- * Verwaltet, welche der drei Dashboard-Kacheln in der Tablet-Ansicht
+ * Verwaltet, welche der Dashboard-Kacheln in der Tablet-Ansicht
  * aufgeklappt ist.
  *
  * Es ist immer hoechstens eine Kachel offen: auf dem Wandtablet (800 CSS-Pixel
@@ -16,11 +16,10 @@ export type DashboardTileKey = 'climate' | 'switches' | 'consumers';
 export class DashboardAccordionService {
   private static readonly STORAGE_KEY = 'household-manager-dashboard-tile';
   private static readonly TILE_KEYS: readonly DashboardTileKey[] = [
-    'climate',
     'switches',
     'consumers'
   ];
-  private static readonly DEFAULT_TILE: DashboardTileKey = 'climate';
+  private static readonly DEFAULT_TILE: DashboardTileKey = 'switches';
 
   /** Die aktuell aufgeklappte Kachel, oder null, wenn alle zu sind. */
   readonly openTile = signal<DashboardTileKey | null>(this.loadOpenTile());
@@ -51,7 +50,8 @@ export class DashboardAccordionService {
     if (DashboardAccordionService.TILE_KEYS.includes(stored as DashboardTileKey)) {
       return stored as DashboardTileKey;
     }
-    // 'none' oder ein unbekannter Wert (z. B. aus einer aelteren Version).
+    // 'none' oder ein unbekannter Wert (z. B. das entfernte 'climate' aus einer
+    // aelteren Version).
     return null;
   }
 

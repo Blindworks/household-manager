@@ -21,6 +21,17 @@
   --gutter: 24px;
   --radius-xl: 1rem;
   --radius-full: 9999px;
+  // Knoepfe nach dem Tesla-Styleguide - dieselben Werte wie im Dashboard,
+  // wo auch die Begruendung steht (u. a. warum die Mindestbreite entfaellt).
+  --radius-btn: 4px;
+  --btn-height: 40px;
+  --btn-padding: 4px 24px;
+  --btn-font: 500 14px/20px 'Universal Sans Text', -apple-system, Arial, sans-serif;
+  --btn-bg: #f4f4f4;
+  --btn-fg: #393c41;
+  --btn-border: #d0d1d2;
+  --btn-selected-bg: #3e6ae1;
+  --btn-selected-fg: #ffffff;
 
   display: flex;
   flex-direction: column;
@@ -188,33 +199,68 @@
 .lumina__viewbar-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex: 0 0 auto;
   white-space: nowrap;
-  // Fingerfreundliches Ziel auf dem Wandtablet, aber kompakter als zuvor -
-  // sechs Eintraege muessen einzeilig nebeneinander passen.
-  min-height: 56px;
-  padding: 0 18px;
-  border-radius: var(--radius-full);
-  color: var(--on-surface);
+  min-height: var(--btn-height);
+  padding: var(--btn-padding);
+  border-radius: var(--radius-btn);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 1px solid var(--btn-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
-  .material-symbols-outlined {
-    font-size: 24px;
-    color: var(--secondary);
-  }
-
-  &--active {
-    border-color: rgba(170, 199, 255, 0.35);
-    color: var(--primary);
+  .lumina__viewbar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
 
     .material-symbols-outlined {
-      color: var(--primary);
+      font-size: 20px;
     }
+  }
+
+  &:hover {
+    background: #ffffff;
+    border-color: var(--btn-border);
+    box-shadow: none;
+  }
+
+  // Die geoeffnete Ansicht ist ein ausgewaehlter Zustand - das einzige Blau.
+  &--active {
+    background: var(--btn-selected-bg);
+    border-color: var(--btn-selected-bg);
+    color: var(--btn-selected-fg);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 }
 
 .lumina__viewbar-label {
-  font-size: 1rem;
-  font-weight: 500;
+  font: var(--btn-font);
+  letter-spacing: 0;
+}
+
+.lumina__viewbar-label {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  transition: color 0.3s ease;
+}
+
+.lumina__viewbar-label {
+  font-family: 'Space Grotesk', 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
 }

@@ -18,27 +18,26 @@ describe('DashboardAccordionService', () => {
     localStorage.removeItem(STORAGE_KEY);
   });
 
-  it('startet ohne gespeicherten Zustand mit der Temperatur-Kachel', () => {
+  it('startet ohne gespeicherten Zustand mit der Schalter-Kachel', () => {
     const service = createService();
 
-    expect(service.isOpen('climate')).toBeTrue();
-    expect(service.isOpen('switches')).toBeFalse();
+    expect(service.isOpen('switches')).toBeTrue();
     expect(service.isOpen('consumers')).toBeFalse();
   });
 
   it('oeffnet nur eine Kachel: die vorher offene schliesst sich', () => {
     const service = createService();
 
-    service.toggle('switches');
+    service.toggle('consumers');
 
-    expect(service.isOpen('switches')).toBeTrue();
-    expect(service.isOpen('climate')).toBeFalse();
+    expect(service.isOpen('consumers')).toBeTrue();
+    expect(service.isOpen('switches')).toBeFalse();
   });
 
   it('schliesst die bereits offene Kachel beim erneuten Antippen', () => {
     const service = createService();
 
-    service.toggle('climate');
+    service.toggle('switches');
 
     expect(service.openTile()).toBeNull();
   });
@@ -50,14 +49,20 @@ describe('DashboardAccordionService', () => {
   });
 
   it('stellt auch den Zustand "alle zu" wieder her', () => {
-    // 'climate' ist initial offen – ein Toggle schliesst alles.
-    createService().toggle('climate');
+    // 'switches' ist initial offen – ein Toggle schliesst alles.
+    createService().toggle('switches');
 
     expect(createService().openTile()).toBeNull();
   });
 
   it('faellt bei einem unbekannten gespeicherten Wert auf "alle zu" zurueck', () => {
     localStorage.setItem(STORAGE_KEY, 'kitchen-sink');
+
+    expect(createService().openTile()).toBeNull();
+  });
+
+  it('faellt auf "alle zu" zurueck, wenn noch die entfernte Klima-Kachel gespeichert ist', () => {
+    localStorage.setItem(STORAGE_KEY, 'climate');
 
     expect(createService().openTile()).toBeNull();
   });

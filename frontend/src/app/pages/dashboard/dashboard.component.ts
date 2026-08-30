@@ -83,11 +83,12 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
  * Vollflaechige Kommandozentrale im Kiosk-Stil: grosse Uhr, Wetter, Kacheln fuer
- * Klima, Schalter und Verbraucher, Szenen, Intelligence Hub, Live-Energie-Ring
+ * Schalter und Verbraucher, Szenen, Intelligence Hub, Live-Energie-Ring
  * und Modus-Schnellaktionen.
  *
  * Echte Daten: Uhr, Wetter (WeatherService), Live-Energie (EnergyLiveService),
- * Klima, Schalter, Verbraucher, Modi, Müllabfuhr, Türkontakte und Türschloss.
+ * Aussentemperaturen, Schalter, Verbraucher, Modi, Müllabfuhr, Türkontakte und
+ * Türschloss.
  */
 @Component({
   selector: 'app-dashboard',
@@ -130,21 +131,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tileAccordion = inject(DashboardAccordionService);
 
   /**
-   * True, wenn die Kacheln Temperaturen/Schalter/Verbraucher in der kompakten
+   * True, wenn die Kacheln Schalter/Verbraucher in der kompakten
    * Tablet-Darstellung stehen. Nur in der Tablet-Ansicht – in der
-   * Website-Ansicht bleibt das dreispaltige Raster.
+   * Website-Ansicht bleibt das mehrspaltige Raster.
    */
   get accordionActive(): boolean {
     return this.viewMode.isTabletView();
   }
 
   /**
-   * Kacheln, die in der Tablet-Ansicht dauerhaft offen nebeneinander stehen.
-   * Temperaturen und Schalter sind die beiden Kacheln, die auf dem Wandtablet
-   * gleichzeitig sichtbar sein sollen – nur was darueber hinausgeht, wird
-   * aufklappbar.
+   * Kacheln, die in der Tablet-Ansicht dauerhaft offen stehen.
+   * Die Schalter sollen auf dem Wandtablet immer sichtbar sein – nur was
+   * darueber hinausgeht, wird aufklappbar.
    */
-  private static readonly ALWAYS_OPEN_TILES: readonly DashboardTileKey[] = ['climate', 'switches'];
+  private static readonly ALWAYS_OPEN_TILES: readonly DashboardTileKey[] = ['switches'];
 
   /** True, wenn die Kachel in der Tablet-Ansicht einen Aufklapp-Kopf hat. */
   isTileCollapsible(key: DashboardTileKey): boolean {
@@ -192,7 +192,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PV_MAX_WATT = 2000;
   /** Netzbezug, der den Bezugs-Ring komplett fuellt (5 kW). */
   private static readonly GRID_MAX_WATT = 5000;
-  /** Aktualisierungsintervall der Klima-Kachel (60 s). */
+  /** Aktualisierungsintervall der Temperaturmesswerte (60 s). */
   private static readonly CLIMATE_REFRESH_MS = 60000;
   /** Anzahl der Schalter auf der Kachel; alle weiteren stehen im Dialog. */
   private static readonly SWITCH_TILE_LIMIT = 8;
@@ -1344,7 +1344,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Haelt die Lueftungs-Karte im Hub aktuell (gleicher Takt wie die Klima-Kacheln). */
+  /** Haelt die Lueftungs-Karte im Hub aktuell (gleicher Takt wie die Messwerte). */
   private startVentilationRefresh(): void {
     this.ventilationSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
       .pipe(
