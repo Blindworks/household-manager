@@ -1003,9 +1003,8 @@
 .lumina__footer {
   display: flex;
   align-items: center;
-  // Die Status-Kacheln stehen links beieinander, die Modi rechts: das schiebt
-  // allein der auto-Rand der Modi-Gruppe. Mit space-between wuerden die beiden
-  // Kacheln ueber die ganze Breite auseinandergezogen.
+  // Alles steht links beieinander: Status-Kacheln, dann die Modi. Mit
+  // space-between wuerden die Kacheln ueber die ganze Breite auseinandergezogen.
   justify-content: flex-start;
   gap: var(--gutter);
   padding-top: 8px;
@@ -1512,9 +1511,43 @@
 .lumina__modes-area {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  // Linksbuendig: die Kachel waechst beim Aufklappen nach rechts, ihre linke
+  // Kante bleibt stehen. Kein auto-Rand mehr - die Modi sassen sonst rechts.
+  align-items: flex-start;
   gap: 8px;
-  margin-left: auto;
+}
+
+// Die Modus-Leiste klappt wie die Tuerschloss- und die Toni-Kachel: Polster
+// und Abstand wandern mit, das Ein- und Ausfahren erledigen die geteilten
+// Klassen .lumina__lock-collapsible und -inner (gleiche Technik, gleiche
+// Dauer). Eingeklappt bleibt nur die Symbolgruppe stehen.
+.lumina__modes-card {
+  gap: 0;
+  padding: 8px;
+  cursor: pointer;
+  transition:
+    padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    gap 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &.lumina__secured--expanded {
+    gap: 16px;
+    padding: 12px 24px;
+  }
+}
+
+// Eingeklappt ist die Symbolgruppe der einzige Traeger der Aussage; laeuft ein
+// Modus, traegt sie das Blau der ausgewaehlten Zustaende.
+.lumina__modes-icons {
+  gap: 6px;
+
+  .material-symbols-outlined {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .lumina__modes-card--active & {
+    color: var(--btn-selected-bg);
+  }
 }
 
 .lumina__modes {
@@ -1707,7 +1740,8 @@
   .lumina__lock-card,
   .lumina__toni-card,
   .lumina__toni-item,
-  .lumina__lock-collapsible {
+  .lumina__lock-collapsible,
+  .lumina__modes-card {
     transition: none;
   }
 }

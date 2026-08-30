@@ -375,6 +375,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * würde jeden fakeAsync-Test des Dashboards mit "timer still in the queue" brechen.
    */
   nukiExpanded = false;
+
+  /**
+   * True, wenn die Modus-Leiste ausgeklappt ist. Bewusst nur im Speicher und
+   * eingeklappt startend - wie nukiExpanded: die Leiste soll auf dem Wandtablet
+   * im Ruhezustand nur zeigen, WAS laeuft, nicht alle Schaltflaechen.
+   */
+  modesExpanded = false;
   /** Wartezeit, bis eine ausgefahrene Fusszeilen-Kachel von selbst wieder zuklappt. */
   private static readonly CARD_COLLAPSE_DELAY_MS = 6000;
   private nukiCollapseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -614,6 +621,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Farbton eines Modus-Knopfs anhand seiner Position; ueberzaehlige werden neutral. */
   modeTone(index: number): string {
     return DashboardComponent.MODE_TONES[index] ?? 'neutral';
+  }
+
+  /** Die gerade eingeschalteten Modi - eingeklappt tragen sie die Aussage der Leiste. */
+  get activeModes(): ModeEntity[] {
+    return this.modes.filter(mode => mode.state === 'on');
+  }
+
+  /**
+   * Beschriftung des Umschalt-Knopfs fuer Screenreader. Eingeklappt zeigt er nur
+   * Symbole - ohne diese Auszeichnung waere nicht zu erfahren, welche Modi
+   * laufen.
+   */
+  get modesToggleLabel(): string {
+    if (this.modesExpanded) {
+      return 'Modi ausblenden';
+    }
+    const active = this.activeModes;
+    return active.length === 0
+      ? 'Modi anzeigen, kein Modus aktiv'
+      : `Modi anzeigen, aktiv: ${active.map(mode => mode.displayName).join(', ')}`;
+  }
+
+  /** Klappt die Modus-Leiste auf oder zu (Muster toggleNukiCard). */
+  toggleModesBar(): void {
+    this.modesExpanded = !this.modesExpanded;
   }
 
   /** Icon eines Modus: im Aus-Zustand die durchgestrichene Variante, falls es eine gibt. */
