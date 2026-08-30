@@ -7,9 +7,11 @@ import { sinceText } from './insight-time.util';
  * Gesetzt werden sie von den Flows "Waschmaschine fertig" und "Spuelmaschine
  * fertig" ueber den Node `helper-set`.
  *
- * <p>Die IDs entstehen im Backend ueber `EntityIds.build` aus dem Helfer-Namen und
- * ueberleben ein Umbenennen. Ein GELOESCHTER und neu angelegter Helfer traegt zwar
- * dieselbe ID, verliert aber die Kachel-Sichtbarkeitsregel — siehe CLAUDE.md.
+ * <p>Die IDs entstehen im Backend deterministisch ueber `EntityIds.build` aus dem
+ * Helfer-Namen und ueberleben sowohl ein Umbenennen als auch ein Loeschen mit
+ * Neuanlegen. Bindend ist damit der NAME: nur "Waschmaschine fertig" bzw.
+ * "Spuelmaschine fertig" erzeugen genau diese IDs — ein Tippfehler beim Anlegen
+ * laesst die Karte wortlos ausbleiben (siehe CLAUDE.md).
  */
 const FINISHED_HELPERS: ReadonlyArray<{ entityId: string; title: string; icon: string }> = [
   {
