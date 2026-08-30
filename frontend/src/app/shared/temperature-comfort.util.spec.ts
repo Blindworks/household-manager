@@ -1,4 +1,12 @@
-import { comfortRating, buildClimateView, buildSensorDetail } from './temperature-comfort.util';
+import {
+  comfortRating,
+  buildClimateView,
+  buildSensorDetail,
+  TEMPERATURE_LEVEL_COLORS,
+  temperatureColorPieces,
+  temperatureLevel,
+  temperatureLevelColor
+} from './temperature-comfort.util';
 import { CurrentTemperatureReading } from '../models/temperature.model';
 
 describe('comfortRating', () => {
@@ -180,5 +188,48 @@ describe('buildSensorDetail', () => {
 
   it('liefert null, wenn der Sensor nicht mehr meldet', () => {
     expect(buildSensorDetail([reading({ sensorId: 'zigbee:1' })], 'zigbee:9', now)).toBeNull();
+  });
+});
+
+describe('temperatureLevel', () => {
+  it('faerbt frisch und angenehm gleich gruen', () => {
+    expect(temperatureLevel(8)).toBe(0);
+    expect(temperatureLevel(21)).toBe(0);
+    expect(temperatureLevel(22.9)).toBe(0);
+  });
+
+  it('teilt oberhalb von 23 Grad in warm, heiss und sehr heiss', () => {
+    expect(temperatureLevel(23)).toBe(1);
+    expect(temperatureLevel(25)).toBe(1);
+    expect(temperatureLevel(25.1)).toBe(2);
+    expect(temperatureLevel(28)).toBe(2);
+    expect(temperatureLevel(28.1)).toBe(3);
+  });
+
+  it('nutzt dieselbe Farbe wie die Stufe', () => {
+    expect(temperatureLevelColor(21)).toBe(TEMPERATURE_LEVEL_COLORS[0]);
+    expect(temperatureLevelColor(30)).toBe(TEMPERATURE_LEVEL_COLORS[3]);
+  });
+});
+
+describe('temperatureColorPieces', () => {
+  it('deckt jede Stufe mit ihrer Farbe ab und laesst keine Luecke', () => {
+    const pieces = temperatureColorPieces();
+
+    expect(pieces.length).toBe(TEMPERATURE_LEVEL_COLORS.length);
+    // Die Stuecke muessen exakt zu temperatureLevel passen, sonst zeigt die
+    // Linie eine andere Farbe als der Jetzt-Wert derselben Kachel.
+    for (const celsius of [8, 22.9, 23, 25, 25.1, 28, 28.1, 40]) {
+      const matching = pieces.filter(
+        piece =>
+          (piece.lt === undefined || celsius < piece.lt) &&
+          (piece.lte === undefined || celsius <= piece.lte) &&
+          (piece.gt === undefined || celsius > piece.gt) &&
+          (piece.gte === undefined || celsius >= piece.gte)
+      );
+
+      expect(matching.length).toBe(1);
+      expect(matching[0].color).toBe(temperatureLevelColor(celsius));
+    }
   });
 });

@@ -3,14 +3,31 @@ import { CommonModule } from '@angular/common';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  VisualMapComponent
+} from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { TemperatureService } from '../../services/temperature.service';
-import { TemperatureSensorSeries, TimeRange } from '../../models/temperature.model';
-import { shortenSensorName } from '../../shared/temperature-comfort.util';
+import { TemperatureSensorSeries, TimeRange, TimeValue } from '../../models/temperature.model';
+import {
+  comfortRating,
+  shortenSensorName,
+  temperatureColorPieces,
+  temperatureLevelColor
+} from '../../shared/temperature-comfort.util';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  VisualMapComponent,
+  CanvasRenderer
+]);
 
 interface RangeOption {
   value: TimeRange;
@@ -34,11 +51,30 @@ interface ChartTile {
   options: Record<string, unknown>;
   /** True, wenn der Sensor zu keiner gewaehlten Messgroesse Werte hat. */
   empty: boolean;
+  /** Juengste Temperatur, z. B. "24,3 °C" - null, wenn nicht gewaehlt oder ohne Werte. */
+  currentTemperatureLabel: string | null;
+  /** Farbe des Jetzt-Werts, aus derselben Stufe wie die Linienfaerbung. */
+  currentTemperatureColor: string;
+  /** Komfortwort zum Jetzt-Wert, als Titel-Tooltip. */
+  currentTemperatureStatus: string;
+  /** Juengste Luftfeuchte, z. B. "48 %" - null, wenn nicht gewaehlt oder ohne Werte. */
+  currentHumidityLabel: string | null;
 }
 
-const TEMPERATURE_COLOR = '#e6484d';
 const HUMIDITY_COLOR = '#3b82f6';
 const AXIS_COLOR = '#94a3b8';
+
+/** Juengster Wert einer Messreihe; null, wenn die Reihe leer ist. */
+function latestValue(points: TimeValue[]): number | null {
+  return points.length === 0 ? null : points[points.length - 1].value;
+}
+
+function formatNumber(value: number, fractionDigits: number): string {
+  return value.toLocaleString('de-DE', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
+  });
+}
 
 /**
  * Temperaturuebersicht fuer das Wandtablet: alle Sensoren gleichzeitig, ohne
@@ -162,13 +198,20 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
   }
 
   private toTile(series: TemperatureSensorSeries): ChartTile {
+    const temperature = this.isMetricActive('temperature') ? latestValue(series.temperature) : null;
+    const humidity = this.isMetricActive('humidity') ? latestValue(series.humidity) : null;
     return {
       sensorId: series.sensorId,
       // Auf der Wand zaehlt der Raum, nicht das fuehrende "Temperatur".
       name: shortenSensorName(series.name),
       series,
       options: this.chartOptionsFor(series),
-      empty: this.pointCount(series) === 0
+      empty: this.pointCount(series) === 0,
+      currentTemperatureLabel: temperature === null ? null : `${formatNumber(temperature, 1)} °C`,
+      currentTemperatureColor:
+        temperature === null ? AXIS_COLOR : temperatureLevelColor(temperature),
+      currentTemperatureStatus: temperature === null ? '' : comfortRating(temperature).label,
+      currentHumidityLabel: humidity === null ? null : `${formatNumber(humidity, 0)} %`
     };
   }
 
@@ -210,8 +253,8 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
         showSymbol: false,
         yAxisIndex: 0,
         data: series.temperature.map(p => [p.time, p.value]),
-        lineStyle: { width: 3, color: TEMPERATURE_COLOR },
-        itemStyle: { color: TEMPERATURE_COLOR }
+        // Farbe kommt aus der visualMap; hier steht nur die Strichstaerke.
+        lineStyle: { width: 3 }
       });
     }
 
@@ -247,6 +290,22 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
       },
       tooltip: { trigger: 'axis' },
       xAxis: { type: 'time', axisLabel },
+      // Faerbt die Temperaturlinie abschnittsweise nach ihrem eigenen Wert; man
+      // sieht damit im Verlauf, wann es warm wurde. Die Temperatur ist immer die
+      // erste Serie, weil sie zuerst angehaengt wird - ohne sie entfaellt die
+      // visualMap, sonst faerbte sie die Feuchtelinie ein.
+      ...(showTemperature
+        ? {
+            visualMap: {
+              show: false,
+              type: 'piecewise',
+              seriesIndex: 0,
+              // Dimension 1 ist der Messwert; Dimension 0 ist die Zeit.
+              dimension: 1,
+              pieces: temperatureColorPieces()
+            }
+          }
+        : {}),
       yAxis,
       series: chartSeries
     };

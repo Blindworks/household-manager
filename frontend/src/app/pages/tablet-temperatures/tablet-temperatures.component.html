@@ -36,7 +36,22 @@
       <div class="tablet-temps__grid" [style.grid-template-columns]="'repeat(' + columns + ', 1fr)'">
         @for (chart of charts; track chart.sensorId) {
           <article class="tablet-temps__card">
-            <h3 class="tablet-temps__card-title">{{ chart.name }}</h3>
+            <h3 class="tablet-temps__card-title">
+              <span class="tablet-temps__sensor">{{ chart.name }}</span>
+              <span class="tablet-temps__current">
+                @if (chart.currentTemperatureLabel) {
+                  <span
+                    class="tablet-temps__current-value"
+                    [style.color]="chart.currentTemperatureColor"
+                    [title]="chart.currentTemperatureStatus">
+                    {{ chart.currentTemperatureLabel }}
+                  </span>
+                }
+                @if (chart.currentHumidityLabel) {
+                  <span class="tablet-temps__current-humidity">{{ chart.currentHumidityLabel }}</span>
+                }
+              </span>
+            </h3>
             @if (chart.empty) {
               <p class="tablet-temps__card-empty">Keine Werte für diese Auswahl</p>
             } @else {

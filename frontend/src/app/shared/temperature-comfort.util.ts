@@ -194,3 +194,69 @@ function formatNumber(value: number, fractionDigits: number): string {
     maximumFractionDigits: fractionDigits
   });
 }
+
+/**
+ * Bewertungsstufe einer Temperatur, 0 = unkritisch bis 3 = sehr heiss.
+ *
+ * Die Stufe ist die EINZIGE Farbquelle der Temperaturansicht: die Linie im
+ * Diagramm und der Jetzt-Wert in der Kachel lesen dieselbe Funktion. Ohne das
+ * liefen Graph und Zahl auseinander, sobald jemand eine Schwelle anfasst.
+ */
+export type TemperatureLevel = 0 | 1 | 2 | 3;
+
+/** Zurueckhaltende Ampel: gruen, gelb, orange, rot. */
+export const TEMPERATURE_LEVEL_COLORS: readonly string[] = [
+  '#4ade80',
+  '#facc15',
+  '#fb923c',
+  '#f87171'
+];
+
+/**
+ * Stufe einer Temperatur.
+ *
+ * Die Grenzen 23 und 25 sind exakt die von {@link comfortRating} - Farbe und
+ * Komfortwort duerfen nicht auseinanderlaufen. "frisch" und "angenehm" teilen
+ * sich dabei bewusst das Gruen: die Skala faerbt nach Waerme, und eine kuehle
+ * Aussentemperatur ist kein Missstand. Oberhalb von "heiss" (25) trennt 28
+ * noch einmal ab, damit ein Hitzestau in der Kurve sichtbar wird.
+ */
+export function temperatureLevel(celsius: number): TemperatureLevel {
+  if (celsius < 23) {
+    return 0;
+  }
+  if (celsius <= 25) {
+    return 1;
+  }
+  if (celsius <= 28) {
+    return 2;
+  }
+  return 3;
+}
+
+export function temperatureLevelColor(celsius: number): string {
+  return TEMPERATURE_LEVEL_COLORS[temperatureLevel(celsius)];
+}
+
+/** Ein Stueck einer ECharts-visualMap: faerbt den Linienabschnitt nach seinem Wert. */
+export interface TemperatureColorPiece {
+  gt?: number;
+  lte?: number;
+  lt?: number;
+  gte?: number;
+  color: string;
+}
+
+/**
+ * Baut die Faerbung der Diagrammlinie aus denselben Schwellen wie
+ * {@link temperatureLevel}. Die Linie traegt damit keine eigene Farbe mehr -
+ * sie zeigt, in welchem Band der Wert liegt.
+ */
+export function temperatureColorPieces(): TemperatureColorPiece[] {
+  return [
+    { lt: 23, color: TEMPERATURE_LEVEL_COLORS[0] },
+    { gte: 23, lte: 25, color: TEMPERATURE_LEVEL_COLORS[1] },
+    { gt: 25, lte: 28, color: TEMPERATURE_LEVEL_COLORS[2] },
+    { gt: 28, color: TEMPERATURE_LEVEL_COLORS[3] }
+  ];
+}
