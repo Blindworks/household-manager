@@ -1471,6 +1471,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * trackBy fuer die Hub-Karten: jeder 30s-Refresh erzeugt frische Objekte, ohne
+   * stabile Identitaet wuerde Angular alle Karten-Knoten neu erzeugen und ein per
+   * Tastatur fokussiertes Element verlöre im Takt den Fokus.
+   */
+  trackByInsight(_index: number, item: HubInsight): string {
+    return item.dismissEntityId ?? item.title;
+  }
+
   /** Klick/Tastatur auf eine Hub-Karte; nur antippbare Karten tun etwas. */
   activateInsight(item: HubInsight): void {
     if (item.dismissEntityId) {
@@ -1482,25 +1491,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Raeumt eine antippbare Hub-Karte weg, indem der zugehoerige Helfer ausgeschaltet
    * wird.
    *
-   * <p>Der Endpunkt ist ein *Toggle* und die Helfer-Liste bis zu 30 s alt: ohne die
-   * Neuaufloesung aus dem aktuellen Stand wuerde ein Klick auf eine inzwischen
-   * anderswo abgeraeumte Karte den Helfer wieder EINschalten (Regel aus
-   * {@link confirmToggle}). Schlaegt das Schalten fehl, bleibt die Karte stehen —
-   * sie ist die ehrliche Anzeige des Serverzustands.
+   * <p>Eine Pruefung gegen den lokal gehaltenen {@link applianceEntities}-Stand waere
+   * wirkungslos: die Karte existiert genau dann, wenn diese Liste bereits "on" sagt
+   * (beide werden ausschliesslich gemeinsam gesetzt) — der Guard liesse also jeden
+   * Klick durch, selbst wenn der Helfer laengst woanders abgeraeumt wurde (Helfer-
+   * Seite, oder der Flow-Trigger "Maschine laeuft wieder"). Der Endpunkt ist ein
+   * *Toggle*, ein solcher Klick schaltete ihn also wieder EIN.
+   *
+   * <p>Deshalb wird der Stand hier vor dem Schalten frisch geladen (Preis: ein
+   * zusaetzlicher Abruf je Antippen) und nur geschaltet, wenn der Helfer dort noch
+   * "on" ist — die Grundidee ist dieselbe wie bei {@link confirmToggle} (gegen einen
+   * aktuellen Stand pruefen statt gegen einen veralteten), der Mechanismus aber ein
+   * anderer: dort eine festgehaltene Dialog-Kopie, hier ein echter Refetch. Schlaegt
+   * der frische Abruf oder das Schalten fehl, bleibt die Karte stehen — sie ist die
+   * ehrliche Anzeige des Serverzustands.
    */
   dismissInsight(entityId: string): void {
-    const current = this.applianceEntities.find(entity => entity.entityId === entityId);
-    if (current?.state !== 'on') {
-      this.refreshApplianceInsights();
-      return;
-    }
-    this.switchService.toggle(entityId).subscribe({
-      next: () => {
-        this.applianceEntities = this.applianceEntities.map(entity =>
-          entity.entityId === entityId ? { ...entity, state: 'off' } : entity);
-        this.refreshApplianceInsights();
+    this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL').subscribe({
+      next: entities => {
+        this.applianceEntities = entities;
+        const current = entities.find(entity => entity.entityId === entityId);
+        if (current?.state !== 'on') {
+          this.refreshApplianceInsights();
+          return;
+        }
+        this.switchService.toggle(entityId).subscribe({
+          next: updated => {
+            this.applianceEntities = this.applianceEntities.map(entity =>
+              entity.entityId === entityId ? { ...entity, state: updated.state } : entity);
+            this.refreshApplianceInsights();
+          },
+          error: () => { /* Karte bleibt stehen, bis der naechste Refresh die Wahrheit bringt. */ }
+        });
       },
-      error: () => { /* Karte bleibt stehen, bis der naechste Refresh die Wahrheit bringt. */ }
+      error: () => { /* Frischer Stand nicht verfuegbar: nicht schalten, Karte bleibt stehen. */ }
     });
   }
 

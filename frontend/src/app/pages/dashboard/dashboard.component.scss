@@ -781,11 +781,16 @@
   padding: 10px 12px;
   border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.05);
-  cursor: pointer;
   transition: background-color 0.3s ease;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
+  // Nur wirklich antippbare Karten (mit dismissEntityId) sollen sich so anfuehlen —
+  // sonst waeren reine Anzeige-Karten optisch nicht von schaltbaren zu unterscheiden.
+  &--clickable {
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
   }
 
   &--primary {

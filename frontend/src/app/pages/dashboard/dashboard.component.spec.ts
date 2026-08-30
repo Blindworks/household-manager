@@ -2250,17 +2250,40 @@ describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
 
     const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
     expect(texts).not.toContain('Waschmaschine');
+    // Positiv pruefen, dass der Hub ueberhaupt gerendert hat — sonst waere der
+    // obige "not.toContain" auch bei einem gar nicht dargestellten Hub gruen.
+    const cards = insightCards(fixture);
+    expect(cards.length).toBe(1);
+    expect(cards[0].textContent ?? '').toContain('Alles ruhig');
 
     discardPeriodicTasks();
   }));
 
-  it('stoert das Dashboard nicht, wenn der Abruf der Helfer fehlschlaegt', fakeAsync(() => {
-    entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
+  it('ueberlebt einen fehlgeschlagenen Abruf und zeigt beim naechsten 30s-Zyklus die Karte', fakeAsync(() => {
+    // Erster Abruf wirft, der zweite (30s spaeter) liefert den Helfer als "on".
+    // Belegt, dass der catchError INNEN im switchMap sitzt und der Stream damit
+    // einen Fehlschlag ueberlebt statt fuer immer zu sterben.
+    let callCount = 0;
+    entityStateServiceSpy.getEntities.and.callFake((domain?: string) => {
+      if (domain !== 'INPUT_BOOLEAN') {
+        return of([]);
+      }
+      callCount++;
+      return callCount === 1
+        ? throwError(() => new Error('kaputt'))
+        : of([helper('input_boolean.manual_waschmaschine_fertig', 'on')]);
+    });
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    let texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
     expect(texts).not.toContain('Waschmaschine');
+
+    tick(30000);
+    fixture.detectChanges();
+
+    texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    expect(texts).toContain('Waschmaschine fertig');
 
     discardPeriodicTasks();
   }));
@@ -2285,15 +2308,31 @@ describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    // Hintergrund-Refresh bei offener Karte: der Helfer wurde woanders abgeraeumt.
-    // Ohne die Neuaufloesung wuerde der Toggle ihn wieder EINschalten.
+    // Der Helfer wurde woanders abgeraeumt (Helfer-Seite oder Flow) — der lokal
+    // gehaltene Stand ist noch "on". dismissInsight muss deshalb selbst frisch
+    // nachladen: die frische Antwort meldet "off", also darf nicht geschaltet werden.
     entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'off')]);
-    tick(30000);
-    fixture.detectChanges();
-    (fixture.componentInstance as unknown as { dismissInsight(id: string): void })
-      .dismissInsight('input_boolean.manual_waschmaschine_fertig');
+    fixture.componentInstance.dismissInsight('input_boolean.manual_waschmaschine_fertig');
 
     expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet nicht, wenn der frische Abruf beim Wegtippen fehlschlaegt', fakeAsync(() => {
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'on')]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    // Der frische Nachlade-Abruf innerhalb von dismissInsight scheitert: es darf
+    // weder geschaltet werden noch die Karte verschwinden.
+    entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
+    fixture.componentInstance.dismissInsight('input_boolean.manual_waschmaschine_fertig');
+    fixture.detectChanges();
+
+    expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+    const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    expect(texts).toContain('Waschmaschine fertig');
 
     discardPeriodicTasks();
   }));
