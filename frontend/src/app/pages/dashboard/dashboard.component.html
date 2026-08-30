@@ -402,33 +402,59 @@
     </div>
 
     <div class="lumina__modes-area">
-      <div class="lumina__modes">
-        <button
-          *ngFor="let mode of modes; let i = index"
-          type="button"
-          class="lumina-card lumina__mode"
-          [ngClass]="'lumina__mode--' + modeTone(i)"
-          [class.lumina__mode--active]="mode.state === 'on'"
-          [class.lumina__mode--pending]="pendingModeIds.has(mode.entityId)"
-          (click)="toggleMode(mode)"
-        >
-          <span class="lumina__mode-icon">
-            <span class="material-symbols-outlined">{{ modeIcon(mode) }}</span>
-          </span>
-          <span class="lumina__mode-label">{{ mode.displayName }}</span>
-        </button>
-        <!-- Reboot ist eine Aktion, kein Modus: fester Button mit Bestaetigungsdialog -->
-        <button
-          type="button"
-          class="lumina-card lumina__mode lumina__mode--error lumina__mode--reboot"
-          [class.lumina__mode--pending]="rebootInProgress"
-          (click)="openRebootDialog()"
-        >
-          <span class="lumina__mode-icon">
-            <span class="material-symbols-outlined">restart_alt</span>
-          </span>
-          <span class="lumina__mode-label">Reboot</span>
-        </button>
+      <!-- Klappt exakt wie die Tuerschloss- und die Toni-Kachel: die ganze
+           Flaeche ist das Klickziel, die Symbole der aktiven Modi bleiben
+           stehen, alles andere faehrt seitlich und in der Hoehe ein. Die
+           Knoepfe darin muessen das Klick-Ereignis stoppen, sonst klappt die
+           Leiste beim Schalten wieder zu. -->
+      <div class="lumina-card lumina__secured lumina__modes-card"
+           [class.lumina__secured--expanded]="modesExpanded"
+           [class.lumina__modes-card--active]="activeModes.length > 0"
+           role="button"
+           tabindex="0"
+           [attr.aria-expanded]="modesExpanded"
+           [attr.aria-label]="modesToggleLabel"
+           (click)="toggleModesBar()"
+           (keydown.enter)="toggleModesBar()"
+           (keydown.space)="$event.preventDefault(); toggleModesBar()">
+        <div class="lumina__secured-icon lumina__modes-icons">
+          <span class="material-symbols-outlined" *ngFor="let mode of activeModes">{{ modeIcon(mode) }}</span>
+          <span class="material-symbols-outlined" *ngIf="activeModes.length === 0">tune</span>
+        </div>
+        <div class="lumina__lock-collapsible" [attr.aria-hidden]="!modesExpanded">
+          <div class="lumina__lock-collapsible-inner">
+            <div class="lumina__modes">
+              <button
+                *ngFor="let mode of modes; let i = index"
+                type="button"
+                class="lumina-card lumina__mode"
+                [ngClass]="'lumina__mode--' + modeTone(i)"
+                [class.lumina__mode--active]="mode.state === 'on'"
+                [class.lumina__mode--pending]="pendingModeIds.has(mode.entityId)"
+                [attr.tabindex]="modesExpanded ? null : -1"
+                (click)="$event.stopPropagation(); toggleMode(mode)"
+              >
+                <span class="lumina__mode-icon">
+                  <span class="material-symbols-outlined">{{ modeIcon(mode) }}</span>
+                </span>
+                <span class="lumina__mode-label">{{ mode.displayName }}</span>
+              </button>
+              <!-- Reboot ist eine Aktion, kein Modus: fester Button mit Bestaetigungsdialog -->
+              <button
+                type="button"
+                class="lumina-card lumina__mode lumina__mode--error lumina__mode--reboot"
+                [class.lumina__mode--pending]="rebootInProgress"
+                [attr.tabindex]="modesExpanded ? null : -1"
+                (click)="$event.stopPropagation(); openRebootDialog()"
+              >
+                <span class="lumina__mode-icon">
+                  <span class="material-symbols-outlined">restart_alt</span>
+                </span>
+                <span class="lumina__mode-label">Reboot</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <p *ngIf="modeError" class="lumina__mode-error">{{ modeError }}</p>
     </div>

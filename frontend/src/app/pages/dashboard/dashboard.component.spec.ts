@@ -764,6 +764,78 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     discardPeriodicTasks();
   }));
 
+  it('zeigt eingeklappt nur die Symbole der aktiven Modi', fakeAsync(() => {
+    modeServiceSpy.getModes.and.returnValue(of([
+      mode({ state: 'on' }),
+      mode({ entityId: 'input_boolean.manual_abwesend', displayName: 'Abwesend', icon: 'logout', state: 'off' })
+    ]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modesExpanded).toBeFalse();
+    const card: HTMLElement = fixture.nativeElement.querySelector('.lumina__modes-card');
+    const symbols = Array.from(card.querySelectorAll('.lumina__modes-icons .material-symbols-outlined'))
+      .map(icon => icon.textContent?.trim());
+    expect(symbols).toEqual(['nights_stay']);
+    expect(card.classList).toContain('lumina__modes-card--active');
+    expect(card.getAttribute('aria-label')).toContain('Nachtmodus');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt eingeklappt ein neutrales Symbol, wenn kein Modus aktiv ist', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const card: HTMLElement = fixture.nativeElement.querySelector('.lumina__modes-card');
+    expect(card.querySelector('.lumina__modes-icons')?.textContent).toContain('tune');
+    expect(card.classList).not.toContain('lumina__modes-card--active');
+
+    discardPeriodicTasks();
+  }));
+
+  it('klappt die Leiste auf und wieder zu', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const card: HTMLElement = fixture.nativeElement.querySelector('.lumina__modes-card');
+    // Eingeklappt sind die Knoepfe im DOM, aber aus der Tab-Reihenfolge genommen.
+    expect(fixture.nativeElement.querySelector('.lumina__mode').getAttribute('tabindex')).toBe('-1');
+    expect(card.getAttribute('aria-expanded')).toBe('false');
+
+    card.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modesExpanded).toBeTrue();
+    expect(card.getAttribute('aria-expanded')).toBe('true');
+    expect(card.classList).toContain('lumina__secured--expanded');
+    expect(fixture.nativeElement.querySelector('.lumina__mode').getAttribute('tabindex')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__mode--reboot')).not.toBeNull();
+
+    card.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modesExpanded).toBeFalse();
+
+    discardPeriodicTasks();
+  }));
+
+  it('klappt beim Schalten eines Modus nicht zu', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.lumina__modes-card').click();
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.lumina__mode').click();
+    tick();
+    fixture.detectChanges();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalled();
+    expect(fixture.componentInstance.modesExpanded).toBeTrue();
+
+    discardPeriodicTasks();
+  }));
+
   it('behaelt beim Ladefehler die zuletzt bekannten Modi', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
