@@ -2141,3 +2141,127 @@ describe('DashboardComponent (Anwesenheit in der Kopfzeile)', () => {
     discardPeriodicTasks();
   }));
 });
+
+describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
+  let entityStateServiceSpy: jasmine.SpyObj<EntityStateService>;
+  let switchServiceSpy: jasmine.SpyObj<SwitchService>;
+
+  const helper = (entityId: string, state: string): EntityState => ({
+    entityId,
+    domain: 'INPUT_BOOLEAN',
+    source: 'MANUAL',
+    sourceRef: entityId,
+    friendlyName: entityId,
+    displayName: entityId,
+    state,
+    attributes: {},
+    lastChanged: '2026-08-14T17:46:32',
+    lastUpdated: '2026-08-14T17:46:32'
+  });
+
+  /**
+   * Die Helfer-Karten und die Tuer-Karten holen ihre Daten aus demselben Endpunkt
+   * mit verschiedenen Filtern — der Stub muss deshalb nach Argumenten antworten,
+   * sonst reicht er Tuerkontakte an die Maschinen-Util (und umgekehrt).
+   */
+  function entitiesReturning(helpers: EntityState[]): void {
+    entityStateServiceSpy.getEntities.and.callFake((domain?: string) =>
+      of(domain === 'INPUT_BOOLEAN' ? helpers : []));
+  }
+
+  function insightCards(fixture: ComponentFixture<DashboardComponent>): HTMLElement[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__insight')
+    );
+  }
+
+  beforeEach(async () => {
+    entityStateServiceSpy = jasmine.createSpyObj('EntityStateService', ['getEntities']);
+    entityStateServiceSpy.getEntities.and.returnValue(of([]));
+
+    switchServiceSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchServiceSpy.getSwitches.and.returnValue(of([]));
+    switchServiceSpy.toggle.and.returnValue(of({
+      entityId: 'input_boolean.manual_waschmaschine_fertig',
+      domain: 'INPUT_BOOLEAN',
+      source: 'MANUAL',
+      displayName: 'Waschmaschine fertig',
+      state: 'off',
+      available: true,
+      icon: 'local_laundry_service',
+      confirmRequired: false,
+      toggleCount: 1,
+      lastToggledAt: null
+    } as SwitchEntity));
+
+    const wasteSpy = jasmine.createSpyObj('WasteCollectionService', ['getUpcoming']);
+    wasteSpy.getUpcoming.and.returnValue(of([]));
+
+    const calendarSpy = jasmine.createSpyObj('CalendarService', ['getUpcoming']);
+    calendarSpy.getUpcoming.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: EntityStateService, useValue: entityStateServiceSpy },
+        { provide: SwitchService, useValue: switchServiceSpy },
+        { provide: WasteCollectionService, useValue: wasteSpy },
+        { provide: CalendarService, useValue: calendarSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('zeigt die fertige Waschmaschine als Karte im Hub', fakeAsync(() => {
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'on')]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(entityStateServiceSpy.getEntities).toHaveBeenCalledWith('INPUT_BOOLEAN', 'MANUAL');
+    const text = (insightCards(fixture)[0].textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain('Waschmaschine fertig');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt keine Karte, solange der Helfer aus ist', fakeAsync(() => {
+    entitiesReturning([helper('input_boolean.manual_waschmaschine_fertig', 'off')]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    expect(texts).not.toContain('Waschmaschine');
+
+    discardPeriodicTasks();
+  }));
+
+  it('stoert das Dashboard nicht, wenn der Abruf der Helfer fehlschlaegt', fakeAsync(() => {
+    entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+    expect(texts).not.toContain('Waschmaschine');
+
+    discardPeriodicTasks();
+  }));
+});

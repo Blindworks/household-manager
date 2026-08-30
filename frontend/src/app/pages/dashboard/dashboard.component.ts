@@ -39,7 +39,9 @@ import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
 import { buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
 import { buildDoorInsights } from '../../shared/door-insight.util';
+import { buildApplianceInsights } from '../../shared/appliance-insight.util';
 import { EntityStateService } from '../../services/entity-state.service';
+import { EntityState } from '../../models/entity-state.model';
 import { VentilationAssessment } from '../../models/ventilation.model';
 import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
@@ -181,6 +183,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private petSubscription?: Subscription;
   private zigbeeHealthSubscription?: Subscription;
   private doorSubscription?: Subscription;
+  private applianceSubscription?: Subscription;
   private petSupplySubscription?: Subscription;
   private presenceSubscription?: Subscription;
 
@@ -215,6 +218,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly NUKI_REFRESH_MS = 30000;
   /** Aktualisierungsintervall der Tuer-offen-Hinweise im Hub (30 s). */
   private static readonly DOOR_REFRESH_MS = 30000;
+  /** Wie die Tuerkarten: die Helfer aendern sich selten, 30 s reichen. */
+  private static readonly APPLIANCE_REFRESH_MS = 30000;
   /** Anzahl der Verbraucher auf der Kachel; alle weiteren stehen im Dialog. */
   private static readonly CONSUMER_TILE_LIMIT = 4;
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
@@ -317,6 +322,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private trackerBatteryInsight: HubInsight | null = null;
   /** Zuletzt gebaute Tuer-offen-Karten (Haustuer/Terrassentuer); leer = alles zu. */
   private doorInsights: HubInsight[] = [];
+  /** Karten fuer fertige Maschinen; gesetzt von den Flows ueber Helfer-Entitaeten. */
+  private applianceInsights: HubInsight[] = [];
+
+  /**
+   * Letzter geladener Stand der manuellen Helfer. Wird beim Wegtippen gebraucht,
+   * um das Ziel neu aufzuloesen, statt einer festgehaltenen Kopie zu vertrauen.
+   */
+  private applianceEntities: EntityState[] = [];
 
   /** Haus-Modi der Fussleiste, vom Backend geladen. */
   modes: ModeEntity[] = [];
@@ -422,6 +435,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
     this.startDoorRefresh();
+    this.startApplianceRefresh();
     this.startPetSupplyRefresh();
     this.startPresenceRefresh();
   }
@@ -442,6 +456,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.petSubscription?.unsubscribe();
     this.zigbeeHealthSubscription?.unsubscribe();
     this.doorSubscription?.unsubscribe();
+    this.applianceSubscription?.unsubscribe();
     this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
@@ -1456,10 +1471,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Komponiert den Hub: offene Tueren voran, dann Muell, Termine, Lueften, Tracker-Akku. */
+  /** Komponiert den Hub: offene Tueren voran, dann fertige Maschinen, Muell, Termine, Lueften, Tracker-Akku. */
   private rebuildInsights(): void {
     this.insights = [
       ...this.doorInsights,
+      ...this.applianceInsights,
       ...(this.wasteInsight ? [this.wasteInsight] : []),
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
@@ -1482,6 +1498,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
       )
       .subscribe(entities => {
         this.doorInsights = buildDoorInsights(entities, Date.now());
+        this.rebuildInsights();
+      });
+  }
+
+  /**
+   * Haelt die Karten fertiger Maschinen aktuell. Quelle sind die Helfer, die die
+   * Flows "Waschmaschine/Spuelmaschine fertig" setzen. Ein Ladefehler leert die
+   * Karten bewusst (Muster Tueren): eine Karte ohne bekannten Serverzustand liesse
+   * sich auch nicht mehr sinnvoll wegtippen.
+   */
+  private startApplianceRefresh(): void {
+    this.applianceSubscription = interval(DashboardComponent.APPLIANCE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL')
+          .pipe(catchError(() => of([]))))
+      )
+      .subscribe(entities => {
+        this.applianceEntities = entities;
+        this.applianceInsights = buildApplianceInsights(entities, Date.now());
         this.rebuildInsights();
       });
   }
