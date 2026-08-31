@@ -240,4 +240,40 @@ describe('TabletTemperaturesComponent', () => {
 
     expect(clearSpy).toHaveBeenCalledWith(timerId);
   });
+
+  it('zeigt den juengsten Wert je Kachel in der Ueberschrift', () => {
+    const values = Array.from(
+      fixture.nativeElement.querySelectorAll('.tablet-temps__current-value')
+    ).map(el => (el as HTMLElement).textContent!.trim());
+
+    expect(values).toEqual(['21,5 °C', '12,3 °C']);
+    // Luftfeuchte ist ab Werk nicht gewaehlt und darf deshalb auch nicht als
+    // Jetzt-Wert erscheinen.
+    expect(fixture.nativeElement.querySelectorAll('.tablet-temps__current-humidity').length).toBe(0);
+  });
+
+  it('nimmt die Luftfeuchte erst nach dem Zuschalten in die Ueberschrift auf', () => {
+    component.toggleMetric('humidity');
+    fixture.detectChanges();
+
+    const humidity = Array.from(
+      fixture.nativeElement.querySelectorAll('.tablet-temps__current-humidity')
+    ).map(el => (el as HTMLElement).textContent!.trim());
+
+    // Nur der Sensor mit Feuchtewerten bekommt eine zweite Zahl.
+    expect(humidity).toEqual(['48 %']);
+  });
+
+  it('faerbt die Temperaturlinie ueber eine visualMap, die Feuchtelinie nicht', () => {
+    const withTemperature = component.chartOptionsFor(withHumidity) as Record<string, any>;
+    expect(withTemperature['visualMap'].seriesIndex).toBe(0);
+
+    component.toggleMetric('humidity');
+    component.toggleMetric('temperature');
+    const humidityOnly = component.chartOptionsFor(withHumidity) as Record<string, any>;
+
+    // Ohne Temperaturlinie darf keine visualMap uebrig bleiben - sie faerbte
+    // sonst die Feuchtelinie nach Temperaturschwellen ein.
+    expect(humidityOnly['visualMap']).toBeUndefined();
+  });
 });
