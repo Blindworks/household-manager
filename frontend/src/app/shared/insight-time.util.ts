@@ -25,3 +25,38 @@ function isSameLocalDay(a: Date, b: Date): boolean {
     && a.getMonth() === b.getMonth()
     && a.getDate() === b.getDate();
 }
+
+/**
+ * Formatiert "<Praefix> seit 42 Minuten." aus dem `lastChanged` einer Entitaet.
+ * Anders als {@link sinceText} nennt diese Fassung die verstrichene Dauer statt der
+ * Startuhrzeit — bei einer laufenden Maschine ist "seit 42 Minuten" griffiger als
+ * "seit 17:46 Uhr".
+ *
+ * <p>Ein Zeitstempel aus der Zukunft liefert den Rueckfalltext statt einer negativen
+ * Dauer: Server- und Browseruhr koennen minimal auseinanderlaufen, und
+ * "seit -1 Minuten" waere sichtbarer Unsinn.
+ *
+ * @param prefix Zustandswort des Aufrufers, z. B. "Laeuft".
+ * @param fallback Text bei unlesbarem oder zukuenftigem Zeitstempel.
+ */
+export function elapsedText(lastChanged: string, nowMs: number, prefix: string, fallback: string): string {
+  const since = new Date(lastChanged);
+  if (isNaN(since.getTime())) {
+    return fallback;
+  }
+  const minutes = Math.floor((nowMs - since.getTime()) / 60_000);
+  if (minutes < 0) {
+    return fallback;
+  }
+  if (minutes < 1) {
+    return `${prefix} seit weniger als einer Minute.`;
+  }
+  if (minutes < 60) {
+    return `${prefix} seit ${minutes} ${minutes === 1 ? 'Minute' : 'Minuten'}.`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0
+    ? `${prefix} seit ${hours} Std.`
+    : `${prefix} seit ${hours} Std. ${rest} Min.`;
+}
