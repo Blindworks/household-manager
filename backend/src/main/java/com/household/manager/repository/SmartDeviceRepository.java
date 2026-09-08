@@ -36,6 +36,14 @@ public interface SmartDeviceRepository extends JpaRepository<SmartDevice, Long> 
     List<SmartDevice> findByDeviceTypeOrderByDeviceNameAsc(DeviceType deviceType);
 
     /**
+     * Find all smart devices whose type is in the given set, ordered by device name.
+     *
+     * @param deviceTypes the device types to include
+     * @return list of matching smart devices, sorted by name
+     */
+    List<SmartDevice> findByDeviceTypeInOrderByDeviceNameAsc(List<DeviceType> deviceTypes);
+
+    /**
      * Find a smart device by its type and external device ID.
      * <p>
      * The combination of device type and external device ID is unique,

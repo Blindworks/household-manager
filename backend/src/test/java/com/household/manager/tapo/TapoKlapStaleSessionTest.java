@@ -78,6 +78,51 @@ class TapoKlapStaleSessionTest {
         }
     }
 
+    @Test
+    @DisplayName("Abgelaufene Session (403 bei offenem Socket) wird auf DEMSELBEN Port neu angemeldet")
+    void reauthenticatesOnSamePortWhenSessionExpiredWith403() throws Exception {
+        try (FakeKlapDevice device = new FakeKlapDevice(USERNAME, PASSWORD)) {
+            // Bewusst nur EIN Port: heilt der 403 nur durch Port-Wechsel (der alte Bug),
+            // bleibt kein Port zum Ausweichen und der Abruf scheitert. Gelingt er, muss
+            // auf genau diesem Port neu angemeldet worden sein.
+            TapoKlapDeviceConnection connection = new TapoKlapDeviceConnection(
+                    null, new ObjectMapper(), USERNAME, PASSWORD, "127.0.0.1",
+                    new int[]{device.port()});
+
+            connection.getDeviceInfo();
+            assertEquals(1, device.handshakeCount());
+
+            // Das Geraet verwirft seine Session serverseitig und beantwortet den naechsten
+            // /request mit 403, haelt den Socket aber offen (real gemessen an P110/L530:
+            // die kurzlebige Geraete-Session laeuft lange vor der 300-s-Client-TTL ab).
+            device.rejectNextRequestAs403();
+
+            JsonNode result = connection.getDeviceInfo();
+            assertEquals("L530", result.path("model").asText(),
+                    "403 auf abgelaufener Session muss per frischem Handshake auf demselben Port heilen");
+            assertEquals(2, device.handshakeCount(), "genau eine erneute Anmeldung auf demselben Port");
+        }
+    }
+
+    @Test
+    @DisplayName("Echt falscher Port: 403 auch nach frischem Handshake weicht auf den Alternativport aus")
+    void switchesToAlternativePortWhenSamePortKeepsReturning403() throws Exception {
+        try (FakeKlapDevice denying = new FakeKlapDevice(USERNAME, PASSWORD);
+             FakeKlapDevice serving = new FakeKlapDevice(USERNAME, PASSWORD)) {
+            // Erster Port lehnt JEDEN /request mit 403 ab (falsche Firmware/Port), der
+            // zweite Port bedient normal. Nach dem erfolglosen Neu-Handshake auf Port 1
+            // muss der Client auf Port 2 ausweichen.
+            denying.rejectEveryRequestAs403();
+            TapoKlapDeviceConnection connection = new TapoKlapDeviceConnection(
+                    null, new ObjectMapper(), USERNAME, PASSWORD, "127.0.0.1",
+                    new int[]{denying.port(), serving.port()});
+
+            JsonNode result = connection.getDeviceInfo();
+            assertEquals("L530", result.path("model").asText(),
+                    "ein dauerhaft ablehnender Port muss zum Alternativport fuehren");
+        }
+    }
+
     /**
      * Minimales echtes KLAP-Geraet auf einem ephemeren Port: HTTP/1.1 ueber einen
      * rohen Socket, handshake1/handshake2/request mit derselben Schluesselableitung
@@ -92,6 +137,8 @@ class TapoKlapStaleSessionTest {
         private volatile Socket currentClient;
         private volatile boolean running = true;
         private volatile boolean dropInsteadOfAnswering = false;
+        private volatile boolean rejectNextRequestAs403 = false;
+        private volatile boolean rejectEveryRequestAs403 = false;
 
         private byte[] sessionKey;
         private byte[] sessionIvPrefix;
@@ -118,6 +165,16 @@ class TapoKlapStaleSessionTest {
         /** Der naechste /app/request wird gelesen, aber statt einer Antwort wird die Verbindung geschlossen. */
         void dropInsteadOfAnsweringNextRequest() {
             dropInsteadOfAnswering = true;
+        }
+
+        /** Der naechste /app/request wird mit HTTP 403 beantwortet (Socket bleibt offen). */
+        void rejectNextRequestAs403() {
+            rejectNextRequestAs403 = true;
+        }
+
+        /** Jeder /app/request wird mit HTTP 403 beantwortet (falscher Port / falsche Firmware). */
+        void rejectEveryRequestAs403() {
+            rejectEveryRequestAs403 = true;
         }
 
         /** Simuliert den geraeteseitigen Idle-Close der Keep-Alive-Verbindung. */
@@ -192,6 +249,11 @@ class TapoKlapStaleSessionTest {
             if (dropInsteadOfAnswering) {
                 dropInsteadOfAnswering = false;
                 currentClient.close();
+                return;
+            }
+            if (rejectEveryRequestAs403 || rejectNextRequestAs403) {
+                rejectNextRequestAs403 = false;
+                writeResponse(out, 403, null, new byte[0]);
                 return;
             }
             int seq = Integer.parseInt(request.path.substring(request.path.indexOf("seq=") + 4));

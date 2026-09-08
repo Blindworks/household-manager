@@ -41,7 +41,8 @@ class TapoKlapSessionKeyTest {
     @DisplayName("Requests auf einer Verbindung sind serialisiert (gemeinsamer Socket)")
     void requestExecutionIsSerializedPerConnection() throws Exception {
         var method = TapoKlapDeviceConnection.class
-                .getDeclaredMethod("executeRequestInternal", com.fasterxml.jackson.databind.JsonNode.class, boolean.class);
+                .getDeclaredMethod("executeRequestInternal", com.fasterxml.jackson.databind.JsonNode.class,
+                        boolean.class, boolean.class);
         assertEquals(true, java.lang.reflect.Modifier.isSynchronized(method.getModifiers()),
                 "Parallele Requests (z.B. info + energy) teilen sich den TCP-Socket und muessen serialisiert werden");
     }

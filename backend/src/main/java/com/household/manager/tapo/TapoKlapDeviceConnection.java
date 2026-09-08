@@ -126,15 +126,33 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
     // -------------------------------------------------------------------------
 
     private JsonNode executeRequest(JsonNode requestData) {
-        return executeRequestInternal(requestData, true);
+        return executeRequestInternal(requestData, true, true);
     }
 
     /**
      * Serialized per connection: concurrent requests (e.g. info + energy fired together
      * by the UI) would otherwise interleave reads/writes on the shared socket and both
      * time out.
+     *
+     * <p>Two independent, one-shot retry budgets guard the request against the two ways a
+     * cached session goes bad:
+     * <ul>
+     *   <li>{@code staleRetryAllowed} – the session expired or was replaced (a 403 with the
+     *       socket still open, {@code error_code -1301}, or a dead keep-alive socket read as
+     *       EOF/RST). These heal by re-handshaking on the <em>same</em> port. This is by far
+     *       the common case: the devices (P110/L530/L900) drop their side of the session
+     *       within seconds, long before the 300&nbsp;s client TTL.</li>
+     *   <li>{@code portRetryAllowed} – only a 403 that persists <em>after</em> a fresh
+     *       same-port handshake means this firmware genuinely refuses {@code /request} on
+     *       this port. Only then is the port blacklisted and the alternative port tried.</li>
+     * </ul>
+     * Treating every 403 as a wrong-port signal (the previous behaviour) blacklisted port 80
+     * on the very first expired-session 403 and fell through to port 443, which these devices
+     * do not serve — so a routine session expiry was misreported as the device being offline.
      */
-    private synchronized JsonNode executeRequestInternal(JsonNode requestData, boolean retryOnAuthError) {
+    private synchronized JsonNode executeRequestInternal(JsonNode requestData,
+                                                         boolean staleRetryAllowed,
+                                                         boolean portRetryAllowed) {
         ensureAuthenticated();
         int seq = sequence.incrementAndGet();
         log.debug("KLAP /request seq={} ({})", seq, seq < 0 ? "negativ!" : "positiv");
@@ -151,12 +169,23 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             if (response.statusCode == 403) {
                 log.debug("KLAP /request 403 - Body ({} Bytes): {}",
                         response.body.length, new String(response.body, StandardCharsets.UTF_8));
-                if (retryOnAuthError) {
-                    // Exclude the current port from the next handshake so we fall through to port 443.
-                    requestDeniedPort = activeSession.getPort();
-                    log.debug("KLAP /request 403 auf port={} – naechster Versuch schlaegt diesen Port aus", requestDeniedPort);
+                if (staleRetryAllowed) {
+                    // Most likely an expired/replaced session, not a wrong port: re-handshake on
+                    // the SAME port first and retry. Only if the fresh session is refused again
+                    // (portRetryAllowed below) is the port itself treated as wrong.
+                    log.debug("KLAP /request 403 auf port={} – erneuere Session auf demselben Port",
+                            activeSession.getPort());
                     invalidateSession();
-                    return executeRequestInternal(requestData, false);
+                    return executeRequestInternal(requestData, false, portRetryAllowed);
+                }
+                if (portRetryAllowed) {
+                    // A freshly handshaked session was still refused: this firmware does not
+                    // serve /request on this port. Blacklist it and fall through to port 443.
+                    requestDeniedPort = activeSession.getPort();
+                    log.debug("KLAP /request 403 auch nach frischem Handshake auf port={} – "
+                            + "naechster Versuch schlaegt diesen Port aus", requestDeniedPort);
+                    invalidateSession();
+                    return executeRequestInternal(requestData, false, false);
                 }
             }
 
@@ -167,9 +196,9 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             JsonNode parsed = objectMapper.readTree(decrypt(response.body, seq));
 
             int errorCode = parsed.path("error_code").asInt(0);
-            if (errorCode == -1301 && retryOnAuthError) {
+            if (errorCode == -1301 && staleRetryAllowed) {
                 invalidateSession();
-                return executeRequestInternal(requestData, false);
+                return executeRequestInternal(requestData, false, portRetryAllowed);
             }
 
             validateResponse(parsed, "Tapo KLAP-Geraet");
@@ -182,11 +211,11 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
             // with a fresh handshake, same pattern as the 403 / -1301 handling above. All
             // commands set absolute state (device_on true/false, brightness value), so a single
             // retry cannot double-apply anything.
-            if (retryOnAuthError) {
+            if (staleRetryAllowed) {
                 log.debug("KLAP-Socket zu {} nicht mehr verwendbar ({}), erneuere Session",
                         host, ex.getMessage());
                 invalidateSession();
-                return executeRequestInternal(requestData, false);
+                return executeRequestInternal(requestData, false, portRetryAllowed);
             }
             throw new TapoException("Tapo KLAP-Kommunikation fehlgeschlagen: " + ex.getMessage(), ex);
         }
