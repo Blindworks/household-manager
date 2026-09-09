@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -58,6 +58,42 @@ describe('UtilityPricesComponent', () => {
     component.gasKwhPerM3 = 11;
     component.saveGasFactor();
     expect(serviceSpy.updateSettings).toHaveBeenCalledWith({ gasKwhPerM3: 11 });
-    expect(component.successMessage).toContain('Gasfaktor');
+    expect(component.settingsSuccessMessage).toContain('Gasfaktor');
+  });
+
+  it('zeigt einen eigenen Fehler, wenn das Speichern des Gasfaktors fehlschlägt', () => {
+    setup(true);
+    serviceSpy.updateSettings.and.returnValue(throwError(() => new Error('Der Gasfaktor muss zwischen 5 und 15 kWh je m³ liegen.')));
+
+    component.gasKwhPerM3 = 10;
+    component.saveGasFactor();
+
+    expect(component.settingsErrorMessage).toBe('Der Gasfaktor muss zwischen 5 und 15 kWh je m³ liegen.');
+    expect(component.isSavingSettings).toBeFalse();
+    expect(component.settingsSuccessMessage).toBeNull();
+  });
+
+  it('zeigt einen eigenen Fehler, wenn das Laden des Gasfaktors fehlschlägt, ohne die Preisliste zu beeinträchtigen', () => {
+    serviceSpy = jasmine.createSpyObj('UtilityPriceService',
+      ['getAllPrices', 'getSettings', 'updateSettings', 'deletePrice']);
+    serviceSpy.getAllPrices.and.returnValue(of([]));
+    serviceSpy.getSettings.and.returnValue(throwError(() => new Error('Der Gasfaktor konnte nicht geladen werden.')));
+
+    TestBed.configureTestingModule({
+      imports: [UtilityPricesComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: UtilityPriceService, useValue: serviceSpy },
+        { provide: AuthService, useValue: { isAdmin: signal(true) } }
+      ]
+    });
+    fixture = TestBed.createComponent(UtilityPricesComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.settingsErrorMessage).toBe('Der Gasfaktor konnte nicht geladen werden.');
+    expect(component.errorMessage).toBeNull();
+    expect(component.prices).toEqual([]);
   });
 });

@@ -112,33 +112,26 @@
   }
 }
 
-.btn {
-  padding: 0.75rem 1.25rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
+/*
+ * Kein lokales .btn/.btn--primary hier: styles.scss definiert diese Klassen
+ * bereits global (inkl. Hover-Effekt). Eine komponentenlokale Kopie würde
+ * dank View-Encapsulation den globalen Stil überschreiben und optisch
+ * abweichen - siehe Review-Befund 6.
+ */
+
+.btn__loading {
+  display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  font-family: inherit;
+}
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &--primary {
-    background-color: var(--color-primary, #2563eb);
-    color: white;
-
-    &:hover:not(:disabled) {
-      background-color: #1d4ed8;
-    }
-  }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
 
 /* Content Grid */

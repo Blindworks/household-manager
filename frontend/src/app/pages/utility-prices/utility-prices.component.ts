@@ -52,6 +52,22 @@ export class UtilityPricesComponent implements OnInit {
   /** Speicher-Status des Gasfaktors */
   isSavingSettings = false;
 
+  /**
+   * Eigenes Meldungspaar für den Gasfaktor, damit ein Fehler dort nicht als
+   * Fehlerbanner über der (davon unabhängigen) Preistabelle erscheint.
+   */
+  settingsErrorMessage: string | null = null;
+  settingsSuccessMessage: string | null = null;
+
+  /**
+   * Zulässiger Bereich des Gasfaktors. Verbindlich ist die Backend-Prüfung -
+   * das hier ist nur Nutzer-Komfort (frühe Rückmeldung, Knopf-Sperre), keine
+   * Sicherheitsgrenze. Einzige Definition, damit Knopf-Sperre und min/max-
+   * Attribute im Template nicht auseinanderlaufen.
+   */
+  readonly gasKwhPerM3Min = 5;
+  readonly gasKwhPerM3Max = 15;
+
   ngOnInit(): void {
     this.loadPrices();
     if (this.isAdmin()) {
@@ -65,28 +81,50 @@ export class UtilityPricesComponent implements OnInit {
   private loadSettings(): void {
     this.utilityPriceService.getSettings().subscribe({
       next: settings => (this.gasKwhPerM3 = settings.gasKwhPerM3),
-      error: () => (this.errorMessage = 'Der Gasfaktor konnte nicht geladen werden.')
+      error: () => (this.settingsErrorMessage = 'Der Gasfaktor konnte nicht geladen werden.')
     });
+  }
+
+  /**
+   * Prüft, ob der eingegebene Gasfaktor im zulässigen Bereich liegt.
+   */
+  isGasFactorValid(): boolean {
+    return (
+      this.gasKwhPerM3 !== null &&
+      this.gasKwhPerM3 >= this.gasKwhPerM3Min &&
+      this.gasKwhPerM3 <= this.gasKwhPerM3Max
+    );
   }
 
   /**
    * Speichert den Gas-Umrechnungsfaktor
    */
   saveGasFactor(): void {
-    if (this.gasKwhPerM3 === null) {
+    if (!this.isGasFactorValid() || this.gasKwhPerM3 === null) {
       return;
     }
 
     this.isSavingSettings = true;
+    this.settingsErrorMessage = null;
+    this.settingsSuccessMessage = null;
+
     this.utilityPriceService.updateSettings({ gasKwhPerM3: this.gasKwhPerM3 }).subscribe({
       next: settings => {
         this.gasKwhPerM3 = settings.gasKwhPerM3;
-        this.successMessage = 'Gasfaktor gespeichert.';
+        this.settingsSuccessMessage = 'Gasfaktor gespeichert.';
         this.isSavingSettings = false;
+
+        setTimeout(() => {
+          this.settingsSuccessMessage = null;
+        }, 3000);
       },
       error: (error: Error) => {
-        this.errorMessage = error.message || 'Der Gasfaktor konnte nicht gespeichert werden.';
+        this.settingsErrorMessage = error.message || 'Der Gasfaktor konnte nicht gespeichert werden.';
         this.isSavingSettings = false;
+
+        setTimeout(() => {
+          this.settingsErrorMessage = null;
+        }, 5000);
       }
     });
   }

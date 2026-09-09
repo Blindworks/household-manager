@@ -33,16 +33,34 @@
       </h2>
       <p class="pricing-settings__hint">
         Der Gaszähler zählt m³, der Gaspreis gilt je kWh. Der Faktor (Brennwert × Zustandszahl)
-        steht auf der Gasrechnung, meist zwischen 9 und 12.
+        steht auf der Gasrechnung, meist zwischen 9 und 12. Zulässig sind Werte von
+        {{ gasKwhPerM3Min }} bis {{ gasKwhPerM3Max }}.
       </p>
+
+      <!-- Success Message (eigenes Banner, unabhängig von der Preistabelle) -->
+      <div class="alert alert--success" *ngIf="settingsSuccessMessage">
+        <app-icon name="check-circle" class="alert__icon"></app-icon>
+        <span class="alert__message">{{ settingsSuccessMessage }}</span>
+      </div>
+
+      <!-- Error Message (eigenes Banner, unabhängig von der Preistabelle) -->
+      <div class="alert alert--error" *ngIf="settingsErrorMessage">
+        <app-icon name="alert-triangle" class="alert__icon"></app-icon>
+        <span class="alert__message">{{ settingsErrorMessage }}</span>
+      </div>
+
       <div class="pricing-settings__row">
         <label for="gasKwhPerM3">kWh je m³</label>
-        <input id="gasKwhPerM3" type="number" step="0.01" min="5" max="15"
+        <input id="gasKwhPerM3" type="number" step="0.01" [min]="gasKwhPerM3Min" [max]="gasKwhPerM3Max"
                [(ngModel)]="gasKwhPerM3" name="gasKwhPerM3">
         <button type="button" class="btn btn--primary"
-                [disabled]="isSavingSettings || gasKwhPerM3 === null"
+                [disabled]="isSavingSettings || !isGasFactorValid()"
                 (click)="saveGasFactor()">
-          Speichern
+          <span *ngIf="!isSavingSettings">Speichern</span>
+          <span *ngIf="isSavingSettings" class="btn__loading">
+            <span class="spinner"></span>
+            Wird gespeichert...
+          </span>
         </button>
       </div>
     </section>

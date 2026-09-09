@@ -122,7 +122,7 @@ export class UtilityPriceService {
       // Server-seitiger Fehler
       switch (error.status) {
         case 400:
-          errorMessage = 'Ungültige Daten. Bitte überprüfen Sie Ihre Eingaben.';
+          errorMessage = error.error?.message || 'Ungültige Daten. Bitte überprüfen Sie Ihre Eingaben.';
           break;
         case 404:
           errorMessage = 'Die angeforderten Daten wurden nicht gefunden.';
