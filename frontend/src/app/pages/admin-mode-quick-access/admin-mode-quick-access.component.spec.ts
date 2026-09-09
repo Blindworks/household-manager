@@ -170,6 +170,12 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(deleted.request.method).toBe('DELETE');
     deleted.flush(null);
     httpMock.expectOne(WINDOWS_URL).flush([]);
+    fixture.detectChanges();
+
+    // Der Reload liefert eine leere Liste zurueck. Ein reiner Laengencheck auf 0 waere hier
+    // falsch: eine leere Tabelle rendert einen Platzhalter-<tr> ("Noch keine Zeitfenster
+    // angelegt."), also muss geprueft werden, dass keine Zeile mehr den Nachtmodus zeigt.
+    expect(rows().some(row => row.textContent?.includes('Nachtmodus'))).toBeFalse();
   });
 
   /** Ein Fenster ohne zugehoerigen Modus bleibt sichtbar — sonst waere es nicht loeschbar. */
@@ -194,6 +200,31 @@ describe('AdminModeQuickAccessComponent', () => {
 
     expect(el.querySelector('.admin-mode-quick-access__error')?.textContent)
       .toContain('bereits ein Zeitfenster');
+  });
+
+  /**
+   * loadModes() faengt einen Fehlschlag ab und setzt nur eine leere Liste (kein errorMessage,
+   * kein loadFailed) — die Fensterpflege soll trotz kaputtem Modus-Katalog bedienbar bleiben.
+   */
+  it('laesst die Fensterpflege nutzbar, wenn nur die Modus-Liste nicht geladen werden kann', () => {
+    fixture.detectChanges();
+    httpMock.expectOne(WINDOWS_URL).flush([NACHT_FENSTER]);
+    httpMock.expectOne(MODES_URL)
+      .flush({ message: 'Modus-Katalog nicht erreichbar.' }, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+
+    // Die Tabelle ist da und zeigt das geladene Fenster.
+    expect(el.querySelector('.admin-mode-quick-access__table')).toBeTruthy();
+    expect(rows().length).toBe(1);
+    expect(el.textContent).toContain('Nachtmodus');
+
+    // Das Dropdown hat ausser der Platzhalter-Option keine Modus-Optionen.
+    const options = Array.from(el.querySelectorAll('[name="entityId"] option'));
+    expect(options.length).toBe(1);
+    expect(options[0].textContent?.trim()).toBe('— bitte wählen —');
+
+    // Kein Fehlerbanner, das die Pflege blockieren wuerde — der Fehler betrifft nur das Dropdown.
+    expect(el.querySelector('.admin-mode-quick-access__error')).toBeFalsy();
   });
 
   it('zeigt einen Fehler, wenn das Laden fehlschlaegt', () => {
