@@ -129,6 +129,24 @@ class ModeQuickAccessServiceTest {
         verify(auditService).record("mode.quick-access.update", "Nachtmodus 21:00-07:00");
     }
 
+    /**
+     * Eine fremde Zeile mit demselben Modus muss beim Aendern weiterhin als Duplikat gelten —
+     * nur die eigene Zeile ist von der Pruefung ausgenommen. Dieser Fall wird eigenstaendig
+     * geprueft, weil ein invertierter oder gestrichener Id-Filter im Produktionscode sonst
+     * unbemerkt bliebe.
+     */
+    @Test
+    void lehntEineFremdeZeileAlsDuplikatBeimAendernAb() {
+        ModeQuickAccess fremdeZeile = ModeQuickAccess.builder().id(5L).entityId(NACHTMODUS)
+                .fromTime(LocalTime.of(8, 0)).toTime(LocalTime.of(10, 0)).active(true).build();
+        when(repository.findById(7L)).thenReturn(Optional.of(saved()));
+        when(repository.findByEntityId(NACHTMODUS)).thenReturn(Optional.of(fremdeZeile));
+
+        assertThatThrownBy(() -> service.update(7L, request(NACHTMODUS, "21:00", "07:00")))
+                .isInstanceOf(DuplicateEntityException.class);
+        verify(repository, never()).save(any());
+    }
+
     @Test
     void meldetEineUnbekannteIdAlsNichtGefunden() {
         when(repository.findById(99L)).thenReturn(Optional.empty());

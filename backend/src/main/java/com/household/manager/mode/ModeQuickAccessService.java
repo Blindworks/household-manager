@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 public class ModeQuickAccessService {
 
     private static final DateTimeFormatter AUDIT_TIME = DateTimeFormatter.ofPattern("HH:mm");
+    private static final String DUPLICATE_WINDOW_MESSAGE =
+            "Fuer diesen Modus gibt es bereits ein Zeitfenster.";
 
     private final ModeQuickAccessRepository repository;
     private final HouseModeQueryService houseModeQueryService;
@@ -46,8 +48,7 @@ public class ModeQuickAccessService {
         Map<String, String> names = modeNames();
         validate(request, names);
         if (repository.findByEntityId(request.entityId()).isPresent()) {
-            throw new DuplicateEntityException(
-                    "Fuer diesen Modus gibt es bereits ein Zeitfenster.");
+            throw new DuplicateEntityException(DUPLICATE_WINDOW_MESSAGE);
         }
         ModeQuickAccess saved = repository.save(ModeQuickAccess.builder()
                 .entityId(request.entityId())
@@ -68,8 +69,7 @@ public class ModeQuickAccessService {
         Optional<ModeQuickAccess> other = repository.findByEntityId(request.entityId())
                 .filter(existing -> !existing.getId().equals(id));
         if (other.isPresent()) {
-            throw new DuplicateEntityException(
-                    "Fuer diesen Modus gibt es bereits ein Zeitfenster.");
+            throw new DuplicateEntityException(DUPLICATE_WINDOW_MESSAGE);
         }
         window.setEntityId(request.entityId());
         window.setFromTime(request.fromTime());
