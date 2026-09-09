@@ -629,6 +629,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Modi, die gerade per Schnellzugriff neben der eingeklappten Leiste stehen.
+   *
+   * Vier Bedingungen, alle bewusst: nur im Tablet-Modus (die Browser-Ansicht bleibt
+   * unveraendert), nur bei eingeklappter Leiste (ausgeklappt stuende der Modus doppelt),
+   * nur wenn das Backend sein Zeitfenster fuer offen haelt, und nur solange er AUS ist —
+   * eingeschaltet hat der Knopf seinen Zweck erfuellt, und der aktive Modus erscheint
+   * ohnehin als Symbol in der eingeklappten Karte.
+   *
+   * Ob ein Fenster offen ist, entscheidet allein das Backend (`quickAccess`); hier wird
+   * keine Uhrzeit ausgewertet.
+   */
+  get quickAccessModes(): ModeEntity[] {
+    if (!this.viewMode.isTabletView() || this.modesExpanded) {
+      return [];
+    }
+    return this.modes.filter(mode => mode.quickAccess && mode.state !== 'on');
+  }
+
+  /**
    * Beschriftung des Umschalt-Knopfs fuer Screenreader. Eingeklappt zeigt er nur
    * Symbole - ohne diese Auszeichnung waere nicht zu erfahren, welche Modi
    * laufen.

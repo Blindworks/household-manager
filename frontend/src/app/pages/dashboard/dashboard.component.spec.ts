@@ -2438,3 +2438,144 @@ describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
     discardPeriodicTasks();
   }));
 });
+
+/**
+ * Der Schnellzugriff zeigt einen faelligen Modus direkt neben der eingeklappten
+ * Modus-Leiste. `viewMode` wird hier nicht gemockt: der echte ViewModeService liest
+ * localStorage beim Erzeugen, deshalb wird der Schluessel vor jedem Test entfernt und
+ * die Tablet-Ansicht ueber `componentInstance.viewMode.toggle()` eingeschaltet — genau
+ * wie in der bestehenden Ansichtsmodus-Suite.
+ */
+describe('DashboardComponent (Modus-Schnellzugriff)', () => {
+  let modeServiceSpy: jasmine.SpyObj<ModeService>;
+
+  const nachtmodus = (overrides: Partial<ModeEntity> = {}): ModeEntity => ({
+    entityId: 'input_boolean.manual_nachtmodus',
+    displayName: 'Nachtmodus',
+    icon: 'nights_stay',
+    state: 'off',
+    quickAccess: true,
+    ...overrides
+  });
+
+  beforeEach(async () => {
+    localStorage.removeItem('household-manager-view-mode');
+
+    modeServiceSpy = jasmine.createSpyObj('ModeService', ['getModes', 'toggle']);
+    modeServiceSpy.getModes.and.returnValue(of([nachtmodus()]));
+    modeServiceSpy.toggle.and.returnValue(of(nachtmodus({ state: 'on' })));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ModeService, useValue: modeServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  afterAll(() => localStorage.removeItem('household-manager-view-mode'));
+
+  /** Startet das Dashboard in der Tablet-Ansicht. */
+  function tabletFixture(): ComponentFixture<DashboardComponent> {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function quickButtons(fixture: ComponentFixture<DashboardComponent>): HTMLElement[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__modes-quick .lumina__mode'));
+  }
+
+  it('zeigt einen faelligen, ausgeschalteten Modus als Schnellzugriff', fakeAsync(() => {
+    const fixture = tabletFixture();
+
+    const buttons = quickButtons(fixture);
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('Nachtmodus');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt keinen Schnellzugriff, sobald der Modus an ist', fakeAsync(() => {
+    modeServiceSpy.getModes.and.returnValue(of([nachtmodus({ state: 'on' })]));
+    const fixture = tabletFixture();
+
+    expect(quickButtons(fixture).length).toBe(0);
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt keinen Schnellzugriff, wenn kein Fenster offen ist', fakeAsync(() => {
+    modeServiceSpy.getModes.and.returnValue(of([nachtmodus({ quickAccess: false })]));
+    const fixture = tabletFixture();
+
+    expect(quickButtons(fixture).length).toBe(0);
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt keinen Schnellzugriff in der Website-Ansicht', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.viewMode.isTabletView()).toBeFalse();
+    expect(quickButtons(fixture).length).toBe(0);
+
+    discardPeriodicTasks();
+  }));
+
+  /** Ausgeklappt steht der Modus ohnehin in der Leiste — doppelt braucht ihn niemand. */
+  it('zeigt keinen Schnellzugriff bei ausgeklappter Modus-Leiste', fakeAsync(() => {
+    const fixture = tabletFixture();
+    fixture.componentInstance.toggleModesBar();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modesExpanded).toBeTrue();
+    expect(quickButtons(fixture).length).toBe(0);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Der Knopf liegt NEBEN der Karte, nicht in ihr: ein Klick darf den Modus schalten,
+   * ohne die Leiste aufzuklappen.
+   */
+  it('schaltet per Klick, ohne die Leiste aufzuklappen', fakeAsync(() => {
+    const fixture = tabletFixture();
+
+    quickButtons(fixture)[0].click();
+    tick();
+    fixture.detectChanges();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalledWith('input_boolean.manual_nachtmodus');
+    expect(fixture.componentInstance.modesExpanded).toBeFalse();
+
+    discardPeriodicTasks();
+  }));
+});
