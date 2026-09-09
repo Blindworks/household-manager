@@ -131,17 +131,18 @@ public class UtilityPriceController {
      * <p>
      * PUT /api/v1/utility-prices/settings
      * <p>
-     * Die Bereichspruefung braucht {@code Double.isFinite}: Jackson erzeugt aus dem
-     * String "NaN" klaglos ein Double.NaN, und jeder Vergleich damit ist false.
+     * Ein nicht-numerischer Wert (z. B. der String "NaN") scheitert schon beim
+     * Deserialisieren in das {@code BigDecimal}-Feld und wird vom
+     * {@code HttpMessageNotReadableException}-Handler mit 400 beantwortet, bevor
+     * diese Methode ueberhaupt erreicht wird.
      */
     @PutMapping("/settings")
     public ResponseEntity<UtilityPricingSettingsDto> updateSettings(
             @RequestBody UtilityPricingSettingsDto request) {
-        Double value = request.gasKwhPerM3();
-        if (value == null || !Double.isFinite(value)) {
+        BigDecimal factor = request.gasKwhPerM3();
+        if (factor == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Der Gasfaktor fehlt.");
         }
-        BigDecimal factor = BigDecimal.valueOf(value);
         if (!UtilityPricingSettingsService.isPlausible(factor)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Der Gasfaktor muss zwischen " + UtilityPricingSettingsService.MIN_GAS_KWH_PER_M3
@@ -152,6 +153,6 @@ public class UtilityPriceController {
     }
 
     private UtilityPricingSettingsDto currentSettings() {
-        return new UtilityPricingSettingsDto(settingsService.getGasKwhPerM3().doubleValue());
+        return new UtilityPricingSettingsDto(settingsService.getGasKwhPerM3());
     }
 }

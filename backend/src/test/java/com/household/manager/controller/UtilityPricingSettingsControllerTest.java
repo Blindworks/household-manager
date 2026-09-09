@@ -5,6 +5,7 @@ import com.household.manager.security.ServiceTokenService;
 import com.household.manager.service.UtilityPriceService;
 import com.household.manager.service.UtilityPricingSettingsService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -53,7 +55,24 @@ class UtilityPricingSettingsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"gasKwhPerM3\": 11.2}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.gasKwhPerM3").value(11.2));
-        verify(settingsService).saveGasKwhPerM3(new BigDecimal("11.2"));
+
+        ArgumentCaptor<BigDecimal> captor = ArgumentCaptor.forClass(BigDecimal.class);
+        verify(settingsService).saveGasKwhPerM3(captor.capture());
+        // Jackson erzeugt aus dem JSON-Literal 11.2 ein BigDecimal mit Skala 1 (11.2),
+        // BigDecimal.equals wuerde bei abweichender Skala (z. B. "11.20") faelschlich
+        // scheitern - deshalb Wertvergleich statt Skalenvergleich.
+        assertThat(captor.getValue()).isEqualByComparingTo(new BigDecimal("11.2"));
+    }
+
+    @Test
+    void speichertDenGasfaktorAnDerOberenGrenze() throws Exception {
+        when(settingsService.getGasKwhPerM3()).thenReturn(new BigDecimal("15"));
+        mockMvc.perform(put("/v1/utility-prices/settings")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"gasKwhPerM3\": 15}"))
+                .andExpect(status().isOk());
+        ArgumentCaptor<BigDecimal> captor = ArgumentCaptor.forClass(BigDecimal.class);
+        verify(settingsService).saveGasKwhPerM3(captor.capture());
+        assertThat(captor.getValue()).isEqualByComparingTo(new BigDecimal("15"));
     }
 
     @Test
@@ -64,9 +83,15 @@ class UtilityPricingSettingsControllerTest {
         verify(settingsService, never()).saveGasKwhPerM3(any());
     }
 
-    /** Jackson macht aus dem String "NaN" klaglos ein Double.NaN; jeder Vergleich damit ist false. */
+    /**
+     * Seit dem Wechsel des DTO-Feldes auf {@code BigDecimal} scheitert ein
+     * nicht-numerischer Wert bereits beim Deserialisieren (Jackson kann "NaN" nicht in
+     * ein BigDecimal wandeln) und wird vom bestehenden
+     * {@code HttpMessageNotReadableException}-Handler in {@code GlobalExceptionHandler}
+     * mit 400 beantwortet - nicht mit 500.
+     */
     @Test
-    void lehntNaNAb() throws Exception {
+    void lehntNichtNumerischenWertAlsUnlesbarenRequestAb() throws Exception {
         mockMvc.perform(put("/v1/utility-prices/settings")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"gasKwhPerM3\": \"NaN\"}"))
                 .andExpect(status().isBadRequest());
