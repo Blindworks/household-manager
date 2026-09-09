@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.dto.ModeResponse;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.entitystate.mapper.ModeResponseMapper;
+import com.household.manager.mode.ModeQuickAccessResolver;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.repository.EntityStateRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,9 +14,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,13 +27,19 @@ class HouseModeQueryServiceTest {
     @Mock
     private EntityStateRepository entityStateRepository;
 
+    @Mock
+    private ModeQuickAccessResolver quickAccessResolver;
+
     private HouseModeQueryService service;
 
     @BeforeEach
     void setUp() {
         EntityStateResponseMapper entityMapper = new EntityStateResponseMapper(new ObjectMapper());
+        // lenient(), weil nicht jeder Test dieser Klasse bis zur Abbildung kommt — mit
+        // striktem Stubbing waere das sonst "unnecessary stubbing".
+        lenient().when(quickAccessResolver.dueEntityIds()).thenReturn(Set.of());
         service = new HouseModeQueryService(entityStateRepository, entityMapper,
-                new ModeResponseMapper(entityMapper));
+                new ModeResponseMapper(entityMapper, quickAccessResolver), quickAccessResolver);
     }
 
     private EntityState manualBoolean(String ref, String name, String state, String attributes) {
