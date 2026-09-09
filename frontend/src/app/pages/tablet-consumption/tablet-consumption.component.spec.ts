@@ -17,16 +17,18 @@ describe('TabletConsumptionComponent', () => {
   const strom: MeterConsumptionSeries = {
     meterType: MeterType.ELECTRICITY,
     unit: 'kWh',
+    currency: 'EUR',
     points: [
-      { periodStart: '2026-08-14', label: 'KW 33', consumption: 34, estimated: false },
-      { periodStart: '2026-08-21', label: 'KW 34', consumption: 38.08, estimated: true }
+      { periodStart: '2026-08-14', label: 'KW 33', consumption: 34, estimated: false, cost: null },
+      { periodStart: '2026-08-21', label: 'KW 34', consumption: 38.08, estimated: true, cost: null }
     ]
   };
   const wasser: MeterConsumptionSeries = {
     meterType: MeterType.WATER,
     unit: 'm³',
+    currency: 'EUR',
     points: [
-      { periodStart: '2026-08-21', label: 'KW 34', consumption: 2.4, estimated: false }
+      { periodStart: '2026-08-21', label: 'KW 34', consumption: 2.4, estimated: false, cost: null }
     ]
   };
 

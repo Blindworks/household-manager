@@ -2,7 +2,8 @@ import {
   RANGE_OPTIONS,
   compareToPrevious,
   defaultRangeFor,
-  formatConsumption
+  formatConsumption,
+  formatCost
 } from './consumption-view.util';
 import { ConsumptionPoint } from '../models/meter-consumption-series.model';
 
@@ -11,8 +12,8 @@ describe('consumption-view.util', () => {
    * Ein Balken. Das Datum zaehlt: compareToPrevious sagt nur dann "Vorwoche" bzw.
    * "Vormonat", wenn die beiden Balken wirklich benachbarte Perioden sind.
    */
-  function point(consumption: number, periodStart = '2026-08-21'): ConsumptionPoint {
-    return { periodStart, label: 'KW 34', consumption, estimated: false };
+  function point(consumption: number, periodStart = '2026-08-21', cost: number | null = null): ConsumptionPoint {
+    return { periodStart, label: 'KW 34', consumption, estimated: false, cost };
   }
 
   /** Zwei aufeinanderfolgende Ablesewochen. */
@@ -93,6 +94,31 @@ describe('consumption-view.util', () => {
 
     it('zeigt bei fehlendem Wert einen Platzhalter', () => {
       expect(formatConsumption(null, 'kWh')).toBe('–');
+    });
+  });
+
+  describe('compareToPrevious mit Wertselektor', () => {
+    it('vergleicht auf Kostenbasis, wenn ein Selektor uebergeben wird', () => {
+      const points = [point(10, WEEK_A, 4), point(20, WEEK_B, 5)];
+      expect(compareToPrevious(points, 'WEEK', p => p.cost)).toBe('+25 % ggü. Vorwoche');
+    });
+
+    it('gibt nichts zurueck, wenn der gewaehlte Wert fehlt', () => {
+      const points = [point(10, WEEK_A, null), point(20, WEEK_B, 5)];
+      expect(compareToPrevious(points, 'WEEK', p => p.cost)).toBeNull();
+    });
+  });
+
+  describe('formatCost', () => {
+    it('zeigt zwei Nachkommastellen mit Euro-Zeichen', () => {
+      // toLocaleString mit style "currency" setzt vor dem Euro-Zeichen ein
+      // GESCHUETZTES Leerzeichen (U+00A0), kein gewoehnliches - hier bewusst als
+      // \u00a0-Escape geschrieben, damit es im Quelltext sichtbar bleibt.
+      expect(formatCost(12.4, 'EUR')).toBe('12,40\u00a0€');
+    });
+
+    it('zeigt bei fehlendem Wert einen Platzhalter', () => {
+      expect(formatCost(null, 'EUR')).toBe('–');
     });
   });
 });

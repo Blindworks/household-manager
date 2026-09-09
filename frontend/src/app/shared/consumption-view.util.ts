@@ -49,28 +49,35 @@ const PREVIOUS_LABEL: Record<ConsumptionResolution, string> = {
   MONTH: 'Vormonat'
 };
 
+/** Liest den zu vergleichenden Wert eines Balkens; null = kein Wert. */
+export type PointValueSelector = (point: ConsumptionPoint) => number | null;
+
+const CONSUMPTION_OF: PointValueSelector = p => p.consumption;
+
 /**
  * Veraenderung des letzten Werts gegenueber dem vorletzten, z. B. "+12 % ggü. Vorwoche".
  *
- * Gibt null zurueck, wenn es nichts zu vergleichen gibt: bei weniger als zwei Punkten
- * oder wenn die Vorperiode 0 war. Ein "+0 %" oder "+∞ %" waere in beiden Faellen eine
- * Aussage, die die Daten nicht hergeben.
+ * Gibt null zurueck, wenn es nichts zu vergleichen gibt: bei weniger als zwei Punkten,
+ * wenn die Vorperiode 0 war, oder wenn der gewaehlte Wert (per Default der Verbrauch)
+ * bei einem der beiden Balken fehlt. Ein "+0 %" oder "+∞ %" waere in all diesen Faellen
+ * eine Aussage, die die Daten nicht hergeben.
  */
 export function compareToPrevious(
   points: readonly ConsumptionPoint[],
-  resolution: ConsumptionResolution
+  resolution: ConsumptionResolution,
+  valueOf: PointValueSelector = CONSUMPTION_OF
 ): string | null {
   if (points.length < 2) {
     return null;
   }
   const previousPoint = points[points.length - 2];
   const currentPoint = points[points.length - 1];
-  if (previousPoint.consumption === 0) {
+  const previous = valueOf(previousPoint);
+  const current = valueOf(currentPoint);
+  if (previous === null || current === null || previous === 0) {
     return null;
   }
-  const percent = Math.round(
-    ((currentPoint.consumption - previousPoint.consumption) / previousPoint.consumption) * 100
-  );
+  const percent = Math.round(((current - previous) / previous) * 100);
   const sign = percent >= 0 ? '+' : '';
   const reference = isAdjacent(previousPoint, currentPoint, resolution)
     ? PREVIOUS_LABEL[resolution]
@@ -124,4 +131,12 @@ export function formatConsumption(value: number | null, unit: string): string {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
   })} ${unit}`;
+}
+
+/** Kostenwert mit Waehrungszeichen, zwei Nachkommastellen, deutsches Komma. */
+export function formatCost(value: number | null, currency: string): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '–';
+  }
+  return value.toLocaleString('de-DE', { style: 'currency', currency });
 }

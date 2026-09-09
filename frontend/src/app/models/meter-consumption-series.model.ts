@@ -21,6 +21,11 @@ export interface ConsumptionPoint {
   readonly consumption: number;
   /** True, sobald mindestens eine beitragende Ablesung ein Schaetzwert war. */
   readonly estimated: boolean;
+  /**
+   * Kosten der Periode in der Waehrung der Serie (Arbeitspreis × Menge), null wenn
+   * fuer mindestens eine beitragende Ablesewoche kein Preis hinterlegt ist.
+   */
+  readonly cost: number | null;
 }
 
 /** Die Verbrauchsreihe genau eines Zaehlertyps - eine Kachel der Ansicht. */
@@ -28,6 +33,8 @@ export interface MeterConsumptionSeries {
   readonly meterType: MeterType;
   /** "kWh" bei Strom, "m³" bei Gas und Wasser. */
   readonly unit: string;
+  /** Waehrung der Kosten, heute immer "EUR". */
+  readonly currency: string;
   /** Balken, aeltester zuerst. */
   readonly points: ConsumptionPoint[];
 }
