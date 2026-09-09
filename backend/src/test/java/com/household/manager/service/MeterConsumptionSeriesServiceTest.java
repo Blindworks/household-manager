@@ -350,6 +350,36 @@ class MeterConsumptionSeriesServiceTest {
         assertThat(august.cost()).isEqualByComparingTo("2.01");
     }
 
+    /**
+     * Eine Serie kann gemischt sein: ein Monat vollstaendig bepreist, der andere gar
+     * nicht. Das Frontend laesst im Kostenmodus Balken ohne Preis weg - genau dieser
+     * Fall entscheidet darueber, und die Mengenangabe darf davon unberuehrt bleiben.
+     */
+    @Test
+    void bepreistNurDenVollstaendigBepreistenMonatDerSerie() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 6, 26), "1000", false),
+                reading(LocalDate.of(2026, 7, 3), "1020", false),
+                reading(LocalDate.of(2026, 8, 7), "1050", false));
+        when(priceBook.costOf(new BigDecimal("20"), LocalDate.of(2026, 7, 3)))
+                .thenReturn(Optional.of(new BigDecimal("5.00")));
+        // August (14.08.-Woche gibt es hier nicht, nur die eine Woche vom 07.08.) bleibt ohne Preis (Default-Stub)
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+
+        assertThat(series.points()).hasSize(2);
+        ConsumptionPoint juli = series.points().get(0);
+        ConsumptionPoint august = series.points().get(1);
+
+        assertThat(juli.periodStart()).isEqualTo(LocalDate.of(2026, 7, 1));
+        assertThat(juli.consumption()).isEqualByComparingTo("20");
+        assertThat(juli.cost()).isEqualByComparingTo("5.00");
+
+        assertThat(august.periodStart()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(august.consumption()).isEqualByComparingTo("30");
+        assertThat(august.cost()).isNull();
+    }
+
     /** Der Calculator wird je Serie EINMAL befragt, nicht je Woche. */
     @Test
     void holtDasPreisbuchEinmalJeSerie() {
