@@ -53,6 +53,31 @@ class UtilityPricingSettingsServiceTest {
         assertThat(service.getGasKwhPerM3()).isEqualByComparingTo("10.0");
     }
 
+    // isPlausible schliesst beide Grenzen bewusst ein (Javadoc der Konstanten). Der spaetere
+    // REST-Endpunkt PUT /v1/utility-prices/settings haengt seine 400-Entscheidung direkt an
+    // diese Methode, und ein realer Gasfaktor kann nahe an 5 oder 15 liegen — ein Off-by-one
+    // (">" statt ">=") waere vom bisherigen Test mit dem Wert 100 nicht zu unterscheiden.
+
+    @Test
+    void nimmtDieUntereGrenzeAn() {
+        assertThat(UtilityPricingSettingsService.isPlausible(new BigDecimal("5"))).isTrue();
+    }
+
+    @Test
+    void nimmtDieObereGrenzeAn() {
+        assertThat(UtilityPricingSettingsService.isPlausible(new BigDecimal("15"))).isTrue();
+    }
+
+    @Test
+    void lehntKnappUnterhalbDerUnterenGrenzeAb() {
+        assertThat(UtilityPricingSettingsService.isPlausible(new BigDecimal("4.99"))).isFalse();
+    }
+
+    @Test
+    void lehntKnappOberhalbDerOberenGrenzeAb() {
+        assertThat(UtilityPricingSettingsService.isPlausible(new BigDecimal("15.01"))).isFalse();
+    }
+
     /** Der Serien-Service laeuft bei jedem Tablet-Abruf; ein DB-Fehler darf ihn nicht kippen. */
     @Test
     void leseFehlerWirftNicht() {
