@@ -192,6 +192,13 @@ export const routes: Routes = [
     title: 'Audit-Log - Household Manager'
   },
   {
+    path: 'admin/mode-quick-access',
+    loadComponent: () => import('./pages/admin-mode-quick-access/admin-mode-quick-access.component')
+      .then(m => m.AdminModeQuickAccessComponent),
+    canActivate: [adminGuard],
+    title: 'Modus-Schnellzugriff - Household Manager'
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
     canActivate: [adminGuard],
