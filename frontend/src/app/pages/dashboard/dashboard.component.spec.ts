@@ -675,6 +675,7 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     displayName: 'Nachtmodus',
     icon: 'nights_stay',
     state: 'off',
+    quickAccess: false,
     ...overrides
   });
 
@@ -1788,6 +1789,7 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
     displayName: 'Toni allein',
     icon: 'pets',
     state: 'off',
+    quickAccess: false,
     ...overrides
   });
 
@@ -1796,6 +1798,7 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
     displayName: 'Nachtmodus',
     icon: 'nights_stay',
     state: 'off',
+    quickAccess: false,
     ...overrides
   });
 

@@ -6,4 +6,9 @@ export interface ModeEntity {
   icon: string;
   /** "on" oder "off". */
   state: string;
+  /**
+   * True, wenn das Backend fuer diesen Modus gerade ein Zeitfenster offen sieht. Das
+   * Tablet-Dashboard zeigt ihn dann direkt als Knopf neben der eingeklappten Leiste.
+   */
+  quickAccess: boolean;
 }
