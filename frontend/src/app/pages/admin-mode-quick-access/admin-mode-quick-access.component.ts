@@ -138,13 +138,13 @@ export class AdminModeQuickAccessComponent implements OnInit {
     const call = id === null ? this.api.create(request) : this.api.update(id, request);
     call.subscribe({
       next: () => {
-        // Ein neues/geaendertes Fenster kann sofort quickAccess eines Modus umklappen
-        // (liegt „jetzt" im neuen Fenster) — deshalb beide Listen neu laden.
+        // Der Modus-Katalog ist backend-seitig statisch (HouseModes.CATALOG) und dient hier
+        // nur dem Dropdown — ein neues/geaendertes Fenster aendert daran nichts. `quickAccess`
+        // wird auf dieser Seite nirgends angezeigt, ein Nachladen der Modi waere wirkungslos.
         this.load(() => {
           this.saving.set(false);
           this.resetForm();
         });
-        this.loadModes();
       },
       error: (error: HttpErrorResponse) => {
         this.saving.set(false);
@@ -162,7 +162,6 @@ export class AdminModeQuickAccessComponent implements OnInit {
           this.form.active = active;
         }
         this.load();
-        this.loadModes();
       },
       error: (error: HttpErrorResponse) => this.errorMessage.set(this.messageFrom(error))
     });
@@ -180,7 +179,6 @@ export class AdminModeQuickAccessComponent implements OnInit {
           this.resetForm();
         }
         this.load();
-        this.loadModes();
       },
       error: (error: HttpErrorResponse) => this.errorMessage.set(this.messageFrom(error))
     });

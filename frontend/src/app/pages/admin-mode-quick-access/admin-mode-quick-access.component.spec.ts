@@ -110,7 +110,6 @@ describe('AdminModeQuickAccessComponent', () => {
     });
     created.flush(NACHT_FENSTER);
     httpMock.expectOne(WINDOWS_URL).flush([NACHT_FENSTER]);
-    httpMock.expectOne(MODES_URL).flush([NACHTMODUS, ABWESEND]);
   });
 
   it('lehnt ein Speichern ohne Modus ohne Anfrage ab', async () => {
@@ -159,7 +158,6 @@ describe('AdminModeQuickAccessComponent', () => {
     });
     update.flush({ ...NACHT_FENSTER, active: false });
     httpMock.expectOne(WINDOWS_URL).flush([{ ...NACHT_FENSTER, active: false }]);
-    httpMock.expectOne(MODES_URL).flush([NACHTMODUS, ABWESEND]);
   });
 
   it('loescht ein Fenster nach Bestaetigung', async () => {
@@ -172,7 +170,6 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(deleted.request.method).toBe('DELETE');
     deleted.flush(null);
     httpMock.expectOne(WINDOWS_URL).flush([]);
-    httpMock.expectOne(MODES_URL).flush([NACHTMODUS, ABWESEND]);
   });
 
   /** Ein Fenster ohne zugehoerigen Modus bleibt sichtbar — sonst waere es nicht loeschbar. */
