@@ -18,7 +18,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,9 +34,7 @@ class HouseModeQueryServiceTest {
     @BeforeEach
     void setUp() {
         EntityStateResponseMapper entityMapper = new EntityStateResponseMapper(new ObjectMapper());
-        // lenient(), weil nicht jeder Test dieser Klasse bis zur Abbildung kommt — mit
-        // striktem Stubbing waere das sonst "unnecessary stubbing".
-        lenient().when(quickAccessResolver.dueEntityIds()).thenReturn(Set.of());
+        when(quickAccessResolver.dueEntityIds()).thenReturn(Set.of());
         service = new HouseModeQueryService(entityStateRepository, entityMapper,
                 new ModeResponseMapper(entityMapper, quickAccessResolver), quickAccessResolver);
     }

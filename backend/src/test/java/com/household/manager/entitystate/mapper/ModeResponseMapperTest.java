@@ -15,6 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,5 +73,10 @@ class ModeResponseMapperTest {
         ModeResponse response = mapper.toResponse(nachtmodus(), Set.of(NACHTMODUS));
 
         assertThat(response.quickAccess()).isTrue();
+        // Ohne diese Pruefung liesse ein leeres Default-Set des ungestubbten Resolvers eine
+        // Implementierung durchgehen, die beide Quellen kombiniert (dueEntityIds.contains(...)
+        // || quickAccessResolver.dueEntityIds().contains(...)) — genau das Doppelberechnen,
+        // das diese Ueberladung ausschliessen soll.
+        verify(quickAccessResolver, never()).dueEntityIds();
     }
 }
