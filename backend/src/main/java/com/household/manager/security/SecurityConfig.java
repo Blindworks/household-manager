@@ -148,7 +148,10 @@ public class SecurityConfig {
                         // unten stehen, sonst duerfte das Kiosk-Tablet die Home-Definition lesen.
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
                                 "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout",
-                                "/v1/tractive/home-settings", "/v1/presence/settings").hasRole("ADMIN")
+                                "/v1/tractive/home-settings", "/v1/presence/settings",
+                                // Gasfaktor: liegt unter /v1/utility-prices/**, dessen GET weiter unten
+                                // KIOSK ist — muss deshalb hier vor dieser Regel stehen.
+                                "/v1/utility-prices/settings").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das

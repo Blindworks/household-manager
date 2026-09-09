@@ -2,15 +2,19 @@ package com.household.manager.controller;
 
 import com.household.manager.dto.UtilityPriceRequest;
 import com.household.manager.dto.UtilityPriceResponse;
+import com.household.manager.dto.UtilityPricingSettingsDto;
 import com.household.manager.model.entity.MeterType;
 import com.household.manager.service.UtilityPriceService;
+import com.household.manager.service.UtilityPricingSettingsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -28,6 +32,7 @@ import java.util.List;
 public class UtilityPriceController {
 
     private final UtilityPriceService utilityPriceService;
+    private final UtilityPricingSettingsService settingsService;
 
     /**
      * Create a new utility price.
@@ -106,5 +111,47 @@ public class UtilityPriceController {
         log.info("Received request to delete utility price with ID: {}", id);
         utilityPriceService.deleteUtilityPrice(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Get the gas conversion factor (kWh per m³).
+     * <p>
+     * GET /api/v1/utility-prices/settings
+     * <p>
+     * "/settings" is a literal path segment and wins against the {@code /{type}}
+     * path variable above.
+     */
+    @GetMapping("/settings")
+    public ResponseEntity<UtilityPricingSettingsDto> getSettings() {
+        return ResponseEntity.ok(currentSettings());
+    }
+
+    /**
+     * Update the gas conversion factor (kWh per m³).
+     * <p>
+     * PUT /api/v1/utility-prices/settings
+     * <p>
+     * Die Bereichspruefung braucht {@code Double.isFinite}: Jackson erzeugt aus dem
+     * String "NaN" klaglos ein Double.NaN, und jeder Vergleich damit ist false.
+     */
+    @PutMapping("/settings")
+    public ResponseEntity<UtilityPricingSettingsDto> updateSettings(
+            @RequestBody UtilityPricingSettingsDto request) {
+        Double value = request.gasKwhPerM3();
+        if (value == null || !Double.isFinite(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Der Gasfaktor fehlt.");
+        }
+        BigDecimal factor = BigDecimal.valueOf(value);
+        if (!UtilityPricingSettingsService.isPlausible(factor)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Der Gasfaktor muss zwischen " + UtilityPricingSettingsService.MIN_GAS_KWH_PER_M3
+                            + " und " + UtilityPricingSettingsService.MAX_GAS_KWH_PER_M3 + " kWh je m³ liegen.");
+        }
+        settingsService.saveGasKwhPerM3(factor);
+        return ResponseEntity.ok(currentSettings());
+    }
+
+    private UtilityPricingSettingsDto currentSettings() {
+        return new UtilityPricingSettingsDto(settingsService.getGasKwhPerM3().doubleValue());
     }
 }

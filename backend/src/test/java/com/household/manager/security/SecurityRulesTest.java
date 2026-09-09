@@ -642,6 +642,42 @@ class SecurityRulesTest {
     }
 
     /**
+     * /v1/utility-prices/settings liegt unter /v1/utility-prices/**, dessen GET fuer
+     * KIOSK offen ist. Der methodenlose ADMIN-Matcher muss VOR dieser Zeile stehen,
+     * sonst laese das Wandtablet den Gasfaktor mit.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenGasfaktorNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/utility-prices/settings")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDenGasfaktorNichtSchreiben() throws Exception {
+        mockMvc.perform(put("/v1/utility-prices/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"gasKwhPerM3\": 10.5}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDenGasfaktorLesenUndSchreiben() throws Exception {
+        // Kein UtilityPriceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(get("/v1/utility-prices/settings")).andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/utility-prices/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"gasKwhPerM3\": 10.5}"))
+                .andExpect(status().isNotFound());
+    }
+
+    /** Die generische GET-Regel fuer Preise bleibt: das Wandtablet liest weiter Preise. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfPreiseWeiterLesen() throws Exception {
+        mockMvc.perform(get("/v1/utility-prices")).andExpect(status().isNotFound());
+    }
+
+    /**
      * Anwesenheits-Geraete pflegen ist ADMIN-only. KIOSK und MEMBER muessen es je aus
      * eigenem Test belegen (Muster Netzwerk-Geraete).
      */
