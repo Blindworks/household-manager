@@ -37,7 +37,12 @@ Rechnungsbetrag: Grundgebühr, Netzentgelte und Steuern sind nicht Teil des Mode
   Kategorie `UTILITY_PRICING`, Schlüssel `gas_kwh_per_m3`, Default `10.0`.
 - Lesen wirft nie: unlesbar oder außerhalb **5 … 15** ⇒ Default und Warnung im Log.
 - Endpunkt `GET/PUT /v1/utility-prices/settings` (`{ gasKwhPerM3: number }`), beide ADMIN.
-  Validierung an der API-Grenze mit `Double.isFinite` und Bereich 5 … 15, sonst 400.
+  Validierung an der API-Grenze gegen den Bereich 5 … 15, sonst 400.
+  **Umgesetzt mit einer Abweichung von diesem Entwurf:** Der Entwurf sah eine
+  `Double.isFinite`-Prüfung vor, weil Jackson aus dem String `"NaN"` klaglos ein
+  `Double.NaN` erzeugt. Das DTO trägt stattdessen `BigDecimal` — damit sind `NaN` und
+  `Infinity` strukturell unmöglich, Jackson lehnt sie schon beim Deserialisieren ab und
+  der bestehende Handler macht daraus einen 400. Die Laufzeitprüfung entfällt ersatzlos.
 - Security: `/v1/utility-prices/settings` als **methodenloser ADMIN-Matcher vor** der
   Zeile `GET /v1/utility-prices/** → KIOSK` (sonst gewänne die KIOSK-GET-Regel).
 - Audit `utility-pricing.settings.update` mit altem und neuem Wert.
