@@ -2578,4 +2578,27 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
 
     discardPeriodicTasks();
   }));
+
+  /**
+   * Strukturelle statt reiner Verhaltensprüfung: ein Kind-Knopf mit eigenem
+   * `$event.stopPropagation()` würde den obigen Klick-Test genauso bestehen, verletzte aber
+   * die Konstruktionsregel aus dashboard.component.html ("bewusst ein GESCHWISTER der Karte,
+   * kein Kind") — läge der Schnellzugriff innerhalb von `.lumina__modes-card`, klappte jeder
+   * Tipp darauf zusätzlich die Leiste auf. Deshalb hier direkt die DOM-Struktur prüfen.
+   */
+  it('haengt den Schnellzugriff als Geschwister der Modus-Karte, nicht als Kind', fakeAsync(() => {
+    const fixture = tabletFixture();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const card = root.querySelector('.lumina__modes-card') as HTMLElement;
+    expect(card).withContext('Modus-Karte fehlt').not.toBeNull();
+    expect(card.querySelector('.lumina__modes-quick'))
+      .withContext('Schnellzugriff darf nicht innerhalb der Karte liegen').toBeNull();
+    // Ohne diese zweite Prüfung waere die erste trivial erfuellt (fehlender Schnellzugriff
+    // ist auch "nicht in der Karte").
+    expect(root.querySelector('.lumina__modes-quick'))
+      .withContext('Schnellzugriff muss im Dokument existieren').not.toBeNull();
+
+    discardPeriodicTasks();
+  }));
 });
