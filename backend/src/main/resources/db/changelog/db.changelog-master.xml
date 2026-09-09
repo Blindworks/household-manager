@@ -131,4 +131,7 @@
     <include file="db/changelog/changes/20260828-0051-generalize-pet-supplies.xml"/>
     <include file="db/changelog/changes/20260908-0052-allow-water-utility-prices.xml"/>
 
+    <!-- Zeitgesteuerter Modus-Schnellzugriff im Tablet-Dashboard -->
+    <include file="db/changelog/changes/20260909-0053-create-mode-quick-access.xml"/>
+
 </databaseChangeLog>
