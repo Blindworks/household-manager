@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * Service for managing utility prices.
  * <p>
  * Handles business logic for creating, retrieving, and managing
- * utility prices for electricity and gas with validity periods.
+ * utility prices for electricity, gas and water with validity periods.
  */
 @Service
 @RequiredArgsConstructor
@@ -32,7 +32,6 @@ public class UtilityPriceService {
      * Create a new utility price.
      * <p>
      * Validates that:
-     * - Only ELECTRICITY or GAS meter types are allowed
      * - validFrom is before validTo (if validTo is provided)
      * - No overlapping validity periods exist for the same meter type
      *
@@ -44,7 +43,6 @@ public class UtilityPriceService {
     public UtilityPriceResponse createUtilityPrice(UtilityPriceRequest request) {
         log.info("Creating new utility price for type: {}", request.getMeterType());
 
-        validateMeterType(request.getMeterType());
         validateValidityPeriod(request.getValidFrom(), request.getValidTo());
         validateNoOverlappingPeriods(request.getMeterType(), request.getValidFrom(), request.getValidTo(), null);
 
@@ -88,7 +86,6 @@ public class UtilityPriceService {
     @Transactional(readOnly = true)
     public List<UtilityPriceResponse> getUtilityPricesByMeterType(MeterType meterType) {
         log.debug("Retrieving utility prices for type: {}", meterType);
-        validateMeterType(meterType);
 
         List<UtilityPrice> prices = utilityPriceRepository.findByMeterTypeOrderByValidFromDesc(meterType);
         return prices.stream()
@@ -108,7 +105,6 @@ public class UtilityPriceService {
     @Transactional(readOnly = true)
     public UtilityPriceResponse getCurrentPriceForMeterType(MeterType meterType) {
         log.debug("Retrieving current price for type: {}", meterType);
-        validateMeterType(meterType);
 
         LocalDate today = LocalDate.now();
         UtilityPrice price = utilityPriceRepository.findCurrentPriceForMeterType(meterType, today)
@@ -134,21 +130,6 @@ public class UtilityPriceService {
 
         utilityPriceRepository.deleteById(id);
         log.info("Successfully deleted utility price with ID: {}", id);
-    }
-
-    /**
-     * Validate that only ELECTRICITY or GAS meter types are used.
-     *
-     * @param meterType the meter type to validate
-     * @throws IllegalArgumentException if meter type is not ELECTRICITY or GAS
-     */
-    private void validateMeterType(MeterType meterType) {
-        if (meterType != MeterType.ELECTRICITY && meterType != MeterType.GAS) {
-            log.warn("Invalid meter type for utility price: {}", meterType);
-            throw new IllegalArgumentException(
-                    "Utility prices are only supported for ELECTRICITY and GAS meter types. " +
-                    "Provided: " + meterType);
-        }
     }
 
     /**
