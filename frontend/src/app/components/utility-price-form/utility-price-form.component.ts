@@ -31,7 +31,7 @@ export class UtilityPriceFormComponent implements OnInit {
   priceForm!: FormGroup;
 
   /** Verfügbare Zählertypen */
-  meterTypes: MeterType[] = [MeterType.ELECTRICITY, MeterType.GAS];
+  meterTypes: MeterType[] = [MeterType.ELECTRICITY, MeterType.GAS, MeterType.WATER];
 
   /** MeterTypeUtils für Template-Zugriff */
   meterTypeUtils = MeterTypeUtils;

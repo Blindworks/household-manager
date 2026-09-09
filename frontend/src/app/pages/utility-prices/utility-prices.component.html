@@ -8,7 +8,7 @@
           Versorgerpreise
         </h1>
         <p class="page-header__subtitle">
-          Erfassen und verwalten Sie hier Ihre Strom- und Gaspreise zur Kostenberechnung
+          Erfassen und verwalten Sie hier Ihre Strom-, Gas- und Wasserpreise zur Kostenberechnung
         </p>
       </div>
     </header>
@@ -24,6 +24,28 @@
       <app-icon name="alert-triangle" class="alert__icon"></app-icon>
       <span class="alert__message">{{ errorMessage }}</span>
     </div>
+
+    <!-- Gas-Umrechnungsfaktor (nur ADMIN, der Endpunkt ist ADMIN-only) -->
+    <section class="pricing-settings" *ngIf="isAdmin()">
+      <h2 class="section-title">
+        <app-icon name="flame" [size]="20"></app-icon>
+        Gas: Umrechnung
+      </h2>
+      <p class="pricing-settings__hint">
+        Der Gaszähler zählt m³, der Gaspreis gilt je kWh. Der Faktor (Brennwert × Zustandszahl)
+        steht auf der Gasrechnung, meist zwischen 9 und 12.
+      </p>
+      <div class="pricing-settings__row">
+        <label for="gasKwhPerM3">kWh je m³</label>
+        <input id="gasKwhPerM3" type="number" step="0.01" min="5" max="15"
+               [(ngModel)]="gasKwhPerM3" name="gasKwhPerM3">
+        <button type="button" class="btn btn--primary"
+                [disabled]="isSavingSettings || gasKwhPerM3 === null"
+                (click)="saveGasFactor()">
+          Speichern
+        </button>
+      </div>
+    </section>
 
     <!-- Main Content -->
     <div class="content-grid">

@@ -1,11 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { UtilityPriceFormComponent } from '../../components/utility-price-form/utility-price-form.component';
 import { UtilityPriceService } from '../../services/utility-price.service';
 import { UtilityPrice } from '../../models/utility-price.model';
 import { MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
+import { AuthService } from '../../services/auth.service';
 
 /**
  * Seiten-Komponente für die Verwaltung von Versorgerpreisen
@@ -14,12 +16,14 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 @Component({
   selector: 'app-utility-prices',
   standalone: true,
-  imports: [CommonModule, IconComponent, UtilityPriceFormComponent],
+  imports: [CommonModule, FormsModule, IconComponent, UtilityPriceFormComponent],
   templateUrl: './utility-prices.component.html',
   styleUrl: './utility-prices.component.scss'
 })
 export class UtilityPricesComponent implements OnInit {
   private readonly utilityPriceService = inject(UtilityPriceService);
+  private readonly authService = inject(AuthService);
+  readonly isAdmin = this.authService.isAdmin;
 
   /** Alle geladenen Preise */
   prices: UtilityPrice[] = [];
@@ -40,10 +44,51 @@ export class UtilityPricesComponent implements OnInit {
   meterTypeUtils = MeterTypeUtils;
 
   /** Alle Meter Types für die Gruppierung */
-  readonly meterTypes = [MeterType.ELECTRICITY, MeterType.GAS];
+  readonly meterTypes = [MeterType.ELECTRICITY, MeterType.GAS, MeterType.WATER];
+
+  /** Gas: kWh je m³ - nur für ADMIN geladen und sichtbar. */
+  gasKwhPerM3: number | null = null;
+
+  /** Speicher-Status des Gasfaktors */
+  isSavingSettings = false;
 
   ngOnInit(): void {
     this.loadPrices();
+    if (this.isAdmin()) {
+      this.loadSettings();
+    }
+  }
+
+  /**
+   * Lädt den Gas-Umrechnungsfaktor (nur für ADMIN aufrufbar - der Endpunkt ist ADMIN-only)
+   */
+  private loadSettings(): void {
+    this.utilityPriceService.getSettings().subscribe({
+      next: settings => (this.gasKwhPerM3 = settings.gasKwhPerM3),
+      error: () => (this.errorMessage = 'Der Gasfaktor konnte nicht geladen werden.')
+    });
+  }
+
+  /**
+   * Speichert den Gas-Umrechnungsfaktor
+   */
+  saveGasFactor(): void {
+    if (this.gasKwhPerM3 === null) {
+      return;
+    }
+
+    this.isSavingSettings = true;
+    this.utilityPriceService.updateSettings({ gasKwhPerM3: this.gasKwhPerM3 }).subscribe({
+      next: settings => {
+        this.gasKwhPerM3 = settings.gasKwhPerM3;
+        this.successMessage = 'Gasfaktor gespeichert.';
+        this.isSavingSettings = false;
+      },
+      error: (error: Error) => {
+        this.errorMessage = error.message || 'Der Gasfaktor konnte nicht gespeichert werden.';
+        this.isSavingSettings = false;
+      }
+    });
   }
 
   /**

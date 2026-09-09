@@ -26,6 +26,12 @@ export interface UtilityPrice {
   updatedAt?: Date;
 }
 
+/** Pflegbare Preis-Einstellungen (GET/PUT /v1/utility-prices/settings). */
+export interface UtilityPricingSettings {
+  /** Gas: kWh je m³ (Brennwert × Zustandszahl). */
+  gasKwhPerM3: number;
+}
+
 /**
  * Request-Interface für das Erstellen eines neuen Preises
  */

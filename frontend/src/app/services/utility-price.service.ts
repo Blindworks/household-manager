@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { UtilityPrice, UtilityPriceRequest } from '../models/utility-price.model';
+import { UtilityPrice, UtilityPriceRequest, UtilityPricingSettings } from '../models/utility-price.model';
 import { MeterType } from '../models/meter-reading.model';
 
 /**
@@ -67,6 +67,24 @@ export class UtilityPriceService {
    */
   deletePrice(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Lädt die Preis-Einstellungen (z. B. den Gas-Umrechnungsfaktor). ADMIN-only.
+   */
+  getSettings(): Observable<UtilityPricingSettings> {
+    return this.http.get<UtilityPricingSettings>(`${this.baseUrl}/settings`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Aktualisiert die Preis-Einstellungen. ADMIN-only.
+   */
+  updateSettings(settings: UtilityPricingSettings): Observable<UtilityPricingSettings> {
+    return this.http.put<UtilityPricingSettings>(`${this.baseUrl}/settings`, settings).pipe(
       catchError(this.handleError)
     );
   }
