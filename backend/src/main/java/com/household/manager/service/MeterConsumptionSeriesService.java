@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
@@ -33,12 +34,18 @@ import java.util.function.Supplier;
  *
  * <p>Jeder Zaehlertyp wird fuer sich ausgewertet - faellt einer aus, kommen die
  * anderen trotzdem (Muster {@code TemperatureSeriesService}).
+ *
+ * <p>Kosten je Ablesewoche zum Preis am Ablesedatum ({@link MeterCostCalculator}),
+ * Monatsbalken summieren; fehlt einer Woche der Preis, entfaellt der Monatswert.
  */
 @Service
 @Slf4j
 public class MeterConsumptionSeriesService {
 
+    private static final String CURRENCY = "EUR";
+
     private final MeterReadingRepository repository;
+    private final MeterCostCalculator costCalculator;
     /** Injizierbar, damit Tests ein festes "heute" setzen koennen. */
     private final Supplier<LocalDate> today;
 
@@ -49,12 +56,16 @@ public class MeterConsumptionSeriesService {
      * und der Anwendungsstart bricht ab.
      */
     @Autowired
-    public MeterConsumptionSeriesService(MeterReadingRepository repository) {
-        this(repository, LocalDate::now);
+    public MeterConsumptionSeriesService(MeterReadingRepository repository,
+                                         MeterCostCalculator costCalculator) {
+        this(repository, costCalculator, LocalDate::now);
     }
 
-    MeterConsumptionSeriesService(MeterReadingRepository repository, Supplier<LocalDate> today) {
+    MeterConsumptionSeriesService(MeterReadingRepository repository,
+                                  MeterCostCalculator costCalculator,
+                                  Supplier<LocalDate> today) {
         this.repository = repository;
+        this.costCalculator = costCalculator;
         this.today = today;
     }
 
@@ -74,7 +85,7 @@ public class MeterConsumptionSeriesService {
             List<ConsumptionPoint> points = points(type, range, from);
             return points.isEmpty()
                     ? Optional.empty()
-                    : Optional.of(new MeterConsumptionSeries(type, unitOf(type), points));
+                    : Optional.of(new MeterConsumptionSeries(type, unitOf(type), CURRENCY, points));
         } catch (Exception e) {
             log.warn("Verbrauchsreihe fuer {} konnte nicht gebildet werden: {}", type, e.toString());
             return Optional.empty();
@@ -83,6 +94,7 @@ public class MeterConsumptionSeriesService {
 
     private List<ConsumptionPoint> points(MeterType type, ConsumptionRange range, LocalDate from) {
         List<MeterReading> readings = repository.findByMeterTypeOrderByReadingDateAsc(type);
+        MeterCostCalculator.PriceBook priceBook = costCalculator.priceBookFor(type);
         List<ConsumptionPoint> weekly = new ArrayList<>();
 
         for (int i = 1; i < readings.size(); i++) {
@@ -99,8 +111,9 @@ public class MeterConsumptionSeriesService {
             if (date.isBefore(from)) {
                 continue;
             }
+            BigDecimal cost = priceBook.costOf(consumption, date).orElse(null);
             weekly.add(new ConsumptionPoint(date, weekLabel(date), consumption,
-                    current.isEstimated()));
+                    current.isEstimated(), cost));
         }
         return aggregateByPeriod(weekly, range.getResolution());
     }
@@ -140,12 +153,29 @@ public class MeterConsumptionSeriesService {
                 .map(ConsumptionPoint::consumption)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         boolean estimated = group.stream().anyMatch(ConsumptionPoint::estimated);
+        BigDecimal cost = sumCosts(group);
 
         if (resolution == ConsumptionResolution.WEEK) {
-            return new ConsumptionPoint(first.periodStart(), first.label(), consumption, estimated);
+            return new ConsumptionPoint(first.periodStart(), first.label(), consumption, estimated, cost);
         }
         LocalDate periodStart = first.periodStart().withDayOfMonth(1);
-        return new ConsumptionPoint(periodStart, MONTH_LABEL.format(periodStart), consumption, estimated);
+        return new ConsumptionPoint(periodStart, MONTH_LABEL.format(periodStart), consumption, estimated, cost);
+    }
+
+    /**
+     * Summe der Kosten einer Periode, gerundet erst NACH der Summe. Fehlt einem
+     * Mitglied der Preis, ist die Summe null: eine Teilsumme saehe aus wie ein
+     * billiger Monat.
+     */
+    private static BigDecimal sumCosts(List<ConsumptionPoint> group) {
+        BigDecimal sum = BigDecimal.ZERO;
+        for (ConsumptionPoint point : group) {
+            if (point.cost() == null) {
+                return null;
+            }
+            sum = sum.add(point.cost());
+        }
+        return sum.setScale(2, RoundingMode.HALF_UP);
     }
 
     private static String weekLabel(LocalDate date) {

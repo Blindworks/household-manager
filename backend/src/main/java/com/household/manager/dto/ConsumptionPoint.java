@@ -11,11 +11,15 @@ import java.time.LocalDate;
  * @param consumption Verbrauch in der Einheit der Serie
  * @param estimated   true, sobald mindestens eine beitragende Ablesung ein Schaetzwert war;
  *                    ein Balken kann mehrere Ablesungen derselben Periode zusammenfassen
+ * @param cost        Kosten der Periode in EUR (Arbeitspreis × Menge, 2 Nachkommastellen);
+ *                    null, wenn fuer mindestens eine beitragende Ablesewoche kein Preis
+ *                    hinterlegt ist — eine Teilsumme saehe aus wie ein billiger Monat
  */
 public record ConsumptionPoint(
         LocalDate periodStart,
         String label,
         BigDecimal consumption,
-        boolean estimated
+        boolean estimated,
+        BigDecimal cost
 ) {
 }

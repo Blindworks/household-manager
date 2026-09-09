@@ -9,11 +9,13 @@ import java.util.List;
  *
  * @param meterType Zaehlertyp
  * @param unit      Einheit der Werte ("kWh" bei Strom, "m³" bei Gas und Wasser)
+ * @param currency  Waehrung der Kosten, immer "EUR"
  * @param points    Balken, aeltester zuerst
  */
 public record MeterConsumptionSeries(
         MeterType meterType,
         String unit,
+        String currency,
         List<ConsumptionPoint> points
 ) {
 }

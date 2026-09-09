@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.dto.ConsumptionPoint;
 import com.household.manager.dto.MeterConsumptionSeries;
 import com.household.manager.model.entity.MeterReading;
 import com.household.manager.model.entity.MeterType;
@@ -14,9 +15,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +29,10 @@ class MeterConsumptionSeriesServiceTest {
 
     @Mock
     private MeterReadingRepository repository;
+    @Mock
+    private MeterCostCalculator costCalculator;
+    @Mock
+    private MeterCostCalculator.PriceBook priceBook;
 
     private MeterConsumptionSeriesService service;
 
@@ -32,8 +41,10 @@ class MeterConsumptionSeriesServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MeterConsumptionSeriesService(repository, () -> TODAY);
-        when(repository.findByMeterTypeOrderByReadingDateAsc(any())).thenReturn(List.of());
+        service = new MeterConsumptionSeriesService(repository, costCalculator, () -> TODAY);
+        lenient().when(repository.findByMeterTypeOrderByReadingDateAsc(any())).thenReturn(List.of());
+        lenient().when(costCalculator.priceBookFor(any())).thenReturn(priceBook);
+        lenient().when(priceBook.costOf(any(), any())).thenReturn(Optional.empty());
     }
 
     private static MeterReading reading(LocalDate date, String value, boolean estimated) {
@@ -275,6 +286,83 @@ class MeterConsumptionSeriesServiceTest {
                 .containsExactly(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 8, 1));
     }
 
+    /** Kosten je Ablesewoche zum Preis am Ablesedatum, gerundet auf 2 Nachkommastellen. */
+    @Test
+    void bepreistJedeAblesewocheAmAblesedatum() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 8, 7), "1000", false),
+                reading(LocalDate.of(2026, 8, 14), "1038", false));
+        when(priceBook.costOf(new BigDecimal("38"), LocalDate.of(2026, 8, 14)))
+                .thenReturn(Optional.of(new BigDecimal("11.4266")));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.WEEKS_8);
+
+        assertThat(series.currency()).isEqualTo("EUR");
+        assertThat(series.points().get(0).cost()).isEqualByComparingTo("11.43");
+        assertThat(series.points().get(0).cost().scale()).isEqualTo(2);
+    }
+
+    @Test
+    void ohnePreisBleibenDieKostenLeer() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 8, 7), "1000", false),
+                reading(LocalDate.of(2026, 8, 14), "1038", false));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.WEEKS_8);
+
+        assertThat(series.points().get(0).cost()).isNull();
+        assertThat(series.points().get(0).consumption()).isEqualByComparingTo("38");
+    }
+
+    /** Monatsregel: fehlt EINER Woche der Preis, entfaellt der ganze Monatswert. */
+    @Test
+    void monatOhneVollstaendigePreiseHatKeineKosten() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 7, 31), "1000", false),
+                reading(LocalDate.of(2026, 8, 7), "1010", false),
+                reading(LocalDate.of(2026, 8, 14), "1020", false));
+        when(priceBook.costOf(new BigDecimal("10"), LocalDate.of(2026, 8, 7)))
+                .thenReturn(Optional.of(new BigDecimal("3.00")));
+        // 14.08. bleibt ohne Preis (Default-Stub)
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+        ConsumptionPoint august = series.points().get(series.points().size() - 1);
+
+        assertThat(august.consumption()).isEqualByComparingTo("20");
+        assertThat(august.cost()).isNull();
+    }
+
+    /** Rundung erst nach der Summe: 1,005 + 1,005 = 2,01, nicht 1,01 + 1,01 = 2,02. */
+    @Test
+    void rundetMonatskostenErstNachDerSumme() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 7, 31), "1000", false),
+                reading(LocalDate.of(2026, 8, 7), "1010", false),
+                reading(LocalDate.of(2026, 8, 14), "1020", false));
+        when(priceBook.costOf(new BigDecimal("10"), LocalDate.of(2026, 8, 7)))
+                .thenReturn(Optional.of(new BigDecimal("1.005")));
+        when(priceBook.costOf(new BigDecimal("10"), LocalDate.of(2026, 8, 14)))
+                .thenReturn(Optional.of(new BigDecimal("1.005")));
+
+        MeterConsumptionSeries series = strom(ConsumptionRange.MONTHS_6);
+        ConsumptionPoint august = series.points().get(series.points().size() - 1);
+
+        assertThat(august.cost()).isEqualByComparingTo("2.01");
+    }
+
+    /** Der Calculator wird je Serie EINMAL befragt, nicht je Woche. */
+    @Test
+    void holtDasPreisbuchEinmalJeSerie() {
+        stromAblesungen(
+                reading(LocalDate.of(2026, 7, 31), "1000", false),
+                reading(LocalDate.of(2026, 8, 7), "1010", false),
+                reading(LocalDate.of(2026, 8, 14), "1020", false));
+
+        service.getSeries(ConsumptionRange.WEEKS_8);
+
+        verify(costCalculator, times(1)).priceBookFor(MeterType.ELECTRICITY);
+    }
+
     /**
      * Die Klasse hat zwei Konstruktoren: einen fuer Spring und einen fuer die Tests
      * mit festem "heute". Spring waehlt nur dann selbsttaetig einen aus, wenn es
@@ -289,6 +377,7 @@ class MeterConsumptionSeriesServiceTest {
     void laesstSichVonSpringInstanziieren() {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
             context.registerBean(MeterReadingRepository.class, () -> repository);
+            context.registerBean(MeterCostCalculator.class, () -> costCalculator);
             context.registerBean(MeterConsumptionSeriesService.class);
             context.refresh();
 

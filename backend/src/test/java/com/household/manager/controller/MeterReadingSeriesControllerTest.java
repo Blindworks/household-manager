@@ -47,9 +47,9 @@ class MeterReadingSeriesControllerTest {
 
     private void stubSeries() {
         when(meterConsumptionSeriesService.getSeries(any())).thenReturn(List.of(
-                new MeterConsumptionSeries(MeterType.ELECTRICITY, "kWh", List.of(
+                new MeterConsumptionSeries(MeterType.ELECTRICITY, "kWh", "EUR", List.of(
                         new ConsumptionPoint(LocalDate.of(2026, 8, 21), "KW 34",
-                                new BigDecimal("38.20"), false)))));
+                                new BigDecimal("38.1"), false, new BigDecimal("11.43"))))));
     }
 
     /**
@@ -65,9 +65,11 @@ class MeterReadingSeriesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].meterType").value("ELECTRICITY"))
                 .andExpect(jsonPath("$[0].unit").value("kWh"))
+                .andExpect(jsonPath("$[0].currency").value("EUR"))
                 .andExpect(jsonPath("$[0].points[0].label").value("KW 34"))
                 .andExpect(jsonPath("$[0].points[0].periodStart").value("2026-08-21"))
-                .andExpect(jsonPath("$[0].points[0].estimated").value(false));
+                .andExpect(jsonPath("$[0].points[0].estimated").value(false))
+                .andExpect(jsonPath("$[0].points[0].cost").value(11.43));
     }
 
     @Test

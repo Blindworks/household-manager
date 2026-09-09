@@ -34,6 +34,9 @@ public class MeterCostCalculator {
     /**
      * Preisbuch eines Typs. Ein Ladefehler ergibt ein leeres Buch (alle Kosten
      * {@code empty}) statt einer Ausnahme — die Verbrauchsserie kommt trotzdem.
+     *
+     * <p>Einmal je Zaehlertyp aufrufen, nicht je Ablesewoche — das zurueckgegebene
+     * Buch beantwortet beliebig viele {@code costOf}-Aufrufe ohne erneute Abfrage.
      */
     public PriceBook priceBookFor(MeterType type) {
         try {
@@ -61,6 +64,12 @@ public class MeterCostCalculator {
             return priceAt(date).map(price -> amount.multiply(unitFactor).multiply(price));
         }
 
+        /**
+         * Linearer Scan statt Indexstruktur: je Typ stehen nur wenige Preiszeilen
+         * (Preisaenderungen sind selten), eine Indizierung waere hier unnoetige
+         * Komplexitaet — kein Regressionsschaden gegenueber der Klassenabsicht
+         * "eine Query je Woche waere unnoetig".
+         */
         private Optional<BigDecimal> priceAt(LocalDate date) {
             return prices.stream()
                     .filter(p -> !p.getValidFrom().isAfter(date))
