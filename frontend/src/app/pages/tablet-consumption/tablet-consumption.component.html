@@ -39,7 +39,21 @@
         @for (tile of tiles; track tile.key) {
           <article class="tablet-consumption__card">
             <header class="tablet-consumption__card-head">
-              <h3 class="tablet-consumption__card-title">{{ tile.name }}</h3>
+              <div class="tablet-consumption__title-row">
+                <h3 class="tablet-consumption__card-title">{{ tile.name }}</h3>
+                <div class="tablet-consumption__modes" role="group" [attr.aria-label]="'Ansicht ' + tile.name">
+                  @for (mode of modes; track mode.value) {
+                    <button
+                      type="button"
+                      class="tablet-consumption__mode-btn"
+                      [class.tablet-consumption__mode-btn--active]="mode.value === tile.mode"
+                      [attr.aria-pressed]="mode.value === tile.mode"
+                      (click)="setMode(tile.meterType, mode.value)">
+                      {{ mode.label }}
+                    </button>
+                  }
+                </div>
+              </div>
               <div class="tablet-consumption__figures">
                 <span class="tablet-consumption__current">{{ tile.currentLabel }}</span>
                 @if (tile.comparison) {
@@ -47,13 +61,24 @@
                 }
               </div>
             </header>
-            <div
-              echarts
-              class="tablet-consumption__chart"
-              [options]="tile.options"
-              [autoResize]="true"></div>
-            @if (tile.hasEstimated) {
-              <p class="tablet-consumption__legend">Blasse Balken sind Schätzwerte</p>
+            @if (tile.hasNoCost) {
+              <p class="tablet-consumption__empty">Kein Preis hinterlegt</p>
+            } @else {
+              <div
+                echarts
+                class="tablet-consumption__chart"
+                [options]="tile.options"
+                [autoResize]="true"></div>
+            }
+            @if (tile.hasEstimated || tile.missingPriceCount > 0) {
+              <p class="tablet-consumption__legend">
+                @if (tile.hasEstimated) {
+                  <span>Blasse Balken sind Schätzwerte</span>
+                }
+                @if (tile.missingPriceCount > 0) {
+                  <span>{{ tile.missingPriceCount }} Perioden ohne hinterlegten Preis</span>
+                }
+              </p>
             }
           </article>
         }

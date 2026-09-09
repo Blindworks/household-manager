@@ -19,8 +19,8 @@ describe('TabletConsumptionComponent', () => {
     unit: 'kWh',
     currency: 'EUR',
     points: [
-      { periodStart: '2026-08-14', label: 'KW 33', consumption: 34, estimated: false, cost: null },
-      { periodStart: '2026-08-21', label: 'KW 34', consumption: 38.08, estimated: true, cost: null }
+      { periodStart: '2026-08-14', label: 'KW 33', consumption: 34, estimated: false, cost: 10.2 },
+      { periodStart: '2026-08-21', label: 'KW 34', consumption: 38.08, estimated: true, cost: 11.43 }
     ]
   };
   const wasser: MeterConsumptionSeries = {
@@ -91,6 +91,75 @@ describe('TabletConsumptionComponent', () => {
   it('meldet, ob ueberhaupt ein Schaetzwert im Bild ist', () => {
     expect(component.tiles[0].hasEstimated).toBeTrue();
     expect(component.tiles[1].hasEstimated).toBeFalse();
+  });
+
+  it('startet jede Kachel im Verbrauchsmodus', () => {
+    expect(component.tiles.every(t => t.mode === 'consumption')).toBeTrue();
+  });
+
+  it('zeigt im Kostenmodus Kopfwert und Vergleich in Euro', () => {
+    component.setMode(MeterType.ELECTRICITY, 'cost');
+
+    const tile = component.tiles[0];
+    expect(tile.mode).toBe('cost');
+    expect(tile.currentLabel).toContain('11,43');
+    expect(tile.currentLabel).toContain('€');
+    expect(tile.comparison).toBe('+12 % ggü. Vorwoche');
+  });
+
+  it('beschriftet die Y-Achse im Kostenmodus in Euro', () => {
+    component.setMode(MeterType.ELECTRICITY, 'cost');
+    const options = component.tiles[0].options as { yAxis: { axisLabel: { formatter: string } } };
+    expect(options.yAxis.axisLabel.formatter).toBe('{value} €');
+  });
+
+  it('laesst im Kostenmodus Balken ohne Preis weg und nennt ihre Zahl', () => {
+    component.setMode(MeterType.WATER, 'cost');
+    const tile = component.tiles[1];
+    const options = tile.options as { series: { data: unknown[] }[] };
+    expect(options.series[0].data.length).toBe(0);
+    expect(tile.missingPriceCount).toBe(1);
+    expect(tile.hasNoCost).toBeTrue();
+  });
+
+  it('zeigt bei fehlenden Preisen "Kein Preis hinterlegt" statt des Diagramms', () => {
+    component.setMode(MeterType.WATER, 'cost');
+    fixture.detectChanges();
+    const cards = fixture.nativeElement.querySelectorAll('.tablet-consumption__card');
+    expect(cards[1].textContent).toContain('Kein Preis hinterlegt');
+    expect(cards[1].querySelector('.tablet-consumption__chart')).toBeNull();
+  });
+
+  it('laesst den Modus einer Kachel den Refresh ueberleben', () => {
+    component.setMode(MeterType.ELECTRICITY, 'cost');
+    component.reload();
+    expect(component.tiles[0].mode).toBe('cost');
+    expect(component.tiles[1].mode).toBe('consumption');
+  });
+
+  it('laesst den Modus einer Kachel den Zeitraumwechsel ueberleben', () => {
+    component.setMode(MeterType.ELECTRICITY, 'cost');
+    component.setRange('WEEKS_8');
+    expect(component.tiles[0].mode).toBe('cost');
+  });
+
+  it('schaltet ueber die Knoepfe im Kachelkopf um', () => {
+    const card = fixture.nativeElement.querySelector('.tablet-consumption__card') as HTMLElement;
+    const buttons = card.querySelectorAll('.tablet-consumption__mode-btn');
+    expect(buttons.length).toBe(2);
+    (buttons[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.tiles[0].mode).toBe('cost');
+    const refreshedButtons = fixture.nativeElement
+      .querySelector('.tablet-consumption__card')
+      .querySelectorAll('.tablet-consumption__mode-btn');
+    expect(refreshedButtons[1].classList).toContain('tablet-consumption__mode-btn--active');
+  });
+
+  it('schaltet ohne Nachladen um', () => {
+    serviceSpy.getSeries.calls.reset();
+    component.setMode(MeterType.ELECTRICITY, 'cost');
+    expect(serviceSpy.getSeries).not.toHaveBeenCalled();
   });
 
   it('lädt bei einem Zeitraumwechsel genau einmal nach', () => {

@@ -103,8 +103,16 @@ describe('consumption-view.util', () => {
       expect(compareToPrevious(points, 'WEEK', p => p.cost)).toBe('+25 % ggü. Vorwoche');
     });
 
-    it('gibt nichts zurueck, wenn der gewaehlte Wert fehlt', () => {
+    it('gibt nichts zurueck, wenn der gewaehlte Wert der Vorperiode fehlt', () => {
       const points = [point(10, WEEK_A, null), point(20, WEEK_B, 5)];
+      expect(compareToPrevious(points, 'WEEK', p => p.cost)).toBeNull();
+    });
+
+    // Spiegelfall zum Test oben: faellt hier ein Teilausdruck weg (z. B. eine
+    // versehentlich entfernte current-Pruefung), faellt kein Test aus, ohne dieses
+    // Gegenstueck.
+    it('gibt nichts zurueck, wenn der gewaehlte Wert des aktuellen Punkts fehlt', () => {
+      const points = [point(10, WEEK_A, 4), point(20, WEEK_B, null)];
       expect(compareToPrevious(points, 'WEEK', p => p.cost)).toBeNull();
     });
   });

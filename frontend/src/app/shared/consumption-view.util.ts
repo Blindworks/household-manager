@@ -74,7 +74,11 @@ export function compareToPrevious(
   const currentPoint = points[points.length - 1];
   const previous = valueOf(previousPoint);
   const current = valueOf(currentPoint);
-  if (previous === null || current === null || previous === 0) {
+  // == statt === faengt auch ein undefined ab: der Wert stammt letztlich aus einer
+  // JSON-Antwort, und TypeScript-Typen gelten zur Laufzeit nicht (Muster
+  // formatConsumption/formatCost unten) - ohne das rutschte ein undefined durch und
+  // ergaebe sichtbar "+NaN %".
+  if (previous == null || current == null || previous === 0) {
     return null;
   }
   const percent = Math.round(((current - previous) / previous) * 100);
@@ -133,7 +137,11 @@ export function formatConsumption(value: number | null, unit: string): string {
   })} ${unit}`;
 }
 
-/** Kostenwert mit Waehrungszeichen, zwei Nachkommastellen, deutsches Komma. */
+/**
+ * Kostenwert mit Waehrungszeichen und deutscher Zahlformatierung ueber
+ * Intl.NumberFormat. Die Nachkommastellenzahl richtet sich nach der Waehrung (EUR:
+ * zwei, JPY: keine) - "zwei Nachkommastellen" waere hier keine Garantie.
+ */
 export function formatCost(value: number | null, currency: string): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '–';

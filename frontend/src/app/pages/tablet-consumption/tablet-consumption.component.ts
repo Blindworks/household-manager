@@ -9,17 +9,20 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { MeterConsumptionSeriesService } from '../../services/meter-consumption-series.service';
 import {
+  ConsumptionPoint,
   ConsumptionRange,
   ConsumptionResolution,
   MeterConsumptionSeries
 } from '../../models/meter-consumption-series.model';
+import { MeterType } from '../../models/meter-reading.model';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
 import {
   RANGE_OPTIONS,
   RangeOption,
   compareToPrevious,
   defaultRangeFor,
-  formatConsumption
+  formatConsumption,
+  formatCost
 } from '../../shared/consumption-view.util';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
@@ -29,17 +32,31 @@ interface ResolutionOption {
   readonly label: string;
 }
 
+/** Was eine Kachel zeigt: Menge oder verbrauchsabhaengige Kosten. */
+export type TileMode = 'consumption' | 'cost';
+
+interface ModeOption {
+  readonly value: TileMode;
+  readonly label: string;
+}
+
 /** Eine Zaehlerkachel des Rasters. */
 interface ConsumptionTile {
   /** Zaehlertyp als Schluessel des @for-track. */
   readonly key: string;
+  readonly meterType: MeterType;
   readonly name: string;
-  /** Letzter Wert mit Einheit, z. B. "38,1 kWh". */
+  readonly mode: TileMode;
+  /** Letzter Wert mit Einheit, z. B. "38,1 kWh" bzw. "11,43 €". */
   readonly currentLabel: string;
   /** Veraenderung zur Vorperiode, null wenn nicht vergleichbar. */
   readonly comparison: string | null;
   /** True, wenn mindestens ein Balken ein Schaetzwert ist - steuert die Legende. */
   readonly hasEstimated: boolean;
+  /** Im Kostenmodus: Balken, die mangels hinterlegtem Preis entfallen sind. */
+  readonly missingPriceCount: number;
+  /** Im Kostenmodus: kein einziger Balken hat einen Preis - kein Diagramm zeigbar. */
+  readonly hasNoCost: boolean;
   readonly options: Record<string, unknown>;
 }
 
@@ -73,12 +90,27 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
     { value: 'MONTH', label: 'Monat' }
   ];
 
+  readonly modes: ModeOption[] = [
+    { value: 'consumption', label: 'Verbrauch' },
+    { value: 'cost', label: 'Kosten' }
+  ];
+
   activeResolution: ConsumptionResolution = 'WEEK';
   activeRange: ConsumptionRange = defaultRangeFor('WEEK');
   tiles: ConsumptionTile[] = [];
   isLoading = true;
   isEmpty = false;
   errorMessage: string | null = null;
+
+  /** Zuletzt geladene Serien - Grundlage fuer ein Umschalten ohne Nachladen. */
+  private series: MeterConsumptionSeries[] = [];
+  /**
+   * Modus je Zaehlertyp. Lebt ausserhalb der Kacheln, weil Refresh und
+   * Zeitraumwechsel die Kacheln neu bauen; nach einem Neuladen der Seite steht
+   * bewusst alles wieder auf Verbrauch (wie Zeitraum und Aufloesung, die auch
+   * nicht persistiert werden - kein localStorage).
+   */
+  private readonly modeByType = new Map<MeterType, TileMode>();
 
   ngOnInit(): void {
     this.load(this.activeRange);
@@ -129,6 +161,23 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
     this.load(this.activeRange, true);
   }
 
+  /** Schaltet eine Kachel um - rein lokal, kein Nachladen. */
+  setMode(meterType: MeterType, mode: TileMode): void {
+    if (this.modeOf(meterType) === mode) {
+      return;
+    }
+    this.modeByType.set(meterType, mode);
+    this.tiles = this.buildTiles(this.activeResolution);
+  }
+
+  private modeOf(meterType: MeterType): TileMode {
+    return this.modeByType.get(meterType) ?? 'consumption';
+  }
+
+  private buildTiles(resolution: ConsumptionResolution): ConsumptionTile[] {
+    return this.series.map(s => this.toTile(s, resolution, this.modeOf(s.meterType)));
+  }
+
   private load(range: ConsumptionRange, silent = false): void {
     if (!silent) {
       this.isLoading = true;
@@ -142,7 +191,8 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
     this.pendingRequest?.unsubscribe();
     this.pendingRequest = this.seriesService.getSeries(range).subscribe({
       next: series => {
-        this.tiles = series.map(s => this.toTile(s, resolution));
+        this.series = series;
+        this.tiles = this.buildTiles(resolution);
         this.isEmpty = this.tiles.length === 0;
         this.errorMessage = null;
         this.isLoading = false;
@@ -162,18 +212,32 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
 
   private toTile(
     series: MeterConsumptionSeries,
-    resolution: ConsumptionResolution
+    resolution: ConsumptionResolution,
+    mode: TileMode
   ): ConsumptionTile {
-    const last = series.points.length > 0
-      ? series.points[series.points.length - 1].consumption
-      : null;
+    const isCost = mode === 'cost';
+    // Im Kostenmodus fliessen nur bepreiste Balken ins Diagramm - ein Balken ohne
+    // Preis wuerde sonst als 0 EUR erscheinen, statt schlicht zu fehlen.
+    const points = isCost ? series.points.filter(p => p.cost !== null) : series.points;
+    const last = points.length > 0 ? points[points.length - 1] : null;
     return {
       key: series.meterType,
+      meterType: series.meterType,
       name: MeterTypeUtils.getLabel(series.meterType),
-      currentLabel: formatConsumption(last, series.unit),
-      comparison: compareToPrevious(series.points, resolution),
-      hasEstimated: series.points.some(p => p.estimated),
-      options: this.chartOptionsFor(series)
+      mode,
+      currentLabel: isCost
+        ? formatCost(last?.cost ?? null, series.currency)
+        : formatConsumption(last?.consumption ?? null, series.unit),
+      comparison: isCost
+        ? compareToPrevious(points, resolution, p => p.cost)
+        : compareToPrevious(points, resolution),
+      // Bewusst aus den GEFILTERTEN Punkten: die Legende "Blasse Balken sind
+      // Schaetzwerte" soll zu dem passen, was tatsaechlich im Diagramm steht - ein
+      // Schaetzwert ohne Preis ist im Kostenmodus gar nicht sichtbar.
+      hasEstimated: points.some(p => p.estimated),
+      missingPriceCount: isCost ? series.points.length - points.length : 0,
+      hasNoCost: isCost && points.length === 0,
+      options: this.chartOptionsFor(series, points, mode)
     };
   }
 
@@ -182,31 +246,40 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
    * geringerer Deckkraft - sichtbar, dass diese Woche nicht wirklich abgelesen wurde,
    * ohne sie aus der Summe zu nehmen.
    */
-  private chartOptionsFor(series: MeterConsumptionSeries): Record<string, unknown> {
+  private chartOptionsFor(
+    series: MeterConsumptionSeries,
+    points: readonly ConsumptionPoint[],
+    mode: TileMode
+  ): Record<string, unknown> {
     const color = MeterTypeUtils.getColor(series.meterType);
     const axisLabel = { color: AXIS_COLOR, fontSize: 12 };
+    const isCost = mode === 'cost';
+    const unitLabel = isCost ? '€' : series.unit;
+    const valueOf = (p: ConsumptionPoint): number | null => (isCost ? p.cost : p.consumption);
+    const format = (value: number): string =>
+      isCost ? formatCost(value, series.currency) : formatConsumption(value, series.unit);
 
     return {
       grid: { left: 52, right: 12, top: 12, bottom: 30, containLabel: false },
       tooltip: {
         trigger: 'axis',
-        valueFormatter: (value: number) => formatConsumption(value, series.unit)
+        valueFormatter: (value: number) => format(value)
       },
       xAxis: {
         type: 'category',
-        data: series.points.map(p => p.label),
+        data: points.map(p => p.label),
         axisLabel: { ...axisLabel, hideOverlap: true }
       },
       yAxis: {
         type: 'value',
-        axisLabel: { ...axisLabel, formatter: `{value} ${series.unit}` },
+        axisLabel: { ...axisLabel, formatter: `{value} ${unitLabel}` },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       },
       series: [
         {
           type: 'bar',
-          data: series.points.map(p => ({
-            value: [p.label, p.consumption],
+          data: points.map(p => ({
+            value: [p.label, valueOf(p)],
             itemStyle: {
               color,
               opacity: p.estimated ? ESTIMATED_OPACITY : 1,
