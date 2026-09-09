@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 class ModeQuickAccessResolverTest {
 
     private static final String NACHTMODUS = "input_boolean.manual_nachtmodus";
+    private static final String ABWESEND = "input_boolean.manual_abwesend";
     private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
 
     @Mock
@@ -36,9 +37,13 @@ class ModeQuickAccessResolverTest {
     }
 
     private ModeQuickAccess window(String from, String to, boolean active) {
+        return window(NACHTMODUS, from, to, active);
+    }
+
+    private ModeQuickAccess window(String entityId, String from, String to, boolean active) {
         return ModeQuickAccess.builder()
                 .id(1L)
-                .entityId(NACHTMODUS)
+                .entityId(entityId)
                 .fromTime(LocalTime.parse(from))
                 .toTime(LocalTime.parse(to))
                 .active(active)
@@ -93,11 +98,27 @@ class ModeQuickAccessResolverTest {
         assertThat(resolverAt("08:00").dueEntityIds()).isEmpty();
     }
 
+    /**
+     * Ueberprueft nur den leeren Rueckgabewert der Query, nicht die Deaktivierung selbst:
+     * die Filterung auf aktive Zeilen steckt in {@code findByActiveTrue()}, der Resolver
+     * wertet {@code active} bewusst nirgends aus.
+     */
     @Test
-    void ignoriertDeaktivierteFenster() {
+    void meldetNichtsBeiLeererFensterliste() {
         when(repository.findByActiveTrue()).thenReturn(List.of());
 
         assertThat(resolverAt("12:00").dueEntityIds()).isEmpty();
+    }
+
+    /** {@code dueEntityIds()} liefert ein Set — mehrere gleichzeitig offene Fenster muessen alle auftauchen. */
+    @Test
+    void meldetMehrereGleichzeitigFaelligeFenster() {
+        when(repository.findByActiveTrue()).thenReturn(List.of(
+                window(NACHTMODUS, "08:00", "18:00", true),
+                window(ABWESEND, "08:00", "18:00", true)
+        ));
+
+        assertThat(resolverAt("12:00").dueEntityIds()).containsExactlyInAnyOrder(NACHTMODUS, ABWESEND);
     }
 
     /**
