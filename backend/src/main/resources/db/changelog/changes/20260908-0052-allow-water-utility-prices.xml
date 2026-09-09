@@ -6,14 +6,35 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <!-- Wasserpreise fuer die Kostenansicht des Wandtablets: der Check aus
-         20260206-0005 liess nur Strom und Gas zu. -->
-    <changeSet id="20260908-0052" author="household-manager">
-        <comment>Allow WATER in utility_prices meter_type check constraint</comment>
+         20260206-0005 liess nur Strom und Gas zu.
+
+         Bewusst auf ZWEI Changesets verteilt (Muster 20260727-0044-a/b1/b3/b4):
+         MariaDB committet jedes DDL implizit. In einem einzigen Changeset koennte der
+         ADD CONSTRAINT nach erfolgreichem DROP CONSTRAINT scheitern — die Tabelle stuende
+         dann ohne Check-Constraint da, das Changeset waere aber nicht in
+         DATABASECHANGELOG vermerkt. Der naechste Start wiederholte dasselbe Changeset und
+         der DROP schluege mit "constraint does not exist" fehl: der Anwendungsstart haenge
+         dann dauerhaft, bis jemand von Hand eingreift. Mit getrennten Changesets bleibt
+         -a in DATABASECHANGELOG vermerkt und nur -b wird beim naechsten Start wiederholt. -->
+    <changeSet id="20260908-0052-a" author="household-manager">
+        <comment>Schritt 1/2: alten meter_type-Check entfernen.</comment>
 
         <sql dbms="mariadb,mysql">
             ALTER TABLE utility_prices
             DROP CONSTRAINT chk_utility_price_meter_type
         </sql>
+
+        <rollback>
+            <sql dbms="mariadb,mysql">
+                ALTER TABLE utility_prices
+                ADD CONSTRAINT chk_utility_price_meter_type
+                CHECK (meter_type IN ('ELECTRICITY', 'GAS'))
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260908-0052-b" author="household-manager">
+        <comment>Schritt 2/2: meter_type-Check inklusive WATER neu anlegen.</comment>
 
         <sql>
             ALTER TABLE utility_prices
@@ -25,11 +46,6 @@
             <sql dbms="mariadb,mysql">
                 ALTER TABLE utility_prices
                 DROP CONSTRAINT chk_utility_price_meter_type
-            </sql>
-            <sql dbms="mariadb,mysql">
-                ALTER TABLE utility_prices
-                ADD CONSTRAINT chk_utility_price_meter_type
-                CHECK (meter_type IN ('ELECTRICITY', 'GAS'))
             </sql>
         </rollback>
     </changeSet>

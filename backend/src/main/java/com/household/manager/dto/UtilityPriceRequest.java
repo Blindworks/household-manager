@@ -25,7 +25,7 @@ import java.time.LocalDate;
 public class UtilityPriceRequest {
 
     /**
-     * Type of meter (ELECTRICITY or GAS only)
+     * Type of meter (ELECTRICITY, GAS or WATER)
      */
     @NotNull(message = "Meter type is required")
     private MeterType meterType;
@@ -36,7 +36,8 @@ public class UtilityPriceRequest {
      * Must be a positive number with up to 4 decimal places.
      * Units depend on meter type:
      * - ELECTRICITY: price per kWh
-     * - GAS: price per m³
+     * - GAS: price per kWh
+     * - WATER: price per m³
      */
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than zero")

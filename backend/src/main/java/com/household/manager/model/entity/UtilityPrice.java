@@ -8,11 +8,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Entity representing utility prices for electricity and water.
+ * Entity representing utility prices for electricity, gas and water.
  * <p>
  * Tracks price information with validity periods to enable
  * historical price tracking and cost calculations.
- * Only supports ELECTRICITY and GAS meter types.
  */
 @Entity
 @Table(name = "utility_prices")
@@ -31,7 +30,7 @@ public class UtilityPrice {
     private Long id;
 
     /**
-     * Type of meter (ELECTRICITY or GAS only)
+     * Type of meter (ELECTRICITY, GAS or WATER)
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "meter_type", nullable = false, length = 50)
@@ -43,7 +42,8 @@ public class UtilityPrice {
      * Precision: 10 digits total, 4 decimal places
      * Units depend on meter type:
      * - ELECTRICITY: price per kWh
-     * - GAS: price per m³
+     * - GAS: price per kWh
+     * - WATER: price per m³
      */
     @Column(name = "price", nullable = false, precision = 10, scale = 4)
     private BigDecimal price;

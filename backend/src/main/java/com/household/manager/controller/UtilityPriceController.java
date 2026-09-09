@@ -64,7 +64,7 @@ public class UtilityPriceController {
      * <p>
      * GET /api/v1/utility-prices/{type}
      *
-     * @param type the meter type (ELECTRICITY or GAS)
+     * @param type the meter type (ELECTRICITY, GAS or WATER)
      * @return list of utility prices for the specified type
      */
     @GetMapping("/{type}")
@@ -82,7 +82,7 @@ public class UtilityPriceController {
      * <p>
      * Returns the price valid for today's date.
      *
-     * @param type the meter type (ELECTRICITY or GAS)
+     * @param type the meter type (ELECTRICITY, GAS or WATER)
      * @return the current utility price for the specified type
      */
     @GetMapping("/{type}/current")
