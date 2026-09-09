@@ -122,6 +122,28 @@ describe('TabletConsumptionComponent', () => {
     expect(tile.hasNoCost).toBeTrue();
   });
 
+  it('laesst im Kostenmodus nur bepreiste Balken bei gemischten Preisen uebrig', () => {
+    const gemischt: MeterConsumptionSeries = {
+      meterType: MeterType.GAS,
+      unit: 'm³',
+      currency: 'EUR',
+      points: [
+        { periodStart: '2026-08-07', label: 'KW 32', consumption: 5, estimated: false, cost: 3.5 },
+        { periodStart: '2026-08-14', label: 'KW 33', consumption: 6, estimated: false, cost: null },
+        { periodStart: '2026-08-21', label: 'KW 34', consumption: 4, estimated: false, cost: 2.8 }
+      ]
+    };
+    serviceSpy.getSeries.and.returnValue(of([gemischt]));
+    component.setRange('WEEKS_8');
+    component.setMode(MeterType.GAS, 'cost');
+
+    const tile = component.tiles[0];
+    const options = tile.options as { series: { data: unknown[] }[] };
+    expect(options.series[0].data.length).toBe(2);
+    expect(tile.missingPriceCount).toBe(1);
+    expect(tile.hasNoCost).toBeFalse();
+  });
+
   it('zeigt bei fehlenden Preisen "Kein Preis hinterlegt" statt des Diagramms', () => {
     component.setMode(MeterType.WATER, 'cost');
     fixture.detectChanges();

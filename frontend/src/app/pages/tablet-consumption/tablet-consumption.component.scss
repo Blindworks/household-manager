@@ -113,14 +113,20 @@
     flex: 0 0 auto;
   }
 
+  // Wandtablet, im Stehen mit dem Finger aus Armlaenge bedient - min-height traegt
+  // die 44 px auch dann, wenn Innenabstand/Schrift allein nicht reichten.
   &__mode-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
     border: none;
     background: transparent;
-    padding: 0.3rem 0.7rem;
+    padding: 0.45rem 0.85rem;
     border-radius: 7px;
     cursor: pointer;
     font: inherit;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: rgba(228, 226, 228, 0.7);
 
     &--active {
@@ -131,6 +137,7 @@
 
   &__empty {
     flex: 1 1 auto;
+    min-height: 0;
     display: grid;
     place-items: center;
     margin: 0;
