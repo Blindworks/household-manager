@@ -138,3 +138,126 @@ und wird synchron verdrahtet.
 Kind-Komponente in einem `<form>` steht: `NgModel` injiziert seinen `ControlContainer` mit
 `@Optional() @Host()`, und `@Host()` stoppt an der Host-Grenze der Komponente. Der
 IconPicker darf also gefahrlos in einem `<form>` stehen.
+
+## Ein neuer TABLET_VIEWS-Eintrag kann Schwester-Specs brechen — nie ungeprueft als "vorbestehender Flake" abtun
+`shared/tablet-views.ts` ist die einzige Definition der Ansichtsleiste (`app-tablet-shell`,
+`<nav class="lumina__viewbar">`, `flex-wrap: wrap`). Ein fuenfter Eintrag (Task 10,
+`/tablet/network`) liess die Leiste bei der in Karma gerenderten Breite zweizeilig
+umbrechen und stahl dem Kachelraster darunter Hoehe — der Hoehenketten-Test von
+`tablet-air-quality.component.spec.ts` fiel dadurch **deterministisch** (3/3 Laeufen)
+durch ("Expected 48.86 to be greater than 80"), nicht nur gelegentlich. Ich hatte das
+faelschlich als denselben "vorbestehenden Karma-Body-Hoehen-Flake" eingeordnet wie in
+[[testing-notes]] dokumentiert, weil der isolierte Lauf der Datei ebenfalls fehlschlug —
+aber nur, weil ich testete, ohne die eigene Aenderung an `tablet-views.ts` probeweise
+zurueckzunehmen. Setzt man NUR diese Datei zurueck, ist der Test wieder 15/15 gruen.
+
+**Fix:** `.lumina__viewbar` auf `flex-wrap: nowrap` + `overflow-x: auto` (statt `wrap`),
+Knopf-Padding/Icon-Groesse kompakter. Existiert **zweimal** (Dashboard-Kopie in
+`dashboard.component.scss`, siehe [[dashboard-style-encapsulation]]) — beide Stellen
+anfassen.
+
+**Why:** Ein rot laufender Test in einer fremden Datei nach der eigenen Aenderung ist erst
+dann ein "vorbestehender Flake", wenn er auch mit der eigenen Aenderung *entfernt*
+weiterhin fehlschlaegt — nicht schon, wenn er isoliert (aber mit der Aenderung noch drin)
+fehlschlaegt.
+**How to apply:** Vor dem Einordnen eines fremden Testfehlschlags als "pre-existing" immer
+per `git stash`/gezieltem Zuruecksetzen der eigenen Datei gegenpruefen, ob der Fehlschlag
+OHNE die eigene Aenderung verschwindet. Bei jedem neuen Eintrag in einer geteilten
+Konstante (`TABLET_VIEWS`, `AIR_QUALITY_METRICS`, etc.) gezielt die Schwester-Specs
+mitlaufen lassen, die dieselbe geteilte Datei ueber eine gemeinsame Elternkomponente
+rendern.
+
+## `date`/`number`-Pipe mit explizitem `'de'` wirft NG0701 in Karma, ohne `registerLocaleData`
+`main.ts` registriert die de-Locale nur fuer die echte App (`registerLocaleData(localeDe)`
+beim Bootstrap) — Karma laedt `main.ts` nie. Jedes Template, das `date:'...':undefined:'de'`
+oder `number:'...':'de'` mit explizitem Locale-Argument nutzt (z. B. die Vorbild-Snippets
+in Taskplaenen fuer Admin-Seiten), wirft beim ersten `detectChanges()` im Test
+`NG02100 InvalidPipeArgument: NG0701: Missing locale data for the locale "de"` — alle
+Tests der Datei fallen durch, nicht nur einer. Betraf zuletzt `admin-presence.component.ts`
+(Task 12, Anwesenheitserkennung) genau nach Vorlage aus dem Plan; `pet-food.component.spec.ts`
+hat den Fix schon laenger.
+
+**Fix:** im Spec ganz oben `import { registerLocaleData } from '@angular/common'`,
+`import localeDe from '@angular/common/locales/de'`, dann `registerLocaleData(localeDe);`
+vor dem `describe`.
+
+**Why:** Ohne das laesst sich der Plan-Code 1:1 uebernehmen, kompiliert, und faellt dann
+komplett in Karma durch — leicht mit einem echten Implementierungsfehler zu verwechseln.
+**How to apply:** Sobald eine neue Komponente ein Template mit explizitem `'de'`-Locale-
+Argument in einer `date`- oder `number`-Pipe bekommt, erst pruefen, ob das Format
+ueberhaupt ein sprachabhaengiges Token enthaelt (Monatsname, Wochentag). Reine Ziffernformate
+wie `'dd.MM. HH:mm'` brauchen KEIN Locale-Argument — das Argument einfach weglassen ist der
+bessere Fix als `registerLocaleData` im Spec nachzuruesten (Review-Fund, Task 12: der Aufruf
+war der einzige `'de'`-Pipe-Aufruf der ganzen App und brachte nichts). Nur wenn das Format
+wirklich lokalisierte Tokens braucht, den Registrierungs-Import in die Spec-Datei schreiben.
+
+## Ein neu zugewiesenes Formular-Objekt braucht nach `detectChanges()` noch ein `whenStable()`
+Bekannt war bereits: die ERSTE Bindung eines `ngModel` in einem `<form>` braucht
+`await fixture.whenStable()` nach dem ersten `detectChanges()` (NgForm registriert
+ValueAccessors erst im Microtask). Neu (Task 12, Review-Fund): das gilt genauso, wenn
+eine BEREITS gebundene Formulargruppe spaeter im Testverlauf komplett ausgetauscht wird
+(`this.form = emptyForm();` nach einem erfolgreichen Save/Delete). Ein Test, der nach dem
+Reset nur `fixture.detectChanges()` aufruft und dann `input.value` prueft, sieht noch den
+ALTEN Wert — `component.form.name` ist zu diesem Zeitpunkt laengst `''`, nur die DOM-Seite
+hinkt hinterher. Erst ein zusaetzliches `await fixture.whenStable();` (danach nochmal
+`detectChanges()`) synchronisiert den neuen Objekt-Wert ins Input.
+
+**Why:** Der Bug sieht aus wie "clearFormState() laeuft nicht", ist aber ein reines
+Test-Timing-Problem — `console.log(component.form)` direkt nach dem ersten `detectChanges()`
+zeigt den korrekten (geleerten) Zustand, nur das Input-Element zeigt ihn noch nicht.
+**How to apply:** Jeder Test, der nach einer Aktion prueft, ob ein `[(ngModel)]`-gebundenes
+Feld zurueckgesetzt wurde, braucht `await fixture.whenStable()` zwischen der ausloesenden
+Aktion (bzw. dem letzten `httpMock.flush(...)`) und der DOM-Pruefung — nicht nur beim
+allerersten Formularaufbau.
+
+## Ein Fehler-Signal, das zwei unabhaengige Fehlerquellen teilt, loescht sich selbst
+Schreiben zwei voneinander unabhaengige Abrufe (z. B. Geraeteliste UND Personenliste) in
+dasselbe `errorMessage`-Signal, und Geraete-Aktionen setzen dieses Signal routinemaessig auf
+`null` zurueck (Muster: jede Aktion beginnt mit `this.errorMessage.set(null)`), dann loescht
+der naechstbeste Klick auf eine ganz andere Aktion (Bearbeiten, Abbrechen, Umschalten) die
+Erklaerung fuer den ERSTEN, noch ungeloesten Fehler — ohne dass der Nutzer je erfaehrt,
+warum z. B. das Personen-Dropdown leer ist (Task 12, Review-Fund).
+**Why:** Sichtbar wird der Bug nur, wenn beide Fehlerquellen gleichzeitig/kurz
+hintereinander ausfallen — im Alltag selten genug, um durch Review zu rutschen, aber genau
+dann besonders aergerlich, weil er die einzige Erklaerung wegwischt.
+**How to apply:** Sobald eine Komponente mehr als eine unabhaengige Fehlerquelle hat, JEDE
+ihr eigenes Signal geben und es NUR aus dem eigenen Ladepfad zuruecksetzen — nie aus dem
+Reset-Pfad einer anderen Aktion. Siehe [[dashboard-style-encapsulation]] fuer das verwandte
+Muster "ein Zustand pro Ursache" bei visueller Kapselung.
+
+## Eine Checkbox als Umschalter kann optisch etwas anderes zeigen als gesendet wird
+Eine `<input type="checkbox" [checked]="device.active" (change)="setActive(device, !device.active)">`
+kippt beim Klick SOFORT ihren eigenen DOM-Haken um (Browser-Default-Verhalten), aber der
+gesendete Wert kommt aus `!device.active` — dem Modell-Wert VOR dem Request. Bis die Antwort
+da ist und `device.active` neu geladen wurde, zeigt die Box einen Zustand, der nicht dem
+entspricht, was unterwegs ist. Zwei schnelle Klicks senden zweimal denselben Wert, waehrend
+die Box sichtbar hin- und herspringt (Task 12, Review-Fund; Referenzimplementierung
+`admin-network-devices` nutzt deshalb bewusst einen Knopf statt einer Checkbox).
+**Fix:** ein `<button>`, dessen Beschriftung direkt aus dem Modell kommt
+(`{{ device.active ? 'Deaktivieren' : 'Aktivieren' }}`) — der kann nie etwas anderes
+behaupten als das, was der naechste Klick sendet. Zusaetzlich ein Sperr-Signal
+(`togglingId`), das den Knopf waehrend des laufenden Requests deaktiviert, sonst loesen
+N Klicks N Requests aus, deren Antworten in beliebiger Reihenfolge eintreffen koennen.
+**Why:** Ein Haken, der optisch "an" zeigt, waehrend "aus" unterwegs ist, ist eine
+Falschanzeige mit Sicherheitsrelevanz bei Ausschalt-Bestaetigungen (vgl. `confirm_required`
+in CLAUDE.md — dieselbe Familie von Bug: "UI zeigt einen Zustand, den das Modell nicht hat").
+**How to apply:** Bei jedem Aktiv/Inaktiv-Umschalter in einer Admin-Tabelle grundsaetzlich
+den Knopf-statt-Checkbox-Ansatz der Referenzseiten uebernehmen, nicht neu erfinden.
+
+## `routerLink` im Template verlangt `provideRouter([])` in der Spec, auch ohne einen einzigen Router-Test
+`RouterLink` injiziert `ActivatedRoute` — fehlt der Router-Provider im `TestBed`, wirft
+JEDER Test, dessen `fixture.detectChanges()` den `routerLink` tatsaechlich rendert
+(`NullInjectorError: No provider for ActivatedRoute!`), auch wenn der Test selbst nichts
+mit Navigation zu tun hat (Task 10, Kamera-Dashboard: der Fehler kam nur in "zeigt den
+Login-Hinweis", weil nur dort der Fehlerbanner mit dem `<a routerLink>` sichtbar wird).
+Betrifft nur Tests, die den Zweig mit dem Link tatsaechlich durchlaufen — Tests ohne diesen
+Zweig bleiben gruen und taeuschen eine funktionierende Spec vor.
+**Fix:** `import { provideRouter } from '@angular/router';` und `provideRouter([])` in die
+`providers`-Liste des `TestBed.configureTestingModule(...)`. Selbes Muster wie der
+`header.component.spec.ts`-Fix in [[testing-notes]].
+**Why:** Plan-Vorlagen fuer Seiten mit `routerLink` (hier: Login-Hinweis auf `/vision`)
+geben oft nur `imports`+`providers` fuer den fachlichen Service vor und vergessen den
+Router-Provider, weil er in einer ersten, gluecklichen Testreihenfolge nicht auffaellt.
+**How to apply:** Sobald ein Template `routerLink` (oder `routerLinkActive`) nutzt, im
+Spec routinemaessig `provideRouter([])` ergaenzen — unabhaengig davon, ob ein Test
+Navigation pruefen soll.

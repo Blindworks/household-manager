@@ -1,7 +1,7 @@
 # Angular 21 Frontend Development - Project Memory
 
 ## UI-Fallen
-- [UI-Fallen](template-pitfalls.md) — `@for track` braucht eindeutige Keys (Laufzeitfehler!); `<label>` um mehrere Buttons leitet Klicks fehl; helle Seiten vertragen keine `rgba(255,255,255)`-Styles; **ein Fehlerfeld pro Ursache** — ein paralleler Abruf leert es sonst; `ngModel` in einem `<form>` ist im Test erst nach `await fixture.whenStable()` ans Modell gebunden.
+- [UI-Fallen](template-pitfalls.md) — `@for track` braucht eindeutige Keys (Laufzeitfehler!); `<label>` um mehrere Buttons leitet Klicks fehl; helle Seiten vertragen keine `rgba(255,255,255)`-Styles; **ein Fehlerfeld pro Ursache** — ein paralleler Abruf/eine andere Aktion leert es sonst; `ngModel` in einem `<form>` braucht `whenStable()` sowohl beim ERSTEN Aufbau als auch bei jedem SPAETEREN Objekt-Austausch; `date`/`number`-Pipe mit `'de'` nur wenn das Format wirklich lokalisierte Tokens hat; ein Aktiv/Inaktiv-Umschalter gehoert als Knopf (Modell-Text), nie als Checkbox (kann optisch luegen).
 - Dashboard-Fussleisten-Karte (`dashboard.component.html`, `<footer class="lumina__footer">`): neue Status-Hinweiskarten koennen die vorhandenen `.lumina__secured*`-Klassen der Nuki-Karte direkt wiederverwenden (nur Icon-Farbe per Modifier ueberschreiben) — `--error`/`--primary`/`--secondary`/`--tertiary` sind CSS-Vars auf `.lumina` (dunkles Glass-Theme, `rgba(255,255,255,…)` hier bewusst richtig, anders als bei hellen Seiten). `dashboard.component.scss` ueberschreitet das 16 kB-Budget bereits vorher — nicht actionable.
 
 ## Ausschalt-Bestaetigung (Task, 2026-08-19)
@@ -10,12 +10,28 @@
 ## Toni-allein-Aktivierungs-Checks (Task 2, 2026-08-20)
 - [Mode-Activation-Check-Muster](mode-activation-check-pattern.md) — Einschalt-Warnung (nicht Ausschalt-Bestaetigung!) fuer "Toni allein"/"Abwesend"; zwei parallele Checks, ein Fehlerfeld je Check, blockiert nie. Branch feature/toni-allein-checks, Commit 0cf6281.
 
+## Modus-Schnellzugriff im Dashboard (Task 7, 2026-09-09)
+- Klickbare `lumina-card` mit Karten-weitem `(click)`-Handler (hier `.lumina__modes-card`, Muster auch bei Tuer-/Toni-Kachel): ein neuer Knopf, der NICHT den Handler ausloesen soll, muss ein **Geschwister** in einem eigenen Zeilen-Wrapper sein (`.lumina__modes-row`, `display:flex`), nicht ein Kind — sonst feuert jeder Tipp darauf zusaetzlich den Karten-Click. `.lumina__modes-area` ist `flex-direction:column`, daher landet ein Nachbar ohne den Zeilen-Wrapper untereinander statt daneben. Branch feature/modus-schnellzugriff, Commit d93d639.
+- Reiner Anwendungsfall des Plan-Texts (`docs/superpowers/plans/2026-09-09-modus-schnellzugriff.md`, Task 7) ohne Abweichung noetig; TDD-Lauf zeigte nur 2 echte Fehlschlaege (nicht 3 wie im Plantext angedeutet — "zeigt einen Schnellzugriff" + "schaltet per Klick"), die vier "zeigt keinen"-Tests sind erwartungsgemaess trivial gruen.
+
 ## Git Safety
 - [Git concurrency hazard](git-concurrency.md) — repo/index shared across concurrent agent sessions; a commit can be silently clobbered by another session's amend. Always verify `git show --stat HEAD` right after committing.
 - [Kasa per IP](kasa-manual-add.md) has the recipe for committing only your own files when a parallel agent stages files elsewhere in the same index: `git commit -m "<msg>" -- <your paths...>` (pathspec after `-m`, never before).
 
 ## TP-Link Leuchtmittel (Task 5, 2026-08-18)
 - [Smart-Device Light Controls](smart-device-light-controls.md) — brightness/color/color-temp sliders + Tapo address form in smart-device-list; backend never returns current light values (only capabilities+range) so sliders use a lazy per-device-id Map with local defaults; send-on-release via (input)/(change) split instead of ngModel; hexToHueSaturation pure util in shared/.
+
+## Admin-CRUD-Seiten (Task 11 Netzwerk-Monitoring, 2026-08-25)
+- [Admin-Page-CRUD-Muster](admin-page-crud-pattern.md) — Ablage `pages/admin-<name>/` (nicht `pages/admin/<name>/`); Reihenfolge-Vorschlag, Voll-PUT bei Aktiv-Toggle, whenStable-Falle, "has no expectations"-Falle bei reinem expectOne/expectNone. `admin-network-devices` folgt `admin-calendar-categories` 1:1, aber ohne Konflikt-Banner (kein FK-Konflikt im Backend) und ohne CalendarCategoryApiError-Aequivalent (NetworkService hat kein catchError).
+
+## Presence Manual Refresh (Task 2026-08-26)
+- [Manual-Refresh-Button](presence-manual-refresh-frontend.md) — admin-presence page, own signals, response reuse instead of a second `load()`/`getStatus()` roundtrip.
+
+## Presence-Header (Task, 2026-08-26)
+- [Presence-Header-Kreise-Muster](presence-header-circles-pattern.md) — Footer-Kachel in `lumina__clock`-Header verschoben, Personenkreise (jetzt wieder Status-Icon statt Initiale, plus Breiten-Fix gegen abgeschnittene Namen auf feature/presence-icons); `unavailable`+`unknown` teilen den neutralen Ring, aber unterschiedliche Icons. Branch feature/presence-header, Commit 51aa565; Review-Nachbesserung in 14addc8.
+
+## Modus-Schnellzugriff Admin-Seite (Task 8, 2026-09-09)
+- [Mode-Quick-Access-Admin-Seite](mode-quick-access-admin-page.md) — folgt dem Netzwerk-Geraete-CRUD-Skelett. KORRIGIERT 2026-09-09: das anfaengliche Nachladen von `/v1/modes` nach jeder Mutation war falsch (statischer Katalog, `quickAccess` wird hier nirgends angezeigt) und wurde wieder entfernt, Tests angepasst.
 
 ## Usermanagement Feature (WP7, Task 17+18)
 - [Usermanagement Frontend](usermanagement-frontend.md) — Header role-filtered nav (visibleNavLinks), admin pages for users/tokens/audit-log; header.component.spec.ts fix (provideRouter([]) + HTTP providers) dropped baseline fails 4→3.
