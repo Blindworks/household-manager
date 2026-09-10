@@ -1,5 +1,5 @@
 ---
-name: presence-wifi-review-fixes
+name: presence-wifi-cleanup-coupling
 description: Anwesenheitserkennung (feature/presence-wifi) review-fix round 2026-08-26 — cleanup-coupling and aggregate-freeze patterns worth reusing elsewhere
 metadata:
   type: project

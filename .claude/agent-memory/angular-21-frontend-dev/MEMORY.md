@@ -124,3 +124,9 @@
 ## Flow Editor (Stufe 3b) — Frontend
 - [flow-editor-frontend.md](flow-editor-frontend.md) — full build history: `flow.model.ts`/`flow.service.ts` contract, ED-B3–B11, import button, `@foblex/flow` link.
 - Quick facts: routes `/flows` (list) and `/flows/:id` (editor, `unsavedChangesGuard`); error-signal convention `error.set(err.message)` + `*__error` banner div, used across all flow pages.
+
+## Grundlagen und Umgebung
+- [Project uses Angular 19, not 21](project_angular_version.md) — persona says "Angular 21" but CLAUDE.md and package.json say Angular 19; follow project conventions over persona framing
+- [Frontend service pattern](service_pattern.md) — HttpClient service conventions: inject(), baseUrl, catchError(this.handleError), German error messages
+- [Frontend test environment](test_environment.md) — Karma + real Chrome launcher works locally on this Windows machine; `npm test -- --watch=false --include='<glob>'` runs a single spec
+- [Leaflet default icon fix](leaflet_default_icon_fix.md) — Leaflet marker icons break under Angular's esbuild bundler; plan docs can claim a fix exists when it doesn't — verify by grepping

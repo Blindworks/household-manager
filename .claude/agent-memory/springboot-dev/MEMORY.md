@@ -119,3 +119,7 @@ com.household.manager/
 - [blink-motion-service.md](blink-motion-service.md) - Task 3: event.blink_<id>_motion + In-Memory letzte Bewegung (d9b3b0a); EntityIds.build verifiziert, Map.of-Nullrisiko fuer Task 4 offen
 - [blink-motion-webhook.md](blink-motion-webhook.md) - Task 4 (30651af): POST /v1/blink/motion SERVICE-Zeile, GET /cameras CameraResponse-Anreicherung, Pflichtfeld-Pruefung; SecurityRulesTest hatte VORHER kein SERVICE-Testmuster, selbst rekonstruiert; Mutationsprobe bestaetigt
 - [blink-security-revision.md](blink-security-revision.md) - Task 5 (29604c9): KIOSK darf Blink-Kameras jetzt schalten (Sperre bewusst aufgehoben); RoleHierarchy MEMBER-erbt-KIOSK verifiziert; Kollateralschaden (BlinkController-Kommentar) geflaggt statt out-of-scope repariert
+- [Dedup composite hash rule](feedback_dedup_composite_hash.md) — DedupHasher must always composite-hash; reference-only key collapses recurring payments
+- [Alexa auth flow structure](project_alexa_auth_flow.md) — AlexaAuthService PKCE login port from alexa-cookie; known deviations/risks, unverified E2E
+- [Day-relative text windows](feedback_day_relative_text_windows.md) — announce windows with "morgen"/"heute" text must clamp to LocalTime.MAX, never wrap past midnight
+- [Presence-wifi cleanup coupling](presence-wifi-cleanup-coupling.md) — cleanup steps must sit outside the try/catch they compensate for; check aggregates for the same orphan-freeze hole as their inputs
