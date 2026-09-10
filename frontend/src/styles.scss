@@ -214,8 +214,8 @@ button {
 
 $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
 
-// Shared input/select/textarea mixin
-@mixin finance-field {
+// Shared input/select/textarea mixin — genutzt vom Finanz- UND vom Admin-Scope
+@mixin form-field {
   padding: 0.55rem 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: var(--radius-md);
@@ -252,7 +252,7 @@ $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
   input[type='search'],
   input[type='date'],
   textarea {
-    @include finance-field;
+    @include form-field;
   }
 
   // ---- Color picker ----
@@ -309,7 +309,7 @@ $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
 
   // ---- Select ----
   select {
-    @include finance-field;
+    @include form-field;
     min-width: 8rem;
     cursor: pointer;
     appearance: none;
@@ -571,9 +571,42 @@ $finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
    default = primary, .ghost = neutral outline, .danger = red outline.
    ============================================================ */
 
-$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories, .vision, .pets-page, .admin-presence';
+$admin-scopes: '.admin-users, .admin-tokens, .audit-log, .admin-tractive, .admin-calendar-categories, .vision, .pets-page, .admin-presence, .admin-mode-quick-access';
 
 #{$admin-scopes} {
+
+  // ---- Eingabefelder ----
+  // Derselbe Feld-Stil wie im Finanz-Scope (geteiltes form-field-Mixin), damit
+  // Formulare projektweit gleich aussehen.
+  //
+  // Bestandsseiten mit eigenen Feldregeln (z. B. .admin-presence__field input)
+  // behalten ihr Aussehen: Angular haengt bei emulierter Kapselung an JEDEN Teil
+  // eines Komponenten-Selektors ein [_ngcontent-…] an, aus der lokalen Regel wird
+  // also (0,3,1) gegen (0,2,1) hier. Wer eine Seite auf diesen gemeinsamen Stil
+  // umstellen will, loescht dort schlicht die lokalen input/select-Regeln.
+  input[type='text'],
+  input[type='number'],
+  input[type='time'],
+  input[type='date'],
+  input[type='email'],
+  input[type='password'],
+  input[type='search'],
+  textarea {
+    @include form-field;
+  }
+
+  select {
+    @include form-field;
+    min-width: 8rem;
+    cursor: pointer;
+  }
+
+  input[type='checkbox'] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+  }
 
   // Eingebettete Komponenten mit eigener Button-Optik (Icon-Picker) bleiben unberuehrt.
   button:not([class*='icon-picker']) {
