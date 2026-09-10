@@ -8,6 +8,11 @@ public record ModeResponse(
         String entityId,
         String displayName,
         String icon,
-        String state
+        String state,
+        /**
+         * True, wenn fuer diesen Modus gerade ein Zeitfenster offen ist. Das Tablet-Dashboard
+         * zeigt ihn dann direkt als Knopf neben der eingeklappten Modus-Leiste.
+         */
+        boolean quickAccess
 ) {
 }

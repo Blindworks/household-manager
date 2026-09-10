@@ -1517,6 +1517,25 @@
   gap: 8px;
 }
 
+// Karte und Schnellzugriff stehen nebeneinander; die Flaeche darum ist bewusst
+// kein Klickziel, damit ein Tipp auf den Schnellzugriff die Leiste nicht aufklappt.
+.lumina__modes-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+
+// Mehrere gleichzeitig faellige Modi scrollen seitwaerts statt umzubrechen: ein
+// Umbruch hier stiehlt dem darunterliegenden Inhalt Hoehe (dieselbe Lehre wie bei
+// .lumina__viewbar, als der fuenfte Eintrag die Leiste umbrechen liess).
+.lumina__modes-quick {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+}
+
 // Die Modus-Leiste klappt wie die Tuerschloss- und die Toni-Kachel: Polster
 // und Abstand wandern mit, das Ein- und Ausfahren erledigen die geteilten
 // Klassen .lumina__lock-collapsible und -inner (gleiche Technik, gleiche

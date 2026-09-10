@@ -151,7 +151,13 @@ public class SecurityConfig {
                                 "/v1/tractive/home-settings", "/v1/presence/settings",
                                 // Gasfaktor: liegt unter /v1/utility-prices/**, dessen GET weiter unten
                                 // KIOSK ist — muss deshalb hier vor dieser Regel stehen.
-                                "/v1/utility-prices/settings").hasRole("ADMIN")
+                                "/v1/utility-prices/settings",
+                                // Zeitfenster der Modus-Schnellzugriffe: auch LESEN ist ADMIN.
+                                // Das Wandtablet braucht die Konfiguration nie, es bekommt das
+                                // fertige quickAccess-Flag ueber GET /v1/modes. Die Position vor
+                                // der generischen GET-Regel weiter unten ist deshalb tragend.
+                                // Beide Formen, damit auch der Pfad ohne Unterpfad sicher trifft.
+                                "/v1/mode-quick-access", "/v1/mode-quick-access/**").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das

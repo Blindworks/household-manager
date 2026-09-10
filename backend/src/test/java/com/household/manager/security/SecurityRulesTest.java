@@ -837,4 +837,71 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON).content("[]"))
                 .andExpect(status().isNotFound());
     }
+
+    /**
+     * Die Zeitfenster der Modus-Schnellzugriffe sind ADMIN-only, auch lesend: das Wandtablet
+     * braucht die Konfiguration nie — es bekommt das fertige quickAccess-Flag ueber
+     * GET /v1/modes. Der Matcher steht deshalb VOR der generischen Regel GET /v1/** -> KIOSK;
+     * genau das belegen diese Tests. KIOSK und MEMBER muessen es je aus eigenem Test belegen,
+     * sonst faellt ein zu laxer Matcher fuer die jeweils andere Rolle niemandem auf.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieModusZeitfensterNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/mode-quick-access")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDieModusZeitfensterNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/mode-quick-access")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinModusZeitfensterAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/mode-quick-access").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeinModusZeitfensterAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/mode-quick-access").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinModusZeitfensterAendernOderLoeschen() throws Exception {
+        mockMvc.perform(put("/v1/mode-quick-access/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/v1/mode-quick-access/1").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnDieModusZeitfensterVorbei() throws Exception {
+        // Kein ModeQuickAccessController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(get("/v1/mode-quick-access")).andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/mode-quick-access").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/mode-quick-access/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/mode-quick-access/1").with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /** Das Flag selbst haengt an GET /v1/modes und bleibt fuer das Wandtablet lesbar. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieModiWeiterhinLesen() throws Exception {
+        mockMvc.perform(get("/v1/modes")).andExpect(status().isNotFound());
+    }
 }

@@ -144,8 +144,13 @@ Teil-PUT läse `active` serverseitig als „aktiv".
   Modus-Refresh. Bei einem Nachtmodus ohne Belang.
 - **Maßgeblich ist die Uhr des Servers**, nicht die des Tablets. Im selben Haushalt
   dieselbe.
-- **Fällt das Backend aus oder scheitert die Abfrage**, ist nichts fällig: der Knopf bleibt
-  weg, die Leiste funktioniert unverändert weiter.
+- **Zwei verschiedene Ausfälle, zwei verschiedene Folgen.** Scheitert das *Lesen der
+  Fenstertabelle*, während das Backend sonst antwortet, gilt nichts als fällig: der Knopf
+  bleibt weg, die Leiste funktioniert unverändert weiter. Fällt dagegen das *ganze Backend*
+  aus, schlägt schon `getModes()` fehl — das Dashboard behält dann seinen letzten Stand
+  (`catchError` liefert `null`, die Modus-Liste bleibt stehen), ein bereits sichtbarer Knopf
+  bleibt also sichtbar. Das ist dasselbe „letzten Stand behalten"-Verhalten wie bei den
+  übrigen Dashboard-Kacheln und bewusst so.
 - **Ein Fenster je Modus.** Zwei getrennte Zeitfenster für denselben Modus (morgens und
   abends) sind nicht ausdrückbar; das UNIQUE hält das fest.
 
