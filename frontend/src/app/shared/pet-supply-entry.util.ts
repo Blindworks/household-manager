@@ -16,7 +16,12 @@ export interface PurchasePreset {
   refill: boolean;
 }
 
-/** Nachkommastellen des Rasters (0.5 -> 1, 1 -> 0, 0.25 -> 2). */
+/**
+ * Nachkommastellen des Rasters (0.5 -> 1, 1 -> 0, 0.25 -> 2).
+ * `toString()` ist hier nur exponentenfrei, weil `step_size` in der DB ein
+ * `DECIMAL(6,1)` ist (eine Nachkommastelle, nie < 1e-6) - bekommt die Spalte
+ * je mehr Nachkommastellen oder einen Raster-Wert 0, bricht es genau hier.
+ */
 function decimalsOf(step: number): number {
   const text = step.toString();
   const dot = text.indexOf('.');
@@ -29,17 +34,21 @@ export function snapToStep(amount: number, step: number): number {
   return Number(snapped.toFixed(decimalsOf(step)));
 }
 
+/** Toleranz gegen Gleitkomma-Reste beim Teilen durch das Raster (0.3 / 0.1 = 2.9999...). */
+const GRID_EPSILON = 1e-9;
+
 /**
  * Naechster Stepper-Wert: ein Rasterschritt in die gewaehlte Richtung, nie
  * unter `min`. Ein leeres Feld (null) startet auf `min`. Ein Wert ausserhalb
- * des Rasters wird erst aufs Raster gezogen, sonst bliebe er fuer immer daneben.
+ * des Rasters springt auf den naechsten Rasterpunkt in der gewaehlten Richtung.
  */
 export function stepAmount(current: number | null, step: number, direction: 1 | -1, min: number): number {
   if (current === null || Number.isNaN(current)) {
     return min;
   }
-  const next = snapToStep(current, step) + direction * step;
-  return Math.max(min, snapToStep(next, step));
+  const units = current / step;
+  const base = direction === 1 ? Math.floor(units + GRID_EPSILON) : Math.ceil(units - GRID_EPSILON);
+  return Math.max(min, snapToStep((base + direction) * step, step));
 }
 
 /**

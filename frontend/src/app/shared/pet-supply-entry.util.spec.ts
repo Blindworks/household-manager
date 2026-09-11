@@ -9,7 +9,7 @@ describe('pet-supply-entry.util', () => {
       expect(snapToStep(7.4, 1)).toBe(7);
     });
 
-    it('liefert bei 0,5-Raster nie mehr als eine Nachkommastelle', () => {
+    it('schneidet den Gleitkomma-Rest bei 0,1-Raster ab', () => {
       // 3 * 0.1 waere 0.30000000000000004 - das darf nicht im Feld landen.
       expect(String(snapToStep(0.3, 0.1))).toBe('0.3');
     });
@@ -32,9 +32,16 @@ describe('pet-supply-entry.util', () => {
       expect(stepAmount(null, 1, -1, 0)).toBe(0);
     });
 
-    it('zieht einen Wert ausserhalb des Rasters erst aufs Raster', () => {
-      // 2,3 Dosen sind kein gueltiger Bestand; +1 Schritt ergibt 3,0, nicht 2,8.
-      expect(stepAmount(2.3, 0.5, 1, 0.5)).toBe(3);
+    it('springt von einem Wert ausserhalb des Rasters auf den naechsten Rasterpunkt in der Richtung', () => {
+      // 2,3 Dosen sind kein gueltiger Bestand: hoch ergibt 2,5, runter 2,0 - nie 2,8.
+      expect(stepAmount(2.3, 0.5, 1, 0.5)).toBe(2.5);
+      expect(stepAmount(2.3, 0.5, -1, 0.5)).toBe(2);
+      expect(stepAmount(0.3, 0.1, 1, 0.1)).toBe(0.4);
+    });
+
+    it('behandelt NaN wie ein leeres Feld', () => {
+      expect(stepAmount(Number.NaN, 0.5, 1, 0.5)).toBe(0.5);
+      expect(correctionDelta(Number.NaN, 5)).toBeNull();
     });
   });
 
@@ -68,6 +75,15 @@ describe('pet-supply-entry.util', () => {
         { amount: 24, refill: true }
       ]);
     });
+
+    it('zeigt Viertel und Haelfte nur einmal, wenn sie auf denselben Rasterwert fallen', () => {
+      // Ziel 2 bei Raster 1: Viertel (0,5 -> 1) und Haelfte (1) sind derselbe Chip.
+      const presets = purchasePresets({ targetAmount: 2, amountRemaining: 0, step: 1 });
+      expect(presets).toEqual([
+        { amount: 1, refill: false },
+        { amount: 2, refill: true }
+      ]);
+    });
   });
 
   describe('correctionDelta', () => {
@@ -79,6 +95,10 @@ describe('pet-supply-entry.util', () => {
 
     it('liefert null bei leerem Feld', () => {
       expect(correctionDelta(null, 5)).toBeNull();
+    });
+
+    it('liefert 0 bei unveraendertem Bestand', () => {
+      expect(correctionDelta(5, 5)).toBe(0);
     });
   });
 });
