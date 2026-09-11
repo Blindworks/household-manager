@@ -62,9 +62,10 @@ import { PetSupplyService } from '../../services/pet-supply.service';
 import { PetSupply } from '../../models/pet-supply.model';
 import { PresenceService } from '../../services/presence.service';
 import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
-import { formatDate } from '@angular/common';
+import { formatDate, formatNumber } from '@angular/common';
 import { iconOffVariant } from '../../shared/icon-off.util';
-import { PetSupplyTone, petSupplyIcon as petSupplyLevelIcon, petSupplyTone as petSupplyLevelTone, worstPetSupplyTone } from '../../shared/pet-supply-level.util';
+import { PetSupplyTone, petSupplyBarWidth as petSupplyLevelBarWidth, petSupplyIcon as petSupplyLevelIcon, petSupplyTone as petSupplyLevelTone, worstPetSupplyTone } from '../../shared/pet-supply-level.util';
+import { PurchasePreset, correctionDelta, purchasePresets, stepAmount } from '../../shared/pet-supply-entry.util';
 import {
   groupWalksByDay as groupWalks,
   walkDistance as formatWalkDistance,
@@ -98,7 +99,9 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
   imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.scss'
+  // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro
+  // Datei, und dashboard.component.scss steht kurz vor der Fehlergrenze.
+  styleUrls: ['./dashboard.component.scss', './dashboard-pet-supply-dialog.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
@@ -423,6 +426,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   petSupplyCorrectionNote = '';
   petSupplySaving = false;
   petSupplyError: string | null = null;
+  petSupplySuccess: string | null = null;
 
   /** Anwesenheits-Status; null = Kachel wird nicht gerendert. */
   presence: PresenceStatusResponse | null = null;
@@ -1760,6 +1764,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   openPetSupplyDialog(supply: PetSupply): void {
     this.petSupplyDialogKey = supply.key;
     this.petSupplyError = null;
+    this.petSupplySuccess = null;
     this.petSupplyPurchaseAmount = null;
     this.petSupplyPurchaseNote = '';
     this.petSupplyCorrectionAmount = supply.amountRemaining;
@@ -1772,12 +1777,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   submitPetSupplyPurchase(): void {
     const supply = this.petSupplyDialogSupply;
-    if (supply === null || this.petSupplyPurchaseAmount == null || this.petSupplyPurchaseAmount <= 0) {
+    const amount = this.petSupplyPurchaseAmount;
+    if (supply === null || amount == null || amount <= 0) {
       return;
     }
     this.mutatePetSupply(
-      this.petSupplyService.recordPurchase(supply.key, this.petSupplyPurchaseAmount, this.petSupplyPurchaseNote),
-      () => { this.petSupplyPurchaseAmount = null; this.petSupplyPurchaseNote = ''; });
+      this.petSupplyService.recordPurchase(supply.key, amount, this.petSupplyPurchaseNote),
+      updated => {
+        this.petSupplySuccess = `+${formatNumber(amount, 'de', '1.0-2')} ${updated.unit} gebucht`;
+        this.petSupplyPurchaseAmount = null;
+        this.petSupplyPurchaseNote = '';
+      });
   }
 
   submitPetSupplyCorrection(): void {
@@ -1787,19 +1797,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     this.mutatePetSupply(
       this.petSupplyService.correctStock(supply.key, this.petSupplyCorrectionAmount, this.petSupplyCorrectionNote),
-      () => { this.petSupplyCorrectionNote = ''; });
+      updated => {
+        this.petSupplySuccess = `Bestand auf ${formatNumber(updated.amountRemaining, 'de', '1.0-2')} ${updated.unit} gesetzt`;
+        this.petSupplyCorrectionNote = '';
+      });
   }
 
-  /** Der Dialog bleibt nach dem Buchen offen, damit der neue Füllstand sofort sichtbar ist. */
-  private mutatePetSupply(request: Observable<PetSupply>, onSuccess: () => void): void {
+  /** Schnellwahl-Chips des Einkaufs, aus Ziel und Bestand des offenen Vorrats. */
+  get petSupplyPurchasePresets(): PurchasePreset[] {
+    const supply = this.petSupplyDialogSupply;
+    return supply ? purchasePresets(supply) : [];
+  }
+
+  /** Stepper des Einkaufs: Untergrenze ein Rasterschritt (0 Dosen kauft niemand). */
+  stepPetSupplyPurchase(direction: 1 | -1): void {
+    const supply = this.petSupplyDialogSupply;
+    if (supply) {
+      this.petSupplyPurchaseAmount = stepAmount(this.petSupplyPurchaseAmount, supply.step, direction, supply.step);
+    }
+  }
+
+  /** Stepper der Korrektur: Untergrenze 0 (leerer Vorrat ist ein gueltiger Stand). */
+  stepPetSupplyCorrection(direction: 1 | -1): void {
+    const supply = this.petSupplyDialogSupply;
+    if (supply) {
+      this.petSupplyCorrectionAmount = stepAmount(this.petSupplyCorrectionAmount, supply.step, direction, 0);
+    }
+  }
+
+  applyPetSupplyPreset(amount: number): void {
+    this.petSupplyPurchaseAmount = amount;
+  }
+
+  /** Vorschauzeile der Korrektur: was aendert der eingegebene Bestand gegenueber jetzt? */
+  petSupplyCorrectionPreview(supply: PetSupply): string {
+    const delta = correctionDelta(this.petSupplyCorrectionAmount, supply.amountRemaining);
+    if (delta === null) {
+      return 'Bestand eingeben';
+    }
+    if (delta === 0) {
+      return 'Unverändert gegenüber jetzt';
+    }
+    const sign = delta > 0 ? '+' : '−';
+    return `${sign}${formatNumber(Math.abs(delta), 'de', '1.0-2')} ${supply.unit} gegenüber jetzt`;
+  }
+
+  petSupplyBarWidth(percent: number): number {
+    return petSupplyLevelBarWidth(percent);
+  }
+
+  private mutatePetSupply(request: Observable<PetSupply>, onSuccess: (updated: PetSupply) => void): void {
     this.petSupplySaving = true;
     this.petSupplyError = null;
+    this.petSupplySuccess = null;
     request.subscribe({
       next: updated => {
         this.petSupplySaving = false;
         this.petSupplies = this.petSupplies.map(supply => supply.key === updated.key ? updated : supply);
         this.petSupplyCorrectionAmount = updated.amountRemaining;
-        onSuccess();
+        onSuccess(updated);
       },
       error: (err: Error) => {
         this.petSupplySaving = false;

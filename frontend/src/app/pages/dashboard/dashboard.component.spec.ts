@@ -28,6 +28,8 @@ import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
 import { PresenceService } from '../../services/presence.service';
 import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
+import { PetSupplyService } from '../../services/pet-supply.service';
+import { PetSupply } from '../../models/pet-supply.model';
 
 // `presenceLabel` formatiert die Abwesenheitszeit ueber `formatDate(..., 'de')`.
 // Karma laedt `main.ts` nicht, das Locale muss hier also selbst registriert
@@ -2598,6 +2600,198 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
     // ist auch "nicht in der Karte").
     expect(root.querySelector('.lumina__modes-quick'))
       .withContext('Schnellzugriff muss im Dokument existieren').not.toBeNull();
+
+    discardPeriodicTasks();
+  }));
+});
+
+/**
+ * Erfassungs-Dialog der Vorrats-Kachel. `viewMode` wird nicht gemockt (Muster
+ * Modus-Schnellzugriff): der echte ViewModeService liest localStorage, deshalb
+ * wird der Schluessel vor jedem Test entfernt und die Tablet-Ansicht ueber
+ * `viewMode.toggle()` eingeschaltet.
+ */
+describe('DashboardComponent (Vorrats-Dialog)', () => {
+  let petSupplySpy: jasmine.SpyObj<PetSupplyService>;
+
+  const futter = (overrides: Partial<PetSupply> = {}): PetSupply => ({
+    key: 'toni_cans',
+    name: 'Futter',
+    unit: 'Dosen',
+    amountRemaining: 5,
+    targetAmount: 48,
+    step: 0.5,
+    perDay: 1,
+    percent: 10,
+    daysRemaining: 5,
+    ...overrides
+  });
+
+  beforeEach(async () => {
+    localStorage.removeItem('household-manager-view-mode');
+
+    petSupplySpy = jasmine.createSpyObj('PetSupplyService', ['getSupplies', 'recordPurchase', 'correctStock']);
+    petSupplySpy.getSupplies.and.returnValue(of([futter()]));
+    petSupplySpy.recordPurchase.and.returnValue(of(futter({ amountRemaining: 17, percent: 35, daysRemaining: 17 })));
+    petSupplySpy.correctStock.and.returnValue(of(futter({ amountRemaining: 4.5, percent: 9, daysRemaining: 4 })));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PetSupplyService, useValue: petSupplySpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  afterAll(() => localStorage.removeItem('household-manager-view-mode'));
+
+  /** Dashboard mit geoeffnetem Futter-Dialog; optional in der Tablet-Ansicht. */
+  function openedFixture(tablet = false): ComponentFixture<DashboardComponent> {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    if (tablet) {
+      fixture.componentInstance.viewMode.toggle();
+    }
+    fixture.detectChanges();
+    fixture.componentInstance.openPetSupplyDialog(fixture.componentInstance.petSupplies[0]);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function dialog(fixture: ComponentFixture<DashboardComponent>): HTMLElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('.lumina__dialog--supply') as HTMLElement;
+  }
+
+  it('steppt den Einkauf im Raster des Vorrats und nicht unter einen Schritt', fakeAsync(() => {
+    const fixture = openedFixture();
+    const component = fixture.componentInstance;
+
+    component.stepPetSupplyPurchase(1);
+    expect(component.petSupplyPurchaseAmount).toBe(0.5);
+    component.stepPetSupplyPurchase(1);
+    expect(component.petSupplyPurchaseAmount).toBe(1);
+    component.stepPetSupplyPurchase(-1);
+    component.stepPetSupplyPurchase(-1);
+    expect(component.petSupplyPurchaseAmount).toBe(0.5);
+
+    discardPeriodicTasks();
+  }));
+
+  it('bietet Schnellwahl-Chips aus Ziel und Bestand an und uebernimmt sie', fakeAsync(() => {
+    const fixture = openedFixture();
+    const chips = Array.from(dialog(fixture).querySelectorAll('.lumina__supply-preset')) as HTMLButtonElement[];
+
+    expect(chips.map(chip => chip.textContent?.replace(/\s+/g, ' ').trim()))
+      .toEqual(['+12', '+24', 'Auffüllen · +43']);
+
+    chips[0].click();
+    expect(fixture.componentInstance.petSupplyPurchaseAmount).toBe(12);
+
+    discardPeriodicTasks();
+  }));
+
+  it('bucht den Einkauf mit Betrag und Notiz und meldet den Erfolg', fakeAsync(() => {
+    const fixture = openedFixture();
+    const component = fixture.componentInstance;
+    component.petSupplyPurchaseAmount = 12;
+    component.petSupplyPurchaseNote = 'Fressnapf';
+
+    component.submitPetSupplyPurchase();
+    tick();
+    fixture.detectChanges();
+
+    expect(petSupplySpy.recordPurchase).toHaveBeenCalledWith('toni_cans', 12, 'Fressnapf');
+    expect(component.petSupplies[0].amountRemaining).toBe(17);
+    expect(component.petSupplyPurchaseAmount).toBeNull();
+    expect(dialog(fixture).querySelector('.lumina__supply-feedback--success')?.textContent).toContain('+12 Dosen gebucht');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt die Korrektur als Differenz zum aktuellen Bestand', fakeAsync(() => {
+    const fixture = openedFixture();
+    const component = fixture.componentInstance;
+
+    expect(component.petSupplyCorrectionAmount).toBe(5);
+    expect(component.petSupplyCorrectionPreview(component.petSupplies[0])).toBe('Unverändert gegenüber jetzt');
+
+    component.stepPetSupplyCorrection(-1);
+    expect(component.petSupplyCorrectionAmount).toBe(4.5);
+    expect(component.petSupplyCorrectionPreview(component.petSupplies[0])).toBe('−0,5 Dosen gegenüber jetzt');
+
+    component.petSupplyCorrectionAmount = 40;
+    expect(component.petSupplyCorrectionPreview(component.petSupplies[0])).toBe('+35 Dosen gegenüber jetzt');
+
+    discardPeriodicTasks();
+  }));
+
+  it('korrigiert den Bestand und meldet den neuen Stand', fakeAsync(() => {
+    const fixture = openedFixture();
+    const component = fixture.componentInstance;
+    component.stepPetSupplyCorrection(-1);
+
+    component.submitPetSupplyCorrection();
+    tick();
+    fixture.detectChanges();
+
+    expect(petSupplySpy.correctStock).toHaveBeenCalledWith('toni_cans', 4.5, '');
+    expect(dialog(fixture).querySelector('.lumina__supply-feedback--success')?.textContent).toContain('Bestand auf 4,5 Dosen gesetzt');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt einen Buchungsfehler im Dialog an', fakeAsync(() => {
+    petSupplySpy.recordPurchase.and.returnValue(throwError(() => new Error('Menge passt nicht ins Raster.')));
+    const fixture = openedFixture();
+    fixture.componentInstance.petSupplyPurchaseAmount = 12;
+
+    fixture.componentInstance.submitPetSupplyPurchase();
+    tick();
+    fixture.detectChanges();
+
+    expect(dialog(fixture).querySelector('.lumina__supply-feedback--error')?.textContent).toContain('Menge passt nicht ins Raster.');
+    expect(dialog(fixture).querySelector('.lumina__supply-feedback--success')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('verlinkt in der Website-Ansicht auf die Vorrats-Seite', fakeAsync(() => {
+    const fixture = openedFixture();
+
+    expect(dialog(fixture).querySelector('.lumina__supply-page-link')).not.toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  /** /pet-food hat keinen Zurueck-Knopf - das Tablet waere dort gefangen. */
+  it('zeigt den Link zur Vorrats-Seite in der Tablet-Ansicht nicht', fakeAsync(() => {
+    const fixture = openedFixture(true);
+
+    expect(fixture.componentInstance.viewMode.isTabletView()).toBeTrue();
+    expect(dialog(fixture).querySelector('.lumina__supply-page-link')).toBeNull();
 
     discardPeriodicTasks();
   }));
