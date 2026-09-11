@@ -441,6 +441,13 @@ docker-compose down
 - Typischer Ablauf: `flow_node_types` + Lookups → `flow_create` (entsteht deaktiviert, nicht deployt) → `flow_deploy` (liefert ValidationResult; 400 wird als fachliches Ergebnis durchgereicht) → `flow_set_enabled`
 - Flow-JSON-Format: `docs/flows/flow-import-format.md`; Design: `docs/superpowers/specs/2026-07-20-flow-mcp-server-design.md`
 
+### Flow-Engine: Zeitfenster-Node `time-condition`
+- Bedingungs-Node „liegt die aktuelle Uhrzeit im Fenster `[from, to)`?" (`TimeConditionNodeHandler`), Port 0 wahr / Port 1 falsch; `HH:mm`-Strings. Gebaut für den ersten Taster-Flow „Treppenhaus-Taster: Nachtmodus" (Druck 05:00–20:00 ⇒ Nachtmodus aus, sonst an). Spec: `docs/superpowers/specs/2026-09-11-zeitfenster-node-treppenhaus-flow-design.md`
+- **`common/TimeWindow` ist die einzige Fensterregel im Projekt** — `ModeQuickAccessResolver` fragt seit diesem Umbau dieselbe Klasse. Beginn inklusive, Ende exklusiv, `from > to` überspannt Mitternacht, `from == to` ist **leer** (nie „immer") und wird beim Deploy abgelehnt; eine Regel „Ende nach Beginn" wäre der naheliegende Fehler, sie verböte den Nachtfall
+- Rechnet mit dem `Clock`-Bean (Europe/Berlin), **nicht** mit `systemDefault` — die Cron-Trigger hängen noch an der Systemzone (UTC-Falle), dieser Node wiederholt das nicht. Ein Test hält fest, dass 19:30 Berlin nicht als 17:30 UTC bewertet wird
+- Der bequemere Weg „Helfer ‚Tagsüber' + zwei Cron-Trigger" wurde bewusst verworfen: unsichtbarer Kunst-Helfer, zweiter Flow, und ein Backend-Neustart genau zur Flanke lässt den Helfer bis zur nächsten falsch stehen
+- **Rollout-Falle:** `flow_deploy` validiert gegen das laufende Backend — der Flow kann erst nach dem PROD-Deploy des Nodes angelegt und deployt werden (dieselbe Falle wie bei `push-send`)
+
 ### Wandtablet (Präsenzerkennung)
 - Eigene Android-Kiosk-App in `tablet-app/` (Kotlin, minSdk 29): Dashboard im Vollbild-WebView, Anwesenheitserkennung per Frontkamera (CameraX: Bewegung weckt, ML-Kit-Gesicht hält wach), Soft-Off via schwarzem Overlay + Helligkeit 0
 - Präsenz-Meldung an `POST /v1/tablet-presence/{tabletId}`; Spiegelung als `binary_sensor.tablet_<id>_presence` (`EntitySource.TABLET`) im Entity-State-Layer, nutzbar als Flow-Trigger; ausbleibender Heartbeat → `unavailable`

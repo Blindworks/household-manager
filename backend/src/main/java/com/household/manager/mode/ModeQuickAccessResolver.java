@@ -1,5 +1,6 @@
 package com.household.manager.mode;
 
+import com.household.manager.common.TimeWindow;
 import com.household.manager.model.entity.ModeQuickAccess;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,20 +46,8 @@ public class ModeQuickAccessResolver {
         }
     }
 
-    /**
-     * Halboffenes Intervall [from, to): der Beginn gehoert dazu, das Ende nicht.
-     * Liegt {@code to} vor {@code from}, ueberspannt das Fenster Mitternacht.
-     * Gleicher Beginn und gleiches Ende ergeben ein leeres Fenster.
-     */
+    /** Die Fensterregel selbst ist {@link TimeWindow} — geteilt mit dem Flow-Node {@code time-condition}. */
     private static boolean isWithin(ModeQuickAccess window, LocalTime now) {
-        LocalTime from = window.getFromTime();
-        LocalTime to = window.getToTime();
-        if (from.equals(to)) {
-            return false;
-        }
-        if (from.isBefore(to)) {
-            return !now.isBefore(from) && now.isBefore(to);
-        }
-        return !now.isBefore(from) || now.isBefore(to);
+        return new TimeWindow(window.getFromTime(), window.getToTime()).contains(now);
     }
 }
