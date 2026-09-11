@@ -17,9 +17,10 @@ import java.util.List;
  * seinen Schluessel adressiert; ein unbekannter Schluessel ergibt 404.
  * <p>
  * Lesen faellt unter die generische GET-KIOSK-Regel (Wandtablet sieht die
- * Kacheln), alle Schreibpfade unter anyRequest -> MEMBER; eine eigene
- * Security-Regel gibt es bewusst nicht (SecurityRulesTest haelt beide
- * Richtungen fest).
+ * Kacheln). purchases und corrections stehen in der KIOSK-POST-Whitelist
+ * (Erfassungs-Dialog der Vorrats-Kachel laeuft auf dem Wandtablet); target
+ * bleibt unter anyRequest -> MEMBER. SecurityRulesTest haelt alle Richtungen
+ * fest.
  */
 @RestController
 @RequestMapping("/v1/pet-supplies")
