@@ -55,7 +55,7 @@ ein importierter Draft darf also noch unvollständig sein.
 
 - `from.node` / `to.node`: Node-`id`s.
 - `from.port`: Ausgangsport der Quell-Node (0-basiert). Die meisten Nodes haben nur
-  Port 0; die Bedingung hat Port 0 (wahr) und Port 1 (falsch).
+  Port 0; Bedingung und Zeitfenster haben Port 0 (wahr) und Port 1 (falsch).
 
 ## Node-Typen
 
@@ -119,6 +119,19 @@ Prüft den AKTUELLEN Zustand einer beliebigen Entität.
 > (`!= on`) gilt bei einem Ausfall der Quelle damit als **erfüllt** und lässt die Message
 > auf Port 0 (wahr) durch. Wo das gefährlich wäre, lieber positiv formulieren (`== off`)
 > — dann verhält sich ein Ausfall wie „falsch".
+
+### `time-condition` — Zeitfenster (2 Ausgänge: 0 = wahr, 1 = falsch)
+Prüft, ob die AKTUELLE Uhrzeit (Haushaltszeit Europe/Berlin) in einem Tagesfenster liegt.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `from` | ja | Beginn `HH:mm` — gehört zum Fenster |
+| `to` | ja | Ende `HH:mm` — gehört **nicht** zum Fenster |
+
+Halboffenes Intervall `[from, to)`. Liegt `to` vor `from`, überspannt das Fenster
+Mitternacht (`"from": "22:00", "to": "06:00"` = nachts). `from == to` wird beim Deploy
+abgelehnt — „nie" und „immer" wären sonst nicht unterscheidbar. Für „tagsüber A, sonst B"
+genügt **ein** Node: Port 0 für das Fenster, Port 1 für den Rest des Tages.
 
 ### `delay` — Verzögerung (1 Ausgang)
 

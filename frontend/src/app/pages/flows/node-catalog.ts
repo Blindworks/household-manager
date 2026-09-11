@@ -16,6 +16,7 @@ const LABELS: Record<string, string> = {
   'entity-event-trigger': 'Taster-Trigger',
   'schedule-trigger': 'Zeitplan',
   'entity-condition': 'Bedingung',
+  'time-condition': 'Zeitfenster',
   'delay': 'Verzögerung',
   'rate-limit': 'Drossel',
   'debug': 'Debug',
