@@ -43,6 +43,11 @@
   --btn-height: 40px;
   --btn-padding: 4px 24px;
   --btn-font: 500 14px/20px 'Universal Sans Text', -apple-system, Arial, sans-serif;
+  // Inhaltshoehe der aufgeklappten Footer-Kacheln (Tuerschloss, Toni, Modi):
+  // ein Knopf plus Abstand und Fuellstandsbalken der Vorrats-Items. Alle drei
+  // Kacheln stellen ihren Inhalt darauf, damit sie nebeneinander gleich hoch
+  // stehen - vorher waren es 65, 77 und 93 px.
+  --footer-content-height: calc(var(--btn-height) + 8px);
   --btn-bg: #f4f4f4;
   --btn-fg: #393c41;
   --btn-border: #d0d1d2;
@@ -1009,6 +1014,12 @@
   gap: var(--gutter);
   padding-top: 8px;
   flex-wrap: wrap;
+  // Container fuer die Klapp-Regel unter .lumina__lock-collapsible-inner: ob
+  // der Klapp-Inhalt schrumpfen darf, haengt an der Breite des Footers, nicht
+  // des Viewports - und ein Test kann die Footer-Breite setzen, den Viewport
+  // von Karma nicht (749 px, also unterhalb des Handy-Umbruchs).
+  container-type: inline-size;
+  container-name: footer;
 }
 
 .lumina__secured {
@@ -1039,8 +1050,13 @@
     color: inherit;
   }
 
+  // Der globale Ueberschriften-Reset (styles.scss) gibt jedem h4 16 px
+  // margin-bottom; der gewollte Abstand zur Detailzeile sind die 4 px an
+  // .lumina__secured-detail. Ohne den Reset waere die Toni-Kachel allein
+  // durch die Luft unter dem Titel hoeher als die Modus-Kachel.
   .lumina__label--secondary {
     color: var(--btn-fg);
+    margin-bottom: 0;
   }
 
   .lumina__secured-detail {
@@ -1129,6 +1145,13 @@
 // Sie sind fuer sich klickbar - wie die drei Knoepfe der Tuerschloss-Kachel -
 // und tragen deshalb keinen eigenen Kartenhintergrund, nur einen Hover.
 .lumina__toni-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  // Kein vertikales Polster: die Hoehe kommt aus dem gemeinsamen Token, sonst
+  // stuende die Toni-Kachel hoeher als Tuerschloss- und Modus-Kachel.
+  min-height: var(--footer-content-height);
+  padding: 0 12px;
   border-radius: var(--radius-lg);
   transition: background 0.2s ease;
 
@@ -1173,6 +1196,17 @@
   gap: 16px;
   min-width: 0;
   overflow: hidden;
+}
+
+// Der Inhalt behaelt waehrend der Animation seine aufgeklappte Breite und
+// wird nur beschnitten. Duerfte er schrumpfen, wuerde er bei jeder
+// Zwischenbreite neu umbrochen: die Modus-Knoepfe standen beim Aufklappen
+// erst untereinander, dann in zwei Zeilen, erst am Ende nebeneinander, und
+// die Vorratstexte der Toni-Kachel brachen in drei Zeilen um - das war das
+// Ruckeln. Der Vorfahr im Selektor ist noetig, damit die Regel gegen
+// `.lumina__lock-info { flex: 1 }` gewinnt.
+.lumina__secured .lumina__lock-collapsible-inner > * {
+  flex: none;
 }
 
 // ---- Leiste mit den Tablet-Unteransichten --------------------------------
@@ -1283,12 +1317,6 @@
   }
 }
 
-.lumina__pets {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 12px;
-}
 
 .lumina__pets-info {
   min-width: 0;
@@ -1310,11 +1338,6 @@
 }
 
 .lumina__petfood {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 12px;
   cursor: pointer;
 
   &[data-tone='ok'] .lumina__petfood-fill { background: #2e7d32; }
@@ -1323,13 +1346,11 @@
   &[data-tone='critical'] .lumina__secured-icon { color: var(--btn-danger-bg); }
 }
 
-// Am unteren Kachelrand statt im Textblock: so bleibt die Kachel exakt so hoch
-// wie die Haustier-Kachel daneben (gleiche Struktur: Icon + Titel + Detailzeile).
+// Unter der Detailzeile im Textblock. Die Item-Hoehe kommt aus
+// --footer-content-height, das den Balken bereits einrechnet - er macht die
+// Vorrats-Items also nicht hoeher als das Hund-Item ohne Balken.
 .lumina__petfood-track {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 4px;
+  margin-top: 4px;
   height: 4px;
   border-radius: 2px;
   background: rgba(57, 60, 65, 0.15);
@@ -1401,8 +1422,19 @@
 
 .lumina__lock-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-left: 8px;
+}
+
+// Die Hoehe haengt am Textblock, nicht an den Knoepfen: ohne gefundenes
+// Schloss gibt es keine Knoepfe, und die Kachel bliebe sonst kuerzer als
+// Toni- und Modus-Kachel daneben.
+.lumina__lock-card .lumina__lock-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--footer-content-height);
 }
 
 .lumina__lock-btn {
@@ -1495,8 +1527,10 @@
 
 .lumina__modes {
   display: flex;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+  min-height: var(--footer-content-height);
 }
 
 .lumina__mode-error {
@@ -1667,6 +1701,18 @@
 
   .lumina__modes {
     justify-content: center;
+  }
+}
+
+// Auf dem Handy muss der Klapp-Inhalt schrumpfen duerfen (Modus-Knoepfe
+// umbrechen, Vorratstexte umbrechen), sonst ragt die Kachel aus dem
+// Bildschirm. Preis: dort bleibt der Aufklapp-Umbruch, wie er vorher war.
+// Gemessen wird der Footer (siehe container-type dort), deshalb greift die
+// Regel schon knapp oberhalb des 768-px-Viewport-Umbruchs - harmlos, das ist
+// dort das alte Verhalten.
+@container footer (max-width: 768px) {
+  .lumina__secured .lumina__lock-collapsible-inner > * {
+    flex: 0 1 auto;
   }
 }
 

@@ -2845,3 +2845,149 @@ describe('DashboardComponent (Vorrats-Dialog)', () => {
     discardPeriodicTasks();
   }));
 });
+
+/**
+ * Die drei Footer-Kacheln (Tuerschloss, Toni, Modi) stehen aufgeklappt
+ * nebeneinander und muessen gleich hoch sein; ihr Inhalt darf waehrend der
+ * Klapp-Animation nicht neu umbrechen. Beides sind reine Stylefragen, deshalb
+ * misst die Suite gerenderte Geometrie statt Komponentenzustand. Die
+ * Uebergaenge werden fuer die Messung abgeschaltet - sonst laese der Test den
+ * Startwert der gerade begonnenen Animation.
+ */
+describe('DashboardComponent (Footer-Kacheln: Hoehe und Klappen)', () => {
+  let noTransitions: HTMLStyleElement;
+
+  const lock = (): NukiLock => ({
+    smartlockId: 1,
+    name: 'Haustür',
+    state: 'locked',
+    doorState: 'off',
+    batteryCharge: 90,
+    batteryCritical: false
+  });
+
+  const mode = (name: string): ModeEntity => ({
+    entityId: `input_boolean.manual_${name.toLowerCase()}`,
+    displayName: name,
+    icon: 'tune',
+    state: 'off',
+    quickAccess: false
+  });
+
+  const supply = (key: string, name: string): PetSupply => ({
+    key,
+    name,
+    unit: 'Dosen',
+    amountRemaining: 5,
+    targetAmount: 48,
+    step: 0.5,
+    perDay: 1,
+    percent: 10,
+    daysRemaining: 5
+  });
+
+  beforeEach(async () => {
+    localStorage.removeItem('household-manager-view-mode');
+    noTransitions = document.createElement('style');
+    noTransitions.textContent = '* { transition: none !important; }';
+    document.head.appendChild(noTransitions);
+
+    const nukiSpy = jasmine.createSpyObj('NukiService', ['getLocks', 'sendAction']);
+    nukiSpy.getLocks.and.returnValue(of([lock()]));
+
+    const modeSpy = jasmine.createSpyObj('ModeService', ['getModes', 'toggle']);
+    modeSpy.getModes.and.returnValue(of([mode('Abwesend'), mode('Toni allein'), mode('Nachtmodus'), mode('Bewegungssensoren')]));
+
+    const petSupplySpy = jasmine.createSpyObj('PetSupplyService', ['getSupplies', 'recordPurchase', 'correctStock']);
+    petSupplySpy.getSupplies.and.returnValue(of([supply('toni_cans', 'Futtervorrat'), supply('toni_vomisan', 'VomiSan-Tabletten')]));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NukiService, useValue: nukiSpy },
+        { provide: ModeService, useValue: modeSpy },
+        { provide: PetSupplyService, useValue: petSupplySpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  afterEach(() => noTransitions.remove());
+  afterAll(() => localStorage.removeItem('household-manager-view-mode'));
+
+  const CARDS = ['.lumina__lock-card', '.lumina__toni-card', '.lumina__modes-card'];
+
+  /**
+   * Dashboard mit allen drei Footer-Kacheln aufgeklappt. Karmas Fenster ist
+   * 749 px breit, also im Handy-Umbruch; der Host wird deshalb breiter gezogen
+   * als das Fenster, damit der Footer (ein Container, siehe SCSS) die
+   * Tablet-Regeln bekommt, in denen der Klapp-Inhalt nicht schrumpfen darf.
+   */
+  function expandedFixture(): ComponentFixture<DashboardComponent> {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    (fixture.nativeElement as HTMLElement).style.width = '1400px';
+    fixture.detectChanges();
+    fixture.componentInstance.toggleNukiCard();
+    fixture.componentInstance.toggleToniCard();
+    fixture.componentInstance.toggleModesBar();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function cards(fixture: ComponentFixture<DashboardComponent>): HTMLElement[] {
+    return CARDS.map(selector => (fixture.nativeElement as HTMLElement).querySelector(selector) as HTMLElement);
+  }
+
+  it('stehen aufgeklappt alle drei gleich hoch', fakeAsync(() => {
+    const fixture = expandedFixture();
+
+    const heights = cards(fixture).map(card => Math.round(card.getBoundingClientRect().height));
+    expect(new Set(heights).size).withContext(`Hoehen: ${heights.join(', ')}`).toBe(1);
+
+    discardPeriodicTasks();
+  }));
+
+  it('halten ihren Inhalt bei jeder Zwischenbreite der Klapp-Animation in einer Zeile', fakeAsync(() => {
+    const fixture = expandedFixture();
+
+    for (const card of cards(fixture)) {
+      const collapsible = card.querySelector('.lumina__lock-collapsible') as HTMLElement;
+      const children = Array.from(card.querySelectorAll('.lumina__mode, .lumina__toni-item, .lumina__lock-btn'));
+      expect(children.length).withContext(card.className).toBeGreaterThan(1);
+
+      // Eine Zwischenbreite der Animation einfrieren und pruefen, dass nichts
+      // umbricht: jeder Knopf bzw. jedes Item sitzt auf derselben Oberkante.
+      for (const fraction of [0.2, 0.5, 0.8]) {
+        collapsible.style.gridTemplateColumns = `${fraction}fr`;
+        collapsible.style.gridTemplateRows = `${fraction}fr`;
+        const tops = new Set(children.map(child => Math.round(child.getBoundingClientRect().top)));
+        expect(tops.size).withContext(`${card.className} bei ${fraction}fr`).toBe(1);
+      }
+    }
+
+    discardPeriodicTasks();
+  }));
+});
