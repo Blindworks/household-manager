@@ -496,6 +496,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Schliesst die geoeffneten Dialoge per Escape-Taste. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.petSupplyDialogKey !== null) {
+      this.closePetSupplyDialog();
+      return;
+    }
     if (this.walksDialogOpen) {
       this.closeWalksDialog();
       return;
@@ -1807,6 +1811,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   get petSupplyPurchasePresets(): PurchasePreset[] {
     const supply = this.petSupplyDialogSupply;
     return supply ? purchasePresets(supply) : [];
+  }
+
+  /**
+   * trackBy fuer die Schnellwahl-Chips: der Getter oben baut bei jedem Change-
+   * Detection-Lauf frische Objekte, ohne stabile Identitaet wuerde Angular die
+   * Chips staendig neu erzeugen - ein gerade angeklickter Chip verlöre dabei
+   * seinen eigenen aktiv-Zustand-Uebergang (und jeden Tastaturfokus).
+   */
+  trackByPetSupplyPreset(_index: number, preset: PurchasePreset): number {
+    return preset.amount;
   }
 
   /** Stepper des Einkaufs: Untergrenze ein Rasterschritt (0 Dosen kauft niemand). */

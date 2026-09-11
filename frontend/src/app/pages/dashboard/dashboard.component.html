@@ -1046,7 +1046,7 @@
               <button
                 type="button"
                 class="lumina__supply-preset"
-                *ngFor="let preset of petSupplyPurchasePresets"
+                *ngFor="let preset of petSupplyPurchasePresets; trackBy: trackByPetSupplyPreset"
                 [class.lumina__supply-preset--active]="petSupplyPurchaseAmount === preset.amount"
                 (click)="applyPetSupplyPreset(preset.amount)"
               ><ng-container *ngIf="preset.refill">Auffüllen · </ng-container>+{{ preset.amount | number:'1.0-1':'de' }}</button>
@@ -1056,7 +1056,7 @@
                      maxlength="255" placeholder="z. B. Fressnapf">
             </label>
             <button type="submit" class="lumina__supply-submit lumina__supply-submit--purchase"
-                    [disabled]="petSupplySaving || !petSupplyPurchaseAmount">
+                    [disabled]="petSupplySaving || petSupplyPurchaseAmount == null || petSupplyPurchaseAmount <= 0">
               <span class="material-symbols-outlined">add_shopping_cart</span>Zubuchen
             </button>
           </form>
@@ -1083,7 +1083,7 @@
                      maxlength="255" placeholder="z. B. nachgezählt">
             </label>
             <button type="submit" class="lumina__supply-submit lumina__supply-submit--correction"
-                    [disabled]="petSupplySaving || petSupplyCorrectionAmount == null">
+                    [disabled]="petSupplySaving || petSupplyCorrectionAmount == null || petSupplyCorrectionAmount < 0">
               <span class="material-symbols-outlined">inventory_2</span>Korrigieren
             </button>
           </form>

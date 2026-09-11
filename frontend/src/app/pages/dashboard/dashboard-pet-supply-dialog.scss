@@ -227,6 +227,7 @@ $supply-font-display: 'Space Grotesk', 'Geist', sans-serif;
 }
 
 .lumina__supply-preset {
+  min-height: 44px;
   padding: 8px 14px;
   border: 1px solid $supply-line;
   border-radius: 999px;
@@ -240,7 +241,10 @@ $supply-font-display: 'Space Grotesk', 'Geist', sans-serif;
 
   &:hover { background: $supply-panel; }
 
-  &--active {
+  // Muss :hover schlagen: der WebView haelt den getippten Chip im Hover-Zustand,
+  // sonst stuende weisser Text auf hellem Grund.
+  &--active,
+  &--active:hover {
     border-color: $supply-ink;
     background: $supply-ink;
     color: #ffffff;

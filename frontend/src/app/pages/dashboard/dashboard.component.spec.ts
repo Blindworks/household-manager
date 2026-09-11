@@ -2708,7 +2708,9 @@ describe('DashboardComponent (Vorrats-Dialog)', () => {
       .toEqual(['+12', '+24', 'Auffüllen · +43']);
 
     chips[0].click();
+    fixture.detectChanges();
     expect(fixture.componentInstance.petSupplyPurchaseAmount).toBe(12);
+    expect(chips[0].classList).toContain('lumina__supply-preset--active');
 
     discardPeriodicTasks();
   }));
@@ -2726,6 +2728,7 @@ describe('DashboardComponent (Vorrats-Dialog)', () => {
     expect(petSupplySpy.recordPurchase).toHaveBeenCalledWith('toni_cans', 12, 'Fressnapf');
     expect(component.petSupplies[0].amountRemaining).toBe(17);
     expect(component.petSupplyPurchaseAmount).toBeNull();
+    expect(component.petSupplyCorrectionAmount).toBe(17);
     expect(dialog(fixture).querySelector('.lumina__supply-feedback--success')?.textContent).toContain('+12 Dosen gebucht');
 
     discardPeriodicTasks();
@@ -2792,6 +2795,52 @@ describe('DashboardComponent (Vorrats-Dialog)', () => {
 
     expect(fixture.componentInstance.viewMode.isTabletView()).toBeTrue();
     expect(dialog(fixture).querySelector('.lumina__supply-page-link')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('sperrt Zubuchen ohne Betrag, bei 0 und bei negativem Betrag', fakeAsync(() => {
+    const fixture = openedFixture();
+    const component = fixture.componentInstance;
+    const button = () => dialog(fixture).querySelector('.lumina__supply-submit--purchase') as HTMLButtonElement;
+
+    expect(button().disabled).toBeTrue();
+
+    component.petSupplyPurchaseAmount = 0;
+    fixture.detectChanges();
+    expect(button().disabled).toBeTrue();
+
+    component.petSupplyPurchaseAmount = -5;
+    fixture.detectChanges();
+    expect(button().disabled).toBeTrue();
+
+    component.petSupplyPurchaseAmount = 12;
+    fixture.detectChanges();
+    expect(button().disabled).toBeFalse();
+
+    discardPeriodicTasks();
+  }));
+
+  it('steppt ueber die Plus-Taste der Einkaufskarte', fakeAsync(() => {
+    const fixture = openedFixture();
+    const plus = dialog(fixture).querySelector('.lumina__supply-card .lumina__supply-step[aria-label="Mehr"]') as HTMLButtonElement;
+
+    plus.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.petSupplyPurchaseAmount).toBe(0.5);
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliesst den Dialog per Escape', fakeAsync(() => {
+    const fixture = openedFixture();
+
+    fixture.componentInstance.onEscape();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.petSupplyDialogKey).toBeNull();
+    expect(dialog(fixture)).toBeNull();
 
     discardPeriodicTasks();
   }));
