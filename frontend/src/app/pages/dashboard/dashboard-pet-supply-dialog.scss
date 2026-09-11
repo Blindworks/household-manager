@@ -1,1 +1,323 @@
-// Erfassungs-Dialog der Vorrats-Kacheln - Inhalt folgt.
+// Erfassungs-Dialog der Vorrats-Kacheln (Einkauf zubuchen / Bestand korrigieren).
+//
+// Eigene Datei, nicht dashboard.component.scss: das anyComponentStyle-Budget in
+// angular.json gilt PRO Datei, und die Hauptdatei steht kurz vor der Fehlergrenze.
+// Die Kapselung bleibt - beide Dateien gehoeren derselben Komponente (styleUrls),
+// die lumina-Klassen des Templates sind hier also erreichbar.
+//
+// Farbwelt ist die des HELLEN Dialogs (.lumina__dialog ist weiss). Die frueheren
+// Formularstyles trugen die Werte des dunklen Dashboards und waren darauf
+// praktisch unlesbar. Keine color-mix()-Aufrufe: der Android-WebView des
+// Wandtablets ist nicht garantiert aktuell, Toene stehen deshalb ausgeschrieben.
+
+$supply-ink: #0f172a;
+$supply-muted: #475569;
+$supply-panel: rgba(15, 23, 42, 0.04);
+$supply-line: rgba(15, 23, 42, 0.12);
+$supply-focus: rgba(15, 23, 42, 0.35);
+$supply-ok: #16a34a;
+$supply-ok-dark: #15803d;
+$supply-warn: #d97706;
+$supply-critical: #dc2626;
+$supply-font-display: 'Space Grotesk', 'Geist', sans-serif;
+
+.lumina__dialog--supply {
+  width: min(760px, 100%);
+}
+
+// ---- Kopf ------------------------------------------------------------------
+.lumina__supply-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.lumina__supply-heading-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: $supply-panel;
+  color: $supply-muted;
+  font-size: 26px;
+
+  &[data-tone='warn'] { color: $supply-warn; background: rgba(217, 119, 6, 0.1); }
+  &[data-tone='critical'] { color: $supply-critical; background: rgba(220, 38, 38, 0.08); }
+}
+
+.lumina__supply-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: $supply-muted;
+}
+
+// ---- Zusammenfassung -------------------------------------------------------
+.lumina__supply-summary {
+  padding: 16px 18px;
+  border-radius: 0.75rem;
+  background: $supply-panel;
+
+  &[data-tone='ok'] {
+    .lumina__supply-chip { background: rgba(22, 163, 74, 0.12); color: $supply-ok-dark; }
+    .lumina__supply-fill { background: $supply-ok; }
+  }
+  &[data-tone='warn'] {
+    .lumina__supply-chip { background: rgba(217, 119, 6, 0.12); color: #b45309; }
+    .lumina__supply-fill { background: $supply-warn; }
+  }
+  &[data-tone='critical'] {
+    .lumina__supply-chip { background: rgba(220, 38, 38, 0.1); color: #b91c1c; }
+    .lumina__supply-fill { background: $supply-critical; }
+  }
+}
+
+.lumina__supply-figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+
+.lumina__supply-amount {
+  font-family: $supply-font-display;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: $supply-ink;
+}
+
+.lumina__supply-target {
+  font-size: 1rem;
+  color: $supply-muted;
+}
+
+.lumina__supply-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lumina__supply-track {
+  margin-top: 12px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+}
+
+.lumina__supply-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+// ---- Rueckmeldung ----------------------------------------------------------
+.lumina__supply-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  .material-symbols-outlined { font-size: 20px; }
+
+  &--error { background: rgba(220, 38, 38, 0.08); color: #b91c1c; }
+  &--success { background: rgba(22, 163, 74, 0.1); color: $supply-ok-dark; }
+}
+
+// ---- Die zwei Karten -------------------------------------------------------
+.lumina__supply-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.lumina__supply-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid $supply-line;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.lumina__supply-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: $supply-ink;
+
+  .material-symbols-outlined { font-size: 22px; color: $supply-muted; }
+}
+
+// Stepper: 56-px-Tasten sind auf dem Wandtablet ohne Zielen treffbar.
+.lumina__supply-stepper {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  gap: 8px;
+  align-items: stretch;
+
+  input {
+    width: 100%;
+    min-width: 0;
+    height: 56px;
+    padding: 0 8px;
+    border: 1px solid $supply-line;
+    border-radius: 12px;
+    background: $supply-panel;
+    color: $supply-ink;
+    font-family: $supply-font-display;
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+
+    // Die Browser-Spinner sind winzig; der Stepper ersetzt sie.
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    &::placeholder { color: rgba(15, 23, 42, 0.3); }
+    &:focus { outline: 2px solid $supply-focus; outline-offset: 1px; }
+  }
+}
+
+.lumina__supply-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $supply-line;
+  border-radius: 12px;
+  background: #ffffff;
+  color: $supply-ink;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  .material-symbols-outlined { font-size: 26px; }
+
+  &:hover { background: $supply-panel; }
+  &:active { background: rgba(15, 23, 42, 0.1); }
+}
+
+.lumina__supply-unit {
+  margin-top: -6px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: $supply-muted;
+}
+
+.lumina__supply-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lumina__supply-preset {
+  padding: 8px 14px;
+  border: 1px solid $supply-line;
+  border-radius: 999px;
+  background: #ffffff;
+  color: $supply-ink;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:hover { background: $supply-panel; }
+
+  &--active {
+    border-color: $supply-ink;
+    background: $supply-ink;
+    color: #ffffff;
+  }
+}
+
+.lumina__supply-preview {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: $supply-muted;
+}
+
+.lumina__supply-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: $supply-muted;
+
+  input {
+    padding: 10px 12px;
+    border: 1px solid $supply-line;
+    border-radius: 10px;
+    background: #ffffff;
+    color: $supply-ink;
+    font: inherit;
+    font-size: 0.95rem;
+
+    &::placeholder { color: rgba(15, 23, 42, 0.35); }
+    &:focus { outline: 2px solid $supply-focus; outline-offset: 1px; }
+  }
+}
+
+.lumina__supply-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: auto;
+  min-height: 52px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+
+  .material-symbols-outlined { font-size: 22px; }
+
+  &:disabled { opacity: 0.45; cursor: default; }
+
+  &--purchase {
+    background: $supply-ok;
+    &:not(:disabled):hover { background: $supply-ok-dark; }
+  }
+
+  // Korrigieren ist weder destruktiv noch "positiv": neutral dunkel.
+  &--correction {
+    background: $supply-ink;
+    &:not(:disabled):hover { background: #1e293b; }
+  }
+}
+
+.lumina__supply-page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 0.85rem;
+  color: $supply-muted;
+  text-decoration: none;
+
+  .material-symbols-outlined { font-size: 18px; }
+
+  &:hover { color: $supply-ink; text-decoration: underline; }
+}

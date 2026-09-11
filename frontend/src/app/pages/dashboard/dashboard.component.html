@@ -971,21 +971,30 @@
     </div>
   </div>
 
-  <!-- Vorrats-Dialog (oeffnet sich beim Klick auf eine Vorrats-Kachel) -->
+  <!-- Vorrats-Dialog (oeffnet sich beim Klick auf eine Vorrats-Kachel).
+       Styles in dashboard-pet-supply-dialog.scss (zweite styleUrl der Komponente). -->
   <div
     *ngIf="petSupplyDialogSupply as supply"
     class="lumina__dialog-backdrop"
     (click)="closePetSupplyDialog()"
   >
     <div
-      class="lumina__dialog"
+      class="lumina__dialog lumina__dialog--supply"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="supply.name + ' erfassen'"
       (click)="$event.stopPropagation()"
     >
       <header class="lumina__dialog-head">
-        <h2 class="lumina__dialog-title">{{ supply.name }} erfassen</h2>
+        <div class="lumina__supply-heading">
+          <span class="lumina__supply-heading-icon material-symbols-outlined" [attr.data-tone]="petSupplyTone(supply)">
+            {{ petSupplyIcon(supply) }}
+          </span>
+          <div>
+            <h2 class="lumina__dialog-title">{{ supply.name }}</h2>
+            <p class="lumina__supply-subtitle">Vorrat erfassen</p>
+          </div>
+        </div>
         <button
           type="button"
           class="lumina__dialog-close"
@@ -995,46 +1004,100 @@
           <span class="material-symbols-outlined">close</span>
         </button>
       </header>
+
       <div class="lumina__dialog-body">
-        <div class="lumina__petfood-summary" [attr.data-tone]="petSupplyTone(supply)">
-          <p class="lumina__petfood-figures">
-            {{ supply.amountRemaining | number:'1.0-1':'de' }} von {{ supply.targetAmount | number:'1.0-1':'de' }} {{ supply.unit }}
-            • {{ supply.percent }} % • reicht ~{{ supply.daysRemaining }} Tage
-          </p>
-          <div class="lumina__petfood-track">
-            <div class="lumina__petfood-fill" [style.width.%]="supply.percent > 100 ? 100 : supply.percent"></div>
+        <section class="lumina__supply-summary" [attr.data-tone]="petSupplyTone(supply)">
+          <div class="lumina__supply-figures">
+            <span class="lumina__supply-amount">{{ supply.amountRemaining | number:'1.0-1':'de' }}</span>
+            <span class="lumina__supply-target">von {{ supply.targetAmount | number:'1.0-1':'de' }} {{ supply.unit }}</span>
+            <span class="lumina__supply-chip">{{ supply.percent }} %</span>
+            <span class="lumina__supply-chip">reicht ~{{ supply.daysRemaining }} Tage</span>
           </div>
-        </div>
+          <div class="lumina__supply-track">
+            <div class="lumina__supply-fill" [style.width.%]="petSupplyBarWidth(supply.percent)"></div>
+          </div>
+        </section>
 
-        <p *ngIf="petSupplyError" class="lumina__petfood-error">{{ petSupplyError }}</p>
+        <p *ngIf="petSupplyError" class="lumina__supply-feedback lumina__supply-feedback--error" role="alert">
+          <span class="material-symbols-outlined">error</span>{{ petSupplyError }}
+        </p>
+        <p *ngIf="petSupplySuccess" class="lumina__supply-feedback lumina__supply-feedback--success" role="status">
+          <span class="material-symbols-outlined">check_circle</span>{{ petSupplySuccess }}
+        </p>
 
-        <div class="lumina__petfood-forms">
-          <form class="lumina__petfood-form" (ngSubmit)="submitPetSupplyPurchase()">
-            <h3>Einkauf zubuchen</h3>
-            <label>{{ supply.unit }}
-              <input type="number" name="petSupplyPurchaseAmount" [(ngModel)]="petSupplyPurchaseAmount"
-                     [min]="supply.step" [step]="supply.step" required>
+        <div class="lumina__supply-forms">
+          <form class="lumina__supply-card" (ngSubmit)="submitPetSupplyPurchase()">
+            <h3 class="lumina__supply-card-title">
+              <span class="material-symbols-outlined">add_shopping_cart</span>Einkauf zubuchen
+            </h3>
+            <div class="lumina__supply-stepper">
+              <button type="button" class="lumina__supply-step" (click)="stepPetSupplyPurchase(-1)" aria-label="Weniger">
+                <span class="material-symbols-outlined">remove</span>
+              </button>
+              <input type="number" inputmode="decimal" name="petSupplyPurchaseAmount"
+                     [(ngModel)]="petSupplyPurchaseAmount" [min]="supply.step" [step]="supply.step"
+                     placeholder="0" [attr.aria-label]="'Einkauf in ' + supply.unit" required>
+              <button type="button" class="lumina__supply-step" (click)="stepPetSupplyPurchase(1)" aria-label="Mehr">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+            </div>
+            <span class="lumina__supply-unit">{{ supply.unit }}</span>
+            <div class="lumina__supply-presets">
+              <button
+                type="button"
+                class="lumina__supply-preset"
+                *ngFor="let preset of petSupplyPurchasePresets"
+                [class.lumina__supply-preset--active]="petSupplyPurchaseAmount === preset.amount"
+                (click)="applyPetSupplyPreset(preset.amount)"
+              ><ng-container *ngIf="preset.refill">Auffüllen · </ng-container>+{{ preset.amount | number:'1.0-1':'de' }}</button>
+            </div>
+            <label class="lumina__supply-note">Notiz (optional)
+              <input type="text" name="petSupplyPurchaseNote" [(ngModel)]="petSupplyPurchaseNote"
+                     maxlength="255" placeholder="z. B. Fressnapf">
             </label>
-            <label>Notiz (optional)
-              <input type="text" name="petSupplyPurchaseNote" [(ngModel)]="petSupplyPurchaseNote" maxlength="255">
-            </label>
-            <button type="submit" [disabled]="petSupplySaving || !petSupplyPurchaseAmount">Zubuchen</button>
+            <button type="submit" class="lumina__supply-submit lumina__supply-submit--purchase"
+                    [disabled]="petSupplySaving || !petSupplyPurchaseAmount">
+              <span class="material-symbols-outlined">add_shopping_cart</span>Zubuchen
+            </button>
           </form>
 
-          <form class="lumina__petfood-form" (ngSubmit)="submitPetSupplyCorrection()">
-            <h3>Bestand korrigieren</h3>
-            <label>Gezählter Bestand
-              <input type="number" name="petSupplyCorrectionAmount" [(ngModel)]="petSupplyCorrectionAmount"
-                     min="0" [step]="supply.step" required>
+          <form class="lumina__supply-card" (ngSubmit)="submitPetSupplyCorrection()">
+            <h3 class="lumina__supply-card-title">
+              <span class="material-symbols-outlined">inventory_2</span>Bestand korrigieren
+            </h3>
+            <div class="lumina__supply-stepper">
+              <button type="button" class="lumina__supply-step" (click)="stepPetSupplyCorrection(-1)" aria-label="Weniger">
+                <span class="material-symbols-outlined">remove</span>
+              </button>
+              <input type="number" inputmode="decimal" name="petSupplyCorrectionAmount"
+                     [(ngModel)]="petSupplyCorrectionAmount" min="0" [step]="supply.step"
+                     [attr.aria-label]="'Gezählter Bestand in ' + supply.unit" required>
+              <button type="button" class="lumina__supply-step" (click)="stepPetSupplyCorrection(1)" aria-label="Mehr">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+            </div>
+            <span class="lumina__supply-unit">{{ supply.unit }} gezählt</span>
+            <p class="lumina__supply-preview">{{ petSupplyCorrectionPreview(supply) }}</p>
+            <label class="lumina__supply-note">Notiz (optional)
+              <input type="text" name="petSupplyCorrectionNote" [(ngModel)]="petSupplyCorrectionNote"
+                     maxlength="255" placeholder="z. B. nachgezählt">
             </label>
-            <label>Notiz (optional)
-              <input type="text" name="petSupplyCorrectionNote" [(ngModel)]="petSupplyCorrectionNote" maxlength="255">
-            </label>
-            <button type="submit" [disabled]="petSupplySaving || petSupplyCorrectionAmount == null">Korrigieren</button>
+            <button type="submit" class="lumina__supply-submit lumina__supply-submit--correction"
+                    [disabled]="petSupplySaving || petSupplyCorrectionAmount == null">
+              <span class="material-symbols-outlined">inventory_2</span>Korrigieren
+            </button>
           </form>
         </div>
 
-        <a class="lumina__petfood-page-link" routerLink="/pet-food" (click)="closePetSupplyDialog()">
+        <!-- /pet-food hat keinen Zurueck-Knopf: im Tablet-Modus (ohne Header-Navigation)
+             waere das Wandtablet dort gefangen. -->
+        <a
+          *ngIf="!viewMode.isTabletView()"
+          class="lumina__supply-page-link"
+          routerLink="/pet-food"
+          (click)="closePetSupplyDialog()"
+        >
+          <span class="material-symbols-outlined">history</span>
           Historie und Zielbestand auf der Vorrats-Seite
         </a>
       </div>
