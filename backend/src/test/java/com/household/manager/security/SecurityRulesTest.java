@@ -339,19 +339,30 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
-    void kioskDarfKeinenEinkaufBuchen() throws Exception {
+    void kioskDarfEinkaufBuchen() throws Exception {
+        // Der Erfassungs-Dialog der Dashboard-Kachel laeuft auch auf dem Wandtablet.
         mockMvc.perform(post("/v1/pet-supplies/toni_cans/purchases").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\": 24}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(roles = "KIOSK")
-    void kioskDarfKeineBestandskorrekturBuchen() throws Exception {
+    void kioskDarfBestandKorrigieren() throws Exception {
         mockMvc.perform(post("/v1/pet-supplies/toni_vomisan/corrections").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amountRemaining\": 10}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfZielbestandNichtAendern() throws Exception {
+        // Nur die zwei Dialog-Aktionen sind KIOSK; der Zielbestand bleibt MEMBER.
+        mockMvc.perform(put("/v1/pet-supplies/toni_cans/target").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetAmount\": 60}"))
                 .andExpect(status().isForbidden());
     }
 

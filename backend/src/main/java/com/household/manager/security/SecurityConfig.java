@@ -202,13 +202,18 @@ public class SecurityConfig {
                         // KIOSK (Nutzerentscheidung, Spec blink-bewegung-und-tablet-
                         // schalten): der Schutz gegen Versehen ist der Bestaetigungs-
                         // dialog der Tablet-Ansicht, nicht mehr der Server.
+                        // /v1/pet-supplies/*/purchases und /*/corrections: der Erfassungs-
+                        // Dialog der Vorrats-Kachel laeuft auf dem Wandtablet; ohne KIOSK
+                        // oeffnet er sich dort, das Speichern liefert aber 403. Der Ziel-
+                        // bestand (PUT /target) bleibt bewusst MEMBER.
                         .requestMatchers(HttpMethod.POST, "/v1/switches/*/toggle",
                                 "/v1/modes/*/toggle", "/v1/nuki/locks/*/actions",
                                 "/v1/auth/password", "/v1/tractive/pets/refresh",
                                 "/v1/system/reboot", "/v1/network/speedtest",
                                 "/v1/blink/cameras/*/snapshot",
                                 "/v1/blink/cameras/*/arm", "/v1/blink/cameras/*/disarm",
-                                "/v1/blink/system/*/arm", "/v1/blink/system/*/disarm")
+                                "/v1/blink/system/*/arm", "/v1/blink/system/*/disarm",
+                                "/v1/pet-supplies/*/purchases", "/v1/pet-supplies/*/corrections")
                         .hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
