@@ -153,8 +153,11 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
-    ports:
-      - "1883:1883"
+    # Kein Host-Port-Mapping: Der Container-Broker ist derzeit ungenutzt (das
+    # Backend spricht den HA-Mosquitto auf 192.168.1.150). Ein 1883:1883-Mapping
+    # kollidierte nach einem harten Neustart mit einer stale Docker-Port-
+    # Allokation ("port is already allocated"). Intern bleibt der Broker im
+    # app_net erreichbar; fuers kuenftige "HA abloesen"-Szenario wieder ergaenzen.
     networks:
       - app_net
 
