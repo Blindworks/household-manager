@@ -87,7 +87,7 @@
 
   <!-- Normal: nach Geraetetyp gruppiert -->
   <ng-template #groupedView>
-    <section class="device-section" *ngFor="let group of groupedDevices">
+    <section class="device-section" *ngFor="let group of groupedDevices; trackBy: trackByGroupType">
       <div class="device-section__header">
         <h2 class="device-section__title">{{ group.label }}</h2>
         <span class="device-section__count">{{ group.devices.length }}</span>

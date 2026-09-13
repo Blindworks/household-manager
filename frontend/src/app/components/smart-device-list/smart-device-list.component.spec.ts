@@ -266,6 +266,30 @@ describe('SmartDeviceListComponent', () => {
     expect(serviceSpy.getAllDevices).toHaveBeenCalledTimes(2);
   });
 
+  it('behaelt das IP-Eingabefeld beim Tippen als dasselbe DOM-Element (Fokus geht nicht verloren)', () => {
+    // Regression: der Getter groupedDevices liefert bei jeder Change Detection neue Gruppen-
+    // Objekte. Ohne trackBy am Gruppen-ngFor baute Angular die <section> samt Eingabefeld bei
+    // jedem Tastendruck neu auf - das Feld verlor nach jeder Ziffer den Fokus.
+    const fixture = TestBed.createComponent(SmartDeviceListComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.toggleAddressForm(device);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const inputBefore = host.querySelector<HTMLInputElement>('.address-form__input');
+    expect(inputBefore).not.toBeNull();
+    inputBefore!.focus();
+
+    inputBefore!.value = '192.168.1.1';
+    inputBefore!.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const inputAfter = host.querySelector<HTMLInputElement>('.address-form__input');
+    expect(inputAfter).toBe(inputBefore);
+    expect(document.activeElement).toBe(inputBefore);
+  });
+
   it('lehnt eine ungueltige IP im Adressformular ab, ohne den Service aufzurufen', () => {
     const fixture = TestBed.createComponent(SmartDeviceListComponent);
     fixture.detectChanges();

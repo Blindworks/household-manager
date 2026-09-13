@@ -600,6 +600,15 @@ export class SmartDeviceListComponent implements OnInit, OnDestroy {
     return device.isPoweredOn ? 'device-card__status--on' : 'device-card__status--standby';
   }
 
+  /**
+   * groupedDevices ist ein Getter und liefert bei jeder Change Detection neue Gruppen-Objekte.
+   * Ohne trackBy hielte ngFor jede Gruppe fuer neu und baute die <section> samt der darin
+   * liegenden Formulare bei jedem Tastendruck neu auf - das IP-Feld verlor so den Fokus.
+   */
+  trackByGroupType(_: number, group: { type: SmartDevice['deviceType'] }): string {
+    return group.type;
+  }
+
   trackByDeviceId(_: number, device: SmartDevice): number {
     return device.id;
   }
