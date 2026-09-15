@@ -1,11 +1,15 @@
 package com.household.manager.mode;
 
 import com.household.manager.audit.AuditService;
-import com.household.manager.dto.ModeResponse;
-import com.household.manager.entitystate.HouseModeQueryService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.exception.DuplicateEntityException;
 import com.household.manager.exception.ResourceNotFoundException;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.ModeQuickAccess;
+import com.household.manager.repository.EntityStateRepository;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,11 +33,12 @@ import static org.mockito.Mockito.when;
 class ModeQuickAccessServiceTest {
 
     private static final String NACHTMODUS = "input_boolean.manual_nachtmodus";
+    private static final String KAMIN = "input_boolean.manual_kamin";
 
     @Mock
     private ModeQuickAccessRepository repository;
     @Mock
-    private HouseModeQueryService houseModeQueryService;
+    private EntityStateRepository entityStateRepository;
     @Mock
     private AuditService auditService;
 
@@ -41,10 +46,25 @@ class ModeQuickAccessServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ModeQuickAccessService(repository, houseModeQueryService, auditService);
-        lenient().when(houseModeQueryService.listModes()).thenReturn(List.of(
-                ModeResponse.builder().entityId(NACHTMODUS).displayName("Nachtmodus")
-                        .icon("nights_stay").state("off").quickAccess(false).build()));
+        service = new ModeQuickAccessService(repository, entityStateRepository,
+                new EntityStateResponseMapper(new ObjectMapper()), auditService);
+        // Ein Haus-Modus und ein gewoehnlicher Helfer ohne Modus-Marker.
+        lenient().when(entityStateRepository.findByDomainAndSourceOrderByEntityIdAsc(
+                EntityDomain.INPUT_BOOLEAN, EntitySource.MANUAL)).thenReturn(List.of(
+                helper(KAMIN, "Kamin", "{\"icon\":\"fireplace\"}"),
+                helper(NACHTMODUS, "Nachtmodus", "{\"icon\":\"nights_stay\",\"mode\":true}")));
+    }
+
+    private static EntityState helper(String entityId, String name, String attributes) {
+        return EntityState.builder()
+                .entityId(entityId)
+                .domain(EntityDomain.INPUT_BOOLEAN)
+                .source(EntitySource.MANUAL)
+                .sourceRef(entityId.substring("input_boolean.manual_".length()))
+                .friendlyName(name)
+                .state("off")
+                .attributes(attributes)
+                .build();
     }
 
     private ModeQuickAccessDtos.Request request(String entityId, String from, String to) {
@@ -68,12 +88,27 @@ class ModeQuickAccessServiceTest {
         verify(auditService).record("mode.quick-access.create", "Nachtmodus 20:00-06:00");
     }
 
-    /** Das Dropdown der Admin-Seite kennt nur echte Modi; ueber die API kaeme sonst Unsinn durch. */
+    /**
+     * Seit 2026-09-15 darf jeder Helfer vom Typ INPUT_BOOLEAN ein Fenster bekommen, nicht nur
+     * ein Haus-Modus — die Flexibilitaet war ausdruecklich gewuenscht.
+     */
     @Test
-    void lehntEineEntityAbDieKeinHausModusIst() {
+    void akzeptiertEinenGewoehnlichenHelferOhneModusMarker() {
+        when(repository.findByEntityId(KAMIN)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ModeQuickAccessDtos.Response response = service.create(request(KAMIN, "17:00", "22:00"));
+
+        assertThat(response.displayName()).isEqualTo("Kamin");
+        verify(auditService).record("mode.quick-access.create", "Kamin 17:00-22:00");
+    }
+
+    /** Das Dropdown der Admin-Seite kennt nur Helfer; ueber die API kaeme sonst Unsinn durch. */
+    @Test
+    void lehntEineEntityAbDieKeinHelferIst() {
         assertThatThrownBy(() -> service.create(request("switch.meross_kaffeemaschine", "20:00", "06:00")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("kein Haus-Modus");
+                .hasMessageContaining("kein Helfer");
         verify(repository, never()).save(any());
     }
 
@@ -90,10 +125,10 @@ class ModeQuickAccessServiceTest {
     }
 
     @Test
-    void lehntEinenFehlendenModusAb() {
+    void lehntEinenFehlendenHelferAb() {
         assertThatThrownBy(() -> service.create(request(null, "20:00", "06:00")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Modus");
+                .hasMessageContaining("Helfer");
     }
 
     @Test
@@ -166,11 +201,11 @@ class ModeQuickAccessServiceTest {
     }
 
     /**
-     * Ein Fenster fuer einen Modus, den es nicht mehr gibt, bleibt in der Liste sichtbar —
+     * Ein Fenster fuer einen Helfer, den es nicht mehr gibt, bleibt in der Liste sichtbar —
      * ohne Anzeigenamen. Wuerde es weggefiltert, waere es nicht mehr loeschbar.
      */
     @Test
-    void listetEinFensterOhneZugehoerigenModusOhneAnzeigenamen() {
+    void listetEinFensterOhneZugehoerigenHelferOhneAnzeigenamen() {
         ModeQuickAccess verwaist = ModeQuickAccess.builder().id(8L).entityId("input_boolean.manual_weg")
                 .fromTime(LocalTime.of(1, 0)).toTime(LocalTime.of(2, 0)).active(true).build();
         when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(verwaist));

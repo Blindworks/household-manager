@@ -3,9 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ModeQuickAccessService } from '../../services/mode-quick-access.service';
-import { ModeService } from '../../services/mode.service';
+import { EntityStateService } from '../../services/entity-state.service';
 import { ModeQuickAccess, ModeQuickAccessRequest } from '../../models/mode-quick-access.model';
-import { ModeEntity } from '../../models/mode.model';
+import { MANUAL_SOURCE } from '../../models/entity-state.model';
+
+/** Eintrag des Helfer-Dropdowns. */
+export interface HelperOption {
+  entityId: string;
+  displayName: string;
+}
 
 /** Zustand des Anlege-/Bearbeiten-Formulars. */
 interface WindowFormState {
@@ -22,9 +28,9 @@ function emptyForm(): WindowFormState {
 }
 
 /**
- * Admin-Seite „Modus-Schnellzugriff": pflegt die Zeitfenster, in denen ein Haus-Modus im
- * Tablet-Dashboard direkt als Knopf steht. Muster und Interaktionsform an der Admin-Seite
- * „Netzwerk-Geräte" ausgerichtet.
+ * Admin-Seite „Modus-Schnellzugriff": pflegt die Zeitfenster, in denen ein Helfer (Haus-Modus
+ * oder gewoehnlicher INPUT_BOOLEAN-Helfer) im Tablet-Dashboard direkt als Knopf steht.
+ * Muster und Interaktionsform an der Admin-Seite „Netzwerk-Geräte" ausgerichtet.
  */
 @Component({
   selector: 'app-admin-mode-quick-access',
@@ -35,11 +41,11 @@ function emptyForm(): WindowFormState {
 })
 export class AdminModeQuickAccessComponent implements OnInit {
   private readonly api = inject(ModeQuickAccessService);
-  private readonly modeApi = inject(ModeService);
+  private readonly entityApi = inject(EntityStateService);
 
   readonly windows = signal<ModeQuickAccess[]>([]);
-  /** Auswahl des Dropdowns; leer, wenn die Modi nicht geladen werden konnten. */
-  readonly modes = signal<ModeEntity[]>([]);
+  /** Auswahl des Dropdowns; leer, wenn die Helfer nicht geladen werden konnten. */
+  readonly helpers = signal<HelperOption[]>([]);
   /** Nur der erste Abruf blendet die Tabelle aus; spaetere lassen sie stehen. */
   readonly loading = signal(true);
   /** Bei fehlgeschlagenem Laden bleibt die Tabelle verborgen — eine leere Liste loege. */
@@ -51,7 +57,7 @@ export class AdminModeQuickAccessComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.loadModes();
+    this.loadHelpers();
   }
 
   /** Laedt die Fensterliste neu. `afterLoad` laeuft auch im Fehlerfall. */
@@ -73,13 +79,14 @@ export class AdminModeQuickAccessComponent implements OnInit {
   }
 
   /**
-   * Laedt die Haus-Modi fuer das Dropdown. Ein Fehlschlag blockiert die Pflege nicht:
-   * die Liste bleibt sichtbar, nur die Auswahl ist leer.
+   * Laedt alle Helfer vom Typ INPUT_BOOLEAN (Modi eingeschlossen) fuer das Dropdown. Ein
+   * Fehlschlag blockiert die Pflege nicht: die Liste bleibt sichtbar, nur die Auswahl ist leer.
    */
-  private loadModes(): void {
-    this.modeApi.getModes().subscribe({
-      next: modes => this.modes.set(modes),
-      error: () => this.modes.set([])
+  private loadHelpers(): void {
+    this.entityApi.getEntities('INPUT_BOOLEAN', MANUAL_SOURCE).subscribe({
+      next: entities => this.helpers.set(
+        entities.map(entity => ({ entityId: entity.entityId, displayName: entity.displayName }))),
+      error: () => this.helpers.set([])
     });
   }
 
@@ -87,7 +94,7 @@ export class AdminModeQuickAccessComponent implements OnInit {
     return this.form.id !== null;
   }
 
-  /** Anzeigename eines Fensters; ohne zugehoerigen Modus die rohe Entity-ID. */
+  /** Anzeigename eines Fensters; ohne zugehoerigen Helfer die rohe Entity-ID. */
   label(window: ModeQuickAccess): string {
     return window.displayName ?? window.entityId;
   }
@@ -115,7 +122,7 @@ export class AdminModeQuickAccessComponent implements OnInit {
 
   save(): void {
     if (!this.form.entityId) {
-      this.errorMessage.set('Es ist kein Modus ausgewählt.');
+      this.errorMessage.set('Es ist kein Helfer ausgewählt.');
       return;
     }
     if (!this.form.fromTime || !this.form.toTime) {
@@ -138,9 +145,8 @@ export class AdminModeQuickAccessComponent implements OnInit {
     const call = id === null ? this.api.create(request) : this.api.update(id, request);
     call.subscribe({
       next: () => {
-        // Der Modus-Katalog ist backend-seitig statisch (HouseModes.CATALOG) und dient hier
-        // nur dem Dropdown — ein neues/geaendertes Fenster aendert daran nichts. `quickAccess`
-        // wird auf dieser Seite nirgends angezeigt, ein Nachladen der Modi waere wirkungslos.
+        // Die Helfer-Liste dient hier nur dem Dropdown — ein neues/geaendertes Fenster
+        // aendert daran nichts, ein Nachladen waere ein Request ohne Wirkung.
         this.load(() => {
           this.saving.set(false);
           this.resetForm();

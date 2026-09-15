@@ -851,8 +851,8 @@ class SecurityRulesTest {
 
     /**
      * Die Zeitfenster der Modus-Schnellzugriffe sind ADMIN-only, auch lesend: das Wandtablet
-     * braucht die Konfiguration nie — es bekommt das fertige quickAccess-Flag ueber
-     * GET /v1/modes. Der Matcher steht deshalb VOR der generischen Regel GET /v1/** -> KIOSK;
+     * braucht die Konfiguration nie — es bekommt die faelligen Helfer fertig ueber
+     * GET /v1/mode-quick-access/due (eigener KIOSK-Matcher davor). Der Matcher steht deshalb VOR der generischen Regel GET /v1/** -> KIOSK;
      * genau das belegen diese Tests. KIOSK und MEMBER muessen es je aus eigenem Test belegen,
      * sonst faellt ein zu laxer Matcher fuer die jeweils andere Rolle niemandem auf.
      */
@@ -909,10 +909,29 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
     }
 
-    /** Das Flag selbst haengt an GET /v1/modes und bleibt fuer das Wandtablet lesbar. */
+    /** Die Modus-Liste bleibt fuer das Wandtablet lesbar. */
     @Test
     @WithMockUser(roles = "KIOSK")
     void kioskDarfDieModiWeiterhinLesen() throws Exception {
         mockMvc.perform(get("/v1/modes")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * Die faelligen Schnellzugriffe holt das Wandtablet ueber /due. Der Matcher steht VOR dem
+     * ADMIN-Matcher auf /v1/mode-quick-access/** — rutscht er dahinter, ist der Knopf am
+     * Tablet tot (403). Kein Controller im Slice: 404 belegt, dass die Regel durchlaesst.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieFaelligenSchnellzugriffeLesen() throws Exception {
+        mockMvc.perform(get("/v1/mode-quick-access/due")).andExpect(status().isNotFound());
+    }
+
+    /** Die Freigabe von /due darf die Konfiguration nicht mit oeffnen. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfTrotzDueDieZeitfensterNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/mode-quick-access")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/v1/mode-quick-access/1")).andExpect(status().isForbidden());
     }
 }

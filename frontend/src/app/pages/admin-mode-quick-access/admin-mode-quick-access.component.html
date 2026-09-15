@@ -2,8 +2,10 @@
   <h1>Modus-Schnellzugriff</h1>
 
   <p class="admin-mode-quick-access__hint">
-    Ein Modus mit Zeitfenster steht im Tablet-Dashboard während dieser Zeit direkt als Knopf
-    neben der eingeklappten Modus-Leiste — und verschwindet, sobald er eingeschaltet ist.
+    Ein Helfer mit Zeitfenster — ein Haus-Modus oder ein gewöhnlicher Ein/Aus-Helfer — steht
+    im Tablet-Dashboard während dieser Zeit direkt als Knopf neben der eingeklappten
+    Modus-Leiste; eingeschaltet bleibt er hervorgehoben stehen und lässt sich dort wieder
+    ausschalten.
     Liegt das Ende vor dem Beginn, überspannt das Fenster Mitternacht (20:00–06:00).
     Der Beginn zählt mit, das Ende nicht. Ein deaktiviertes Fenster wirkt nicht, bleibt aber
     angelegt. Ein Wechsel wird am Tablet innerhalb von 30 Sekunden sichtbar.
@@ -20,11 +22,11 @@
 
     <div class="admin-mode-quick-access__fields">
       <label class="admin-mode-quick-access__field">
-        <span>Modus</span>
+        <span>Helfer</span>
         <select name="entityId" [(ngModel)]="form.entityId">
           <option value="">— bitte wählen —</option>
-          @for (mode of modes(); track mode.entityId) {
-            <option [value]="mode.entityId">{{ mode.displayName }}</option>
+          @for (helper of helpers(); track helper.entityId) {
+            <option [value]="helper.entityId">{{ helper.displayName }}</option>
           }
         </select>
       </label>
@@ -66,7 +68,7 @@
     <table class="admin-mode-quick-access__table">
       <thead>
         <tr>
-          <th scope="col">Modus</th>
+          <th scope="col">Helfer</th>
           <th scope="col">Von</th>
           <th scope="col">Bis</th>
           <th scope="col">Aktiv</th>

@@ -3,26 +3,31 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AdminModeQuickAccessComponent } from './admin-mode-quick-access.component';
 import { ModeQuickAccess } from '../../models/mode-quick-access.model';
-import { ModeEntity } from '../../models/mode.model';
+import { EntityState } from '../../models/entity-state.model';
 
 const WINDOWS_URL = '/api/v1/mode-quick-access';
-const MODES_URL = '/api/v1/modes';
+/** Das Dropdown laedt alle Helfer vom Typ INPUT_BOOLEAN — die Query-Parameter sind Teil des Vertrags. */
+const HELPERS_URL = '/api/v1/entities?domain=INPUT_BOOLEAN&source=MANUAL';
 
-const NACHTMODUS: ModeEntity = {
-  entityId: 'input_boolean.manual_nachtmodus',
-  displayName: 'Nachtmodus',
-  icon: 'nights_stay',
-  state: 'off',
-  quickAccess: false
-};
+function helper(ref: string, displayName: string, attributes: Record<string, unknown>): EntityState {
+  return {
+    entityId: `input_boolean.manual_${ref}`,
+    domain: 'INPUT_BOOLEAN',
+    source: 'MANUAL',
+    sourceRef: ref,
+    friendlyName: displayName,
+    displayName,
+    state: 'off',
+    attributes,
+    lastChanged: '2026-09-15T06:00:00',
+    lastUpdated: '2026-09-15T06:00:00'
+  };
+}
 
-const ABWESEND: ModeEntity = {
-  entityId: 'input_boolean.manual_abwesend',
-  displayName: 'Abwesend',
-  icon: 'exit_to_app',
-  state: 'off',
-  quickAccess: false
-};
+const NACHTMODUS = helper('nachtmodus', 'Nachtmodus', { icon: 'nights_stay', mode: true });
+const ABWESEND = helper('abwesend', 'Abwesend', { icon: 'exit_to_app', mode: true });
+/** Ein gewoehnlicher Helfer ohne Modus-Marker — seit 2026-09-15 ebenfalls waehlbar. */
+const KAMIN = helper('kamin', 'Kamin', { icon: 'fireplace' });
 
 const NACHT_FENSTER: ModeQuickAccess = {
   id: 1,
@@ -55,10 +60,11 @@ describe('AdminModeQuickAccessComponent', () => {
    * innerhalb eines `<form>` registriert NgForm jedes NgModel erst in einem Microtask —
    * vorher veraendert ein `input`-Ereignis aus dem Test das Formular nicht.
    */
-  async function loadWith(windows: ModeQuickAccess[], modes: ModeEntity[] = [NACHTMODUS, ABWESEND]) {
+  async function loadWith(windows: ModeQuickAccess[],
+                          helpers: EntityState[] = [NACHTMODUS, ABWESEND, KAMIN]) {
     fixture.detectChanges();
     httpMock.expectOne(WINDOWS_URL).flush(windows);
-    httpMock.expectOne(MODES_URL).flush(modes);
+    httpMock.expectOne(HELPERS_URL).flush(helpers);
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -82,13 +88,14 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(el.textContent).toContain('06:00');
   });
 
-  it('bietet die Haus-Modi zur Auswahl an', async () => {
+  it('bietet alle Helfer zur Auswahl an, Modi wie gewoehnliche Helfer', async () => {
     await loadWith([]);
 
     const options = Array.from(el.querySelectorAll('[name="entityId"] option'))
       .map(option => option.textContent?.trim());
     expect(options).toContain('Nachtmodus');
     expect(options).toContain('Abwesend');
+    expect(options).toContain('Kamin');
   });
 
   it('legt ein Zeitfenster mit den Formularwerten an', async () => {
@@ -112,7 +119,7 @@ describe('AdminModeQuickAccessComponent', () => {
     httpMock.expectOne(WINDOWS_URL).flush([NACHT_FENSTER]);
   });
 
-  it('lehnt ein Speichern ohne Modus ohne Anfrage ab', async () => {
+  it('lehnt ein Speichern ohne Helfer ohne Anfrage ab', async () => {
     await loadWith([]);
 
     setInput('fromTime', '20:00');
@@ -122,7 +129,7 @@ describe('AdminModeQuickAccessComponent', () => {
 
     httpMock.expectNone(WINDOWS_URL);
     expect(el.querySelector('.admin-mode-quick-access__error')?.textContent)
-      .toContain('Es ist kein Modus ausgewählt.');
+      .toContain('Es ist kein Helfer ausgewählt.');
   });
 
   it('lehnt gleichen Beginn und gleiches Ende ohne Anfrage ab', async () => {
@@ -178,7 +185,7 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(rows().some(row => row.textContent?.includes('Nachtmodus'))).toBeFalse();
   });
 
-  /** Ein Fenster ohne zugehoerigen Modus bleibt sichtbar — sonst waere es nicht loeschbar. */
+  /** Ein Fenster ohne zugehoerigen Helfer bleibt sichtbar — sonst waere es nicht loeschbar. */
   it('zeigt ein verwaistes Fenster mit seiner rohen Entity-ID', async () => {
     await loadWith([{ ...NACHT_FENSTER, id: 5, entityId: 'input_boolean.manual_weg', displayName: null }]);
 
@@ -194,7 +201,7 @@ describe('AdminModeQuickAccessComponent', () => {
     (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
 
     httpMock.expectOne(WINDOWS_URL).flush(
-      { message: 'Fuer diesen Modus gibt es bereits ein Zeitfenster.' },
+      { message: 'Fuer diesen Helfer gibt es bereits ein Zeitfenster.' },
       { status: 409, statusText: 'Conflict' });
     fixture.detectChanges();
 
@@ -203,14 +210,14 @@ describe('AdminModeQuickAccessComponent', () => {
   });
 
   /**
-   * loadModes() faengt einen Fehlschlag ab und setzt nur eine leere Liste (kein errorMessage,
-   * kein loadFailed) — die Fensterpflege soll trotz kaputtem Modus-Katalog bedienbar bleiben.
+   * loadHelpers() faengt einen Fehlschlag ab und setzt nur eine leere Liste (kein errorMessage,
+   * kein loadFailed) — die Fensterpflege soll trotz kaputter Helfer-Liste bedienbar bleiben.
    */
-  it('laesst die Fensterpflege nutzbar, wenn nur die Modus-Liste nicht geladen werden kann', () => {
+  it('laesst die Fensterpflege nutzbar, wenn nur die Helfer-Liste nicht geladen werden kann', () => {
     fixture.detectChanges();
     httpMock.expectOne(WINDOWS_URL).flush([NACHT_FENSTER]);
-    httpMock.expectOne(MODES_URL)
-      .flush({ message: 'Modus-Katalog nicht erreichbar.' }, { status: 500, statusText: 'Error' });
+    httpMock.expectOne(HELPERS_URL)
+      .flush({ message: 'Helfer nicht erreichbar.' }, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
     // Die Tabelle ist da und zeigt das geladene Fenster.
@@ -218,7 +225,7 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(rows().length).toBe(1);
     expect(el.textContent).toContain('Nachtmodus');
 
-    // Das Dropdown hat ausser der Platzhalter-Option keine Modus-Optionen.
+    // Das Dropdown hat ausser der Platzhalter-Option keine Helfer-Optionen.
     const options = Array.from(el.querySelectorAll('[name="entityId"] option'));
     expect(options.length).toBe(1);
     expect(options[0].textContent?.trim()).toBe('— bitte wählen —');
@@ -231,7 +238,7 @@ describe('AdminModeQuickAccessComponent', () => {
     fixture.detectChanges();
     httpMock.expectOne(WINDOWS_URL)
       .flush({ message: 'Datenbank nicht erreichbar.' }, { status: 500, statusText: 'Error' });
-    httpMock.expectOne(MODES_URL).flush([NACHTMODUS]);
+    httpMock.expectOne(HELPERS_URL).flush([NACHTMODUS]);
     fixture.detectChanges();
 
     expect(el.querySelector('.admin-mode-quick-access__error')?.textContent)

@@ -146,15 +146,19 @@ public class SecurityConfig {
                         // Admin-Bereiche (inkl. bestehender /v1/admin/*-Polling-Controller)
                         // /v1/tractive/home-settings MUSS vor der generischen GET-Regel weiter
                         // unten stehen, sonst duerfte das Kiosk-Tablet die Home-Definition lesen.
+                        // Faellige Schnellzugriffe fuer das Wandtablet: MUSS vor dem ADMIN-Matcher
+                        // auf /v1/mode-quick-access/** stehen, sonst waere der Knopf am Tablet tot.
+                        .requestMatchers(HttpMethod.GET, "/v1/mode-quick-access/due").hasRole("KIOSK")
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
                                 "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout",
                                 "/v1/tractive/home-settings", "/v1/presence/settings",
                                 // Gasfaktor: liegt unter /v1/utility-prices/**, dessen GET weiter unten
                                 // KIOSK ist — muss deshalb hier vor dieser Regel stehen.
                                 "/v1/utility-prices/settings",
-                                // Zeitfenster der Modus-Schnellzugriffe: auch LESEN ist ADMIN.
-                                // Das Wandtablet braucht die Konfiguration nie, es bekommt das
-                                // fertige quickAccess-Flag ueber GET /v1/modes. Die Position vor
+                                // Zeitfenster der Schnellzugriffe: auch LESEN ist ADMIN.
+                                // Das Wandtablet braucht die Konfiguration nie, es bekommt die
+                                // faelligen Helfer fertig ueber GET /v1/mode-quick-access/due,
+                                // das direkt davor als KIOSK freigegeben ist. Die Position vor
                                 // der generischen GET-Regel weiter unten ist deshalb tragend.
                                 // Beide Formen, damit auch der Pfad ohne Unterpfad sicher trifft.
                                 "/v1/mode-quick-access", "/v1/mode-quick-access/**").hasRole("ADMIN")

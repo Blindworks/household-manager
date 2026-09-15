@@ -14,6 +14,7 @@ import { AnkerSolixService } from '../../services/ankersolix.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { ModeService } from '../../services/mode.service';
+import { ModeQuickAccessService } from '../../services/mode-quick-access.service';
 import { SystemService } from '../../services/system.service';
 import { NukiService } from '../../services/nuki.service';
 import { SwitchEntity } from '../../models/switch.model';
@@ -677,7 +678,6 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     displayName: 'Nachtmodus',
     icon: 'nights_stay',
     state: 'off',
-    quickAccess: false,
     ...overrides
   });
 
@@ -1791,7 +1791,6 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
     displayName: 'Toni allein',
     icon: 'pets',
     state: 'off',
-    quickAccess: false,
     ...overrides
   });
 
@@ -1800,7 +1799,6 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
     displayName: 'Nachtmodus',
     icon: 'nights_stay',
     state: 'off',
-    quickAccess: false,
     ...overrides
   });
 
@@ -2450,13 +2448,22 @@ describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
  */
 describe('DashboardComponent (Modus-Schnellzugriff)', () => {
   let modeServiceSpy: jasmine.SpyObj<ModeService>;
+  let quickAccessSpy: jasmine.SpyObj<ModeQuickAccessService>;
 
   const nachtmodus = (overrides: Partial<ModeEntity> = {}): ModeEntity => ({
     entityId: 'input_boolean.manual_nachtmodus',
     displayName: 'Nachtmodus',
     icon: 'nights_stay',
     state: 'off',
-    quickAccess: true,
+    ...overrides
+  });
+
+  /** Ein gewoehnlicher Helfer ohne Modus-Marker — steht nie in der Modus-Leiste. */
+  const kamin = (overrides: Partial<ModeEntity> = {}): ModeEntity => ({
+    entityId: 'input_boolean.manual_kamin',
+    displayName: 'Kamin',
+    icon: 'fireplace',
+    state: 'off',
     ...overrides
   });
 
@@ -2466,6 +2473,10 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
     modeServiceSpy = jasmine.createSpyObj('ModeService', ['getModes', 'toggle']);
     modeServiceSpy.getModes.and.returnValue(of([nachtmodus()]));
     modeServiceSpy.toggle.and.returnValue(of(nachtmodus({ state: 'on' })));
+
+    // Die faelligen Helfer kommen fertig vom Backend, nicht aus der Modus-Liste.
+    quickAccessSpy = jasmine.createSpyObj('ModeQuickAccessService', ['due']);
+    quickAccessSpy.due.and.returnValue(of([nachtmodus()]));
 
     const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
     switchSpy.getSwitches.and.returnValue(of([]));
@@ -2490,6 +2501,7 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ModeService, useValue: modeServiceSpy },
+        { provide: ModeQuickAccessService, useValue: quickAccessSpy },
         { provide: SwitchService, useValue: switchSpy },
         { provide: WeatherService, useValue: weatherSpy },
         { provide: EnergyLiveService, useValue: energySpy },
@@ -2529,7 +2541,7 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
    * Modus ueber denselben Weg wieder ausschalten (Nutzerentscheidung 2026-09-15).
    */
   it('zeigt einen eingeschalteten Modus weiterhin, als aktiv hervorgehoben', fakeAsync(() => {
-    modeServiceSpy.getModes.and.returnValue(of([nachtmodus({ state: 'on' })]));
+    quickAccessSpy.due.and.returnValue(of([nachtmodus({ state: 'on' })]));
     const fixture = tabletFixture();
 
     const buttons = quickButtons(fixture);
@@ -2548,10 +2560,56 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
   }));
 
   it('zeigt keinen Schnellzugriff, wenn kein Fenster offen ist', fakeAsync(() => {
-    modeServiceSpy.getModes.and.returnValue(of([nachtmodus({ quickAccess: false })]));
+    quickAccessSpy.due.and.returnValue(of([]));
     const fixture = tabletFixture();
 
     expect(quickButtons(fixture).length).toBe(0);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Seit 2026-09-15 darf jeder Helfer ein Fenster bekommen. Ein gewoehnlicher Helfer steht
+   * nicht in der Modus-Leiste — der Schnellzugriff darf ihn deshalb nicht aus `modes`
+   * ableiten, sondern muss die Backend-Liste unveraendert zeigen.
+   */
+  it('zeigt einen gewoehnlichen Helfer, der nicht in der Modus-Leiste steht', fakeAsync(() => {
+    quickAccessSpy.due.and.returnValue(of([kamin()]));
+    const fixture = tabletFixture();
+
+    const buttons = quickButtons(fixture);
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('Kamin');
+
+    discardPeriodicTasks();
+  }));
+
+  /** Ein Ladefehler bei /due behaelt den letzten Stand statt die Knoepfe zu leeren. */
+  it('behaelt die Schnellzugriffe bei einem Ladefehler', fakeAsync(() => {
+    const fixture = tabletFixture();
+    expect(quickButtons(fixture).length).toBe(1);
+
+    quickAccessSpy.due.and.returnValue(throwError(() => new Error('weg')));
+    tick(30_000);
+    fixture.detectChanges();
+
+    expect(quickButtons(fixture).length).toBe(1);
+
+    discardPeriodicTasks();
+  }));
+
+  /**
+   * Nach dem Schalten muss der Schnellzugriff-Knopf sofort umspringen, nicht erst mit dem
+   * naechsten 30-s-Refresh — die Antwort des Toggles wird in beide Listen geschrieben.
+   */
+  it('hebt den Knopf nach dem Einschalten sofort hervor', fakeAsync(() => {
+    const fixture = tabletFixture();
+
+    quickButtons(fixture)[0].click();
+    tick();
+    fixture.detectChanges();
+
+    expect(quickButtons(fixture)[0].classList).toContain('lumina__mode--active');
 
     discardPeriodicTasks();
   }));
@@ -2884,8 +2942,7 @@ describe('DashboardComponent (Footer-Kacheln: Hoehe und Klappen)', () => {
     entityId: `input_boolean.manual_${name.toLowerCase()}`,
     displayName: name,
     icon: 'tune',
-    state: 'off',
-    quickAccess: false
+    state: 'off'
   });
 
   const supply = (key: string, name: string): PetSupply => ({

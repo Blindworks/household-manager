@@ -12,8 +12,7 @@ describe('ModeService', () => {
     entityId: 'input_boolean.manual_nachtmodus',
     displayName: 'Nachtmodus',
     icon: 'nights_stay',
-    state: 'off',
-    quickAccess: false
+    state: 'off'
   };
 
   beforeEach(() => {

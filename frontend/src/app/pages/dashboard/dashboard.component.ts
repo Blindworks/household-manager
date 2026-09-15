@@ -47,6 +47,7 @@ import { HubInsight } from '../../shared/hub-insight.model';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeService } from '../../services/mode.service';
+import { ModeQuickAccessService } from '../../services/mode-quick-access.service';
 import { SystemService } from '../../services/system.service';
 import { ModeEntity } from '../../models/mode.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
@@ -111,6 +112,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly insightService = inject(InsightService);
   private readonly switchService = inject(SwitchService);
   private readonly modeService = inject(ModeService);
+  private readonly modeQuickAccessService = inject(ModeQuickAccessService);
   private readonly systemService = inject(SystemService);
   private readonly wasteService = inject(WasteCollectionService);
   private readonly calendarService = inject(CalendarService);
@@ -179,6 +181,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
+  private quickAccessSubscription?: Subscription;
   private wasteSubscription?: Subscription;
   private calendarSubscription?: Subscription;
   private nukiSubscription?: Subscription;
@@ -336,6 +339,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Haus-Modi der Fussleiste, vom Backend geladen. */
   modes: ModeEntity[] = [];
+  /**
+   * Helfer mit gerade offenem Zeitfenster (Modi UND gewoehnliche Helfer), fertig vom
+   * Backend (`GET /v1/mode-quick-access/due`). Eigene Liste neben `modes`, weil ein
+   * gewoehnlicher Helfer in der Modus-Leiste nie auftaucht.
+   */
+  quickAccessEntities: ModeEntity[] = [];
   /** Entity-IDs mit laufendem Modus-Schaltbefehl (verhindert Doppelklicks). */
   readonly pendingModeIds = new Set<string>();
   modeError: string | null = null;
@@ -439,6 +448,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startSwitchRefresh();
     this.startConsumerRefresh();
     this.startModeRefresh();
+    this.startQuickAccessRefresh();
     this.startWasteRefresh();
     this.startCalendarRefresh();
     this.startVentilationRefresh();
@@ -460,6 +470,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.ventilationSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
+    this.quickAccessSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
     this.calendarSubscription?.unsubscribe();
     this.nukiSubscription?.unsubscribe();
@@ -637,24 +648,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Modi, die gerade per Schnellzugriff neben der eingeklappten Leiste stehen.
+   * Helfer, die gerade per Schnellzugriff neben der eingeklappten Leiste stehen.
    *
-   * Drei Bedingungen, alle bewusst: nur im Tablet-Modus (die Browser-Ansicht bleibt
-   * unveraendert), nur bei eingeklappter Leiste (ausgeklappt stuende der Modus doppelt),
-   * und nur wenn das Backend sein Zeitfenster fuer offen haelt.
+   * Zwei Bedingungen hier, alle bewusst: nur im Tablet-Modus (die Browser-Ansicht bleibt
+   * unveraendert) und nur bei eingeklappter Leiste (ausgeklappt stuende ein Modus doppelt).
+   * Ob ein Fenster offen ist, entscheidet allein das Backend — `quickAccessEntities`
+   * enthaelt nur faellige Helfer; hier wird keine Uhrzeit ausgewertet.
    *
-   * Der Zustand des Modus spielt keine Rolle: eingeschaltet bleibt der Knopf stehen und
-   * ist blau hervorgehoben, damit sich der Modus ueber denselben Weg wieder ausschalten
-   * laesst (Nutzerentscheidung 2026-09-15; die erste Fassung blendete ihn bei „an" aus).
-   *
-   * Ob ein Fenster offen ist, entscheidet allein das Backend (`quickAccess`); hier wird
-   * keine Uhrzeit ausgewertet.
+   * Der Zustand spielt keine Rolle: eingeschaltet bleibt der Knopf stehen und ist blau
+   * hervorgehoben, damit sich der Helfer ueber denselben Weg wieder ausschalten laesst
+   * (Nutzerentscheidung 2026-09-15; die erste Fassung blendete ihn bei „an" aus).
    */
   get quickAccessModes(): ModeEntity[] {
     if (!this.viewMode.isTabletView() || this.modesExpanded) {
       return [];
     }
-    return this.modes.filter(mode => mode.quickAccess);
+    return this.quickAccessEntities;
   }
 
   /**
@@ -749,11 +758,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!dialogMode) {
       return;
     }
-    const current = this.modes.find(item => item.entityId === dialogMode.entityId);
+    const current = this.findModeOrQuickAccess(dialogMode.entityId);
     if (!current || current.state === 'on') {
       return;
     }
     this.performModeToggle(current);
+  }
+
+  /** Sucht in der Modus-Leiste und im Schnellzugriff — ein Helfer steht nur in Letzterem. */
+  private findModeOrQuickAccess(entityId: string): ModeEntity | undefined {
+    return this.modes.find(item => item.entityId === entityId)
+      ?? this.quickAccessEntities.find(item => item.entityId === entityId);
   }
 
   closeModeCheckDialog(): void {
@@ -768,10 +783,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return check.status === 'warning' ? 'warning' : 'hourglass_empty';
   }
 
+  /**
+   * Schreibt den neuen Zustand in BEIDE Listen: ein Modus steht in der Leiste und —
+   * bei offenem Fenster — zusaetzlich im Schnellzugriff; die Knoepfe muessen gemeinsam
+   * umspringen, sonst zeigte einer von beiden bis zum naechsten Refresh das Falsche.
+   */
   private applyModeState(entityId: string, state: string): void {
-    const match = this.modes.find(item => item.entityId === entityId);
-    if (match) {
-      match.state = state;
+    for (const list of [this.modes, this.quickAccessEntities]) {
+      const match = list.find(item => item.entityId === entityId);
+      if (match) {
+        match.state = state;
+      }
     }
   }
 
@@ -1491,6 +1513,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (modes) {
           this.modes = modes;
           this.modeError = null;
+        }
+      });
+  }
+
+  /**
+   * Haelt die faelligen Schnellzugriffe aktuell — gleicher Takt wie die Modi, damit ein
+   * geoeffnetes oder geschlossenes Fenster am Tablet in derselben Frist sichtbar wird.
+   * Ladefehler behalten den letzten Stand (null = kein Update).
+   */
+  private startQuickAccessRefresh(): void {
+    this.quickAccessSubscription = interval(DashboardComponent.MODE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.modeQuickAccessService.due().pipe(catchError(() => of<ModeEntity[] | null>(null))))
+      )
+      .subscribe(entities => {
+        if (entities) {
+          this.quickAccessEntities = entities;
         }
       });
   }

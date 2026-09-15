@@ -1,11 +1,14 @@
 package com.household.manager.mode;
 
 import com.household.manager.audit.AuditService;
-import com.household.manager.dto.ModeResponse;
-import com.household.manager.entitystate.HouseModeQueryService;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntitySource;
+import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.exception.DuplicateEntityException;
 import com.household.manager.exception.ResourceNotFoundException;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.ModeQuickAccess;
+import com.household.manager.repository.EntityStateRepository;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,8 +21,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Pflegt die Zeitfenster, in denen ein Haus-Modus im Tablet-Dashboard direkt als Knopf
- * steht. Die Auswertung selbst gehoert dem {@link ModeQuickAccessResolver}.
+ * Pflegt die Zeitfenster, in denen ein Helfer (INPUT_BOOLEAN, Quelle MANUAL — Haus-Modus
+ * oder gewoehnlicher Helfer) im Tablet-Dashboard direkt als Knopf steht. Die Auswertung
+ * selbst gehoert dem {@link ModeQuickAccessResolver}.
  */
 @Service
 @RequiredArgsConstructor
@@ -27,10 +31,11 @@ public class ModeQuickAccessService {
 
     private static final DateTimeFormatter AUDIT_TIME = DateTimeFormatter.ofPattern("HH:mm");
     private static final String DUPLICATE_WINDOW_MESSAGE =
-            "Fuer diesen Modus gibt es bereits ein Zeitfenster.";
+            "Fuer diesen Helfer gibt es bereits ein Zeitfenster.";
 
     private final ModeQuickAccessRepository repository;
-    private final HouseModeQueryService houseModeQueryService;
+    private final EntityStateRepository entityStateRepository;
+    private final EntityStateResponseMapper entityStateResponseMapper;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -92,10 +97,12 @@ public class ModeQuickAccessService {
                 .orElseThrow(() -> new ResourceNotFoundException("ModeQuickAccess", "id", id));
     }
 
-    /** Anzeigenamen der bekannten Haus-Modi, nach Entity-ID. */
+    /** Anzeigenamen aller Helfer vom Typ INPUT_BOOLEAN (Modi eingeschlossen), nach Entity-ID. */
     private Map<String, String> modeNames() {
-        return houseModeQueryService.listModes().stream()
-                .collect(Collectors.toMap(ModeResponse::entityId, ModeResponse::displayName,
+        return entityStateRepository
+                .findByDomainAndSourceOrderByEntityIdAsc(EntityDomain.INPUT_BOOLEAN, EntitySource.MANUAL)
+                .stream()
+                .collect(Collectors.toMap(EntityState::getEntityId, entityStateResponseMapper::displayName,
                         (first, second) -> first));
     }
 
@@ -112,12 +119,12 @@ public class ModeQuickAccessService {
     }
 
     /**
-     * Die Zeit-Checks stehen vor dem Modus-Check: ein offensichtlich falsches Formular soll
+     * Die Zeit-Checks stehen vor dem Helfer-Check: ein offensichtlich falsches Formular soll
      * die naheliegende Meldung bekommen.
      */
-    private void validate(ModeQuickAccessDtos.Request request, Map<String, String> knownModes) {
+    private void validate(ModeQuickAccessDtos.Request request, Map<String, String> knownHelpers) {
         if (request.entityId() == null || request.entityId().isBlank()) {
-            throw new IllegalArgumentException("Es ist kein Modus ausgewaehlt.");
+            throw new IllegalArgumentException("Es ist kein Helfer ausgewaehlt.");
         }
         if (request.fromTime() == null || request.toTime() == null) {
             throw new IllegalArgumentException("Beginn und Ende muessen gesetzt sein.");
@@ -126,9 +133,9 @@ public class ModeQuickAccessService {
             throw new IllegalArgumentException(
                     "Beginn und Ende duerfen nicht gleich sein — das Fenster waere leer.");
         }
-        if (!knownModes.containsKey(request.entityId())) {
+        if (!knownHelpers.containsKey(request.entityId())) {
             throw new IllegalArgumentException(
-                    "%s ist kein Haus-Modus.".formatted(request.entityId()));
+                    "%s ist kein Helfer vom Typ input_boolean.".formatted(request.entityId()));
         }
     }
 }

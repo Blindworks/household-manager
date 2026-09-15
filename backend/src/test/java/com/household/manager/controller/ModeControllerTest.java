@@ -24,8 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Haelt die tatsaechliche JSON-Serialisierung der Modus-API fest, nicht nur das
- * Java-Objekt: Das Angular-Frontend liest {@code quickAccess} als konkreten
- * Feldnamen aus der Antwort. Ein Tippfehler im Record-Komponentennamen oder ein
+ * Java-Objekt: Das Angular-Frontend liest {@code entityId}, {@code displayName},
+ * {@code icon} und {@code state} als konkrete Feldnamen aus der Antwort. Ein Tippfehler im Record-Komponentennamen oder ein
  * kuenftig ergaenztes {@code @JsonProperty} wuerde den Vertrag brechen, ohne dass
  * ein Test, der nur gegen {@link ModeResponse} deserialisiert, das je bemerkt -
  * deshalb pruefen die Tests hier ausschliesslich per {@code jsonPath} gegen den
@@ -49,19 +49,18 @@ class ModeControllerTest {
     @MockitoBean
     private ServiceTokenService serviceTokenService;
 
-    private ModeResponse modeResponse(boolean quickAccess) {
+    private ModeResponse modeResponse() {
         return ModeResponse.builder()
                 .entityId("input_boolean.manual_toni_allein")
                 .displayName("Toni allein")
                 .icon("pets")
                 .state("off")
-                .quickAccess(quickAccess)
                 .build();
     }
 
     @Test
     void listeDerModiTraegtDieVertraglichenFeldnamen() throws Exception {
-        when(houseModeQueryService.listModes()).thenReturn(List.of(modeResponse(true)));
+        when(houseModeQueryService.listModes()).thenReturn(List.of(modeResponse()));
 
         mockMvc.perform(get("/v1/modes"))
                 .andExpect(status().isOk())
@@ -69,7 +68,9 @@ class ModeControllerTest {
                 .andExpect(jsonPath("$[0].displayName").value("Toni allein"))
                 .andExpect(jsonPath("$[0].icon").value("pets"))
                 .andExpect(jsonPath("$[0].state").value("off"))
-                .andExpect(jsonPath("$[0].quickAccess").value(true));
+                // Das fruehere Flag ist entfallen: faellige Schnellzugriffe liefert
+                // GET /v1/mode-quick-access/due, nicht mehr die Modus-Liste.
+                .andExpect(jsonPath("$[0].quickAccess").doesNotExist());
     }
 
     @Test
@@ -78,14 +79,13 @@ class ModeControllerTest {
                 .entityId("input_boolean.manual_toni_allein")
                 .build();
         when(manualEntityService.toggle("input_boolean.manual_toni_allein")).thenReturn(entityState);
-        when(modeResponseMapper.toResponse(entityState)).thenReturn(modeResponse(false));
+        when(modeResponseMapper.toResponse(entityState)).thenReturn(modeResponse());
 
         mockMvc.perform(post("/v1/modes/input_boolean.manual_toni_allein/toggle"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.entityId").value("input_boolean.manual_toni_allein"))
                 .andExpect(jsonPath("$.displayName").value("Toni allein"))
                 .andExpect(jsonPath("$.icon").value("pets"))
-                .andExpect(jsonPath("$.state").value("off"))
-                .andExpect(jsonPath("$.quickAccess").value(false));
+                .andExpect(jsonPath("$.state").value("off"));
     }
 }

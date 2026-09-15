@@ -19,8 +19,8 @@ public final class ModeQuickAccessDtos {
     }
 
     /**
-     * @param displayName Anzeigename des Modus, {@code null} wenn es zu der Entity-ID keinen
-     *                    Haus-Modus (mehr) gibt. Die Admin-Seite zeigt dann die rohe ID.
+     * @param displayName Anzeigename des Helfers, {@code null} wenn es zu der Entity-ID keinen
+     *                    Helfer (mehr) gibt. Die Admin-Seite zeigt dann die rohe ID.
      */
     public record Response(Long id, String entityId, String displayName,
                            LocalTime fromTime, LocalTime toTime, boolean active) {
