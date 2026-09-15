@@ -150,7 +150,7 @@ Alle unter `/v1/zigbee`, Lesen über die generische `GET /v1/**`-Regel KIOSK:
 - **`GET /bridge`** — `permitJoin`, `permitJoinEnd`, `availabilityCheckEnabled`,
   `version`, `registryLoaded`
 - **`GET /bridge/events`** — die letzten 50 `ZigbeeBridgeEvent`, neueste zuerst
-- **`GET /devices/{ieee}/references`** — Flows, die eine Entität des Geräts
+- **`GET /flow-references?friendlyName=`** — Flows, die eine Entität des Geräts
   verwenden (Abschnitt 3)
 - **`/live` (SSE)** — pusht zusätzlich `bridge-event` und `permit-join`
   (bei jeder Änderung aus `bridge/info`)
@@ -171,12 +171,14 @@ Alle ADMIN, alle über `ZigbeeBridgeRequestService` mit 10-s-Timeout:
 | Neu-Interview | `POST /devices/{ieee}/interview` | `device/interview {id}` |
 | Neu-Konfigurieren | `POST /devices/{ieee}/configure` | `device/configure {id}` |
 | Aus z2m entfernen | `DELETE /devices/{ieee}?force=false` | `device/remove {id, force}` |
-| Aus HM entfernen | `DELETE /devices/{ieee}/local-data` | — (nur DB) |
+| Aus HM entfernen | `DELETE /devices/local/{id}` | — (nur DB) |
 
 **Geräte werden über die IEEE-Adresse adressiert**, nicht über den Friendly Name:
 der ist genau das, was Umbenennen ändert, und z2m erlaubt `/` im Namen — im Pfad ein
 Problem. Der Service löst die IEEE-Adresse gegen das Registry (für z2m-Requests) bzw.
 gegen `zigbee_device.ieeeAddress` (für den lokalen Pfad) auf; unbekannt ⇒ 404.
+Ausnahme: „Aus Household Manager entfernen" adressiert über die DB-Id, weil
+Bestandszeilen keine IEEE-Adresse tragen.
 
 `friendlyName` beim Umbenennen: nicht leer, max. 64 Zeichen, kein `/`, kein `+`,
 kein `#` (MQTT-Wildcards) — 400 bei Verstoß, bevor irgendetwas gesendet wird.
@@ -202,7 +204,7 @@ Dialog.
 
 ### Flow-Warnung
 
-`GET /devices/{ieee}/references` durchsucht `deployedDefinition` und
+`GET /flow-references?friendlyName=` durchsucht `deployedDefinition` und
 `draftDefinition` aller Flows nach den Entity-IDs des Geräts und liefert
 `[{flowId, name, enabled}]`. **String-Suche im JSON**, bewusst: Node-Configs sind
 eine freie Map, eine strukturierte Suche hinkte bei jedem neuen Node-Typ nach. Ein
@@ -235,7 +237,9 @@ generischen `GET /v1/**`-Regel:
 - `POST` und `DELETE /v1/zigbee/bridge/permit-join`
 - `PUT /v1/zigbee/devices/*/name`
 - `POST /v1/zigbee/devices/*/interview`, `POST /v1/zigbee/devices/*/configure`
-- `DELETE /v1/zigbee/devices/*`, `DELETE /v1/zigbee/devices/*/local-data`
+- `DELETE /v1/zigbee/devices/*`
+- `DELETE /v1/zigbee/devices/local/*` (ADMIN)
+- `GET /v1/zigbee/flow-references` (ADMIN)
 
 `SecurityRulesTest`: je Zeile ein MEMBER-403-Test, dazu KIOSK-200 für
 `GET /devices`, `GET /bridge`, `GET /bridge/events` und `GET /devices/*/measurements`.
@@ -294,7 +298,8 @@ innerhalb alphabetisch nach Friendly Name. Je Karte:
   zigbee2mqtt entfernen. Sichtbar nur bei `authService.isAdmin()`; der Server prüft
   ohnehin
 
-Die Live-Messwerte per SSE (`liveValues`) fließen weiter in die Entitätenliste ein;
+Live-Events (Messwerte und Bridge-Ereignisse) fließen weiter in die Entitätenliste
+ein und lösen den in „Aktualisierung" unten beschriebenen gedrosselten Reload aus;
 `lastSeen` wird wie heute bei jedem Live-Event hochgezogen.
 
 ### Dialoge
@@ -318,10 +323,12 @@ schließt mit Hinweis.
 
 ### Aktualisierung
 
-Geräteliste alle 30 s per Poll (die Health-Einstufung ändert sich mit der Zeit,
-nicht nur bei Nachrichten). Bridge-Ereignisse und Permit-Join-Wechsel per SSE
-sofort. Ein fehlgeschlagener Poll behält den letzten Stand; nur der Erstabruf
-meldet einen Fehler.
+Live-Events (Messwerte und Bridge-Ereignisse) lösen einen gedrosselten Reload der
+Geräteliste aus — höchstens einmal je 5 s, garantiert binnen 5 s nach dem ersten
+Event; damit bleibt die Health-Einstufung auch ohne eigenen Timer aktuell. Bridge-
+Ereignisse und Permit-Join-Wechsel weiterhin sofort per SSE. Ein fehlgeschlagener
+Reload behält den letzten Stand; nur der Erstabruf meldet einen Fehler. Der
+Countdown-Intervall läuft nur, solange ein Anlernfenster offen ist.
 
 Das Verlauf-Diagramm unten bleibt unverändert.
 
