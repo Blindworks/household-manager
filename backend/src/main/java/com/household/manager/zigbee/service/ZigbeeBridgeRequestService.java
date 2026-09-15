@@ -69,8 +69,12 @@ public class ZigbeeBridgeRequestService {
         pending.put(transaction, future);
         try {
             String json = objectMapper.writeValueAsString(payload);
+            // Ein Budget fuer beide Wartezeiten: Publish-Ack und Antwort teilen sich denselben
+            // Zeitrahmen, statt je die volle Frist zu bekommen (sonst bis zu 2x timeout).
+            long deadline = System.nanoTime() + timeout.toNanos();
             commands.publish(REQUEST_PREFIX + request, json).get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            ZigbeeBridgeResponse response = future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            long remainingNanos = Math.max(1, deadline - System.nanoTime());
+            ZigbeeBridgeResponse response = future.get(remainingNanos, TimeUnit.NANOSECONDS);
             if (!response.ok()) {
                 throw new ZigbeeBridgeRejectedException(
                         response.error() != null ? response.error() : "zigbee2mqtt hat den Request abgelehnt.");

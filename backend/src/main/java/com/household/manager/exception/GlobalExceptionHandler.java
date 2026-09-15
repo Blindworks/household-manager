@@ -346,6 +346,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ZigbeeBridgeRejectedException.class)
     public ResponseEntity<ErrorResponse> handleZigbeeBridgeRejected(
             ZigbeeBridgeRejectedException ex, WebRequest request) {
+        log.warn("zigbee2mqtt hat den Request abgelehnt: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(zigbeeError(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request));
     }
@@ -353,6 +354,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ZigbeeDeviceKnownToBridgeException.class)
     public ResponseEntity<ErrorResponse> handleZigbeeDeviceKnownToBridge(
             ZigbeeDeviceKnownToBridgeException ex, WebRequest request) {
+        log.warn("Zigbee-Geraet noch in zigbee2mqtt bekannt: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(zigbeeError(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request));
     }
