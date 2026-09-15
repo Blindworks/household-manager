@@ -13,6 +13,9 @@ import com.household.manager.tractive.TractiveAuthException;
 import com.household.manager.tractive.TractiveException;
 import com.household.manager.tractive.TractiveRateLimitException;
 import com.household.manager.vision.VisionException;
+import com.household.manager.zigbee.ZigbeeBridgeRejectedException;
+import com.household.manager.zigbee.ZigbeeBridgeUnavailableException;
+import com.household.manager.zigbee.ZigbeeDeviceKnownToBridgeException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
@@ -330,6 +333,38 @@ public class GlobalExceptionHandler {
 
         log.warn("Nuki communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    @ExceptionHandler(ZigbeeBridgeUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleZigbeeBridgeUnavailable(
+            ZigbeeBridgeUnavailableException ex, WebRequest request) {
+        log.warn("zigbee2mqtt nicht erreichbar: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(zigbeeError(HttpStatus.BAD_GATEWAY, "Bad Gateway", ex.getMessage(), request));
+    }
+
+    @ExceptionHandler(ZigbeeBridgeRejectedException.class)
+    public ResponseEntity<ErrorResponse> handleZigbeeBridgeRejected(
+            ZigbeeBridgeRejectedException ex, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(zigbeeError(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request));
+    }
+
+    @ExceptionHandler(ZigbeeDeviceKnownToBridgeException.class)
+    public ResponseEntity<ErrorResponse> handleZigbeeDeviceKnownToBridge(
+            ZigbeeDeviceKnownToBridgeException ex, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(zigbeeError(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request));
+    }
+
+    private ErrorResponse zigbeeError(HttpStatus status, String error, String message, WebRequest request) {
+        return ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .error(error)
+                .message(message)
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
     }
 
     @ExceptionHandler(TractiveAuthException.class)
