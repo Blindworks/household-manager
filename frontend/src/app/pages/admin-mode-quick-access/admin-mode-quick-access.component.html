@@ -1,19 +1,60 @@
 <div class="admin-mode-quick-access">
-  <h1>Modus-Schnellzugriff</h1>
-
-  <p class="admin-mode-quick-access__hint">
-    Ein Helfer mit Zeitfenster — ein Haus-Modus oder ein gewöhnlicher Ein/Aus-Helfer — steht
-    im Tablet-Dashboard während dieser Zeit direkt als Knopf neben der eingeklappten
-    Modus-Leiste; eingeschaltet bleibt er hervorgehoben stehen und lässt sich dort wieder
-    ausschalten. Mit „Immer anzeigen“ steht er dort ohne Zeitfenster dauerhaft.
-    Liegt das Ende vor dem Beginn, überspannt das Fenster Mitternacht (20:00–06:00).
-    Der Beginn zählt mit, das Ende nicht. Ein deaktiviertes Fenster wirkt nicht, bleibt aber
-    angelegt. Ein Wechsel wird am Tablet innerhalb von 30 Sekunden sichtbar.
-  </p>
+  <h1>Modus-Leiste und Schnellzugriff</h1>
 
   @if (errorMessage()) {
     <div class="admin-mode-quick-access__error" role="alert">{{ errorMessage() }}</div>
   }
+
+  <h2 class="admin-mode-quick-access__section-title">Modus-Leiste</h2>
+
+  <p class="admin-mode-quick-access__hint">
+    Welche Ein/Aus-Helfer in der ausgeklappten Modus-Leiste des Dashboards stehen. Haus-Modi
+    sind standardmäßig drin und lassen sich herausnehmen, gewöhnliche Helfer lassen sich
+    hineinholen. Nur was hier in der Leiste steht, kann unten ein Zeitfenster bekommen.
+  </p>
+
+  <table class="admin-mode-quick-access__table admin-mode-quick-access__bar-table">
+    <thead>
+      <tr>
+        <th scope="col">Helfer</th>
+        <th scope="col">Art</th>
+        <th scope="col">In der Modus-Leiste</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (helper of helpers(); track helper.entityId) {
+        <tr>
+          <td>{{ helper.displayName }}</td>
+          <td>{{ helper.isMode ? 'Haus-Modus' : 'Helfer' }}</td>
+          <td>
+            <label class="admin-mode-quick-access__checkbox">
+              <input
+                type="checkbox"
+                class="admin-mode-quick-access__bar-toggle"
+                [checked]="helper.inBar"
+                [disabled]="barPending().has(helper.entityId)"
+                (change)="setInBar(helper, !helper.inBar)">
+              <span>{{ helper.inBar ? 'Ja' : 'Nein' }}</span>
+            </label>
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="3">Keine Helfer gefunden.</td></tr>
+      }
+    </tbody>
+  </table>
+
+  <h2 class="admin-mode-quick-access__section-title">Schnellzugriff</h2>
+
+  <p class="admin-mode-quick-access__hint">
+    Ein Eintrag der Modus-Leiste mit Zeitfenster steht im Tablet-Dashboard während dieser Zeit
+    direkt als Knopf neben der eingeklappten Modus-Leiste; eingeschaltet bleibt er
+    hervorgehoben stehen und lässt sich dort wieder ausschalten. Mit „Immer anzeigen“ steht er
+    dort ohne Zeitfenster dauerhaft. Liegt das Ende vor dem Beginn, überspannt das Fenster
+    Mitternacht (20:00–06:00). Der Beginn zählt mit, das Ende nicht. Ein deaktiviertes Fenster
+    wirkt nicht, bleibt aber angelegt. Ein Wechsel wird am Tablet innerhalb von 30 Sekunden
+    sichtbar.
+  </p>
 
   <form class="admin-mode-quick-access__form" (ngSubmit)="save()">
     <h2 class="admin-mode-quick-access__form-title">
@@ -25,7 +66,7 @@
         <span>Helfer</span>
         <select name="entityId" [(ngModel)]="form.entityId">
           <option value="">— bitte wählen —</option>
-          @for (helper of helpers(); track helper.entityId) {
+          @for (helper of barHelpers; track helper.entityId) {
             <option [value]="helper.entityId">{{ helper.displayName }}</option>
           }
         </select>

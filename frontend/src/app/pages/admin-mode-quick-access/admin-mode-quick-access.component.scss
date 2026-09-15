@@ -29,6 +29,15 @@
     font-size: 1.1rem;
   }
 
+  &__section-title {
+    margin: var(--spacing-lg) 0 var(--spacing-xs);
+    font-size: 1.2rem;
+  }
+
+  &__bar-table {
+    margin-bottom: var(--spacing-lg);
+  }
+
   &__fields {
     display: flex;
     flex-wrap: wrap;

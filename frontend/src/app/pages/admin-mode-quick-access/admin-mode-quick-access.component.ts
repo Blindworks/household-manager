@@ -5,12 +5,29 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ModeQuickAccessService } from '../../services/mode-quick-access.service';
 import { EntityStateService } from '../../services/entity-state.service';
 import { ModeQuickAccess, ModeQuickAccessRequest } from '../../models/mode-quick-access.model';
-import { MANUAL_SOURCE } from '../../models/entity-state.model';
+import { EntityState, MANUAL_SOURCE, MODES_TILE_KEY, TileVisibility } from '../../models/entity-state.model';
 
-/** Eintrag des Helfer-Dropdowns. */
+/** Ein Ein/Aus-Helfer (Haus-Modus oder gewoehnlicher Helfer) mit seinem Leisten-Status. */
 export interface HelperOption {
   entityId: string;
   displayName: string;
+  /** True fuer Katalog-Modi (Marker `mode`): ohne Regel sichtbar, per NEVER ausblendbar. */
+  isMode: boolean;
+  /** True, wenn der Helfer aktuell in der Modus-Leiste steht. */
+  inBar: boolean;
+}
+
+/**
+ * Einzige Definition von "steht in der Modus-Leiste" auf Frontend-Seite — spiegelt
+ * HouseModeQueryService.inBar: ALWAYS ja, NEVER nein, WHEN_ON solange an, AUTO nur Modi.
+ */
+export function helperOptionFrom(entity: EntityState): HelperOption {
+  const isMode = entity.attributes?.['mode'] === true;
+  const rule: TileVisibility = entity.tileVisibility?.[MODES_TILE_KEY] ?? 'AUTO';
+  const inBar = rule === 'ALWAYS'
+    || (rule === 'WHEN_ON' && entity.state === 'on')
+    || (rule === 'AUTO' && isMode);
+  return { entityId: entity.entityId, displayName: entity.displayName, isMode, inBar };
 }
 
 /** Zustand des Anlege-/Bearbeiten-Formulars. */
@@ -46,8 +63,10 @@ export class AdminModeQuickAccessComponent implements OnInit {
   private readonly entityApi = inject(EntityStateService);
 
   readonly windows = signal<ModeQuickAccess[]>([]);
-  /** Auswahl des Dropdowns; leer, wenn die Helfer nicht geladen werden konnten. */
+  /** Alle Ein/Aus-Helfer mit Leisten-Status; leer, wenn sie nicht geladen werden konnten. */
   readonly helpers = signal<HelperOption[]>([]);
+  /** Helfer, deren Leisten-Schalter gerade gespeichert wird (Doppelklick-Schutz). */
+  readonly barPending = signal<Set<string>>(new Set());
   /** Nur der erste Abruf blendet die Tabelle aus; spaetere lassen sie stehen. */
   readonly loading = signal(true);
   /** Bei fehlgeschlagenem Laden bleibt die Tabelle verborgen — eine leere Liste loege. */
@@ -81,14 +100,55 @@ export class AdminModeQuickAccessComponent implements OnInit {
   }
 
   /**
-   * Laedt alle Helfer vom Typ INPUT_BOOLEAN (Modi eingeschlossen) fuer das Dropdown. Ein
-   * Fehlschlag blockiert die Pflege nicht: die Liste bleibt sichtbar, nur die Auswahl ist leer.
+   * Laedt alle Helfer vom Typ INPUT_BOOLEAN (Modi eingeschlossen) samt Leisten-Status. Ein
+   * Fehlschlag blockiert die Fensterpflege nicht: die Liste bleibt sichtbar, nur Leisten-
+   * Tabelle und Auswahl sind leer.
    */
   private loadHelpers(): void {
     this.entityApi.getEntities('INPUT_BOOLEAN', MANUAL_SOURCE).subscribe({
-      next: entities => this.helpers.set(
-        entities.map(entity => ({ entityId: entity.entityId, displayName: entity.displayName }))),
+      next: entities => this.helpers.set(entities.map(helperOptionFrom)),
       error: () => this.helpers.set([])
+    });
+  }
+
+  /** Nur Leisten-Mitglieder duerfen ein Fenster bekommen — der Schnellzugriff ist eine Teilmenge der Leiste. */
+  get barHelpers(): HelperOption[] {
+    return this.helpers().filter(helper => helper.inBar);
+  }
+
+  /**
+   * Nimmt einen Helfer in die Modus-Leiste auf oder heraus. Fuer einen Katalog-Modus heisst
+   * "raus" NEVER und "rein" AUTO (sein Standard); fuer einen gewoehnlichen Helfer heisst
+   * "rein" ALWAYS und "raus" AUTO. So bleibt nur dort eine Regel stehen, wo vom Standard
+   * abgewichen wird. Die Antwort traegt die neue Regel, daraus wird der Status neu berechnet.
+   */
+  setInBar(helper: HelperOption, inBar: boolean): void {
+    if (this.barPending().has(helper.entityId)) {
+      return;
+    }
+    const visibility: TileVisibility = helper.isMode
+      ? (inBar ? 'AUTO' : 'NEVER')
+      : (inBar ? 'ALWAYS' : 'AUTO');
+    this.barPending.update(set => new Set(set).add(helper.entityId));
+    this.errorMessage.set(null);
+    this.entityApi.setTileVisibility(helper.entityId, MODES_TILE_KEY, visibility).subscribe({
+      next: updated => {
+        this.helpers.update(list => list.map(item =>
+          item.entityId === updated.entityId ? helperOptionFrom(updated) : item));
+        this.releaseBarPending(helper.entityId);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.messageFrom(error));
+        this.releaseBarPending(helper.entityId);
+      }
+    });
+  }
+
+  private releaseBarPending(entityId: string): void {
+    this.barPending.update(set => {
+      const next = new Set(set);
+      next.delete(entityId);
+      return next;
     });
   }
 

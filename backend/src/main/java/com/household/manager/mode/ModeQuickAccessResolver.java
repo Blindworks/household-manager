@@ -2,11 +2,8 @@ package com.household.manager.mode;
 
 import com.household.manager.common.TimeWindow;
 import com.household.manager.dto.ModeResponse;
-import com.household.manager.entitystate.EntityDomain;
-import com.household.manager.entitystate.EntitySource;
-import com.household.manager.entitystate.mapper.ModeResponseMapper;
+import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.model.entity.ModeQuickAccess;
-import com.household.manager.repository.EntityStateRepository;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +20,10 @@ import java.util.stream.Collectors;
  * Einzige Definition von „dieser Helfer ist jetzt faellig" (Muster
  * {@code TractiveHomeResolver}, {@code PowerConsumerQueryService.findConsumer}).
  *
- * <p>Seit 2026-09-15 gilt das fuer jeden Helfer vom Typ INPUT_BOOLEAN, nicht nur fuer
- * Haus-Modi. Das Tablet-Dashboard fragt {@link #dueEntities()} direkt ab
- * ({@code GET /v1/mode-quick-access/due}); die Modus-Liste traegt kein Flag mehr.
+ * <p>Der Schnellzugriff ist eine <b>Teilmenge der Modus-Leiste</b>: {@link #dueEntities()}
+ * filtert {@link HouseModeQueryService#listModes()} auf die offenen Fenster. Ein Fenster
+ * fuer einen Helfer, der (nicht mehr) in der Leiste steht, ist damit wirkungslos — die
+ * Admin-Seite bietet deshalb nur Leisten-Mitglieder zur Auswahl an.
  *
  * <p><b>Wirft nie.</b> Ein Fehler beim Lesen ergibt „nichts ist faellig" plus Warnung im
  * Log — eine kaputte Konfigurationstabelle darf das Wandtablet nicht mit einem 500
@@ -37,11 +35,10 @@ import java.util.stream.Collectors;
 public class ModeQuickAccessResolver {
 
     private final ModeQuickAccessRepository repository;
-    private final EntityStateRepository entityStateRepository;
-    private final ModeResponseMapper modeResponseMapper;
+    private final HouseModeQueryService houseModeQueryService;
     private final Clock clock;
 
-    /** Entity-IDs der Helfer, deren Fenster gerade offen ist. Nie {@code null}. */
+    /** Entity-IDs der Eintraege, deren Fenster gerade offen ist (oder die „immer" gelten). Nie {@code null}. */
     @Transactional(readOnly = true)
     public Set<String> dueEntityIds() {
         LocalTime now = LocalTime.now(clock);
@@ -58,9 +55,9 @@ public class ModeQuickAccessResolver {
     }
 
     /**
-     * Die gerade faelligen Helfer mit Name, Icon und Zustand, in Entity-ID-Reihenfolge.
-     * Ein Fenster fuer eine geloeschte Entity wird still uebersprungen — es gibt nichts,
-     * was der Knopf schalten koennte. Nie {@code null}.
+     * Die gerade faelligen Helfer mit Name, Icon und Zustand, in der Reihenfolge der
+     * Modus-Leiste. Ein Fenster fuer einen Helfer ausserhalb der Leiste (oder eine
+     * geloeschte Entity) wird still uebersprungen. Nie {@code null}.
      */
     @Transactional(readOnly = true)
     public List<ModeResponse> dueEntities() {
@@ -69,11 +66,8 @@ public class ModeQuickAccessResolver {
             return List.of();
         }
         try {
-            return entityStateRepository
-                    .findByDomainAndSourceOrderByEntityIdAsc(EntityDomain.INPUT_BOOLEAN, EntitySource.MANUAL)
-                    .stream()
-                    .filter(entity -> due.contains(entity.getEntityId()))
-                    .map(modeResponseMapper::toResponse)
+            return houseModeQueryService.listModes().stream()
+                    .filter(mode -> due.contains(mode.entityId()))
                     .toList();
         } catch (Exception ex) {
             log.warn("Faellige Schnellzugriffe nicht lesbar, keiner wird angezeigt: {}", ex.getMessage());

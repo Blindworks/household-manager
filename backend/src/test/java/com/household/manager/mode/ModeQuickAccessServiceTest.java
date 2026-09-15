@@ -1,15 +1,11 @@
 package com.household.manager.mode;
 
 import com.household.manager.audit.AuditService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.household.manager.entitystate.EntityDomain;
-import com.household.manager.entitystate.EntitySource;
-import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
+import com.household.manager.dto.ModeResponse;
+import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.exception.DuplicateEntityException;
 import com.household.manager.exception.ResourceNotFoundException;
-import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.ModeQuickAccess;
-import com.household.manager.repository.EntityStateRepository;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +34,7 @@ class ModeQuickAccessServiceTest {
     @Mock
     private ModeQuickAccessRepository repository;
     @Mock
-    private EntityStateRepository entityStateRepository;
+    private HouseModeQueryService houseModeQueryService;
     @Mock
     private AuditService auditService;
 
@@ -46,25 +42,13 @@ class ModeQuickAccessServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ModeQuickAccessService(repository, entityStateRepository,
-                new EntityStateResponseMapper(new ObjectMapper()), auditService);
-        // Ein Haus-Modus und ein gewoehnlicher Helfer ohne Modus-Marker.
-        lenient().when(entityStateRepository.findByDomainAndSourceOrderByEntityIdAsc(
-                EntityDomain.INPUT_BOOLEAN, EntitySource.MANUAL)).thenReturn(List.of(
-                helper(KAMIN, "Kamin", "{\"icon\":\"fireplace\"}"),
-                helper(NACHTMODUS, "Nachtmodus", "{\"icon\":\"nights_stay\",\"mode\":true}")));
-    }
-
-    private static EntityState helper(String entityId, String name, String attributes) {
-        return EntityState.builder()
-                .entityId(entityId)
-                .domain(EntityDomain.INPUT_BOOLEAN)
-                .source(EntitySource.MANUAL)
-                .sourceRef(entityId.substring("input_boolean.manual_".length()))
-                .friendlyName(name)
-                .state("off")
-                .attributes(attributes)
-                .build();
+        service = new ModeQuickAccessService(repository, houseModeQueryService, auditService);
+        // Die Modus-Leiste: ein Haus-Modus und ein per Sichtbarkeitsregel hinzugeholter Helfer.
+        lenient().when(houseModeQueryService.listModes()).thenReturn(List.of(
+                ModeResponse.builder().entityId(NACHTMODUS).displayName("Nachtmodus")
+                        .icon("nights_stay").state("off").build(),
+                ModeResponse.builder().entityId(KAMIN).displayName("Kamin")
+                        .icon("fireplace").state("off").build()));
     }
 
     private ModeQuickAccessDtos.Request request(String entityId, String from, String to) {
@@ -89,11 +73,11 @@ class ModeQuickAccessServiceTest {
     }
 
     /**
-     * Seit 2026-09-15 darf jeder Helfer vom Typ INPUT_BOOLEAN ein Fenster bekommen, nicht nur
-     * ein Haus-Modus — die Flexibilitaet war ausdruecklich gewuenscht.
+     * Seit 2026-09-15 darf jeder Eintrag der Modus-Leiste ein Fenster bekommen, auch ein
+     * hinzugeholter gewoehnlicher Helfer — die Flexibilitaet war ausdruecklich gewuenscht.
      */
     @Test
-    void akzeptiertEinenGewoehnlichenHelferOhneModusMarker() {
+    void akzeptiertEinenHinzugeholtenHelferAusDerLeiste() {
         when(repository.findByEntityId(KAMIN)).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -103,12 +87,19 @@ class ModeQuickAccessServiceTest {
         verify(auditService).record("mode.quick-access.create", "Kamin 17:00-22:00");
     }
 
-    /** Das Dropdown der Admin-Seite kennt nur Helfer; ueber die API kaeme sonst Unsinn durch. */
+    /**
+     * Der Schnellzugriff ist eine Teilmenge der Modus-Leiste: was dort nicht steht (ein
+     * Schalter, oder ein Helfer ohne ALWAYS-Regel), bekommt kein Fenster. Das Dropdown der
+     * Admin-Seite bietet nur Leisten-Mitglieder an; ueber die API kaeme sonst Unsinn durch.
+     */
     @Test
-    void lehntEineEntityAbDieKeinHelferIst() {
+    void lehntEineEntityAbDieNichtInDerModusLeisteSteht() {
         assertThatThrownBy(() -> service.create(request("switch.meross_kaffeemaschine", "20:00", "06:00")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("kein Helfer");
+                .hasMessageContaining("nicht in der Modus-Leiste");
+        assertThatThrownBy(() -> service.create(request("input_boolean.manual_urlaub", "20:00", "06:00")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("nicht in der Modus-Leiste");
         verify(repository, never()).save(any());
     }
 

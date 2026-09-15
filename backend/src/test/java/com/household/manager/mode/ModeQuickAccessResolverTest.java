@@ -1,14 +1,8 @@
 package com.household.manager.mode;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.dto.ModeResponse;
-import com.household.manager.entitystate.EntityDomain;
-import com.household.manager.entitystate.EntitySource;
-import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
-import com.household.manager.entitystate.mapper.ModeResponseMapper;
-import com.household.manager.model.entity.EntityState;
+import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.model.entity.ModeQuickAccess;
-import com.household.manager.repository.EntityStateRepository;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +17,6 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,14 +26,13 @@ class ModeQuickAccessResolverTest {
 
     private static final String NACHTMODUS = "input_boolean.manual_nachtmodus";
     private static final String ABWESEND = "input_boolean.manual_abwesend";
-    private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
-
     private static final String KAMIN = "input_boolean.manual_kamin";
+    private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
 
     @Mock
     private ModeQuickAccessRepository repository;
     @Mock
-    private EntityStateRepository entityStateRepository;
+    private HouseModeQueryService houseModeQueryService;
 
     /** Feste Uhr auf der gewuenschten lokalen Uhrzeit des 9. September 2026. */
     private ModeQuickAccessResolver resolverAt(String localTime) {
@@ -48,21 +40,11 @@ class ModeQuickAccessResolverTest {
                 .atTime(LocalTime.parse(localTime))
                 .atZone(BERLIN)
                 .toInstant();
-        EntityStateResponseMapper entityMapper = new EntityStateResponseMapper(new ObjectMapper());
-        return new ModeQuickAccessResolver(repository, entityStateRepository,
-                new ModeResponseMapper(entityMapper), Clock.fixed(instant, BERLIN));
+        return new ModeQuickAccessResolver(repository, houseModeQueryService, Clock.fixed(instant, BERLIN));
     }
 
-    private static EntityState helper(String entityId, String name, String state, String attributes) {
-        return EntityState.builder()
-                .entityId(entityId)
-                .domain(EntityDomain.INPUT_BOOLEAN)
-                .source(EntitySource.MANUAL)
-                .sourceRef(entityId.substring("input_boolean.manual_".length()))
-                .friendlyName(name)
-                .state(state)
-                .attributes(attributes)
-                .build();
+    private static ModeResponse barEntry(String entityId, String name, String state, String icon) {
+        return ModeResponse.builder().entityId(entityId).displayName(name).state(state).icon(icon).build();
     }
 
     private ModeQuickAccess window(String from, String to, boolean active) {
@@ -150,9 +132,7 @@ class ModeQuickAccessResolverTest {
         assertThat(resolverAt("12:00").dueEntityIds()).containsExactlyInAnyOrder(NACHTMODUS, ABWESEND);
     }
 
-    /**
-     * Wirft nie. Ein Datenbankfehler darf nicht das Wandtablet in einen 500 kippen.
-     */
+    /** Wirft nie. Ein Datenbankfehler darf nicht das Wandtablet in einen 500 kippen. */
     @Test
     void meldetBeiEinemDatenbankfehlerNichtsStattZuWerfen() {
         when(repository.findByActiveTrue()).thenThrow(new RuntimeException("DB weg"));
@@ -161,31 +141,6 @@ class ModeQuickAccessResolverTest {
 
         assertThat(due).isEmpty();
         assertThat(resolverAt("12:00").dueEntities()).isEmpty();
-    }
-
-    /**
-     * {@code dueEntities()} liefert die faelligen Helfer fertig fuer das Dashboard — Modi und
-     * gewoehnliche Helfer gleichermassen, mit ihrem echten Zustand. Ein Fenster fuer eine
-     * geloeschte Entity faellt still weg.
-     */
-    @Test
-    void liefertDieFaelligenHelferMitZustandUndUeberspringtGeloeschte() {
-        when(repository.findByActiveTrue()).thenReturn(List.of(
-                window(NACHTMODUS, "08:00", "18:00", true),
-                window(KAMIN, "08:00", "18:00", true),
-                window("input_boolean.manual_geloescht", "08:00", "18:00", true),
-                window(ABWESEND, "20:00", "22:00", true)));
-        when(entityStateRepository.findByDomainAndSourceOrderByEntityIdAsc(
-                EntityDomain.INPUT_BOOLEAN, EntitySource.MANUAL)).thenReturn(List.of(
-                helper(ABWESEND, "Abwesend", "off", "{\"icon\":\"exit_to_app\",\"mode\":true}"),
-                helper(KAMIN, "Kamin", "on", "{\"icon\":\"fireplace\"}"),
-                helper(NACHTMODUS, "Nachtmodus", "off", "{\"icon\":\"nights_stay\",\"mode\":true}")));
-
-        List<ModeResponse> due = resolverAt("12:00").dueEntities();
-
-        assertThat(due).extracting(ModeResponse::entityId).containsExactly(KAMIN, NACHTMODUS);
-        assertThat(due.get(0).state()).isEqualTo("on");
-        assertThat(due.get(0).icon()).isEqualTo("fireplace");
     }
 
     /** Ein Eintrag ohne Zeitfenster (beide Zeiten null) gilt zu jeder Uhrzeit. */
@@ -215,12 +170,37 @@ class ModeQuickAccessResolverTest {
         assertThat(resolverAt("12:00").dueEntityIds()).isEmpty();
     }
 
-    /** Ohne offenes Fenster wird die Entity-Tabelle gar nicht erst befragt. */
+    /**
+     * {@code dueEntities()} ist die Modus-Leiste, gefiltert auf offene Fenster — in
+     * Leisten-Reihenfolge, mit dem echten Zustand. Ein Fenster fuer einen Helfer, der nicht
+     * (mehr) in der Leiste steht, faellt still weg: der Schnellzugriff ist eine Teilmenge
+     * der Leiste, nie mehr.
+     */
     @Test
-    void fragtOhneFaelligesFensterKeineEntitiesAb() {
+    void liefertDieFaelligenLeistenEintraegeUndUeberspringtFremde() {
+        when(repository.findByActiveTrue()).thenReturn(List.of(
+                window(NACHTMODUS, "08:00", "18:00", true),
+                window(KAMIN, "08:00", "18:00", true),
+                window("input_boolean.manual_nicht_in_leiste", "08:00", "18:00", true),
+                window(ABWESEND, "20:00", "22:00", true)));
+        when(houseModeQueryService.listModes()).thenReturn(List.of(
+                barEntry(ABWESEND, "Abwesend", "off", "exit_to_app"),
+                barEntry(NACHTMODUS, "Nachtmodus", "off", "nights_stay"),
+                barEntry(KAMIN, "Kamin", "on", "fireplace")));
+
+        List<ModeResponse> due = resolverAt("12:00").dueEntities();
+
+        assertThat(due).extracting(ModeResponse::entityId).containsExactly(NACHTMODUS, KAMIN);
+        assertThat(due.get(1).state()).isEqualTo("on");
+        assertThat(due.get(1).icon()).isEqualTo("fireplace");
+    }
+
+    /** Ohne offenes Fenster wird die Leiste gar nicht erst befragt. */
+    @Test
+    void fragtOhneFaelligesFensterDieLeisteNichtAb() {
         when(repository.findByActiveTrue()).thenReturn(List.of(window("08:00", "18:00", true)));
 
         assertThat(resolverAt("19:00").dueEntities()).isEmpty();
-        verify(entityStateRepository, never()).findByDomainAndSourceOrderByEntityIdAsc(any(), any());
+        verify(houseModeQueryService, never()).listModes();
     }
 }

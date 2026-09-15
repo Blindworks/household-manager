@@ -1,14 +1,11 @@
 package com.household.manager.mode;
 
 import com.household.manager.audit.AuditService;
-import com.household.manager.entitystate.EntityDomain;
-import com.household.manager.entitystate.EntitySource;
-import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
+import com.household.manager.dto.ModeResponse;
+import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.exception.DuplicateEntityException;
 import com.household.manager.exception.ResourceNotFoundException;
-import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.ModeQuickAccess;
-import com.household.manager.repository.EntityStateRepository;
 import com.household.manager.repository.ModeQuickAccessRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,9 +18,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Pflegt die Zeitfenster, in denen ein Helfer (INPUT_BOOLEAN, Quelle MANUAL — Haus-Modus
- * oder gewoehnlicher Helfer) im Tablet-Dashboard direkt als Knopf steht. Die Auswertung
- * selbst gehoert dem {@link ModeQuickAccessResolver}.
+ * Pflegt die Zeitfenster, in denen ein Eintrag der Modus-Leiste (Haus-Modus oder
+ * hinzugeholter Helfer) im Tablet-Dashboard direkt als Knopf steht. Zulaessig sind nur
+ * Leisten-Mitglieder ({@link HouseModeQueryService#listModes()}) — der Schnellzugriff ist
+ * eine Teilmenge der Leiste. Die Auswertung selbst gehoert dem {@link ModeQuickAccessResolver}.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,8 +32,7 @@ public class ModeQuickAccessService {
             "Fuer diesen Helfer gibt es bereits ein Zeitfenster.";
 
     private final ModeQuickAccessRepository repository;
-    private final EntityStateRepository entityStateRepository;
-    private final EntityStateResponseMapper entityStateResponseMapper;
+    private final HouseModeQueryService houseModeQueryService;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -97,12 +94,10 @@ public class ModeQuickAccessService {
                 .orElseThrow(() -> new ResourceNotFoundException("ModeQuickAccess", "id", id));
     }
 
-    /** Anzeigenamen aller Helfer vom Typ INPUT_BOOLEAN (Modi eingeschlossen), nach Entity-ID. */
+    /** Anzeigenamen der Eintraege der Modus-Leiste, nach Entity-ID. */
     private Map<String, String> modeNames() {
-        return entityStateRepository
-                .findByDomainAndSourceOrderByEntityIdAsc(EntityDomain.INPUT_BOOLEAN, EntitySource.MANUAL)
-                .stream()
-                .collect(Collectors.toMap(EntityState::getEntityId, entityStateResponseMapper::displayName,
+        return houseModeQueryService.listModes().stream()
+                .collect(Collectors.toMap(ModeResponse::entityId, ModeResponse::displayName,
                         (first, second) -> first));
     }
 
@@ -142,7 +137,7 @@ public class ModeQuickAccessService {
         }
         if (!knownHelpers.containsKey(request.entityId())) {
             throw new IllegalArgumentException(
-                    "%s ist kein Helfer vom Typ input_boolean.".formatted(request.entityId()));
+                    "%s steht nicht in der Modus-Leiste.".formatted(request.entityId()));
         }
     }
 }

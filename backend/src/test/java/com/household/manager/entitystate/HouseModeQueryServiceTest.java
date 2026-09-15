@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,13 +25,17 @@ class HouseModeQueryServiceTest {
     @Mock
     private EntityStateRepository entityStateRepository;
 
+    @Mock
+    private EntityTileVisibilityService tileVisibilityService;
+
     private HouseModeQueryService service;
 
     @BeforeEach
     void setUp() {
         EntityStateResponseMapper entityMapper = new EntityStateResponseMapper(new ObjectMapper());
+        when(tileVisibilityService.tileRules(DashboardTiles.MODES)).thenReturn(Map.of());
         service = new HouseModeQueryService(entityStateRepository, entityMapper,
-                new ModeResponseMapper(entityMapper));
+                new ModeResponseMapper(entityMapper), tileVisibilityService);
     }
 
     private EntityState manualBoolean(String ref, String name, String state, String attributes) {
@@ -62,6 +67,37 @@ class HouseModeQueryServiceTest {
         assertThat(modes).extracting(ModeResponse::entityId).containsExactly(
                 "input_boolean.manual_nachtmodus",
                 "input_boolean.manual_ausschalten",
+                "input_boolean.manual_urlaub");
+    }
+
+    /**
+     * Die Leiste ist seit 2026-09-15 admin-konfigurierbar ueber die Kachel-Sichtbarkeit
+     * "modes": ALWAYS holt einen gewoehnlichen Helfer hinein, NEVER nimmt einen Modus heraus,
+     * WHEN_ON zeigt ihn nur solange er an ist. Hinzugeholte Helfer stehen hinter dem Katalog.
+     */
+    @Test
+    void wendet_die_sichtbarkeitsregeln_der_modus_leiste_an() {
+        when(entityStateRepository.findByDomainAndSourceOrderByEntityIdAsc(any(), any())).thenReturn(List.of(
+                manualBoolean("abwesend", "Abwesend", "off", "{\"icon\":\"exit_to_app\",\"mode\":true}"),
+                manualBoolean("kamin", "Kamin", "off", "{\"icon\":\"fireplace\"}"),
+                manualBoolean("nachtmodus", "Nachtmodus", "on", "{\"icon\":\"nights_stay\",\"mode\":true}"),
+                manualBoolean("party", "Party", "off", "{}"),
+                manualBoolean("urlaub", "Urlaub", "on", "{}")
+        ));
+        when(tileVisibilityService.tileRules(DashboardTiles.MODES)).thenReturn(Map.of(
+                "input_boolean.manual_kamin", TileVisibility.ALWAYS,
+                "input_boolean.manual_nachtmodus", TileVisibility.NEVER,
+                "input_boolean.manual_party", TileVisibility.WHEN_ON,
+                "input_boolean.manual_urlaub", TileVisibility.WHEN_ON
+        ));
+
+        List<ModeResponse> modes = service.listModes();
+
+        // Abwesend (Katalog, AUTO) bleibt; Nachtmodus (NEVER) fehlt; Kamin (ALWAYS) kommt dazu;
+        // Party (WHEN_ON, aus) fehlt; Urlaub (WHEN_ON, an) kommt dazu.
+        assertThat(modes).extracting(ModeResponse::entityId).containsExactly(
+                "input_boolean.manual_abwesend",
+                "input_boolean.manual_kamin",
                 "input_boolean.manual_urlaub");
     }
 

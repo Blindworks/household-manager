@@ -11,7 +11,14 @@ public final class DashboardTiles {
     /** Schalter-Kachel des Dashboards. */
     public static final String SWITCHES = "switches";
 
-    private static final Set<String> KNOWN = Set.of(SWITCHES);
+    /**
+     * Modus-Leiste des Dashboards (seit 2026-09-15 admin-konfigurierbar). AUTO = Katalog-Modi
+     * (Marker {@code mode}) sichtbar, gewöhnliche Helfer nicht; ALWAYS holt einen Helfer in
+     * die Leiste, NEVER nimmt einen Modus heraus, WHEN_ON zeigt ihn nur solange er an ist.
+     */
+    public static final String MODES = "modes";
+
+    private static final Set<String> KNOWN = Set.of(SWITCHES, MODES);
 
     private DashboardTiles() {
     }

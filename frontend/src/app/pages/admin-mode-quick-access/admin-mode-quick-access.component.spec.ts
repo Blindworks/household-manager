@@ -3,13 +3,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AdminModeQuickAccessComponent } from './admin-mode-quick-access.component';
 import { ModeQuickAccess } from '../../models/mode-quick-access.model';
-import { EntityState } from '../../models/entity-state.model';
+import { EntityState, TileVisibility } from '../../models/entity-state.model';
 
 const WINDOWS_URL = '/api/v1/mode-quick-access';
 /** Das Dropdown laedt alle Helfer vom Typ INPUT_BOOLEAN — die Query-Parameter sind Teil des Vertrags. */
 const HELPERS_URL = '/api/v1/entities?domain=INPUT_BOOLEAN&source=MANUAL';
 
-function helper(ref: string, displayName: string, attributes: Record<string, unknown>): EntityState {
+function helper(ref: string, displayName: string, attributes: Record<string, unknown>,
+                tileVisibility?: Record<string, TileVisibility>): EntityState {
   return {
     entityId: `input_boolean.manual_${ref}`,
     domain: 'INPUT_BOOLEAN',
@@ -19,6 +20,7 @@ function helper(ref: string, displayName: string, attributes: Record<string, unk
     displayName,
     state: 'off',
     attributes,
+    tileVisibility,
     lastChanged: '2026-09-15T06:00:00',
     lastUpdated: '2026-09-15T06:00:00'
   };
@@ -26,8 +28,10 @@ function helper(ref: string, displayName: string, attributes: Record<string, unk
 
 const NACHTMODUS = helper('nachtmodus', 'Nachtmodus', { icon: 'nights_stay', mode: true });
 const ABWESEND = helper('abwesend', 'Abwesend', { icon: 'exit_to_app', mode: true });
-/** Ein gewoehnlicher Helfer ohne Modus-Marker — seit 2026-09-15 ebenfalls waehlbar. */
-const KAMIN = helper('kamin', 'Kamin', { icon: 'fireplace' });
+/** Ein gewoehnlicher Helfer, per ALWAYS in die Modus-Leiste geholt — damit im Schnellzugriff waehlbar. */
+const KAMIN = helper('kamin', 'Kamin', { icon: 'fireplace' }, { modes: 'ALWAYS' });
+/** Ein gewoehnlicher Helfer ohne Regel: nicht in der Leiste, also auch nicht waehlbar. */
+const URLAUB = helper('urlaub', 'Urlaub', { icon: 'beach_access' });
 
 const NACHT_FENSTER: ModeQuickAccess = {
   id: 1,
@@ -61,7 +65,7 @@ describe('AdminModeQuickAccessComponent', () => {
    * vorher veraendert ein `input`-Ereignis aus dem Test das Formular nicht.
    */
   async function loadWith(windows: ModeQuickAccess[],
-                          helpers: EntityState[] = [NACHTMODUS, ABWESEND, KAMIN]) {
+                          helpers: EntityState[] = [NACHTMODUS, ABWESEND, KAMIN, URLAUB]) {
     fixture.detectChanges();
     httpMock.expectOne(WINDOWS_URL).flush(windows);
     httpMock.expectOne(HELPERS_URL).flush(helpers);
@@ -69,8 +73,18 @@ describe('AdminModeQuickAccessComponent', () => {
     await fixture.whenStable();
   }
 
+  /** Zeilen der Zeitfenster-Tabelle (nicht der Leisten-Tabelle). */
   function rows(): HTMLElement[] {
-    return Array.from(el.querySelectorAll('.admin-mode-quick-access__table tbody tr'));
+    return Array.from(el.querySelectorAll(
+      '.admin-mode-quick-access__table:not(.admin-mode-quick-access__bar-table) tbody tr'));
+  }
+
+  function barRows(): HTMLElement[] {
+    return Array.from(el.querySelectorAll('.admin-mode-quick-access__bar-table tbody tr'));
+  }
+
+  function barToggle(row: HTMLElement): HTMLInputElement {
+    return row.querySelector('.admin-mode-quick-access__bar-toggle') as HTMLInputElement;
   }
 
   function setInput(name: string, value: string): void {
@@ -88,7 +102,11 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(el.textContent).toContain('06:00');
   });
 
-  it('bietet alle Helfer zur Auswahl an, Modi wie gewoehnliche Helfer', async () => {
+  /**
+   * Der Schnellzugriff ist eine Teilmenge der Modus-Leiste: waehlbar sind Katalog-Modi (ohne
+   * NEVER) und per ALWAYS hineingeholte Helfer — ein Helfer ohne Regel fehlt.
+   */
+  it('bietet nur Helfer zur Auswahl an, die in der Modus-Leiste stehen', async () => {
     await loadWith([]);
 
     const options = Array.from(el.querySelectorAll('[name="entityId"] option'))
@@ -96,6 +114,56 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(options).toContain('Nachtmodus');
     expect(options).toContain('Abwesend');
     expect(options).toContain('Kamin');
+    expect(options).not.toContain('Urlaub');
+  });
+
+  it('zeigt alle Helfer mit ihrem Leisten-Status', async () => {
+    await loadWith([]);
+
+    const status = barRows().map(row =>
+      `${row.querySelector('td')?.textContent?.trim()}:${barToggle(row).checked}`);
+    expect(status).toEqual(['Nachtmodus:true', 'Abwesend:true', 'Kamin:true', 'Urlaub:false']);
+  });
+
+  /**
+   * Ein Katalog-Modus wird per NEVER herausgenommen (sein Standard ist "drin"), ein gewoehnlicher
+   * Helfer per ALWAYS hineingeholt (sein Standard ist "draussen"). Zurueck zum Standard heisst
+   * jeweils AUTO — so steht nur dort eine Regel, wo vom Standard abgewichen wird.
+   */
+  it('nimmt einen Modus per NEVER aus der Leiste und holt einen Helfer per ALWAYS hinein', async () => {
+    await loadWith([]);
+
+    barToggle(barRows()[0]).click();
+    const modeUpdate = httpMock.expectOne('/api/v1/entities/input_boolean.manual_nachtmodus/tiles/modes');
+    expect(modeUpdate.request.method).toBe('PUT');
+    expect(modeUpdate.request.body).toEqual({ visibility: 'NEVER' });
+    modeUpdate.flush({ ...NACHTMODUS, tileVisibility: { modes: 'NEVER' } });
+    fixture.detectChanges();
+    expect(barToggle(barRows()[0]).checked).toBeFalse();
+
+    barToggle(barRows()[3]).click();
+    const helperUpdate = httpMock.expectOne('/api/v1/entities/input_boolean.manual_urlaub/tiles/modes');
+    expect(helperUpdate.request.body).toEqual({ visibility: 'ALWAYS' });
+    helperUpdate.flush({ ...URLAUB, tileVisibility: { modes: 'ALWAYS' } });
+    fixture.detectChanges();
+    expect(barToggle(barRows()[3]).checked).toBeTrue();
+
+    // Der hineingeholte Helfer ist jetzt auch im Schnellzugriff waehlbar, der Modus nicht mehr.
+    const options = Array.from(el.querySelectorAll('[name="entityId"] option'))
+      .map(option => option.textContent?.trim());
+    expect(options).toContain('Urlaub');
+    expect(options).not.toContain('Nachtmodus');
+  });
+
+  it('setzt einen Modus per AUTO zurueck in die Leiste', async () => {
+    await loadWith([], [helper('nachtmodus', 'Nachtmodus', { mode: true }, { modes: 'NEVER' })]);
+
+    expect(barToggle(barRows()[0]).checked).toBeFalse();
+    barToggle(barRows()[0]).click();
+
+    const update = httpMock.expectOne('/api/v1/entities/input_boolean.manual_nachtmodus/tiles/modes');
+    expect(update.request.body).toEqual({ visibility: 'AUTO' });
+    update.flush(NACHTMODUS);
   });
 
   it('legt ein Zeitfenster mit den Formularwerten an', async () => {
@@ -274,7 +342,9 @@ describe('AdminModeQuickAccessComponent', () => {
     expect(rows().length).toBe(1);
     expect(el.textContent).toContain('Nachtmodus');
 
-    // Das Dropdown hat ausser der Platzhalter-Option keine Helfer-Optionen.
+    // Das Dropdown hat ausser der Platzhalter-Option keine Helfer-Optionen, die Leisten-Tabelle ist leer.
+    expect(barRows().length).toBe(1);
+    expect(barRows()[0].textContent).toContain('Keine Helfer gefunden.');
     const options = Array.from(el.querySelectorAll('[name="entityId"] option'));
     expect(options.length).toBe(1);
     expect(options[0].textContent?.trim()).toBe('— bitte wählen —');
@@ -292,6 +362,10 @@ describe('AdminModeQuickAccessComponent', () => {
 
     expect(el.querySelector('.admin-mode-quick-access__error')?.textContent)
       .toContain('Datenbank nicht erreichbar.');
-    expect(el.querySelector('.admin-mode-quick-access__table')).toBeFalsy();
+    // Die Zeitfenster-Tabelle bleibt weg (eine leere Liste loege); die Leisten-Tabelle haengt
+    // an einem eigenen Abruf und steht weiterhin da.
+    expect(el.querySelector('.admin-mode-quick-access__table:not(.admin-mode-quick-access__bar-table)'))
+      .toBeFalsy();
+    expect(el.querySelector('.admin-mode-quick-access__bar-table')).toBeTruthy();
   });
 });

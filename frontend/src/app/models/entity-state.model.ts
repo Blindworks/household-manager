@@ -29,6 +29,13 @@ export type TileVisibility = 'ALWAYS' | 'AUTO' | 'WHEN_ON' | 'NEVER';
 /** Schlüssel der Schalter-Kachel des Dashboards. */
 export const SWITCH_TILE_KEY = 'switches';
 
+/**
+ * Schlüssel der Modus-Leiste des Dashboards (admin-konfigurierbar seit 2026-09-15).
+ * AUTO = Katalog-Modi sichtbar, gewöhnliche Helfer nicht; ALWAYS holt einen Helfer hinein,
+ * NEVER nimmt einen Modus heraus.
+ */
+export const MODES_TILE_KEY = 'modes';
+
 /** Vom Benutzer anlegbare Helfer-Typen. */
 export type ManualEntityType = 'INPUT_BOOLEAN' | 'INPUT_NUMBER' | 'INPUT_TEXT' | 'INPUT_SELECT';
 
