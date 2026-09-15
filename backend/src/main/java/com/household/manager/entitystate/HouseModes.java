@@ -19,6 +19,7 @@ public final class HouseModes {
             new HouseModeDefinition("Abwesend", "exit_to_app"),
             new HouseModeDefinition("Toni allein", "pets"),
             new HouseModeDefinition("Nachtmodus", "nights_stay"),
+            new HouseModeDefinition("Morgenmodus", "wb_twilight"),
             new HouseModeDefinition("Bewegungssensoren", "sensors")
     );
 

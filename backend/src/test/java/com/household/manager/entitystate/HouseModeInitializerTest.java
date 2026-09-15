@@ -53,11 +53,12 @@ class HouseModeInitializerTest {
         initializer.seedHouseModes();
 
         ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
-        verify(entityStateService, times(4)).reportState(captor.capture());
+        verify(entityStateService, times(5)).reportState(captor.capture());
         assertThat(captor.getAllValues()).extracting(EntityStateUpdate::entityId).containsExactly(
                 "input_boolean.manual_abwesend",
                 "input_boolean.manual_toni_allein",
                 "input_boolean.manual_nachtmodus",
+                "input_boolean.manual_morgenmodus",
                 "input_boolean.manual_bewegungssensoren");
         EntityStateUpdate first = captor.getAllValues().get(0);
         assertThat(first.friendlyName()).isEqualTo("Abwesend");
@@ -109,7 +110,7 @@ class HouseModeInitializerTest {
 
         initializer.seedHouseModes();
 
-        verify(entityStateService, times(3)).reportState(any());
+        verify(entityStateService, times(4)).reportState(any());
     }
 
     @Test
