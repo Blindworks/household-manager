@@ -161,9 +161,9 @@
   </div>
 
   @if (dialog; as d) {
-    <div class="dialog-backdrop" (click)="closeDialog()" (keydown.escape)="closeDialog()">
+    <div class="dialog-backdrop" (click)="closeDialog()">
       <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="zigbee-dialog-title" tabindex="-1"
-           (click)="$event.stopPropagation()">
+           (click)="$event.stopPropagation()" (keydown.escape)="closeDialog()">
         <h3 class="dialog__title" id="zigbee-dialog-title">{{ dialogTitle(d.kind) }}</h3>
         <p class="dialog__text"><strong>{{ d.friendlyName }}</strong></p>
 

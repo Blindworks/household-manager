@@ -334,6 +334,8 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
       showsBatteryHint: device.battery && (kind === 'interview' || kind === 'configure' || kind === 'remove'),
       danger: kind === 'remove' || kind === 'purge'
     };
+    // Fokus auf den Dialog, sonst kommt (keydown.escape) nie an — Tastaturereignisse brauchen ein fokussiertes Element.
+    setTimeout(() => (document.querySelector('.zigbee-page .dialog') as HTMLElement | null)?.focus());
     if (showsFlowWarning) {
       this.loadReferences(this.dialog);
     }

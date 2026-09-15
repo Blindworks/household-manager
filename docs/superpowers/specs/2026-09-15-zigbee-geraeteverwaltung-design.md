@@ -152,8 +152,8 @@ Alle unter `/v1/zigbee`, Lesen über die generische `GET /v1/**`-Regel KIOSK:
 - **`GET /bridge/events`** — die letzten 50 `ZigbeeBridgeEvent`, neueste zuerst
 - **`GET /flow-references?friendlyName=`** — Flows, die eine Entität des Geräts
   verwenden (Abschnitt 3)
-- **`/live` (SSE)** — pusht zusätzlich `bridge-event` und `permit-join`
-  (bei jeder Änderung aus `bridge/info`)
+- **`/live` (SSE)** — pusht zusätzlich `bridge-event` und `bridge-info`
+  (bei jeder Änderung aus `bridge/info`, darin auch das Anlernfenster)
 
 `GET /devices/{friendlyName}/measurements` bleibt unverändert.
 
@@ -314,8 +314,9 @@ ein und lösen den in „Aktualisierung" unten beschriebenen gedrosselten Reload
   wecken (z. B. Reset-Taste kurz drücken), sonst schlägt das Entfernen fehl"
 - **Neu-Interview / Neu-Konfigurieren**: Bestätigung mit demselben Weck-Hinweis bei
   Batterie-Geräten
-- **Aus Household Manager entfernen**: nennt die Zahl der Messwerte und Entitäten,
-  roter Knopf
+- **Aus Household Manager entfernen**: nennt die Zahl der Entitäten, roter Knopf.
+  Die Zahl der Messwerte ist vorab nicht bekannt — sie steht erst nach dem Löschen
+  fest und kommt in der Antwort des Endpunkts zurück
 
 Jeder Dialog löst sein Gerät beim Bestätigen aus der **aktuellen** Liste neu auf
 (Regel aus `confirmToggle`); ist es verschwunden, passiert nichts und der Dialog
@@ -323,10 +324,12 @@ schließt mit Hinweis.
 
 ### Aktualisierung
 
-Live-Events (Messwerte und Bridge-Ereignisse) lösen einen gedrosselten Reload der
-Geräteliste aus — höchstens einmal je 5 s, garantiert binnen 5 s nach dem ersten
-Event; damit bleibt die Health-Einstufung auch ohne eigenen Timer aktuell. Bridge-
-Ereignisse und Permit-Join-Wechsel weiterhin sofort per SSE. Ein fehlgeschlagener
+Die Komponente lädt Geräteliste und Health alle 30 s per eigenem Timer neu; zusätzlich
+lösen Live-Events (Messwerte und Bridge-Ereignisse) einen gedrosselten Reload aus —
+höchstens einmal je 5 s, garantiert binnen 5 s nach dem ersten Event. So bleibt die
+Health-Einstufung auch bei stiller Anbindung aktuell (der Timer) und folgt einer
+Änderung trotzdem zeitnah (der Live-Reload). Bridge-Ereignisse und Permit-Join-Wechsel
+weiterhin sofort per SSE. Ein fehlgeschlagener
 Reload behält den letzten Stand; nur der Erstabruf meldet einen Fehler. Der
 Countdown-Intervall läuft nur, solange ein Anlernfenster offen ist.
 
