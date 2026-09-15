@@ -2524,11 +2524,25 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
     discardPeriodicTasks();
   }));
 
-  it('zeigt keinen Schnellzugriff, sobald der Modus an ist', fakeAsync(() => {
+  /**
+   * Eingeschaltet bleibt der Knopf stehen und ist hervorgehoben — nur so laesst sich der
+   * Modus ueber denselben Weg wieder ausschalten (Nutzerentscheidung 2026-09-15).
+   */
+  it('zeigt einen eingeschalteten Modus weiterhin, als aktiv hervorgehoben', fakeAsync(() => {
     modeServiceSpy.getModes.and.returnValue(of([nachtmodus({ state: 'on' })]));
     const fixture = tabletFixture();
 
-    expect(quickButtons(fixture).length).toBe(0);
+    const buttons = quickButtons(fixture);
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].classList).toContain('lumina__mode--active');
+
+    discardPeriodicTasks();
+  }));
+
+  it('hebt einen ausgeschalteten Modus im Schnellzugriff nicht hervor', fakeAsync(() => {
+    const fixture = tabletFixture();
+
+    expect(quickButtons(fixture)[0].classList).not.toContain('lumina__mode--active');
 
     discardPeriodicTasks();
   }));

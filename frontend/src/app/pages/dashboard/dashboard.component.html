@@ -466,6 +466,7 @@
             *ngFor="let mode of quickAccessModes"
             type="button"
             class="lumina-card lumina__mode"
+            [class.lumina__mode--active]="mode.state === 'on'"
             [class.lumina__mode--pending]="pendingModeIds.has(mode.entityId)"
             (click)="toggleMode(mode)"
           >
