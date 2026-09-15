@@ -114,6 +114,9 @@ public class ModeQuickAccessService {
     private String auditDetail(ModeQuickAccess window, Map<String, String> names) {
         String name = Optional.ofNullable(names.get(window.getEntityId()))
                 .orElse(window.getEntityId());
+        if (window.isAlways()) {
+            return "%s immer".formatted(name);
+        }
         return "%s %s-%s".formatted(name, AUDIT_TIME.format(window.getFromTime()),
                 AUDIT_TIME.format(window.getToTime()));
     }
@@ -126,10 +129,14 @@ public class ModeQuickAccessService {
         if (request.entityId() == null || request.entityId().isBlank()) {
             throw new IllegalArgumentException("Es ist kein Helfer ausgewaehlt.");
         }
-        if (request.fromTime() == null || request.toTime() == null) {
-            throw new IllegalArgumentException("Beginn und Ende muessen gesetzt sein.");
+        boolean always = request.fromTime() == null && request.toTime() == null;
+        // Kein Fenster = immer anzeigen. Nur EIN gesetztes Ende waere mehrdeutig und
+        // wird abgewiesen, statt still als "immer" oder "nie" gelesen zu werden.
+        if (!always && (request.fromTime() == null || request.toTime() == null)) {
+            throw new IllegalArgumentException(
+                    "Beginn und Ende muessen beide gesetzt sein — oder beide leer fuer „immer anzeigen“.");
         }
-        if (request.fromTime().equals(request.toTime())) {
+        if (!always && request.fromTime().equals(request.toTime())) {
             throw new IllegalArgumentException(
                     "Beginn und Ende duerfen nicht gleich sein — das Fenster waere leer.");
         }

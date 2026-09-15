@@ -5,7 +5,7 @@
     Ein Helfer mit Zeitfenster — ein Haus-Modus oder ein gewöhnlicher Ein/Aus-Helfer — steht
     im Tablet-Dashboard während dieser Zeit direkt als Knopf neben der eingeklappten
     Modus-Leiste; eingeschaltet bleibt er hervorgehoben stehen und lässt sich dort wieder
-    ausschalten.
+    ausschalten. Mit „Immer anzeigen“ steht er dort ohne Zeitfenster dauerhaft.
     Liegt das Ende vor dem Beginn, überspannt das Fenster Mitternacht (20:00–06:00).
     Der Beginn zählt mit, das Ende nicht. Ein deaktiviertes Fenster wirkt nicht, bleibt aber
     angelegt. Ein Wechsel wird am Tablet innerhalb von 30 Sekunden sichtbar.
@@ -31,14 +31,19 @@
         </select>
       </label>
 
+      <label class="admin-mode-quick-access__checkbox">
+        <input type="checkbox" name="always" [(ngModel)]="form.always">
+        <span>Immer anzeigen</span>
+      </label>
+
       <label class="admin-mode-quick-access__field admin-mode-quick-access__field--narrow">
         <span>Von</span>
-        <input type="time" name="fromTime" [(ngModel)]="form.fromTime">
+        <input type="time" name="fromTime" [(ngModel)]="form.fromTime" [disabled]="form.always">
       </label>
 
       <label class="admin-mode-quick-access__field admin-mode-quick-access__field--narrow">
         <span>Bis</span>
-        <input type="time" name="toTime" [(ngModel)]="form.toTime">
+        <input type="time" name="toTime" [(ngModel)]="form.toTime" [disabled]="form.always">
       </label>
 
       <label class="admin-mode-quick-access__checkbox">
@@ -69,8 +74,7 @@
       <thead>
         <tr>
           <th scope="col">Helfer</th>
-          <th scope="col">Von</th>
-          <th scope="col">Bis</th>
+          <th scope="col">Zeitfenster</th>
           <th scope="col">Aktiv</th>
           <th scope="col"><span class="admin-mode-quick-access__sr-only">Aktionen</span></th>
         </tr>
@@ -79,8 +83,7 @@
         @for (window of windows(); track window.id) {
           <tr [class.admin-mode-quick-access__row--inactive]="!window.active">
             <td>{{ label(window) }}</td>
-            <td>{{ shortTime(window.fromTime) }}</td>
-            <td>{{ shortTime(window.toTime) }}</td>
+            <td>{{ windowLabel(window) }}</td>
             <td>{{ window.active ? 'Ja' : 'Nein' }}</td>
             <td class="admin-mode-quick-access__actions">
               <button type="button" (click)="startEdit(window)">Bearbeiten</button>
@@ -99,7 +102,7 @@
             </td>
           </tr>
         } @empty {
-          <tr><td colspan="5">Noch keine Zeitfenster angelegt.</td></tr>
+          <tr><td colspan="4">Noch keine Zeitfenster angelegt.</td></tr>
         }
       </tbody>
     </table>

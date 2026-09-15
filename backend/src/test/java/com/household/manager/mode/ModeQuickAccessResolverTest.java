@@ -188,6 +188,33 @@ class ModeQuickAccessResolverTest {
         assertThat(due.get(0).icon()).isEqualTo("fireplace");
     }
 
+    /** Ein Eintrag ohne Zeitfenster (beide Zeiten null) gilt zu jeder Uhrzeit. */
+    @Test
+    void meldetEinenEintragOhneFensterImmer() {
+        ModeQuickAccess immer = ModeQuickAccess.builder().id(3L).entityId(KAMIN).active(true).build();
+        when(repository.findByActiveTrue()).thenReturn(List.of(immer));
+
+        assertThat(resolverAt("00:00").dueEntityIds()).containsExactly(KAMIN);
+        assertThat(resolverAt("12:34").dueEntityIds()).containsExactly(KAMIN);
+        assertThat(resolverAt("23:59").dueEntityIds()).containsExactly(KAMIN);
+    }
+
+    /**
+     * Eine halb gesetzte Zeile (nur Beginn oder nur Ende) entsteht ueber die API nie, per Hand
+     * in der DB aber schon. Sie gilt fail-safe als "nie" — ein Tippfehler darf keinen
+     * Dauerknopf erzeugen.
+     */
+    @Test
+    void wertetEineHalbGesetzteZeileAlsNie() {
+        ModeQuickAccess nurBeginn = ModeQuickAccess.builder().id(4L).entityId(KAMIN)
+                .fromTime(LocalTime.of(8, 0)).active(true).build();
+        ModeQuickAccess nurEnde = ModeQuickAccess.builder().id(5L).entityId(NACHTMODUS)
+                .toTime(LocalTime.of(18, 0)).active(true).build();
+        when(repository.findByActiveTrue()).thenReturn(List.of(nurBeginn, nurEnde));
+
+        assertThat(resolverAt("12:00").dueEntityIds()).isEmpty();
+    }
+
     /** Ohne offenes Fenster wird die Entity-Tabelle gar nicht erst befragt. */
     @Test
     void fragtOhneFaelligesFensterKeineEntitiesAb() {

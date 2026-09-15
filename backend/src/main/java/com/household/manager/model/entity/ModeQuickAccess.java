@@ -15,7 +15,9 @@ import lombok.Setter;
 import java.time.LocalTime;
 
 /**
- * Zeitfenster, in dem ein Haus-Modus im Tablet-Dashboard direkt als Knopf steht.
+ * Schnellzugriff-Eintrag: ein Helfer, der im Tablet-Dashboard direkt als Knopf steht —
+ * waehrend eines Zeitfensters oder, ohne Fenster ({@code fromTime}/{@code toTime} beide
+ * {@code null}), <b>immer</b>. Halb gesetzte Zeilen weist die API ab.
  *
  * <p>Bewusst ohne Fremdschluessel auf {@code entity_states} (Muster
  * {@code entity_tile_visibility}): die Zugehoerigkeit haengt allein an der stabilen
@@ -38,13 +40,21 @@ public class ModeQuickAccess {
     @Column(name = "entity_id", nullable = false, length = 255, unique = true)
     private String entityId;
 
-    /** Beginn des Fensters, inklusive. */
-    @Column(name = "from_time", nullable = false)
+    /** Beginn des Fensters, inklusive; {@code null} = kein Fenster (immer anzeigen). */
+    @Column(name = "from_time")
     private LocalTime fromTime;
 
-    /** Ende des Fensters, exklusiv. Liegt es vor {@link #fromTime}, ueberspannt das Fenster Mitternacht. */
-    @Column(name = "to_time", nullable = false)
+    /**
+     * Ende des Fensters, exklusiv; {@code null} = kein Fenster (immer anzeigen). Liegt es
+     * vor {@link #fromTime}, ueberspannt das Fenster Mitternacht.
+     */
+    @Column(name = "to_time")
     private LocalTime toTime;
+
+    /** True, wenn der Eintrag kein Zeitfenster hat und damit dauerhaft gilt. */
+    public boolean isAlways() {
+        return fromTime == null && toTime == null;
+    }
 
     @Column(nullable = false)
     @Builder.Default

@@ -81,8 +81,19 @@ public class ModeQuickAccessResolver {
         }
     }
 
-    /** Die Fensterregel selbst ist {@link TimeWindow} — geteilt mit dem Flow-Node {@code time-condition}. */
+    /**
+     * Die Fensterregel selbst ist {@link TimeWindow} — geteilt mit dem Flow-Node
+     * {@code time-condition}. Ohne Fenster gilt der Eintrag immer. Eine halb gesetzte Zeile
+     * (nur Beginn oder nur Ende, per Hand eingetragen) gilt fail-safe als <b>nie</b> —
+     * sonst erzeugte ein Tippfehler in der DB einen Dauerknopf.
+     */
     private static boolean isWithin(ModeQuickAccess window, LocalTime now) {
+        if (window.isAlways()) {
+            return true;
+        }
+        if (window.getFromTime() == null || window.getToTime() == null) {
+            return false;
+        }
         return new TimeWindow(window.getFromTime(), window.getToTime()).contains(now);
     }
 }

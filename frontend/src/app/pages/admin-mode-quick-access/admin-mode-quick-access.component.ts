@@ -18,13 +18,15 @@ interface WindowFormState {
   /** null = Anlegen, sonst die Id des bearbeiteten Fensters. */
   id: number | null;
   entityId: string;
+  /** True = kein Zeitfenster, der Helfer steht immer im Schnellzugriff; die Zeiten sind dann inaktiv. */
+  always: boolean;
   fromTime: string;
   toTime: string;
   active: boolean;
 }
 
 function emptyForm(): WindowFormState {
-  return { id: null, entityId: '', fromTime: '20:00', toTime: '06:00', active: true };
+  return { id: null, entityId: '', always: false, fromTime: '20:00', toTime: '06:00', active: true };
 }
 
 /**
@@ -99,18 +101,34 @@ export class AdminModeQuickAccessComponent implements OnInit {
     return window.displayName ?? window.entityId;
   }
 
-  /** "20:00:00" -> "20:00"; ein `<input type="time">` erwartet die kurze Form. */
-  shortTime(time: string): string {
-    return time.slice(0, 5);
+  /** "20:00:00" -> "20:00"; ein `<input type="time">` erwartet die kurze Form. null bleibt leer. */
+  shortTime(time: string | null): string {
+    return time?.slice(0, 5) ?? '';
+  }
+
+  /** True, wenn der Eintrag kein Zeitfenster hat und damit dauerhaft gilt. */
+  isAlways(window: ModeQuickAccess): boolean {
+    return window.fromTime === null && window.toTime === null;
+  }
+
+  /** Anzeige der Zeitspalte: das Fenster, oder "immer" ohne Fenster. */
+  windowLabel(window: ModeQuickAccess): string {
+    return this.isAlways(window)
+      ? 'immer'
+      : `${this.shortTime(window.fromTime)} – ${this.shortTime(window.toTime)}`;
   }
 
   startEdit(window: ModeQuickAccess): void {
     this.errorMessage.set(null);
+    const always = this.isAlways(window);
     this.form = {
       id: window.id,
       entityId: window.entityId,
-      fromTime: this.shortTime(window.fromTime),
-      toTime: this.shortTime(window.toTime),
+      always,
+      // Ohne Fenster bleiben die Vorgabezeiten stehen, damit ein Abwaehlen von "Immer" sofort
+      // ein brauchbares Fenster zeigt statt zweier leerer Felder.
+      fromTime: always ? '20:00' : this.shortTime(window.fromTime),
+      toTime: always ? '06:00' : this.shortTime(window.toTime),
       active: window.active
     };
   }
@@ -125,18 +143,19 @@ export class AdminModeQuickAccessComponent implements OnInit {
       this.errorMessage.set('Es ist kein Helfer ausgewählt.');
       return;
     }
-    if (!this.form.fromTime || !this.form.toTime) {
-      this.errorMessage.set('Beginn und Ende müssen gesetzt sein.');
+    if (!this.form.always && (!this.form.fromTime || !this.form.toTime)) {
+      this.errorMessage.set('Beginn und Ende müssen gesetzt sein — oder „Immer anzeigen“ wählen.');
       return;
     }
-    if (this.form.fromTime === this.form.toTime) {
+    if (!this.form.always && this.form.fromTime === this.form.toTime) {
       this.errorMessage.set('Beginn und Ende dürfen nicht gleich sein — das Fenster wäre leer.');
       return;
     }
     const request: ModeQuickAccessRequest = {
       entityId: this.form.entityId,
-      fromTime: this.form.fromTime,
-      toTime: this.form.toTime,
+      // "Immer" wird als fehlendes Fenster uebertragen — beide Zeiten null, nie nur eine.
+      fromTime: this.form.always ? null : this.form.fromTime,
+      toTime: this.form.always ? null : this.form.toTime,
       active: this.form.active
     };
     const id = this.form.id;

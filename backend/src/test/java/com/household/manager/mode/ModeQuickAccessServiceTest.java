@@ -132,13 +132,36 @@ class ModeQuickAccessServiceTest {
     }
 
     @Test
-    void lehntFehlendeZeitenAb() {
+    void lehntEinHalbGesetztesFensterAb() {
         ModeQuickAccessDtos.Request ohneEnde =
                 new ModeQuickAccessDtos.Request(NACHTMODUS, LocalTime.of(20, 0), null, true);
+        ModeQuickAccessDtos.Request ohneBeginn =
+                new ModeQuickAccessDtos.Request(NACHTMODUS, null, LocalTime.of(6, 0), true);
 
         assertThatThrownBy(() -> service.create(ohneEnde))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Beginn und Ende");
+        assertThatThrownBy(() -> service.create(ohneBeginn))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Beginn und Ende");
+        verify(repository, never()).save(any());
+    }
+
+    /**
+     * Seit 2026-09-15 darf ein Eintrag OHNE Zeitfenster stehen — der Helfer ist dann immer im
+     * Schnellzugriff. Beide Zeiten leer ist die einzige gueltige Form dafuer.
+     */
+    @Test
+    void legtEinenEintragOhneZeitfensterAlsImmerAn() {
+        when(repository.findByEntityId(KAMIN)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ModeQuickAccessDtos.Response response =
+                service.create(new ModeQuickAccessDtos.Request(KAMIN, null, null, true));
+
+        assertThat(response.fromTime()).isNull();
+        assertThat(response.toTime()).isNull();
+        verify(auditService).record("mode.quick-access.create", "Kamin immer");
     }
 
     /** Ein Modus hat hoechstens ein Fenster — sonst waere unklar, welches gilt. */

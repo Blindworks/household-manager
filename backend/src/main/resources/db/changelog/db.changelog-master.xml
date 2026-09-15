@@ -133,5 +133,7 @@
 
     <!-- Zeitgesteuerter Modus-Schnellzugriff im Tablet-Dashboard -->
     <include file="db/changelog/changes/20260909-0053-create-mode-quick-access.xml"/>
+    <!-- Schnellzugriff auch ohne Zeitfenster ("immer anzeigen") -->
+    <include file="db/changelog/changes/20260915-0054-mode-quick-access-optional-window.xml"/>
 
 </databaseChangeLog>

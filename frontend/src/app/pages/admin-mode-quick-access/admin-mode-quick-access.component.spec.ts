@@ -132,6 +132,55 @@ describe('AdminModeQuickAccessComponent', () => {
       .toContain('Es ist kein Helfer ausgewählt.');
   });
 
+  /**
+   * "Immer anzeigen" wird als fehlendes Fenster uebertragen: BEIDE Zeiten null. Die
+   * Zeitfelder tragen dabei weiterhin ihre Vorgabewerte — sie duerfen nicht mitgesendet werden.
+   */
+  it('legt einen Eintrag ohne Zeitfenster an, wenn "Immer anzeigen" gewaehlt ist', async () => {
+    await loadWith([]);
+
+    setInput('entityId', 'input_boolean.manual_kamin');
+    const always = el.querySelector('[name="always"]') as HTMLInputElement;
+    always.click();
+    fixture.detectChanges();
+    // NgModel schreibt [disabled] erst in einem Microtask ans DOM — ohne whenStable()
+    // saehe der Test das Feld noch aktiv, obwohl es gleich darauf gesperrt ist.
+    await fixture.whenStable();
+
+    expect((el.querySelector('[name="fromTime"]') as HTMLInputElement).disabled).toBeTrue();
+    (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+
+    const created = httpMock.expectOne(WINDOWS_URL);
+    expect(created.request.body).toEqual({
+      entityId: 'input_boolean.manual_kamin',
+      fromTime: null,
+      toTime: null,
+      active: true
+    });
+    created.flush({ ...NACHT_FENSTER, id: 9, entityId: 'input_boolean.manual_kamin',
+      displayName: 'Kamin', fromTime: null, toTime: null });
+    httpMock.expectOne(WINDOWS_URL).flush([]);
+  });
+
+  it('zeigt einen Eintrag ohne Zeitfenster als "immer"', async () => {
+    await loadWith([{ ...NACHT_FENSTER, fromTime: null, toTime: null }]);
+
+    expect(rows()[0].textContent).toContain('immer');
+    expect(rows()[0].textContent).not.toContain('20:00');
+  });
+
+  /** Beim Bearbeiten eines "immer"-Eintrags muss die Checkbox gesetzt sein, sonst wuerde ein Speichern das Fenster erfinden. */
+  it('uebernimmt "immer" beim Bearbeiten ins Formular', async () => {
+    await loadWith([{ ...NACHT_FENSTER, fromTime: null, toTime: null }]);
+
+    (rows()[0].querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.form.always).toBeTrue();
+    expect((el.querySelector('[name="always"]') as HTMLInputElement).checked).toBeTrue();
+  });
+
   it('lehnt gleichen Beginn und gleiches Ende ohne Anfrage ab', async () => {
     await loadWith([]);
 

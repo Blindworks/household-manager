@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Ein Schnellzugriff darf seit 2026-09-15 auch OHNE Zeitfenster stehen ("immer
+        anzeigen"): from_time und to_time sind dann beide NULL. Halb gesetzte Zeilen weist
+        die API ab; der Resolver wertet eine halb gesetzte Zeile fail-safe als "nie".
+
+        Zwei Changesets statt einem: MariaDB committet jedes DDL implizit. Ein gebuendeltes
+        Changeset stuende nach einem Fehlschlag im zweiten ALTER halb angewendet in der
+        Tabelle, aber nicht in DATABASECHANGELOG - und blockierte den naechsten Start.
+    -->
+    <changeSet id="20260915-0054-a" author="household-manager">
+        <comment>Schritt 1/2: from_time optional (NULL = kein Zeitfenster, immer anzeigen).</comment>
+        <dropNotNullConstraint tableName="mode_quick_access" columnName="from_time" columnDataType="TIME"/>
+        <rollback>
+            <addNotNullConstraint tableName="mode_quick_access" columnName="from_time" columnDataType="TIME"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260915-0054-b" author="household-manager">
+        <comment>Schritt 2/2: to_time optional (NULL = kein Zeitfenster, immer anzeigen).</comment>
+        <dropNotNullConstraint tableName="mode_quick_access" columnName="to_time" columnDataType="TIME"/>
+        <rollback>
+            <addNotNullConstraint tableName="mode_quick_access" columnName="to_time" columnDataType="TIME"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
