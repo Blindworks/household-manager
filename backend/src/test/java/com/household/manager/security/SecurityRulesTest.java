@@ -1029,4 +1029,20 @@ class SecurityRulesTest {
         mockMvc.perform(get("/v1/zigbee/devices/Motion/measurements").param("type", "OCCUPANCY"))
                 .andExpect(status().isNotFound());
     }
+
+    /** Flow-Namen/-Ids sind Admin-Daten (wie /v1/flows/**); einziger Konsument ist der ADMIN-Dialog. */
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfZigbeeFlowReferenzenNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/zigbee/flow-references").param("friendlyName", "x"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfZigbeeFlowReferenzenLesen() throws Exception {
+        when(zigbeeFlowReferenceService.references(anyString())).thenReturn(List.of());
+        mockMvc.perform(get("/v1/zigbee/flow-references").param("friendlyName", "x"))
+                .andExpect(status().isOk());
+    }
 }
