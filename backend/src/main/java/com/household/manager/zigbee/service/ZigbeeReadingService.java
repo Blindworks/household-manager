@@ -67,7 +67,16 @@ public class ZigbeeReadingService {
         if (message.linkQuality() != null) {
             device.setLastLinkQuality(message.linkQuality());
         }
-        device.setLastSeen(now);
+        // Retained Nachrichten setzen lastSeen NICHT: nach jedem Reconnect spielt der
+        // Broker den letzten retained Wert jedes Geraets erneut aus, ohne dass eine
+        // einzige frische Funk-Nachricht kam. Wuerde lastSeen hier trotzdem gesetzt,
+        // saehen danach alle Geraete - auch laengst tote Sensoren - ueber
+        // ZigbeeDeviceQueryService.lastHeard() bis zu 25 h lang aktiv aus. Messwerte,
+        // Batterie und Link-Qualitaet werden weiterhin uebernommen, der Wert selbst ist
+        // ja gueltig (dieselbe Regel wie fuer die Stille-Uhr in ZigbeeMqttConfig).
+        if (!message.retained()) {
+            device.setLastSeen(now);
+        }
         return deviceRepository.save(device);
     }
 }

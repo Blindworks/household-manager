@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,8 @@ public class ZigbeeBridgeMessageParser {
             Set.of("device_joined", "device_interview", "device_announce", "device_leave");
 
     private final ObjectMapper objectMapper;
+    /** Nur fuer z2m 1.x noetig: dort kommt das Anlernfenster als Restsekunden, nicht als Endzeitpunkt. */
+    private final Clock clock;
 
     public Optional<List<ZigbeeBridgeDevice>> parseDevices(String topic, String payload) {
         if (!DEVICES_TOPIC.equals(topic)) {
@@ -100,14 +103,30 @@ public class ZigbeeBridgeMessageParser {
             return Optional.empty();
         }
         boolean permitJoin = root.path("permit_join").asBoolean(false);
-        JsonNode end = root.get("permit_join_end");
-        Instant permitJoinEnd = (permitJoin && end != null && end.isNumber())
-                ? Instant.ofEpochMilli(end.asLong()) : null;
         return Optional.of(new ZigbeeBridgeInfo(
                 text(root, "version"),
                 permitJoin,
-                permitJoinEnd,
+                permitJoin ? permitJoinEnd(root) : null,
                 availabilityEnabled(root.path("config").get("availability"))));
+    }
+
+    /**
+     * z2m 2.x: {@code permit_join_end} als Epoch-Millisekunden; z2m 1.x: nur
+     * {@code permit_join_timeout} als Restsekunden — das wird ueber die Uhr in einen
+     * Endzeitpunkt umgerechnet, sonst bliebe das Fenster auf 1.x in der Oberflaeche
+     * dauerhaft "geschlossen". Nur bei offenem Fenster aufrufen: ein stehen
+     * gebliebener Timeout bei {@code permit_join:false} darf kein Ende erzeugen.
+     */
+    private Instant permitJoinEnd(JsonNode root) {
+        JsonNode end = root.get("permit_join_end");
+        if (end != null && end.isNumber()) {
+            return Instant.ofEpochMilli(end.asLong());
+        }
+        JsonNode timeout = root.get("permit_join_timeout");
+        if (timeout != null && timeout.isNumber() && timeout.asLong() > 0) {
+            return clock.instant().plusSeconds(timeout.asLong());
+        }
+        return null;
     }
 
     /**

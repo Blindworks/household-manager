@@ -97,7 +97,7 @@ public class ZigbeeMessageParser {
         if (measurements.isEmpty() && battery == null && linkQuality == null && action == null) {
             return Optional.empty();
         }
-        return Optional.of(new ParsedZigbeeMessage(friendlyName, battery, linkQuality, measurements, action));
+        return Optional.of(new ParsedZigbeeMessage(friendlyName, battery, linkQuality, measurements, action, retained));
     }
 
     /**

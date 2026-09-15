@@ -23,7 +23,7 @@ class ZigbeeEntityMapperTest {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Wohnzimmer Sensor", 87, 120,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")),
-                null);
+                null, false);
 
         List<EntityStateUpdate> updates = mapper.map(message);
 
@@ -46,7 +46,7 @@ class ZigbeeEntityMapperTest {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ONE, "")),
-                null);
+                null, false);
 
         List<EntityStateUpdate> updates = mapper.map(message);
 
@@ -65,7 +65,7 @@ class ZigbeeEntityMapperTest {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.CONTACT, BigDecimal.ZERO, "")),
-                null);
+                null, false);
 
         assertEquals("on", mapper.map(message).get(0).state());
     }
@@ -75,7 +75,7 @@ class ZigbeeEntityMapperTest {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Haustür", null, null,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ZERO, "")),
-                null);
+                null, false);
 
         assertEquals("off", mapper.map(message).get(0).state());
     }
@@ -85,7 +85,7 @@ class ZigbeeEntityMapperTest {
         ParsedZigbeeMessage message = new ParsedZigbeeMessage(
                 "Flur", null, null,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.OCCUPANCY, BigDecimal.ONE, "")),
-                null);
+                null, false);
 
         assertEquals("on", mapper.map(message).get(0).state());
     }
@@ -97,14 +97,14 @@ class ZigbeeEntityMapperTest {
                 List.of(
                         new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("22.0"), "°C"),
                         new ZigbeeMeasurementValue(MeasurementType.HUMIDITY, new BigDecimal("55"), "%")),
-                null);
+                null, false);
 
         assertEquals(2, mapper.map(message).size());
     }
 
     @Test
     void mapsActionToEventEntity() {
-        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Flur-Taster", 100, 90, List.of(), "single");
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Flur-Taster", 100, 90, List.of(), "single", false);
 
         EntityStateUpdate update = mapper.mapAction(message).orElseThrow();
 
@@ -120,14 +120,14 @@ class ZigbeeEntityMapperTest {
 
     @Test
     void mapActionTransliteratesUmlautsInEntityId() {
-        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Küchen-Taster", null, null, List.of(), "hold");
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Küchen-Taster", null, null, List.of(), "hold", false);
 
         assertEquals("event.zigbee_kuechen_taster_action", mapper.mapAction(message).orElseThrow().entityId());
     }
 
     @Test
     void mapActionIsEmptyWithoutAction() {
-        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Haustür", null, null, List.of(), null);
+        ParsedZigbeeMessage message = new ParsedZigbeeMessage("Haustür", null, null, List.of(), null, false);
 
         assertTrue(mapper.mapAction(message).isEmpty());
     }

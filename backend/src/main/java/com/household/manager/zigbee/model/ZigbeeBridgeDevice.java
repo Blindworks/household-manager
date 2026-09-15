@@ -19,8 +19,19 @@ public record ZigbeeBridgeDevice(
         String description,
         Integer networkAddress) {
 
-    /** Batteriegeraete sind schlafende Endgeraete: andere Stille-Schwelle, kein Ping. */
+    /**
+     * Batteriegeraete sind schlafende Endgeraete: andere Stille-Schwelle, kein Ping.
+     * <p>
+     * Konservativ: nur eine ausdruecklich netzversorgte Quelle ("Mains …", "DC Source")
+     * gilt als Netzgeraet. Fehlt die Angabe oder lautet sie "Unknown", wird das Geraet
+     * wie ein Batteriegeraet behandelt — sonst bekaeme es die aggressive 15-Minuten-Schwelle
+     * und stuende bei jeder laengeren Funkpause faelschlich auf "still".
+     */
     public boolean battery() {
-        return powerSource != null && powerSource.toLowerCase(Locale.ROOT).contains("battery");
+        if (powerSource == null) {
+            return true;
+        }
+        String source = powerSource.toLowerCase(Locale.ROOT);
+        return !source.contains("mains") && !source.contains("dc source");
     }
 }

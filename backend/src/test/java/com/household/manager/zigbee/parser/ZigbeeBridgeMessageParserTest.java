@@ -7,7 +7,9 @@ import com.household.manager.zigbee.model.ZigbeeBridgeInfo;
 import com.household.manager.zigbee.model.ZigbeeBridgeResponse;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,7 +17,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ZigbeeBridgeMessageParserTest {
 
-    private final ZigbeeBridgeMessageParser parser = new ZigbeeBridgeMessageParser(new ObjectMapper());
+    private static final Instant NOW = Instant.parse("2026-09-15T10:00:00Z");
+
+    private final ZigbeeBridgeMessageParser parser =
+            new ZigbeeBridgeMessageParser(new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     private static final String DEVICES = """
             [
@@ -93,6 +98,54 @@ class ZigbeeBridgeMessageParserTest {
         assertThat(info.permitJoin()).isTrue();
         assertThat(info.permitJoinEnd()).isEqualTo(Instant.ofEpochMilli(1757950000000L));
         assertThat(info.availabilityCheckEnabled()).isTrue();
+    }
+
+    @Test
+    void liestPermitJoinTimeoutDerEinerVersion() {
+        String payload = """
+                {"version":"1.42.0","permit_join":true,"permit_join_timeout":120,"config":{}}
+                """;
+
+        ZigbeeBridgeInfo info = parser.parseInfo("zigbee2mqtt/bridge/info", payload).orElseThrow();
+
+        assertThat(info.permitJoin()).isTrue();
+        assertThat(info.permitJoinEnd()).isEqualTo(Instant.parse("2026-09-15T10:02:00Z"));
+    }
+
+    @Test
+    void geschlossenesFensterIgnoriertAltenPermitJoinTimeout() {
+        String payload = """
+                {"version":"1.42.0","permit_join":false,"permit_join_timeout":120,"config":{}}
+                """;
+
+        ZigbeeBridgeInfo info = parser.parseInfo("zigbee2mqtt/bridge/info", payload).orElseThrow();
+
+        assertThat(info.permitJoin()).isFalse();
+        assertThat(info.permitJoinEnd()).isNull();
+    }
+
+    @Test
+    void permitJoinEndGewinntGegenTimeoutUndNullTimeoutErgibtKeinEnde() {
+        ZigbeeBridgeInfo beides = parser.parseInfo("zigbee2mqtt/bridge/info",
+                "{\"permit_join\":true,\"permit_join_end\":1757950000000,\"permit_join_timeout\":120}").orElseThrow();
+        assertThat(beides.permitJoinEnd()).isEqualTo(Instant.ofEpochMilli(1757950000000L));
+
+        ZigbeeBridgeInfo abgelaufen = parser.parseInfo("zigbee2mqtt/bridge/info",
+                "{\"permit_join\":true,\"permit_join_timeout\":0}").orElseThrow();
+        assertThat(abgelaufen.permitJoinEnd()).isNull();
+    }
+
+    @Test
+    void unbekannteStromquelleGiltAlsBatterie() {
+        assertThat(bridgeDevice(null).battery()).isTrue();
+        assertThat(bridgeDevice("Unknown").battery()).isTrue();
+        assertThat(bridgeDevice("Battery").battery()).isTrue();
+        assertThat(bridgeDevice("Mains (single phase)").battery()).isFalse();
+        assertThat(bridgeDevice("DC Source").battery()).isFalse();
+    }
+
+    private static ZigbeeBridgeDevice bridgeDevice(String powerSource) {
+        return new ZigbeeBridgeDevice("0x1", "Sensor", "EndDevice", powerSource, true, true, null, null, null, null);
     }
 
     @Test
