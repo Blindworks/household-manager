@@ -8,6 +8,7 @@ import com.household.manager.zigbee.model.ZigbeeStreamStatus;
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
+import com.household.manager.zigbee.service.ZigbeeDeviceQueryService;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeStreamMonitor;
 import lombok.RequiredArgsConstructor;
@@ -34,13 +35,11 @@ public class ZigbeeController {
     private final ZigbeeMeasurementRepository measurementRepository;
     private final ZigbeeLiveService liveService;
     private final ZigbeeStreamMonitor streamMonitor;
+    private final ZigbeeDeviceQueryService queryService;
 
     @GetMapping("/devices")
     public ResponseEntity<List<ZigbeeDeviceResponse>> getDevices() {
-        List<ZigbeeDeviceResponse> devices = deviceRepository.findAll().stream()
-                .map(this::toDeviceResponse)
-                .toList();
-        return ResponseEntity.ok(devices);
+        return ResponseEntity.ok(queryService.listDevices());
     }
 
     @GetMapping("/devices/{friendlyName}/measurements")
@@ -90,18 +89,5 @@ public class ZigbeeController {
                 .lastBridgeStateAt(status.lastBridgeStateAt())
                 .offlineDevices(status.offlineDevices())
                 .build());
-    }
-
-    private ZigbeeDeviceResponse toDeviceResponse(ZigbeeDevice device) {
-        return ZigbeeDeviceResponse.builder()
-                .id(device.getId())
-                .friendlyName(device.getFriendlyName())
-                .ieeeAddress(device.getIeeeAddress())
-                .deviceType(device.getDeviceType())
-                .model(device.getModel())
-                .lastBatteryPercent(device.getLastBatteryPercent())
-                .lastLinkQuality(device.getLastLinkQuality())
-                .lastSeen(device.getLastSeen())
-                .build();
     }
 }

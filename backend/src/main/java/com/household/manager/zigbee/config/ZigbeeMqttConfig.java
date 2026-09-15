@@ -7,14 +7,13 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.ZigbeeEntityMapper;
 import com.household.manager.zigbee.dto.ZigbeeBridgeEventResponse;
-import com.household.manager.zigbee.dto.ZigbeeBridgeStatusResponse;
-import com.household.manager.zigbee.model.ZigbeeBridgeInfo;
 import com.household.manager.zigbee.parser.ZigbeeBridgeMessageParser;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
 import com.household.manager.zigbee.parser.ZigbeeAvailability;
 import com.household.manager.zigbee.service.ZigbeeBridgeCommands;
 import com.household.manager.zigbee.service.ZigbeeBridgeRequestService;
 import com.household.manager.zigbee.service.ZigbeeConnectionControl;
+import com.household.manager.zigbee.service.ZigbeeDeviceQueryService;
 import com.household.manager.zigbee.service.ZigbeeDeviceRegistry;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeMessageParser;
@@ -63,6 +62,12 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl, ZigbeeBridgeCo
      * ihn fuer {@code onResponse} — ein Bean-Zirkel, den der Provider aufloest.
      */
     private final ObjectProvider<ZigbeeBridgeRequestService> requestServiceProvider;
+    /**
+     * Ebenfalls ObjectProvider: der Query-Service haengt ueber {@link ZigbeeBridgeCommands}
+     * an dieser Klasse. Er ist die einzige Definition des Bridge-Status — SSE und
+     * GET /v1/zigbee/bridge liefern denselben Aufbau.
+     */
+    private final ObjectProvider<ZigbeeDeviceQueryService> queryServiceProvider;
 
     private Mqtt3AsyncClient client;
 
@@ -384,7 +389,7 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl, ZigbeeBridgeCo
         });
         bridgeParser.parseInfo(topic, payload).ifPresent(info -> {
             registry.updateInfo(info);
-            liveService.broadcastBridgeInfo(bridgeStatus());
+            liveService.broadcastBridgeInfo(queryServiceProvider.getObject().bridgeStatus());
         });
         bridgeParser.parseEvent(topic, payload).ifPresent(event -> {
             registry.recordEvent(event);
@@ -395,19 +400,6 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl, ZigbeeBridgeCo
         bridgeParser.parseResponse(topic, payload)
                 .ifPresent(response -> requestServiceProvider.getObject().onResponse(response));
         return true;
-    }
-
-    /** Baut den Bridge-Status fuer SSE; derselbe Aufbau wie GET /v1/zigbee/bridge (siehe ZigbeeDeviceQueryService). */
-    private ZigbeeBridgeStatusResponse bridgeStatus() {
-        var info = registry.info();
-        return ZigbeeBridgeStatusResponse.builder()
-                .version(info.map(ZigbeeBridgeInfo::version).orElse(null))
-                .connected(isConnected())
-                .registryLoaded(registry.loaded())
-                .permitJoin(info.map(ZigbeeBridgeInfo::permitJoin).orElse(false))
-                .permitJoinEnd(info.map(ZigbeeBridgeInfo::permitJoinEnd).orElse(null))
-                .availabilityCheckEnabled(info.map(ZigbeeBridgeInfo::availabilityCheckEnabled).orElse(null))
-                .build();
     }
 
     private void reportEntityStates(ParsedZigbeeMessage message) {
