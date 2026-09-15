@@ -4,9 +4,11 @@ import com.household.manager.zigbee.model.MeasurementType;
 import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import com.household.manager.zigbee.model.entity.ZigbeeMeasurement;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,4 +33,9 @@ public interface ZigbeeMeasurementRepository extends JpaRepository<ZigbeeMeasure
     /** Jüngster Messwert eines Geräts für einen Messtyp. */
     Optional<ZigbeeMeasurement> findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(
             Long deviceId, MeasurementType measurementType);
+
+    @Transactional
+    @Modifying
+    @Query("delete from ZigbeeMeasurement m where m.device.id = :deviceId")
+    int deleteByDeviceId(@Param("deviceId") Long deviceId);
 }

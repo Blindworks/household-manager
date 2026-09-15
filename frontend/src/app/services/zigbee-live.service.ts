@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { ZigbeeLiveEvent } from '../models/zigbee.model';
+import { ZigbeeBridgeEvent, ZigbeeBridgeStatus, ZigbeeLiveEvent } from '../models/zigbee.model';
 
 type LiveStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 /**
- * SSE-Service für Live-Zigbee-Messwerte.
- * Listens on the named event 'live' as emitted by the backend ZigbeeLiveService.
+ * SSE-Service fuer /api/v1/zigbee/live. Eine Verbindung, drei benannte Ereignisse:
+ * 'live' (Messwerte), 'bridge-event' (Anlernen live), 'bridge-info' (Anlernfenster,
+ * Verfuegbarkeitspruefung). Ein Unsubscribe entfernt nur seinen Listener — die
+ * Verbindung schliesst erst disconnect() (die Seite ruft es in ngOnDestroy).
  */
 @Injectable({ providedIn: 'root' })
 export class ZigbeeLiveService {
@@ -19,27 +21,15 @@ export class ZigbeeLiveService {
   }
 
   getLiveStream(): Observable<ZigbeeLiveEvent> {
-    return new Observable<ZigbeeLiveEvent>((observer) => {
-      this.connect();
+    return this.stream<ZigbeeLiveEvent>('live');
+  }
 
-      this.eventSource?.addEventListener('live', (event: MessageEvent) => {
-        try {
-          observer.next(JSON.parse(event.data) as ZigbeeLiveEvent);
-        } catch (error) {
-          observer.error(error);
-        }
-      });
+  getBridgeEvents(): Observable<ZigbeeBridgeEvent> {
+    return this.stream<ZigbeeBridgeEvent>('bridge-event');
+  }
 
-      if (this.eventSource) {
-        this.eventSource.onopen = () => this.statusSubject.next('connected');
-        this.eventSource.onerror = (error) => {
-          this.statusSubject.next('error');
-          observer.error(error);
-        };
-      }
-
-      return () => this.disconnect();
-    });
+  getBridgeInfo(): Observable<ZigbeeBridgeStatus> {
+    return this.stream<ZigbeeBridgeStatus>('bridge-info');
   }
 
   disconnect(): void {
@@ -50,9 +40,30 @@ export class ZigbeeLiveService {
     this.statusSubject.next('disconnected');
   }
 
-  private connect(): void {
-    if (this.eventSource) { return; }
+  private stream<T>(name: string): Observable<T> {
+    return new Observable<T>((observer) => {
+      const source = this.connect();
+      const listener = (event: MessageEvent) => {
+        try {
+          observer.next(JSON.parse(event.data) as T);
+        } catch (error) {
+          observer.error(error);
+        }
+      };
+      source.addEventListener(name, listener);
+      return () => source.removeEventListener(name, listener);
+    });
+  }
+
+  private connect(): EventSource {
+    if (this.eventSource) { return this.eventSource; }
     this.statusSubject.next('connecting');
-    this.eventSource = new EventSource(this.url);
+    const source = new EventSource(this.url);
+    source.onopen = () => this.statusSubject.next('connected');
+    // Kein observer.error hier: der Browser verbindet SSE selbst neu, ein Fehler
+    // wuerde alle drei Streams beenden, obwohl die Verbindung gleich wiederkommt.
+    source.onerror = () => this.statusSubject.next('error');
+    this.eventSource = source;
+    return source;
   }
 }

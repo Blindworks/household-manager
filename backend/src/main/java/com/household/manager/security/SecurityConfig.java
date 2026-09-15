@@ -186,6 +186,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/presence/devices").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/v1/presence/devices/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/presence/devices/*").hasRole("ADMIN")
+                        // Zigbee-Geraeteverwaltung (Anlernen, Umbenennen, Interview, Entfernen) ist
+                        // ADMIN. Methodenspezifisch, weil GET /v1/zigbee/devices/*/measurements unter
+                        // demselben Praefix liegt und KIOSK bleiben muss (Muster Kalender-Kategorien).
+                        .requestMatchers(HttpMethod.POST, "/v1/zigbee/bridge/permit-join").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/zigbee/bridge/permit-join").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/v1/zigbee/devices/*/name").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/v1/zigbee/devices/*/interview",
+                                "/v1/zigbee/devices/*/configure").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/zigbee/devices/*",
+                                "/v1/zigbee/devices/local/*").hasRole("ADMIN")
+                        // Flow-Namen sind Admin-Daten wie /v1/flows/**
+                        .requestMatchers(HttpMethod.GET, "/v1/zigbee/flow-references").hasRole("ADMIN")
                         // Manueller Abruf lebt bewusst NICHT in der KIOSK-POST-Whitelist weiter
                         // unten (anders als /v1/tractive/pets/refresh oder /v1/network/speedtest):
                         // er sitzt nur auf der Admin-Seite und kann als sequentielle Probe aller

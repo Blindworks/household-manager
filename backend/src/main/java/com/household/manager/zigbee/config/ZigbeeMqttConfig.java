@@ -6,9 +6,15 @@ import com.hivemq.client.mqtt.lifecycle.MqttDisconnectSource;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.mapper.ZigbeeEntityMapper;
+import com.household.manager.zigbee.dto.ZigbeeBridgeEventResponse;
+import com.household.manager.zigbee.parser.ZigbeeBridgeMessageParser;
 import com.household.manager.zigbee.parser.ParsedZigbeeMessage;
 import com.household.manager.zigbee.parser.ZigbeeAvailability;
+import com.household.manager.zigbee.service.ZigbeeBridgeCommands;
+import com.household.manager.zigbee.service.ZigbeeBridgeRequestService;
 import com.household.manager.zigbee.service.ZigbeeConnectionControl;
+import com.household.manager.zigbee.service.ZigbeeDeviceQueryService;
+import com.household.manager.zigbee.service.ZigbeeDeviceRegistry;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeMessageParser;
 import com.household.manager.zigbee.service.ZigbeeReadingService;
@@ -17,10 +23,12 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
+public class ZigbeeMqttConfig implements ZigbeeConnectionControl, ZigbeeBridgeCommands {
 
     private final ZigbeeMqttProperties properties;
     private final ZigbeeMessageParser parser;
@@ -46,6 +54,20 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
     private final ZigbeeEntityMapper zigbeeEntityMapper;
     private final EntityStateService entityStateService;
     private final ZigbeeStreamMonitor streamMonitor;
+    private final ZigbeeBridgeMessageParser bridgeParser;
+    private final ZigbeeDeviceRegistry registry;
+    /**
+     * Bewusst ObjectProvider statt direkter Abhaengigkeit: der Request-Service braucht
+     * {@link ZigbeeBridgeCommands} (= diese Klasse) zum Publizieren, diese Klasse braucht
+     * ihn fuer {@code onResponse} — ein Bean-Zirkel, den der Provider aufloest.
+     */
+    private final ObjectProvider<ZigbeeBridgeRequestService> requestServiceProvider;
+    /**
+     * Ebenfalls ObjectProvider: der Query-Service haengt ueber {@link ZigbeeBridgeCommands}
+     * an dieser Klasse. Er ist die einzige Definition des Bridge-Status — SSE und
+     * GET /v1/zigbee/bridge liefern denselben Aufbau.
+     */
+    private final ObjectProvider<ZigbeeDeviceQueryService> queryServiceProvider;
 
     private Mqtt3AsyncClient client;
 
@@ -222,6 +244,26 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
         });
     }
 
+    @Override
+    public boolean isConnected() {
+        Mqtt3AsyncClient current = this.client;
+        return current != null && current.getConfig().getState().isConnected();
+    }
+
+    @Override
+    public CompletableFuture<Void> publish(String topic, String payload) {
+        Mqtt3AsyncClient current = this.client;
+        if (current == null) {
+            return CompletableFuture.failedFuture(new IllegalStateException("MQTT-Client nicht gestartet"));
+        }
+        return current.publishWith()
+                .topic(topic)
+                .qos(MqttQos.AT_LEAST_ONCE)
+                .payload(payload.getBytes(StandardCharsets.UTF_8))
+                .send()
+                .thenApply(ack -> null);
+    }
+
     private void subscribe() {
         subscribe(1, subscribeGeneration.incrementAndGet());
     }
@@ -298,6 +340,10 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
                 return;
             }
 
+            if (handleBridgeTopic(topic, payload)) {
+                return;
+            }
+
             Optional<ZigbeeAvailability> availability = parser.parseAvailability(topic, payload);
             if (availability.isPresent()) {
                 streamMonitor.recordAvailability(
@@ -326,6 +372,34 @@ public class ZigbeeMqttConfig implements ZigbeeConnectionControl {
             log.warn("Zigbee-MQTT-Nachricht konnte nicht verarbeitet werden (Topic {}): {}",
                     publish.getTopic(), ex.getMessage(), ex);
         }
+    }
+
+    /**
+     * Verzeichnis, Info, Ereignisse und Antworten der Bridge. Liefert true, wenn das
+     * Topic eines davon war (auch wenn das Payload unlesbar war — dann bleibt der alte
+     * Stand stehen, ein Format-Bruch darf das Registry nicht leeren).
+     */
+    private boolean handleBridgeTopic(String topic, String payload) {
+        if (!topic.startsWith("zigbee2mqtt/bridge/")) {
+            return false;
+        }
+        bridgeParser.parseDevices(topic, payload).ifPresent(devices -> {
+            registry.replaceDevices(devices);
+            log.info("zigbee2mqtt-Verzeichnis: {} Geraete", devices.size());
+        });
+        bridgeParser.parseInfo(topic, payload).ifPresent(info -> {
+            registry.updateInfo(info);
+            liveService.broadcastBridgeInfo(queryServiceProvider.getObject().bridgeStatus());
+        });
+        bridgeParser.parseEvent(topic, payload).ifPresent(event -> {
+            registry.recordEvent(event);
+            registry.events().stream().findFirst()
+                    .ifPresent(stamped -> liveService.broadcastBridgeEvent(ZigbeeBridgeEventResponse.from(stamped)));
+            log.info("zigbee2mqtt-Ereignis {} fuer {}", event.type(), event.friendlyName());
+        });
+        bridgeParser.parseResponse(topic, payload)
+                .ifPresent(response -> requestServiceProvider.getObject().onResponse(response));
+        return true;
     }
 
     private void reportEntityStates(ParsedZigbeeMessage message) {

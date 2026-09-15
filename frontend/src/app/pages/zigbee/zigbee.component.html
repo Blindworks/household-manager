@@ -1,5 +1,19 @@
 <section class="zigbee-page">
-  <h1>Zigbee-Sensoren</h1>
+  <header class="page-header">
+    <h1>Zigbee-Geräte</h1>
+    @if (isAdmin()) {
+      <div class="permit-join">
+        @if (permitJoinActive) {
+          <span class="permit-join__countdown">Anlernen läuft — noch {{ permitJoinRemaining }} s</span>
+          <button type="button" class="ghost" [disabled]="permitJoinBusy" (click)="closePermitJoin()">Beenden</button>
+        } @else {
+          <button type="button" [disabled]="permitJoinBusy || !bridge?.connected" (click)="openPermitJoin()">
+            Anlernen (4 min)
+          </button>
+        }
+      </div>
+    }
+  </header>
 
   @if (health && !health.healthy) {
     <div class="outage-banner">
@@ -13,31 +27,111 @@
     </div>
   }
 
+  <div class="bridge-status">
+    @if (bridge) {
+      <span>zigbee2mqtt {{ bridge.version ?? '?' }}</span>
+      <span [class.ok]="bridge.connected" [class.bad]="!bridge.connected">
+        {{ bridge.connected ? 'verbunden' : 'nicht verbunden' }}
+      </span>
+      @if (!bridge.registryLoaded) {
+        <span>Geräteverzeichnis wird geladen …</span>
+      }
+    }
+  </div>
+
+  @if (showAvailabilityHint) {
+    <div class="availability-hint">
+      Die Verfügbarkeitsprüfung ist in zigbee2mqtt nicht aktiviert. Der Status je Gerät beruht nur auf der
+      letzten empfangenen Nachricht. (Einstellungen → Verfügbarkeit in der zigbee2mqtt-Oberfläche)
+    </div>
+  }
+
+  @if (notice) {
+    <div class="notice">{{ notice }}</div>
+  }
+  @if (loadError) {
+    <div class="outage-banner">{{ loadError }}</div>
+  }
+
+  <details class="bridge-events" [open]="eventsExpanded">
+    <summary>Ereignisse ({{ bridgeEvents.length }})</summary>
+    @if (bridgeEvents.length === 0) {
+      <p class="muted">Noch keine Ereignisse seit dem Start.</p>
+    }
+    <ul>
+      @for (event of bridgeEvents; track event.receivedAt + event.type + (event.ieeeAddress ?? '')) {
+        <li>
+          <span class="muted">{{ event.receivedAt | date:'HH:mm:ss' }}</span>
+          <span>{{ bridgeEventText(event) }}</span>
+          @if (isAdmin() && event.type === 'device_interview' && event.status === 'successful' && event.ieeeAddress) {
+            <button type="button" class="link" (click)="openRenameForEvent(event)">Benennen</button>
+          }
+        </li>
+      }
+    </ul>
+  </details>
+
   <div class="device-grid">
-    @for (device of devices; track device.id) {
-      <article class="device-card">
+    @for (device of devices; track device.ieeeAddress ?? device.friendlyName) {
+      <article class="device-card" [class.device-card--orphan]="!device.knownToBridge">
         <header>
           <h2>{{ device.friendlyName }}</h2>
-          @if (device.lastBatteryPercent != null) {
-            <span class="meta">Bat: {{ device.lastBatteryPercent }}%</span>
+          @if (device.knownToBridge) {
+            <span class="badge" [class]="'badge ' + healthBadge(device.health.status).cssClass">
+              {{ healthBadge(device.health.status).label }}
+            </span>
+          } @else {
+            <span class="badge badge--neutral">in zigbee2mqtt nicht bekannt</span>
           }
-          @if (device.lastLinkQuality != null) {
-            <span class="meta">LQ: {{ device.lastLinkQuality }}</span>
+          @if (isAdmin() && device.knownToBridge && device.ieeeAddress) {
+            <button type="button" class="actions-toggle" aria-label="Aktionen" (click)="toggleMenu(device.ieeeAddress)">⋯</button>
+            @if (menuOpenFor === device.ieeeAddress) {
+              <div class="actions-menu" role="menu">
+                <button type="button" (click)="openDialog('rename', device)">Umbenennen</button>
+                <button type="button" (click)="openDialog('interview', device)">Neu interviewen</button>
+                <button type="button" (click)="openDialog('configure', device)">Neu konfigurieren</button>
+                <button type="button" class="danger" (click)="openDialog('remove', device)">Aus zigbee2mqtt entfernen</button>
+              </div>
+            }
           }
         </header>
-        <ul class="values">
-          @for (type of liveTypesFor(device.friendlyName); track type) {
-            <li>
-              <span class="type">{{ type }}</span>
-              <span class="value">
-                {{ liveValues[device.friendlyName][type].value }}
-                {{ liveValues[device.friendlyName][type].unit }}
-              </span>
-            </li>
+
+        <p class="health-text">
+          @if (device.health.status === 'INTERVIEW') {
+            Interview läuft
+          } @else {
+            {{ silentText(device.health.silentSeconds) }}
           }
-        </ul>
-        @if (device.lastSeen) {
-          <p class="last-seen">Zuletzt: {{ device.lastSeen }}</p>
+        </p>
+
+        <p class="meta-row">
+          @if (device.model) { <span>{{ device.model }}</span> }
+          @if (device.vendor) { <span>{{ device.vendor }}</span> }
+          @if (device.powerSource) {
+            <span>{{ device.battery ? '🔋' : '🔌' }} {{ device.powerSource }}</span>
+          }
+          @if (device.lastBatteryPercent != null) { <span>Bat: {{ device.lastBatteryPercent }}%</span> }
+          @if (device.lastLinkQuality != null) { <span>LQ: {{ device.lastLinkQuality }}</span> }
+        </p>
+
+        @if (device.entities.length > 0) {
+          <ul class="entities">
+            @for (entity of device.entities; track entity.entityId) {
+              <li [class.stale]="entityStale(device, entity.lastUpdated)">
+                <span class="entity-name">{{ entity.displayName }}</span>
+                <span class="entity-state">{{ entity.state }}</span>
+                <span class="entity-updated" [title]="entity.entityId">{{ entity.lastUpdated | date:'dd.MM. HH:mm' }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">Noch keine Entitäten — das Gerät hat nie Daten gesendet.</p>
+        }
+
+        @if (!device.knownToBridge && isAdmin() && device.id != null) {
+          <button type="button" class="purge-button danger" (click)="openDialog('purge', device)">
+            Aus Household Manager entfernen
+          </button>
         }
       </article>
     }
@@ -47,7 +141,7 @@
     <h2>Verlauf</h2>
     <div class="controls">
       <select [(ngModel)]="selectedDevice" (change)="loadHistory()">
-        @for (device of devices; track device.id) {
+        @for (device of devices; track device.friendlyName) {
           <option [value]="device.friendlyName">{{ device.friendlyName }}</option>
         }
       </select>
@@ -65,4 +159,65 @@
       <div echarts [options]="chartOptions" class="chart"></div>
     }
   </div>
+
+  @if (dialog; as d) {
+    <div class="dialog-backdrop" (click)="closeDialog()">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="zigbee-dialog-title" tabindex="-1"
+           (click)="$event.stopPropagation()" (keydown.escape)="closeDialog()">
+        <h3 class="dialog__title" id="zigbee-dialog-title">{{ dialogTitle(d.kind) }}</h3>
+        <p class="dialog__text"><strong>{{ d.friendlyName }}</strong></p>
+
+        @if (d.kind === 'rename') {
+          <label class="dialog__field">
+            Neuer Name
+            <input type="text" [(ngModel)]="d.newName" maxlength="64" [disabled]="d.busy">
+          </label>
+          <p class="dialog__hint">Entitäten bekommen neue IDs; Flows und Dashboard-Kacheln müssen nachgezogen werden.</p>
+        }
+        @if (d.showsBatteryHint) {
+          <p class="dialog__hint">Batterie-Gerät: vorher wecken (z. B. Reset-Taste kurz drücken), sonst schlägt die Aktion fehl.</p>
+        }
+        @if (d.kind === 'purge') {
+          <p class="dialog__text">Löscht alle Messwerte und {{ d.entityCount }} Entität(en) dieses Geräts endgültig.</p>
+        }
+
+        @if (d.showsFlowWarning) {
+          <div class="flow-warning">
+            @if (d.referencesFailed) {
+              <span>Flow-Verwendung konnte nicht geprüft werden.</span>
+            } @else if (d.references === null) {
+              <span class="muted">Prüfe Flow-Verwendung …</span>
+            } @else if (d.references.length === 0) {
+              <span class="muted">Wird in keinem Flow verwendet.</span>
+            } @else {
+              <span>Wird verwendet in:</span>
+              <ul>
+                @for (ref of d.references; track ref.flowId) {
+                  <li>{{ ref.name }} ({{ ref.enabled ? 'aktiv' : 'inaktiv' }})</li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        @if (d.error) {
+          <p class="dialog__error">{{ d.error }}</p>
+        }
+
+        <div class="dialog__actions">
+          <button type="button" class="dialog__cancel" [disabled]="d.busy" (click)="closeDialog()">Abbrechen</button>
+          @if (d.kind === 'remove' && d.offerForce) {
+            <button type="button" class="dialog__confirm dialog__force" [disabled]="d.busy" (click)="confirmDialog(true)">
+              Erzwingen
+            </button>
+          }
+          <button type="button" class="dialog__confirm"
+                  [class.dialog__confirm--danger]="d.danger"
+                  [disabled]="d.busy" (click)="confirmDialog()">
+            {{ d.busy ? 'Bitte warten …' : dialogConfirmLabel(d.kind) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </section>

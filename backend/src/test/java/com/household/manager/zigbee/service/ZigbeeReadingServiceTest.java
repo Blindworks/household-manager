@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +40,39 @@ class ZigbeeReadingServiceTest {
         climateMessage = new ParsedZigbeeMessage(
                 "Wohnzimmer-Klima", 90, 120,
                 List.of(new ZigbeeMeasurementValue(MeasurementType.TEMPERATURE, new BigDecimal("21.5"), "°C")),
-                null);
+                null, false);
+    }
+
+    @Test
+    void nichtRetainedNachrichtSetztLastSeen() {
+        LocalDateTime alt = LocalDateTime.of(2026, 9, 1, 8, 0);
+        ZigbeeDevice existing = ZigbeeDevice.builder()
+                .id(1L).friendlyName("Wohnzimmer-Klima").lastSeen(alt).build();
+        when(deviceRepository.findByFriendlyName("Wohnzimmer-Klima")).thenReturn(Optional.of(existing));
+        when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.record(climateMessage);
+
+        assertThat(existing.getLastSeen()).isAfter(alt);
+    }
+
+    @Test
+    void retainedNachrichtSetztLastSeenNicht() {
+        LocalDateTime alt = LocalDateTime.of(2026, 9, 1, 8, 0);
+        ZigbeeDevice existing = ZigbeeDevice.builder()
+                .id(1L).friendlyName("Wohnzimmer-Klima").lastBatteryPercent(50).lastSeen(alt).build();
+        when(deviceRepository.findByFriendlyName("Wohnzimmer-Klima")).thenReturn(Optional.of(existing));
+        when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
+        ParsedZigbeeMessage retained = new ParsedZigbeeMessage(
+                "Wohnzimmer-Klima", 90, 120, climateMessage.measurements(), null, true);
+
+        List<ZigbeeLiveResponse> events = service.record(retained);
+
+        assertThat(existing.getLastSeen()).isEqualTo(alt);
+        // Messwerte, Batterie und Live-Events werden fuer retained Nachrichten weiterhin verarbeitet
+        assertThat(existing.getLastBatteryPercent()).isEqualTo(90);
+        verify(measurementRepository).save(any(ZigbeeMeasurement.class));
+        assertThat(events).hasSize(1);
     }
 
     @Test

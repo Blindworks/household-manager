@@ -1,5 +1,7 @@
 package com.household.manager.zigbee.service;
 
+import com.household.manager.zigbee.dto.ZigbeeBridgeEventResponse;
+import com.household.manager.zigbee.dto.ZigbeeBridgeStatusResponse;
 import com.household.manager.zigbee.dto.ZigbeeLiveResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,9 +30,23 @@ public class ZigbeeLiveService {
     }
 
     public void broadcast(ZigbeeLiveResponse event) {
+        send("live", event);
+    }
+
+    /** Anlernen live verfolgen: device_joined, device_interview, ... */
+    public void broadcastBridgeEvent(ZigbeeBridgeEventResponse event) {
+        send("bridge-event", event);
+    }
+
+    /** Bei jeder bridge/info: Anlernfenster auf/zu, Verfuegbarkeitspruefung an/aus. */
+    public void broadcastBridgeInfo(ZigbeeBridgeStatusResponse status) {
+        send("bridge-info", status);
+    }
+
+    private void send(String name, Object data) {
         emitters.forEach(emitter -> {
             try {
-                emitter.send(SseEmitter.event().name("live").data(event));
+                emitter.send(SseEmitter.event().name(name).data(data));
             } catch (Exception ex) {
                 emitters.remove(emitter);
             }
