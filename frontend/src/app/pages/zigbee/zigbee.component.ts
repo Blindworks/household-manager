@@ -50,11 +50,16 @@ export interface ZigbeeDialogState {
   error: string | null;
   /** Entfernen ist einmal gescheitert — "Erzwingen" anbieten. */
   offerForce: boolean;
+  /** Einmal in openDialog aus kind/device abgeleitet, statt an drei Stellen im Template. */
+  showsFlowWarning: boolean;
+  showsBatteryHint: boolean;
+  danger: boolean;
 }
 
 const PERMIT_JOIN_SECONDS = 240;
 const DEVICES_REFRESH_MS = 30_000;
 const EVENTS_VISIBLE_AFTER_CLOSE_MS = 120_000;
+const LIVE_RELOAD_MS = 5000;
 
 /**
  * Zigbee-Geraeteverwaltung: Bridge-Status, Anlernen, Ereignisse, Gerätekarten mit
@@ -109,7 +114,6 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     this.loadBridgeEvents();
     this.loadDevices();
     this.refreshTimer = setInterval(() => { this.loadDevices(); this.loadHealth(); }, DEVICES_REFRESH_MS);
-    this.countdownTimer = setInterval(() => this.tickCountdown(), 1000);
     this.subscriptions.add(this.liveService.getLiveStream().subscribe({
       next: (event) => this.applyLiveEvent(event),
       error: () => { /* SSE reconnects via browser */ }
@@ -202,6 +206,11 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     if (wasOpen && !status.permitJoin) {
       this.permitJoinClosedAt = Date.now();
     }
+    // Der Countdown laeuft nur, waehrend ein Anlernfenster offen ist — kein
+    // dauerhafter 1-s-Timer fuer eine Seite, die die meiste Zeit nicht anlernt.
+    if (status.permitJoin && !this.countdownTimer) {
+      this.countdownTimer = setInterval(() => this.tickCountdown(), 1000);
+    }
     this.tickCountdown();
   }
 
@@ -221,16 +230,35 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     this.scheduleLiveReload();
   }
 
-  /** Entprellt: viele Sensoren melden im Minutentakt, nicht bei jedem Event neu laden. */
+  /**
+   * Drosselung statt Entprellung: garantiert hoechstens einen Reload je 5 s, auch bei
+   * Dauerverkehr — ein staendig zurueckgesetzter Debounce wuerde unter stetigem
+   * Sensorverkehr nie feuern. Die 5 s decken zugleich ab, dass das Backend das
+   * SSE-Event sendet, bevor der Entity-State geschrieben ist (sonst laeuft ein sofort
+   * folgender Abruf noch gegen den alten Stand).
+   */
   private scheduleLiveReload(): void {
-    clearTimeout(this.liveReloadTimer);
-    this.liveReloadTimer = setTimeout(() => this.loadDevices(), 2000);
+    if (this.liveReloadTimer) { return; }
+    this.liveReloadTimer = setTimeout(() => {
+      this.liveReloadTimer = undefined;
+      this.loadDevices();
+    }, LIVE_RELOAD_MS);
   }
 
   private tickCountdown(): void {
+    const previous = this.permitJoinRemaining;
     this.permitJoinRemaining = this.bridge?.permitJoin
       ? permitJoinRemainingSeconds(this.bridge.permitJoinEnd, Date.now())
       : 0;
+    // Client-seitig abgelaufen, bevor die naechste Bridge-Info das bestaetigt: die
+    // Ereignisliste soll trotzdem sofort in die 2-min-Kulanz gehen, nicht erst flackern.
+    if (previous > 0 && this.permitJoinRemaining === 0 && this.bridge?.permitJoin) {
+      this.permitJoinClosedAt = Date.now();
+    }
+    if (this.permitJoinRemaining === 0 && this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = undefined;
+    }
   }
 
   // --- Anzeige-Helfer ---------------------------------------------------------
@@ -288,6 +316,7 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
   openDialog(kind: ZigbeeDialogKind, device: ZigbeeDevice): void {
     this.menuOpenFor = null;
     this.notice = null;
+    const showsFlowWarning = kind === 'rename' || kind === 'remove' || kind === 'purge';
     this.dialog = {
       kind,
       friendlyName: device.friendlyName,
@@ -300,9 +329,12 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
       referencesFailed: false,
       busy: false,
       error: null,
-      offerForce: false
+      offerForce: false,
+      showsFlowWarning,
+      showsBatteryHint: device.battery && (kind === 'interview' || kind === 'configure' || kind === 'remove'),
+      danger: kind === 'remove' || kind === 'purge'
     };
-    if (kind === 'rename' || kind === 'remove' || kind === 'purge') {
+    if (showsFlowWarning) {
       this.loadReferences(this.dialog);
     }
   }
@@ -344,7 +376,7 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     const current = this.resolveDialogDevice(dialog);
     if (!current) {
       this.dialog = null;
-      this.notice = `„${dialog.friendlyName}" ist nicht mehr in der Liste — nichts geändert.`;
+      this.notice = `„${dialog.friendlyName}" steht (noch) nicht in der Geräteliste — nichts geändert. Bitte kurz warten und erneut versuchen.`;
       return;
     }
     const action = this.buildAction(dialog, current, force);
@@ -355,6 +387,14 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
       next: () => {
         dialog.busy = false;
         this.dialog = null;
+        // Der bisher gewaehlte Verlaufs-Sensor kann durch die Aktion ungueltig
+        // geworden sein: nach Umbenennen folgt er dem neuen Namen, nach
+        // Entfernen/Purge wird er zurueckgesetzt, damit loadDevices() neu waehlt.
+        if (dialog.kind === 'rename' && this.selectedDevice === dialog.friendlyName) {
+          this.selectedDevice = dialog.newName.trim();
+        } else if ((dialog.kind === 'remove' || dialog.kind === 'purge') && this.selectedDevice === dialog.friendlyName) {
+          this.selectedDevice = undefined;
+        }
         this.loadDevices();
         this.loadBridge();
       },

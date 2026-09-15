@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { NEVER, Subject, of, throwError } from 'rxjs';
+import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
 import { ZigbeeComponent } from './zigbee.component';
 import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeLiveService } from '../../services/zigbee-live.service';
 import { AuthService } from '../../services/auth.service';
-import { ZigbeeBridgeStatus, ZigbeeDevice, ZigbeeDeviceHealthStatus } from '../../models/zigbee.model';
+import { ZigbeeBridgeStatus, ZigbeeDevice, ZigbeeDeviceHealthStatus, ZigbeeLiveEvent } from '../../models/zigbee.model';
 
 describe('ZigbeeComponent', () => {
   let serviceSpy: jasmine.SpyObj<ZigbeeService>;
@@ -26,7 +26,12 @@ describe('ZigbeeComponent', () => {
     availabilityCheckEnabled: true, ...overrides
   });
 
-  function setup(isAdmin: boolean, devices: ZigbeeDevice[], bridgeStatus: ZigbeeBridgeStatus): ComponentFixture<ZigbeeComponent> {
+  function setup(
+    isAdmin: boolean,
+    devices: ZigbeeDevice[],
+    bridgeStatus: ZigbeeBridgeStatus,
+    liveEvents$: Observable<ZigbeeLiveEvent> = NEVER
+  ): ComponentFixture<ZigbeeComponent> {
     serviceSpy = jasmine.createSpyObj('ZigbeeService', [
       'getDevices', 'getHealth', 'getMeasurements', 'getBridge', 'getBridgeEvents', 'getFlowReferences',
       'openPermitJoin', 'closePermitJoin', 'renameDevice', 'interviewDevice', 'configureDevice',
@@ -50,7 +55,7 @@ describe('ZigbeeComponent', () => {
 
     bridgeInfo$ = new Subject<ZigbeeBridgeStatus>();
     liveSpy = jasmine.createSpyObj('ZigbeeLiveService', ['getLiveStream', 'getBridgeEvents', 'getBridgeInfo', 'disconnect']);
-    liveSpy.getLiveStream.and.returnValue(NEVER);
+    liveSpy.getLiveStream.and.returnValue(liveEvents$);
     liveSpy.getBridgeEvents.and.returnValue(NEVER);
     liveSpy.getBridgeInfo.and.returnValue(bridgeInfo$.asObservable());
 
@@ -207,5 +212,36 @@ describe('ZigbeeComponent', () => {
     fixture.componentInstance.confirmDialog();
 
     expect(serviceSpy.purgeLocalData).toHaveBeenCalledWith(9);
+  });
+
+  it('laedt nach Live-Events hoechstens einmal je 5 s neu', fakeAsync(() => {
+    const liveEvents$ = new Subject<ZigbeeLiveEvent>();
+    const fixture = setup(true, [device('A', 'ACTIVE')], bridge(), liveEvents$.asObservable());
+    const callsAfterSetup = serviceSpy.getDevices.calls.count();
+    const event: ZigbeeLiveEvent = {
+      friendlyName: 'A', measurementType: 'TEMPERATURE', value: 21, unit: '°C', measuredAt: new Date().toISOString()
+    };
+
+    liveEvents$.next(event);
+    tick(200);
+    liveEvents$.next(event);
+    tick(200);
+    liveEvents$.next(event);
+    tick(5000);
+
+    expect(serviceSpy.getDevices.calls.count()).toBe(callsAfterSetup + 1);
+    fixture.destroy();
+  }));
+
+  it('setzt den Verlaufs-Sensor nach Umbenennen um', () => {
+    const fixture = setup(true, [device('A', 'ACTIVE')], bridge());
+    const component = fixture.componentInstance;
+    expect(component.selectedDevice).toBe('A');
+
+    component.openDialog('rename', component.devices[0]);
+    component.dialog!.newName = 'B';
+    component.confirmDialog();
+
+    expect(component.selectedDevice).toBe('B');
   });
 });

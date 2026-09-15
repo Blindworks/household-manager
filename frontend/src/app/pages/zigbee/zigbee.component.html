@@ -161,9 +161,10 @@
   </div>
 
   @if (dialog; as d) {
-    <div class="dialog-backdrop" (click)="closeDialog()">
-      <div class="dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-        <h3 class="dialog__title">{{ dialogTitle(d.kind) }}</h3>
+    <div class="dialog-backdrop" (click)="closeDialog()" (keydown.escape)="closeDialog()">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="zigbee-dialog-title" tabindex="-1"
+           (click)="$event.stopPropagation()">
+        <h3 class="dialog__title" id="zigbee-dialog-title">{{ dialogTitle(d.kind) }}</h3>
         <p class="dialog__text"><strong>{{ d.friendlyName }}</strong></p>
 
         @if (d.kind === 'rename') {
@@ -173,14 +174,14 @@
           </label>
           <p class="dialog__hint">Entitäten bekommen neue IDs; Flows und Dashboard-Kacheln müssen nachgezogen werden.</p>
         }
-        @if ((d.kind === 'interview' || d.kind === 'configure' || d.kind === 'remove') && d.battery) {
+        @if (d.showsBatteryHint) {
           <p class="dialog__hint">Batterie-Gerät: vorher wecken (z. B. Reset-Taste kurz drücken), sonst schlägt die Aktion fehl.</p>
         }
         @if (d.kind === 'purge') {
           <p class="dialog__text">Löscht alle Messwerte und {{ d.entityCount }} Entität(en) dieses Geräts endgültig.</p>
         }
 
-        @if (d.kind === 'rename' || d.kind === 'remove' || d.kind === 'purge') {
+        @if (d.showsFlowWarning) {
           <div class="flow-warning">
             @if (d.referencesFailed) {
               <span>Flow-Verwendung konnte nicht geprüft werden.</span>
@@ -211,7 +212,7 @@
             </button>
           }
           <button type="button" class="dialog__confirm"
-                  [class.dialog__confirm--danger]="d.kind === 'remove' || d.kind === 'purge'"
+                  [class.dialog__confirm--danger]="d.danger"
                   [disabled]="d.busy" (click)="confirmDialog()">
             {{ d.busy ? 'Bitte warten …' : dialogConfirmLabel(d.kind) }}
           </button>
