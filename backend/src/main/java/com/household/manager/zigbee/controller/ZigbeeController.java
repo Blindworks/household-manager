@@ -1,5 +1,8 @@
 package com.household.manager.zigbee.controller;
 
+import com.household.manager.zigbee.dto.FlowReferenceResponse;
+import com.household.manager.zigbee.dto.ZigbeeBridgeEventResponse;
+import com.household.manager.zigbee.dto.ZigbeeBridgeStatusResponse;
 import com.household.manager.zigbee.dto.ZigbeeDeviceResponse;
 import com.household.manager.zigbee.dto.ZigbeeHealthResponse;
 import com.household.manager.zigbee.dto.ZigbeeMeasurementResponse;
@@ -9,6 +12,7 @@ import com.household.manager.zigbee.model.entity.ZigbeeDevice;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
 import com.household.manager.zigbee.service.ZigbeeDeviceQueryService;
+import com.household.manager.zigbee.service.ZigbeeFlowReferenceService;
 import com.household.manager.zigbee.service.ZigbeeLiveService;
 import com.household.manager.zigbee.service.ZigbeeStreamMonitor;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +40,27 @@ public class ZigbeeController {
     private final ZigbeeLiveService liveService;
     private final ZigbeeStreamMonitor streamMonitor;
     private final ZigbeeDeviceQueryService queryService;
+    private final ZigbeeFlowReferenceService flowReferenceService;
 
     @GetMapping("/devices")
     public ResponseEntity<List<ZigbeeDeviceResponse>> getDevices() {
         return ResponseEntity.ok(queryService.listDevices());
+    }
+
+    @GetMapping("/bridge")
+    public ResponseEntity<ZigbeeBridgeStatusResponse> getBridge() {
+        return ResponseEntity.ok(queryService.bridgeStatus());
+    }
+
+    @GetMapping("/bridge/events")
+    public ResponseEntity<List<ZigbeeBridgeEventResponse>> getBridgeEvents() {
+        return ResponseEntity.ok(queryService.bridgeEvents());
+    }
+
+    /** Friendly Name als Query-Parameter, weil z2m '/' im Namen erlaubt. */
+    @GetMapping("/flow-references")
+    public ResponseEntity<List<FlowReferenceResponse>> getFlowReferences(@RequestParam String friendlyName) {
+        return ResponseEntity.ok(flowReferenceService.references(friendlyName));
     }
 
     @GetMapping("/devices/{friendlyName}/measurements")

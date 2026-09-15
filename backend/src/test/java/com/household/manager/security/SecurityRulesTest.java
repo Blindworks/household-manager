@@ -23,10 +23,21 @@ import com.household.manager.push.PushNotificationService;
 import com.household.manager.push.PushSubscriptionService;
 import com.household.manager.push.VapidKeyService;
 import com.household.manager.repository.AppUserRepository;
+import com.household.manager.repository.ZigbeeDeviceRepository;
+import com.household.manager.repository.ZigbeeMeasurementRepository;
 import com.household.manager.service.SmartDeviceService;
 import com.household.manager.system.SystemController;
 import com.household.manager.system.SystemRebootService;
 import com.household.manager.tablet.TabletPresenceService;
+import com.household.manager.zigbee.controller.ZigbeeController;
+import com.household.manager.zigbee.controller.ZigbeeManagementController;
+import com.household.manager.zigbee.dto.ZigbeeBridgeStatusResponse;
+import com.household.manager.zigbee.service.ZigbeeDeviceManagementService;
+import com.household.manager.zigbee.service.ZigbeeDevicePurgeService;
+import com.household.manager.zigbee.service.ZigbeeDeviceQueryService;
+import com.household.manager.zigbee.service.ZigbeeFlowReferenceService;
+import com.household.manager.zigbee.service.ZigbeeLiveService;
+import com.household.manager.zigbee.service.ZigbeeStreamMonitor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,7 +81,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {SwitchController.class, CalendarEventController.class,
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
         HouseholdUserController.class, SystemController.class, PetSupplyController.class,
-        PushController.class, SmartDeviceController.class},
+        PushController.class, SmartDeviceController.class, ZigbeeController.class,
+        ZigbeeManagementController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -115,6 +127,22 @@ class SecurityRulesTest {
     private SmartDeviceService smartDeviceService;
     @MockitoBean
     private AuditService auditService;
+    @MockitoBean
+    private ZigbeeDeviceRepository zigbeeDeviceRepository;
+    @MockitoBean
+    private ZigbeeMeasurementRepository zigbeeMeasurementRepository;
+    @MockitoBean
+    private ZigbeeLiveService zigbeeLiveService;
+    @MockitoBean
+    private ZigbeeStreamMonitor zigbeeStreamMonitor;
+    @MockitoBean
+    private ZigbeeDeviceQueryService zigbeeDeviceQueryService;
+    @MockitoBean
+    private ZigbeeFlowReferenceService zigbeeFlowReferenceService;
+    @MockitoBean
+    private ZigbeeDeviceManagementService zigbeeDeviceManagementService;
+    @MockitoBean
+    private ZigbeeDevicePurgeService zigbeeDevicePurgeService;
 
     /**
      * DisabledUserSessionFilter fragt bei jedem Request mit einem UserDetails-Principal
@@ -933,5 +961,72 @@ class SecurityRulesTest {
     void kioskDarfTrotzDueDieZeitfensterNichtLesen() throws Exception {
         mockMvc.perform(get("/v1/mode-quick-access")).andExpect(status().isForbidden());
         mockMvc.perform(get("/v1/mode-quick-access/1")).andExpect(status().isForbidden());
+    }
+
+    // --- Zigbee-Geraeteverwaltung: jede ADMIN-Zeile hat ihren eigenen MEMBER-Verbotstest ---
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinAnlernfensterOeffnen() throws Exception {
+        mockMvc.perform(post("/v1/zigbee/bridge/permit-join").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"seconds\":240}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinAnlernfensterSchliessen() throws Exception {
+        mockMvc.perform(delete("/v1/zigbee/bridge/permit-join").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfZigbeeGeraeteNichtUmbenennen() throws Exception {
+        mockMvc.perform(put("/v1/zigbee/devices/0x1/name").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"friendlyName\":\"Neu\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfKeinInterviewUndKeinKonfigurierenAusloesen() throws Exception {
+        mockMvc.perform(post("/v1/zigbee/devices/0x1/interview").with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/v1/zigbee/devices/0x1/configure").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfZigbeeGeraeteNichtEntfernen() throws Exception {
+        mockMvc.perform(delete("/v1/zigbee/devices/0x1").with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/v1/zigbee/devices/local/5").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfZigbeeGeraeteVerwalten() throws Exception {
+        mockMvc.perform(post("/v1/zigbee/bridge/permit-join").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"seconds\":240}"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/v1/zigbee/devices/0x1").with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfZigbeeLesen() throws Exception {
+        when(zigbeeDeviceQueryService.listDevices()).thenReturn(List.of());
+        when(zigbeeDeviceQueryService.bridgeStatus()).thenReturn(ZigbeeBridgeStatusResponse.builder().build());
+        when(zigbeeDeviceQueryService.bridgeEvents()).thenReturn(List.of());
+        mockMvc.perform(get("/v1/zigbee/devices")).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/zigbee/bridge")).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/zigbee/bridge/events")).andExpect(status().isOk());
+        // 404 = Regel laesst durch, das Geraet gibt es nur nicht (Repository-Mock leer)
+        mockMvc.perform(get("/v1/zigbee/devices/Motion/measurements").param("type", "OCCUPANCY"))
+                .andExpect(status().isNotFound());
     }
 }
