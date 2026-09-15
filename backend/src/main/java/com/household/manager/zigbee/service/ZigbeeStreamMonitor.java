@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -36,6 +37,12 @@ public class ZigbeeStreamMonitor {
     /** friendlyName -> online. Nur Geraete, zu denen zigbee2mqtt etwas gemeldet hat. */
     private final Map<String, Boolean> deviceAvailability = new ConcurrentHashMap<>();
 
+    /** friendlyName -> Zeitpunkt der letzten nicht-retained Geraetenachricht. */
+    private final Map<String, Instant> lastMessageByDevice = new ConcurrentHashMap<>();
+
+    /** friendlyName -> explizites Urteil aus <name>/availability. */
+    private final Map<String, Boolean> explicitAvailability = new ConcurrentHashMap<>();
+
     @Autowired
     public ZigbeeStreamMonitor(ZigbeeWatchdogProperties properties) {
         this(properties, Clock.systemUTC());
@@ -50,9 +57,11 @@ public class ZigbeeStreamMonitor {
 
     /** Von jeder eingehenden Geraetenachricht aufzurufen. */
     public void recordMessage(String friendlyName) {
-        lastMessageAt = clock.instant();
+        Instant now = clock.instant();
+        lastMessageAt = now;
         if (friendlyName != null && !friendlyName.isBlank()) {
             deviceAvailability.put(friendlyName, Boolean.TRUE);
+            lastMessageByDevice.put(friendlyName, now);
         }
     }
 
@@ -64,11 +73,26 @@ public class ZigbeeStreamMonitor {
     public void recordAvailability(String friendlyName, boolean online) {
         if (friendlyName != null && !friendlyName.isBlank()) {
             deviceAvailability.put(friendlyName, online);
+            explicitAvailability.put(friendlyName, online);
         }
     }
 
     public Instant lastMessageAt() {
         return lastMessageAt;
+    }
+
+    /**
+     * Letzte nicht-retained Nachricht dieses Geraets seit dem Start. Retained
+     * Nachrichten zaehlen wie beim globalen Watchdog nicht — sonst saehe nach jedem
+     * Reconnect jedes Geraet frisch aus.
+     */
+    public Optional<Instant> lastMessageAt(String friendlyName) {
+        return Optional.ofNullable(lastMessageByDevice.get(friendlyName));
+    }
+
+    /** zigbee2mqtt's Verfuegbarkeitsurteil, leer solange nie eines kam. */
+    public Optional<Boolean> availability(String friendlyName) {
+        return Optional.ofNullable(explicitAvailability.get(friendlyName));
     }
 
     public ZigbeeStreamStatus status() {

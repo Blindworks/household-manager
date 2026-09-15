@@ -125,4 +125,23 @@ class ZigbeeStreamMonitorTest {
 
         assertThat(monitor.status().offlineDevices()).isEmpty();
     }
+
+    @Test
+    void merktSichDieLetzteNachrichtJeGeraet() {
+        monitor.recordMessage("Motion Büro");
+        clock.advance(Duration.ofMinutes(3));
+        monitor.recordMessage("Temperatur Keller");
+
+        assertThat(monitor.lastMessageAt("Motion Büro")).contains(START);
+        assertThat(monitor.lastMessageAt("Temperatur Keller")).contains(START.plus(Duration.ofMinutes(3)));
+        assertThat(monitor.lastMessageAt("Unbekannt")).isEmpty();
+    }
+
+    @Test
+    void liefertDieVerfuegbarkeitJeGeraet() {
+        monitor.recordAvailability("Motion Büro", false);
+
+        assertThat(monitor.availability("Motion Büro")).contains(false);
+        assertThat(monitor.availability("Nie gemeldet")).isEmpty();
+    }
 }
