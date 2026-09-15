@@ -1,4 +1,8 @@
-<div class="switch-list" [ngClass]="'switch-list--' + variant">
+<div
+  class="switch-list"
+  [ngClass]="'switch-list--' + variant"
+  [class.switch-list--grid]="layout === 'grid'"
+>
   <button
     *ngFor="let item of switches"
     type="button"
@@ -9,10 +13,16 @@
     [attr.aria-pressed]="isOn(item)"
     (click)="toggled.emit(item)"
   >
-    <span class="material-symbols-outlined switch-list__icon">{{ item.icon }}</span>
-    <span class="switch-list__name">{{ item.displayName }}</span>
-    <span *ngIf="powerLabel(item)" class="switch-list__power">{{ powerLabel(item) }}</span>
-    <span class="switch-list__state">{{ stateLabel(item) }}</span>
+    <span class="switch-list__icon-wrap" aria-hidden="true">
+      <span class="material-symbols-outlined switch-list__icon">{{ item.icon }}</span>
+    </span>
+    <span class="switch-list__text">
+      <span class="switch-list__name">{{ item.displayName }}</span>
+      <span class="switch-list__meta">
+        <span class="switch-list__state">{{ stateLabel(item) }}</span>
+        <span *ngIf="powerLabel(item)" class="switch-list__power">{{ powerLabel(item) }}</span>
+      </span>
+    </span>
     <span class="switch-list__toggle" aria-hidden="true">
       <span class="switch-list__knob"></span>
     </span>

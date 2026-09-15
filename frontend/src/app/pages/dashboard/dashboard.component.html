@@ -122,6 +122,7 @@
               [switches]="topSwitches"
               [pendingIds]="pendingSwitchIds"
               variant="tile"
+              [layout]="accordionActive ? 'grid' : 'list'"
               (toggled)="toggleSwitch($event)"
             ></app-switch-list>
             <p *ngIf="switchError" class="lumina__switch-error">{{ switchError }}</p>

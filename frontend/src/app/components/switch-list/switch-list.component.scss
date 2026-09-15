@@ -1,26 +1,57 @@
+// Schalterzeilen: eine Karte je Schalter mit Icon-Chip, Name, Zustandszeile
+// und dekorativem Umschalter. Die ganze Karte ist das Klickziel.
 .switch-list {
+  --switch-accent: var(--secondary, #53e16f);
+  --switch-accent-rgb: 83, 225, 111;
+  --switch-surface: rgba(255, 255, 255, 0.04);
+  --switch-surface-hover: rgba(255, 255, 255, 0.08);
+  --switch-border: rgba(255, 255, 255, 0.07);
+  --switch-chip: rgba(255, 255, 255, 0.07);
+  --switch-track: rgba(255, 255, 255, 0.14);
+  --switch-knob: rgba(255, 255, 255, 0.9);
+  --switch-muted: rgba(255, 255, 255, 0.55);
+
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+// Zweispaltig (Tablet-Kachel): die Karten teilen sich die Breite, statt
+// einzeln ueber das ganze Wandtablet zu laufen.
+.switch-list--grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .switch-list__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  min-width: 0;
+  min-height: 68px;
+  padding: 12px 14px 12px 12px;
+  border: 1px solid var(--switch-border);
+  border-radius: 1.1rem;
+  background: var(--switch-surface);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--switch-surface-hover);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -29,108 +60,151 @@
   }
 
   &--unavailable {
-    opacity: 0.5;
+    opacity: 0.45;
   }
 }
 
-.switch-list__icon {
-  font-size: 20px;
+// Runder Icon-Chip; leuchtet im eingeschalteten Zustand in der Akzentfarbe.
+.switch-list__icon-wrap {
   flex: none;
-  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--switch-chip);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.switch-list__icon {
+  font-size: 22px;
+  opacity: 0.75;
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+
+.switch-list__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .switch-list__name {
-  flex: 1;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.switch-list__state {
-  flex: none;
+.switch-list__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.switch-list__state {
+  color: var(--switch-muted);
+  transition: color 0.25s ease;
 }
 
 .switch-list__power {
-  flex: none;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--secondary, #53e16f);
-  opacity: 0.85;
+  color: var(--switch-accent);
+  font-weight: 600;
+
+  &::before {
+    content: '·';
+    margin-right: 8px;
+    color: var(--switch-muted);
+    font-weight: 400;
+  }
 }
 
-// Umschalter (rein dekorativ; die ganze Zeile ist das Klickziel)
+// Umschalter (rein dekorativ; die ganze Karte ist das Klickziel)
 .switch-list__toggle {
   flex: none;
   position: relative;
-  width: 38px;
-  height: 22px;
+  width: 46px;
+  height: 26px;
   border-radius: var(--radius-full, 999px);
-  background: rgba(255, 255, 255, 0.15);
-  transition: background 0.2s ease;
+  background: var(--switch-track);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 
 .switch-list__knob {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  transition: transform 0.2s ease;
+  background: var(--switch-knob);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .switch-list__row--on {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--switch-accent-rgb), 0.16),
+    rgba(var(--switch-accent-rgb), 0.05) 60%,
+    var(--switch-surface)
+  );
+  border-color: rgba(var(--switch-accent-rgb), 0.35);
+  box-shadow: 0 0 0 1px rgba(var(--switch-accent-rgb), 0.08) inset;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(var(--switch-accent-rgb), 0.5);
+  }
+
+  .switch-list__icon-wrap {
+    background: rgba(var(--switch-accent-rgb), 0.18);
+    box-shadow: 0 0 18px rgba(var(--switch-accent-rgb), 0.3);
+  }
+
   .switch-list__icon {
     opacity: 1;
-    color: var(--secondary, #53e16f);
+    color: var(--switch-accent);
+  }
+
+  .switch-list__state {
+    color: var(--switch-accent);
   }
 
   .switch-list__toggle {
-    background: var(--secondary, #53e16f);
+    background: var(--switch-accent);
+    box-shadow: 0 0 12px rgba(var(--switch-accent-rgb), 0.45);
   }
 
   .switch-list__knob {
-    transform: translateX(16px);
+    transform: translateX(20px);
+    background: #ffffff;
   }
 }
 
 // ---- Heller Dialog-Hintergrund -------------------------------------------
+// Nur die Farbtoken wechseln; Aufbau und Geometrie bleiben identisch.
 .switch-list--dialog {
-  .switch-list__row {
-    background: rgba(15, 23, 42, 0.04);
-    border-color: rgba(15, 23, 42, 0.06);
+  --switch-accent: #16a34a;
+  --switch-accent-rgb: 22, 163, 74;
+  --switch-surface: rgba(15, 23, 42, 0.035);
+  --switch-surface-hover: rgba(15, 23, 42, 0.07);
+  --switch-border: rgba(15, 23, 42, 0.08);
+  --switch-chip: rgba(15, 23, 42, 0.07);
+  --switch-track: rgba(15, 23, 42, 0.22);
+  --switch-knob: #ffffff;
+  --switch-muted: rgba(15, 23, 42, 0.55);
 
-    &:hover:not(:disabled) {
-      background: rgba(15, 23, 42, 0.08);
-    }
-  }
-
-  .switch-list__toggle {
-    background: rgba(15, 23, 42, 0.2);
-  }
-
-  .switch-list__knob {
-    background: #ffffff;
-  }
-
-  .switch-list__power {
-    color: #15803d;
-  }
-
-  .switch-list__row--on {
-    .switch-list__icon {
-      color: #15803d;
-    }
-
-    .switch-list__toggle {
-      background: #22c55e;
-    }
+  .switch-list__row:hover:not(:disabled) {
+    border-color: rgba(15, 23, 42, 0.16);
   }
 }

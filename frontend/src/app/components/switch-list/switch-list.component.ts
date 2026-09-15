@@ -23,6 +23,13 @@ export class SwitchListComponent {
   /** Tonalitaet: dunkle Kachel oder heller Dialog. */
   @Input() variant: 'tile' | 'dialog' = 'tile';
 
+  /**
+   * Anordnung: untereinander (Default) oder zweispaltig. Zweispaltig nutzt
+   * die Tablet-Kachel, in der die Schalter sonst ueber die volle Breite des
+   * Wandtablets laufen.
+   */
+  @Input() layout: 'list' | 'grid' = 'list';
+
   @Output() toggled = new EventEmitter<SwitchEntity>();
 
   isOn(entity: SwitchEntity): boolean {

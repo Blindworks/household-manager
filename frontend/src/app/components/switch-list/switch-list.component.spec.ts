@@ -85,6 +85,23 @@ describe('SwitchListComponent', () => {
     expect(list.classList).toContain('switch-list--dialog');
   });
 
+  it('ordnet die Schalter im Grid-Layout zweispaltig an', () => {
+    const fixture = render([entity()]);
+    fixture.componentRef.setInput('layout', 'grid');
+    fixture.detectChanges();
+
+    const list = (fixture.nativeElement as HTMLElement).querySelector('.switch-list')!;
+    expect(list.classList).toContain('switch-list--grid');
+    expect(getComputedStyle(list).gridTemplateColumns.split(' ').length).toBe(2);
+  });
+
+  it('bleibt ohne Layout-Angabe eine einspaltige Liste', () => {
+    const fixture = render([entity()]);
+
+    const list = (fixture.nativeElement as HTMLElement).querySelector('.switch-list')!;
+    expect(list.classList).not.toContain('switch-list--grid');
+  });
+
   it('spiegelt den Zustand in aria-pressed', () => {
     const fixture = render([entity({ state: 'off' })]);
 
