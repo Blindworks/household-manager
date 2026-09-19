@@ -6,7 +6,6 @@ import com.household.manager.charging.dto.EnbwAddressDto;
 import com.household.manager.charging.dto.EnbwChargePointDto;
 import com.household.manager.charging.dto.EnbwStationDetailsDto;
 import com.household.manager.charging.dto.EnbwStationDto;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -28,7 +27,6 @@ import java.util.stream.Stream;
  * eingebettete API-Key.
  */
 @Component
-@Slf4j
 public class EnbwChargingClient implements ChargingStationSource {
 
     private final ChargingProperties properties;
@@ -59,6 +57,7 @@ public class EnbwChargingClient implements ChargingStationSource {
 
     @Override
     public ChargingStationDetails stationDetails(String stationId) {
+        // Formularkodierung macht ein Leerzeichen zu "+" - unschaedlich, EnBW-Ids (DE*XXX*E...) haben keine.
         return parseDetails(mapper, get("/chargestations/" + URLEncoder.encode(stationId, StandardCharsets.UTF_8)));
     }
 
