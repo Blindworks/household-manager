@@ -30,7 +30,7 @@ Wegwerf-JUnit) gegen das echte Backend mit einer Bounding Box ums Zuhause. Alle 
 **Annahmen aus den bekannten Home-Assistant-Integrationen**, bis die aufgezeichnete Antwort als Fixture im
 Repo liegt. Ein beobachtetes Rate-Limit fließt in die Poll-Intervalle ein.
 
-Angenommene Endpunkte (Basis `https://enbw-emp.azure-api.net/emobility-public-api/api/v1`):
+Angenommene Endpunkte (Basis `https://api.emp.emob-enbw.com/emobility-public-api/api/v1`):
 
 - `GET /chargestations?fromLat&toLat&fromLon&toLon&grouping=false` — Standorte im Rechteck mit
   `stationId`, `lat`, `lon`, `operator`, Adresse, `maxPowerInKw`, `numberOfChargePoints`,

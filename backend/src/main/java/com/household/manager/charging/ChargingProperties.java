@@ -22,7 +22,7 @@ public class ChargingProperties {
 
     @Data
     public static class Enbw {
-        private String baseUrl = "https://enbw-emp.azure-api.net/emobility-public-api/api/v1";
+        private String baseUrl = "https://api.emp.emob-enbw.com/emobility-public-api/api/v1";
         /** Oeffentlich in der EnBW-Web-App eingebetteter Key; kein Geheimnis, aber per Env nachziehbar. */
         private String apiKey = "";
         private String origin = "https://www.enbw.com";
