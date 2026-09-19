@@ -136,4 +136,7 @@
     <!-- Schnellzugriff auch ohne Zeitfenster ("immer anzeigen") -->
     <include file="db/changelog/changes/20260915-0054-mode-quick-access-optional-window.xml"/>
 
+    <!-- Ladesaeulen-Uebersicht: Favoriten und Belegungsbeginn je Ladepunkt -->
+    <include file="db/changelog/changes/20260919-0055-create-charging-tables.xml"/>
+
 </databaseChangeLog>

@@ -37,5 +37,7 @@ public enum EntitySource {
     /** Anwesenheitserkennung pro Person (TCP-Probe gegen Handy-IPs im WLAN). */
     PRESENCE,
     /** Blink-Kameras (Scharf-Status via blink-vision-Sidecar). */
-    BLINK
+    BLINK,
+    /** Oeffentliche Ladesaeulen (inoffizielles EnBW-Backend), je Favorit sensor.charging_<stationId>_free. */
+    CHARGING
 }
