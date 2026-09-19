@@ -18,7 +18,9 @@ describe('AdminChargingComponent', () => {
   beforeEach(async () => {
     chargingSpy = jasmine.createSpyObj('ChargingService',
       ['getSettings', 'saveSettings', 'getStations', 'removeFavorite']);
-    chargingSpy.getSettings.and.returnValue(of(settings));
+    // Frische Kopie je Test: die Komponente bindet das Objekt per ngModel und der Schrankentest
+    // veraendert es - ein geteiltes Objekt liesse die Tests je nach Reihenfolge kippen.
+    chargingSpy.getSettings.and.returnValue(of({ ...settings }));
     chargingSpy.getStations.and.returnValue(of({ configured: true, lastPolledAt: null, stations: [
       { stationId: 'fav', name: 'Lidl', lat: 50, lon: 8, distanceMeters: 100, total: 2, free: 1, favorite: true }
     ] }));
