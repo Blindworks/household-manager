@@ -125,11 +125,11 @@ public class ChargingPollingService {
                 lastReported.put(stationId, update);
             } catch (ChargingRateLimitException ex) {
                 log.warn("Ladesaeulen-Favoriten: Rate-Limit bei {}, Durchlauf abgebrochen", stationId);
-                reportFetchFailureUnavailable(favorite);
+                reportUnavailable(favorite);
                 break;
             } catch (Exception ex) {
                 log.warn("Ladesaeulen-Favorit {} nicht lesbar: {}", stationId, ex.getMessage());
-                reportFetchFailureUnavailable(favorite);
+                reportUnavailable(favorite);
             }
         }
         // Erfolgreich gelesene Details ersetzen den Stand; fehlgeschlagene behalten den alten Snapshot-Eintrag.
@@ -169,44 +169,57 @@ public class ChargingPollingService {
     }
 
     /**
-     * Ein Favorit, dessen Detailabruf gerade fehlschlug: die Station ist noch bekannt (wir
-     * haben das {@link ChargingFavorite}-Objekt), also wird unavailable direkt daraus gebaut,
-     * nicht ueber {@link #lastReported} gegated - sonst bekaeme ein Favorit, dessen allererster
-     * Poll scheitert, nie eine Meldung.
+     * Ein Favorit, dessen Detailabruf gerade fehlschlug, aber noch in der aktuellen Liste
+     * steht (wir haben das {@link ChargingFavorite}-Objekt). Bevorzugt den letzten
+     * ERFOLGREICHEN Stand aus {@link #lastReported} (behaelt total/maxPowerKw/occupiedSince);
+     * nur wenn es den nie gab (allererster Poll dieses Favoriten scheitert), wird unavailable
+     * aus dem Favoriten selbst gebaut (stationName/operator). {@link #lastReported} wird hier
+     * bewusst NICHT ueberschrieben, damit ein weiterer Fehlschlag weiterhin die reichen
+     * Attribute des letzten Erfolgs hat statt sie durch die duenne unavailable-Version zu ersetzen.
      */
-    private void reportFetchFailureUnavailable(ChargingFavorite favorite) {
-        Map<String, Object> attributes = new LinkedHashMap<>();
-        attributes.put("stationName", favorite.getDisplayName());
-        if (favorite.getOperator() != null) {
-            attributes.put("operator", favorite.getOperator());
-        }
-        EntityStateUpdate update = EntityStateUpdate.builder()
-                .entityId(ChargingEntityMapper.entityId(favorite.getStationId()))
-                .domain(EntityDomain.SENSOR)
-                .source(EntitySource.CHARGING)
-                .sourceRef(favorite.getStationId())
-                .friendlyName(favorite.getDisplayName() + " frei")
-                .state("unavailable")
-                .attributes(attributes)
-                .build();
-        entityStateService.reportState(update);
-        lastReported.put(favorite.getStationId(), update);
+    private void reportUnavailable(ChargingFavorite favorite) {
+        entityStateService.reportState(unavailableUpdate(lastReported.get(favorite.getStationId()), favorite));
     }
 
-    /** unavailable MIT erhaltenen Attributen (EntityStateWriter.upsert ueberschreibt sie sonst komplett). */
+    /**
+     * Ein Favorit, der ganz aus der Liste verschwunden ist: kein {@link ChargingFavorite}-Objekt
+     * mehr vorhanden, deshalb ausschliesslich aus {@link #lastReported} gebaut. War er nie
+     * erfolgreich gemeldet, gibt es nichts zu melden.
+     */
     private void reportUnavailable(String stationId) {
         EntityStateUpdate previous = lastReported.get(stationId);
         if (previous == null) {
             return;
         }
-        entityStateService.reportState(EntityStateUpdate.builder()
-                .entityId(previous.entityId())
-                .domain(previous.domain())
-                .source(previous.source())
-                .sourceRef(previous.sourceRef())
-                .friendlyName(previous.friendlyName())
+        entityStateService.reportState(unavailableUpdate(previous, null));
+    }
+
+    /** unavailable MIT erhaltenen Attributen, wenn vorhanden - sonst aus dem Favoriten (siehe Aufrufer). */
+    private EntityStateUpdate unavailableUpdate(EntityStateUpdate previous, ChargingFavorite fallback) {
+        if (previous != null) {
+            return EntityStateUpdate.builder()
+                    .entityId(previous.entityId())
+                    .domain(previous.domain())
+                    .source(previous.source())
+                    .sourceRef(previous.sourceRef())
+                    .friendlyName(previous.friendlyName())
+                    .state("unavailable")
+                    .attributes(previous.attributes())
+                    .build();
+        }
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("stationName", fallback.getDisplayName());
+        if (fallback.getOperator() != null) {
+            attributes.put("operator", fallback.getOperator());
+        }
+        return EntityStateUpdate.builder()
+                .entityId(ChargingEntityMapper.entityId(fallback.getStationId()))
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.CHARGING)
+                .sourceRef(fallback.getStationId())
+                .friendlyName(fallback.getDisplayName() + " frei")
                 .state("unavailable")
-                .attributes(previous.attributes())
-                .build());
+                .attributes(attributes)
+                .build();
     }
 }

@@ -131,6 +131,24 @@ class ChargingPollingServiceTest {
     }
 
     @Test
+    void spaetererFehlschlagBehaeltDieAttributeDesLetztenErfolgs() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
+        when(tracker.occupancyFor("S1")).thenReturn(Map.of());
+        service.pollFavorites();
+        org.mockito.Mockito.reset(entityStateService);
+        // doThrow statt when(...).thenThrow(...): siehe Mockito-Falle oben.
+        org.mockito.Mockito.doThrow(new ChargingSourceException("weg")).when(source).stationDetails("S1");
+
+        service.pollFavorites();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService).reportState(captor.capture());
+        assertThat(captor.getValue().state()).isEqualTo("unavailable");
+        assertThat(captor.getValue().attributes()).containsKey("total");
+    }
+
+    @Test
     void entfernterFavoritWirdEinmalUnavailableGemeldet() {
         when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
         when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
