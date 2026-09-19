@@ -20,6 +20,5 @@ public record EnbwStationDto(
         @JsonProperty("maxPowerInKw") Double maxPowerInKw,
         @JsonProperty("numberOfChargePoints") Integer numberOfChargePoints,
         @JsonProperty("availableChargePoints") Integer availableChargePoints,
-        @JsonProperty("unknownStateChargePoints") Integer unknownStateChargePoints,
         @JsonProperty("viewPort") EnbwViewPortDto viewPort) {
 }
