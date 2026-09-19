@@ -1,0 +1,71 @@
+<div class="charging-page">
+  <div class="charging-page__head">
+    <h1>Ladesäulen</h1>
+    <div class="charging-page__actions">
+      @if (data?.lastPolledAt) {
+        <span class="charging-page__stand">Stand {{ data!.lastPolledAt | date:'HH:mm' }}</span>
+      }
+      <button type="button" (click)="refreshNow()" [disabled]="refreshing">
+        {{ refreshing ? 'Lädt…' : 'Jetzt aktualisieren' }}
+      </button>
+    </div>
+  </div>
+
+  @if (actionError) {
+    <p class="charging-page__error">{{ actionError }}</p>
+  }
+
+  @if (data && !data.configured) {
+    <p class="charging-page__unconfigured">
+      Es ist kein Zuhause für die Ladesäulen-Übersicht hinterlegt.
+      <a routerLink="/admin/charging">Unter Admin → Ladesäulen festlegen.</a>
+    </p>
+  } @else {
+    <div class="charging-page__body">
+      <div #mapContainer class="charging-page__map"></div>
+
+      <div class="charging-page__list">
+        @if (!data) {
+          <p class="charging-page__hint">{{ error ?? 'Lade Ladesäulen…' }}</p>
+        } @else if (stations.length === 0) {
+          <p class="charging-page__hint">{{ data.lastPolledAt ? 'Keine Ladesäulen im Umkreis.' : 'Noch keine Daten.' }}</p>
+        } @else {
+          @for (station of stations; track station.stationId) {
+            <article class="charging-page__row" [class.charging-page__row--favorite]="station.favorite">
+              <div class="charging-page__row-head">
+                <span class="charging-page__dot" [attr.data-tone]="tone(station)"></span>
+                <span class="charging-page__name">{{ station.name }}</span>
+                <span class="charging-page__meta">
+                  {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
+                </span>
+                <button
+                  type="button"
+                  class="charging-page__star-btn"
+                  [attr.aria-pressed]="station.favorite"
+                  [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
+                  [disabled]="busyStationId === station.stationId"
+                  (click)="toggleFavorite(station)">
+                  {{ station.favorite ? '★' : '☆' }}
+                </button>
+              </div>
+              @if (station.address) {
+                <p class="charging-page__address">{{ station.address }}</p>
+              }
+              @if (station.chargePoints; as points) {
+                <ul class="charging-page__points">
+                  @for (point of points; track point.chargePointId) {
+                    <li class="charging-page__point" [attr.data-status]="point.status">
+                      <span>{{ power(point.maxPowerKw) }}</span>
+                      <span>{{ pointLabel(point) }}</span>
+                      @if (point.status === 'OCCUPIED') { <span class="charging-page__since">{{ duration(point) }}</span> }
+                    </li>
+                  }
+                </ul>
+              }
+            </article>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>
