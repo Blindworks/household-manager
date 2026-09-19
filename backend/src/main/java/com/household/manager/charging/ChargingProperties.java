@@ -24,7 +24,7 @@ public class ChargingProperties {
     public static class Enbw {
         private String baseUrl = "https://api.emp.emob-enbw.com/emobility-public-api/api/v1";
         /** Oeffentlich in der EnBW-Web-App eingebetteter Key; kein Geheimnis, aber per Env nachziehbar. */
-        private String apiKey = "";
+        private String apiKey = "90a67b9900364009b588e100e4b1cc64";
         private String origin = "https://www.enbw.com";
     }
 }
