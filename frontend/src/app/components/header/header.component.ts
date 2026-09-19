@@ -56,6 +56,7 @@ export class HeaderComponent {
         { path: '/pets', label: 'Hundetracker' },
         { path: '/pet-food', label: 'Futtervorrat' },
         { path: '/cameras', label: 'Kameras' },
+        { path: '/charging', label: 'Ladesäulen' },
         { path: '/notifications', label: 'Benachrichtigungen' },
         { path: '/devices', label: 'Geraete' },
         { path: '/entities', label: 'Entitaeten' },
@@ -76,6 +77,7 @@ export class HeaderComponent {
         { path: '/admin/calendar-categories', label: 'Kalender-Kategorien', minRole: 'ADMIN' },
         { path: '/admin/tractive', label: 'Hundetracker-Einstellungen', minRole: 'ADMIN' },
         { path: '/admin/network-devices', label: 'Netzwerk-Geräte', minRole: 'ADMIN' },
+        { path: '/admin/charging', label: 'Ladesäulen', minRole: 'ADMIN' },
         { path: '/admin/presence', label: 'Anwesenheit', minRole: 'ADMIN' },
         { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', minRole: 'ADMIN' }
       ]
