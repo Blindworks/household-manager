@@ -25,19 +25,29 @@ Geklärte Entscheidungen aus dem Brainstorming:
 
 ## Datenquelle: EnBW-Backend
 
-**Realtest zuerst.** Vor jeder Implementierung ein Probeskript (`scripts/probe-enbw-charging.*` oder ein
-Wegwerf-JUnit) gegen das echte Backend mit einer Bounding Box ums Zuhause. Alle Feldnamen unten sind
-**Annahmen aus den bekannten Home-Assistant-Integrationen**, bis die aufgezeichnete Antwort als Fixture im
-Repo liegt. Ein beobachtetes Rate-Limit fließt in die Poll-Intervalle ein.
+**Verifiziert am 2026-09-19** gegen das echte Backend; die aufgezeichneten Antworten liegen als Fixtures
+in `backend/src/test/resources/charging/` (`enbw-area.json`, `enbw-area-grouped.json`,
+`enbw-station.json`), aufgenommen mit `scripts/probe-enbw-charging.sh`. Was der ursprüngliche Entwurf
+aus den Home-Assistant-Integrationen annahm und was sich real zeigte:
 
-Angenommene Endpunkte (Basis `https://api.emp.emob-enbw.com/emobility-public-api/api/v1`):
-
-- `GET /chargestations?fromLat&toLat&fromLon&toLon&grouping=false` — Standorte im Rechteck mit
-  `stationId`, `lat`, `lon`, `operator`, Adresse, `maxPowerInKw`, `numberOfChargePoints`,
-  `availableChargePoints`
-- `GET /chargestations/{stationId}` — Ladepunkte einzeln: `status` (`AVAILABLE`, `OCCUPIED`,
-  `OUT_OF_SERVICE`, `UNKNOWN`), `maxPowerInKw`, Steckertyp
-- Header `Ocp-Apim-Subscription-Key` (der in der EnBW-Web-App öffentlich eingebettete Key) und `Origin`
+- **Host:** `https://api.emp.emob-enbw.com/emobility-public-api/api/v1` — der Azure-Host der
+  HA-Integrationen (`enbw-emp.azure-api.net`) antwortet 404
+- **Key:** `Ocp-Apim-Subscription-Key` steht öffentlich im Quelltext der Kartenseite
+  `https://www.enbw.com/elektromobilitaet/produkte/mobilityplus-app/ladestation-finden/map`
+  (`initMap({ … apimSubscriptionKey })`), zusammen mit `Origin`/`Referer` `https://www.enbw.com`
+- `GET /chargestations?fromLat&toLat&fromLon&toLon&grouping=false&groupingDivisor=15[&minPower=<kW>]`:
+  **der Server gruppiert selbst** — in großen Kästen kommen Einträge mit `grouped: true`,
+  `stationId: null` und einem `viewPort`; erst Kästen um 0,01° liefern zuverlässig Einzelstationen.
+  Der Client bohrt gruppierte Einträge über ihren `viewPort` rekursiv nach (Tiefe ≤ 6, Hard-Cap 150
+  Requests je Umkreis-Poll, Dedup über `stationId`). **`minPower` filtert serverseitig** (gemessen für
+  einen dichten 10-km-Kasten: 23 Requests mit `minPower=50`, 131 ohne)
+- Einzelstation: `stationId` (Integer), `operator` (`"*"` = unbekannt), `shortAddress` (String
+  „Straße, PLZ Ort, DE"), `lat`, `lon`, `maxPowerInKw`, `numberOfChargePoints`,
+  `availableChargePoints`. **Es gibt keinen Stationsnamen** — `name` wird aus dem Straßenteil von
+  `shortAddress` gebildet, sonst Betreiber, sonst Id
+- `GET /chargestations/{stationId}` — `chargePoints[]` mit `evseId`, `status` (`AVAILABLE`, `OCCUPIED`,
+  …), **`state.updatedAt`** (Epoch-ms des letzten Statuswechsels — der echte Belegungsbeginn) und
+  `connectors[] {plugTypeName, maxPowerInKw}`
 
 ### `ChargingStationSource` (Interface) / `EnbwChargingClient`
 
@@ -72,15 +82,18 @@ Angenommene Endpunkte (Basis `https://api.emp.emob-enbw.com/emobility-public-api
 
 Zwei getrennte `@Scheduled`-Pfade, beide werfen nie, Fehler in einem stört den anderen nicht:
 
-- **Umkreis alle 300 s**: eine Bounding Box aus Zuhause + Radius, ein Request. Die API kennt nur
+- **Umkreis alle 300 s**: eine Bounding Box aus Zuhause + Radius, plus Drill-down der gruppierten
+  Einträge (siehe Datenquelle; `minPower` serverseitig). Die API kennt nur
   Rechtecke — serverseitig wird per Haversine auf den Kreis geschnitten und unter der Mindestleistung
   aussortiert (`ChargingAreaFilter`, reine Funktion, getestet). Ergebnis nur im Speicher
-  (`ChargingSnapshot` mit `lastPolledAt`), kein DB-Schreiben. Favoriten außerhalb des Kreises bleiben
+  (`ChargingSnapshot` mit `lastPolledAt`), kein DB-Schreiben. Die Intervalle stehen in Sekunden und werden
+  per SpEL in Millisekunden umgerechnet (`ChargingPollingScheduleTest`). Favoriten außerhalb des Kreises bleiben
   trotzdem in der Liste (sie werden über den Detailpfad versorgt)
 - **Favoriten alle 60 s**: je Favorit ein Detail-Request; Fehler je Favorit isoliert (Muster
   `TractivePollingService.collectPet`). Bei `ChargingRateLimitException` bricht der Durchlauf sofort ab
 - Bei einem Fehler bleibt der letzte Snapshot **erhalten** (Frontend zeigt „Stand von HH:MM"); die
-  Favoriten-Entitäten werden `unavailable` **mit erhaltenen Attributen** (`EntityStateWriter.upsert`
+  Favoriten-Entitäten werden `unavailable` **mit erhaltenen Attributen des letzten Erfolgs** (auch bei einem
+  späteren Fehlschlag; ein Favorit, dessen erster Abruf je scheitert, entsteht direkt in `unavailable`) (`EntityStateWriter.upsert`
   überschreibt Attribute sonst komplett, Muster Zigbee-Watchdog/Blink)
 - Manueller Abruf `refreshNow()`: beide Pfade synchron, Mindestabstand 15 s (429 sonst), Fehler
   werden an den Aufrufer durchgereicht (400 „nicht konfiguriert", 502 Quelle, 429 Rate-Limit)
@@ -89,6 +102,8 @@ Zwei getrennte `@Scheduled`-Pfade, beide werfen nie, Fehler in einem stört den 
 
 - Tabelle `charging_point_occupancy`: `chargepoint_id` (PK, String), `station_id`, `occupied_since`
   (DATETIME, nullbar), `first_seen_occupied_at` (DATETIME, NOT NULL)
+- **Belegungsbeginn kommt primär aus `state.updatedAt` der Quelle** (`ChargePoint.statusSince`); eine Zeile ohne
+  Beginn wird damit nachgefüllt. Die folgenden Regeln sind der Fallback für Quellen ohne Zeitstempel
 - Übergang **frei → belegt**: Zeile mit `occupied_since = jetzt` (und `first_seen_occupied_at = jetzt`).
   **belegt → frei** (oder außer Betrieb): Zeile löschen
 - Ladepunkt beim ersten Poll (oder nach Neustart ohne Zeile) **schon belegt**: Zeile mit
@@ -208,7 +223,8 @@ Temperaturen — beide sollen sich unabhängig entwickeln können).
 
 - **Inoffizielle Quelle:** ein Key- oder Formatwechsel bei EnBW legt die Ansicht lahm, sichtbar nur am
   alternden „Stand von" und an `unavailable`-Entitäten. Der Key ist per Env nachziehbar, ein
-  Formatwechsel braucht Code
+  Formatwechsel braucht Code; `scripts/probe-enbw-charging.sh` ist der erste Schritt der Diagnose
+- Mindestleistung 0 in dichter Gegend läuft ins 150-Request-Cap und liefert eine unvollständige Liste
 - Keine Preise, keine Ladehistorie, keine Belegungsstatistik, kein Routing, kein Supercharger-Sonderstatus
 - Ein Zuhause; Belegungsdauer nur für Favoriten; Übergänge während eines Backend-Neustarts werden nicht
   gesehen (die Dauer selbst überlebt den Neustart über die DB)
