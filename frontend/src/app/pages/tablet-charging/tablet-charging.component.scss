@@ -1,0 +1,184 @@
+// Ladesaeulen-Ansicht des Wandtablets. Kopfzeile/Ansichtsleiste liefert app-tablet-shell.
+// Hoehenkette: :host -> .tablet-charging -> __body -> __map/__list (flex: 1, min-height: 0).
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tablet-charging {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.6rem;
+  color: #e4e2e4;
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__stand {
+    font-size: 0.95rem;
+    color: rgba(228, 226, 228, 0.7);
+  }
+
+  &__refresh {
+    border: 1px solid rgba(170, 199, 255, 0.35);
+    background: rgba(170, 199, 255, 0.12);
+    color: #aac7ff;
+    padding: 0.5rem 1.1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.95rem;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__error, &__unconfigured, &__hint {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 1.05rem;
+    text-align: center;
+  }
+
+  &__error { color: #ffb4ab; }
+
+  &__unconfigured {
+    flex: 1;
+    display: grid;
+    place-items: center;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 1rem;
+    min-height: 0;
+  }
+
+  &__map {
+    min-height: 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #1e293b;
+  }
+
+  &__list {
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__row {
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+
+    &--favorite { background: rgba(255, 255, 255, 0.06); }
+    &--selected { border-color: #aac7ff; }
+  }
+
+  &__row-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+    background: #64748b;
+
+    &[data-tone='free'] { background: #22c55e; }
+    &[data-tone='busy'] { background: #ef4444; }
+  }
+
+  &__name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__star { color: #fbbf24; margin-right: 0.2rem; }
+
+  &__meta {
+    font-size: 0.9rem;
+    color: rgba(228, 226, 228, 0.75);
+    white-space: nowrap;
+  }
+
+  &__points {
+    list-style: none;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  &__point {
+    display: flex;
+    gap: 0.8rem;
+    font-size: 0.95rem;
+    padding-left: 1.4rem;
+
+    &[data-tone='free'] .tablet-charging__point-status { color: #22c55e; }
+    &[data-tone='busy'] .tablet-charging__point-status { color: #ef4444; }
+  }
+
+  &__point-power { min-width: 4.5rem; color: rgba(228, 226, 228, 0.75); }
+  &__point-since { color: #fca5a5; margin-left: auto; }
+}
+
+// Leaflet rendert divIcons ausserhalb der Komponenten-Kapselung.
+:host ::ng-deep {
+  .charging-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    background: #64748b;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+
+    &--free { background: #22c55e; }
+    &--busy { background: #ef4444; }
+
+    &--favorite::after {
+      content: '★';
+      position: absolute;
+      top: -10px;
+      right: -8px;
+      color: #fbbf24;
+      font-size: 14px;
+    }
+  }
+
+  .charging-home {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.25);
+  }
+}

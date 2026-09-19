@@ -1,0 +1,69 @@
+<app-tablet-shell heading="Laden">
+  <div shellActions class="tablet-charging__controls">
+    <span class="tablet-charging__stand">{{ lastPolledLabel }}</span>
+    <button type="button" class="tablet-charging__refresh" [disabled]="refreshing" (click)="refreshNow()">
+      {{ refreshing ? 'Lädt…' : 'Jetzt aktualisieren' }}
+    </button>
+  </div>
+
+  <section class="tablet-charging">
+    @if (refreshError) {
+      <p class="tablet-charging__error">{{ refreshError }}</p>
+    }
+
+    @if (data && !data.configured) {
+      <p class="tablet-charging__unconfigured">
+        Kein Zuhause hinterlegt. Bitte unter Admin → Ladesäulen festlegen.
+      </p>
+    } @else {
+      <div class="tablet-charging__body">
+        <!-- Der Kartencontainer steht IMMER im DOM (ViewChild + ngAfterViewInit), sonst hinge der
+             Kartenaufbau an der Reihenfolge von Datenankunft und Change Detection (Lehre aus /pets). -->
+        <div #mapContainer class="tablet-charging__map"></div>
+
+        <aside class="tablet-charging__list">
+          @if (!data) {
+            <p class="tablet-charging__hint">{{ error ?? 'Lade Ladesäulen…' }}</p>
+          } @else if (stations.length === 0) {
+            <p class="tablet-charging__hint">
+              {{ data.lastPolledAt ? 'Keine Ladesäulen im Umkreis.' : 'Noch keine Daten.' }}
+            </p>
+          } @else {
+            @for (station of stations; track station.stationId) {
+              <article
+                class="tablet-charging__row"
+                [class.tablet-charging__row--favorite]="station.favorite"
+                [class.tablet-charging__row--selected]="station.stationId === selectedStationId"
+                [attr.data-tone]="tone(station)"
+                (click)="select(station.stationId)">
+                <header class="tablet-charging__row-head">
+                  <span class="tablet-charging__dot" [attr.data-tone]="tone(station)"></span>
+                  <span class="tablet-charging__name">
+                    @if (station.favorite) { <span class="tablet-charging__star">★</span> }
+                    {{ station.name }}
+                  </span>
+                  <span class="tablet-charging__meta">
+                    {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
+                  </span>
+                </header>
+                @if (station.chargePoints; as points) {
+                  <ul class="tablet-charging__points">
+                    @for (point of points; track point.chargePointId) {
+                      <li class="tablet-charging__point" [attr.data-tone]="pointTone(point)">
+                        <span class="tablet-charging__point-power">{{ power(point.maxPowerKw) }}</span>
+                        <span class="tablet-charging__point-status">{{ pointLabel(point) }}</span>
+                        @if (point.status === 'OCCUPIED') {
+                          <span class="tablet-charging__point-since">{{ duration(point) }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+              </article>
+            }
+          }
+        </aside>
+      </div>
+    }
+  </section>
+</app-tablet-shell>
