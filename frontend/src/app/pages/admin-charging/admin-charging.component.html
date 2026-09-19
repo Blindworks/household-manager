@@ -1,0 +1,74 @@
+<div class="admin-charging">
+  <h1>Ladesäulen – Zuhause, Umkreis und Favoriten</h1>
+
+  <p *ngIf="loading()">Wird geladen …</p>
+
+  <p class="error" *ngIf="loadFailed()">
+    {{ errorMessage() }} Das Formular bleibt ausgeblendet, damit nichts versehentlich
+    überschrieben wird. Bitte die Seite neu laden.
+  </p>
+
+  <ng-container *ngIf="!loading() && !loadFailed()">
+    <p class="warning" *ngIf="!hasCoordinates">
+      Es ist kein Zuhause hinterlegt. Ohne Koordinaten gibt es keinen Umkreis, keine Karte und
+      keinen Abruf. Klicke auf der Karte auf dein Haus oder übernimm das Hundetracker-Zuhause.
+    </p>
+
+    <div id="charging-home-map" class="map"></div>
+
+    <div class="admin-charging__fields">
+      <label>
+        Breitengrad
+        <input type="number" step="0.000001" name="latitude"
+               [(ngModel)]="settings.homeLatitude" (ngModelChange)="onValueChange()">
+      </label>
+      <label>
+        Längengrad
+        <input type="number" step="0.000001" name="longitude"
+               [(ngModel)]="settings.homeLongitude" (ngModelChange)="onValueChange()">
+      </label>
+      <label>
+        Radius (km)
+        <input type="number" [min]="radiusMin" [max]="radiusMax" step="1" name="radius"
+               [(ngModel)]="settings.radiusKm" (ngModelChange)="onValueChange()">
+        <span class="hint">Nur Säulen innerhalb dieses Kreises werden abgefragt (1–50 km).</span>
+      </label>
+      <label>
+        Mindestleistung (kW)
+        <input type="number" [min]="powerMin" [max]="powerMax" step="1" name="minPower"
+               [(ngModel)]="settings.minPowerKw" (ngModelChange)="onValueChange()">
+        <span class="hint">Säulen darunter erscheinen nicht (0 = alle, 50 = nur Schnelllader).</span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="button" (click)="save()" [disabled]="saving() || !canSave">
+        {{ saving() ? 'Speichert …' : 'Speichern' }}
+      </button>
+      <button type="button" class="ghost" (click)="adoptTractiveHome()">
+        Aus Hundetracker-Zuhause übernehmen
+      </button>
+      <button type="button" class="danger" (click)="clearCoordinates()" *ngIf="hasCoordinates">
+        Koordinaten entfernen
+      </button>
+    </div>
+
+    <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+    <p class="success" *ngIf="successMessage()">{{ successMessage() }}</p>
+  </ng-container>
+
+  <h2>Favoriten</h2>
+  <p class="hint">
+    Favoriten werden jede Minute einzeln abgefragt und bekommen die Belegungsdauer je Ladepunkt.
+    Hinzufügen geht auf der Seite „Ladesäulen" über den Stern.
+  </p>
+  <p class="error" *ngIf="favoriteError()">{{ favoriteError() }}</p>
+  <ul class="admin-charging__favorites" *ngIf="favorites.length > 0; else noFavorites">
+    <li *ngFor="let favorite of favorites">
+      <span class="admin-charging__favorite-name">{{ favorite.name }}</span>
+      <span class="hint" *ngIf="favorite.operator">{{ favorite.operator }}</span>
+      <button type="button" class="danger" (click)="removeFavorite(favorite.stationId)">Entfernen</button>
+    </li>
+  </ul>
+  <ng-template #noFavorites><p class="hint">Noch keine Favoriten.</p></ng-template>
+</div>
