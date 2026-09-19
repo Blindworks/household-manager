@@ -37,11 +37,19 @@ class ChargingOccupancyTrackerTest {
     }
 
     private static ChargePoint point(String id, ChargePointStatus status) {
-        return new ChargePoint(id, status, 150.0, "CCS");
+        return new ChargePoint(id, status, 150.0, "CCS", null);
+    }
+
+    private static ChargePoint point(String id, ChargePointStatus status, Instant statusSince) {
+        return new ChargePoint(id, status, 150.0, "CCS", statusSince);
     }
 
     private static ChargingStationDetails details(ChargePointStatus status) {
         return new ChargingStationDetails("S1", List.of(point("P1", status)));
+    }
+
+    private static ChargingStationDetails details(ChargePointStatus status, Instant statusSince) {
+        return new ChargingStationDetails("S1", List.of(point("P1", status, statusSince)));
     }
 
     private static ChargingPointOccupancy existingRow() {
@@ -112,6 +120,34 @@ class ChargingOccupancyTrackerTest {
         tracker.record(details(ChargePointStatus.OUT_OF_SERVICE));
 
         verify(repository).delete(existing);
+    }
+
+    @Test
+    void beginnKommtAusStatusSinceDerQuelle() {
+        when(repository.findByStationId("S1")).thenReturn(List.of());
+        Instant statusSince = Instant.parse("2026-09-19T08:00:00Z");
+
+        tracker.record(details(ChargePointStatus.OCCUPIED, statusSince));
+
+        ArgumentCaptor<ChargingPointOccupancy> captor = ArgumentCaptor.forClass(ChargingPointOccupancy.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getOccupiedSince()).isEqualTo(statusSince);
+        assertThat(captor.getValue().getFirstSeenOccupiedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void statusSinceFuelltUnbekanntenBeginnNach() {
+        ChargingPointOccupancy existing = ChargingPointOccupancy.builder()
+                .chargePointId("P1").stationId("S1").occupiedSince(null).firstSeenOccupiedAt(EARLIER).build();
+        when(repository.findByStationId("S1")).thenReturn(List.of(existing));
+        Instant statusSince = Instant.parse("2026-09-19T08:00:00Z");
+
+        tracker.record(details(ChargePointStatus.OCCUPIED, statusSince));
+
+        ArgumentCaptor<ChargingPointOccupancy> captor = ArgumentCaptor.forClass(ChargingPointOccupancy.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue()).isSameAs(existing);
+        assertThat(captor.getValue().getOccupiedSince()).isEqualTo(statusSince);
     }
 
     @Test

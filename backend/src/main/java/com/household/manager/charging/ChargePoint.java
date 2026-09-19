@@ -1,5 +1,13 @@
 package com.household.manager.charging;
 
-/** Ein Ladepunkt (EVSE) einer Station. */
-public record ChargePoint(String chargePointId, ChargePointStatus status, Double maxPowerKw, String connector) {
+import java.time.Instant;
+
+/**
+ * Ein Ladepunkt (EVSE) einer Station. {@code statusSince} ist der von der Quelle gemeldete
+ * Zeitpunkt des letzten Statuswechsels (z. B. EnBWs {@code state.updatedAt}); {@code null}
+ * bei Quellen, die das nicht liefern - dann greift weiterhin die eigene Poll-Historie in
+ * {@link ChargingOccupancyTracker}.
+ */
+public record ChargePoint(String chargePointId, ChargePointStatus status, Double maxPowerKw, String connector,
+                          Instant statusSince) {
 }

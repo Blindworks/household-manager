@@ -51,7 +51,7 @@ class ChargingPollingServiceTest {
     }
 
     private static ChargingStationDetails details(String id, ChargePointStatus status) {
-        return new ChargingStationDetails(id, List.of(new ChargePoint(id + "-1", status, 150.0, "CCS")));
+        return new ChargingStationDetails(id, List.of(new ChargePoint(id + "-1", status, 150.0, "CCS", null)));
     }
 
     @BeforeEach

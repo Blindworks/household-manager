@@ -39,13 +39,20 @@ public class ChargingOccupancyTracker {
             switch (point.status()) {
                 case OCCUPIED -> {
                     if (row == null) {
-                        boolean beginKnown = lastSeen.get(point.chargePointId()) == ChargePointStatus.FREE;
+                        Instant since = point.statusSince();
+                        if (since == null) {
+                            boolean beginKnown = lastSeen.get(point.chargePointId()) == ChargePointStatus.FREE;
+                            since = beginKnown ? now : null;
+                        }
                         repository.save(ChargingPointOccupancy.builder()
                                 .chargePointId(point.chargePointId())
                                 .stationId(details.stationId())
-                                .occupiedSince(beginKnown ? now : null)
+                                .occupiedSince(since)
                                 .firstSeenOccupiedAt(now)
                                 .build());
+                    } else if (row.getOccupiedSince() == null && point.statusSince() != null) {
+                        row.setOccupiedSince(point.statusSince());
+                        repository.save(row);
                     }
                 }
                 case FREE, OUT_OF_SERVICE -> {

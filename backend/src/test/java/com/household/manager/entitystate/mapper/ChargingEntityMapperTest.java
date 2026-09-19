@@ -27,8 +27,8 @@ class ChargingEntityMapperTest {
     void bildetFreieLadepunkteAlsStateUndDenAeltestenBeginnAlsAttributAb() {
         Instant since = Instant.parse("2026-09-19T09:00:00Z");
         ChargingStationDetails details = new ChargingStationDetails("DE*LDL*E123", List.of(
-                new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS"),
-                new ChargePoint("P2", ChargePointStatus.FREE, 150.0, "CCS")));
+                new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS", null),
+                new ChargePoint("P2", ChargePointStatus.FREE, 150.0, "CCS", null)));
         Map<String, ChargingPointOccupancy> occupancy = Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("DE*LDL*E123").occupiedSince(since).firstSeenOccupiedAt(since).build());
 
@@ -49,7 +49,7 @@ class ChargingEntityMapperTest {
     @Test
     void ohneBekanntenBeginnFehltDerSchluesselOccupiedSince() {
         ChargingStationDetails details = new ChargingStationDetails("DE*LDL*E123", List.of(
-                new ChargePoint("P1", ChargePointStatus.OCCUPIED, null, null)));
+                new ChargePoint("P1", ChargePointStatus.OCCUPIED, null, null, null)));
         Map<String, ChargingPointOccupancy> occupancy = Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("DE*LDL*E123").occupiedSince(null)
                 .firstSeenOccupiedAt(Instant.EPOCH).build());

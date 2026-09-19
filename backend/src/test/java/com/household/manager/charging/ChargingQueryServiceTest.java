@@ -74,8 +74,8 @@ class ChargingQueryServiceTest {
                 .operator("Lidl").lat(50.08).lon(8.0).createdAt(NOW).build();
         when(favoriteService.list()).thenReturn(List.of(favorite));
         snapshot.updateFavoriteDetails(Map.of("fav", new ChargingStationDetails("fav", List.of(
-                new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS"),
-                new ChargePoint("P2", ChargePointStatus.FREE, 150.0, "CCS")))), NOW);
+                new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS", null),
+                new ChargePoint("P2", ChargePointStatus.FREE, 150.0, "CCS", null)))), NOW);
         Instant since = Instant.parse("2026-09-19T09:20:00Z");
         when(tracker.occupancyFor("fav")).thenReturn(Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("fav").occupiedSince(since).firstSeenOccupiedAt(since).build()));
@@ -101,7 +101,7 @@ class ChargingQueryServiceTest {
                 .operator("Op").lat(51.0).lon(9.0).createdAt(NOW).build();
         when(favoriteService.list()).thenReturn(List.of(favorite));
         snapshot.updateFavoriteDetails(Map.of("weit", new ChargingStationDetails("weit", List.of(
-                new ChargePoint("P1", ChargePointStatus.OCCUPIED, null, null)))), NOW);
+                new ChargePoint("P1", ChargePointStatus.OCCUPIED, null, null, null)))), NOW);
         when(tracker.occupancyFor("weit")).thenReturn(Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("weit").occupiedSince(null).firstSeenOccupiedAt(NOW).build()));
 

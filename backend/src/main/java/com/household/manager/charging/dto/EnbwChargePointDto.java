@@ -8,5 +8,6 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EnbwChargePointDto(@JsonProperty("evseId") String evseId,
                                  @JsonProperty("status") String status,
+                                 @JsonProperty("state") EnbwStateDto state,
                                  @JsonProperty("connectors") List<EnbwConnectorDto> connectors) {
 }
