@@ -51,6 +51,13 @@ class ChargingSettingsServiceTest {
     }
 
     @Test
+    void mindestleistungAusserhalbDerSchrankenFaelltAufDenDefaultZurueck() {
+        assertThat(settingsFrom(Map.of("min_power_kw", "500")).minPowerKw()).isEqualTo(50.0);
+        assertThat(settingsFrom(Map.of("min_power_kw", "-1")).minPowerKw()).isEqualTo(50.0);
+        assertThat(settingsFrom(Map.of("min_power_kw", "0")).minPowerKw()).isEqualTo(0.0);
+    }
+
+    @Test
     void halbeKoordinateZaehltAlsNichtKonfiguriert() {
         ChargingSettings settings = settingsFrom(Map.of("home_lat", "50.1"));
 
