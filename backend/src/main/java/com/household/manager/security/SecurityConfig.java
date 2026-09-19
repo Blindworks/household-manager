@@ -161,7 +161,10 @@ public class SecurityConfig {
                                 // das direkt davor als KIOSK freigegeben ist. Die Position vor
                                 // der generischen GET-Regel weiter unten ist deshalb tragend.
                                 // Beide Formen, damit auch der Pfad ohne Unterpfad sicher trifft.
-                                "/v1/mode-quick-access", "/v1/mode-quick-access/**").hasRole("ADMIN")
+                                "/v1/mode-quick-access", "/v1/mode-quick-access/**",
+                                // Ladesaeulen: Zuhause/Radius/Mindestleistung nur ADMIN, auch lesen -
+                                // methodenlos, VOR der generischen GET-Regel (Muster tractive/home-settings).
+                                "/v1/charging/settings").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
@@ -229,7 +232,9 @@ public class SecurityConfig {
                                 "/v1/blink/cameras/*/snapshot",
                                 "/v1/blink/cameras/*/arm", "/v1/blink/cameras/*/disarm",
                                 "/v1/blink/system/*/arm", "/v1/blink/system/*/disarm",
-                                "/v1/pet-supplies/*/purchases", "/v1/pet-supplies/*/corrections")
+                                "/v1/pet-supplies/*/purchases", "/v1/pet-supplies/*/corrections",
+                                // Ladesaeulen-Refresh zieht nur Daten - sonst waere der Knopf am Tablet tot.
+                                "/v1/charging/refresh")
                         .hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
