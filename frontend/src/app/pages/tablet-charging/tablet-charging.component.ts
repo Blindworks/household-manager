@@ -225,7 +225,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     this.markerLayer!.clearLayers();
     this.markers.clear();
     for (const station of this.data.stations) {
-      const marker = L.marker([station.lat, station.lon], { icon: stationIcon(station) })
+      const marker = L.marker([station.lat, station.lon], { icon: stationIcon(station, 'pin') })
         .bindPopup(stationPopupText(station))
         .on('click', () => this.select(station.stationId, { fromMap: true }))
         .addTo(this.markerLayer!);

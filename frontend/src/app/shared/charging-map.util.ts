@@ -8,15 +8,33 @@ import { formatPower, formatPrice, stationTone } from './charging-status.util';
  * stylen beide Seiten in ihrer eigenen SCSS (Leaflet rendert divIcons ausserhalb der
  * Komponenten-Kapselung, deshalb per ::ng-deep bzw. global in der Seite).
  */
-export function stationIcon(station: ChargingStation): L.DivIcon {
+export type MarkerShape = 'dot' | 'pin';
+
+/** Rahmen und Anker je Form; bei der Tropfenform liegt der Anker auf der Spitze. */
+export const MARKER_GEOMETRY: Record<MarkerShape, { size: [number, number]; anchor: [number, number]; popup: [number, number] }> = {
+  dot: { size: [30, 30], anchor: [15, 15], popup: [0, -14] },
+  pin: { size: [30, 40], anchor: [15, 40], popup: [0, -38] }
+};
+
+/**
+ * Marker-Icon einer Ladesaeule: farbige Form mit der Zahl freier Ladepunkte, Stern bei
+ * Favoriten. `dot` ist ein Kreis um den Standort (Website), `pin` eine Tropfenform, deren
+ * SPITZE auf dem Standort steht - der Anker muss dann auf der Spitze liegen, sonst wandert
+ * der Pin beim Zoomen um den festen Pixelversatz gegen die Karte (real passiert).
+ * Die Klassen `charging-marker--*` stylt jede Seite in ihrer eigenen SCSS (Leaflet rendert
+ * divIcons ausserhalb der Komponenten-Kapselung, deshalb per ::ng-deep).
+ */
+export function stationIcon(station: ChargingStation, shape: MarkerShape = 'dot'): L.DivIcon {
   const tone = stationTone(station);
   const label = station.total > 0 ? String(station.free) : '–';
+  const geometry = MARKER_GEOMETRY[shape];
   return L.divIcon({
-    className: `charging-marker charging-marker--${tone}${station.favorite ? ' charging-marker--favorite' : ''}`,
+    className: `charging-marker charging-marker--${shape} charging-marker--${tone}`
+      + `${station.favorite ? ' charging-marker--favorite' : ''}`,
     html: `<span class="charging-marker__count">${label}</span>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -14]
+    iconSize: geometry.size,
+    iconAnchor: geometry.anchor,
+    popupAnchor: geometry.popup
   });
 }
 
