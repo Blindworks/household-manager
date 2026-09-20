@@ -51,5 +51,31 @@ describe('AppComponent', () => {
       fixture.detectChanges();
       expect(layout.classList).not.toContain('app-layout--tablet');
     });
+
+    it('laesst den Hauptbereich unter seinen Inhalt schrumpfen, damit nichts aus dem Schirm ragt', () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [AppComponent],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()]
+      });
+      const fixture = TestBed.createComponent(AppComponent);
+      TestBed.inject(ViewModeService).isTabletView.set(true);
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      const layout = host.querySelector('.app-layout') as HTMLElement;
+      const main = host.querySelector('.main-content') as HTMLElement;
+      // Ein Kind, das ohne Kette die Hoehe des Schirms sprengen wuerde (wie eine lange
+      // Stationsliste), dazu ein fester Rahmen statt 100vh, damit der Test nicht vom
+      // Karma-Fenster abhaengt.
+      layout.style.height = '400px';
+      layout.style.minHeight = '0';
+      const tall = document.createElement('div');
+      tall.style.height = '1000px';
+      main.appendChild(tall);
+
+      expect(main.getBoundingClientRect().height).toBeLessThanOrEqual(400);
+      tall.remove();
+    });
   });
 });

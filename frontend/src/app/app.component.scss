@@ -21,4 +21,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  // Glied der Hoehenkette: ohne min-height: 0 gilt fuer ein Flex-Element die Mindesthoehe
+  // "Inhalt", es schrumpft nie unter seinen Inhalt - und im gekappten Tablet-Layout ragen
+  // Karte und Liste dann unten aus dem Schirm, ohne dass irgendetwas scrollt.
+  min-height: 0;
 }
