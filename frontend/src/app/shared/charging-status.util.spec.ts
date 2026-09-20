@@ -5,7 +5,7 @@ import {
   stationTone,
   sortStations
 } from './charging-status.util';
-import { stationPopupText } from './charging-map.util';
+import { MARKER_GEOMETRY, stationIcon, stationPopupText } from './charging-map.util';
 import { ChargingStation } from '../models/charging.model';
 
 describe('charging-status.util', () => {
@@ -92,6 +92,21 @@ describe('charging-status.util', () => {
       expect(html).not.toContain('EnBW-Tarif');
       expect(html).toContain('&lt;b&gt;x&lt;/b&gt;');
       expect(html).toContain('A&amp;B');
+    });
+  });
+
+  describe('stationIcon', () => {
+    it('legt bei der Tropfenform den Anker auf die Spitze (unten Mitte), sonst wandert der Pin beim Zoomen', () => {
+      const pin = stationIcon(station({}), 'pin').options;
+      expect(pin.iconSize).toEqual([30, 40]);
+      expect(pin.iconAnchor).toEqual([15, 40]);
+      expect(pin.className).toContain('charging-marker--pin');
+    });
+
+    it('nutzt fuer den Kreis die Mitte als Anker', () => {
+      const dot = stationIcon(station({})).options;
+      expect(dot.iconAnchor).toEqual(MARKER_GEOMETRY.dot.anchor);
+      expect(dot.iconAnchor).toEqual([15, 15]);
     });
   });
 

@@ -285,28 +285,31 @@
     color: rgba(228, 226, 228, 0.55);
   }
 
-  // Tropfenform: ein um 45 Grad gedrehtes Quadrat mit drei runden Ecken; die Zahl wird
-  // zurueckgedreht. Die Spitze zeigt auf den Standort (iconAnchor liegt in der Mitte des
-  // 30-px-Rahmens, deshalb der Versatz nach oben).
+  // Tropfenform in einem 30x40-Rahmen, Anker = Spitze (unten Mitte, siehe MARKER_GEOMETRY).
+  // Das Quadrat haengt mit seiner spitzen Ecke (border-radius 0) genau auf dem Anker:
+  // transform-origin liegt auf dieser Ecke, die Drehung um -45 Grad stellt es symmetrisch
+  // darueber, und die Auswahl-Skalierung dreht sich um denselben Punkt - die Spitze bleibt.
   .charging-marker {
     position: relative;
     width: 30px;
-    height: 30px;
+    height: 40px;
     background: transparent;
     border: none;
 
     &::before {
       content: '';
       position: absolute;
-      left: 3px;
-      top: -9px;
+      left: 15px;
+      top: 16px;
       width: 24px;
       height: 24px;
       border-radius: 50% 50% 50% 0;
+      transform-origin: 0 100%;
       transform: rotate(-45deg);
       background: #3b4048;
       border: 2px solid rgba(255, 255, 255, 0.35);
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+      box-sizing: border-box;
     }
 
     &--free::before {
@@ -322,34 +325,34 @@
     &--favorite::before {
       width: 28px;
       height: 28px;
-      left: 1px;
-      top: -12px;
+      top: 12px;
       border-width: 3px;
       border-color: #ffffff;
     }
   }
 
+  // Zahl ueber der Quadratmitte: die liegt Diagonale/2 ueber der Spitze (17 px bzw. 20 px).
   .charging-marker__count {
     position: absolute;
     left: 0;
     right: 0;
-    top: -6px;
+    top: 14px;
     text-align: center;
     color: #fff;
     font-weight: 700;
     font-size: 12px;
     line-height: 18px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
   }
 
   .charging-marker--favorite .charging-marker__count {
-    top: -9px;
+    top: 9px;
     font-size: 13px;
     line-height: 22px;
   }
 
-  // Ausgewaehlter Pin: groesser, heller Ring und ein pulsierender Lichthof, damit er auf der
-  // dunklen Karte sofort ins Auge faellt, egal wie viele Nachbarn er hat.
+  // Ausgewaehlter Pin: groesser (um die Spitze), heller Ring und pulsierender Lichthof.
   .charging-marker--selected {
     z-index: 1000 !important;
 
@@ -369,8 +372,8 @@
   .charging-marker--favorite::after {
     content: '★';
     position: absolute;
-    top: -20px;
-    right: -6px;
+    top: -4px;
+    right: -5px;
     color: #fbbf24;
     font-size: 13px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
