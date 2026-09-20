@@ -39,7 +39,8 @@ describe('TabletChargingComponent', () => {
   };
 
   beforeEach(async () => {
-    chargingSpy = jasmine.createSpyObj('ChargingService', ['getStations', 'refresh']);
+    chargingSpy = jasmine.createSpyObj('ChargingService', ['getStations', 'refresh', 'getChargePoints']);
+    chargingSpy.getChargePoints.and.returnValue(of([]));
     chargingSpy.getStations.and.returnValue(of(response));
     weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weatherSpy.getOverview.and.returnValue(
@@ -109,6 +110,29 @@ describe('TabletChargingComponent', () => {
     const rows = host.querySelectorAll('.tablet-charging__row--selected');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Lidl Hauptstr.');
+  });
+
+  it('laedt beim Antippen einer Nicht-Favoritin die Ladepunkte nach und ergaenzt Popup und Liste', () => {
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'OCCUPIED', maxPowerKw: 300, occupiedSince: '2026-09-19T11:00:00',
+        minimumDuration: false, pricePerKwh: 0.59 }
+    ]));
+
+    component.select('other');
+    fixture.detectChanges();
+
+    expect(chargingSpy.getChargePoints).toHaveBeenCalledOnceWith('other');
+    const popup = component.mapForTest()!.getPane('popupPane')!;
+    expect(popup.textContent).toContain('0,59 €/kWh');
+    expect(popup.textContent).toContain('belegt');
+    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.tablet-charging__point');
+    expect(rows.length).toBe(3);
+  });
+
+  it('laedt fuer einen Favoriten nichts nach - er bringt seine Ladepunkte mit', () => {
+    component.select('fav');
+
+    expect(chargingSpy.getChargePoints).not.toHaveBeenCalled();
   });
 
   it('behaelt die Hervorhebung des Pins ueber einen Refresh hinweg', () => {

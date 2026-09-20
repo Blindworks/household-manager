@@ -31,7 +31,8 @@
           <p class="charging-page__hint">{{ data.lastPolledAt ? 'Keine Ladesäulen im Umkreis.' : 'Noch keine Daten.' }}</p>
         } @else {
           @for (station of stations; track station.stationId) {
-            <article class="charging-page__row" [class.charging-page__row--favorite]="station.favorite">
+            <article class="charging-page__row" [class.charging-page__row--favorite]="station.favorite"
+                     (click)="showDetails(station.stationId)">
               <div class="charging-page__row-head">
                 <span class="charging-page__dot" [attr.data-tone]="tone(station)"></span>
                 <span class="charging-page__name">{{ station.name }}</span>
@@ -44,7 +45,7 @@
                   [attr.aria-pressed]="station.favorite"
                   [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
                   [disabled]="busyStationId === station.stationId"
-                  (click)="toggleFavorite(station)">
+                  (click)="toggleFavorite(station); $event.stopPropagation()">
                   {{ station.favorite ? '★' : '☆' }}
                 </button>
               </div>

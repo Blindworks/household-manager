@@ -31,7 +31,8 @@ describe('ChargingComponent', () => {
 
   beforeEach(async () => {
     chargingSpy = jasmine.createSpyObj('ChargingService',
-      ['getStations', 'refresh', 'addFavorite', 'removeFavorite']);
+      ['getStations', 'refresh', 'addFavorite', 'removeFavorite', 'getChargePoints']);
+    chargingSpy.getChargePoints.and.returnValue(of([]));
     chargingSpy.getStations.and.returnValue(of(response));
 
     await TestBed.configureTestingModule({
@@ -82,6 +83,30 @@ describe('ChargingComponent', () => {
     component.toggleFavorite(response.stations[0]);
 
     expect(component.actionError).toContain('nicht in der aktuellen Umkreisliste');
+  });
+
+  it('laedt beim Antippen einer Zeile die Ladepunkte nach und zeigt sie', () => {
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'FREE', maxPowerKw: 300, minimumDuration: false, pricePerKwh: 0.59 }
+    ]));
+
+    component.showDetails('other');
+    fixture.detectChanges();
+
+    expect(chargingSpy.getChargePoints).toHaveBeenCalledOnceWith('other');
+    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.charging-page__point');
+    expect(rows.length).toBe(3);
+  });
+
+  it('der Stern favorisiert, ohne die Zeile zu oeffnen', () => {
+    chargingSpy.addFavorite.and.returnValue(of(response));
+    const star = (fixture.nativeElement as HTMLElement)
+      .querySelectorAll('.charging-page__row')[1].querySelector('.charging-page__star-btn') as HTMLButtonElement;
+
+    star.click();
+
+    expect(chargingSpy.addFavorite).toHaveBeenCalledOnceWith('other');
+    expect(chargingSpy.getChargePoints).not.toHaveBeenCalled();
   });
 
   it('haelt den Kartencontainer im DOM und zeichnet Marker', () => {
