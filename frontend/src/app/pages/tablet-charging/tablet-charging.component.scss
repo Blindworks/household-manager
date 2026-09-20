@@ -129,6 +129,33 @@
     white-space: nowrap;
   }
 
+  &__sub {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    margin: 0.15rem 0 0 1.6rem;
+    font-size: 0.9rem;
+    color: rgba(228, 226, 228, 0.7);
+  }
+
+  &__operator {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__price {
+    margin-left: auto;
+    color: #fbbf24;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  &__point-price {
+    color: rgba(251, 191, 36, 0.85);
+    font-variant-numeric: tabular-nums;
+  }
+
   &__points {
     list-style: none;
     margin: 0.4rem 0 0;
@@ -175,14 +202,88 @@
     a { color: #94a3b8; }
   }
 
-  .leaflet-popup-content-wrapper,
-  .leaflet-popup-tip {
-    background: #15181d;
+  // Popup als kleine dunkle Karte im Stil der Listenzeilen; Leaflets Standardrand und
+  // Innenabstand werden ueberschrieben, der Inhalt kommt aus stationPopupText.
+  .leaflet-popup-content-wrapper {
+    background: rgba(21, 24, 29, 0.96);
     color: #e4e2e4;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
   }
 
-  .leaflet-popup-content { font-size: 13px; line-height: 1.4; }
+  .leaflet-popup-tip {
+    background: rgba(21, 24, 29, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+  }
+
+  .leaflet-popup-content {
+    margin: 0.75rem 0.9rem;
+    font-size: 13px;
+    line-height: 1.35;
+    min-width: 200px;
+  }
+
+  .leaflet-popup-close-button {
+    color: rgba(228, 226, 228, 0.6);
+    font-size: 18px;
+    padding: 6px 8px 0 0;
+
+    &:hover { color: #fff; }
+  }
+
+  .charging-popup__title {
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: #f4f3f5;
+    padding-right: 1rem;
+  }
+
+  .charging-popup__star { color: #fbbf24; margin-right: 0.25rem; }
+
+  .charging-popup__subtitle {
+    margin-top: 0.15rem;
+    font-size: 0.82rem;
+    color: rgba(228, 226, 228, 0.65);
+  }
+
+  .charging-popup__facts {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+  }
+
+  .charging-popup__fact {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.4rem 0.3rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .charging-popup__value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f4f3f5;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    small { font-size: 0.75rem; font-weight: 500; color: rgba(228, 226, 228, 0.6); }
+    &--free { color: #22c55e; }
+    &--busy { color: #ef4444; }
+  }
+
+  .charging-popup__label {
+    margin-top: 0.1rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(228, 226, 228, 0.55);
+  }
 
   // Tropfenform: ein um 45 Grad gedrehtes Quadrat mit drei runden Ecken; die Zahl wird
   // zurueckgedreht. Die Spitze zeigt auf den Standort (iconAnchor liegt in der Mitte des

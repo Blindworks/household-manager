@@ -1,9 +1,11 @@
 import {
   formatOccupiedDuration,
   formatPower,
+  formatPrice,
   stationTone,
   sortStations
 } from './charging-status.util';
+import { stationPopupText } from './charging-map.util';
 import { ChargingStation } from '../models/charging.model';
 
 describe('charging-status.util', () => {
@@ -57,6 +59,39 @@ describe('charging-status.util', () => {
 
     it('liefert Strich ohne Angabe', () => {
       expect(formatPower(undefined)).toBe('–');
+    });
+  });
+
+  describe('formatPrice', () => {
+    it('formatiert mit Komma und Einheit', () => {
+      expect(formatPrice(0.34)).toBe('0,34 €/kWh');
+      expect(formatPrice(1.05)).toBe('1,05 €/kWh');
+    });
+
+    it('liefert leer ohne Preis', () => {
+      expect(formatPrice(undefined)).toBe('');
+    });
+  });
+
+  describe('stationPopupText', () => {
+    it('zeigt Name, Betreiber, Adresse und die Kennzahlen inklusive Preis', () => {
+      const html = stationPopupText(station({
+        name: 'Lidl Hauptstr.', operator: 'EnBW', address: 'Hauptstr. 1, 12345 Stadt',
+        free: 1, total: 2, maxPowerKw: 150, pricePerKwh: 0.34, favorite: true
+      }));
+      expect(html).toContain('Lidl Hauptstr.');
+      expect(html).toContain('EnBW · Hauptstr. 1, 12345 Stadt');
+      expect(html).toContain('150 kW');
+      expect(html).toContain('0,34 €/kWh');
+      expect(html).toContain('charging-popup__star');
+      expect(html).toContain('charging-popup__value--free');
+    });
+
+    it('laesst die Preiskachel ohne Preis weg und escaped Fremdtexte', () => {
+      const html = stationPopupText(station({ name: '<b>x</b>', operator: 'A&B' }));
+      expect(html).not.toContain('EnBW-Tarif');
+      expect(html).toContain('&lt;b&gt;x&lt;/b&gt;');
+      expect(html).toContain('A&amp;B');
     });
   });
 
