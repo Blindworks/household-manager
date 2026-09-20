@@ -180,13 +180,15 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     const home: L.LatLngExpression = [this.data.home.lat, this.data.home.lon];
     if (!this.map) {
       this.map = L.map(container, { zoomControl: false });
+      // OSM-Standardkacheln; die dunkle Tesla-Optik entsteht per CSS-Filter auf der Kachelebene
+      // (siehe SCSS). Dunkle Kachel-Anbieter (CARTO) verlangen inzwischen einen API-Key.
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap', maxZoom: 19
       }).addTo(this.map);
       this.homeLayer = L.layerGroup().addTo(this.map);
       this.markerLayer = L.layerGroup().addTo(this.map);
       const radiusMeters = (this.data.radiusKm ?? 10) * 1000;
-      L.circle(home, { radius: radiusMeters, color: '#38bdf8', weight: 1, fillOpacity: 0.04 }).addTo(this.homeLayer);
+      L.circle(home, { radius: radiusMeters, color: 'rgba(255, 255, 255, 0.45)', weight: 1, dashArray: '6 6', fillOpacity: 0.03 }).addTo(this.homeLayer);
       L.marker(home, { icon: homeIcon(), interactive: false }).addTo(this.homeLayer);
       this.map.fitBounds(L.latLng(home).toBounds(radiusMeters * 2), { padding: [8, 8] });
     }
