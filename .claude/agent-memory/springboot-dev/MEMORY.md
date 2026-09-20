@@ -123,3 +123,5 @@ com.household.manager/
 - [Alexa auth flow structure](project_alexa_auth_flow.md) — AlexaAuthService PKCE login port from alexa-cookie; known deviations/risks, unverified E2E
 - [Day-relative text windows](feedback_day_relative_text_windows.md) — announce windows with "morgen"/"heute" text must clamp to LocalTime.MAX, never wrap past midnight
 - [Presence-wifi cleanup coupling](presence-wifi-cleanup-coupling.md) — cleanup steps must sit outside the try/catch they compensate for; check aggregates for the same orphan-freeze hole as their inputs
+- [Charging favorite unavailable](charging-favorite-unavailable.md) — unavailable must build from the ChargingFavorite object in-loop, not gate on lastReported, or a favorite's first-ever failed poll never gets reported
+- [Charging price per kWh](charging-price-per-kwh.md) — EnBW tariffDescription regex parse; price only for favorites (detail response), area stations always null; branch feature/charging-price not yet merged
