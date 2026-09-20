@@ -9,7 +9,7 @@ import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell
 import { ChargingService } from '../../services/charging.service';
 import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../models/charging.model';
 import {
-  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone
+  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
 } from '../../shared/charging-status.util';
 import { homeIcon, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
@@ -98,7 +98,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       return station;
     }
     const loaded = this.loadedChargePoints.get(station.stationId);
-    return loaded ? { ...station, chargePoints: loaded } : station;
+    return loaded ? withChargePoints(station, loaded) : station;
   }
 
   get lastPolledLabel(): string {
@@ -176,6 +176,9 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     const station = this.stations.find(s => s.stationId === stationId);
     if (marker && station) {
       marker.setPopupContent(stationPopupText(station, this.now));
+      // Die Zahl im Pin stammt aus der Umkreisliste; nach dem Nachladen zaehlt die frische.
+      marker.setIcon(stationIcon(station, 'pin'));
+      this.applySelectionToMarkers();
     }
   }
 

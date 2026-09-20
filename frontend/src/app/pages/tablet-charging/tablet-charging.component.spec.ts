@@ -113,6 +113,7 @@ describe('TabletChargingComponent', () => {
   });
 
   it('laedt beim Antippen einer Nicht-Favoritin die Ladepunkte nach und ergaenzt Popup und Liste', () => {
+    const host = fixture.nativeElement as HTMLElement;
     chargingSpy.getChargePoints.and.returnValue(of([
       { chargePointId: 'X1', status: 'OCCUPIED', maxPowerKw: 300, occupiedSince: '2026-09-19T11:00:00',
         minimumDuration: false, pricePerKwh: 0.59 }
@@ -125,7 +126,11 @@ describe('TabletChargingComponent', () => {
     const popup = component.mapForTest()!.getPane('popupPane')!;
     expect(popup.textContent).toContain('0,59 €/kWh');
     expect(popup.textContent).toContain('belegt');
-    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.tablet-charging__point');
+    // Kopfzahl und Pin folgen den frischen Ladepunkten (1 Punkt, 0 frei), nicht der Umkreisliste (8 von 6).
+    expect(popup.textContent).toContain('0/1');
+    const pin = host.querySelector('.charging-marker--selected .charging-marker__count');
+    expect(pin?.textContent).toBe('0');
+    const rows = host.querySelectorAll('.tablet-charging__point');
     expect(rows.length).toBe(3);
   });
 

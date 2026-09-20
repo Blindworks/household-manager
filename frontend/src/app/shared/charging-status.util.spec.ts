@@ -3,7 +3,8 @@ import {
   formatPower,
   formatPrice,
   stationTone,
-  sortStations
+  sortStations,
+  withChargePoints
 } from './charging-status.util';
 import { MARKER_GEOMETRY, stationIcon, stationPopupText } from './charging-map.util';
 import { ChargingStation } from '../models/charging.model';
@@ -128,6 +129,28 @@ describe('charging-status.util', () => {
       const dot = stationIcon(station({})).options;
       expect(dot.iconAnchor).toEqual(MARKER_GEOMETRY.dot.anchor);
       expect(dot.iconAnchor).toEqual([15, 15]);
+    });
+  });
+
+  describe('withChargePoints', () => {
+    it('leitet frei/gesamt, Leistung und Preis aus den frischen Ladepunkten ab', () => {
+      const merged = withChargePoints(station({ free: 0, total: 2, maxPowerKw: 150 }), [
+        { chargePointId: 'P1', status: 'FREE', maxPowerKw: 300, minimumDuration: false, pricePerKwh: 0.79 },
+        { chargePointId: 'P2', status: 'OCCUPIED', maxPowerKw: 150, minimumDuration: false, pricePerKwh: 0.59 }
+      ]);
+      expect(merged.free).toBe(1);
+      expect(merged.total).toBe(2);
+      expect(merged.maxPowerKw).toBe(300);
+      expect(merged.pricePerKwh).toBe(0.59);
+      expect(merged.chargePoints?.length).toBe(2);
+    });
+
+    it('behaelt Leistung und Preis der Liste, wenn die Ladepunkte keine nennen', () => {
+      const merged = withChargePoints(station({ maxPowerKw: 150, pricePerKwh: 0.4 }), [
+        { chargePointId: 'P1', status: 'FREE', minimumDuration: false }
+      ]);
+      expect(merged.maxPowerKw).toBe(150);
+      expect(merged.pricePerKwh).toBe(0.4);
     });
   });
 
