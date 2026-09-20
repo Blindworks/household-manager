@@ -9,7 +9,7 @@ import * as L from 'leaflet';
 import { ChargingService } from '../../services/charging.service';
 import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../models/charging.model';
 import {
-  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone
+  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
 } from '../../shared/charging-status.util';
 import { homeIcon, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
@@ -79,7 +79,7 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
       return station;
     }
     const loaded = this.loadedChargePoints.get(station.stationId);
-    return loaded ? { ...station, chargePoints: loaded } : station;
+    return loaded ? withChargePoints(station, loaded) : station;
   }
 
   /** Antippen in Liste oder Karte: Ladepunkte nachladen, Popup danach aktualisieren. */
@@ -107,6 +107,7 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
         const merged = this.stations.find(s => s.stationId === stationId);
         if (marker && merged) {
           marker.setPopupContent(stationPopupText(merged, this.now));
+          marker.setIcon(stationIcon(merged));
         }
       },
       error: (err: HttpErrorResponse) => {

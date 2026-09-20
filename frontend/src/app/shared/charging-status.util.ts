@@ -1,4 +1,4 @@
-import { ChargingStation } from '../models/charging.model';
+import { ChargePoint, ChargingStation } from '../models/charging.model';
 
 /**
  * Einzige Definition von Farbe, Dauerformat und Sortierung der Ladesaeulen - Tablet und
@@ -59,4 +59,24 @@ export function sortStations(stations: readonly ChargingStation[]): ChargingStat
     }
     return a.distanceMeters - b.distanceMeters;
   });
+}
+
+/**
+ * Ergaenzt eine Station um frisch nachgeladene Ladepunkte und leitet die Kopfzahlen daraus ab:
+ * frei/gesamt, Hoechstleistung und guenstigster Preis. Die Umkreisliste ist bis zu fuenf
+ * Minuten alt, die Ladepunkte sind frisch - zwei Quellen nebeneinander widersprachen sich
+ * sichtbar ("0/2 frei" ueber einem freien Ladepunkt). Dieselbe Regel wie im Backend fuer
+ * Favoriten (`ChargingQueryService.favoriteRow`).
+ */
+export function withChargePoints(station: ChargingStation, points: ChargePoint[]): ChargingStation {
+  const powers = points.map(p => p.maxPowerKw).filter((p): p is number => p !== undefined && p !== null);
+  const prices = points.map(p => p.pricePerKwh).filter((p): p is number => p !== undefined && p !== null);
+  return {
+    ...station,
+    chargePoints: points,
+    total: points.length,
+    free: points.filter(p => p.status === 'FREE').length,
+    maxPowerKw: powers.length > 0 ? Math.max(...powers) : station.maxPowerKw,
+    pricePerKwh: prices.length > 0 ? Math.min(...prices) : station.pricePerKwh
+  };
 }
