@@ -38,6 +38,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
 
   private map?: L.Map;
   private markerLayer?: L.LayerGroup;
+  /** Marker je Station, damit eine Auswahl in der Liste den Pin auf der Karte findet. */
+  private markers = new Map<string, L.Marker>();
   private homeLayer?: L.LayerGroup;
   private viewInitialized = false;
   private refreshTimer: number | null = null;
@@ -107,8 +109,32 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     });
   }
 
-  select(stationId: string): void {
+  /**
+   * Auswahl aus Liste oder Karte: hebt die Zeile UND den Pin hervor, oeffnet das Popup und
+   * schwenkt die Karte auf den Standort - ohne den Zoom anzufassen (ein gezoomter Blick soll
+   * bleiben, Muster wie beim Refresh).
+   */
+  select(stationId: string, options: { fromMap?: boolean } = {}): void {
     this.selectedStationId = stationId;
+    this.applySelectionToMarkers();
+    const marker = this.markers.get(stationId);
+    if (!marker || !this.map) {
+      return;
+    }
+    if (!options.fromMap) {
+      this.map.panTo(marker.getLatLng(), { animate: true });
+      marker.openPopup();
+    }
+  }
+
+  /** Setzt die Hervorhebungsklasse auf genau einem Pin; ueberlebt auch den Marker-Austausch. */
+  private applySelectionToMarkers(): void {
+    for (const [stationId, marker] of this.markers) {
+      const element = marker.getElement();
+      if (element) {
+        element.classList.toggle('charging-marker--selected', stationId === this.selectedStationId);
+      }
+    }
   }
 
   tone(station: ChargingStation): string {
@@ -193,11 +219,15 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       this.map.fitBounds(L.latLng(home).toBounds(radiusMeters * 2), { padding: [8, 8] });
     }
     this.markerLayer!.clearLayers();
+    this.markers.clear();
     for (const station of this.data.stations) {
-      L.marker([station.lat, station.lon], { icon: stationIcon(station) })
+      const marker = L.marker([station.lat, station.lon], { icon: stationIcon(station) })
         .bindPopup(stationPopupText(station))
-        .on('click', () => this.select(station.stationId))
+        .on('click', () => this.select(station.stationId, { fromMap: true }))
         .addTo(this.markerLayer!);
+      this.markers.set(station.stationId, marker);
     }
+    // Nach dem Austausch tragen die neuen Pins die Auswahl noch nicht.
+    this.applySelectionToMarkers();
   }
 }
