@@ -5,5 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EnbwConnectorDto(@JsonProperty("plugTypeName") String plugTypeName,
-                               @JsonProperty("maxPowerInKw") Double maxPowerInKw) {
+                               @JsonProperty("maxPowerInKw") Double maxPowerInKw,
+                               @JsonProperty("tariffInfo") EnbwTariffInfoDto tariffInfo) {
 }

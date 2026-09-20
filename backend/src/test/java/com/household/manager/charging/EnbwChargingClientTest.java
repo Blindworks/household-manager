@@ -49,6 +49,16 @@ class EnbwChargingClientTest {
         assertThat(details.stationId()).isEqualTo("1156477");
         assertThat(details.chargePoints()).hasSize(12);
         assertThat(details.chargePoints()).allSatisfy(point -> assertThat(point.statusSince()).isNotNull());
+        assertThat(details.chargePoints()).allSatisfy(point -> assertThat(point.pricePerKwh()).isEqualTo(0.34));
+    }
+
+    @Test
+    void parstDenPreisAusDerTarifbeschreibung() {
+        assertThat(EnbwChargingClient.parsePricePerKwh("Preis je DC kWh: Ab 0,34 € \nmit Blockiergebühr*"))
+                .isEqualTo(0.34);
+        assertThat(EnbwChargingClient.parsePricePerKwh("Ab 1,05 €")).isEqualTo(1.05);
+        assertThat(EnbwChargingClient.parsePricePerKwh("keine Zahl hier")).isNull();
+        assertThat(EnbwChargingClient.parsePricePerKwh(null)).isNull();
     }
 
     @Test

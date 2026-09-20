@@ -37,11 +37,11 @@ class ChargingOccupancyTrackerTest {
     }
 
     private static ChargePoint point(String id, ChargePointStatus status) {
-        return new ChargePoint(id, status, 150.0, "CCS", null);
+        return new ChargePoint(id, status, 150.0, "CCS", null, null);
     }
 
     private static ChargePoint point(String id, ChargePointStatus status, Instant statusSince) {
-        return new ChargePoint(id, status, 150.0, "CCS", statusSince);
+        return new ChargePoint(id, status, 150.0, "CCS", statusSince, null);
     }
 
     private static ChargingStationDetails details(ChargePointStatus status) {
