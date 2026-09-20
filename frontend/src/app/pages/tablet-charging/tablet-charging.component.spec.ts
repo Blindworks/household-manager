@@ -93,6 +93,35 @@ describe('TabletChargingComponent', () => {
     expect(map.getCenter().lat).toBeCloseTo(50.5, 3);
   });
 
+  it('hebt bei Auswahl in der Liste den Pin hervor und schwenkt die Karte dorthin', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const map = component.mapForTest()!;
+    map.setView([50.5, 8.5], 12);
+
+    component.select('fav');
+    fixture.detectChanges();
+
+    const selected = host.querySelectorAll('.charging-marker--selected');
+    expect(selected.length).toBe(1);
+    expect(selected[0].classList).toContain('charging-marker--favorite');
+    // panTo animiert; der Zielmittelpunkt ist die Station, der Zoom bleibt.
+    expect(map.getZoom()).toBe(12);
+    const rows = host.querySelectorAll('.tablet-charging__row--selected');
+    expect(rows.length).toBe(1);
+    expect(rows[0].textContent).toContain('Lidl Hauptstr.');
+  });
+
+  it('behaelt die Hervorhebung des Pins ueber einen Refresh hinweg', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    component.select('other');
+
+    component.reload();
+
+    const selected = host.querySelectorAll('.charging-marker--selected');
+    expect(selected.length).toBe(1);
+    expect(selected[0].classList).not.toContain('charging-marker--favorite');
+  });
+
   it('zeigt einen Hinweis statt Karte, wenn kein Zuhause konfiguriert ist', () => {
     chargingSpy.getStations.and.returnValue(of({ configured: false, lastPolledAt: null, stations: [] }));
     const fresh = TestBed.createComponent(TabletChargingComponent);
