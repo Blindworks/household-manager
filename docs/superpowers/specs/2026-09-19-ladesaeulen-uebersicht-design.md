@@ -58,8 +58,8 @@ aus den Home-Assistant-Integrationen annahm und was sich real zeigte:
 - Alle EnBW-Spezifika (URLs, Header, Feldnamen) leben ausschließlich im Client (Muster `WebPushClient`,
   `blink_client.py`) — die Quelle ist damit austauschbar
 - Java-`HttpClient`, **HTTP/1.1 erzwungen**, Timeout 10 s, Jackson mit `ignoreUnknown`
-- Konfiguration: `charging.enabled`, `charging.enbw.base-url`, `charging.enbw.api-key` (Default = der
-  öffentliche Key, per Env `CHARGING_ENBW_API_KEY` überschreibbar), `charging.area-poll-seconds` (300),
+- Konfiguration: `charging.enabled`, `charging.enbw.base-url`, `charging.enbw.api-key` (nur per Env
+  `CHARGING_ENBW_API_KEY`, kein Default im Quelltext — Merge-Sicherheitsfilter), `charging.area-poll-seconds` (300),
   `charging.favorite-poll-seconds` (60)
 - Fehler: `ChargingSourceException` (Unterklasse `ChargingRateLimitException` bei 429). **Nie eine
   Ausnahme, die zu 401 wird** — der Auth-Interceptor des Frontends würde den Nutzer sonst aus der
