@@ -40,6 +40,13 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   private markerLayer?: L.LayerGroup;
   /** Marker je Station, damit eine Auswahl in der Liste den Pin auf der Karte findet. */
   private markers = new Map<string, L.Marker>();
+  /**
+   * Nachgeladene Ladepunkte je Station: die Umkreisliste liefert nur Zaehler, Details kommen
+   * erst beim Antippen. Ein Eintrag ueberlebt den Refresh, bis die Station selbst Details
+   * mitbringt (Favorit) oder erneut angetippt wird.
+   */
+  private loadedChargePoints = new Map<string, ChargePoint[]>();
+  private loadingChargePoints = new Set<string>();
   private homeLayer?: L.LayerGroup;
   private viewInitialized = false;
   private refreshTimer: number | null = null;
@@ -78,8 +85,20 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     this.map = undefined;
   }
 
+  /** Stationen mit nachgeladenen Ladepunkten zusammengefuehrt; eigene Details des Favoriten gewinnen. */
   get stations(): ChargingStation[] {
-    return this.data ? sortStations(this.data.stations) : [];
+    if (!this.data) {
+      return [];
+    }
+    return sortStations(this.data.stations.map(s => this.withLoadedPoints(s)));
+  }
+
+  private withLoadedPoints(station: ChargingStation): ChargingStation {
+    if (station.chargePoints) {
+      return station;
+    }
+    const loaded = this.loadedChargePoints.get(station.stationId);
+    return loaded ? { ...station, chargePoints: loaded } : station;
   }
 
   get lastPolledLabel(): string {
@@ -117,6 +136,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   select(stationId: string, options: { fromMap?: boolean } = {}): void {
     this.selectedStationId = stationId;
     this.applySelectionToMarkers();
+    this.ensureChargePoints(stationId);
     const marker = this.markers.get(stationId);
     if (!marker || !this.map) {
       return;
@@ -124,6 +144,38 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     if (!options.fromMap) {
       this.map.panTo(marker.getLatLng(), { animate: true });
       marker.openPopup();
+    }
+  }
+
+  /**
+   * Laedt die Ladepunkte einer Station nach, wenn sie noch fehlen, und aktualisiert danach das
+   * Popup des Pins. Ein Fehler bleibt still - das Popup zeigt dann weiter die Kennzahlen.
+   */
+  private ensureChargePoints(stationId: string): void {
+    const station = this.data?.stations.find(s => s.stationId === stationId);
+    if (!station || station.chargePoints || this.loadedChargePoints.has(stationId)
+      || this.loadingChargePoints.has(stationId)) {
+      return;
+    }
+    this.loadingChargePoints.add(stationId);
+    this.chargingService.getChargePoints(stationId).subscribe({
+      next: points => {
+        this.loadingChargePoints.delete(stationId);
+        this.loadedChargePoints.set(stationId, points);
+        this.refreshPopup(stationId);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.loadingChargePoints.delete(stationId);
+        console.error('Ladepunkte konnten nicht geladen werden:', err);
+      }
+    });
+  }
+
+  private refreshPopup(stationId: string): void {
+    const marker = this.markers.get(stationId);
+    const station = this.stations.find(s => s.stationId === stationId);
+    if (marker && station) {
+      marker.setPopupContent(stationPopupText(station, this.now));
     }
   }
 
@@ -224,7 +276,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     }
     this.markerLayer!.clearLayers();
     this.markers.clear();
-    for (const station of this.data.stations) {
+    for (const station of this.stations) {
       const marker = L.marker([station.lat, station.lon], { icon: stationIcon(station, 'pin') })
         .bindPopup(stationPopupText(station, this.now))
         .on('click', () => this.select(station.stationId, { fromMap: true }))

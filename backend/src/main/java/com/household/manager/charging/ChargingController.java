@@ -24,10 +24,17 @@ public class ChargingController {
     private final ChargingQueryService queryService;
     private final ChargingPollingService pollingService;
     private final ChargingFavoriteService favoriteService;
+    private final ChargingStationDetailsService detailsService;
 
     @GetMapping("/stations")
     public ResponseEntity<ChargingDtos.StationsResponse> stations() {
         return ResponseEntity.ok(queryService.stations());
+    }
+
+    /** Ladepunkte einer beliebigen Station auf Anfrage (60 s gecacht); KIOSK ueber die generische GET-Regel. */
+    @GetMapping("/stations/{stationId}/charge-points")
+    public ResponseEntity<List<ChargingDtos.ChargePointResponse>> chargePoints(@PathVariable String stationId) {
+        return ResponseEntity.ok(detailsService.chargePoints(stationId));
     }
 
     @PostMapping("/refresh")
