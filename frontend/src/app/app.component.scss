@@ -4,6 +4,17 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+
+  // Wandtablet: feste Bildschirmhoehe statt Mindesthoehe. Mit min-height waechst die Seite
+  // mit ihrem Inhalt, und eine Liste mit overflow-y: auto (z. B. /tablet/charging) hat nie
+  // einen Grund zu scrollen - stattdessen scrollt im Kiosk-WebView die ganze Seite. Die
+  // Tablet-Ansichten sind auf "alles passt auf einen Schirm" gebaut; die Hoehenkette
+  // (flex: 1 / min-height: 0) beginnt genau hier.
+  &--tablet {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
 }
 
 .main-content {
