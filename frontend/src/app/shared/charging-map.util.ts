@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import { ChargingStation } from '../models/charging.model';
-import { formatPower, stationTone } from './charging-status.util';
+import { formatPower, formatPrice, stationTone } from './charging-status.util';
 
 /**
  * Marker-Icon einer Ladesaeule: farbiger Kreis mit der Zahl freier Ladepunkte, Stern bei
@@ -20,15 +20,31 @@ export function stationIcon(station: ChargingStation): L.DivIcon {
   });
 }
 
+/**
+ * Popup-Inhalt als kleine Karte: Name, Betreiber, Adresse, dann drei Kennzahlen (frei,
+ * Leistung, Preis). Die Klassen `charging-popup*` stylt jede Seite in ihrer eigenen SCSS
+ * (Leaflet rendert Popups ausserhalb der Komponenten-Kapselung). Alle Texte der Quelle
+ * werden escaped - Betreiber- und Adresstexte kommen von einem Fremdsystem.
+ */
 export function stationPopupText(station: ChargingStation): string {
-  const lines = [
-    `<strong>${escapeHtml(station.name)}</strong>`,
-    `${station.free}/${station.total} frei · ${formatPower(station.maxPowerKw)}`
+  const tone = stationTone(station);
+  const facts = [
+    `<div class="charging-popup__fact"><span class="charging-popup__value charging-popup__value--${tone}">`
+      + `${station.free}<small>/${station.total}</small></span><span class="charging-popup__label">frei</span></div>`,
+    `<div class="charging-popup__fact"><span class="charging-popup__value">${escapeHtml(formatPower(station.maxPowerKw))}`
+      + `</span><span class="charging-popup__label">Leistung</span></div>`
   ];
-  if (station.address) {
-    lines.push(escapeHtml(station.address));
+  if (station.pricePerKwh !== undefined && station.pricePerKwh !== null) {
+    facts.push(`<div class="charging-popup__fact"><span class="charging-popup__value">`
+      + `${escapeHtml(formatPrice(station.pricePerKwh))}</span><span class="charging-popup__label">EnBW-Tarif</span></div>`);
   }
-  return lines.join('<br>');
+  const subtitle = [station.operator, station.address].filter(s => !!s).map(s => escapeHtml(s!)).join(' · ');
+  return `<div class="charging-popup">`
+    + `<div class="charging-popup__title">${station.favorite ? '<span class="charging-popup__star">★</span>' : ''}`
+    + `${escapeHtml(station.name)}</div>`
+    + (subtitle ? `<div class="charging-popup__subtitle">${subtitle}</div>` : '')
+    + `<div class="charging-popup__facts">${facts.join('')}</div>`
+    + `</div>`;
 }
 
 /** Zuhause-Marker: kleiner blauer Punkt. */

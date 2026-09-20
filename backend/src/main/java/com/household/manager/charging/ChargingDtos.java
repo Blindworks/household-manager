@@ -16,13 +16,15 @@ public final class ChargingDtos {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ChargePointResponse(String chargePointId, ChargePointStatus status, Double maxPowerKw,
-                                      String connector, LocalDateTime occupiedSince, boolean minimumDuration) {
+                                      String connector, LocalDateTime occupiedSince, boolean minimumDuration,
+                                      Double pricePerKwh) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record StationResponse(String stationId, String name, String operator, String address,
                                   double lat, double lon, long distanceMeters, Double maxPowerKw,
-                                  int total, int free, boolean favorite, List<ChargePointResponse> chargePoints) {
+                                  Double pricePerKwh, int total, int free, boolean favorite,
+                                  List<ChargePointResponse> chargePoints) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

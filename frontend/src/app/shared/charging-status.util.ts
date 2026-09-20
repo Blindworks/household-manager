@@ -39,6 +39,14 @@ export function formatPower(kw: number | undefined): string {
   return kw === undefined || kw === null ? '–' : `${Math.round(kw)} kW`;
 }
 
+/** "0,34 €/kWh"; leer ohne Preis (kein erfundener Wert). */
+export function formatPrice(eurPerKwh: number | undefined): string {
+  if (eurPerKwh === undefined || eurPerKwh === null) {
+    return '';
+  }
+  return `${eurPerKwh.toFixed(2).replace('.', ',')} €/kWh`;
+}
+
 export function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
 }

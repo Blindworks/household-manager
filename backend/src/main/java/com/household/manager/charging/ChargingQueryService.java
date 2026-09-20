@@ -63,7 +63,7 @@ public class ChargingQueryService {
     private ChargingDtos.StationResponse areaRow(ChargingStation s, double homeLat, double homeLon) {
         long distance = Math.round(ChargingAreaFilter.distanceMeters(homeLat, homeLon, s.lat(), s.lon()));
         return new ChargingDtos.StationResponse(s.stationId(), s.name(), s.operator(), s.address(), s.lat(), s.lon(),
-                distance, s.maxPowerKw(), s.total(), s.free(), false, null);
+                distance, s.maxPowerKw(), null, s.total(), s.free(), false, null);
     }
 
     /** Stammdaten aus dem Umkreis-Stand, wenn vorhanden; sonst die beim Favorisieren gespeicherten. */
@@ -89,9 +89,12 @@ public class ChargingQueryService {
         Double maxPower = details.map(d -> d.chargePoints().stream().map(ChargePoint::maxPowerKw)
                 .filter(Objects::nonNull).max(Double::compare).orElse(null))
                 .orElse(area.map(ChargingStation::maxPowerKw).orElse(null));
+        Double minPrice = details.map(d -> d.chargePoints().stream().map(ChargePoint::pricePerKwh)
+                .filter(Objects::nonNull).min(Double::compare).orElse(null))
+                .orElse(null);
 
         return new ChargingDtos.StationResponse(favorite.getStationId(), name, operator, address, lat, lon,
-                distance, maxPower, total, free, true, points);
+                distance, maxPower, minPrice, total, free, true, points);
     }
 
     /**
@@ -110,7 +113,7 @@ public class ChargingQueryService {
             }
         }
         return new ChargingDtos.ChargePointResponse(point.chargePointId(), point.status(), point.maxPowerKw(),
-                point.connector(), since, minimum);
+                point.connector(), since, minimum, point.pricePerKwh());
     }
 
     private LocalDateTime local(Instant instant) {

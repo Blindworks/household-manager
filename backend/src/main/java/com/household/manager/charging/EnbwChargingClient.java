@@ -3,6 +3,7 @@ package com.household.manager.charging;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.charging.dto.EnbwChargePointDto;
+import com.household.manager.charging.dto.EnbwConnectorDto;
 import com.household.manager.charging.dto.EnbwStationDetailsDto;
 import com.household.manager.charging.dto.EnbwStationDto;
 import com.household.manager.charging.dto.EnbwViewPortDto;
@@ -19,10 +20,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -196,10 +199,51 @@ public class EnbwChargingClient implements ChargingStationSource {
                         ? null : cp.connectors().get(0).plugTypeName();
                 Instant statusSince = cp.state() == null || cp.state().updatedAt() == null
                         ? null : Instant.ofEpochMilli(cp.state().updatedAt());
-                points.add(new ChargePoint(cp.evseId(), mapStatus(cp.status()), power, connector, statusSince));
+                Double price = pricePerKwh(cp.connectors());
+                points.add(new ChargePoint(cp.evseId(), mapStatus(cp.status()), power, connector, statusSince, price));
             }
         }
         return new ChargingStationDetails(dto.stationId(), points);
+    }
+
+    /**
+     * Preis des Ladepunkts: der Connector mit der hoechsten {@code maxPowerInKw}, dessen Tarif
+     * sich parsen laesst; ohne einen solchen der erste parsbare; sonst {@code null}.
+     */
+    private static Double pricePerKwh(List<EnbwConnectorDto> connectors) {
+        if (connectors == null || connectors.isEmpty()) {
+            return null;
+        }
+        EnbwConnectorDto best = connectors.stream()
+                .filter(c -> parsePricePerKwh(tariffDescription(c)) != null)
+                .max(Comparator.comparingDouble(c -> c.maxPowerInKw() == null ? Double.NEGATIVE_INFINITY
+                        : c.maxPowerInKw()))
+                .orElse(null);
+        if (best == null) {
+            return connectors.stream()
+                    .map(c -> parsePricePerKwh(tariffDescription(c)))
+                    .filter(Objects::nonNull)
+                    .findFirst().orElse(null);
+        }
+        return parsePricePerKwh(tariffDescription(best));
+    }
+
+    private static String tariffDescription(EnbwConnectorDto connector) {
+        return connector.tariffInfo() == null ? null : connector.tariffInfo().tariffDescription();
+    }
+
+    private static final Pattern PRICE_PATTERN = Pattern.compile("(\\d+)[,.](\\d{2})\\s*\\u20AC");
+
+    /** Parst z. B. "Preis je DC kWh: Ab 0,34 EUR \nmit Blockiergebuehr*" (EUR steht hier fuer das Euro-Zeichen) -> 0.34; {@code null} ohne Treffer. */
+    static Double parsePricePerKwh(String tariffDescription) {
+        if (tariffDescription == null) {
+            return null;
+        }
+        var matcher = PRICE_PATTERN.matcher(tariffDescription);
+        if (!matcher.find()) {
+            return null;
+        }
+        return Double.parseDouble(matcher.group(1) + "." + matcher.group(2));
     }
 
     /** Fail-safe: nur bekannte Texte werden gedeutet, alles andere ist UNKNOWN - nie FREE. */

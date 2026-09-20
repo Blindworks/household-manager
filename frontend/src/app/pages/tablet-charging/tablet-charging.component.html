@@ -46,12 +46,23 @@
                     {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
                   </span>
                 </header>
+                @if (station.operator || station.pricePerKwh !== undefined) {
+                  <p class="tablet-charging__sub">
+                    @if (station.operator) { <span class="tablet-charging__operator">{{ station.operator }}</span> }
+                    @if (station.pricePerKwh !== undefined) {
+                      <span class="tablet-charging__price">{{ price(station.pricePerKwh) }}</span>
+                    }
+                  </p>
+                }
                 @if (station.chargePoints; as points) {
                   <ul class="tablet-charging__points">
                     @for (point of points; track point.chargePointId) {
                       <li class="tablet-charging__point" [attr.data-tone]="pointTone(point)">
                         <span class="tablet-charging__point-power">{{ power(point.maxPowerKw) }}</span>
                         <span class="tablet-charging__point-status">{{ pointLabel(point) }}</span>
+                        @if (point.pricePerKwh !== undefined) {
+                          <span class="tablet-charging__point-price">{{ price(point.pricePerKwh) }}</span>
+                        }
                         @if (point.status === 'OCCUPIED') {
                           <span class="tablet-charging__point-since">{{ duration(point) }}</span>
                         }

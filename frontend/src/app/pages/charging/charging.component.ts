@@ -9,7 +9,7 @@ import * as L from 'leaflet';
 import { ChargingService } from '../../services/charging.service';
 import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../models/charging.model';
 import {
-  formatDistance, formatOccupiedDuration, formatPower, sortStations, stationTone
+  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone
 } from '../../shared/charging-status.util';
 import { homeIcon, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
@@ -108,6 +108,10 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   distance(meters: number): string {
     return formatDistance(meters);
+  }
+
+  price(eurPerKwh: number | undefined): string {
+    return formatPrice(eurPerKwh);
   }
 
   duration(point: ChargePoint): string {

@@ -74,8 +74,8 @@ class ChargingQueryServiceTest {
                 .operator("Lidl").lat(50.08).lon(8.0).createdAt(NOW).build();
         when(favoriteService.list()).thenReturn(List.of(favorite));
         snapshot.updateFavoriteDetails(Map.of("fav", new ChargingStationDetails("fav", List.of(
-                new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS", null),
-                new ChargePoint("P2", ChargePointStatus.FREE, 150.0, "CCS", null)))), NOW);
+                new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS", null, 0.34),
+                new ChargePoint("P2", ChargePointStatus.FREE, 150.0, "CCS", null, 0.34)))), NOW);
         Instant since = Instant.parse("2026-09-19T09:20:00Z");
         when(tracker.occupancyFor("fav")).thenReturn(Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("fav").occupiedSince(since).firstSeenOccupiedAt(since).build()));
@@ -86,11 +86,13 @@ class ChargingQueryServiceTest {
                 .containsExactly("fav", "nah", "fern");
         ChargingDtos.StationResponse fav = response.stations().get(0);
         assertThat(fav.favorite()).isTrue();
+        assertThat(fav.pricePerKwh()).isEqualTo(0.34);
         assertThat(fav.chargePoints()).hasSize(2);
         ChargingDtos.ChargePointResponse p1 = fav.chargePoints().get(0);
         assertThat(p1.occupiedSince()).isEqualTo(LocalDateTime.ofInstant(since, BERLIN));
         assertThat(p1.minimumDuration()).isFalse();
         assertThat(response.stations().get(1).chargePoints()).isNull();
+        assertThat(response.stations().get(1).pricePerKwh()).isNull();
         assertThat(response.lastPolledAt()).isEqualTo(LocalDateTime.ofInstant(NOW, BERLIN));
     }
 
@@ -101,7 +103,7 @@ class ChargingQueryServiceTest {
                 .operator("Op").lat(51.0).lon(9.0).createdAt(NOW).build();
         when(favoriteService.list()).thenReturn(List.of(favorite));
         snapshot.updateFavoriteDetails(Map.of("weit", new ChargingStationDetails("weit", List.of(
-                new ChargePoint("P1", ChargePointStatus.OCCUPIED, null, null, null)))), NOW);
+                new ChargePoint("P1", ChargePointStatus.OCCUPIED, null, null, null, null)))), NOW);
         when(tracker.occupancyFor("weit")).thenReturn(Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("weit").occupiedSince(null).firstSeenOccupiedAt(NOW).build()));
 

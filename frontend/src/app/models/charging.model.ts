@@ -10,6 +10,8 @@ export interface ChargePoint {
   occupiedSince?: string;
   /** true = Beginn unbekannt, occupiedSince ist nur eine Untergrenze ("seit mind."). */
   minimumDuration: boolean;
+  /** EnBW-Tarif in Euro je kWh; nur bei Favoriten und nur wenn die Quelle einen nennt. */
+  pricePerKwh?: number;
 }
 
 export interface ChargingStation {
@@ -21,6 +23,8 @@ export interface ChargingStation {
   lon: number;
   distanceMeters: number;
   maxPowerKw?: number;
+  /** Guenstigster EnBW-Tarif der Ladepunkte in Euro je kWh; nur bei Favoriten. */
+  pricePerKwh?: number;
   total: number;
   free: number;
   favorite: boolean;

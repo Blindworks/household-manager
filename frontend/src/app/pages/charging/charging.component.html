@@ -48,8 +48,15 @@
                   {{ station.favorite ? '★' : '☆' }}
                 </button>
               </div>
-              @if (station.address) {
-                <p class="charging-page__address">{{ station.address }}</p>
+              @if (station.operator || station.address || station.pricePerKwh !== undefined) {
+                <p class="charging-page__address">
+                  @if (station.operator) { <span class="charging-page__operator">{{ station.operator }}</span> }
+                  @if (station.operator && station.address) { · }
+                  {{ station.address }}
+                  @if (station.pricePerKwh !== undefined) {
+                    <span class="charging-page__price">{{ price(station.pricePerKwh) }}</span>
+                  }
+                </p>
               }
               @if (station.chargePoints; as points) {
                 <ul class="charging-page__points">
@@ -57,6 +64,7 @@
                     <li class="charging-page__point" [attr.data-status]="point.status">
                       <span>{{ power(point.maxPowerKw) }}</span>
                       <span>{{ pointLabel(point) }}</span>
+                      @if (point.pricePerKwh !== undefined) { <span class="charging-page__point-price">{{ price(point.pricePerKwh) }}</span> }
                       @if (point.status === 'OCCUPIED') { <span class="charging-page__since">{{ duration(point) }}</span> }
                     </li>
                   }
