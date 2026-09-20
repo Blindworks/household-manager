@@ -223,7 +223,7 @@
     margin: 0.75rem 0.9rem;
     font-size: 13px;
     line-height: 1.35;
-    min-width: 200px;
+    min-width: 250px;
   }
 
   .leaflet-popup-close-button {
@@ -284,6 +284,31 @@
     letter-spacing: 0.04em;
     color: rgba(228, 226, 228, 0.55);
   }
+
+  .charging-popup__points {
+    list-style: none;
+    margin: 0.6rem 0 0;
+    padding: 0.45rem 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .charging-popup__point {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    color: rgba(228, 226, 228, 0.85);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .charging-popup__point-power { min-width: 3.6rem; color: rgba(228, 226, 228, 0.65); }
+  .charging-popup__point--free .charging-popup__point-status { color: #22c55e; font-weight: 600; }
+  .charging-popup__point--occupied .charging-popup__point-status { color: #ef4444; font-weight: 600; }
+  .charging-popup__point-since { color: #fca5a5; white-space: nowrap; }
+  .charging-popup__point-price { margin-left: auto; color: #fbbf24; white-space: nowrap; }
 
   // Tropfenform in einem 30x40-Rahmen, Anker = Spitze (unten Mitte, siehe MARKER_GEOMETRY).
   // Das Quadrat haengt mit seiner spitzen Ecke (border-radius 0) genau auf dem Anker:

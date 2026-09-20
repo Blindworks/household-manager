@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
-import { ChargingStation } from '../models/charging.model';
-import { formatPower, formatPrice, stationTone } from './charging-status.util';
+import { ChargePoint, ChargingStation } from '../models/charging.model';
+import { formatOccupiedDuration, formatPower, formatPrice, stationTone } from './charging-status.util';
 
 /**
  * Marker-Icon einer Ladesaeule: farbiger Kreis mit der Zahl freier Ladepunkte, Stern bei
@@ -44,7 +44,7 @@ export function stationIcon(station: ChargingStation, shape: MarkerShape = 'dot'
  * (Leaflet rendert Popups ausserhalb der Komponenten-Kapselung). Alle Texte der Quelle
  * werden escaped - Betreiber- und Adresstexte kommen von einem Fremdsystem.
  */
-export function stationPopupText(station: ChargingStation): string {
+export function stationPopupText(station: ChargingStation, now: Date = new Date()): string {
   const tone = stationTone(station);
   const facts = [
     `<div class="charging-popup__fact"><span class="charging-popup__value charging-popup__value--${tone}">`
@@ -62,7 +62,43 @@ export function stationPopupText(station: ChargingStation): string {
     + `${escapeHtml(station.name)}</div>`
     + (subtitle ? `<div class="charging-popup__subtitle">${subtitle}</div>` : '')
     + `<div class="charging-popup__facts">${facts.join('')}</div>`
+    + chargePointsHtml(station.chargePoints, now)
     + `</div>`;
+}
+
+/**
+ * Ladepunkte einzeln (nur Favoriten liefern sie): Leistung, Status, bei Belegung die Dauer
+ * ("seit 38 min" / "seit mind. 38 min") und der Preis. Die Dauer wird beim Bauen des Popups
+ * gerechnet; die Seiten tauschen die Marker mit jedem Refresh aus, sie altert also hoechstens
+ * eine Minute.
+ */
+function chargePointsHtml(points: ChargePoint[] | undefined, now: Date): string {
+  if (!points || points.length === 0) {
+    return '';
+  }
+  const rows = points.map(point => {
+    const status = point.status.toLowerCase();
+    const label = pointLabel(point);
+    const since = point.status === 'OCCUPIED'
+      ? formatOccupiedDuration(point.occupiedSince, point.minimumDuration, now) : '';
+    const price = point.pricePerKwh !== undefined && point.pricePerKwh !== null ? formatPrice(point.pricePerKwh) : '';
+    return `<li class="charging-popup__point charging-popup__point--${status}">`
+      + `<span class="charging-popup__point-power">${escapeHtml(formatPower(point.maxPowerKw))}</span>`
+      + `<span class="charging-popup__point-status">${label}</span>`
+      + (since ? `<span class="charging-popup__point-since">${escapeHtml(since)}</span>` : '')
+      + (price ? `<span class="charging-popup__point-price">${escapeHtml(price)}</span>` : '')
+      + `</li>`;
+  });
+  return `<ul class="charging-popup__points">${rows.join('')}</ul>`;
+}
+
+function pointLabel(point: ChargePoint): string {
+  switch (point.status) {
+    case 'FREE': return 'frei';
+    case 'OCCUPIED': return 'belegt';
+    case 'OUT_OF_SERVICE': return 'außer Betrieb';
+    case 'UNKNOWN': return 'unbekannt';
+  }
 }
 
 /** Zuhause-Marker: kleiner blauer Punkt. */

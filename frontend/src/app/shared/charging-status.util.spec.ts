@@ -87,6 +87,27 @@ describe('charging-status.util', () => {
       expect(html).toContain('charging-popup__value--free');
     });
 
+    it('listet die Ladepunkte eines Favoriten mit Dauer und Preis', () => {
+      const html = stationPopupText(station({
+        favorite: true,
+        chargePoints: [
+          { chargePointId: 'P1', status: 'OCCUPIED', maxPowerKw: 150, occupiedSince: '2026-09-19T11:22:00',
+            minimumDuration: false, pricePerKwh: 0.34 },
+          { chargePointId: 'P2', status: 'FREE', maxPowerKw: 150, minimumDuration: false, pricePerKwh: 0.34 }
+        ]
+      }), NOW);
+      expect(html).toContain('charging-popup__points');
+      expect(html).toContain('charging-popup__point--occupied');
+      expect(html).toContain('seit 38 min');
+      expect(html).toContain('belegt');
+      expect(html).toContain('frei');
+      expect((html.match(/0,34 €\/kWh/g) ?? []).length).toBe(2);
+    });
+
+    it('zeigt ohne Ladepunkte keine Liste', () => {
+      expect(stationPopupText(station({}))).not.toContain('charging-popup__points');
+    });
+
     it('laesst die Preiskachel ohne Preis weg und escaped Fremdtexte', () => {
       const html = stationPopupText(station({ name: '<b>x</b>', operator: 'A&B' }));
       expect(html).not.toContain('EnBW-Tarif');

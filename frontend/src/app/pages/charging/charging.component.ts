@@ -170,7 +170,7 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.markerLayer!.clearLayers();
     for (const station of this.data.stations) {
       L.marker([station.lat, station.lon], { icon: stationIcon(station) })
-        .bindPopup(stationPopupText(station))
+        .bindPopup(stationPopupText(station, this.now))
         .addTo(this.markerLayer!);
     }
   }
