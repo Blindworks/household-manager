@@ -1,0 +1,192 @@
+[
+ {
+  "grouped": true,
+  "operator": "*",
+  "operatorCode": "DELDL",
+  "priceGroup": "GROUP10",
+  "shortAddress": null,
+  "lat": 48.77732980645162,
+  "lon": 8.932813693548388,
+  "numberOfChargePoints": 4,
+  "availableChargePoints": 2,
+  "unknownStateChargePoints": 0,
+  "stationId": null,
+  "viewPort": {
+   "lowerLeftLat": 48.777329,
+   "lowerLeftLon": 8.932757,
+   "upperRightLat": 48.777381999999996,
+   "upperRightLon": 8.936274999999998
+  },
+  "distanceToMyPositionInKm": null,
+  "plugTypes": [
+   "CHADEMO",
+   "TYPE_2",
+   "CCS"
+  ],
+  "plugTypeNames": [
+   "CCS (Typ 2)"
+  ],
+  "favorite": false,
+  "maxPowerInKw": 200.0,
+  "alwaysOpen": true,
+  "handicappedAccessible": null,
+  "payment": true,
+  "authenticationMethods": [
+   "OTHERS",
+   "REMOTE"
+  ],
+  "hiddenWithActiveProfile": null
+ },
+ {
+  "grouped": true,
+  "operator": "*",
+  "operatorCode": "DEKDL",
+  "priceGroup": "GROUP10",
+  "shortAddress": null,
+  "lat": 48.79768377358489,
+  "lon": 9.004533207547171,
+  "numberOfChargePoints": 4,
+  "availableChargePoints": 4,
+  "unknownStateChargePoints": 0,
+  "stationId": null,
+  "viewPort": {
+   "lowerLeftLat": 48.7971,
+   "lowerLeftLon": 9.004505,
+   "upperRightLat": 48.797695999999995,
+   "upperRightLon": 9.006008999999997
+  },
+  "distanceToMyPositionInKm": null,
+  "plugTypes": [
+   "CHADEMO",
+   "TYPE_2",
+   "CCS"
+  ],
+  "plugTypeNames": [
+   "CCS (Typ 2)"
+  ],
+  "favorite": false,
+  "maxPowerInKw": 100.0,
+  "alwaysOpen": true,
+  "handicappedAccessible": null,
+  "payment": true,
+  "authenticationMethods": [
+   "OTHERS",
+   "MOBILITY_PLUS_CHARGE_CARD",
+   "REMOTE"
+  ],
+  "hiddenWithActiveProfile": null
+ },
+ {
+  "grouped": false,
+  "operator": "AVIA VOLT ",
+  "operatorCode": "DEAPS",
+  "priceGroup": "GROUP60",
+  "shortAddress": "Weil der Städter Straße 57 , 71272 Renningen, DE",
+  "lat": 48.76056992421388,
+  "lon": 8.93144766757757,
+  "numberOfChargePoints": 6,
+  "availableChargePoints": 4,
+  "unknownStateChargePoints": 0,
+  "stationId": 868700,
+  "viewPort": {
+   "lowerLeftLat": 48.760553,
+   "lowerLeftLon": 8.931418,
+   "upperRightLat": 48.760624,
+   "upperRightLon": 8.931457
+  },
+  "distanceToMyPositionInKm": null,
+  "plugTypes": [
+   "CHADEMO",
+   "TYPE_2",
+   "CCS"
+  ],
+  "plugTypeNames": [
+   "CCS (Typ 2)",
+   "Typ 2",
+   "CHAdeMO"
+  ],
+  "favorite": false,
+  "maxPowerInKw": 400.0,
+  "alwaysOpen": true,
+  "handicappedAccessible": null,
+  "payment": true,
+  "authenticationMethods": [
+   "OTHERS",
+   "REMOTE",
+   "MOBILITY_PLUS_CHARGE_CARD"
+  ],
+  "hiddenWithActiveProfile": null
+ },
+ {
+  "grouped": false,
+  "operator": "Shell Recharge ",
+  "operatorCode": "DETNM",
+  "priceGroup": "GROUP30",
+  "shortAddress": "Dornierstraße 9, 71272 Renningen, DE",
+  "lat": 48.780949,
+  "lon": 8.930604,
+  "numberOfChargePoints": 4,
+  "availableChargePoints": 3,
+  "unknownStateChargePoints": 0,
+  "stationId": 1563087,
+  "viewPort": {
+   "lowerLeftLat": 48.780949,
+   "lowerLeftLon": 8.930604,
+   "upperRightLat": 48.78095,
+   "upperRightLon": 8.930605
+  },
+  "distanceToMyPositionInKm": null,
+  "plugTypes": [
+   "CCS"
+  ],
+  "plugTypeNames": [
+   "CCS (Typ 2)"
+  ],
+  "favorite": false,
+  "maxPowerInKw": 300.0,
+  "alwaysOpen": true,
+  "handicappedAccessible": null,
+  "payment": true,
+  "authenticationMethods": [
+   "REMOTE"
+  ],
+  "hiddenWithActiveProfile": null
+ },
+ {
+  "grouped": false,
+  "operator": "Allego Deutschland",
+  "operatorCode": "DEALL",
+  "priceGroup": "GROUP60",
+  "shortAddress": "Dieselstraße 5  , 71277 Rutesheim, DE",
+  "lat": 48.811415,
+  "lon": 8.956094,
+  "numberOfChargePoints": 2,
+  "availableChargePoints": 2,
+  "unknownStateChargePoints": 0,
+  "stationId": 2161003,
+  "viewPort": {
+   "lowerLeftLat": 48.811415,
+   "lowerLeftLon": 8.956094,
+   "upperRightLat": 48.811415999999994,
+   "upperRightLon": 8.956095
+  },
+  "distanceToMyPositionInKm": null,
+  "plugTypes": [
+   "CCS"
+  ],
+  "plugTypeNames": [
+   "CCS (Typ 2)"
+  ],
+  "favorite": false,
+  "maxPowerInKw": 150.0,
+  "alwaysOpen": true,
+  "handicappedAccessible": null,
+  "payment": true,
+  "authenticationMethods": [
+   "OTHERS",
+   "REMOTE",
+   "MOBILITY_PLUS_CHARGE_CARD"
+  ],
+  "hiddenWithActiveProfile": null
+ }
+]

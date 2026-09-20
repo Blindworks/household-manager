@@ -1045,4 +1045,51 @@ class SecurityRulesTest {
         mockMvc.perform(get("/v1/zigbee/flow-references").param("friendlyName", "x"))
                 .andExpect(status().isOk());
     }
+
+    // ---- Ladesaeulen-Uebersicht ----
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieLadesaeulenLesen() throws Exception {
+        mockMvc.perform(get("/v1/charging/stations")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenLadesaeulenAbrufErzwingen() throws Exception {
+        mockMvc.perform(post("/v1/charging/refresh").with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeineFavoritenSetzen() throws Exception {
+        mockMvc.perform(put("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfFavoritenSetzenUndEntfernen() throws Exception {
+        mockMvc.perform(put("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieLadesaeulenEinstellungenNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/charging/settings")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDieLadesaeulenEinstellungenNichtSchreiben() throws Exception {
+        mockMvc.perform(put("/v1/charging/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"radiusKm\": 5, \"minPowerKw\": 50}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieLadesaeulenEinstellungenLesen() throws Exception {
+        mockMvc.perform(get("/v1/charging/settings")).andExpect(status().isNotFound());
+    }
 }

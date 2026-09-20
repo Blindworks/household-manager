@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260919-0055-create-charging-favorite" author="claude">
+        <comment>
+            Favorisierte Ladesaeulen. Name/Betreiber/Koordinaten werden beim Favorisieren aus
+            dem aktuellen API-Stand uebernommen, damit die Liste auch bei Quellenausfall lesbar ist.
+        </comment>
+        <createTable tableName="charging_favorite">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="station_id" type="VARCHAR(191)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uk_charging_favorite_station_id"/>
+            </column>
+            <column name="display_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operator" type="VARCHAR(255)"/>
+            <column name="lat" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lon" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="charging_favorite"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260919-0055-create-charging-point-occupancy" author="claude">
+        <comment>
+            Belegungsbeginn je Ladepunkt eines Favoriten. occupied_since NULL = beim ersten
+            Poll schon belegt (Beginn unbekannt, Anzeige "seit mind."). Kein FK auf
+            charging_favorite - beim Entfernen eines Favoriten raeumt der Service auf.
+        </comment>
+        <createTable tableName="charging_point_occupancy">
+            <column name="chargepoint_id" type="VARCHAR(191)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="station_id" type="VARCHAR(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="occupied_since" type="DATETIME"/>
+            <column name="first_seen_occupied_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="charging_point_occupancy" indexName="ix_charging_point_occupancy_station">
+            <column name="station_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable tableName="charging_point_occupancy"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

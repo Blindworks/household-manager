@@ -71,7 +71,7 @@ Der Key ist in der EnBW-Web-App öffentlich eingebettet. Im Browser `https://www
 #   ENBW_KEY=... ./scripts/probe-enbw-charging.sh <lat> <lon>
 set -euo pipefail
 LAT="${1:?lat}"; LON="${2:?lon}"
-BASE="https://enbw-emp.azure-api.net/emobility-public-api/api/v1"
+BASE="https://api.emp.emob-enbw.com/emobility-public-api/api/v1"
 OUT="backend/src/test/resources/charging"
 mkdir -p "$OUT"
 # ~10 km Kasten: 0.09° Breite, 0.14° Länge (bei ~50° N)
@@ -414,7 +414,7 @@ public class ChargingProperties {
 
     @Data
     public static class Enbw {
-        private String baseUrl = "https://enbw-emp.azure-api.net/emobility-public-api/api/v1";
+        private String baseUrl = "https://api.emp.emob-enbw.com/emobility-public-api/api/v1";
         /** Oeffentlich in der EnBW-Web-App eingebetteter Key; kein Geheimnis, aber per Env nachziehbar. */
         private String apiKey = "";
         private String origin = "https://www.enbw.com";
@@ -749,7 +749,7 @@ public class ChargingSettingsService {
 ```properties
 # --- Ladesaeulen-Uebersicht (inoffizielles EnBW-Backend) ---
 charging.enabled=${CHARGING_ENABLED:true}
-charging.enbw.base-url=https://enbw-emp.azure-api.net/emobility-public-api/api/v1
+charging.enbw.base-url=https://api.emp.emob-enbw.com/emobility-public-api/api/v1
 charging.enbw.api-key=${CHARGING_ENBW_API_KEY:}
 charging.enbw.origin=https://www.enbw.com
 charging.area-poll-seconds=300

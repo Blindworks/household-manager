@@ -56,6 +56,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CHARGING_ENBW_API_KEY: ${CHARGING_ENBW_API_KEY:-}
 
       # Blink-Gesichtserkennung (blink-vision-Sidecar)
       VISION_SIDECAR_URL: http://blink-vision:8090

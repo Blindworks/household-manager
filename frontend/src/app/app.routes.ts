@@ -104,6 +104,12 @@ export const routes: Routes = [
     title: 'Kameras Tablet - Household Manager'
   },
   {
+    path: 'tablet/charging',
+    loadComponent: () => import('./pages/tablet-charging/tablet-charging.component').then(m => m.TabletChargingComponent),
+    canActivate: [authGuard],
+    title: 'Laden Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
@@ -177,6 +183,12 @@ export const routes: Routes = [
       .then(m => m.AdminNetworkDevicesComponent),
     canActivate: [adminGuard],
     title: 'Netzwerk-Geräte - Household Manager'
+  },
+  {
+    path: 'admin/charging',
+    loadComponent: () => import('./pages/admin-charging/admin-charging.component').then(m => m.AdminChargingComponent),
+    canActivate: [adminGuard],
+    title: 'Ladesäulen-Einstellungen - Household Manager'
   },
   {
     path: 'admin/presence',
@@ -287,6 +299,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/cameras/cameras.component').then(m => m.CamerasComponent),
     canActivate: [authGuard],
     title: 'Kameras - Household Manager'
+  },
+  {
+    path: 'charging',
+    loadComponent: () => import('./pages/charging/charging.component').then(m => m.ChargingComponent),
+    canActivate: [authGuard],
+    title: 'Ladesäulen - Household Manager'
   },
   {
     path: 'notifications',

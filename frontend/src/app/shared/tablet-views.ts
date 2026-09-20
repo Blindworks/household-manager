@@ -19,5 +19,6 @@ export const TABLET_VIEWS: readonly TabletView[] = [
   { route: '/tablet/consumption', icon: 'electric_meter', label: 'Verbrauch' },
   { route: '/tablet/toni', icon: 'pets', label: 'Toni' },
   { route: '/tablet/network', icon: 'wifi', label: 'Netzwerk' },
-  { route: '/tablet/cameras', icon: 'videocam', label: 'Kameras' }
+  { route: '/tablet/cameras', icon: 'videocam', label: 'Kameras' },
+  { route: '/tablet/charging', icon: 'ev_station', label: 'Laden' }
 ];
