@@ -36,6 +36,10 @@ public record SunDayTimes(
         };
     }
 
+    /**
+     * Nur fuer Momente dieses Kalendertages definiert; Aufrufer nutzen
+     * {@link SunTimesService#phaseAt}, das den Tag aus dem Moment ableitet.
+     */
     public SunPhase phaseAt(ZonedDateTime moment) {
         if (!moment.isBefore(sunrise) && moment.isBefore(sunset)) {
             return SunPhase.DAY;

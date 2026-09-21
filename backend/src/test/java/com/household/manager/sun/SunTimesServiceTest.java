@@ -37,8 +37,8 @@ class SunTimesServiceTest {
 
     private static void assertWithinMinutes(String expectedLocalTime, ZonedDateTime actual, int toleranceMinutes) {
         LocalTime expected = LocalTime.parse(expectedLocalTime);
-        long diff = Math.abs(Duration.between(expected, actual.toLocalTime()).toMinutes());
-        assertTrue(diff <= toleranceMinutes,
+        long diffSeconds = Math.abs(Duration.between(expected, actual.toLocalTime()).toSeconds());
+        assertTrue(diffSeconds <= toleranceMinutes * 60L,
                 () -> "erwartet " + expected + " +/-" + toleranceMinutes + " min, war " + actual.toLocalTime());
     }
 
@@ -74,6 +74,13 @@ class SunTimesServiceTest {
         assertTrue(duskMinutes >= 25 && duskMinutes <= 70, "buergerliche Daemmerung war " + duskMinutes + " min");
         assertEquals(LocalDate.of(2026, 9, 21), t.dawn().toLocalDate());
         assertEquals(LocalDate.of(2026, 9, 21), t.dusk().toLocalDate());
+    }
+
+    @Test
+    void noTimesWhereCivilTwilightNeverEnds() {
+        // 61 Grad Nord im Hochsommer: Auf-/Untergang existieren, die buergerliche Daemmerung endet nie.
+        when(homeSettings.getSettings()).thenReturn(new TractiveHomeSettings(61.0, 13.0, 100, 500, 60, 30, "Nord"));
+        assertTrue(serviceAt("2026-06-21T12:00").timesFor(LocalDate.of(2026, 6, 21)).isEmpty());
     }
 
     @Test
