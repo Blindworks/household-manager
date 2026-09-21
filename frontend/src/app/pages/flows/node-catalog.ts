@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   'entity-state-trigger': 'Entity-Trigger',
   'entity-event-trigger': 'Taster-Trigger',
   'schedule-trigger': 'Zeitplan',
+  'sun-trigger': 'Sonnenstand',
   'entity-condition': 'Bedingung',
   'time-condition': 'Zeitfenster',
   'delay': 'Verzögerung',
