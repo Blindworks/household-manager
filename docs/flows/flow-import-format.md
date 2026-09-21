@@ -122,7 +122,9 @@ nachgefeuert (wie `schedule-trigger`); wer den Zustand braucht, nimmt `sensor.su
 > **Entität `sensor.sun`:** State `day` / `dusk` / `night` / `dawn`, Attribute `dawn`, `sunrise`,
 > `sunset`, `dusk` (heute, `HH:mm`), `nextSunrise`, `nextSunset` (`yyyy-MM-dd'T'HH:mm:ss`),
 > `elevation`. Ein `entity-state-trigger` mit `operator: "=="`, `value: "dusk"` ist „bei
-> Sonnenuntergang"; `entity-condition` mit `!= day` ist „Sonne ist unten". Versatz **nach** dem
+> Sonnenuntergang"; für „Sonne ist unten" **nicht** `entity-condition` mit `!= day` nehmen —
+> bei `unavailable` wäre das wahr (die `!=`-Falle), sondern `time-condition` mit `dusk`→`dawn`
+> bzw. `sunset`→`sunrise`, das ohne Zuhause als falsch wertet. Versatz **nach** dem
 > Ereignis über `delay`; Versatz **davor** nur mit `sun-trigger`. Ohne Zuhause ist die Entität
 > `unavailable` (kein Trigger auf `value: "unavailable"` — tote-Trigger-Falle).
 

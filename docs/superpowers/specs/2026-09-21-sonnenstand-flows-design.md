@@ -41,10 +41,11 @@ importiert `commons-suncalc` (Muster `RecurrenceExpansionService` als einzige
 - `Optional.empty()`, wenn `hasHomeCoordinates()` falsch ist oder die Bibliothek für
   ein Ereignis `null` liefert (Polarfall — in Deutschland unmöglich, aber die API kann
   es, und ein NPE im Scheduler wäre schlimmer). **Lesen wirft nie.**
-- `phaseAt(ZonedDateTime)` → `Optional<SunPhase>` mit `DAY`, `DUSK`, `NIGHT`, `DAWN`,
+- `SunDayTimes.phaseAt(ZonedDateTime)` → `SunPhase` mit `DAY`, `DUSK`, `NIGHT`, `DAWN`,
   aus den vier Zeiten **desselben Tages**, halboffen wie `TimeWindow`:
   `[sunrise, sunset)` = DAY, `[sunset, dusk)` = DUSK, `[dawn, sunrise)` = DAWN, sonst
-  NIGHT.
+  NIGHT. Reine Funktion ohne Uhr, keine eigene Methode auf `SunTimesService` — Aufrufer
+  holen die Zeiten des Tages über `timesFor` und fragen dann dort.
 - `SunEvent`-Enum (`DAWN`, `SUNRISE`, `SUNSET`, `DUSK`) mit `fromKey(String)` für die
   Schlüsselwörter `dawn`/`sunrise`/`sunset`/`dusk` — die vier Wörter stehen genau einmal,
   Trigger und Ausdrucks-Parser fragen dasselbe Enum.
@@ -63,7 +64,8 @@ Wer fragt: die Entität (2), der Trigger (3), `time-condition` (4).
   (Sonnenhöhe in Grad, eine Nachkommastelle — für einen späteren Blend-Flow, ohne jetzt
   mehr zu bauen).
 - Der Entity-State-Layer feuert `EntityStateChangedEvent` nur bei Wertänderung, also
-  viermal am Tag; die minütliche Meldung kostet sonst nichts. „Bei Sonnenuntergang" ist
+  viermal am Tag; die minütliche Meldung kostet sonst nur ein Zeilen-Update (`elevation`,
+  `lastUpdated`), wie bei Presence/Tractive. „Bei Sonnenuntergang" ist
   damit `entity-state-trigger sensor.sun changed to dusk`; ein Versatz **danach** geht
   über den vorhandenen `delay`-Node.
 - **Kein Zuhause konfiguriert** ⇒ `unavailable` **mit erhaltenen Attributen** (Muster
