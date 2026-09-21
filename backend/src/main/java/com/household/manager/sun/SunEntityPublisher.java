@@ -16,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Spiegelt den Sonnenstand als Entitaet {@code sensor.sun} in den Entity-State-Layer:
@@ -40,6 +41,7 @@ public class SunEntityPublisher {
     static final String FRIENDLY_NAME = "Sonne";
     private static final String STATE_UNAVAILABLE = "unavailable";
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter ISO_LOCAL_SECONDS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private final SunTimesService sunTimes;
     private final EntityStateService entityStateService;
@@ -79,20 +81,51 @@ public class SunEntityPublisher {
         attributes.put("sunrise", HH_MM.format(times.sunrise()));
         attributes.put("sunset", HH_MM.format(times.sunset()));
         attributes.put("dusk", HH_MM.format(times.dusk()));
-        nextOf(SunEvent.SUNRISE, times, now).ifPresent(v -> attributes.put("nextSunrise", v));
-        nextOf(SunEvent.SUNSET, times, now).ifPresent(v -> attributes.put("nextSunset", v));
+        Supplier<Optional<SunDayTimes>> tomorrow = memoize(() -> sunTimes.timesFor(times.date().plusDays(1)));
+        nextOf(SunEvent.SUNRISE, times, now, tomorrow).ifPresent(v -> attributes.put("nextSunrise", v));
+        nextOf(SunEvent.SUNSET, times, now, tomorrow).ifPresent(v -> attributes.put("nextSunset", v));
         sunTimes.elevationAt(now).ifPresent(e -> attributes.put("elevation", Math.round(e * 10.0) / 10.0));
         report(times.phaseAt(now).key(), attributes);
     }
 
-    /** Das naechste Vorkommen nach jetzt: heute, wenn es noch bevorsteht, sonst morgen. */
-    private Optional<String> nextOf(SunEvent event, SunDayTimes today, ZonedDateTime now) {
+    /**
+     * Das naechste Vorkommen nach jetzt: heute, wenn es noch bevorsteht, sonst morgen.
+     *
+     * <p>{@code tomorrow} wird je Lauf hoechstens einmal berechnet (lazy, nur wenn
+     * tatsaechlich ein heutiges Ereignis schon vorbei ist) — sonst kostet jeder Aufruf
+     * dieser Methode einen eigenen Settings-Read plus Astronomie-Berechnung fuer denselben
+     * Tag. So stammen {@code nextSunrise} und {@code nextSunset} zudem aus demselben
+     * Koordinatensatz, falls sich das Zuhause zwischen den beiden Aufrufen aendert.
+     *
+     * <p>{@code isAfter(now)} statt {@code !isBefore(now)} passt bewusst zur halboffenen
+     * Fensterregel aus {@link SunDayTimes#phaseAt}: genau zum Sonnenuntergang ist der State
+     * schon {@code dusk}, also zeigt {@code nextSunset} in diesem Moment folgerichtig
+     * schon auf morgen.
+     */
+    private Optional<String> nextOf(SunEvent event, SunDayTimes today, ZonedDateTime now,
+                                     Supplier<Optional<SunDayTimes>> tomorrow) {
         ZonedDateTime todayAt = today.timeOf(event);
         if (todayAt.isAfter(now)) {
-            return Optional.of(todayAt.toLocalDateTime().toString());
+            return Optional.of(ISO_LOCAL_SECONDS.format(todayAt.toLocalDateTime()));
         }
-        return sunTimes.timesFor(today.date().plusDays(1))
-                .map(t -> t.timeOf(event).toLocalDateTime().toString());
+        return tomorrow.get().map(t -> ISO_LOCAL_SECONDS.format(t.timeOf(event).toLocalDateTime()));
+    }
+
+    /** Memoisiert einen Supplier fuer die Dauer eines einzelnen Laufs — kein Caching darueber hinaus. */
+    private static <T> Supplier<T> memoize(Supplier<T> delegate) {
+        return new Supplier<>() {
+            private boolean computed;
+            private T value;
+
+            @Override
+            public T get() {
+                if (!computed) {
+                    value = delegate.get();
+                    computed = true;
+                }
+                return value;
+            }
+        };
     }
 
     private void markUnavailable() {

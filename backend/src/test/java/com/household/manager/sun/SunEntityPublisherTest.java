@@ -87,8 +87,51 @@ class SunEntityPublisherTest {
         publisherAt("12:00").publish();
 
         Map<String, Object> attrs = reported().attributes();
-        assertEquals(at(TOMORROW, "07:07").toLocalDateTime().toString(), attrs.get("nextSunrise"));
-        assertEquals(at(TODAY, "19:10").toLocalDateTime().toString(), attrs.get("nextSunset"));
+        assertEquals("2026-09-22T07:07:00", attrs.get("nextSunrise"));
+        assertEquals("2026-09-21T19:10:00", attrs.get("nextSunset"));
+    }
+
+    @Test
+    void atExactSunsetStateIsDuskAndNextSunsetIsTomorrow() {
+        publisherAt("19:10").publish();
+
+        EntityStateUpdate update = reported();
+        assertEquals("dusk", update.state());
+        assertEquals("2026-09-22T19:10:00", update.attributes().get("nextSunset"));
+    }
+
+    @Test
+    void atNightBothNextEventsPointToTomorrow() {
+        publisherAt("23:00").publish();
+
+        EntityStateUpdate update = reported();
+        assertEquals("night", update.state());
+        assertEquals("2026-09-22T07:07:00", update.attributes().get("nextSunrise"));
+        assertEquals("2026-09-22T19:10:00", update.attributes().get("nextSunset"));
+    }
+
+    @Test
+    void withoutTomorrowTheNextKeysAreOmitted() {
+        when(sunTimes.timesFor(TOMORROW)).thenReturn(Optional.empty());
+
+        publisherAt("23:00").publish();
+
+        EntityStateUpdate update = reported();
+        assertEquals("night", update.state());
+        assertFalse(update.attributes().containsKey("nextSunrise"));
+        assertFalse(update.attributes().containsKey("nextSunset"));
+        assertEquals("19:10", update.attributes().get("sunset"));
+    }
+
+    @Test
+    void withoutElevationTheKeyIsOmitted() {
+        when(sunTimes.elevationAt(any())).thenReturn(Optional.empty());
+
+        publisherAt("12:00").publish();
+
+        EntityStateUpdate update = reported();
+        assertEquals("day", update.state());
+        assertFalse(update.attributes().containsKey("elevation"));
     }
 
     @Test
@@ -143,5 +186,6 @@ class SunEntityPublisherTest {
     void publishNeverThrows() {
         when(sunTimes.timesFor(TODAY)).thenThrow(new IllegalStateException("kaputt"));
         assertDoesNotThrow(() -> publisherAt("12:00").publish());
+        verify(entityStateService, never()).reportState(any());
     }
 }
