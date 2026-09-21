@@ -105,6 +105,29 @@ Weitere Eigenheiten rund um `unavailable`, die beim Autoren zählen:
 |--------|---------|------|
 | `cron` | ja | Spring-Cron mit 6 Feldern: `Sek Min Std Tag Monat Wochentag`, z. B. `0 0 7 * * *` (täglich 07:00) |
 
+### `sun-trigger` — Sonnenstand (Trigger, 1 Ausgang)
+Feuert zu einem Sonnenereignis am Haushaltsstandort (= Koordinaten des Hundetracker-Zuhauses,
+Admin → Hundetracker-Zuhause), optional mit Versatz. Plant sich nach jedem Feuern selbst neu.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `event` | ja | `dawn` (Beginn bürgerl. Morgendämmerung) / `sunrise` / `sunset` / `dusk` (Ende bürgerl. Abenddämmerung) |
+| `offsetMinutes` | nein | ganze Zahl −240 … 240, Default 0; `-30` = 30 min **vor** dem Ereignis |
+
+Die Message trägt `sunEvent`, `offsetMinutes`, `scheduledFor`, `timestamp`, `triggerNodeId`.
+Ohne konfiguriertes Zuhause bricht der Deploy nicht ab — der Trigger versucht es stündlich
+erneut (Warnung im Log). Verpasste Ereignisse während eines Backend-Ausfalls werden **nicht**
+nachgefeuert (wie `schedule-trigger`); wer den Zustand braucht, nimmt `sensor.sun`.
+
+> **Entität `sensor.sun`:** State `day` / `dusk` / `night` / `dawn`, Attribute `dawn`, `sunrise`,
+> `sunset`, `dusk` (heute, `HH:mm`), `nextSunrise`, `nextSunset` (`yyyy-MM-dd'T'HH:mm:ss`),
+> `elevation`. Ein `entity-state-trigger` mit `operator: "=="`, `value: "dusk"` ist „bei
+> Sonnenuntergang"; für „Sonne ist unten" **nicht** `entity-condition` mit `!= day` nehmen —
+> bei `unavailable` wäre das wahr (die `!=`-Falle), sondern `time-condition` mit `dusk`→`dawn`
+> bzw. `sunset`→`sunrise`, das ohne Zuhause als falsch wertet. Versatz **nach** dem
+> Ereignis über `delay`; Versatz **davor** nur mit `sun-trigger`. Ohne Zuhause ist die Entität
+> `unavailable` (kein Trigger auf `value: "unavailable"` — tote-Trigger-Falle).
+
 ### `entity-condition` — Bedingung (2 Ausgänge: 0 = wahr, 1 = falsch)
 Prüft den AKTUELLEN Zustand einer beliebigen Entität.
 
@@ -125,13 +148,22 @@ Prüft, ob die AKTUELLE Uhrzeit (Haushaltszeit Europe/Berlin) in einem Tagesfens
 
 | config | Pflicht | Wert |
 |--------|---------|------|
-| `from` | ja | Beginn `HH:mm` — gehört zum Fenster |
-| `to` | ja | Ende `HH:mm` — gehört **nicht** zum Fenster |
+| `from` | ja | Beginn — gehört zum Fenster |
+| `to` | ja | Ende — gehört **nicht** zum Fenster |
+
+Beide Werte sind Zeitausdrücke: `HH:mm` **oder** `dawn` / `sunrise` / `sunset` / `dusk` mit
+optionalem Versatz in Minuten (`sunset-30`, `dawn+15`, |Versatz| ≤ 240, kein Leerzeichen
+im Ausdruck). Sonnenausdrücke werden für den heutigen Tag am Haushaltsstandort aufgelöst;
+ein Versatz über Mitternacht landet auf dem Zifferblatt (`dawn-240` im Juni ≈ `23:50`).
 
 Halboffenes Intervall `[from, to)`. Liegt `to` vor `from`, überspannt das Fenster
-Mitternacht (`"from": "22:00", "to": "06:00"` = nachts). `from == to` wird beim Deploy
+Mitternacht (`"from": "dusk", "to": "dawn"` = dunkel). Identische Ausdrücke werden beim Deploy
 abgelehnt — „nie" und „immer" wären sonst nicht unterscheidbar. Für „tagsüber A, sonst B"
 genügt **ein** Node: Port 0 für das Fenster, Port 1 für den Rest des Tages.
+
+> **Ohne konfiguriertes Zuhause** ist ein Sonnenausdruck nicht auflösbar; die Bedingung gilt
+> dann als **falsch** (Port 1) und die Node schreibt einen Debug-Eintrag. „Nicht prüfbar" darf
+> nicht als „erfüllt" gelten.
 
 ### `delay` — Verzögerung (1 Ausgang)
 

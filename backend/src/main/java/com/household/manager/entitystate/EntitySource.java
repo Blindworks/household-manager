@@ -39,5 +39,7 @@ public enum EntitySource {
     /** Blink-Kameras (Scharf-Status via blink-vision-Sidecar). */
     BLINK,
     /** Oeffentliche Ladesaeulen (inoffizielles EnBW-Backend), je Favorit sensor.charging_<stationId>_free. */
-    CHARGING
+    CHARGING,
+    /** Sonnenstand am Haushaltsstandort (sensor.sun; berechnet, keine externe Quelle). */
+    SUN
 }

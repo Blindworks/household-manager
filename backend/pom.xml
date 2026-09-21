@@ -91,6 +91,13 @@
             <version>1.10.0</version>
         </dependency>
 
+        <!-- Sonnenauf-/-untergang und Daemmerung fuer Flows (nur im Paket sun/ importiert) -->
+        <dependency>
+            <groupId>org.shredzone.commons</groupId>
+            <artifactId>commons-suncalc</artifactId>
+            <version>3.11</version>
+        </dependency>
+
         <!-- mDNS Discovery for local TP-Link Tapo devices -->
         <dependency>
             <groupId>org.jmdns</groupId>
