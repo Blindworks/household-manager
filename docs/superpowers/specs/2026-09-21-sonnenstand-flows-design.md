@@ -101,8 +101,14 @@ Wer fragt: die Entität (2), der Trigger (3), `time-condition` (4).
 - **Cleanup** (Undeploy/Re-Deploy) storniert das aktuelle `ScheduledFuture` und setzt
   ein `cancelled`-Flag im `ctx.state()`; das Feuer-Runnable prüft das Flag, **bevor** es
   neu plant — sonst hinterließe ein Re-Deploy genau zur Flanke einen Geister-Timer, der
-  den alten Flow-Stand weiter füttert. Der Future-Tausch läuft atomar über
-  `state().compute`, wie es der `NodeContext`-Kommentar verlangt.
+  den alten Flow-Stand weiter füttert. Das Future wird per `state().put` abgelegt — es
+  gibt nie zwei Schreiber gleichzeitig (das nächste Future entsteht erst nach dem Feuern
+  des vorigen), `compute` brächte hier nichts.
+- **`ctx.emit` ist in try/catch gekapselt, die Neuplanung läuft immer** (Review-Befund
+  2026-09-21): ein Einmal-Task des `TaskScheduler` propagiert eine Exception nur ins nie
+  abgefragte Future — ohne den Fang wäre der Trigger nach einer vollen Executor-Queue
+  lautlos für immer tot. Ein ungültiger `offsetMinutes` lässt `register` werfen statt
+  still auf 0 zu fallen, weil `setEnabled`/Bootstrap ohne erneute Validierung deployen.
 - **Kein Zuhause konfiguriert** beim Registrieren ⇒ Warnung im Log und ein erneuter
   Versuch in 60 Minuten. Kein Deploy-Abbruch — sonst ließe sich der Flow nicht anlegen,
   bevor die Koordinaten stehen (dieselbe Reihenfolge-Toleranz wie `helper-set`, das die
