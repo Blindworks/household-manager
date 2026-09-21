@@ -48,6 +48,7 @@ class SunTriggerHandlerTest {
     private final ArgumentCaptor<Instant> instants = ArgumentCaptor.forClass(Instant.class);
     private ScheduledFuture<?> future;
     private NodeContext ctx;
+    private boolean failEmit;
 
     private static ZonedDateTime at(LocalDate day, String time) {
         return day.atTime(LocalTime.parse(time)).atZone(BERLIN);
@@ -73,7 +74,12 @@ class SunTriggerHandlerTest {
             public long flowId() { return 7L; }
             public String nodeId() { return "sun1"; }
             public ConcurrentMap<String, Object> state() { return state; }
-            public void emit(int port, FlowMessage message) { emitted.add(message); }
+            public void emit(int port, FlowMessage message) {
+                if (failEmit) {
+                    throw new IllegalStateException("voll");
+                }
+                emitted.add(message);
+            }
             public TaskScheduler scheduler() { return taskScheduler; }
             public void debug(String label, FlowMessage message) { }
         };
@@ -133,6 +139,19 @@ class SunTriggerHandlerTest {
     }
 
     @Test
+    void emitFailureStillReschedules() {
+        handlerAt("12:00").register(config("sunrise", null), ctx);
+        // Registrierung um 12:00: Aufgang heute ist vorbei -> morgen 07:07.
+        assertEquals(at(TODAY.plusDays(1), "07:07").toInstant(), instants.getValue());
+
+        failEmit = true;
+        assertDoesNotThrow(() -> tasks.getValue().run());
+
+        // Trotz Fehler beim Emit wird weiter geplant -> der Trigger stirbt nicht lautlos.
+        verify(taskScheduler, times(2)).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
     void cleanupCancelsFutureAndPreventsRescheduling() {
         Runnable cleanup = handlerAt("12:00").register(config("sunset", null), ctx);
 
@@ -142,6 +161,31 @@ class SunTriggerHandlerTest {
         tasks.getValue().run();
         assertTrue(emitted.isEmpty());
         verify(taskScheduler, times(1)).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
+    void cleanupDuringSchedulingCancelsTheFreshFuture() {
+        // Simuliert: das Cleanup-Runnable laeuft zwischen der isCancelled-Pruefung
+        // und dem Einplanen der neuen Future -> die frisch geplante Future darf
+        // keinen Geister-Timer hinterlassen und muss sofort storniert werden.
+        doAnswer(inv -> {
+            state.put(SunTriggerHandler.STATE_CANCELLED, Boolean.TRUE);
+            return future;
+        }).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        handlerAt("12:00").register(config("sunset", null), ctx);
+
+        verify(future).cancel(false);
+    }
+
+    @Test
+    void registerRejectsInvalidOffsetInsteadOfSilentlyUsingZero() {
+        // setEnabled/Bootstrap deployen die gespeicherte Definition ohne erneute
+        // Validierung -> ein kaputter Versatz darf nicht still zu 0 werden.
+        assertThrows(IllegalArgumentException.class,
+                () -> handlerAt("12:00").register(config("sunset", -3000), ctx));
+
+        verify(taskScheduler, never()).schedule(any(Runnable.class), any(Instant.class));
     }
 
     @Test

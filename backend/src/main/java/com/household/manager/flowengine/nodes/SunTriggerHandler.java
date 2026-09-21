@@ -36,6 +36,12 @@ import java.util.concurrent.ScheduledFuture;
  *
  * <p>Verpasste Ereignisse waehrend eines Backend-Ausfalls werden nicht nachgefeuert
  * (wie {@code schedule-trigger}); wer den Zustand braucht, baut auf {@code sensor.sun}.
+ *
+ * <p>Das {@code cancelled}-Flag genuegt als Boolean, weil {@code FlowRegistry} je Deploy
+ * einen neuen {@link NodeContext} mit eigenem {@code state()} erzeugt: das Feuer-Runnable
+ * der alten Generation haelt die alte {@code ctx} und sieht dort das Flag, die neue
+ * Generation startet mit leerem State. Waere der State je ueber Re-Deploys geteilt,
+ * braeuchte es einen Generations-Token statt eines Booleans.
  */
 @Component
 @Slf4j
@@ -45,7 +51,7 @@ public class SunTriggerHandler implements TriggerNodeHandler {
     static final String OFFSET = "offsetMinutes";
     static final Duration RETRY_WITHOUT_HOME = Duration.ofMinutes(60);
     private static final String STATE_FUTURE = "future";
-    private static final String STATE_CANCELLED = "cancelled";
+    static final String STATE_CANCELLED = "cancelled";
 
     private final SunTimesService sunTimes;
     private final Clock clock;
@@ -92,9 +98,14 @@ public class SunTriggerHandler implements TriggerNodeHandler {
     @Override
     public Runnable register(NodeConfig config, NodeContext ctx) {
         SunEvent event = SunEvent.fromKey(config.string(EVENT).orElseThrow()).orElseThrow();
-        int offset = parseOffset(config, new ArrayList<>()).orElse(0);
-        ctx.state().remove(STATE_CANCELLED);
-        scheduleNext(event, offset, ZonedDateTime.now(clock), ctx);
+        List<String> errors = new ArrayList<>();
+        Optional<Integer> offset = parseOffset(config, errors);
+        if (!errors.isEmpty()) {
+            // setEnabled/Bootstrap deployen die gespeicherte Definition ohne erneute
+            // Validierung — ein kaputter Versatz darf nicht still zu 0 werden.
+            throw new IllegalArgumentException(String.join("; ", errors));
+        }
+        scheduleNext(event, offset.orElse(0), ZonedDateTime.now(clock), ctx);
         return () -> {
             ctx.state().put(STATE_CANCELLED, Boolean.TRUE);
             cancelCurrent(ctx);
@@ -134,12 +145,22 @@ public class SunTriggerHandler implements TriggerNodeHandler {
         if (isCancelled(ctx)) {
             return;
         }
-        ctx.emit(0, FlowMessage.of(Map.of(
+        FlowMessage message = FlowMessage.of(Map.of(
                 "sunEvent", event.key(),
                 "offsetMinutes", offset,
                 "scheduledFor", scheduledFor.toLocalDateTime(),
                 "timestamp", LocalDateTime.now(clock),
-                "triggerNodeId", ctx.nodeId())));
+                "triggerNodeId", ctx.nodeId()));
+        try {
+            ctx.emit(0, message);
+        } catch (RuntimeException ex) {
+            // ctx.emit kann bei voller Queue/Shutdown werfen (TaskRejectedException); ein
+            // Einmal-Task des TaskScheduler propagiert das nur ins nie abgefragte Future
+            // und loggt nichts von selbst. Ohne diesen Fang wuerde die Neuplanung unten
+            // uebersprungen und der Trigger stuende dauerhaft und lautlos still.
+            log.warn("sun-trigger (Flow {}, Node {}): Feuern fehlgeschlagen: {}", ctx.flowId(), ctx.nodeId(), ex.getMessage());
+            ctx.debug("ERROR: " + ex.getMessage(), message);
+        }
         // Nie vor dem gerade gefeuerten Zeitpunkt weitersuchen — der Scheduler darf
         // Millisekunden frueh dran sein, sonst wuerde dasselbe Ereignis erneut geplant.
         ZonedDateTime now = ZonedDateTime.now(clock);
