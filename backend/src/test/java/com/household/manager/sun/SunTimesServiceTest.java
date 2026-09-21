@@ -13,7 +13,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -93,21 +92,6 @@ class SunTimesServiceTest {
     void readingNeverThrows() {
         when(homeSettings.getSettings()).thenThrow(new IllegalStateException("DB weg"));
         assertTrue(serviceAt("2026-09-21T12:00").timesFor(LocalDate.of(2026, 9, 21)).isEmpty());
-    }
-
-    @Test
-    void phaseAtUsesTheDayOfTheMomentInHouseholdZone() {
-        when(homeSettings.getSettings()).thenReturn(BERLIN_HOME);
-        SunTimesService service = serviceAt("2026-09-21T12:00");
-
-        assertEquals(Optional.of(SunPhase.DAY), service.phaseAt(ZonedDateTime.of(2026, 9, 21, 12, 0, 0, 0, BERLIN)));
-        assertEquals(Optional.of(SunPhase.NIGHT), service.phaseAt(ZonedDateTime.of(2026, 9, 21, 23, 30, 0, 0, BERLIN)));
-    }
-
-    @Test
-    void phaseAtIsEmptyWithoutHome() {
-        when(homeSettings.getSettings()).thenReturn(NO_HOME);
-        assertTrue(serviceAt("2026-09-21T12:00").phaseAt(ZonedDateTime.of(2026, 9, 21, 12, 0, 0, 0, BERLIN)).isEmpty());
     }
 
     @Test

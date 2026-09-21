@@ -81,4 +81,12 @@ class SunTimeExpressionTest {
         when(sunTimes.timesFor(DAY)).thenReturn(Optional.of(juneTimes));
         assertEquals(Optional.of(LocalTime.of(23, 50)), SunTimeExpression.parse("dawn-240").resolve(DAY, sunTimes));
     }
+
+    @Test
+    void parsesEveryKeywordOfSunEvent() {
+        for (SunEvent event : SunEvent.values()) {
+            assertEquals(new SunTimeExpression.Relative(event, 0), SunTimeExpression.parse(event.key()));
+            assertEquals(new SunTimeExpression.Relative(event, -5), SunTimeExpression.parse(event.key() + "-5"));
+        }
+    }
 }

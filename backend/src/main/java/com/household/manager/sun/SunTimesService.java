@@ -62,12 +62,6 @@ public class SunTimesService {
         }
     }
 
-    /** Phase zum Zeitpunkt {@code moment}, bewertet gegen die Sonnenzeiten seines Kalendertages (Haushaltszeit). */
-    public Optional<SunPhase> phaseAt(ZonedDateTime moment) {
-        LocalDate day = moment.withZoneSameInstant(clock.getZone()).toLocalDate();
-        return timesFor(day).map(times -> times.phaseAt(moment));
-    }
-
     /** Sonnenhoehe in Grad ueber dem Horizont (negativ = unter dem Horizont). */
     public Optional<Double> elevationAt(ZonedDateTime moment) {
         Optional<TractiveHomeSettings> home = configuredHome();

@@ -80,7 +80,9 @@ public class SunTriggerHandler implements TriggerNodeHandler {
     public List<NodeFieldDescriptor> fields() {
         return List.of(
                 NodeFieldDescriptor.enumField(EVENT, "Ereignis", true, SunEvent.keys()),
-                NodeFieldDescriptor.field(OFFSET, "Versatz in Minuten (-240 … 240)", NodeFieldType.NUMBER, false));
+                NodeFieldDescriptor.field(OFFSET,
+                        "Versatz in Minuten (-" + SunEvent.MAX_OFFSET_MINUTES + " … " + SunEvent.MAX_OFFSET_MINUTES + ")",
+                        NodeFieldType.NUMBER, false));
     }
 
     @Override

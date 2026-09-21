@@ -21,7 +21,8 @@ import java.util.regex.Pattern;
  */
 public sealed interface SunTimeExpression permits SunTimeExpression.Fixed, SunTimeExpression.Relative {
 
-    Pattern RELATIVE = Pattern.compile("^(dawn|sunrise|sunset|dusk)([+-]\\d{1,4})?$");
+    /** Schluesselwoerter aus {@link SunEvent#keys()} — die vier Woerter stehen nur dort. */
+    Pattern RELATIVE = Pattern.compile("^(" + String.join("|", SunEvent.keys()) + ")([+-]\\d{1,4})?$");
 
     record Fixed(LocalTime time) implements SunTimeExpression {
         @Override
