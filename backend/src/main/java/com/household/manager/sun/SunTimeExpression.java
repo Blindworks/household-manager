@@ -31,6 +31,11 @@ public sealed interface SunTimeExpression permits SunTimeExpression.Fixed, SunTi
     }
 
     record Relative(SunEvent event, int offsetMinutes) implements SunTimeExpression {
+        /**
+         * Ein Versatz ueber Mitternacht landet auf dem Zifferblatt: {@code dawn-240} im Juni ergibt
+         * ca. 23:50, der Kalendertag wird verworfen — als Grenze im zyklischen {@code TimeWindow}
+         * ist genau das gewollt.
+         */
         @Override
         public Optional<LocalTime> resolve(LocalDate date, SunTimesService sunTimes) {
             return sunTimes.timesFor(date)

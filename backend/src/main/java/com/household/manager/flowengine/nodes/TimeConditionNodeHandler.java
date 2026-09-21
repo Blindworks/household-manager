@@ -36,8 +36,8 @@ import java.util.Optional;
  * Systemzone: die Cron-Trigger haengen noch an {@code systemDefault}, dieser Node
  * soll die UTC-Falle nicht wiederholen.
  *
- * <p>Zur Laufzeit wirft der Node nie — Grammatik und Nicht-Leere des Fensters prueft
- * {@link #validate(NodeConfig)} beim Deploy.
+ * <p>Zur Laufzeit wirft der Node bei validierter Konfiguration nie — Grammatik und Nicht-Leere
+ * des Fensters prueft {@link #validate(NodeConfig)} beim Deploy.
  */
 @Component
 public class TimeConditionNodeHandler implements NodeHandler {

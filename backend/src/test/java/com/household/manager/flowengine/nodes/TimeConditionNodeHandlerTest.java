@@ -182,5 +182,16 @@ class TimeConditionNodeHandlerTest {
         assertFalse(at("12:00").validate(window("noon", "23:00")).isEmpty());
         assertEquals(1, at("12:00").validate(window("sunset", "sunset")).size());
         assertEquals(1, at("12:00").validate(window("sunset-30", "sunset-30")).size());
+        assertEquals(1, at("12:00").validate(window("sunset-0", "sunset")).size());
+    }
+
+    @Test
+    void mixedWindowWithFixedStartAndSunEndAtRuntime() {
+        when(sunTimes.timesFor(DAY)).thenReturn(Optional.of(TIMES));
+        // Fenster "07:00" bis "sunrise+60" (= 07:52)
+        assertEquals(0, portOf(at("07:00").handle(MSG, window("07:00", "sunrise+60"), ctx)));
+        assertEquals(0, portOf(at("07:51").handle(MSG, window("07:00", "sunrise+60"), ctx)));
+        assertEquals(1, portOf(at("07:52").handle(MSG, window("07:00", "sunrise+60"), ctx)));
+        assertEquals(1, portOf(at("06:59").handle(MSG, window("07:00", "sunrise+60"), ctx)));
     }
 }

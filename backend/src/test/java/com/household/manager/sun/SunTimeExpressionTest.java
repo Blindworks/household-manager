@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,6 +59,7 @@ class SunTimeExpressionTest {
     void fixedResolvesWithoutAskingTheService() {
         Optional<LocalTime> t = SunTimeExpression.parse("05:00").resolve(DAY, sunTimes);
         assertEquals(Optional.of(LocalTime.of(5, 0)), t);
+        verifyNoInteractions(sunTimes);
     }
 
     @Test
@@ -71,5 +73,12 @@ class SunTimeExpressionTest {
     void relativeIsEmptyWithoutHome() {
         when(sunTimes.timesFor(DAY)).thenReturn(Optional.empty());
         assertTrue(SunTimeExpression.parse("sunset").resolve(DAY, sunTimes).isEmpty());
+    }
+
+    @Test
+    void negativeOffsetAcrossMidnightLandsOnTheClockFace() {
+        SunDayTimes juneTimes = new SunDayTimes(DAY, at("03:50"), at("04:50"), at("21:30"), at("22:20"));
+        when(sunTimes.timesFor(DAY)).thenReturn(Optional.of(juneTimes));
+        assertEquals(Optional.of(LocalTime.of(23, 50)), SunTimeExpression.parse("dawn-240").resolve(DAY, sunTimes));
     }
 }
