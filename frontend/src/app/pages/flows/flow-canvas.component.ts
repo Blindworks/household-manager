@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FFlowModule, FCreateConnectionEvent, FMoveNodesEvent, FSelectionChangeEvent } from '@foblex/flow';
 import { CanvasNode, CanvasConnection } from './flow-graph.mapper';
 import { NodeCategory, nodeLabel } from './node-catalog';
+import { NodeStatus } from './node-status.util';
 
 const OUT_CONNECTOR_MARKER = '::out::';
 const IN_CONNECTOR_SUFFIX = '::in';
@@ -26,6 +27,8 @@ export class FlowCanvasComponent {
   readonly portLabelsByType = input<Record<string, string[]>>({});
   /** Kategorie je Node-Typ (aus node-types), steuert die Box-Farbe. */
   readonly categoryByType = input<Record<string, NodeCategory>>({});
+  /** Live-Status je Node-Id (Entität/Gerät, Zustand, seit wann); fehlt bei Nodes ohne Bezug. */
+  readonly statusByNodeId = input<Record<string, NodeStatus>>({});
 
   @Output() nodeMoved = new EventEmitter<{ id: string; x: number; y: number }>();
   @Output() connectionCreated = new EventEmitter<CanvasConnection>();
@@ -44,6 +47,10 @@ export class FlowCanvasComponent {
   /** Menschenlesbares Label für die Box-Überschrift. */
   nodeLabel(type: string): string {
     return nodeLabel(type);
+  }
+
+  status(nodeId: string): NodeStatus | undefined {
+    return this.statusByNodeId()[nodeId];
   }
 
   /** Kategorie für die Box-Farbe; Fallback „logic" für unbekannte Typen. */

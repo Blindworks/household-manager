@@ -1,9 +1,16 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, forkJoin, timer } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { FlowService } from '../../services/flow.service';
+import { EntityStateService } from '../../services/entity-state.service';
+import { SmartDeviceService } from '../../services/smart-device.service';
 import { FlowDefinition, NodeType } from '../../models/flow.model';
+import { EntityState } from '../../models/entity-state.model';
+import { SmartDevice } from '../../models/smart-device.model';
+import { NodeStatus, nodeStatus } from './node-status.util';
 import { CanvasConnection, CanvasNode, FlowGraphMapper } from './flow-graph.mapper';
 import { NodePaletteComponent } from './node-palette.component';
 import { NodeCategory, nodeCategory } from './node-catalog';
@@ -21,8 +28,18 @@ import { DebugPanelComponent } from './debug-panel.component';
 })
 export class FlowEditorComponent implements OnInit {
   private readonly flowService = inject(FlowService);
+  private readonly entityService = inject(EntityStateService);
+  private readonly deviceService = inject(SmartDeviceService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly mapper = new FlowGraphMapper();
+
+  /**
+   * Abstand der Live-Status-Abfrage. Es gibt keinen Entitäten-Stream (SSE nur für
+   * Zigbee); 10 s reichen, um „Flur an → aus" am Kästchen mitzuverfolgen, ohne den
+   * Server mit einem offenen Editor zu beschäftigen.
+   */
+  static readonly STATUS_POLL_MS = 10_000;
 
   readonly flowId = Number(this.route.snapshot.paramMap.get('id'));
   readonly name = signal('');
@@ -37,6 +54,11 @@ export class FlowEditorComponent implements OnInit {
   readonly deployErrors = signal<string[]>([]);
   readonly deployWarnings = signal<string[]>([]);
   readonly activeTab = signal<'config' | 'debug'>('config');
+
+  /** Letzter erfolgreich geladener Stand; ein fehlgeschlagener Refresh behält ihn. */
+  private readonly entities = signal<EntityState[]>([]);
+  private readonly devices = signal<SmartDevice[]>([]);
+  private readonly statusClock = signal(Date.now());
 
   /** Breite des rechten Panels (Konfig/Debug) in px — per Zieh-Griff verstellbar. */
   readonly sideWidth = signal(320);
@@ -54,6 +76,20 @@ export class FlowEditorComponent implements OnInit {
   readonly categoryByType = computed<Record<string, NodeCategory>>(() =>
     Object.fromEntries(this.nodeTypes().map(t => [t.type, nodeCategory(t.type, t.trigger)])));
 
+  /** Live-Status je Kästchen (nur Nodes mit Entitäts- oder Gerätebezug haben einen Eintrag). */
+  readonly statusByNodeId = computed<Record<string, NodeStatus>>(() => {
+    const sources = { entities: this.entities(), devices: this.devices() };
+    const now = this.statusClock();
+    const result: Record<string, NodeStatus> = {};
+    for (const node of this.canvasNodes()) {
+      const status = nodeStatus(node, sources, now);
+      if (status) {
+        result[node.id] = status;
+      }
+    }
+    return result;
+  });
+
   ngOnInit(): void {
     forkJoin({ flow: this.flowService.getFlow(this.flowId), types: this.flowService.getNodeTypes() })
       .subscribe(({ flow, types }) => {
@@ -70,6 +106,26 @@ export class FlowEditorComponent implements OnInit {
         this.savedSnapshot = this.serialize();
         this.dirty.set(false);
       });
+    this.startStatusPolling();
+  }
+
+  /**
+   * Zieht Entitäten und Geräte sofort und dann alle {@link STATUS_POLL_MS} nach. Ein
+   * Fehlschlag behält den letzten Stand und beendet den Poller nicht — sonst stünde
+   * nach einem Backend-Schluckauf bis zum Neuladen ein eingefrorener Status da.
+   */
+  private startStatusPolling(): void {
+    timer(0, FlowEditorComponent.STATUS_POLL_MS).pipe(
+      switchMap(() => forkJoin({
+        entities: this.entityService.getEntities(),
+        devices: this.deviceService.getAllDevices()
+      }).pipe(catchError(() => EMPTY))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(({ entities, devices }) => {
+      this.entities.set(entities);
+      this.devices.set(devices);
+      this.statusClock.set(Date.now());
+    });
   }
 
   private serialize(): string {

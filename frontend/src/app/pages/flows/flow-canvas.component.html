@@ -53,6 +53,15 @@
           <div class="flow-canvas__node-type">{{ node.type }}</div>
         </div>
 
+        @if (status(node.id); as s) {
+          <div [class]="'flow-canvas__node-status flow-canvas__node-status--' + s.tone"
+               [title]="s.name + ' · ' + s.state + (s.since ? ' · ' + s.since : '')">
+            <span class="flow-canvas__status-name">{{ s.name }}</span>
+            <span class="flow-canvas__status-state">{{ s.state }}</span>
+            @if (s.since) { <span class="flow-canvas__status-since">{{ s.since }}</span> }
+          </div>
+        }
+
         <div class="flow-canvas__node-body">
           <div
             fConnector
