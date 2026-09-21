@@ -50,6 +50,18 @@ class NodeCatalogFieldsTest {
     }
 
     @Test
+    void sunTriggerHasEventEnumAndOptionalOffset() {
+        var h = new SunTriggerHandler(null, null);
+        assertEquals(NodeFieldType.ENUM, field(h.fields(), "event").type());
+        assertEquals(List.of("dawn", "sunrise", "sunset", "dusk"), field(h.fields(), "event").options());
+        assertTrue(field(h.fields(), "event").required());
+        assertEquals(NodeFieldType.NUMBER, field(h.fields(), "offsetMinutes").type());
+        assertFalse(field(h.fields(), "offsetMinutes").required());
+        assertEquals(List.of("Ausgang"), h.portLabels());
+        assertEquals("sun-trigger", h.type());
+    }
+
+    @Test
     void delayAndRateLimitHaveNumberFields() {
         assertEquals(NodeFieldType.NUMBER, field(new DelayNodeHandler().fields(), "seconds").type());
         assertEquals(NodeFieldType.NUMBER, field(new RateLimitNodeHandler().fields(), "minIntervalSeconds").type());
