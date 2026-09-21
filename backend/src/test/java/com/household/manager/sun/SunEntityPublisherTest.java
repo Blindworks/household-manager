@@ -108,6 +108,8 @@ class SunEntityPublisherTest {
         assertEquals("night", update.state());
         assertEquals("2026-09-22T07:07:00", update.attributes().get("nextSunrise"));
         assertEquals("2026-09-22T19:10:00", update.attributes().get("nextSunset"));
+        // Morgen wird je Lauf hoechstens einmal berechnet (memoisierter Supplier), nicht je Ereignis.
+        verify(sunTimes, times(1)).timesFor(TOMORROW);
     }
 
     @Test
