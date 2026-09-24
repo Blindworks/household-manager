@@ -35,27 +35,28 @@ public class HouseModeInitializer {
                 log.warn("Haus-Modus {} konnte nicht angelegt werden: {}", definition.name(), ex.getMessage());
             }
         }
-        try {
-            cleanUpRetiredShutdownMode();
-        } catch (Exception ex) {
-            log.warn("Alt-Modus Ausschalten konnte nicht bereinigt werden: {}", ex.getMessage());
+        for (String entityId : HouseModes.RETIRED_MODE_ENTITY_IDS) {
+            try {
+                cleanUpRetiredMode(entityId);
+            } catch (Exception ex) {
+                log.warn("Alt-Modus {} konnte nicht bereinigt werden: {}", entityId, ex.getMessage());
+            }
         }
     }
 
     /**
-     * Löscht den ehemaligen Modus „Ausschalten" (ersetzt durch den Reboot-Button).
+     * Löscht einen ehemaligen Modus aus {@link HouseModes#RETIRED_MODE_ENTITY_IDS}.
      * Der Marker-Check stellt sicher, dass ein später manuell angelegter Helfer
      * gleichen Namens nicht mitgelöscht wird.
      */
-    private void cleanUpRetiredShutdownMode() {
-        EntityState existing =
-                entityStateService.getByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID).orElse(null);
+    private void cleanUpRetiredMode(String entityId) {
+        EntityState existing = entityStateService.getByEntityId(entityId).orElse(null);
         if (existing == null
                 || !HouseModes.isMode(responseMapper.parseAttributes(existing.getAttributes()))) {
             return;
         }
-        entityStateService.deleteByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID);
-        log.info("Alt-Modus entfernt: {}", HouseModes.RETIRED_SHUTDOWN_ENTITY_ID);
+        entityStateService.deleteByEntityId(entityId);
+        log.info("Alt-Modus entfernt: {}", entityId);
     }
 
     private void seed(HouseModeDefinition definition) {

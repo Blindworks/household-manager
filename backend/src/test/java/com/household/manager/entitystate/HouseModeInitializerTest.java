@@ -26,6 +26,9 @@ class HouseModeInitializerTest {
     @Mock
     private EntityStateService entityStateService;
 
+    private static final String SHUTDOWN = "input_boolean.manual_ausschalten";
+    private static final String MOTION_SENSORS_ON = "input_boolean.manual_bewegungssensoren";
+
     private HouseModeInitializer initializer;
 
     @BeforeEach
@@ -59,7 +62,7 @@ class HouseModeInitializerTest {
                 "input_boolean.manual_toni_allein",
                 "input_boolean.manual_nachtmodus",
                 "input_boolean.manual_morgenmodus",
-                "input_boolean.manual_bewegungssensoren");
+                "input_boolean.manual_bewegungssensoren_aus");
         EntityStateUpdate first = captor.getAllValues().get(0);
         assertThat(first.friendlyName()).isEqualTo("Abwesend");
         assertThat(first.state()).isEqualTo("off");
@@ -116,25 +119,63 @@ class HouseModeInitializerTest {
     @Test
     void loescht_den_alten_ausschalten_modus_mit_marker() {
         when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
-        when(entityStateService.getByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID))
+        when(entityStateService.getByEntityId(SHUTDOWN))
                 .thenReturn(Optional.of(modeEntity(
-                        HouseModes.RETIRED_SHUTDOWN_ENTITY_ID, "on", "{\"mode\":true}")));
+                        SHUTDOWN, "on", "{\"mode\":true}")));
 
         initializer.seedHouseModes();
 
-        verify(entityStateService).deleteByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID);
+        verify(entityStateService).deleteByEntityId(SHUTDOWN);
     }
 
     @Test
     void loescht_einen_helfer_gleichen_namens_ohne_marker_nicht() {
         when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
-        when(entityStateService.getByEntityId(HouseModes.RETIRED_SHUTDOWN_ENTITY_ID))
+        when(entityStateService.getByEntityId(SHUTDOWN))
                 .thenReturn(Optional.of(modeEntity(
-                        HouseModes.RETIRED_SHUTDOWN_ENTITY_ID, "on", "{\"icon\":\"power\"}")));
+                        SHUTDOWN, "on", "{\"icon\":\"power\"}")));
 
         initializer.seedHouseModes();
 
         verify(entityStateService, never()).deleteByEntityId(anyString());
+    }
+
+    @Test
+    void loescht_den_alten_bewegungssensoren_modus_mit_marker() {
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+        when(entityStateService.getByEntityId(MOTION_SENSORS_ON))
+                .thenReturn(Optional.of(modeEntity(MOTION_SENSORS_ON, "on", "{\"mode\":true}")));
+
+        initializer.seedHouseModes();
+
+        verify(entityStateService).deleteByEntityId(MOTION_SENSORS_ON);
+        verify(entityStateService, never()).deleteByEntityId(SHUTDOWN);
+    }
+
+    @Test
+    void ein_fehler_beim_bereinigen_stoppt_die_uebrigen_alt_modi_nicht() {
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+        when(entityStateService.getByEntityId(SHUTDOWN)).thenThrow(new RuntimeException("DB weg"));
+        when(entityStateService.getByEntityId(MOTION_SENSORS_ON))
+                .thenReturn(Optional.of(modeEntity(MOTION_SENSORS_ON, "on", "{\"mode\":true}")));
+
+        initializer.seedHouseModes();
+
+        verify(entityStateService).deleteByEntityId(MOTION_SENSORS_ON);
+    }
+
+    @Test
+    void neuer_modus_bewegungssensoren_aus_startet_aus_mit_eigenem_icon() {
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+
+        initializer.seedHouseModes();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, times(5)).reportState(captor.capture());
+        EntityStateUpdate last = captor.getAllValues().get(4);
+        assertThat(last.friendlyName()).isEqualTo("Bewegungssensoren aus");
+        assertThat(last.state()).isEqualTo("off");
+        assertThat(last.attributes()).containsEntry("icon", "sensors_off");
     }
 
     @Test

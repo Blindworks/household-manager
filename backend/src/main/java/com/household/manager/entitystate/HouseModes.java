@@ -20,15 +20,23 @@ public final class HouseModes {
             new HouseModeDefinition("Toni allein", "pets"),
             new HouseModeDefinition("Nachtmodus", "nights_stay"),
             new HouseModeDefinition("Morgenmodus", "wb_twilight"),
-            new HouseModeDefinition("Bewegungssensoren", "sensors")
+            new HouseModeDefinition("Bewegungssensoren aus", "sensors_off")
     );
 
     /**
-     * Ehemaliger Modus „Ausschalten", ersetzt durch den Reboot-Aktions-Button im
-     * Dashboard. Der {@link HouseModeInitializer} löscht die Alt-Entity beim Start,
-     * solange sie noch das Modus-Marker-Attribut trägt.
+     * Ehemalige Modi, die der {@link HouseModeInitializer} beim Start löscht, solange
+     * sie noch das Modus-Marker-Attribut tragen:
+     * <ul>
+     *   <li>„Ausschalten" — ersetzt durch den Reboot-Aktions-Button im Dashboard.</li>
+     *   <li>„Bewegungssensoren" — umgedreht zu „Bewegungssensoren aus": Normalzustand
+     *       sind aktive Melder, der Modus ist nur in Sonderfällen an. Der Zustand wird
+     *       bewusst nicht übernommen, der neue Modus startet aus (= Melder aktiv).</li>
+     * </ul>
      */
-    public static final String RETIRED_SHUTDOWN_ENTITY_ID = "input_boolean.manual_ausschalten";
+    public static final List<String> RETIRED_MODE_ENTITY_IDS = List.of(
+            "input_boolean.manual_ausschalten",
+            "input_boolean.manual_bewegungssensoren"
+    );
 
     private HouseModes() {
     }
