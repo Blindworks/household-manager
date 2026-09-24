@@ -22,8 +22,8 @@ manuellen Deploy im Editor.
 | Feld | Pflicht | Bedeutung |
 |------|---------|-----------|
 | `schemaVersion` | ja | Muss aktuell `1` sein. |
-| `name` | ja | Anzeigename (nicht leer). |
-| `description` | nein | Freitextbeschreibung. |
+| `name` | ja | Anzeigename (nicht leer, höchstens 255 Zeichen). |
+| `description` | nein | Freitextbeschreibung, höchstens 1000 Zeichen (länger ⇒ 400). |
 | `definition` | ja | Der Graph aus `nodes` und `wires`. |
 
 Beim Import wird nur geprüft, ob die `definition` parsebares JSON ist. Die volle

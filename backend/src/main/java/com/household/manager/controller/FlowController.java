@@ -7,6 +7,7 @@ import com.household.manager.flowengine.NodeHandler;
 import com.household.manager.flowengine.TriggerNodeHandler;
 import com.household.manager.flowengine.ValidationResult;
 import com.household.manager.model.entity.Flow;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,12 +38,12 @@ public class FlowController {
     }
 
     @PostMapping
-    public FlowDetailResponse createFlow(@RequestBody CreateFlowRequest request) {
+    public FlowDetailResponse createFlow(@Valid @RequestBody CreateFlowRequest request) {
         return toDetail(flowService.create(request.name(), request.description()));
     }
 
     @PostMapping("/import")
-    public FlowDetailResponse importFlow(@RequestBody ImportFlowRequest request) {
+    public FlowDetailResponse importFlow(@Valid @RequestBody ImportFlowRequest request) {
         String definitionJson = request.definition() == null ? null : request.definition().toString();
         return toDetail(flowService.importFlow(
                 request.schemaVersion(), request.name(), request.description(), definitionJson));
@@ -56,7 +57,7 @@ public class FlowController {
     }
 
     @PutMapping("/{id}")
-    public FlowDetailResponse updateFlow(@PathVariable Long id, @RequestBody UpdateFlowRequest request) {
+    public FlowDetailResponse updateFlow(@PathVariable Long id, @Valid @RequestBody UpdateFlowRequest request) {
         return toDetail(flowService.update(id, request.name(), request.description(), request.draftDefinition()));
     }
 

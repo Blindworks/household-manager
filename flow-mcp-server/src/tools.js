@@ -8,6 +8,11 @@ const DEFINITION_SHAPE = z
   })
   .passthrough();
 
+// Spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000)) und
+// FlowFieldLimits im Backend, das längere Werte mit 400 ablehnt.
+const NAME_MAX = 255;
+const DESCRIPTION_MAX = 1000;
+
 const DEFINITION_HINT =
   'Format der definition: { "nodes": [ { "id", "type", "name"?, "position"?, "config" } ], ' +
   '"wires": [ { "from": { "node", "port" }, "to": { "node" } } ] }. ' +
@@ -65,8 +70,12 @@ export const toolDefinitions = [
       'NICHT deployt — scharf wird er erst durch flow_deploy (validiert) und flow_set_enabled. ' +
       DEFINITION_HINT,
     inputSchema: {
-      name: z.string().min(1).describe('Anzeigename des Flows'),
-      description: z.string().optional().describe('Optionale Freitextbeschreibung'),
+      name: z.string().min(1).max(NAME_MAX).describe(`Anzeigename des Flows (max. ${NAME_MAX} Zeichen)`),
+      description: z
+        .string()
+        .max(DESCRIPTION_MAX)
+        .optional()
+        .describe(`Optionale Freitextbeschreibung (max. ${DESCRIPTION_MAX} Zeichen)`),
       definition: DEFINITION_SHAPE.describe('Der Flow-Graph aus nodes und wires'),
     },
     annotations: WRITE,
@@ -92,8 +101,12 @@ export const toolDefinitions = [
       DEFINITION_HINT,
     inputSchema: {
       id: z.number().int().describe('Flow-ID'),
-      name: z.string().min(1).optional().describe('Neuer Anzeigename'),
-      description: z.string().optional().describe('Neue Beschreibung'),
+      name: z.string().min(1).max(NAME_MAX).optional().describe(`Neuer Anzeigename (max. ${NAME_MAX} Zeichen)`),
+      description: z
+        .string()
+        .max(DESCRIPTION_MAX)
+        .optional()
+        .describe(`Neue Beschreibung (max. ${DESCRIPTION_MAX} Zeichen)`),
       definition: DEFINITION_SHAPE.optional().describe('Neue Draft-Definition (nodes + wires)'),
     },
     annotations: WRITE,

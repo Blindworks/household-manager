@@ -150,4 +150,65 @@ class FlowControllerTest {
                 .andExpect(jsonPath("$[0].fields[0].type").value("STRING"))
                 .andExpect(jsonPath("$[0].fields[0].required").value(true));
     }
+
+    @Test
+    void rejectsTooLongDescriptionOnCreateWith400() throws Exception {
+        mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Neu\",\"description\":\"" + "x".repeat(1001) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.description").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void acceptsDescriptionOfExactlyMaxLengthOnCreate() throws Exception {
+        String description = "x".repeat(1000);
+        when(flowService.create("Neu", description)).thenReturn(flow());
+
+        mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Neu\",\"description\":\"" + description + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void rejectsTooLongNameOnCreateWith400() throws Exception {
+        mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + "n".repeat(256) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.name").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void rejectsTooLongDescriptionOnUpdateWith400() throws Exception {
+        mockMvc.perform(put("/v1/flows/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"" + "x".repeat(1001) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.description").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void rejectsTooLongNameOnUpdateWith400() throws Exception {
+        mockMvc.perform(put("/v1/flows/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + "n".repeat(256) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.name").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void rejectsTooLongDescriptionOnImportWith400() throws Exception {
+        mockMvc.perform(post("/v1/flows/import").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"schemaVersion\":1,\"name\":\"Neu\",\"description\":\""
+                                + "x".repeat(1001) + "\",\"definition\":{\"nodes\":[],\"wires\":[]}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.description").exists());
+
+        verifyNoInteractions(flowService);
+    }
 }

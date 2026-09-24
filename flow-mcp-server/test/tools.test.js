@@ -141,3 +141,21 @@ test('nicht erreichbares Backend ergibt eine lesbare Fehlermeldung', async () =>
     (error) => /nicht erreichbar/.test(error.message)
   );
 });
+
+// Die Grenzen spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000)).
+// Das Backend lehnt längere Werte mit 400 ab; das Schema fängt sie schon vor dem Request ab.
+for (const toolName of ['flow_create', 'flow_update']) {
+  test(`${toolName}: Beschreibung über 1000 Zeichen wird vom Schema abgelehnt`, async () => {
+    const { z } = await import('zod');
+    const schema = z.object(tools[toolName].inputSchema).partial();
+    assert.equal(schema.safeParse({ description: 'x'.repeat(1000) }).success, true);
+    assert.equal(schema.safeParse({ description: 'x'.repeat(1001) }).success, false);
+  });
+
+  test(`${toolName}: Name über 255 Zeichen wird vom Schema abgelehnt`, async () => {
+    const { z } = await import('zod');
+    const schema = z.object(tools[toolName].inputSchema).partial();
+    assert.equal(schema.safeParse({ name: 'n'.repeat(255) }).success, true);
+    assert.equal(schema.safeParse({ name: 'n'.repeat(256) }).success, false);
+  });
+}
