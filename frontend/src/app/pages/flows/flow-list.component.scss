@@ -13,6 +13,7 @@
   &__row { cursor: pointer; &:hover { background: #fafafa; } }
   &__delete { background: none; border: none; color: #b71c1c; cursor: pointer; }
   &__empty { text-align: center; color: #888; padding: 2rem; }
+  &__last-triggered { white-space: nowrap; &--never { color: #888; } }
 }
 .badge { padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 600;
   &--deployed { background: #e8f5e9; color: #2e7d32; }

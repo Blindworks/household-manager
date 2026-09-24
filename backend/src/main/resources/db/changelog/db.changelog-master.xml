@@ -139,4 +139,7 @@
     <!-- Ladesaeulen-Uebersicht: Favoriten und Belegungsbeginn je Ladepunkt -->
     <include file="db/changelog/changes/20260919-0055-create-charging-tables.xml"/>
 
+    <!-- Flow-Uebersicht: wann hat ein Flow zuletzt ausgeloest -->
+    <include file="db/changelog/changes/20260924-0056-add-flow-last-triggered-at.xml"/>
+
 </databaseChangeLog>

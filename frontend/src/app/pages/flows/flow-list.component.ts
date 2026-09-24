@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FlowService } from '../../services/flow.service';
 import { FlowSummary } from '../../models/flow.model';
+import { lastTriggeredText } from './last-triggered.util';
 
 /** Übersicht aller Automatisierungs-Flows. */
 @Component({
@@ -62,6 +63,10 @@ export class FlowListComponent implements OnInit {
       next: flow => this.router.navigate(['/flows', flow.id]),
       error: err => this.error.set(err.error?.message ?? 'Import fehlgeschlagen.')
     });
+  }
+
+  lastTriggered(flow: FlowSummary): string {
+    return lastTriggeredText(flow.lastTriggeredAt, Date.now());
   }
 
   open(flow: FlowSummary): void {

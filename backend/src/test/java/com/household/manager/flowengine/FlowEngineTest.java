@@ -19,8 +19,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class FlowEngineTest {
@@ -77,6 +79,7 @@ class FlowEngineTest {
         public Optional<String> watchedEntityId(NodeConfig config) { return Optional.of("sensor.x"); }
     }
 
+    private final FlowTriggerRecorder triggerRecorder = mock(FlowTriggerRecorder.class);
     private FlowEngine engine;
     private FlowRegistry registry;
     private final FlowDefinitionParser parser = new FlowDefinitionParser(new ObjectMapper());
@@ -88,7 +91,7 @@ class FlowEngineTest {
         registry = new FlowRegistry(handlers);
         // Synchroner "Executor" (Runnable::run) macht die Tests deterministisch.
         engine = new FlowEngine(registry, Runnable::run,
-                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer());
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder);
         registry.setEngine(engine);
     }
 
@@ -210,7 +213,7 @@ class FlowEngineTest {
                 mock(org.springframework.scheduling.TaskScheduler.class);
         ScheduledFuture<?> future = mock(ScheduledFuture.class);
         doReturn(future).when(delayScheduler).schedule(any(Runnable.class), any(Instant.class));
-        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer());
+        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer(), triggerRecorder);
         reg.setEngine(delayEngine);
 
         reg.deploy(2L, parser.parse("""
@@ -232,7 +235,7 @@ class FlowEngineTest {
         ContextCapturingHandler capturing = new ContextCapturingHandler();
         FlowRegistry reg = new FlowRegistry(List.of(new TestTriggerHandler(), capturing));
         FlowEngine capturingEngine = new FlowEngine(reg, Runnable::run,
-                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer());
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder);
         reg.setEngine(capturingEngine);
         reg.deploy(7L, parser.parse("""
                 { "nodes": [
@@ -245,5 +248,38 @@ class FlowEngineTest {
 
         assertEquals(AuditActor.flow(7L), capturing.capturedActor.get());
         assertNull(AuditActorContext.get());
+    }
+
+    @Test
+    void startAnTriggerNodeWirdAlsAusloesungFestgehalten() {
+        deploy(1L, """
+                { "nodes": [
+                    { "id": "t", "type": "test-trigger", "config": {} },
+                    { "id": "r1", "type": "recorder", "config": {} } ],
+                  "wires": [ { "from": { "node": "t", "port": 0 }, "to": { "node": "r1" } } ] }
+                """);
+
+        engine.runFrom(1L, "t", 0, FlowMessage.of(Map.of("v", "1")));
+
+        verify(triggerRecorder).recordTriggered(1L);
+    }
+
+    @Test
+    void fortsetzungAusNichtTriggerNodeVerschiebtDenAusloesezeitpunktNicht() {
+        // Delay-/Timer-Nodes setzen den Lauf per emit an ihrer eigenen Node fort.
+        deploy(1L, """
+                { "nodes": [
+                    { "id": "t", "type": "test-trigger", "config": {} },
+                    { "id": "r1", "type": "recorder", "config": {} },
+                    { "id": "r2", "type": "recorder", "config": {} } ],
+                  "wires": [
+                    { "from": { "node": "t", "port": 0 }, "to": { "node": "r1" } },
+                    { "from": { "node": "r1", "port": 0 }, "to": { "node": "r2" } } ] }
+                """);
+
+        engine.runFrom(1L, "r1", 0, FlowMessage.of(Map.of("v", "1")));
+
+        assertEquals(List.of("r2:1"), received);
+        verify(triggerRecorder, never()).recordTriggered(anyLong());
     }
 }

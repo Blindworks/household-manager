@@ -121,6 +121,7 @@ public class FlowController {
                 .id(flow.getId()).name(flow.getName()).description(flow.getDescription())
                 .enabled(flow.isEnabled()).deployed(flow.getDeployedDefinition() != null)
                 .deployedAt(flow.getDeployedAt()).updatedAt(flow.getUpdatedAt())
+                .lastTriggeredAt(flow.getLastTriggeredAt())
                 .build();
     }
 

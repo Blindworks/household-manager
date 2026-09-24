@@ -7,5 +7,5 @@ import java.time.LocalDateTime;
 @Builder
 public record FlowSummaryResponse(
         Long id, String name, String description, boolean enabled, boolean deployed,
-        LocalDateTime deployedAt, LocalDateTime updatedAt) {
+        LocalDateTime deployedAt, LocalDateTime updatedAt, LocalDateTime lastTriggeredAt) {
 }

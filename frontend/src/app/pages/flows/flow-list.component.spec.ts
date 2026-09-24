@@ -10,7 +10,7 @@ describe('FlowListComponent', () => {
   beforeEach(async () => {
     flowService = jasmine.createSpyObj('FlowService', ['getFlows', 'createFlow', 'deleteFlow', 'setEnabled', 'importFlow']);
     flowService.getFlows.and.returnValue(of([
-      { id: 1, name: 'A', enabled: true, deployed: true },
+      { id: 1, name: 'A', enabled: true, deployed: true, lastTriggeredAt: '2020-01-02T08:15:00' },
       { id: 2, name: 'B', enabled: false, deployed: false }
     ] as any));
     await TestBed.configureTestingModule({
@@ -23,6 +23,14 @@ describe('FlowListComponent', () => {
     const fixture = TestBed.createComponent(FlowListComponent);
     fixture.detectChanges();
     expect(fixture.componentInstance.flows().length).toBe(2);
+  });
+
+  it('shows when each flow was last triggered', () => {
+    const fixture = TestBed.createComponent(FlowListComponent);
+    fixture.detectChanges();
+    const cells = Array.from(fixture.nativeElement.querySelectorAll('.flow-table__last-triggered'))
+      .map(cell => (cell as HTMLElement).textContent?.trim());
+    expect(cells).toEqual(['02.01.2020, 08:15', 'Nie']);
   });
 
   it('deletes a flow and reloads', () => {

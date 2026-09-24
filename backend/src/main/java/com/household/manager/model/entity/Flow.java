@@ -43,6 +43,16 @@ public class Flow {
     @Column(name = "deployed_at")
     private LocalDateTime deployedAt;
 
+    /**
+     * Wann ein Trigger des Flows zuletzt ausgelöst hat. Schreibt ausschließlich
+     * {@code FlowTriggerRecorder} per Bulk-Update — deshalb für JPA nicht
+     * schreibbar: ein {@code save()} eines zuvor geladenen Flows (Editor-Speichern,
+     * Deploy) würde sonst einen zwischenzeitlich gesetzten Zeitpunkt mit dem
+     * alten Wert überschreiben.
+     */
+    @Column(name = "last_triggered_at", insertable = false, updatable = false)
+    private LocalDateTime lastTriggeredAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

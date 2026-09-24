@@ -455,6 +455,11 @@ docker-compose down
 - **Wiederholtes Feuern bei flatternden Quellen:** `ShellyPollingService`, `SmartDeviceEntityMapper` (Kasa/Tapo/Meross), `NukiPollingService` und `TractivePollingService` schreiben bei **jedem** fehlgeschlagenen Poll `unavailable`. Bei `power > 500` ergibt die Folge `700` → `unavailable` → `700` deshalb ein erneutes Auslösen. Mit dem `rate-limit`-Node beherrschbar — aber man muss es wissen
 - **Ein Trigger mit `value: "unavailable"` kann nie feuern**, denn genau die Richtung, die dabei zählt, ist unterdrückt. Das ist das Naheliegendste, was eine KI zu einem Ausfall-Feature autoren würde: der Flow validiert, deployt, lässt sich aktivieren — und ist tot, ohne Fehler und ohne Log. Ausfälle werden über `event.zigbee_bridge_status` gemeldet, nicht über einen `unavailable`-Trigger
 
+### Flow-Engine: „Zuletzt ausgelöst" in der Übersicht
+- Spalte `flows.last_triggered_at` (Changeset `20260924-0056`), angezeigt in `/flows` und über `GET /v1/flows` (damit auch in `flow_list` des MCP-Servers). NULL = „Nie" — ältere Auslösungen vor dem Deploy sind unbekannt
+- Gesetzt in `FlowEngine.runFrom`, aber **nur, wenn der Lauf an einer Trigger-Node startet** (auch Test-Inject): Delay-/Timer-Nodes setzen den Lauf über denselben Pfad an ihrer eigenen Node fort und dürfen den Zeitpunkt nicht verschieben. „Ausgelöst" heißt: der Trigger hat gefeuert — ob nachgelagerte Bedingungen durchließen, sagt die Spalte nicht
+- `FlowTriggerRecorder` schreibt per Bulk-Update und wirft nie. Das Entity-Feld ist `insertable/updatable = false`, sonst überschriebe ein `save()` eines vorher geladenen Flows (Editor, Deploy) einen zwischenzeitlich gesetzten Zeitpunkt mit dem alten Wert; `updated_at` bleibt dabei unberührt
+
 ### Flow-Engine: KI-Autoring via MCP
 - Flows werden primär durch eine KI erstellt und gepflegt (Entscheidung 2026-07-20); der visuelle Editor bleibt als Viewer/Debug-Werkzeug, wird aber nicht weiter ausgebaut
 - `flow-mcp-server/` (Node ≥20, stdio) wrappt die REST-API `/api/v1/flows` als MCP-Tools; Registrierung für Claude Code in `.mcp.json` (Server-Name `household-flows`), Setup: `cd flow-mcp-server && npm install`

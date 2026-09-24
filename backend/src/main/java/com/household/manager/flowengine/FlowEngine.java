@@ -29,15 +29,18 @@ public class FlowEngine {
     private final Executor executor;
     private final TaskScheduler scheduler;
     private final DebugBuffer debugBuffer;
+    private final FlowTriggerRecorder triggerRecorder;
 
     public FlowEngine(FlowRegistry registry,
                       @Qualifier("flowEngineExecutor") Executor executor,
                       @Qualifier("flowTaskScheduler") TaskScheduler scheduler,
-                      DebugBuffer debugBuffer) {
+                      DebugBuffer debugBuffer,
+                      FlowTriggerRecorder triggerRecorder) {
         this.registry = registry;
         this.executor = executor;
         this.scheduler = scheduler;
         this.debugBuffer = debugBuffer;
+        this.triggerRecorder = triggerRecorder;
     }
 
     /** Asynchrone Fortsetzung ab einem Node-Ausgang (von NodeContext.emit gerufen). */
@@ -62,6 +65,7 @@ public class FlowEngine {
             if (graph == null) {
                 return;
             }
+            recordIfTrigger(flowId, graph.node(nodeId));
             record Work(String nodeId, FlowMessage message) {
             }
             Deque<Work> queue = new ArrayDeque<>();
@@ -101,6 +105,17 @@ public class FlowEngine {
             }
         } finally {
             AuditActorContext.clear();
+        }
+    }
+
+    /**
+     * Nur der Start an einer Trigger-Node zählt als „ausgelöst“ (auch ein Test-Inject);
+     * Fortsetzungen aus Delay- oder Timer-Nodes laufen ebenfalls hier durch und
+     * dürfen den Zeitpunkt nicht nachträglich verschieben.
+     */
+    private void recordIfTrigger(long flowId, FlowNode startNode) {
+        if (startNode != null && registry.handler(startNode.type()) instanceof TriggerNodeHandler) {
+            triggerRecorder.recordTriggered(flowId);
         }
     }
 

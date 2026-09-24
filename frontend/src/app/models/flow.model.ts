@@ -25,6 +25,8 @@ export interface FlowSummary {
   deployed: boolean;
   deployedAt?: string;
   updatedAt?: string;
+  /** Wann ein Trigger des Flows zuletzt ausgelöst hat; fehlt/null = nie. */
+  lastTriggeredAt?: string | null;
 }
 
 export interface FlowDetail extends FlowSummary {
