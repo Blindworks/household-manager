@@ -32,4 +32,21 @@ class ConsumptionRangeTest {
         assertThat(ConsumptionRange.WEEKS_8.windowStart(heute)).isEqualTo(LocalDate.of(2026, 6, 29));
         assertThat(ConsumptionRange.MONTHS_6.windowStart(heute)).isEqualTo(LocalDate.of(2026, 3, 1));
     }
+
+    @Test
+    void jahreszeitraumTraegtDieAufloesungJahr() {
+        assertThat(ConsumptionRange.YEARS_ALL.getResolution()).isEqualTo(ConsumptionResolution.YEAR);
+        assertThat(ConsumptionRange.MONTHS_ALL.getResolution()).isEqualTo(ConsumptionResolution.MONTH);
+    }
+
+    /** "Alle" heisst: kein Fensterbeginn, auch die aelteste Ablesung zaehlt. */
+    @Test
+    void unbegrenzteZeitraeumeHabenKeinenFensterbeginn() {
+        LocalDate heute = LocalDate.of(2026, 8, 24);
+
+        assertThat(ConsumptionRange.YEARS_ALL.windowStart(heute)).isEqualTo(LocalDate.MIN);
+        assertThat(ConsumptionRange.MONTHS_ALL.windowStart(heute)).isEqualTo(LocalDate.MIN);
+        assertThat(ConsumptionRange.YEARS_ALL.isUnbounded()).isTrue();
+        assertThat(ConsumptionRange.MONTHS_12.isUnbounded()).isFalse();
+    }
 }
