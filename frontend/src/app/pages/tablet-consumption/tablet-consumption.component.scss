@@ -1,5 +1,5 @@
 // Inhalt der Tablet-Verbrauchsansicht. Kopfzeile und Ansichtsleiste liefert
-// app-tablet-shell; hier bleibt nur das Kachelraster.
+// app-tablet-shell; hier bleiben Kachelraster und Summentabelle.
 
 // Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh) bis
 // zum Chart. Fehlt sie an EINER Stelle, faellt alles darunter auf Inhaltshoehe
@@ -163,10 +163,13 @@
     line-height: 1.15;
   }
 
+  // nowrap: Jahreswerte ("2.392,5 kWh") sind so breit, dass Zahl und Einheit sonst
+  // auf zwei Zeilen zerfallen.
   &__current {
     font-size: 1.6rem;
     font-weight: 600;
     color: #f4f3f5;
+    white-space: nowrap;
   }
 
   // Bewusst neutral gefaerbt: ob mehr Verbrauch schlecht ist, haengt an Jahreszeit
@@ -191,5 +194,123 @@
     margin: 0.3rem 0 0;
     font-size: 0.8rem;
     color: rgba(148, 163, 184, 0.8);
+  }
+
+  &__suffix {
+    font-size: 0.85rem;
+    color: rgba(228, 226, 228, 0.75);
+  }
+
+  // Summentabelle: nimmt die Resthoehe der Flex-Kette und scrollt IN sich - zwei
+  // Jahre plus zwoelf Monate passen nicht auf einen Bildschirm, und die Seite selbst
+  // darf auf dem Wandtablet nicht ueber den Rand wachsen (Shell ist overflow: hidden).
+  &__table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.05rem;
+
+    th,
+    td {
+      padding: 0.55rem 1rem;
+      text-align: right;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    th[scope='row'] {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    // Deckender Hintergrund, sonst scheinen die Zeilen beim Scrollen durch.
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #111113;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    thead th:first-child {
+      text-align: left;
+    }
+  }
+
+  &__year-row {
+    background: rgba(255, 255, 255, 0.04);
+
+    th,
+    td {
+      font-weight: 600;
+      color: #f4f3f5;
+    }
+  }
+
+  &__month-row th[scope='row'] {
+    padding-left: 2.8rem;
+    color: rgba(228, 226, 228, 0.85);
+  }
+
+  // Ganze Zeilenhoehe als Tippflaeche: am Wandtablet mit dem Finger aus Armlaenge.
+  &__year-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+  }
+
+  &__chevron {
+    display: inline-block;
+    width: 1.2rem;
+    color: #aac7ff;
+  }
+
+  &__running {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: rgba(148, 163, 184, 0.9);
+  }
+
+  &__cell {
+    white-space: nowrap;
+  }
+
+  &__cell-value {
+    display: block;
+
+    &--none {
+      color: rgba(148, 163, 184, 0.6);
+    }
+  }
+
+  &__cell-cost {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: rgba(148, 163, 184, 0.9);
+  }
+
+  &__estimated {
+    margin-right: 0.2rem;
+    color: #aac7ff;
   }
 }

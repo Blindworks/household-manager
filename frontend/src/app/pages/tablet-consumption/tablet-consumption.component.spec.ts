@@ -327,4 +327,196 @@ describe('TabletConsumptionComponent', () => {
     document.body.appendChild(host);
     frame.remove();
   });
+
+  describe('Jahres-Aufloesung', () => {
+    const thisYear = new Date().getFullYear();
+    const stromJahre: MeterConsumptionSeries = {
+      meterType: MeterType.ELECTRICITY,
+      unit: 'kWh',
+      currency: 'EUR',
+      points: [
+        { periodStart: `${thisYear - 1}-01-01`, label: `${thisYear - 1}`, consumption: 3000, estimated: false, cost: 900 },
+        { periodStart: `${thisYear}-01-01`, label: `${thisYear}`, consumption: 1200, estimated: false, cost: 360 }
+      ]
+    };
+
+    beforeEach(() => {
+      serviceSpy.getSeries.calls.reset();
+      serviceSpy.getSeries.and.returnValue(of([stromJahre]));
+      component.setResolution('YEAR');
+    });
+
+    it('lädt alle Jahre und bietet nur diesen einen Zeitraum', () => {
+      expect(serviceSpy.getSeries).toHaveBeenCalledOnceWith('YEARS_ALL');
+      expect(component.ranges.map(r => r.label)).toEqual(['Alle Jahre']);
+    });
+
+    it('kennzeichnet das laufende Jahr mit "bis heute" und vergleicht nicht', () => {
+      expect(component.tiles[0].currentLabel).toBe('1.200,0 kWh');
+      expect(component.tiles[0].currentSuffix).toBe('bis heute');
+      expect(component.tiles[0].comparison).toBeNull();
+    });
+
+    it('zeigt den Zusatz im Kachelkopf', () => {
+      fixture.detectChanges();
+      const suffix = (fixture.nativeElement as HTMLElement).querySelector('.tablet-consumption__suffix');
+      expect(suffix?.textContent?.trim()).toBe('bis heute');
+    });
+  });
+
+  it('traegt bei Wochen keinen "bis heute"-Zusatz', () => {
+    expect(component.tiles[0].currentSuffix).toBeNull();
+  });
+
+  describe('Tabellenansicht', () => {
+    const thisYear = new Date().getFullYear();
+    const thisMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    const jahre: MeterConsumptionSeries[] = [{
+      meterType: MeterType.ELECTRICITY,
+      unit: 'kWh',
+      currency: 'EUR',
+      points: [
+        { periodStart: `${thisYear - 1}-01-01`, label: '', consumption: 3000, estimated: false, cost: 900 },
+        { periodStart: `${thisYear}-01-01`, label: '', consumption: 1200, estimated: false, cost: null }
+      ]
+    }];
+    const monate: MeterConsumptionSeries[] = [{
+      meterType: MeterType.ELECTRICITY,
+      unit: 'kWh',
+      currency: 'EUR',
+      points: [
+        { periodStart: `${thisYear - 1}-06-01`, label: '', consumption: 250, estimated: false, cost: 75 },
+        { periodStart: `${thisYear}-${thisMonth}-01`, label: '', consumption: 100, estimated: true, cost: null }
+      ]
+    }];
+
+    function stubTable(years = jahre, months = monate): void {
+      serviceSpy.getSeries.and.callFake(range =>
+        of(range === 'YEARS_ALL' ? years : range === 'MONTHS_ALL' ? months : [strom, wasser]));
+    }
+
+    const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+    beforeEach(() => {
+      serviceSpy.getSeries.calls.reset();
+      stubTable();
+      component.setViewMode('table');
+      fixture.detectChanges();
+    });
+
+    it('lädt Jahres- und Monatsreihe', () => {
+      expect(serviceSpy.getSeries).toHaveBeenCalledWith('YEARS_ALL');
+      expect(serviceSpy.getSeries).toHaveBeenCalledWith('MONTHS_ALL');
+      expect(component.totals?.rows.map(r => r.year)).toEqual([thisYear, thisYear - 1]);
+    });
+
+    it('ersetzt Kacheln und Zeitraumknoepfe durch die Tabelle', () => {
+      expect(el().querySelector('.tablet-consumption__table')).not.toBeNull();
+      expect(el().querySelector('.tablet-consumption__grid')).toBeNull();
+      expect(el().querySelector('[aria-label="Zeitraum"]')).toBeNull();
+      expect(el().querySelector('[aria-label="Auflösung"]')).toBeNull();
+    });
+
+    it('klappt nur das juengste Jahr auf', () => {
+      expect(component.isYearExpanded(thisYear)).toBeTrue();
+      expect(component.isYearExpanded(thisYear - 1)).toBeFalse();
+      expect(el().querySelectorAll('.tablet-consumption__month-row').length).toBe(1);
+    });
+
+    it('klappt ein Jahr per Tipp auf und wieder zu', () => {
+      const buttons = el().querySelectorAll<HTMLButtonElement>('.tablet-consumption__year-btn');
+      buttons[1].click();
+      fixture.detectChanges();
+      expect(el().querySelectorAll('.tablet-consumption__month-row').length).toBe(2);
+
+      buttons[1].click();
+      fixture.detectChanges();
+      expect(el().querySelectorAll('.tablet-consumption__month-row').length).toBe(1);
+    });
+
+    it('markiert laufende Perioden und Schaetzwerte', () => {
+      const text = el().querySelector('.tablet-consumption__table')?.textContent ?? '';
+      expect(text).toContain('(laufend)');
+      expect(text).toContain('≈');
+    });
+
+    it('behält den Aufklappzustand ueber den Refresh', () => {
+      component.toggleYear(thisYear);
+      component.toggleYear(thisYear - 1);
+      component.reload();
+      expect(component.isYearExpanded(thisYear)).toBeFalse();
+      expect(component.isYearExpanded(thisYear - 1)).toBeTrue();
+    });
+
+    it('lädt beim Refresh die Tabellenreihen, nicht den Diagrammzeitraum', () => {
+      serviceSpy.getSeries.calls.reset();
+      component.reload();
+      expect(serviceSpy.getSeries.calls.allArgs().map(a => a[0]).sort()).toEqual(['MONTHS_ALL', 'YEARS_ALL']);
+    });
+
+    it('behält bei einem fehlgeschlagenen Refresh die Tabelle', () => {
+      serviceSpy.getSeries.and.returnValue(throwError(() => new Error('weg')));
+      component.reload();
+      expect(component.totals?.rows.length).toBe(2);
+      expect(component.errorMessage).toBeNull();
+    });
+
+    it('lädt beim Zurueckschalten wieder das Diagramm', () => {
+      serviceSpy.getSeries.calls.reset();
+      component.setViewMode('chart');
+      fixture.detectChanges();
+      expect(serviceSpy.getSeries).toHaveBeenCalledOnceWith('WEEKS_26');
+      expect(el().querySelector('.tablet-consumption__grid')).not.toBeNull();
+    });
+
+    it('verwirft eine spaete Tabellenantwort nach dem Zurueckschalten', () => {
+      const years$ = new Subject<MeterConsumptionSeries[]>();
+      serviceSpy.getSeries.and.callFake(range =>
+        range === 'YEARS_ALL' ? years$ : of(range === 'MONTHS_ALL' ? monate : [strom, wasser]));
+      component.setViewMode('chart');
+      component.setViewMode('table');
+      component.setViewMode('chart');
+      years$.next([]);
+      years$.complete();
+      expect(component.viewMode).toBe('chart');
+      expect(component.totals?.rows.length).toBe(2);
+    });
+
+    it('scrollt innerhalb ihres Rahmens statt die Seite zu verlaengern', () => {
+      const vieleMonate: MeterConsumptionSeries[] = [{
+        ...monate[0],
+        points: Array.from({ length: 12 }, (_, i) => ({
+          periodStart: `${thisYear}-${String(i + 1).padStart(2, '0')}-01`,
+          label: '', consumption: 100 + i, estimated: false, cost: 30
+        }))
+      }];
+      stubTable(jahre, vieleMonate);
+      component.reload();
+
+      const host = el();
+      const frame = document.createElement('div');
+      frame.style.display = 'flex';
+      frame.style.flexDirection = 'column';
+      frame.style.height = '600px';
+      document.body.appendChild(frame);
+      frame.appendChild(host);
+      fixture.detectChanges();
+
+      const wrap = host.querySelector('.tablet-consumption__table-wrap') as HTMLElement;
+      expect(host.getBoundingClientRect().height).toBeLessThanOrEqual(600);
+      expect(wrap.scrollHeight).toBeGreaterThan(wrap.clientHeight);
+
+      // Host zurueck in den body, damit fixture.destroy() unveraendert laeuft.
+      document.body.appendChild(host);
+      frame.remove();
+    });
+  });
+
+  it('meldet einen Fehler, wenn schon der Erstabruf der Tabelle scheitert', () => {
+    serviceSpy.getSeries.and.returnValue(throwError(() => new Error('weg')));
+    component.setViewMode('table');
+    fixture.detectChanges();
+    expect(component.errorMessage).toBe('Verbrauchsdaten konnten nicht geladen werden.');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Verbrauchsdaten konnten nicht geladen werden.');
+  });
 });
