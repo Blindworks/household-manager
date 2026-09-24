@@ -181,6 +181,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
+  private switchFollowUpSubscription?: Subscription;
   private quickAccessSubscription?: Subscription;
   private wasteSubscription?: Subscription;
   private calendarSubscription?: Subscription;
@@ -209,6 +210,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly SWITCH_REFRESH_MS = 30000;
   /** Aktualisierungsintervall der Modus-Leiste (30 s; Flows schalten Modi auch von aussen). */
   private static readonly MODE_REFRESH_MS = 30000;
+  /**
+   * Nachlade-Zeitpunkte der Schalter-Kachel nach einem Moduswechsel. Die Flows, die an
+   * einem Modus haengen, laufen asynchron und schalten Funkgeraete — ein sofortiger
+   * Abruf saehe noch den alten Stand, deshalb ein frueher und ein spaeter Nachzug.
+   */
+  private static readonly SWITCH_FOLLOW_UP_AFTER_MODE_MS = [1500, 5000] as const;
   /** Farbton je Modus-Position (bestehende lumina__mode-Varianten); error traegt der Reboot-Button. */
   private static readonly MODE_TONES = ['primary', 'tertiary', 'neutral', 'neutral'] as const;
   /** Wartezeit nach dem Reboot, bevor das Reload-Polling beginnt. */
@@ -470,6 +477,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.ventilationSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
+    this.switchFollowUpSubscription?.unsubscribe();
     this.quickAccessSubscription?.unsubscribe();
     this.wasteSubscription?.unsubscribe();
     this.calendarSubscription?.unsubscribe();
@@ -721,6 +729,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: updated => {
         this.pendingModeIds.delete(mode.entityId);
         this.applyModeState(updated.entityId, updated.state);
+        this.scheduleSwitchFollowUp();
       },
       error: () => {
         this.pendingModeIds.delete(mode.entityId);
@@ -728,6 +737,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.modeError = `${mode.displayName} konnte nicht geschaltet werden.`;
       }
     });
+  }
+
+  /**
+   * Laedt die Schalter-Kachel kurz nach einem Moduswechsel nach, damit die vom Modus
+   * ausgeloesten Flow-Schaltungen nicht erst mit dem 30-s-Refresh sichtbar werden.
+   * Ein erneuter Moduswechsel startet den Nachzug neu. Ein Ladefehler behaelt den
+   * letzten Stand — anders als der Kachel-Refresh leert er die Kachel nicht.
+   */
+  private scheduleSwitchFollowUp(): void {
+    this.switchFollowUpSubscription?.unsubscribe();
+    this.switchFollowUpSubscription = merge(
+      ...DashboardComponent.SWITCH_FOLLOW_UP_AFTER_MODE_MS.map(delayMs => timer(delayMs))
+    )
+      .pipe(
+        switchMap(() => this.switchService.getSwitches(DashboardComponent.SWITCH_TILE_LIMIT, 'tile')
+          .pipe(catchError(() => of<SwitchEntity[] | null>(null))))
+      )
+      .subscribe(switches => {
+        if (switches) {
+          this.topSwitches = switches;
+        }
+      });
   }
 
   /** Öffnet den Check-Dialog und startet beide Prüfungen parallel. */

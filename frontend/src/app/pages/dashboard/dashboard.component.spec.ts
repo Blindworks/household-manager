@@ -753,6 +753,59 @@ describe('DashboardComponent (Modus-Leiste)', () => {
     discardPeriodicTasks();
   }));
 
+  it('laedt die Schalter-Kachel nach einem Moduswechsel nach, ohne auf den 30-s-Refresh zu warten', fakeAsync(() => {
+    const switchSpy = TestBed.inject(SwitchService) as jasmine.SpyObj<SwitchService>;
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const flurlicht = {
+      entityId: 'switch.kasa_flur', displayName: 'Flur', state: 'off', domain: 'SWITCH', source: 'KASA'
+    } as unknown as SwitchEntity;
+    switchSpy.getSwitches.calls.reset();
+    switchSpy.getSwitches.and.returnValue(of([flurlicht]));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick(1500);
+
+    expect(switchSpy.getSwitches).toHaveBeenCalledOnceWith(8, 'tile');
+    expect(fixture.componentInstance.topSwitches).toEqual([flurlicht]);
+
+    tick(3500);
+    expect(switchSpy.getSwitches).toHaveBeenCalledTimes(2);
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaelt die Schalter-Kachel, wenn der Nachzug nach dem Moduswechsel scheitert', fakeAsync(() => {
+    const switchSpy = TestBed.inject(SwitchService) as jasmine.SpyObj<SwitchService>;
+    const bestand = { entityId: 'switch.kasa_flur', displayName: 'Flur', state: 'on' } as unknown as SwitchEntity;
+    switchSpy.getSwitches.and.returnValue(of([bestand]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    switchSpy.getSwitches.and.returnValue(throwError(() => new Error('kaputt')));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick(5000);
+
+    expect(fixture.componentInstance.topSwitches).toEqual([bestand]);
+
+    discardPeriodicTasks();
+  }));
+
+  it('laedt die Schalter nicht nach, wenn der Moduswechsel scheitert', fakeAsync(() => {
+    const switchSpy = TestBed.inject(SwitchService) as jasmine.SpyObj<SwitchService>;
+    modeServiceSpy.toggle.and.returnValue(throwError(() => new Error('kaputt')));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    switchSpy.getSwitches.calls.reset();
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick(5000);
+
+    expect(switchSpy.getSwitches).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+
   it('setzt den Zustand bei einem Schaltfehler zurueck und meldet ihn', fakeAsync(() => {
     modeServiceSpy.toggle.and.returnValue(throwError(() => new Error('kaputt')));
     const fixture = TestBed.createComponent(DashboardComponent);
