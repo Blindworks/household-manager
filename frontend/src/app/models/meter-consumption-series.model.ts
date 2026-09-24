@@ -1,7 +1,7 @@
 import { MeterType } from './meter-reading.model';
 
 /** Laenge einer Verbrauchsperiode. Spiegelt das Backend-Enum ConsumptionResolution. */
-export type ConsumptionResolution = 'WEEK' | 'MONTH';
+export type ConsumptionResolution = 'WEEK' | 'MONTH' | 'YEAR';
 
 /** Waehlbarer Zeitraum. Spiegelt das Backend-Enum ConsumptionRange. */
 export type ConsumptionRange =
@@ -10,13 +10,20 @@ export type ConsumptionRange =
   | 'WEEKS_52'
   | 'MONTHS_6'
   | 'MONTHS_12'
-  | 'MONTHS_24';
+  | 'MONTHS_24'
+  /** Ein Balken je Kalenderjahr seit der ersten Ablesung. */
+  | 'YEARS_ALL'
+  /** Alle Monate seit der ersten Ablesung - Datenquelle der Tabellenansicht. */
+  | 'MONTHS_ALL';
 
 /** Ein Balken der Verbrauchsansicht. */
 export interface ConsumptionPoint {
-  /** ISO-Datum (YYYY-MM-DD): Ablesedatum bei Wochen, Monatserster bei Monaten. */
+  /**
+   * ISO-Datum (YYYY-MM-DD): Ablesedatum bei Wochen, Monatserster bei Monaten,
+   * 1. Januar bei Jahren.
+   */
   readonly periodStart: string;
-  /** Beschriftung der X-Achse, z. B. "KW 33" oder "Juli 26". */
+  /** Beschriftung der X-Achse, z. B. "KW 33", "Juli 26" oder "2025". */
   readonly label: string;
   readonly consumption: number;
   /** True, sobald mindestens eine beitragende Ablesung ein Schaetzwert war. */

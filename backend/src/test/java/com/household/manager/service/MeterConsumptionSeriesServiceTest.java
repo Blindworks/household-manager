@@ -417,4 +417,73 @@ class MeterConsumptionSeriesServiceTest {
                     .getSeries(ConsumptionRange.WEEKS_8)).isEmpty();
         }
     }
+
+    @Test
+    void fasstWochenZuKalenderjahrenZusammen() {
+        stromAblesungen(
+                reading(LocalDate.of(2024, 12, 20), "900", false),
+                reading(LocalDate.of(2025, 3, 7), "1000", false),
+                reading(LocalDate.of(2025, 9, 5), "1500", true),
+                reading(LocalDate.of(2026, 2, 6), "1800", false));
+
+        List<ConsumptionPoint> points = strom(ConsumptionRange.YEARS_ALL).points();
+
+        assertThat(points).extracting(ConsumptionPoint::label).containsExactly("2025", "2026");
+        assertThat(points.get(0).periodStart()).isEqualTo(LocalDate.of(2025, 1, 1));
+        assertThat(points.get(0).consumption()).isEqualByComparingTo("600");
+        assertThat(points.get(0).estimated()).isTrue();
+        assertThat(points.get(1).consumption()).isEqualByComparingTo("300");
+    }
+
+    /** Wie am Monatswechsel: die Woche zaehlt zum Jahr ihres Ablesedatums. */
+    @Test
+    void ordnetEineWocheUeberDemJahreswechselDemJahrDesAblesedatumsZu() {
+        stromAblesungen(
+                reading(LocalDate.of(2025, 12, 29), "1000", false),
+                reading(LocalDate.of(2026, 1, 2), "1040", false));
+
+        List<ConsumptionPoint> points = strom(ConsumptionRange.YEARS_ALL).points();
+
+        assertThat(points).extracting(ConsumptionPoint::label).containsExactly("2026");
+        assertThat(points.get(0).consumption()).isEqualByComparingTo("40");
+    }
+
+    /** Eine Teilsumme saehe aus wie ein billiges Jahr. */
+    @Test
+    void laesstJahreskostenWegWennEinerWocheDerPreisFehlt() {
+        stromAblesungen(
+                reading(LocalDate.of(2025, 3, 7), "1000", false),
+                reading(LocalDate.of(2025, 3, 14), "1010", false),
+                reading(LocalDate.of(2025, 3, 21), "1020", false));
+        when(priceBook.costOf(new BigDecimal("10"), LocalDate.of(2025, 3, 14)))
+                .thenReturn(Optional.of(new BigDecimal("3.00")));
+
+        assertThat(strom(ConsumptionRange.YEARS_ALL).points().get(0).cost()).isNull();
+    }
+
+    @Test
+    void summiertJahreskostenWennAlleWochenBepreistSind() {
+        stromAblesungen(
+                reading(LocalDate.of(2025, 3, 7), "1000", false),
+                reading(LocalDate.of(2025, 3, 14), "1010", false),
+                reading(LocalDate.of(2025, 3, 21), "1020", false));
+        when(priceBook.costOf(new BigDecimal("10"), LocalDate.of(2025, 3, 14)))
+                .thenReturn(Optional.of(new BigDecimal("3.005")));
+        when(priceBook.costOf(new BigDecimal("10"), LocalDate.of(2025, 3, 21)))
+                .thenReturn(Optional.of(new BigDecimal("3.005")));
+
+        assertThat(strom(ConsumptionRange.YEARS_ALL).points().get(0).cost()).isEqualByComparingTo("6.01");
+    }
+
+    @Test
+    void liefertBeiMonthsAllAuchWeitZurueckliegendeMonate() {
+        stromAblesungen(
+                reading(LocalDate.of(2019, 1, 4), "100", false),
+                reading(LocalDate.of(2019, 1, 11), "110", false),
+                reading(LocalDate.of(2026, 8, 21), "5000", false));
+
+        assertThat(strom(ConsumptionRange.MONTHS_ALL).points())
+                .extracting(ConsumptionPoint::periodStart)
+                .containsExactly(LocalDate.of(2019, 1, 1), LocalDate.of(2026, 8, 1));
+    }
 }

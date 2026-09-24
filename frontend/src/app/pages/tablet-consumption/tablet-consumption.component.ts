@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
@@ -19,10 +19,13 @@ import { MeterTypeUtils } from '../../utils/meter-type.utils';
 import {
   RANGE_OPTIONS,
   RangeOption,
+  TotalsTable,
+  buildTotalsTable,
   compareToPrevious,
   defaultRangeFor,
   formatConsumption,
-  formatCost
+  formatCost,
+  isRunningPeriod
 } from '../../shared/consumption-view.util';
 
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
@@ -40,6 +43,14 @@ interface ModeOption {
   readonly label: string;
 }
 
+/** Ganze Seite: Kachelraster mit Diagrammen oder Summentabelle. */
+export type ViewMode = 'chart' | 'table';
+
+interface ViewModeOption {
+  readonly value: ViewMode;
+  readonly label: string;
+}
+
 /** Eine Zaehlerkachel des Rasters. */
 interface ConsumptionTile {
   /** Zaehlertyp als Schluessel des @for-track. */
@@ -49,6 +60,8 @@ interface ConsumptionTile {
   readonly mode: TileMode;
   /** Letzter Wert mit Einheit, z. B. "38,1 kWh" bzw. "11,43 €". */
   readonly currentLabel: string;
+  /** "bis heute", wenn der Kopfwert ein angebrochenes Jahr ist; sonst null. */
+  readonly currentSuffix: string | null;
   /** Veraenderung zur Vorperiode, null wenn nicht vergleichbar. */
   readonly comparison: string | null;
   /** True, wenn mindestens ein Balken ein Schaetzwert ist - steuert die Legende. */
@@ -66,7 +79,8 @@ const ESTIMATED_OPACITY = 0.45;
 
 /**
  * Verbrauchsuebersicht fuer das Wandtablet: Strom, Gas und Wasser nebeneinander,
- * je Ablesewoche oder Kalendermonat, ohne Scrollen.
+ * je Ablesewoche, Kalendermonat oder Kalenderjahr, ohne Scrollen - oder als
+ * Summentabelle (Jahre, aufklappbar in Monate), die innerhalb ihres Rahmens scrollt.
  */
 @Component({
   selector: 'app-tablet-consumption',
@@ -87,7 +101,13 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
 
   readonly resolutions: ResolutionOption[] = [
     { value: 'WEEK', label: 'Woche' },
-    { value: 'MONTH', label: 'Monat' }
+    { value: 'MONTH', label: 'Monat' },
+    { value: 'YEAR', label: 'Jahr' }
+  ];
+
+  readonly viewModes: ViewModeOption[] = [
+    { value: 'chart', label: 'Diagramm' },
+    { value: 'table', label: 'Tabelle' }
   ];
 
   readonly modes: ModeOption[] = [
@@ -101,6 +121,15 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
   isLoading = true;
   isEmpty = false;
   errorMessage: string | null = null;
+  /** Nicht gespeichert: nach dem Neuladen steht die Seite wieder auf Diagramm. */
+  viewMode: ViewMode = 'chart';
+  /** Zuletzt geladene Summentabelle; null, bis der erste Tabellenabruf gelang. */
+  totals: TotalsTable | null = null;
+  /**
+   * Aufgeklappte Jahre. Lebt ausserhalb der Tabelle, damit der 5-Minuten-Refresh
+   * nicht zuklappt, was gerade jemand liest.
+   */
+  private readonly expandedYears = new Set<number>();
 
   /** Zuletzt geladene Serien - Grundlage fuer ein Umschalten ohne Nachladen. */
   private series: MeterConsumptionSeries[] = [];
@@ -158,7 +187,34 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
 
   /** Turnusmaessige Aktualisierung: ein Fehlschlag laesst die Anzeige stehen. */
   reload(): void {
-    this.load(this.activeRange, true);
+    if (this.viewMode === 'table') {
+      this.loadTotals(true);
+    } else {
+      this.load(this.activeRange, true);
+    }
+  }
+
+  /** Wechselt zwischen Kachelraster und Summentabelle und laedt deren Daten. */
+  setViewMode(mode: ViewMode): void {
+    if (mode === this.viewMode) {
+      return;
+    }
+    this.viewMode = mode;
+    if (mode === 'table') {
+      this.loadTotals();
+    } else {
+      this.load(this.activeRange);
+    }
+  }
+
+  toggleYear(year: number): void {
+    if (!this.expandedYears.delete(year)) {
+      this.expandedYears.add(year);
+    }
+  }
+
+  isYearExpanded(year: number): boolean {
+    return this.expandedYears.has(year);
   }
 
   /** Schaltet eine Kachel um - rein lokal, kein Nachladen. */
@@ -210,6 +266,42 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Laedt Jahres- und Monatsreihe gemeinsam. Laeuft ueber dasselbe pendingRequest
+   * wie das Diagramm: ein Moduswechsel bestellt den anderen Abruf ab, sonst koennte
+   * eine spaete Antwort die gerade nicht sichtbare Ansicht mit Daten fuellen.
+   */
+  private loadTotals(silent = false): void {
+    if (!silent) {
+      this.isLoading = true;
+      this.errorMessage = null;
+    }
+    this.pendingRequest?.unsubscribe();
+    this.pendingRequest = forkJoin({
+      years: this.seriesService.getSeries('YEARS_ALL'),
+      months: this.seriesService.getSeries('MONTHS_ALL')
+    }).subscribe({
+      next: ({ years, months }) => {
+        const isFirstTable = this.totals === null;
+        this.totals = buildTotalsTable(years, months);
+        // Beim ersten Oeffnen das juengste Jahr aufklappen - das ist die Frage, mit
+        // der man meistens kommt. Danach gilt, was der Nutzer auf- und zugeklappt hat.
+        if (isFirstTable && this.totals.rows.length > 0) {
+          this.expandedYears.add(this.totals.rows[0].year);
+        }
+        this.errorMessage = null;
+        this.isLoading = false;
+      },
+      error: (error: Error) => {
+        console.error('Fehler beim Laden der Verbrauchssummen:', error);
+        this.isLoading = false;
+        if (!silent) {
+          this.errorMessage = 'Verbrauchsdaten konnten nicht geladen werden.';
+        }
+      }
+    });
+  }
+
   private toTile(
     series: MeterConsumptionSeries,
     resolution: ConsumptionResolution,
@@ -228,6 +320,10 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
       currentLabel: isCost
         ? formatCost(last?.cost ?? null, series.currency)
         : formatConsumption(last?.consumption ?? null, series.unit),
+      currentSuffix:
+        resolution === 'YEAR' && last !== null && isRunningPeriod(last.periodStart, 'YEAR')
+          ? 'bis heute'
+          : null,
       comparison: isCost
         ? compareToPrevious(points, resolution, p => p.cost)
         : compareToPrevious(points, resolution),

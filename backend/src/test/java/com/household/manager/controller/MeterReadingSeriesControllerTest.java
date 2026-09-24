@@ -90,4 +90,14 @@ class MeterReadingSeriesControllerTest {
 
         verify(meterConsumptionSeriesService).getSeries(ConsumptionRange.MONTHS_12);
     }
+
+    @Test
+    void akzeptiertDenJahreszeitraum() throws Exception {
+        stubSeries();
+
+        mockMvc.perform(get("/v1/meter-readings/series?range=YEARS_ALL"))
+                .andExpect(status().isOk());
+
+        verify(meterConsumptionSeriesService).getSeries(ConsumptionRange.YEARS_ALL);
+    }
 }

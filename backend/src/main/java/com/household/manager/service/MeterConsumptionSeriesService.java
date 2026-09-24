@@ -36,7 +36,9 @@ import java.util.function.Supplier;
  * anderen trotzdem (Muster {@code TemperatureSeriesService}).
  *
  * <p>Kosten je Ablesewoche zum Preis am Ablesedatum ({@link MeterCostCalculator}),
- * Monatsbalken summieren; fehlt einer Woche der Preis, entfaellt der Monatswert.
+ * Monats- und Jahresbalken summieren; fehlt einer Woche der Preis, entfaellt der Wert
+ * der ganzen Periode. Eine Woche zaehlt vollstaendig zur Periode ihres Ablesedatums,
+ * auch ueber einen Jahreswechsel hinweg.
  */
 @Service
 @Slf4j
@@ -121,7 +123,8 @@ public class MeterConsumptionSeriesService {
     /**
      * Fasst Wochenbalken zu Perioden zusammen - noetig, weil zwei Ablesungen in
      * derselbe ISO-Woche fallen koennen (Korrekturablesung) und weil bei
-     * {@link ConsumptionResolution#MONTH} mehrere Wochen einen Monatsbalken bilden.
+     * {@link ConsumptionResolution#MONTH}/{@link ConsumptionResolution#YEAR} mehrere
+     * Wochen einen Monats- bzw. Jahresbalken bilden.
      * Beide Faelle sind dieselbe Operation: Perioden-Schluessel bilden, Verbrauch
      * summieren, "estimated" verodern. Die Eingabe ist bereits aufsteigend sortiert,
      * die {@link LinkedHashMap} erhaelt diese Reihenfolge.
@@ -142,9 +145,11 @@ public class MeterConsumptionSeriesService {
     }
 
     private static String periodKey(LocalDate date, ConsumptionResolution resolution) {
-        return resolution == ConsumptionResolution.WEEK
-                ? date.get(WeekFields.ISO.weekBasedYear()) + "-" + date.get(WeekFields.ISO.weekOfWeekBasedYear())
-                : date.getYear() + "-" + date.getMonthValue();
+        return switch (resolution) {
+            case WEEK -> date.get(WeekFields.ISO.weekBasedYear()) + "-" + date.get(WeekFields.ISO.weekOfWeekBasedYear());
+            case MONTH -> date.getYear() + "-" + date.getMonthValue();
+            case YEAR -> String.valueOf(date.getYear());
+        };
     }
 
     private static ConsumptionPoint mergeGroup(List<ConsumptionPoint> group, ConsumptionResolution resolution) {
@@ -155,11 +160,19 @@ public class MeterConsumptionSeriesService {
         boolean estimated = group.stream().anyMatch(ConsumptionPoint::estimated);
         BigDecimal cost = sumCosts(group);
 
-        if (resolution == ConsumptionResolution.WEEK) {
-            return new ConsumptionPoint(first.periodStart(), first.label(), consumption, estimated, cost);
-        }
-        LocalDate periodStart = first.periodStart().withDayOfMonth(1);
-        return new ConsumptionPoint(periodStart, MONTH_LABEL.format(periodStart), consumption, estimated, cost);
+        return switch (resolution) {
+            case WEEK -> new ConsumptionPoint(first.periodStart(), first.label(), consumption, estimated, cost);
+            case MONTH -> {
+                LocalDate periodStart = first.periodStart().withDayOfMonth(1);
+                yield new ConsumptionPoint(periodStart, MONTH_LABEL.format(periodStart),
+                        consumption, estimated, cost);
+            }
+            case YEAR -> {
+                LocalDate periodStart = first.periodStart().withDayOfYear(1);
+                yield new ConsumptionPoint(periodStart, String.valueOf(periodStart.getYear()),
+                        consumption, estimated, cost);
+            }
+        };
     }
 
     /**

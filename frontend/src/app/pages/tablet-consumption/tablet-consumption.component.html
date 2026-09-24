@@ -1,32 +1,114 @@
 <app-tablet-shell heading="Verbrauch">
   <div shellActions class="tablet-consumption__controls">
-    <div class="tablet-consumption__group" role="group" aria-label="Auflösung">
-      @for (resolution of resolutions; track resolution.value) {
+    <div class="tablet-consumption__group" role="group" aria-label="Ansicht">
+      @for (view of viewModes; track view.value) {
         <button
           type="button"
           class="tablet-consumption__btn"
-          [class.tablet-consumption__btn--active]="resolution.value === activeResolution"
-          [attr.aria-pressed]="resolution.value === activeResolution"
-          (click)="setResolution(resolution.value)">
-          {{ resolution.label }}
+          [class.tablet-consumption__btn--active]="view.value === viewMode"
+          [attr.aria-pressed]="view.value === viewMode"
+          (click)="setViewMode(view.value)">
+          {{ view.label }}
         </button>
       }
     </div>
-    <div class="tablet-consumption__group" role="group" aria-label="Zeitraum">
-      @for (range of ranges; track range.value) {
-        <button
-          type="button"
-          class="tablet-consumption__btn"
-          [class.tablet-consumption__btn--active]="range.value === activeRange"
-          (click)="setRange(range.value)">
-          {{ range.label }}
-        </button>
-      }
-    </div>
+    @if (viewMode === 'chart') {
+      <div class="tablet-consumption__group" role="group" aria-label="Auflösung">
+        @for (resolution of resolutions; track resolution.value) {
+          <button
+            type="button"
+            class="tablet-consumption__btn"
+            [class.tablet-consumption__btn--active]="resolution.value === activeResolution"
+            [attr.aria-pressed]="resolution.value === activeResolution"
+            (click)="setResolution(resolution.value)">
+            {{ resolution.label }}
+          </button>
+        }
+      </div>
+      <div class="tablet-consumption__group" role="group" aria-label="Zeitraum">
+        @for (range of ranges; track range.value) {
+          <button
+            type="button"
+            class="tablet-consumption__btn"
+            [class.tablet-consumption__btn--active]="range.value === activeRange"
+            (click)="setRange(range.value)">
+            {{ range.label }}
+          </button>
+        }
+      </div>
+    }
   </div>
 
   <section class="tablet-consumption">
-    @if (isLoading && tiles.length === 0) {
+    @if (viewMode === 'table') {
+      @if (totals === null) {
+        @if (errorMessage) {
+          <p class="tablet-consumption__status tablet-consumption__status--error">
+            {{ errorMessage }}
+          </p>
+        } @else {
+          <p class="tablet-consumption__status">Lade Verbrauchssummen…</p>
+        }
+      } @else if (totals.rows.length === 0) {
+        <p class="tablet-consumption__status">Noch keine Zählerablesungen vorhanden.</p>
+      } @else {
+        <div class="tablet-consumption__table-wrap">
+          <table class="tablet-consumption__table">
+            <thead>
+              <tr>
+                <th scope="col">Zeitraum</th>
+                @for (column of totals.columns; track column.meterType) {
+                  <th scope="col">{{ column.name }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of totals.rows; track row.year) {
+                <tr class="tablet-consumption__year-row">
+                  <th scope="row">
+                    <button
+                      type="button"
+                      class="tablet-consumption__year-btn"
+                      [attr.aria-expanded]="isYearExpanded(row.year)"
+                      (click)="toggleYear(row.year)">
+                      <span class="tablet-consumption__chevron" aria-hidden="true">
+                        {{ isYearExpanded(row.year) ? '▾' : '▸' }}
+                      </span>
+                      {{ row.label }}
+                      @if (row.running) {
+                        <span class="tablet-consumption__running">(laufend)</span>
+                      }
+                    </button>
+                  </th>
+                  @for (cell of row.cells; track $index) {
+                    <ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: cell }" />
+                  }
+                </tr>
+                @if (isYearExpanded(row.year)) {
+                  @for (month of row.months; track month.key) {
+                    <tr class="tablet-consumption__month-row">
+                      <th scope="row">
+                        {{ month.label }}
+                        @if (month.running) {
+                          <span class="tablet-consumption__running">(laufend)</span>
+                        }
+                      </th>
+                      @for (cell of month.cells; track $index) {
+                        <ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: cell }" />
+                      }
+                    </tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="tablet-consumption__legend">
+          <span>≈ enthält Schätzwerte</span>
+          <span>Kosten: nur Arbeitspreis, „–“ = kein vollständiger Preis hinterlegt</span>
+        </p>
+      }
+    } @else if (isLoading && tiles.length === 0) {
       <p class="tablet-consumption__status">Lade Verbrauchsdaten…</p>
     } @else if (errorMessage && tiles.length === 0) {
       <p class="tablet-consumption__status tablet-consumption__status--error">
@@ -56,6 +138,9 @@
               </div>
               <div class="tablet-consumption__figures">
                 <span class="tablet-consumption__current">{{ tile.currentLabel }}</span>
+                @if (tile.currentSuffix) {
+                  <span class="tablet-consumption__suffix">{{ tile.currentSuffix }}</span>
+                }
                 @if (tile.comparison) {
                   <span class="tablet-consumption__comparison">{{ tile.comparison }}</span>
                 }
@@ -86,3 +171,19 @@
     }
   </section>
 </app-tablet-shell>
+
+<ng-template #cellTpl let-cell>
+  <td class="tablet-consumption__cell">
+    @if (cell) {
+      <span class="tablet-consumption__cell-value">
+        @if (cell.estimated) {
+          <span class="tablet-consumption__estimated" title="enthält Schätzwerte">≈</span>
+        }
+        {{ cell.consumption }}
+      </span>
+      <span class="tablet-consumption__cell-cost">{{ cell.cost }}</span>
+    } @else {
+      <span class="tablet-consumption__cell-value tablet-consumption__cell-value--none">–</span>
+    }
+  </td>
+</ng-template>
