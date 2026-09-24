@@ -1,11 +1,14 @@
 import {
   RANGE_OPTIONS,
+  buildTotalsTable,
   compareToPrevious,
   defaultRangeFor,
   formatConsumption,
-  formatCost
+  formatCost,
+  isRunningPeriod
 } from './consumption-view.util';
-import { ConsumptionPoint } from '../models/meter-consumption-series.model';
+import { ConsumptionPoint, MeterConsumptionSeries } from '../models/meter-consumption-series.model';
+import { MeterType } from '../models/meter-reading.model';
 
 describe('consumption-view.util', () => {
   /**
@@ -127,6 +130,100 @@ describe('consumption-view.util', () => {
 
     it('zeigt bei fehlendem Wert einen Platzhalter', () => {
       expect(formatCost(null, 'EUR')).toBe('–');
+    });
+  });
+
+  describe('Jahres-Aufloesung', () => {
+    it('bietet bei Jahr genau "Alle Jahre" als Default', () => {
+      expect(RANGE_OPTIONS.YEAR.map(o => o.value)).toEqual(['YEARS_ALL']);
+      expect(defaultRangeFor('YEAR')).toBe('YEARS_ALL');
+    });
+
+    it('vergleicht bei Jahren nie - ein angebrochenes Jahr gegen ein volles waere falsch', () => {
+      expect(compareToPrevious([point(100, '2025-01-01'), point(40, '2026-01-01')], 'YEAR')).toBeNull();
+    });
+  });
+
+  describe('isRunningPeriod', () => {
+    const today = new Date(2026, 8, 24);
+
+    it('erkennt das laufende Jahr', () => {
+      expect(isRunningPeriod('2026-01-01', 'YEAR', today)).toBeTrue();
+      expect(isRunningPeriod('2025-01-01', 'YEAR', today)).toBeFalse();
+    });
+
+    it('erkennt den laufenden Monat', () => {
+      expect(isRunningPeriod('2026-09-01', 'MONTH', today)).toBeTrue();
+      expect(isRunningPeriod('2025-09-01', 'MONTH', today)).toBeFalse();
+      expect(isRunningPeriod('2026-08-01', 'MONTH', today)).toBeFalse();
+    });
+  });
+
+  describe('buildTotalsTable', () => {
+    const today = new Date(2026, 8, 24);
+
+    function p(periodStart: string, consumption: number, cost: number | null, estimated = false): ConsumptionPoint {
+      return { periodStart, label: periodStart, consumption, estimated, cost };
+    }
+
+    function series(meterType: MeterType, unit: string, points: ConsumptionPoint[]): MeterConsumptionSeries {
+      return { meterType, unit, currency: 'EUR', points };
+    }
+
+    const years = [
+      series(MeterType.ELECTRICITY, 'kWh', [p('2025-01-01', 3000, 900), p('2026-01-01', 1500, null, true)]),
+      series(MeterType.WATER, 'm³', [p('2026-01-01', 40, 120)])
+    ];
+    const months = [
+      series(MeterType.ELECTRICITY, 'kWh', [
+        p('2025-11-01', 250, 75),
+        p('2026-03-01', 300, 90),
+        p('2026-09-01', 100, null, true)
+      ]),
+      series(MeterType.WATER, 'm³', [p('2026-09-01', 4, 12)])
+    ];
+
+    const table = buildTotalsTable(years, months, today);
+
+    it('legt je Zaehlertyp der Jahresreihen eine Spalte an', () => {
+      expect(table.columns.map(c => c.name)).toEqual(['Strom', 'Wasser']);
+    });
+
+    it('stellt das neueste Jahr nach oben', () => {
+      expect(table.rows.map(r => r.year)).toEqual([2026, 2025]);
+    });
+
+    it('ordnet die Monate chronologisch unter ihr Jahr', () => {
+      expect(table.rows[0].months.map(m => m.label)).toEqual(['März', 'September']);
+      expect(table.rows[1].months.map(m => m.label)).toEqual(['November']);
+    });
+
+    it('formatiert Verbrauch und Kosten je Zelle', () => {
+      const cell = table.rows[1].cells[0];
+      expect(cell?.consumption).toBe('3.000,0 kWh');
+      expect(cell?.cost).toContain('900,00');
+      expect(cell?.estimated).toBeFalse();
+    });
+
+    it('zeigt fehlende Kosten als Platzhalter und markiert Schaetzwerte', () => {
+      const cell = table.rows[0].cells[0];
+      expect(cell?.cost).toBe('–');
+      expect(cell?.estimated).toBeTrue();
+    });
+
+    it('laesst eine Zelle ohne Wert leer statt 0 zu erfinden', () => {
+      expect(table.rows[1].cells[1]).toBeNull();
+      expect(table.rows[0].months[0].cells[1]).toBeNull();
+    });
+
+    it('markiert laufendes Jahr und laufenden Monat', () => {
+      expect(table.rows[0].running).toBeTrue();
+      expect(table.rows[1].running).toBeFalse();
+      expect(table.rows[0].months.map(m => m.running)).toEqual([false, true]);
+    });
+
+    it('liefert ohne Daten keine Zeilen', () => {
+      expect(buildTotalsTable([], [], today)).toEqual({ columns: [], rows: [] });
     });
   });
 });
