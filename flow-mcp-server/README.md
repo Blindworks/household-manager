@@ -31,7 +31,8 @@ nach `npm install` stehen die Tools in neuen Claude-Code-Sitzungen automatisch b
 ## Tools
 
 **Flows verwalten:** `flow_list`, `flow_get`, `flow_create`, `flow_update`, `flow_deploy`,
-`flow_set_enabled`, `flow_delete`
+`flow_set_enabled`, `flow_delete`. `flow_create`/`flow_update` akzeptieren optional `category`
+(Bereich der Übersicht); bei `flow_update` heißt weglassen unverändert, `""` entfernen.
 
 **Autoring-Referenzen:** `flow_node_types` (Node-Katalog mit Pflichtfeldern),
 `flow_list_entities` (entityId), `flow_list_switch_devices` (deviceId),
