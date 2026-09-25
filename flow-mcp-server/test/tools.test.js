@@ -165,7 +165,7 @@ test('nicht erreichbares Backend ergibt eine lesbare Fehlermeldung', async () =>
   );
 });
 
-// Die Grenzen spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000)).
+// Die Grenzen spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000), category VARCHAR(60)).
 // Das Backend lehnt längere Werte mit 400 ab; das Schema fängt sie schon vor dem Request ab.
 for (const toolName of ['flow_create', 'flow_update']) {
   test(`${toolName}: Beschreibung über 1000 Zeichen wird vom Schema abgelehnt`, async () => {

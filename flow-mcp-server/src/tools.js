@@ -89,7 +89,7 @@ export const toolDefinitions = [
         .string()
         .max(CATEGORY_MAX)
         .optional()
-        .describe(`Bereich des Flows (max. ${CATEGORY_MAX} Zeichen). ` + CATEGORY_HINT),
+        .describe(`Bereich des Flows (max. ${CATEGORY_MAX} Zeichen), siehe Tool-Beschreibung`),
       definition: DEFINITION_SHAPE.describe('Der Flow-Graph aus nodes und wires'),
     },
     annotations: WRITE,
