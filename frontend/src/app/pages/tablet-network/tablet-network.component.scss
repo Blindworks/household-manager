@@ -1,5 +1,9 @@
 // Inhalt der Tablet-Netzwerkansicht. Kopfzeile und Ansichtsleiste liefert
 // app-tablet-shell; hier bleibt nur das 2x2-Kachelraster.
+//
+// Farben kommen ueber die von der Shell vererbten Custom Properties
+// (--card-bg, --on-surface-rgb, ...) - siehe _lumina-theme.scss. Diese Seite
+// kann .lumina--light wegen der Stil-Kapselung nicht selbst sehen.
 
 // Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
 // bis zum Chart. Fehlt sie an EINER Stelle, faellt alles darunter auf
@@ -18,7 +22,7 @@
   flex: 1;
   min-height: 0;
   gap: 0.75rem;
-  color: #e4e2e4;
+  color: var(--on-surface);
 
   &__controls {
     display: flex;
@@ -30,8 +34,8 @@
     display: inline-flex;
     align-self: center;
     gap: 0.25rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid rgba(var(--tint-rgb), 0.08);
     border-radius: 12px;
     padding: 0.3rem;
     flex: 0 0 auto;
@@ -45,11 +49,11 @@
     cursor: pointer;
     font: inherit;
     font-size: 0.95rem;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
 
     &--active {
-      background: rgba(170, 199, 255, 0.16);
-      color: #aac7ff;
+      background: rgba(var(--primary-rgb), 0.16);
+      color: var(--primary);
     }
   }
 
@@ -67,9 +71,9 @@
     flex-direction: column;
     min-height: 0;
     padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--card-bg);
   }
 
   &__card-title {
@@ -77,9 +81,9 @@
     font-weight: 600;
     flex: 0 0 auto;
     // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
-    // schlaegt die vererbte helle Farbe - auf schwarzem Grund waere die
+    // schlaegt die vererbte Farbe - auf dunklem Grund waere die
     // Beschriftung sonst kaum lesbar.
-    color: #f4f3f5;
+    color: var(--text-strong);
     font-size: 1.05rem;
     letter-spacing: -0.01em;
   }
@@ -105,15 +109,15 @@
   &__figure-note {
     margin: 0.25rem 0 0;
     font-size: 0.95rem;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
   }
 
   &__test-btn {
     align-self: flex-start;
     margin-top: 0.6rem;
-    border: 1px solid rgba(170, 199, 255, 0.35);
-    background: rgba(170, 199, 255, 0.12);
-    color: #aac7ff;
+    border: 1px solid rgba(var(--primary-rgb), 0.35);
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--primary);
     padding: 0.5rem 1.1rem;
     border-radius: 10px;
     cursor: pointer;
@@ -129,7 +133,7 @@
   &__status-error {
     margin: 0.5rem 0 0;
     font-size: 0.9rem;
-    color: #ffb4ab;
+    color: var(--error);
   }
 
   &__chart {
@@ -171,12 +175,12 @@
 
   &__device-name {
     font-weight: 600;
-    color: #f4f3f5;
+    color: var(--text-strong);
   }
 
   &__device-seen {
     margin-left: auto;
-    color: rgba(228, 226, 228, 0.65);
+    color: rgba(var(--on-surface-rgb), 0.65);
     font-size: 0.85rem;
     white-space: nowrap;
   }

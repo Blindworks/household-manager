@@ -18,7 +18,7 @@
   flex: 1;
   min-height: 0;
   gap: 0.75rem;
-  color: #e4e2e4;
+  color: var(--on-surface);
 
   &__controls {
     display: flex;
@@ -30,8 +30,8 @@
     display: inline-flex;
     align-self: center;
     gap: 0.25rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid var(--card-border);
     border-radius: 12px;
     padding: 0.3rem;
     flex: 0 0 auto;
@@ -45,11 +45,11 @@
     cursor: pointer;
     font: inherit;
     font-size: 0.95rem;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
 
     &--active {
-      background: rgba(170, 199, 255, 0.16);
-      color: #aac7ff;
+      background: rgba(var(--primary-rgb), 0.16);
+      color: var(--primary);
     }
   }
 
@@ -62,7 +62,7 @@
     font-size: 1.25rem;
 
     &--error {
-      color: #ffb4ab;
+      color: var(--error);
     }
   }
 
@@ -81,9 +81,9 @@
     flex-direction: column;
     min-height: 0;
     padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--card-bg);
   }
 
   &__card-head {
@@ -107,9 +107,9 @@
     display: inline-flex;
     gap: 0.15rem;
     padding: 0.15rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
     border-radius: 9px;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(var(--tint-rgb), 0.04);
     flex: 0 0 auto;
   }
 
@@ -127,11 +127,11 @@
     cursor: pointer;
     font: inherit;
     font-size: 0.85rem;
-    color: rgba(228, 226, 228, 0.7);
+    color: rgba(var(--on-surface-rgb), 0.7);
 
     &--active {
-      background: rgba(170, 199, 255, 0.16);
-      color: #aac7ff;
+      background: rgba(var(--primary-rgb), 0.16);
+      color: var(--primary);
     }
   }
 
@@ -152,7 +152,7 @@
     // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss schlaegt
     // die vererbte helle Farbe - auf schwarzem Grund waere der Titel sonst kaum
     // lesbar.
-    color: #f4f3f5;
+    color: var(--text-strong);
     letter-spacing: -0.01em;
   }
 
@@ -168,7 +168,7 @@
   &__current {
     font-size: 1.6rem;
     font-weight: 600;
-    color: #f4f3f5;
+    color: var(--text-strong);
     white-space: nowrap;
   }
 
@@ -198,7 +198,7 @@
 
   &__suffix {
     font-size: 0.85rem;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
   }
 
   // Summentabelle: nimmt die Resthoehe der Flex-Kette und scrollt IN sich - zwei
@@ -208,9 +208,9 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--card-bg);
   }
 
   &__table {
@@ -222,7 +222,7 @@
     td {
       padding: 0.55rem 1rem;
       text-align: right;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(var(--tint-rgb), 0.06);
     }
 
     th[scope='row'] {
@@ -231,11 +231,15 @@
     }
 
     // Deckender Hintergrund, sonst scheinen die Zeilen beim Scrollen durch.
+    // Bewusst NICHT auf var(--card-bg) umgestellt: das Token ist im Dunkeldesign
+    // nur zu 3% deckend (fuer Glaskarten gedacht) und liesse Zeilen durchscheinen.
+    // Bleibt bis zu einem eigenen "deckende Flaeche"-Token hartkodiert dunkel -
+    // im hellen Design zeigt der Tabellenkopf dadurch weiterhin eine dunkle Leiste.
     thead th {
       position: sticky;
       top: 0;
       z-index: 1;
-      background: #111113;
+      background: var(--surface-solid);
       color: #94a3b8;
       font-size: 0.9rem;
       font-weight: 600;
@@ -249,18 +253,18 @@
   }
 
   &__year-row {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(var(--tint-rgb), 0.04);
 
     th,
     td {
       font-weight: 600;
-      color: #f4f3f5;
+      color: var(--text-strong);
     }
   }
 
   &__month-row th[scope='row'] {
     padding-left: 2.8rem;
-    color: rgba(228, 226, 228, 0.85);
+    color: rgba(var(--on-surface-rgb), 0.85);
   }
 
   // Ganze Zeilenhoehe als Tippflaeche: am Wandtablet mit dem Finger aus Armlaenge.
@@ -281,7 +285,7 @@
   &__chevron {
     display: inline-block;
     width: 1.2rem;
-    color: #aac7ff;
+    color: var(--primary);
   }
 
   &__running {
@@ -311,6 +315,6 @@
 
   &__estimated {
     margin-right: 0.2rem;
-    color: #aac7ff;
+    color: var(--primary);
   }
 }

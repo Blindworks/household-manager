@@ -1,3 +1,4 @@
+import { AppearanceService } from '../../services/appearance.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
@@ -56,7 +57,8 @@ describe('TabletToniComponent', () => {
         provideRouter([]),
         { provide: PetSupplyService, useValue: petSupplySpy },
         { provide: TractiveService, useValue: tractiveSpy },
-        { provide: WeatherService, useValue: weatherSpy }
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]
     }).compileComponents();
 

@@ -1,5 +1,6 @@
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AppearanceService } from '../../services/appearance.service';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Observable, Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
@@ -106,6 +107,8 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
+  /** Hell/Dunkel gilt global (Admin -> Darstellung); das Wandtablet wechselt beim naechsten Abgleich mit. */
+  readonly lightTheme$ = inject(AppearanceService).isLight$;
   private readonly energyLiveService = inject(EnergyLiveService);
   private readonly ankerSolixService = inject(AnkerSolixService);
   private readonly temperatureService = inject(TemperatureService);

@@ -1,4 +1,4 @@
-<div class="lumina">
+<div class="lumina" [class.lumina--light]="lightTheme$ | async">
   <header class="lumina__clock">
     <h1 class="lumina__time">{{ clockTime }}</h1>
     <div class="lumina__clock-meta">

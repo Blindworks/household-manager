@@ -1,3 +1,4 @@
+import { AppearanceService } from '../../services/appearance.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
@@ -47,7 +48,8 @@ describe('TabletConsumptionComponent', () => {
         // fuer die Kopfzeile.
         provideRouter([]),
         { provide: MeterConsumptionSeriesService, useValue: serviceSpy },
-        { provide: WeatherService, useValue: weatherSpy }
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]
     }).compileComponents();
 

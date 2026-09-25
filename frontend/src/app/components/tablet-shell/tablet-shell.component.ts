@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Subscription, interval, startWith } from 'rxjs';
 import { WeatherService } from '../../services/weather.service';
+import { AppearanceService } from '../../services/appearance.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { weatherSymbol, weatherMaterialSymbol } from '../../shared/weather-icon.util';
 import { TABLET_VIEWS } from '../../shared/tablet-views';
@@ -28,6 +29,8 @@ export class TabletShellComponent implements OnInit, OnDestroy {
   @Input() heading = '';
 
   private readonly weatherService = inject(WeatherService);
+  /** Dieselbe globale Hell/Dunkel-Einstellung wie im Dashboard. */
+  readonly lightTheme$ = inject(AppearanceService).isLight$;
   private clockSubscription?: Subscription;
   private weatherSubscription?: Subscription;
 

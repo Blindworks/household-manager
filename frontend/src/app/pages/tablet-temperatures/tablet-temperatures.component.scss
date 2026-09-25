@@ -1,6 +1,10 @@
 // Inhalt der Tablet-Temperaturansicht. Kopfzeile und Ansichtsleiste liefert
 // app-tablet-shell; hier bleibt nur das Kachelraster, das sich die Resthoehe
 // teilt, damit alle Sensoren ohne Wischen sichtbar sind.
+//
+// Farben kommen ueber die von der Shell vererbten Custom Properties
+// (--card-bg, --on-surface-rgb, ...) - siehe _lumina-theme.scss. Diese Seite
+// kann .lumina--light wegen der Stil-Kapselung nicht selbst sehen.
 
 // Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
 // bis zum Chart. Fehlt sie an EINER Stelle, faellt alles darunter auf
@@ -18,7 +22,7 @@
   flex: 1;
   min-height: 0;
   gap: 0.75rem;
-  color: #e4e2e4;
+  color: var(--on-surface);
 
   /* Zeitraum und Messgroessen stehen als zwei Gruppen in der Kopfzeile. */
   &__controls {
@@ -31,8 +35,8 @@
     display: inline-flex;
     align-self: center;
     gap: 0.25rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid rgba(var(--tint-rgb), 0.08);
     border-radius: 12px;
     padding: 0.3rem;
     flex: 0 0 auto;
@@ -46,11 +50,11 @@
     cursor: pointer;
     font: inherit;
     font-size: 0.95rem;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
 
     &--active {
-      background: rgba(170, 199, 255, 0.16);
-      color: #aac7ff;
+      background: rgba(var(--primary-rgb), 0.16);
+      color: var(--primary);
     }
   }
 
@@ -63,7 +67,7 @@
     font-size: 1.25rem;
 
     &--error {
-      color: #ffb4ab;
+      color: var(--error);
     }
   }
 
@@ -80,9 +84,9 @@
     flex-direction: column;
     min-height: 0;
     padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--card-bg);
   }
 
   &__card-title {
@@ -95,9 +99,9 @@
     font-weight: 600;
     flex: 0 0 auto;
     // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
-    // schlaegt die vererbte helle Farbe - auf schwarzem Grund war der
-    // Sensorname dadurch kaum lesbar. Deshalb hier ausdruecklich hell.
-    color: #f4f3f5;
+    // schlaegt die vererbte Farbe - auf dunklem Grund war der Sensorname
+    // dadurch kaum lesbar. Deshalb hier ausdruecklich das Token.
+    color: var(--text-strong);
     letter-spacing: -0.01em;
   }
 

@@ -1,3 +1,4 @@
+import { AppearanceService } from '../../services/appearance.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -46,7 +47,8 @@ describe('TabletTemperaturesComponent', () => {
         // und zieht das Wetter fuer die Kopfzeile.
         provideRouter([]),
         { provide: TemperatureService, useValue: serviceSpy },
-        { provide: WeatherService, useValue: weatherSpy }
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]
     }).compileComponents();
 

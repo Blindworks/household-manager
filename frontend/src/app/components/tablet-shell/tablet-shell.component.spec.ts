@@ -1,7 +1,8 @@
+import { AppearanceService } from '../../services/appearance.service';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { TabletShellComponent } from './tablet-shell.component';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
@@ -21,19 +22,35 @@ class HostComponent {}
 
 describe('TabletShellComponent', () => {
   let weatherSpy: jasmine.SpyObj<WeatherService>;
+  let lightTheme$: BehaviorSubject<boolean>;
 
   const overview = {
     current: { temperature: 18.6, icon: 1 }
   } as unknown as WeatherOverview;
 
   beforeEach(async () => {
+    lightTheme$ = new BehaviorSubject(false);
     weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weatherSpy.getOverview.and.returnValue(of(overview));
 
     await TestBed.configureTestingModule({
       imports: [HostComponent],
-      providers: [provideRouter([]), { provide: WeatherService, useValue: weatherSpy }]
+      providers: [provideRouter([]), { provide: WeatherService, useValue: weatherSpy },
+        { provide: AppearanceService, useValue: { isLight$: lightTheme$ } }]
     }).compileComponents();
+  });
+
+  it('schaltet mit der globalen Einstellung zwischen dunklem und hellem Design um', () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const root = (fixture.nativeElement as HTMLElement).querySelector('.lumina')!;
+    expect(root.classList).not.toContain('lumina--light');
+
+    lightTheme$.next(true);
+    fixture.detectChanges();
+    expect(root.classList).toContain('lumina--light');
+
+    fixture.destroy();
   });
 
   it('zeigt Uhrzeit, Wetter, Titel und den projizierten Inhalt', () => {

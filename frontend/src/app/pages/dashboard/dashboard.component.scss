@@ -2,7 +2,12 @@
 //  Lumina Wand-Dashboard – Umsetzung des Stitch-Designs in SCSS.
 //  Farben, Typografie und Effekte sind lokal auf .lumina begrenzt, damit das
 //  globale App-Theme unberuehrt bleibt.
+//
+//  Farbtoken kommen aus lumina-theme (_lumina-theme.scss): dark-tokens ist
+//  hier die Grundeinstellung, .lumina--light schaltet auf hell um.
 // ============================================================================
+
+@use '../../shared/styles/lumina-theme';
 
 // Host fuellt den verfuegbaren Platz der .main-content-Flexspalte, damit das
 // Dashboard die Hoehe automatisch ausfuellt – mit oder ohne Header/Footer.
@@ -14,17 +19,15 @@
 
 .lumina {
   // ---- Design-Tokens (Material 3, aus dem Stitch-Entwurf) -----------------
-  --primary: #aac7ff;
+  // --on-primary/--on-secondary/--on-tertiary/--on-error/--surface stehen im
+  // Theme-Mixin nicht (dort nicht gebraucht) und bleiben deshalb hier fest.
   --on-primary: #003064;
-  --secondary: #53e16f;
   --on-secondary: #003911;
-  --tertiary: #e9c400;
   --on-tertiary: #3b2f00;
-  --error: #ffb4ab;
   --on-error: #690005;
-  --on-surface: #e4e2e4;
-  --on-surface-variant: #c0c6d6;
   --surface: #131315;
+
+  @include lumina-theme.dark-tokens;
 
   --gutter: 24px;
   --radius-xl: 1rem;
@@ -68,11 +71,13 @@
   padding: 40px;
   color: var(--on-surface);
   font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
-  background:
-    radial-gradient(1200px 600px at 70% -10%, rgba(170, 199, 255, 0.08), transparent 60%),
-    radial-gradient(900px 500px at 10% 110%, rgba(83, 225, 111, 0.06), transparent 60%),
-    #050505;
+  background: var(--lumina-bg);
   overflow: hidden;
+}
+
+// Helles Design: gleiche Struktur, andere Tokenwerte.
+.lumina--light {
+  @include lumina-theme.light-tokens;
 }
 
 // ---- Dezenter Ansichts-Umschalter (oben links) ---------------------------
@@ -87,9 +92,9 @@
   width: var(--btn-height);
   height: var(--btn-height);
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--tint-rgb), 0.08);
   border-radius: var(--radius-btn);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--tint-rgb), 0.03);
   color: var(--on-surface-variant);
   cursor: pointer;
   opacity: 0.35;
@@ -101,34 +106,34 @@
 
   &:hover {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(170, 199, 255, 0.3);
+    background: rgba(var(--tint-rgb), 0.06);
+    border-color: rgba(var(--primary-rgb), 0.3);
     color: var(--primary);
   }
 
   &--active {
     opacity: 0.6;
     color: var(--primary);
-    border-color: rgba(170, 199, 255, 0.25);
+    border-color: rgba(var(--primary-rgb), 0.25);
   }
 }
 
 // ---- Wiederverwendbare Glass-Card ----------------------------------------
 .lumina-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
   border-radius: var(--radius-xl);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--card-bg-hover);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
-    border-color: rgba(170, 199, 255, 0.3);
-    box-shadow: 0 0 30px rgba(170, 199, 255, 0.15);
+    border-color: var(--card-border-hover);
+    box-shadow: var(--card-shadow-hover);
   }
 }
 
@@ -140,7 +145,7 @@
   letter-spacing: 0.15em;
   line-height: 16px;
   text-transform: uppercase;
-  color: rgba(192, 198, 214, 0.7);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
 
   &--primary {
     color: var(--primary);
@@ -174,8 +179,8 @@
   font-size: clamp(34px, 4.4vw, 56px);
   line-height: 1.05;
   letter-spacing: -0.03em;
-  color: #fff;
-  text-shadow: 0 0 24px rgba(255, 255, 255, 0.18);
+  color: var(--text-strong);
+  text-shadow: 0 0 24px rgba(var(--tint-rgb), 0.18);
 }
 
 .lumina__clock-meta {
@@ -210,7 +215,7 @@
 .lumina__divider {
   width: 1px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--tint-rgb), 0.2);
 }
 
 .lumina__weather {
@@ -249,7 +254,7 @@
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(var(--tint-rgb), 0.06);
   }
 
   &--stale {
@@ -302,35 +307,35 @@
   height: 46px;
   flex: 0 0 auto;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--tint-rgb), 0.05);
   color: var(--on-surface);
   cursor: default;
   transition: 0.3s ease;
 
   &--on {
-    // Werte = --secondary (#53e16f) als Flaechen-/Schein-Ton; die Textfarbe
-    // ist ein von Hand aufgehellter --secondary-Ton fuer Lesbarkeit im Glow.
-    background: rgba(83, 225, 111, 0.13);
-    color: #c9f7d3;
+    // Werte = --secondary als Flaechen-/Schein-Ton; die Textfarbe ist ein von
+    // Hand aufgehellter --secondary-Ton fuer Lesbarkeit im Glow (kein Token -
+    // gilt nur fuer den dunklen Glow und ist im hellen Design ungenutzt fein).
+    background: rgba(var(--secondary-rgb), 0.13);
+    color: var(--on-secondary-container);
     box-shadow:
-      inset 0 0 0 1.5px rgba(83, 225, 111, 0.55),
-      0 0 22px -6px rgba(83, 225, 111, 0.85);
+      inset 0 0 0 1.5px rgba(var(--secondary-rgb), 0.55),
+      0 0 22px -6px rgba(var(--secondary-rgb), 0.85);
   }
 
   &--off {
     // Kein Schein (Konstruktionsprinzip dieser Variante: Ruhe statt
-    // Warnfarbe) - Werte = --error (#ffb4ab) in Alpha-Abstufungen.
-    background: rgba(255, 180, 171, 0.07);
-    color: rgba(255, 180, 171, 0.75);
-    box-shadow: inset 0 0 0 1.5px rgba(255, 180, 171, 0.32);
+    // Warnfarbe) - Werte = --error in Alpha-Abstufungen.
+    background: rgba(var(--error-rgb), 0.07);
+    color: rgba(var(--error-rgb), 0.75);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--error-rgb), 0.32);
   }
 
   &--neutral {
     // Nur ein leiser Ring, keine Flaechentoenung, kein Schein - darf nie wie
-    // --off aussehen. Werte = --on-surface-variant (#c0c6d6) / --on-surface
-    // (#e4e2e4).
-    box-shadow: inset 0 0 0 1.5px rgba(192, 198, 214, 0.22);
-    color: rgba(228, 226, 228, 0.5);
+    // --off aussehen. Werte = --on-surface-variant / --on-surface.
+    box-shadow: inset 0 0 0 1.5px rgba(var(--on-surface-variant-rgb), 0.22);
+    color: rgba(var(--on-surface-rgb), 0.5);
   }
 }
 
@@ -463,8 +468,8 @@
   height: var(--btn-height);
   border: none;
   border-radius: var(--radius-btn);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(192, 198, 214, 0.7);
+  background: rgba(var(--tint-rgb), 0.05);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 
@@ -481,13 +486,13 @@
 .lumina__switch-empty {
   margin: 0;
   font-size: 14px;
-  color: rgba(192, 198, 214, 0.7);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
 }
 
 .lumina__switch-error {
   margin: 0;
   font-size: 12px;
-  color: #fca5a5;
+  color: var(--danger);
 }
 
 // Der Dialog ist hell: der Fehlerton der dunklen Kachel waere dort zu blass.
@@ -516,7 +521,7 @@
 .lumina__consumer-empty {
   margin: 6px 0 0;
   font-size: 14px;
-  color: rgba(192, 198, 214, 0.5);
+  color: rgba(var(--on-surface-variant-rgb), 0.5);
 }
 
 .lumina__consumer-row {
@@ -527,14 +532,14 @@
   width: 100%;
   background: none;
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--tint-rgb), 0.06);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(var(--tint-rgb), 0.04);
   }
 
   &--unavailable {
@@ -544,7 +549,7 @@
 
 .lumina__consumer-name {
   font-size: 15px;
-  color: rgba(192, 198, 214, 0.85);
+  color: rgba(var(--on-surface-variant-rgb), 0.85);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -594,7 +599,7 @@
 .lumina__room-icon {
   padding: 16px;
   border-radius: var(--radius-xl);
-  background: rgba(170, 199, 255, 0.1);
+  background: rgba(var(--primary-rgb), 0.1);
   color: var(--primary);
   transition: all 0.3s ease;
 
@@ -715,7 +720,7 @@
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--tint-rgb), 0.05);
   }
 }
 
@@ -727,7 +732,7 @@
 
 .lumina__room-chevron {
   font-size: 26px;
-  color: rgba(192, 198, 214, 0.7);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
   transition: transform 0.25s ease;
 }
 
@@ -770,11 +775,11 @@
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(var(--tint-rgb), 0.02);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--tint-rgb), 0.1);
     border-radius: 10px;
   }
 }
@@ -785,7 +790,7 @@
   gap: 12px;
   padding: 10px 12px;
   border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--tint-rgb), 0.05);
   transition: background-color 0.3s ease;
 
   // Nur wirklich antippbare Karten (mit dismissEntityId) sollen sich so anfuehlen —
@@ -794,7 +799,7 @@
     cursor: pointer;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(var(--tint-rgb), 0.1);
     }
   }
 
@@ -833,7 +838,7 @@
 
   &--muted {
     .lumina__insight-icon {
-      color: rgba(192, 198, 214, 0.6);
+      color: rgba(var(--on-surface-variant-rgb), 0.6);
     }
   }
 }
@@ -863,7 +868,7 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.3;
-  color: rgba(192, 198, 214, 0.8);
+  color: rgba(var(--on-surface-variant-rgb), 0.8);
 }
 
 // ============================================================================
@@ -894,10 +899,10 @@
   color: var(--secondary);
 
   &--off {
-    color: rgba(192, 198, 214, 0.6);
+    color: rgba(var(--on-surface-variant-rgb), 0.6);
 
     .lumina__status-dot {
-      background: rgba(192, 198, 214, 0.5);
+      background: rgba(var(--on-surface-variant-rgb), 0.5);
       box-shadow: none;
     }
   }
@@ -908,7 +913,7 @@
   height: 8px;
   border-radius: var(--radius-full);
   background: var(--secondary);
-  box-shadow: 0 0 8px rgba(83, 225, 111, 0.6);
+  box-shadow: 0 0 8px rgba(var(--secondary-rgb), 0.6);
 }
 
 .lumina__gauges {
@@ -961,7 +966,7 @@
 }
 
 .lumina__ring-track {
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: rgba(var(--tint-rgb), 0.05);
 }
 
 .lumina__gauge-value {
@@ -998,7 +1003,7 @@
 
 .lumina__gauge-label {
   font-size: 12px;
-  color: rgba(192, 198, 214, 0.7);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
   text-align: center;
 }
 
@@ -1297,7 +1302,7 @@
 .lumina__secured-detail {
   margin: 4px 0 0;
   font-size: 12px;
-  color: rgba(192, 198, 214, 0.7);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
 }
 
 .lumina__secured--open .lumina__secured-icon {
@@ -1536,7 +1541,7 @@
 .lumina__mode-error {
   margin: 0;
   font-size: 12px;
-  color: #fca5a5;
+  color: var(--danger);
 }
 
 .lumina__mode {
