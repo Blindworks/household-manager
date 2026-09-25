@@ -33,8 +33,10 @@ export class FlowService {
     return this.http.post<FlowDetail>(`${this.baseUrl}/import`, payload);
   }
 
-  saveDraft(id: number, name: string, description: string, draftDefinition: string): Observable<FlowDetail> {
-    return this.http.put<FlowDetail>(`${this.baseUrl}/${id}`, { name, description, draftDefinition });
+  /** `category: ''` entfernt den Bereich (Teil-Update-Semantik des Backends). */
+  saveDraft(id: number, name: string, description: string, draftDefinition: string,
+            category: string): Observable<FlowDetail> {
+    return this.http.put<FlowDetail>(`${this.baseUrl}/${id}`, { name, description, category, draftDefinition });
   }
 
   /**

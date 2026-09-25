@@ -21,6 +21,8 @@ export interface FlowSummary {
   id: number;
   name: string;
   description?: string;
+  /** Bereich für die Gliederung der Übersicht; fehlt/null = „Sonstiges". */
+  category?: string | null;
   enabled: boolean;
   deployed: boolean;
   deployedAt?: string;
