@@ -1,19 +1,23 @@
-// Schalterzeilen: eine Karte je Schalter mit Icon-Chip, Name, Zustandszeile
-// und dekorativem Umschalter. Die ganze Karte ist das Klickziel.
+// Schalterzeilen im Knopf-Stil der Modus-Leiste (Tesla-Styleguide): flacher,
+// heller Knopf mit 1 px Rand und 4 px Ecken, eingeschaltet Tesla-Blau mit
+// weisser Schrift. Die ganze Karte ist das Klickziel.
+//
+// Die --btn-*-Token kommen aus .lumina (dashboard.component.scss); Custom
+// Properties erben trotz Stil-Kapselung. Die Fallbacks halten die Liste auch
+// ausserhalb des Dashboards im selben Aussehen.
 .switch-list {
-  --switch-accent: var(--secondary, #53e16f);
-  --switch-accent-rgb: 83, 225, 111;
-  --switch-surface: rgba(255, 255, 255, 0.04);
-  --switch-surface-hover: rgba(255, 255, 255, 0.08);
-  --switch-border: rgba(255, 255, 255, 0.07);
-  --switch-chip: rgba(255, 255, 255, 0.07);
-  --switch-track: rgba(255, 255, 255, 0.14);
-  --switch-knob: rgba(255, 255, 255, 0.9);
-  --switch-muted: rgba(255, 255, 255, 0.55);
+  --switch-bg: var(--btn-bg, #f4f4f4);
+  --switch-bg-hover: #ffffff;
+  --switch-fg: var(--btn-fg, #393c41);
+  --switch-fg-muted: var(--btn-fg-muted, rgba(57, 60, 65, 0.72));
+  --switch-border: var(--btn-border, #d0d1d2);
+  --switch-selected-bg: var(--btn-selected-bg, #3e6ae1);
+  --switch-selected-fg: var(--btn-selected-fg, #ffffff);
+  --switch-radius: var(--radius-btn, 4px);
 
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 // Zweispaltig (Tablet-Kachel): die Karten teilen sich die Breite, statt
@@ -21,41 +25,38 @@
 .switch-list--grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .switch-list__row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
-  min-height: 68px;
-  padding: 12px 14px 12px 12px;
+  min-height: 52px;
+  padding: 6px 16px;
   border: 1px solid var(--switch-border);
-  border-radius: 1.1rem;
-  background: var(--switch-surface);
-  color: inherit;
+  border-radius: var(--switch-radius);
+  background: var(--switch-bg);
+  color: var(--switch-fg);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition:
-    background 0.25s ease,
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
-    transform 0.15s ease;
+  box-shadow: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: var(--switch-surface-hover);
-    border-color: rgba(255, 255, 255, 0.14);
+    background: var(--switch-bg-hover);
   }
 
   &:active:not(:disabled) {
     transform: scale(0.98);
   }
 
+  // Waehrend ein Schaltbefehl laeuft (wie .lumina__mode--pending)
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: progress;
   }
 
@@ -64,37 +65,28 @@
   }
 }
 
-// Runder Icon-Chip; leuchtet im eingeschalteten Zustand in der Akzentfarbe.
 .switch-list__icon-wrap {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--switch-chip);
-  transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 
 .switch-list__icon {
-  font-size: 22px;
-  opacity: 0.75;
-  transition: color 0.25s ease, opacity 0.25s ease;
+  font-size: 20px;
 }
 
 .switch-list__text {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1px;
   min-width: 0;
 }
 
 .switch-list__name {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font: var(--btn-font, 500 14px/20px 'Universal Sans Text', -apple-system, Arial, sans-serif);
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -103,108 +95,37 @@
 .switch-list__meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--switch-fg-muted);
   white-space: nowrap;
   overflow: hidden;
 }
 
-.switch-list__state {
-  color: var(--switch-muted);
-  transition: color 0.25s ease;
-}
-
 .switch-list__power {
-  color: var(--switch-accent);
   font-weight: 600;
 
   &::before {
     content: '·';
-    margin-right: 8px;
-    color: var(--switch-muted);
+    margin-right: 6px;
     font-weight: 400;
   }
 }
 
-// Umschalter (rein dekorativ; die ganze Karte ist das Klickziel)
-.switch-list__toggle {
-  flex: none;
-  position: relative;
-  width: 46px;
-  height: 26px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--switch-track);
-  transition: background 0.25s ease, box-shadow 0.25s ease;
-}
-
-.switch-list__knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--switch-knob);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
+// Eingeschaltet: Tesla-Blau, wie .lumina__mode--active
 .switch-list__row--on {
-  background: linear-gradient(
-    135deg,
-    rgba(var(--switch-accent-rgb), 0.16),
-    rgba(var(--switch-accent-rgb), 0.05) 60%,
-    var(--switch-surface)
-  );
-  border-color: rgba(var(--switch-accent-rgb), 0.35);
-  box-shadow: 0 0 0 1px rgba(var(--switch-accent-rgb), 0.08) inset;
+  background: var(--switch-selected-bg);
+  border-color: var(--switch-selected-bg);
+  color: var(--switch-selected-fg);
 
   &:hover:not(:disabled) {
-    border-color: rgba(var(--switch-accent-rgb), 0.5);
+    background: var(--switch-selected-bg);
   }
 
-  .switch-list__icon-wrap {
-    background: rgba(var(--switch-accent-rgb), 0.18);
-    box-shadow: 0 0 18px rgba(var(--switch-accent-rgb), 0.3);
-  }
-
-  .switch-list__icon {
-    opacity: 1;
-    color: var(--switch-accent);
-  }
-
-  .switch-list__state {
-    color: var(--switch-accent);
-  }
-
-  .switch-list__toggle {
-    background: var(--switch-accent);
-    box-shadow: 0 0 12px rgba(var(--switch-accent-rgb), 0.45);
-  }
-
-  .switch-list__knob {
-    transform: translateX(20px);
-    background: #ffffff;
-  }
-}
-
-// ---- Heller Dialog-Hintergrund -------------------------------------------
-// Nur die Farbtoken wechseln; Aufbau und Geometrie bleiben identisch.
-.switch-list--dialog {
-  --switch-accent: #16a34a;
-  --switch-accent-rgb: 22, 163, 74;
-  --switch-surface: rgba(15, 23, 42, 0.035);
-  --switch-surface-hover: rgba(15, 23, 42, 0.07);
-  --switch-border: rgba(15, 23, 42, 0.08);
-  --switch-chip: rgba(15, 23, 42, 0.07);
-  --switch-track: rgba(15, 23, 42, 0.22);
-  --switch-knob: #ffffff;
-  --switch-muted: rgba(15, 23, 42, 0.55);
-
-  .switch-list__row:hover:not(:disabled) {
-    border-color: rgba(15, 23, 42, 0.16);
+  .switch-list__meta {
+    color: var(--switch-selected-fg);
+    opacity: 0.85;
   }
 }

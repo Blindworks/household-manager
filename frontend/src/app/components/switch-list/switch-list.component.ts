@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { SwitchEntity } from '../../models/switch.model';
 
 /**
- * Praesentationale Liste von Schalter-Zeilen (Icon, Name, Zustand, Umschalter).
+ * Praesentationale Liste von Schalter-Zeilen (Icon, Name, Zustand) im
+ * Knopf-Stil der Modus-Leiste: grau = aus, blau = an.
  * Haelt keinen Zustand und ruft keine Services auf: Kachel und Dialog reichen
  * die Daten herein und behandeln das `toggled`-Ereignis.
  */
