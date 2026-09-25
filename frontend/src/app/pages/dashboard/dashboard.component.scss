@@ -874,13 +874,69 @@
 // ============================================================================
 //  Energiefluss-Gauges (PV / Verbrauch / Bezug)
 // ============================================================================
+// Das Padding sitzt im Klickbereich, nicht an der Karte: so reicht die
+// Klickflaeche fuer den Energiefluss-Dialog bis an den Kartenrand.
 .lumina__energy {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.lumina__energy-flow {
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 24px 28px;
-  position: relative;
-  overflow: hidden;
+}
+
+// ---- Groesste Verbraucher in der Energiefluss-Kachel (nur Tablet) ---------
+// Die Karte bleibt bei ihrer Inhaltshoehe: gestreckt bis zum unteren Rand
+// liefe sie unter den drei Zeilen leer aus.
+.lumina__energy-consumers {
+  display: flex;
+  flex-direction: column;
+  margin: 0 28px;
+  padding: 10px 0 12px;
+  border-top: 1px solid rgba(var(--tint-rgb), 0.08);
+
+  .lumina__consumer-rows {
+    margin-top: 2px;
+  }
+
+  // Kompakter als die Website-Kachel: die Zeilen stehen unter den Gauges.
+  .lumina__consumer-row {
+    padding: 6px 0;
+  }
+
+  .lumina__consumer-name {
+    font-size: 13px;
+  }
+
+  .lumina__consumer-value {
+    font-size: 14px;
+  }
+
+  .lumina__consumer-empty {
+    font-size: 13px;
+  }
+
+  // Der Detailknopf soll den Abschnittskopf nicht auf Knopfhoehe aufblaehen.
+  .lumina__switch-all {
+    width: 30px;
+    height: 30px;
+
+    .material-symbols-outlined {
+      font-size: 16px;
+    }
+  }
+}
+
+.lumina__energy-consumers-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .lumina__energy-head {
@@ -1743,17 +1799,24 @@
 // ============================================================================
 //  Energiefluss-Kachel: klickbar
 // ============================================================================
-.lumina__energy--clickable {
+.lumina__energy-flow {
   cursor: pointer;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
+  border-radius: inherit;
 
   &:focus-visible {
     outline: 2px solid var(--secondary);
-    outline-offset: 3px;
+    outline-offset: -3px;
   }
+}
+
+// Ohne Verbraucher ist der Klickbereich die ganze Karte: dann hebt sie sich
+// wie bisher. Mit Verbrauchern wuerde das die fremden Klickziele mitheben.
+.lumina__energy:not(.lumina__energy--with-consumers):hover {
+  transform: translateY(-2px);
+}
+
+.lumina__energy--with-consumers .lumina__energy-flow:hover {
+  background: rgba(var(--tint-rgb), 0.03);
 }
 
 // ============================================================================

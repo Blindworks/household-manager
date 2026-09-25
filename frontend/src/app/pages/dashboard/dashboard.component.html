@@ -129,8 +129,11 @@
           </div>
         </div>
 
-        <!-- Verbraucher-Kachel: Stromverbraucher, groesster zuerst -->
+        <!-- Verbraucher-Kachel: Stromverbraucher, groesster zuerst. In der
+             Tablet-Ansicht stehen die Verbraucher stattdessen in der
+             Energiefluss-Kachel, wo rechts unten Platz frei war. -->
         <div
+          *ngIf="!accordionActive"
           class="lumina-card lumina__room lumina__consumer-tile lumina__fade"
           [class.lumina__room--accordion]="accordionActive"
           [class.lumina__room--static]="isTileStatic('consumers')"
@@ -229,50 +232,89 @@
       </div>
 
       <div
-        class="lumina-card lumina__energy lumina__energy--clickable lumina__fade"
+        class="lumina-card lumina__energy lumina__fade"
+        [class.lumina__energy--with-consumers]="accordionActive"
         style="--delay: 0.6s"
-        role="button"
-        tabindex="0"
-        (click)="openFlowDialog()"
-        (keydown.enter)="openFlowDialog()"
-        (keydown.space)="$event.preventDefault(); openFlowDialog()"
-        aria-label="Energiefluss-Details öffnen"
       >
-        <div class="lumina__energy-head">
-          <h3 class="lumina__label">Energiefluss</h3>
-          <p class="lumina__energy-status" [class.lumina__energy-status--off]="!energyConnected">
-            <span class="lumina__status-dot"></span>
-            {{ energyConnected ? 'Live' : 'Getrennt' }}
-          </p>
+        <!-- Nur dieser Bereich oeffnet den Energiefluss-Dialog: die Verbraucher
+             darunter haben eigene Klickziele und duerfen nicht darin stecken. -->
+        <div
+          class="lumina__energy-flow"
+          role="button"
+          tabindex="0"
+          (click)="openFlowDialog()"
+          (keydown.enter)="openFlowDialog()"
+          (keydown.space)="$event.preventDefault(); openFlowDialog()"
+          aria-label="Energiefluss-Details öffnen"
+        >
+          <div class="lumina__energy-head">
+            <h3 class="lumina__label">Energiefluss</h3>
+            <p class="lumina__energy-status" [class.lumina__energy-status--off]="!energyConnected">
+              <span class="lumina__status-dot"></span>
+              {{ energyConnected ? 'Live' : 'Getrennt' }}
+            </p>
+          </div>
+          <div class="lumina__gauges">
+            <div
+              *ngFor="let gauge of energyGauges"
+              class="lumina__gauge"
+              [ngClass]="'lumina__gauge--' + gauge.tone"
+            >
+              <div class="lumina__gauge-ring">
+                <svg class="lumina__ring-svg" viewBox="0 0 100 100">
+                  <circle class="lumina__ring-track" cx="50" cy="50" r="40" fill="none" stroke-width="10"></circle>
+                  <circle
+                    class="lumina__gauge-value"
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                    [attr.stroke-dasharray]="ringCircumference"
+                    [attr.stroke-dashoffset]="gauge.offset"
+                  ></circle>
+                </svg>
+                <span class="material-symbols-outlined lumina__gauge-icon">{{ gauge.icon }}</span>
+              </div>
+              <div class="lumina__gauge-readout">
+                <span class="lumina__gauge-number">{{ gauge.value }}</span>
+                <span class="lumina__gauge-unit">W</span>
+              </div>
+              <span class="lumina__gauge-label">{{ gauge.label }}</span>
+            </div>
+          </div>
         </div>
-        <div class="lumina__gauges">
-          <div
-            *ngFor="let gauge of energyGauges"
-            class="lumina__gauge"
-            [ngClass]="'lumina__gauge--' + gauge.tone"
-          >
-            <div class="lumina__gauge-ring">
-              <svg class="lumina__ring-svg" viewBox="0 0 100 100">
-                <circle class="lumina__ring-track" cx="50" cy="50" r="40" fill="none" stroke-width="10"></circle>
-                <circle
-                  class="lumina__gauge-value"
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="none"
-                  stroke-width="10"
-                  stroke-linecap="round"
-                  [attr.stroke-dasharray]="ringCircumference"
-                  [attr.stroke-dashoffset]="gauge.offset"
-                ></circle>
-              </svg>
-              <span class="material-symbols-outlined lumina__gauge-icon">{{ gauge.icon }}</span>
-            </div>
-            <div class="lumina__gauge-readout">
-              <span class="lumina__gauge-number">{{ gauge.value }}</span>
-              <span class="lumina__gauge-unit">W</span>
-            </div>
-            <span class="lumina__gauge-label">{{ gauge.label }}</span>
+        <!-- Groesste Verbraucher (nur Tablet-Ansicht): ersetzt dort die
+             Verbraucher-Kachel; der Knopf oeffnet dieselbe Gesamtliste. -->
+        <div *ngIf="accordionActive" class="lumina__energy-consumers">
+          <div class="lumina__energy-consumers-head">
+            <h3 class="lumina__label">Größte Verbraucher</h3>
+            <button
+              type="button"
+              class="lumina__switch-all"
+              (click)="openConsumerDialog()"
+              title="Alle Verbraucher anzeigen"
+              aria-label="Alle Verbraucher anzeigen"
+            >
+              <span class="material-symbols-outlined">expand_content</span>
+            </button>
+          </div>
+          <div class="lumina__consumer-rows">
+            <p *ngIf="topConsumers.length === 0" class="lumina__consumer-empty">
+              Keine Verbraucher
+            </p>
+            <button
+              *ngFor="let consumer of topConsumers | slice: 0 : consumerEnergyRows"
+              type="button"
+              class="lumina__consumer-row"
+              [class.lumina__consumer-row--unavailable]="consumer.unavailable"
+              (click)="openHistoryDialog(consumer)"
+              [attr.aria-label]="'Verlauf von ' + consumer.displayName + ' anzeigen'"
+            >
+              <span class="lumina__consumer-name">{{ consumer.displayName }}</span>
+              <span class="lumina__consumer-value">{{ powerLabel(consumer) }}</span>
+            </button>
           </div>
         </div>
       </div>

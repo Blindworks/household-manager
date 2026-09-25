@@ -1310,6 +1310,102 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
     discardPeriodicTasks();
   }));
 
+  describe('in der Tablet-Ansicht', () => {
+    beforeEach(() => localStorage.removeItem('household-manager-view-mode'));
+    afterEach(() => localStorage.removeItem('household-manager-view-mode'));
+
+    const tabletFixture = () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.componentInstance.viewMode.toggle();
+      fixture.detectChanges();
+      return fixture;
+    };
+
+    it('zeigt die groessten Verbraucher in der Energiefluss-Kachel', fakeAsync(() => {
+      const fixture = tabletFixture();
+      const section: HTMLElement | null =
+        fixture.nativeElement.querySelector('.lumina__energy .lumina__energy-consumers');
+
+      expect(section).not.toBeNull();
+      expect(section!.querySelectorAll('.lumina__consumer-row').length).toBe(1);
+      expect(section!.textContent).toContain('Waschmaschine');
+      expect(section!.textContent).toContain('1.250 W');
+
+      discardPeriodicTasks();
+    }));
+
+    it('oeffnet ueber den Detailknopf die Gesamtliste, nicht den Energiefluss', fakeAsync(() => {
+      const fixture = tabletFixture();
+      const detail: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.lumina__energy-consumers .lumina__switch-all');
+
+      detail.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.consumerDialogOpen).toBeTrue();
+      expect(fixture.componentInstance.flowDialogOpen).toBeFalse();
+
+      discardPeriodicTasks();
+    }));
+
+    it('oeffnet per Zeilenklick den Verlauf, nicht den Energiefluss', fakeAsync(() => {
+      const fixture = tabletFixture();
+      const row: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.lumina__energy-consumers .lumina__consumer-row');
+
+      row.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.historyConsumer?.entityId).toBe('sensor.meross_wm_power');
+      expect(fixture.componentInstance.flowDialogOpen).toBeFalse();
+
+      discardPeriodicTasks();
+    }));
+
+    it('oeffnet den Energiefluss weiterhin ueber den Gauge-Bereich', fakeAsync(() => {
+      const fixture = tabletFixture();
+      const flow: HTMLElement = fixture.nativeElement.querySelector('.lumina__energy-flow');
+
+      flow.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.flowDialogOpen).toBeTrue();
+
+      discardPeriodicTasks();
+    }));
+  });
+
+  it('zeigt auf der Website-Kachel vier, im Tablet-Energiefluss nur die drei groessten Verbraucher', fakeAsync(() => {
+    localStorage.removeItem('household-manager-view-mode');
+    consumerServiceSpy.getConsumers.and.returnValue(of(
+      Array.from({ length: 4 }, (_, i) => consumer({ entityId: `sensor.c${i}_power`, displayName: `Gerät ${i}` }))));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.lumina__consumer-tile .lumina__consumer-row').length).toBe(4);
+
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+    const rows: HTMLElement[] =
+      Array.from(fixture.nativeElement.querySelectorAll('.lumina__energy-consumers .lumina__consumer-row'));
+    expect(rows.length).toBe(3);
+    expect(rows[0].textContent).toContain('Gerät 0');
+
+    localStorage.removeItem('household-manager-view-mode');
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt in der Website-Ansicht keine Verbraucher in der Energiefluss-Kachel', fakeAsync(() => {
+    localStorage.removeItem('household-manager-view-mode');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.lumina__energy-consumers')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__consumer-tile')).not.toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
   it('formatiert die Leistung deutsch und ganzzahlig', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
@@ -1759,39 +1855,15 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
     expect(component.isTileOpen('switches')).toBeTrue();
     expect(component.isTileCollapsible('switches')).toBeFalse();
 
-    // Nur die Verbraucher-Kachel hat einen Aufklapp-Kopf ...
-    const toggles: HTMLButtonElement[] =
-      Array.from(fixture.nativeElement.querySelectorAll('.lumina__room-toggle'));
-    expect(toggles.length).toBe(1);
-    expect(toggles[0].textContent).toContain('Verbraucher');
-
-    // ... und ist als einzige zugeklappt und ueber die volle Breite gesetzt.
-    const collapsed = fixture.nativeElement.querySelectorAll('.lumina__room--collapsed');
-    expect(collapsed.length).toBe(1);
-    expect(collapsed[0].classList).toContain('lumina__consumer-tile');
-    expect(collapsed[0].classList).toContain('lumina__room--collapsible');
+    // Die Verbraucher stehen in der Tablet-Ansicht in der Energiefluss-Kachel:
+    // eine eigene Verbraucher-Kachel samt Aufklapp-Kopf gibt es dort nicht.
+    expect(fixture.nativeElement.querySelector('.lumina__consumer-tile')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__room-toggle')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
 
     // Die dauerhaft offene Kachel traegt ihren Titel wieder im Inhalt.
     const staticTiles = fixture.nativeElement.querySelectorAll('.lumina__room--static');
     expect(staticTiles.length).toBe(1);
-
-    discardPeriodicTasks();
-  }));
-
-  it('klappt die Verbraucher-Kachel auf, ohne die Schalter zu schliessen', fakeAsync(() => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.componentInstance.viewMode.toggle();
-    fixture.detectChanges();
-    const component = fixture.componentInstance;
-
-    const toggle: HTMLButtonElement =
-      fixture.nativeElement.querySelector('.lumina__room-toggle');
-    toggle.click();
-    fixture.detectChanges();
-
-    expect(component.isTileOpen('consumers')).toBeTrue();
-    expect(component.isTileOpen('switches')).toBeTrue();
-    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
 
     discardPeriodicTasks();
   }));

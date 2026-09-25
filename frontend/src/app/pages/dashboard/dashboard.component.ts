@@ -238,6 +238,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly APPLIANCE_REFRESH_MS = 30000;
   /** Anzahl der Verbraucher auf der Kachel; alle weiteren stehen im Dialog. */
   private static readonly CONSUMER_TILE_LIMIT = 4;
+  /** Zeilen der Verbraucher in der Tablet-Energiefluss-Kachel (Teilmenge der Kachel-Liste). */
+  readonly consumerEnergyRows = 3;
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
   private static readonly CONSUMER_REFRESH_MS = 30000;
   private static readonly PETS_REFRESH_MS = 60000;
