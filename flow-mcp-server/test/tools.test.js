@@ -86,6 +86,29 @@ test('flow_update serialisiert die Definition als draftDefinition-String', async
   assert.equal(requests[0].body.draftDefinition, JSON.stringify(definition));
 });
 
+test('flow_create schickt den Bereich mit', async () => {
+  route('POST', '/v1/flows/import', 200, { id: 9, name: 'Neu', draftDefinition: '{"nodes":[],"wires":[]}' });
+  await tools.flow_create.handler(client, {
+    name: 'Neu', category: 'Licht & Bewegung', definition: { nodes: [], wires: [] },
+  });
+
+  assert.equal(requests[0].body.category, 'Licht & Bewegung');
+});
+
+test('flow_update ohne category lässt den Bereich weg (unverändert)', async () => {
+  route('PUT', '/v1/flows/3', 200, { id: 3, name: 'X', draftDefinition: '{"nodes":[],"wires":[]}' });
+  await tools.flow_update.handler(client, { id: 3, description: 'neu' });
+
+  assert.equal('category' in requests[0].body, false);
+});
+
+test('flow_update mit leerem category entfernt den Bereich', async () => {
+  route('PUT', '/v1/flows/3', 200, { id: 3, name: 'X', draftDefinition: '{"nodes":[],"wires":[]}' });
+  await tools.flow_update.handler(client, { id: 3, category: '' });
+
+  assert.equal(requests[0].body.category, '');
+});
+
 test('flow_deploy reicht ein 400-ValidationResult als fachliches Ergebnis durch', async () => {
   route('POST', '/v1/flows/5/deploy', 400, { valid: false, errors: ['entityId fehlt'] });
   const result = await tools.flow_deploy.handler(client, { id: 5 });
@@ -142,7 +165,7 @@ test('nicht erreichbares Backend ergibt eine lesbare Fehlermeldung', async () =>
   );
 });
 
-// Die Grenzen spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000)).
+// Die Grenzen spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000), category VARCHAR(60)).
 // Das Backend lehnt längere Werte mit 400 ab; das Schema fängt sie schon vor dem Request ab.
 for (const toolName of ['flow_create', 'flow_update']) {
   test(`${toolName}: Beschreibung über 1000 Zeichen wird vom Schema abgelehnt`, async () => {
@@ -157,5 +180,12 @@ for (const toolName of ['flow_create', 'flow_update']) {
     const schema = z.object(tools[toolName].inputSchema).partial();
     assert.equal(schema.safeParse({ name: 'n'.repeat(255) }).success, true);
     assert.equal(schema.safeParse({ name: 'n'.repeat(256) }).success, false);
+  });
+
+  test(`${toolName}: Bereich über 60 Zeichen wird vom Schema abgelehnt`, async () => {
+    const { z } = await import('zod');
+    const schema = z.object(tools[toolName].inputSchema).partial();
+    assert.equal(schema.safeParse({ category: 'c'.repeat(60) }).success, true);
+    assert.equal(schema.safeParse({ category: 'c'.repeat(61) }).success, false);
   });
 }

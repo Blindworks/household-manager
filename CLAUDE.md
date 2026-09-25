@@ -460,6 +460,14 @@ docker-compose down
 - Gesetzt in `FlowEngine.runFrom`, aber **nur, wenn der Lauf an einer Trigger-Node startet** (auch Test-Inject): Delay-/Timer-Nodes setzen den Lauf über denselben Pfad an ihrer eigenen Node fort und dürfen den Zeitpunkt nicht verschieben. „Ausgelöst" heißt: der Trigger hat gefeuert — ob nachgelagerte Bedingungen durchließen, sagt die Spalte nicht
 - `FlowTriggerRecorder` schreibt per Bulk-Update und wirft nie. Das Entity-Feld ist `insertable/updatable = false`, sonst überschriebe ein `save()` eines vorher geladenen Flows (Editor, Deploy) einen zwischenzeitlich gesetzten Zeitpunkt mit dem alten Wert; `updated_at` bleibt dabei unberührt
 
+### Flow-Engine: Bereiche in der Übersicht
+- Spec: `docs/superpowers/specs/2026-09-25-flow-bereiche-design.md`. Spalte `flows.category` (Changeset `20260925-0057`, VARCHAR(60), NULL = „Sonstiges"); `/flows` zeigt je Bereich einen auf-/zuklappbaren Abschnitt, alphabetisch, „Sonstiges" zuletzt, dazu eine Suche über Name und Beschreibung
+- **Gliederung nach Zweck** (Nutzerentscheidung 2026-09-25), nicht nach Raum oder Auslöser: Modi & Szenen, Licht & Bewegung, Taster, Sicherheit & Warnungen, Haushaltsgeräte, Erinnerungen, System & Diagnose. Namensregel: „was passiert, wann" — ohne Bereich, ohne Nummer im Namen
+- **Freitext, keine feste Liste.** Konsistenz halten die MCP-Tool-Beschreibung (vorhandene Bereiche aus `flow_list` wiederverwenden) und die `<datalist>`-Vorschläge im Editor. Ein vertippter Bereich erzeugt still einen eigenen Abschnitt — Korrektur per `flow_update`
+- `FlowService.normalizeCategory` ist die einzige Normalisierung (trim, leer ⇒ NULL). **`PUT` ist Teil-Update:** `category` fehlt ⇒ unverändert, `""` ⇒ entfernt; ohne diese Unterscheidung löschte jede reine Beschreibungskorrektur per MCP den Bereich. > 60 Zeichen ⇒ 400 (`@Size`, `FlowFieldLimits.CATEGORY_MAX`, im MCP-Schema gespiegelt — die Grenze steht damit zweimal)
+- `groupFlowsByCategory` (`pages/flows/flow-grouping.util.ts`) ist die einzige Gruppierungsregel; der Klappzustand liegt in `localStorage` (`flow-section-storage.util.ts`, wirft nie). Während einer Suche ist alles aufgeklappt, der gemerkte Zustand bleibt unberührt
+- Nebenbei behoben: der Editor zählte nur den Graphen als Änderung, eine reine Umbenennung ließ „Speichern" gesperrt — Name und Bereich sind jetzt Teil des Vergleichsstands (`snapshot()`)
+
 ### Flow-Engine: KI-Autoring via MCP
 - Flows werden primär durch eine KI erstellt und gepflegt (Entscheidung 2026-07-20); der visuelle Editor bleibt als Viewer/Debug-Werkzeug, wird aber nicht weiter ausgebaut
 - `flow-mcp-server/` (Node ≥20, stdio) wrappt die REST-API `/api/v1/flows` als MCP-Tools; Registrierung für Claude Code in `.mcp.json` (Server-Name `household-flows`), Setup: `cd flow-mcp-server && npm install`

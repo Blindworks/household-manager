@@ -2,9 +2,10 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { EMPTY, forkJoin, timer } from 'rxjs';
+import { EMPTY, forkJoin, of, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { FlowService } from '../../services/flow.service';
+import { distinctCategories } from './flow-grouping.util';
 import { EntityStateService } from '../../services/entity-state.service';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { FlowDefinition, NodeType } from '../../models/flow.model';
@@ -44,6 +45,8 @@ export class FlowEditorComponent implements OnInit {
   readonly flowId = Number(this.route.snapshot.paramMap.get('id'));
   readonly name = signal('');
   readonly description = signal('');
+  readonly category = signal('');
+  readonly knownCategories = signal<string[]>([]);
   readonly enabled = signal(false);
   readonly deployed = signal(false);
   readonly nodeTypes = signal<NodeType[]>([]);
@@ -95,6 +98,7 @@ export class FlowEditorComponent implements OnInit {
       .subscribe(({ flow, types }) => {
         this.name.set(flow.name);
         this.description.set(flow.description ?? '');
+        this.category.set(flow.category ?? '');
         this.enabled.set(flow.enabled);
         this.deployed.set(flow.deployed);
         this.nodeTypes.set(types);
@@ -103,9 +107,10 @@ export class FlowEditorComponent implements OnInit {
         const { nodes, connections } = this.mapper.toCanvas(def);
         this.canvasNodes.set(nodes);
         this.canvasConnections.set(connections);
-        this.savedSnapshot = this.serialize();
+        this.savedSnapshot = this.snapshot();
         this.dirty.set(false);
       });
+    this.loadKnownCategories();
     this.startStatusPolling();
   }
 
@@ -132,8 +137,34 @@ export class FlowEditorComponent implements OnInit {
     return JSON.stringify(this.mapper.toDefinition(this.canvasNodes(), this.canvasConnections()));
   }
 
+  /**
+   * Vergleichsstand für „ungespeichert": Graph UND Stammdaten. Früher zählte nur der Graph,
+   * eine reine Umbenennung ließ „Speichern" gesperrt.
+   */
+  private snapshot(): string {
+    return JSON.stringify({ definition: this.serialize(), name: this.name(), category: this.category() });
+  }
+
+  /** Vorschläge fürs Bereichsfeld; ohne sie bleibt der Editor voll benutzbar. */
+  private loadKnownCategories(): void {
+    this.flowService.getFlows().pipe(
+      catchError(() => of([])),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(flows => this.knownCategories.set(distinctCategories(flows)));
+  }
+
+  onNameInput(value: string): void {
+    this.name.set(value);
+    this.markDirty();
+  }
+
+  onCategoryInput(value: string): void {
+    this.category.set(value);
+    this.markDirty();
+  }
+
   private markDirty(): void {
-    this.dirty.set(this.serialize() !== this.savedSnapshot);
+    this.dirty.set(this.snapshot() !== this.savedSnapshot);
   }
 
   addNode(type: string): void {
@@ -179,10 +210,11 @@ export class FlowEditorComponent implements OnInit {
 
   save(): void {
     const draft = this.serialize();
-    this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft).subscribe({
+    const snapshot = this.snapshot();
+    this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft, this.category()).subscribe({
       next: () => {
-        this.savedSnapshot = draft;
-        this.dirty.set(false);
+        this.savedSnapshot = snapshot;
+        this.markDirty();
       },
       error: () => this.deployErrors.set(['Speichern fehlgeschlagen.'])
     });
@@ -192,10 +224,11 @@ export class FlowEditorComponent implements OnInit {
     this.deployErrors.set([]);
     this.deployWarnings.set([]);
     const draft = this.serialize();
-    this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft).subscribe({
+    const snapshot = this.snapshot();
+    this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft, this.category()).subscribe({
       next: () => {
-        this.savedSnapshot = draft;
-        this.dirty.set(false);
+        this.savedSnapshot = snapshot;
+        this.markDirty();
         this.flowService.deploy(this.flowId).subscribe(result => {
           this.deployErrors.set(result.errors);
           this.deployWarnings.set(result.warnings);

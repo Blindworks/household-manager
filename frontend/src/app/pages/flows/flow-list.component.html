@@ -13,33 +13,62 @@
     <div class="flow-list-page__error">{{ error() }}</div>
   }
 
+  <input class="flow-list-page__search" type="search" placeholder="Suchen in Name und Beschreibung …"
+         aria-label="Flows durchsuchen"
+         [value]="query()" (input)="query.set($any($event.target).value)" />
+
   <table class="flow-table">
     <thead>
       <tr><th>Name</th><th>Status</th><th>Aktiv</th><th>Zuletzt ausgelöst</th><th></th></tr>
     </thead>
-    <tbody>
-      @for (flow of flows(); track flow.id) {
-        <tr class="flow-table__row" (click)="open(flow)">
-          <td>{{ flow.name }}</td>
-          <td>
-            @if (flow.deployed) { <span class="badge badge--deployed">deployed</span> }
-            @else { <span class="badge badge--draft">Entwurf</span> }
-          </td>
-          <td (click)="$event.stopPropagation()">
-            <button class="toggle" [class.toggle--on]="flow.enabled" (click)="toggleEnabled(flow)">
-              {{ flow.enabled ? 'aktiv' : 'aus' }}
+    @for (section of sections(); track section.title) {
+      <tbody class="flow-section">
+        <tr class="flow-section__header">
+          <th colspan="5" scope="rowgroup">
+            <button class="flow-section__toggle" type="button"
+                    [attr.aria-expanded]="!isCollapsed(section.title)"
+                    [disabled]="searching()"
+                    (click)="toggleSection(section.title)">
+              <span class="flow-section__chevron" aria-hidden="true"
+                    [class.flow-section__chevron--collapsed]="isCollapsed(section.title)">▾</span>
+              <span class="flow-section__title">{{ section.title }}</span>
+              <span class="flow-section__count">({{ section.flows.length }})</span>
+              @if (section.hasDisabled) {
+                <span class="flow-section__hint">enthält deaktivierte</span>
+              }
             </button>
-          </td>
-          <td class="flow-table__last-triggered" [class.flow-table__last-triggered--never]="!flow.lastTriggeredAt">
-            {{ lastTriggered(flow) }}
-          </td>
-          <td (click)="$event.stopPropagation()">
-            <button class="flow-table__delete" (click)="deleteFlow(flow)">Löschen</button>
-          </td>
+          </th>
         </tr>
-      } @empty {
-        <tr><td colspan="5" class="flow-table__empty">Noch keine Automatisierungen. Lege eine neue an.</td></tr>
-      }
-    </tbody>
+        @if (!isCollapsed(section.title)) {
+          @for (flow of section.flows; track flow.id) {
+            <tr class="flow-table__row" (click)="open(flow)">
+              <td>{{ flow.name }}</td>
+              <td>
+                @if (flow.deployed) { <span class="badge badge--deployed">deployed</span> }
+                @else { <span class="badge badge--draft">Entwurf</span> }
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <button class="toggle" [class.toggle--on]="flow.enabled" (click)="toggleEnabled(flow)">
+                  {{ flow.enabled ? 'aktiv' : 'aus' }}
+                </button>
+              </td>
+              <td class="flow-table__last-triggered" [class.flow-table__last-triggered--never]="!flow.lastTriggeredAt">
+                {{ lastTriggered(flow) }}
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <button class="flow-table__delete" (click)="deleteFlow(flow)">Löschen</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    } @empty {
+      <tbody>
+        <tr><td colspan="5" class="flow-table__empty">
+          @if (searching()) { Keine Treffer für „{{ query().trim() }}“. }
+          @else { Noch keine Automatisierungen. Lege eine neue an. }
+        </td></tr>
+      </tbody>
+    }
   </table>
 </div>

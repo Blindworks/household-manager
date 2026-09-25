@@ -39,14 +39,14 @@ public class FlowController {
 
     @PostMapping
     public FlowDetailResponse createFlow(@Valid @RequestBody CreateFlowRequest request) {
-        return toDetail(flowService.create(request.name(), request.description()));
+        return toDetail(flowService.create(request.name(), request.description(), request.category()));
     }
 
     @PostMapping("/import")
     public FlowDetailResponse importFlow(@Valid @RequestBody ImportFlowRequest request) {
         String definitionJson = request.definition() == null ? null : request.definition().toString();
         return toDetail(flowService.importFlow(
-                request.schemaVersion(), request.name(), request.description(), definitionJson));
+                request.schemaVersion(), request.name(), request.description(), request.category(), definitionJson));
     }
 
     @GetMapping("/{id}")
@@ -58,7 +58,8 @@ public class FlowController {
 
     @PutMapping("/{id}")
     public FlowDetailResponse updateFlow(@PathVariable Long id, @Valid @RequestBody UpdateFlowRequest request) {
-        return toDetail(flowService.update(id, request.name(), request.description(), request.draftDefinition()));
+        return toDetail(flowService.update(
+                id, request.name(), request.description(), request.category(), request.draftDefinition()));
     }
 
     @PostMapping("/{id}/deploy")
@@ -119,6 +120,7 @@ public class FlowController {
     private FlowSummaryResponse toSummary(Flow flow) {
         return FlowSummaryResponse.builder()
                 .id(flow.getId()).name(flow.getName()).description(flow.getDescription())
+                .category(flow.getCategory())
                 .enabled(flow.isEnabled()).deployed(flow.getDeployedDefinition() != null)
                 .deployedAt(flow.getDeployedAt()).updatedAt(flow.getUpdatedAt())
                 .lastTriggeredAt(flow.getLastTriggeredAt())
@@ -128,6 +130,7 @@ public class FlowController {
     private FlowDetailResponse toDetail(Flow flow) {
         return FlowDetailResponse.builder()
                 .id(flow.getId()).name(flow.getName()).description(flow.getDescription())
+                .category(flow.getCategory())
                 .enabled(flow.isEnabled()).deployed(flow.getDeployedDefinition() != null)
                 .draftDefinition(flow.getDraftDefinition()).deployedDefinition(flow.getDeployedDefinition())
                 .deployedAt(flow.getDeployedAt()).createdAt(flow.getCreatedAt()).updatedAt(flow.getUpdatedAt())

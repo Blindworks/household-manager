@@ -4,6 +4,9 @@
     &:disabled { opacity: 0.5; cursor: default; } } }
 .editor__name { font-size: 1rem; font-weight: 600; border: 1px solid transparent; padding: 0.2rem 0.4rem;
   &:focus { border-color: #ccc; border-radius: 4px; } }
+.editor__category { font-size: 0.85rem; border: 1px solid #ddd; border-radius: 4px; padding: 0.2rem 0.4rem;
+  width: 12rem; color: #455a64;
+  &:focus { border-color: #999; outline: none; } }
 .editor__spacer { flex: 1; }
 .editor__dirty { color: #b71c1c; font-size: 0.8rem; }
 .editor__body { display: flex; flex: 1; min-height: 0; }

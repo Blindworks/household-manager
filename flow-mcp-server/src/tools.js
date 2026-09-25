@@ -8,10 +8,17 @@ const DEFINITION_SHAPE = z
   })
   .passthrough();
 
-// Spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000)) und
+// Spiegeln die Spalten der Tabelle flows (name VARCHAR(255), description VARCHAR(1000), category VARCHAR(60)) und
 // FlowFieldLimits im Backend, das längere Werte mit 400 ablehnt.
 const NAME_MAX = 255;
 const DESCRIPTION_MAX = 1000;
+const CATEGORY_MAX = 60;
+
+const CATEGORY_HINT =
+  'Bereich gliedert die Flow-Übersicht (z. B. "Modi & Szenen", "Licht & Bewegung", "Taster", ' +
+  '"Sicherheit & Warnungen", "Haushaltsgeräte", "Erinnerungen", "System & Diagnose"). ' +
+  'Vorhandene Bereiche aus flow_list wiederverwenden (exakt gleiche Schreibweise), nur bei echtem Bedarf einen neuen anlegen. ' +
+  'Namensregel für Flows: was passiert, wann — ohne Bereich und ohne Nummer im Namen.';
 
 const DEFINITION_HINT =
   'Format der definition: { "nodes": [ { "id", "type", "name"?, "position"?, "config" } ], ' +
@@ -47,7 +54,9 @@ export const toolDefinitions = [
     name: 'flow_list',
     title: 'Flows auflisten',
     description:
-      'Listet alle Flows der Flow-Engine mit id, name, description, enabled, deployed, deployedAt, updatedAt.',
+      'Listet alle Flows der Flow-Engine mit id, name, description, category (Bereich, null = ohne), ' +
+      'enabled, deployed, deployedAt, updatedAt, lastTriggeredAt. Die vorhandenen category-Werte sind ' +
+      'die Bereiche, die beim Anlegen/Ändern wiederverwendet werden sollen.',
     inputSchema: {},
     annotations: READ_ONLY,
     handler: async (client) => ({ flows: await client.get('/v1/flows') }),
@@ -68,7 +77,7 @@ export const toolDefinitions = [
     description:
       'Legt einen neuen Flow aus einer vollständigen Definition an. Der Flow ist danach DEAKTIVIERT und ' +
       'NICHT deployt — scharf wird er erst durch flow_deploy (validiert) und flow_set_enabled. ' +
-      DEFINITION_HINT,
+      DEFINITION_HINT + ' ' + CATEGORY_HINT,
     inputSchema: {
       name: z.string().min(1).max(NAME_MAX).describe(`Anzeigename des Flows (max. ${NAME_MAX} Zeichen)`),
       description: z
@@ -76,14 +85,20 @@ export const toolDefinitions = [
         .max(DESCRIPTION_MAX)
         .optional()
         .describe(`Optionale Freitextbeschreibung (max. ${DESCRIPTION_MAX} Zeichen)`),
+      category: z
+        .string()
+        .max(CATEGORY_MAX)
+        .optional()
+        .describe(`Bereich des Flows (max. ${CATEGORY_MAX} Zeichen), siehe Tool-Beschreibung`),
       definition: DEFINITION_SHAPE.describe('Der Flow-Graph aus nodes und wires'),
     },
     annotations: WRITE,
-    handler: async (client, { name, description, definition }) => {
+    handler: async (client, { name, description, category, definition }) => {
       const flow = await client.post('/v1/flows/import', {
         schemaVersion: 1,
         name,
         description,
+        category,
         definition,
       });
       return {
@@ -96,8 +111,9 @@ export const toolDefinitions = [
     name: 'flow_update',
     title: 'Flow ändern',
     description:
-      'Aktualisiert Name, Beschreibung und/oder Draft-Definition eines Flows. Nur übergebene Felder werden ' +
-      'geändert. Eine geänderte Definition landet im Draft und wird erst durch flow_deploy aktiv. ' +
+      'Aktualisiert Name, Beschreibung, Bereich und/oder Draft-Definition eines Flows. Nur übergebene Felder werden ' +
+      'geändert; category weglassen = Bereich bleibt, category "" = Bereich entfernen. Eine geänderte Definition ' +
+      'landet im Draft und wird erst durch flow_deploy aktiv. ' + CATEGORY_HINT + ' ' +
       DEFINITION_HINT,
     inputSchema: {
       id: z.number().int().describe('Flow-ID'),
@@ -107,14 +123,20 @@ export const toolDefinitions = [
         .max(DESCRIPTION_MAX)
         .optional()
         .describe(`Neue Beschreibung (max. ${DESCRIPTION_MAX} Zeichen)`),
+      category: z
+        .string()
+        .max(CATEGORY_MAX)
+        .optional()
+        .describe(`Neuer Bereich (max. ${CATEGORY_MAX} Zeichen); "" entfernt ihn, weglassen lässt ihn unverändert`),
       definition: DEFINITION_SHAPE.optional().describe('Neue Draft-Definition (nodes + wires)'),
     },
     annotations: WRITE,
-    handler: async (client, { id, name, description, definition }) =>
+    handler: async (client, { id, name, description, category, definition }) =>
       toFlowDetail(
         await client.put(`/v1/flows/${id}`, {
           name,
           description,
+          category,
           draftDefinition: definition === undefined ? undefined : JSON.stringify(definition),
         })
       ),

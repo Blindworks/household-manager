@@ -28,6 +28,10 @@ public class Flow {
     @Column(name = "description", length = 1000)
     private String description;
 
+    /** Bereich für die Gliederung der Übersicht (Freitext); NULL = ohne Bereich („Sonstiges"). */
+    @Column(name = "category", length = 60)
+    private String category;
+
     /** Kill-Switch: deaktivierte Flows werden nicht ausgeführt. */
     @Column(name = "enabled", nullable = false)
     private boolean enabled;

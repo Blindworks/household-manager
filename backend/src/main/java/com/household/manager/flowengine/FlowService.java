@@ -45,22 +45,30 @@ public class FlowService {
     }
 
     @Transactional
-    public Flow create(String name, String description) {
-        Flow flow = Flow.builder().name(name).description(description).enabled(true)
-                .draftDefinition("{ \"nodes\": [], \"wires\": [] }").build();
+    public Flow create(String name, String description, String category) {
+        Flow flow = Flow.builder().name(name).description(description).category(normalizeCategory(category))
+                .enabled(true).draftDefinition("{ \"nodes\": [], \"wires\": [] }").build();
         Flow saved = flowRepository.save(flow);
         auditService.record("flow.create", name);
         return saved;
     }
 
+    /**
+     * Teil-Update: {@code null} lässt ein Feld unverändert. Beim Bereich entfernt ein leerer
+     * Text den Bereich — nur so lässt er sich wieder löschen, ohne dass eine reine
+     * Beschreibungskorrektur (ohne {@code category}) ihn still mitlöscht.
+     */
     @Transactional
-    public Flow update(Long id, String name, String description, String draftDefinition) {
+    public Flow update(Long id, String name, String description, String category, String draftDefinition) {
         Flow flow = require(id);
         if (name != null) {
             flow.setName(name);
         }
         if (description != null) {
             flow.setDescription(description);
+        }
+        if (category != null) {
+            flow.setCategory(normalizeCategory(category));
         }
         if (draftDefinition != null) {
             parser.parse(draftDefinition); // wirft IllegalArgumentException bei kaputtem JSON -> 400
@@ -78,7 +86,8 @@ public class FlowService {
      * (wie beim Draft-Speichern); die volle Graph-Validierung bleibt dem Deploy.
      */
     @Transactional
-    public Flow importFlow(Integer schemaVersion, String name, String description, String definitionJson) {
+    public Flow importFlow(Integer schemaVersion, String name, String description, String category,
+                            String definitionJson) {
         if (schemaVersion == null || schemaVersion != 1) {
             throw new IllegalArgumentException("Nicht unterstützte schemaVersion: " + schemaVersion);
         }
@@ -90,7 +99,7 @@ public class FlowService {
         }
         parser.parse(definitionJson); // wirft IllegalArgumentException bei kaputtem JSON -> 400
         Flow flow = Flow.builder()
-                .name(name).description(description).enabled(false)
+                .name(name).description(description).category(normalizeCategory(category)).enabled(false)
                 .draftDefinition(definitionJson).build();
         Flow saved = flowRepository.save(flow);
         auditService.record("flow.import", name);
@@ -161,5 +170,14 @@ public class FlowService {
     private Flow require(Long id) {
         return flowRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Flow not found with ID: " + id));
+    }
+
+    /** Rand-Leerzeichen weg, leerer Text = ohne Bereich. Einzige Stelle dieser Regel. */
+    private static String normalizeCategory(String category) {
+        if (category == null) {
+            return null;
+        }
+        String trimmed = category.strip();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

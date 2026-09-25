@@ -40,11 +40,13 @@ describe('FlowService', () => {
     req.flush({});
   });
 
-  it('saves draft via PUT', () => {
-    service.saveDraft(1, 'Name', 'Desc', '{"nodes":[],"wires":[]}').subscribe();
+  it('saves draft via PUT including the category', () => {
+    service.saveDraft(1, 'Name', 'Desc', '{"nodes":[],"wires":[]}', 'Licht').subscribe();
     const req = httpMock.expectOne('/api/v1/flows/1');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body.draftDefinition).toBe('{"nodes":[],"wires":[]}');
+    expect(req.request.body).toEqual({
+      name: 'Name', description: 'Desc', category: 'Licht', draftDefinition: '{"nodes":[],"wires":[]}'
+    });
     req.flush({});
   });
 

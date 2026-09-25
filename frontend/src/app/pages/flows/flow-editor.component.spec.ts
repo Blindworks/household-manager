@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { FlowEditorComponent } from './flow-editor.component';
 import { FlowService } from '../../services/flow.service';
 import { EntityStateService } from '../../services/entity-state.service';
@@ -19,11 +19,16 @@ describe('FlowEditorComponent', () => {
     deviceService = jasmine.createSpyObj('SmartDeviceService', ['getAllDevices']);
     deviceService.getAllDevices.and.returnValue(of([]));
     flowService = jasmine.createSpyObj('FlowService',
-      ['getFlow', 'getNodeTypes', 'saveDraft', 'deploy', 'setEnabled', 'inject']);
+      ['getFlow', 'getFlows', 'getNodeTypes', 'saveDraft', 'deploy', 'setEnabled', 'inject']);
     flowService.getFlow.and.returnValue(of({
-      id: 1, name: 'F', enabled: false, deployed: false,
+      id: 1, name: 'F', category: 'Licht', enabled: false, deployed: false,
       draftDefinition: '{"nodes":[{"id":"n1","type":"entity-state-trigger","position":{"x":0,"y":0},"config":{}}],"wires":[]}'
     } as any));
+    flowService.getFlows.and.returnValue(of([
+      { id: 1, name: 'F', category: 'Licht', enabled: true, deployed: true },
+      { id: 2, name: 'G', category: 'Taster', enabled: true, deployed: true },
+      { id: 3, name: 'H', enabled: true, deployed: true }
+    ] as any));
     flowService.getNodeTypes.and.returnValue(of([
       { type: 'entity-state-trigger', trigger: true, outputPorts: 1, portLabels: ['Ausgang'], fields: [] }
     ] as any));
@@ -148,5 +153,67 @@ describe('FlowEditorComponent', () => {
       expect(fixture.componentInstance.statusByNodeId()['trig']?.state).toBe('off');
       discardPeriodicTasks();
     }));
+  });
+
+  it('loads the category and offers existing categories as suggestions', () => {
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.category()).toBe('Licht');
+    expect(fixture.componentInstance.knownCategories()).toEqual(['Licht', 'Taster']);
+    const options = Array.from(fixture.nativeElement.querySelectorAll('#flow-categories option'))
+      .map(o => (o as HTMLOptionElement).value);
+    expect(options).toEqual(['Licht', 'Taster']);
+  });
+
+  it('still loads the flow when the category suggestions fail', () => {
+    flowService.getFlows.and.returnValue(throwError(() => new Error('down')));
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canvasNodes().length).toBe(1);
+    expect(fixture.componentInstance.knownCategories()).toEqual([]);
+  });
+
+  it('marks the flow dirty when only the category or only the name changes', () => {
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+    const editor = fixture.componentInstance;
+
+    editor.onCategoryInput('Taster');
+    expect(editor.dirty()).toBeTrue();
+    editor.onCategoryInput('Licht');
+    expect(editor.dirty()).toBeFalse();
+
+    editor.onNameInput('Umbenannt');
+    expect(editor.dirty()).toBeTrue();
+  });
+
+  it('saves the category and clears the dirty flag', () => {
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+    const editor = fixture.componentInstance;
+
+    editor.onCategoryInput('Taster');
+    editor.save();
+
+    expect(flowService.saveDraft.calls.mostRecent().args[4]).toBe('Taster');
+    expect(editor.dirty()).toBeFalse();
+  });
+
+  it('stays dirty when the category is edited again while a save is still in flight', () => {
+    const subject = new Subject<any>();
+    flowService.saveDraft.and.returnValue(subject);
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+    const editor = fixture.componentInstance;
+
+    editor.onCategoryInput('A');
+    editor.save();
+    editor.onCategoryInput('B');
+    subject.next({} as any);
+    subject.complete();
+
+    expect(editor.dirty()).toBeTrue();
   });
 });

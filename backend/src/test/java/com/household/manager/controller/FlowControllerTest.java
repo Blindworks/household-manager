@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -70,7 +71,7 @@ class FlowControllerTest {
 
     @Test
     void createsFlow() throws Exception {
-        when(flowService.create("Neu", "Desc")).thenReturn(flow());
+        when(flowService.create("Neu", "Desc", null)).thenReturn(flow());
 
         mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Neu\",\"description\":\"Desc\"}"))
@@ -125,7 +126,7 @@ class FlowControllerTest {
     void importDelegatesToServiceAndMapsResponse() throws Exception {
         Flow saved = Flow.builder().id(7L).name("Imported").description("desc")
                 .enabled(false).draftDefinition("{\"nodes\":[],\"wires\":[]}").build();
-        when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), any())).thenReturn(saved);
+        when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), isNull(), any())).thenReturn(saved);
 
         mockMvc.perform(post("/v1/flows/import").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"schemaVersion\":1,\"name\":\"Imported\",\"description\":\"desc\","
@@ -135,7 +136,7 @@ class FlowControllerTest {
                 .andExpect(jsonPath("$.name").value("Imported"))
                 .andExpect(jsonPath("$.enabled").value(false));
 
-        verify(flowService).importFlow(eq(1), eq("Imported"), eq("desc"), eq("{\"nodes\":[],\"wires\":[]}"));
+        verify(flowService).importFlow(eq(1), eq("Imported"), eq("desc"), isNull(), eq("{\"nodes\":[],\"wires\":[]}"));
     }
 
     @Test
@@ -164,7 +165,7 @@ class FlowControllerTest {
     @Test
     void acceptsDescriptionOfExactlyMaxLengthOnCreate() throws Exception {
         String description = "x".repeat(1000);
-        when(flowService.create("Neu", description)).thenReturn(flow());
+        when(flowService.create("Neu", description, null)).thenReturn(flow());
 
         mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Neu\",\"description\":\"" + description + "\"}"))
@@ -208,6 +209,115 @@ class FlowControllerTest {
                                 + "x".repeat(1001) + "\",\"definition\":{\"nodes\":[],\"wires\":[]}}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.validationErrors.description").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void listIncludesCategory() throws Exception {
+        Flow flow = flow();
+        flow.setCategory("Licht");
+        when(flowService.getAll()).thenReturn(List.of(flow));
+
+        mockMvc.perform(get("/v1/flows"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].category").value("Licht"));
+    }
+
+    @Test
+    void detailIncludesCategory() throws Exception {
+        Flow flow = flow();
+        flow.setCategory("Taster");
+        when(flowService.getById(1L)).thenReturn(Optional.of(flow));
+
+        mockMvc.perform(get("/v1/flows/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.category").value("Taster"));
+    }
+
+    @Test
+    void passesCategoryOnCreate() throws Exception {
+        when(flowService.create("Neu", "Desc", "Licht")).thenReturn(flow());
+
+        mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Neu\",\"description\":\"Desc\",\"category\":\"Licht\"}"))
+                .andExpect(status().isOk());
+
+        verify(flowService).create("Neu", "Desc", "Licht");
+    }
+
+    @Test
+    void passesCategoryOnUpdate() throws Exception {
+        when(flowService.update(1L, null, null, "Taster", null)).thenReturn(flow());
+
+        mockMvc.perform(put("/v1/flows/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"Taster\"}"))
+                .andExpect(status().isOk());
+
+        verify(flowService).update(1L, null, null, "Taster", null);
+    }
+
+    /** "" muss beim Service ankommen — nur so lässt sich ein Bereich wieder entfernen. */
+    @Test
+    void passesEmptyCategoryOnUpdateSoItCanBeCleared() throws Exception {
+        when(flowService.update(1L, null, null, "", null)).thenReturn(flow());
+
+        mockMvc.perform(put("/v1/flows/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"\"}"))
+                .andExpect(status().isOk());
+
+        verify(flowService).update(1L, null, null, "", null);
+    }
+
+    @Test
+    void passesCategoryOnImport() throws Exception {
+        when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), eq("Taster"), any())).thenReturn(flow());
+
+        mockMvc.perform(post("/v1/flows/import").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"schemaVersion\":1,\"name\":\"Imported\",\"description\":\"desc\","
+                                + "\"category\":\"Taster\",\"definition\":{\"nodes\":[],\"wires\":[]}}"))
+                .andExpect(status().isOk());
+
+        verify(flowService).importFlow(eq(1), eq("Imported"), eq("desc"), eq("Taster"), any());
+    }
+
+    @Test
+    void acceptsCategoryOfExactlyMaxLengthOnCreate() throws Exception {
+        String category = "c".repeat(60);
+        when(flowService.create("Neu", null, category)).thenReturn(flow());
+
+        mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Neu\",\"category\":\"" + category + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void rejectsTooLongCategoryOnCreateWith400() throws Exception {
+        mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Neu\",\"category\":\"" + "c".repeat(61) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.category").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void rejectsTooLongCategoryOnUpdateWith400() throws Exception {
+        mockMvc.perform(put("/v1/flows/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"" + "c".repeat(61) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.category").exists());
+
+        verifyNoInteractions(flowService);
+    }
+
+    @Test
+    void rejectsTooLongCategoryOnImportWith400() throws Exception {
+        mockMvc.perform(post("/v1/flows/import").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"schemaVersion\":1,\"name\":\"Neu\",\"category\":\"" + "c".repeat(61)
+                                + "\",\"definition\":{\"nodes\":[],\"wires\":[]}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.category").exists());
 
         verifyNoInteractions(flowService);
     }
