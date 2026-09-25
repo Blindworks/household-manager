@@ -153,11 +153,11 @@
     font-weight: 600;
     // rgba-Anteil ohne eigenes *-rgb-Token im Vertrag - bleibt literal, nur die
     // deckende Textfarbe ist tokenisiert.
-    background: rgba(74, 222, 128, 0.16);
+    background: rgba(var(--success-rgb), 0.16);
     color: var(--success);
 
     &--away {
-      background: rgba(251, 191, 36, 0.16);
+      background: rgba(var(--warning-rgb), 0.16);
       color: var(--warning);
     }
   }

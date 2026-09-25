@@ -45,6 +45,13 @@
   --card-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
   --card-shadow-hover: 0 0 30px rgba(170, 199, 255, 0.15);
 
+  // Deckende Flaechen, wo die Glas-Karte zu durchsichtig waere (sticky
+  // Tabellenkopf, Karten-Popup, Kamera-Kacheln, Knoepfe auf Kacheln)
+  --surface-solid: #111113;
+  --surface-overlay: rgba(21, 24, 29, 0.96);
+  --surface-raised: rgba(15, 23, 42, 0.6);
+  --surface-control: rgba(30, 41, 59, 0.8);
+
   // Akzente (fuer dunkle Flaechen: hell und entsaettigt)
   --primary: #aac7ff;
   --primary-rgb: 170, 199, 255;
@@ -55,8 +62,12 @@
   --error: #ffb4ab;
   --error-rgb: 255, 180, 171;
   --success: #4ade80;
+  --success-rgb: 74, 222, 128;
   --warning: #fbbf24;
+  --warning-rgb: 251, 191, 36;
   --danger: #fca5a5;
+  // Schrift auf einer --secondary-getoenten Flaeche (Anwesenheitsring "da")
+  --on-secondary-container: #c9f7d3;
 }
 
 @mixin light-tokens {
@@ -80,6 +91,11 @@
   --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
   --card-shadow-hover: 0 2px 6px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.08);
 
+  --surface-solid: #ffffff;
+  --surface-overlay: rgba(255, 255, 255, 0.97);
+  --surface-raised: #ffffff;
+  --surface-control: rgba(15, 23, 42, 0.05);
+
   // Akzente fuer helle Flaechen: dieselben Farbtoene, dunkel genug fuer Kontrast
   --primary: #2f5fd0;
   --primary-rgb: 47, 95, 208;
@@ -90,6 +106,9 @@
   --error: #b91c1c;
   --error-rgb: 185, 28, 28;
   --success: #15803d;
+  --success-rgb: 21, 128, 61;
   --warning: #b45309;
+  --warning-rgb: 180, 83, 9;
   --danger: #b91c1c;
+  --on-secondary-container: #14532d;
 }

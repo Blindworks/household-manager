@@ -317,7 +317,7 @@
     // Hand aufgehellter --secondary-Ton fuer Lesbarkeit im Glow (kein Token -
     // gilt nur fuer den dunklen Glow und ist im hellen Design ungenutzt fein).
     background: rgba(var(--secondary-rgb), 0.13);
-    color: #c9f7d3;
+    color: var(--on-secondary-container);
     box-shadow:
       inset 0 0 0 1.5px rgba(var(--secondary-rgb), 0.55),
       0 0 22px -6px rgba(var(--secondary-rgb), 0.85);

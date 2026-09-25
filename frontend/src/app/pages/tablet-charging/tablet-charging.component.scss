@@ -13,7 +13,7 @@
   flex: 1;
   min-height: 0;
   gap: 0.6rem;
-  color: #e4e2e4;
+  color: var(--on-surface);
 
   &__controls {
     display: flex;
@@ -23,13 +23,13 @@
 
   &__stand {
     font-size: 0.95rem;
-    color: rgba(228, 226, 228, 0.7);
+    color: rgba(var(--on-surface-rgb), 0.7);
   }
 
   &__refresh {
-    border: 1px solid rgba(170, 199, 255, 0.35);
-    background: rgba(170, 199, 255, 0.12);
-    color: #aac7ff;
+    border: 1px solid rgba(var(--primary-rgb), 0.35);
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--primary);
     padding: 0.5rem 1.1rem;
     border-radius: 10px;
     cursor: pointer;
@@ -46,7 +46,7 @@
     text-align: center;
   }
 
-  &__error { color: #ffb4ab; }
+  &__error { color: var(--error); }
 
   &__unconfigured {
     flex: 1;
@@ -69,7 +69,10 @@
     min-height: 0;
     border-radius: 1rem;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
+    // Bleibt in beiden Designs dunkel: die Tesla-Navigationskarte darunter ist per
+    // Filter fest dunkel eingefaerbt (siehe .leaflet-tile-pane), dieser Platzhalter
+    // vor dem ersten Kachel-Laden soll nicht heller aufblitzen.
     background: #1e293b;
   }
 
@@ -87,12 +90,12 @@
   &__row {
     padding: 0.6rem 0.8rem;
     border-radius: 0.8rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
     cursor: pointer;
 
-    &--favorite { background: rgba(255, 255, 255, 0.06); }
-    &--selected { border-color: #aac7ff; }
+    &--favorite { background: var(--card-bg-hover); }
+    &--selected { border-color: var(--primary); }
   }
 
   &__row-head {
@@ -121,11 +124,11 @@
     text-overflow: ellipsis;
   }
 
-  &__star { color: #fbbf24; margin-right: 0.2rem; }
+  &__star { color: var(--warning); margin-right: 0.2rem; }
 
   &__meta {
     font-size: 0.9rem;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
     white-space: nowrap;
   }
 
@@ -135,7 +138,7 @@
     align-items: baseline;
     margin: 0.15rem 0 0 1.6rem;
     font-size: 0.9rem;
-    color: rgba(228, 226, 228, 0.7);
+    color: rgba(var(--on-surface-rgb), 0.7);
   }
 
   &__operator {
@@ -146,13 +149,13 @@
 
   &__price {
     margin-left: auto;
-    color: #fbbf24;
+    color: var(--warning);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
   &__point-price {
-    color: rgba(251, 191, 36, 0.85);
+    color: rgba(var(--warning-rgb), 0.85);
     font-variant-numeric: tabular-nums;
   }
 
@@ -175,13 +178,15 @@
     &[data-tone='busy'] .tablet-charging__point-status { color: #ef4444; }
   }
 
-  &__point-power { min-width: 4.5rem; color: rgba(228, 226, 228, 0.75); }
-  &__point-since { color: #fca5a5; margin-left: auto; }
+  &__point-power { min-width: 4.5rem; color: rgba(var(--on-surface-rgb), 0.75); }
+  &__point-since { color: var(--danger); margin-left: auto; }
 }
 
 // Leaflet rendert divIcons ausserhalb der Komponenten-Kapselung.
 // Leaflet rendert divIcons ausserhalb der Komponenten-Kapselung. Optik nach Tesla-Vorbild:
 // dunkle Karte, Pins in Tesla-Rot fuer Saeulen mit freiem Ladepunkt, gedaempft fuer belegte.
+// Karte, Kacheln, Attribution und Marker bleiben in beiden Designs dunkel - sie liegen auf
+// der per Filter fest dunkel eingefaerbten Tesla-Navigationskarte, nicht auf dem Seitengrund.
 :host ::ng-deep {
   .leaflet-container {
     background: #0b0d10;
@@ -202,20 +207,20 @@
     a { color: #94a3b8; }
   }
 
-  // Popup als kleine dunkle Karte im Stil der Listenzeilen; Leaflets Standardrand und
+  // Popup als kleine Karte im Stil der Listenzeilen; Leaflets Standardrand und
   // Innenabstand werden ueberschrieben, der Inhalt kommt aus stationPopupText.
   .leaflet-popup-content-wrapper {
-    background: rgba(21, 24, 29, 0.96);
-    color: #e4e2e4;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--surface-overlay);
+    color: var(--on-surface);
+    border: 1px solid rgba(var(--tint-rgb), 0.12);
     border-radius: 14px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(6px);
   }
 
   .leaflet-popup-tip {
-    background: rgba(21, 24, 29, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--surface-overlay);
+    border: 1px solid rgba(var(--tint-rgb), 0.12);
     box-shadow: none;
   }
 
@@ -227,26 +232,26 @@
   }
 
   .leaflet-popup-close-button {
-    color: rgba(228, 226, 228, 0.6);
+    color: rgba(var(--on-surface-rgb), 0.6);
     font-size: 18px;
     padding: 6px 8px 0 0;
 
-    &:hover { color: #fff; }
+    &:hover { color: var(--text-strong); }
   }
 
   .charging-popup__title {
     font-weight: 700;
     font-size: 1.02rem;
-    color: #f4f3f5;
+    color: var(--text-strong);
     padding-right: 1rem;
   }
 
-  .charging-popup__star { color: #fbbf24; margin-right: 0.25rem; }
+  .charging-popup__star { color: var(--warning); margin-right: 0.25rem; }
 
   .charging-popup__subtitle {
     margin-top: 0.15rem;
     font-size: 0.82rem;
-    color: rgba(228, 226, 228, 0.65);
+    color: rgba(var(--on-surface-rgb), 0.65);
   }
 
   .charging-popup__facts {
@@ -262,17 +267,17 @@
     align-items: center;
     padding: 0.4rem 0.3rem;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--tint-rgb), 0.05);
   }
 
   .charging-popup__value {
     font-size: 1.05rem;
     font-weight: 700;
-    color: #f4f3f5;
+    color: var(--text-strong);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 
-    small { font-size: 0.75rem; font-weight: 500; color: rgba(228, 226, 228, 0.6); }
+    small { font-size: 0.75rem; font-weight: 500; color: rgba(var(--on-surface-rgb), 0.6); }
     &--free { color: #22c55e; }
     &--busy { color: #ef4444; }
   }
@@ -282,14 +287,14 @@
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: rgba(228, 226, 228, 0.55);
+    color: rgba(var(--on-surface-rgb), 0.55);
   }
 
   .charging-popup__points {
     list-style: none;
     margin: 0.6rem 0 0;
     padding: 0.45rem 0 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(var(--tint-rgb), 0.1);
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
@@ -300,20 +305,21 @@
     align-items: baseline;
     gap: 0.6rem;
     font-size: 0.85rem;
-    color: rgba(228, 226, 228, 0.85);
+    color: rgba(var(--on-surface-rgb), 0.85);
     font-variant-numeric: tabular-nums;
   }
 
-  .charging-popup__point-power { min-width: 3.6rem; color: rgba(228, 226, 228, 0.65); }
+  .charging-popup__point-power { min-width: 3.6rem; color: rgba(var(--on-surface-rgb), 0.65); }
   .charging-popup__point--free .charging-popup__point-status { color: #22c55e; font-weight: 600; }
   .charging-popup__point--occupied .charging-popup__point-status { color: #ef4444; font-weight: 600; }
-  .charging-popup__point-since { color: #fca5a5; white-space: nowrap; }
-  .charging-popup__point-price { margin-left: auto; color: #fbbf24; white-space: nowrap; }
+  .charging-popup__point-since { color: var(--danger); white-space: nowrap; }
+  .charging-popup__point-price { margin-left: auto; color: var(--warning); white-space: nowrap; }
 
   // Tropfenform in einem 30x40-Rahmen, Anker = Spitze (unten Mitte, siehe MARKER_GEOMETRY).
   // Das Quadrat haengt mit seiner spitzen Ecke (border-radius 0) genau auf dem Anker:
   // transform-origin liegt auf dieser Ecke, die Drehung um -45 Grad stellt es symmetrisch
   // darueber, und die Auswahl-Skalierung dreht sich um denselben Punkt - die Spitze bleibt.
+  // Ampelfarben (frei/belegt) bleiben in beiden Designs unveraendert.
   .charging-marker {
     position: relative;
     width: 30px;

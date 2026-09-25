@@ -50,10 +50,8 @@
   align-content: start;
 }
 
-// Kartenrahmen der Kachel - Kandidat fuer var(--card-bg), siehe Bericht (Alpha
-// weicht im Dunkeldesign ab: 0,6 statt 0,03).
 .camera-tile {
-  background: var(--card-bg);
+  background: var(--surface-raised);
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 14px;
   overflow: hidden;
@@ -139,8 +137,6 @@
   text-align: left;
 }
 
-// Kandidat fuer var(--card-bg), siehe Bericht (Alpha weicht im Dunkeldesign
-// ab: 0,8 statt 0,03).
 .tile-actions {
   display: flex;
   gap: 0.5rem;
@@ -149,7 +145,7 @@
   button {
     border: 1px solid rgba(148, 163, 184, 0.4);
     border-radius: 10px;
-    background: var(--card-bg);
+    background: var(--surface-control);
     color: var(--on-surface);
     padding: 0.45rem 0.9rem;
   }
@@ -169,7 +165,7 @@
 }
 
 // Liegt ueber einem schwarzen Vollbild-Scrim (wie ein Video-Player) - bleibt
-// in beiden Designs dunkel/weiss, siehe Bericht.
+// in beiden Designs dunkel/weiss.
 .clip-player {
   position: fixed;
   inset: 0;
@@ -209,10 +205,8 @@
   z-index: 60;
 }
 
-// Kandidat fuer var(--card-bg), siehe Bericht (Alpha weicht im Dunkeldesign
-// ab: opak statt 0,03).
 .confirm-dialog {
-  background: var(--card-bg);
+  background: var(--surface-solid);
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
