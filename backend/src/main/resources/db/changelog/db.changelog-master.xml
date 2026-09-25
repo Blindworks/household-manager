@@ -142,4 +142,7 @@
     <!-- Flow-Uebersicht: wann hat ein Flow zuletzt ausgeloest -->
     <include file="db/changelog/changes/20260924-0056-add-flow-last-triggered-at.xml"/>
 
+    <!-- Flow-Uebersicht: Gliederung nach Bereichen -->
+    <include file="db/changelog/changes/20260925-0057-add-flow-category.xml"/>
+
 </databaseChangeLog>
