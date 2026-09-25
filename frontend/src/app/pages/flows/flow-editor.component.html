@@ -1,6 +1,13 @@
 <div class="editor">
   <div class="editor__toolbar">
-    <input class="editor__name" [value]="name()" (input)="name.set($any($event.target).value)" />
+    <input class="editor__name" aria-label="Name" [value]="name()"
+           (input)="onNameInput($any($event.target).value)" />
+    <input class="editor__category" aria-label="Bereich" placeholder="Bereich" maxlength="60"
+           list="flow-categories" [value]="category()"
+           (input)="onCategoryInput($any($event.target).value)" />
+    <datalist id="flow-categories">
+      @for (c of knownCategories(); track c) { <option [value]="c"></option> }
+    </datalist>
     @if (deployed()) { <span class="badge badge--deployed">aktiv/deployed</span> }
     @else { <span class="badge badge--draft">Entwurf</span> }
     @if (dirty()) { <span class="editor__dirty">● ungespeichert</span> }
