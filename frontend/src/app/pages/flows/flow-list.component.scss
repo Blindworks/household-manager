@@ -5,6 +5,8 @@
   &__error { background: #fdecea; color: #b71c1c; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
   &__actions { display: flex; gap: 0.5rem; }
   &__import { background: transparent; border: 1px solid var(--color-border, #ccc); border-radius: 4px; padding: 0.4rem 0.9rem; cursor: pointer; }
+  &__search { width: 100%; max-width: 360px; padding: 0.4rem 0.6rem; margin-bottom: 1rem;
+    border: 1px solid #ccc; border-radius: 4px; font: inherit; }
 }
 .flow-table {
   width: 100%; border-collapse: collapse; font-size: 0.9rem;
@@ -20,3 +22,12 @@
   &--draft { background: #eceff1; color: #546e7a; } }
 .toggle { padding: 0.2rem 0.6rem; border: 1px solid #ccc; border-radius: 10px; background: #eceff1; cursor: pointer;
   &--on { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; } }
+.flow-section {
+  &__header th { background: #eef3f8; padding: 0; border-bottom: 1px solid #d5dde6; }
+  &__toggle { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.55rem 0.75rem;
+    border: none; background: none; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+  &__chevron { display: inline-block; transition: transform 0.15s;
+    &--collapsed { transform: rotate(-90deg); } }
+  &__count { color: #666; font-weight: 400; }
+  &__hint { margin-left: auto; font-size: 0.75rem; font-weight: 400; color: #8d6e63; }
+}

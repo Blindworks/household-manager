@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FlowService } from '../../services/flow.service';
 import { FlowSummary } from '../../models/flow.model';
 import { lastTriggeredText } from './last-triggered.util';
+import { groupFlowsByCategory, matchesFlowSearch } from './flow-grouping.util';
+import { loadCollapsedSections, saveCollapsedSections } from './flow-section-storage.util';
 
 /** Übersicht aller Automatisierungs-Flows. */
 @Component({
@@ -19,6 +21,25 @@ export class FlowListComponent implements OnInit {
 
   readonly flows = signal<FlowSummary[]>([]);
   readonly error = signal<string | null>(null);
+  readonly query = signal('');
+  private readonly collapsed = signal<Set<string>>(loadCollapsedSections());
+
+  readonly searching = computed(() => this.query().trim() !== '');
+  readonly sections = computed(() =>
+    groupFlowsByCategory(this.flows().filter(flow => matchesFlowSearch(flow, this.query()))));
+
+  /** Während einer Suche ist alles aufgeklappt, der gemerkte Zustand bleibt unangetastet. */
+  isCollapsed(title: string): boolean {
+    return !this.searching() && this.collapsed().has(title);
+  }
+
+  toggleSection(title: string): void {
+    if (this.searching()) { return; }
+    const next = new Set(this.collapsed());
+    if (next.has(title)) { next.delete(title); } else { next.add(title); }
+    this.collapsed.set(next);
+    saveCollapsedSections(next);
+  }
 
   ngOnInit(): void {
     this.reload();
