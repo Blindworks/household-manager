@@ -25,7 +25,8 @@
 .flow-section {
   &__header th { background: #eef3f8; padding: 0; border-bottom: 1px solid #d5dde6; }
   &__toggle { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.55rem 0.75rem;
-    border: none; background: none; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+    border: none; background: none; font: inherit; font-weight: 600; text-align: left; cursor: pointer;
+    &:disabled { cursor: default; } }
   &__chevron { display: inline-block; transition: transform 0.15s;
     &--collapsed { transform: rotate(-90deg); } }
   &__count { color: #666; font-weight: 400; }

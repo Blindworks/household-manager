@@ -139,6 +139,22 @@ describe('FlowListComponent', () => {
       expect(rowNames(fixture)).toEqual(['Diagnose']);
     });
 
+    it('does not let a click during search change the stored collapsed state', () => {
+      localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify(['Sonstiges']));
+      const fixture = render();
+
+      fixture.componentInstance.query.set('engine');
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('.flow-section__toggle') as HTMLElement).click();
+      fixture.detectChanges();
+
+      fixture.componentInstance.query.set('');
+      fixture.detectChanges();
+
+      expect(rowNames(fixture)).toEqual(['Morgenmodus', 'Nachtmodus', 'Büro-Taster']);
+      expect(JSON.parse(localStorage.getItem(COLLAPSED_SECTIONS_KEY)!)).toEqual(['Sonstiges']);
+    });
+
     it('says so when the search finds nothing', () => {
       const fixture = render();
       fixture.componentInstance.query.set('gibtsnicht');

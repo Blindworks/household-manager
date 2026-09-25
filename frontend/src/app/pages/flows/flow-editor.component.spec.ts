@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { FlowEditorComponent } from './flow-editor.component';
 import { FlowService } from '../../services/flow.service';
 import { EntityStateService } from '../../services/entity-state.service';
@@ -199,5 +199,21 @@ describe('FlowEditorComponent', () => {
 
     expect(flowService.saveDraft.calls.mostRecent().args[4]).toBe('Taster');
     expect(editor.dirty()).toBeFalse();
+  });
+
+  it('stays dirty when the category is edited again while a save is still in flight', () => {
+    const subject = new Subject<any>();
+    flowService.saveDraft.and.returnValue(subject);
+    const fixture = TestBed.createComponent(FlowEditorComponent);
+    fixture.detectChanges();
+    const editor = fixture.componentInstance;
+
+    editor.onCategoryInput('A');
+    editor.save();
+    editor.onCategoryInput('B');
+    subject.next({} as any);
+    subject.complete();
+
+    expect(editor.dirty()).toBeTrue();
   });
 });

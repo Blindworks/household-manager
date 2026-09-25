@@ -24,11 +24,12 @@
     @for (section of sections(); track section.title) {
       <tbody class="flow-section">
         <tr class="flow-section__header">
-          <th colspan="5">
+          <th colspan="5" scope="rowgroup">
             <button class="flow-section__toggle" type="button"
                     [attr.aria-expanded]="!isCollapsed(section.title)"
+                    [disabled]="searching()"
                     (click)="toggleSection(section.title)">
-              <span class="flow-section__chevron"
+              <span class="flow-section__chevron" aria-hidden="true"
                     [class.flow-section__chevron--collapsed]="isCollapsed(section.title)">▾</span>
               <span class="flow-section__title">{{ section.title }}</span>
               <span class="flow-section__count">({{ section.flows.length }})</span>

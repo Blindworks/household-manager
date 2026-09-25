@@ -214,7 +214,7 @@ export class FlowEditorComponent implements OnInit {
     this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft, this.category()).subscribe({
       next: () => {
         this.savedSnapshot = snapshot;
-        this.dirty.set(false);
+        this.markDirty();
       },
       error: () => this.deployErrors.set(['Speichern fehlgeschlagen.'])
     });
@@ -228,7 +228,7 @@ export class FlowEditorComponent implements OnInit {
     this.flowService.saveDraft(this.flowId, this.name(), this.description(), draft, this.category()).subscribe({
       next: () => {
         this.savedSnapshot = snapshot;
-        this.dirty.set(false);
+        this.markDirty();
         this.flowService.deploy(this.flowId).subscribe(result => {
           this.deployErrors.set(result.errors);
           this.deployWarnings.set(result.warnings);
