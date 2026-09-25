@@ -1,3 +1,4 @@
+import { AppearanceService } from '../../services/appearance.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
@@ -37,7 +38,8 @@ describe('TabletCamerasComponent', () => {
         // Wetter fuer die Kopfzeile.
         provideRouter([]),
         { provide: BlinkService, useValue: blinkService },
-        { provide: WeatherService, useValue: weatherService }
+        { provide: WeatherService, useValue: weatherService },
+        { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]
     }).compileComponents();
 

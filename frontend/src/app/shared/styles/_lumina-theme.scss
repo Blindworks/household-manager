@@ -1,0 +1,95 @@
+// ============================================================================
+//  Farbwelt des lumina-Designs (Dashboard + Tablet-Ansichten), hell und dunkel.
+//
+//  Einzige Definition der Farbtoken. dashboard.component.scss und
+//  tablet-shell.component.scss binden die Mixins an ihrem .lumina-Wurzelelement
+//  ein; die Tablet-Seiten werden in die Shell projiziert und erben die Werte
+//  ueber die normale CSS-Vererbung (Custom Properties durchdringen die
+//  Stil-Kapselung, Selektoren nicht - siehe dashboard-style-encapsulation).
+//
+//  Umgeschaltet wird ueber die Klasse .lumina--light am Wurzelelement; welches
+//  Design gilt, steht global in der Datenbank (Admin -> Darstellung,
+//  AppearanceService).
+//
+//  Die *-rgb-Varianten existieren, weil die Stile Transparenzen brauchen:
+//  rgba(var(--primary-rgb), 0.3). Keine color-mix()-Aufrufe - der Android-
+//  WebView des Wandtablets ist nicht garantiert aktuell.
+//
+//  Die Knopf-Token (--btn-*) sind bewusst NICHT hier: die Tesla-Knoepfe sind
+//  in beiden Designs gleich hell.
+// ============================================================================
+
+@mixin dark-tokens {
+  // Seitenhintergrund
+  --lumina-bg:
+    radial-gradient(1200px 600px at 70% -10%, rgba(170, 199, 255, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(83, 225, 111, 0.06), transparent 60%),
+    #050505;
+
+  // Text
+  --on-surface: #e4e2e4;
+  --on-surface-rgb: 228, 226, 228;
+  --on-surface-variant: #c0c6d6;
+  --on-surface-variant-rgb: 192, 198, 214;
+  --text-strong: #f4f3f5;
+
+  // Neutrale Ueberlagerung (Linien, Hover-Flaechen, Leerbalken): im Dunkeln Weiss,
+  // im Hellen Schiefer - rgba(var(--tint-rgb), 0.08).
+  --tint-rgb: 255, 255, 255;
+
+  // Glas-Karte
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --card-bg-hover: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-hover: rgba(170, 199, 255, 0.3);
+  --card-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  --card-shadow-hover: 0 0 30px rgba(170, 199, 255, 0.15);
+
+  // Akzente (fuer dunkle Flaechen: hell und entsaettigt)
+  --primary: #aac7ff;
+  --primary-rgb: 170, 199, 255;
+  --secondary: #53e16f;
+  --secondary-rgb: 83, 225, 111;
+  --tertiary: #e9c400;
+  --tertiary-rgb: 233, 196, 0;
+  --error: #ffb4ab;
+  --error-rgb: 255, 180, 171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #fca5a5;
+}
+
+@mixin light-tokens {
+  --lumina-bg:
+    radial-gradient(1200px 600px at 70% -10%, rgba(62, 106, 225, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(22, 163, 74, 0.05), transparent 60%),
+    #eef0f4;
+
+  --on-surface: #1b1d22;
+  --on-surface-rgb: 27, 29, 34;
+  --on-surface-variant: #4a5162;
+  --on-surface-variant-rgb: 74, 81, 98;
+  --text-strong: #0f1115;
+
+  --tint-rgb: 15, 23, 42;
+
+  --card-bg: #ffffff;
+  --card-bg-hover: #ffffff;
+  --card-border: rgba(15, 23, 42, 0.08);
+  --card-border-hover: rgba(47, 95, 208, 0.35);
+  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
+  --card-shadow-hover: 0 2px 6px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.08);
+
+  // Akzente fuer helle Flaechen: dieselben Farbtoene, dunkel genug fuer Kontrast
+  --primary: #2f5fd0;
+  --primary-rgb: 47, 95, 208;
+  --secondary: #15803d;
+  --secondary-rgb: 21, 128, 61;
+  --tertiary: #a16207;
+  --tertiary-rgb: 161, 98, 7;
+  --error: #b91c1c;
+  --error-rgb: 185, 28, 28;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+}

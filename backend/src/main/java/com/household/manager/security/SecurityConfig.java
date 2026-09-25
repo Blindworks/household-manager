@@ -206,6 +206,10 @@ public class SecurityConfig {
                         // er sitzt nur auf der Admin-Seite und kann als sequentielle Probe aller
                         // aktiven Geraete mehrere Sekunden des Request-Threads belegen.
                         .requestMatchers(HttpMethod.POST, "/v1/presence/refresh").hasRole("ADMIN")
+                        // Hell/Dunkel des Dashboards gilt global fuer alle Geraete. Lesen bleibt
+                        // ueber die generische GET-Regel KIOSK (das Wandtablet muss es wissen),
+                        // Umstellen nur im Admin-Menue - ohne diese Zeile waere es MEMBER.
+                        .requestMatchers(HttpMethod.PUT, "/v1/appearance").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet

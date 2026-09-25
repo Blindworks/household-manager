@@ -1,5 +1,9 @@
 // Inhalt der Tablet-Hundeansicht. Kopfzeile und Ansichtsleiste liefert
 // app-tablet-shell; hier bleibt das 2x2-Raster, das sich die Resthoehe teilt.
+//
+// Farben kommen ueber die von der Shell vererbten Custom Properties
+// (--card-bg, --on-surface-rgb, ...) - siehe _lumina-theme.scss. Diese Seite
+// kann .lumina--light wegen der Stil-Kapselung nicht selbst sehen.
 
 // Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
 // bis in die Kacheln. Fehlt sie an EINER Stelle, faellt alles darunter auf
@@ -18,7 +22,7 @@
   flex: 1;
   min-height: 0;
   gap: 0.75rem;
-  color: #e4e2e4;
+  color: var(--on-surface);
 
   &__grid {
     flex: 1 1 auto;
@@ -34,9 +38,9 @@
     flex-direction: column;
     min-height: 0;
     padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--card-bg);
   }
 
   &__card-title {
@@ -48,9 +52,9 @@
     font-weight: 600;
     flex: 0 0 auto;
     // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
-    // schlaegt die vererbte helle Farbe - auf schwarzem Grund waere die
+    // schlaegt die vererbte Farbe - auf dunklem Grund waere die
     // Beschriftung sonst kaum lesbar.
-    color: #f4f3f5;
+    color: var(--text-strong);
     font-size: 1.05rem;
     letter-spacing: -0.01em;
     min-width: 0;
@@ -76,33 +80,33 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    color: #f4f3f5;
+    color: var(--text-strong);
   }
 
   &__unit {
     font-size: 1.1rem;
     font-weight: 500;
-    color: rgba(228, 226, 228, 0.65);
+    color: rgba(var(--on-surface-rgb), 0.65);
   }
 
   &__figure-note {
     margin: 0.5rem 0 0;
     font-size: 1rem;
-    color: rgba(228, 226, 228, 0.7);
+    color: rgba(var(--on-surface-rgb), 0.7);
   }
 
   &__bar {
     margin-top: 0.9rem;
     height: 1.1rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(var(--tint-rgb), 0.07);
     overflow: hidden;
   }
 
   &__bar-fill {
     height: 100%;
     border-radius: 999px;
-    background: #4ade80;
+    background: var(--success);
     transition: width 0.3s ease;
   }
 
@@ -129,15 +133,15 @@
    * voller Futtervorrat neben leeren Tabletten faelschlich kritisch aus.
    */
   &__supply[data-tone='warn'] .tablet-toni__bar-fill {
-    background: #fbbf24;
+    background: var(--warning);
   }
 
   &__supply[data-tone='critical'] .tablet-toni__bar-fill {
-    background: #ffb4ab;
+    background: var(--error);
   }
 
   &__supply[data-tone='critical'] .tablet-toni__figure {
-    color: #ffb4ab;
+    color: var(--error);
   }
 
   &__badge {
@@ -147,26 +151,28 @@
     border-radius: 999px;
     font-size: 1rem;
     font-weight: 600;
+    // rgba-Anteil ohne eigenes *-rgb-Token im Vertrag - bleibt literal, nur die
+    // deckende Textfarbe ist tokenisiert.
     background: rgba(74, 222, 128, 0.16);
-    color: #4ade80;
+    color: var(--success);
 
     &--away {
       background: rgba(251, 191, 36, 0.16);
-      color: #fbbf24;
+      color: var(--warning);
     }
   }
 
   &__charging {
     font-size: 1.6rem;
-    color: #4ade80;
+    color: var(--success);
     align-self: center;
   }
 
   &__ranges {
     display: inline-flex;
     gap: 0.2rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid rgba(var(--tint-rgb), 0.08);
     border-radius: 10px;
     padding: 0.2rem;
     flex: 0 0 auto;
@@ -181,11 +187,11 @@
     font: inherit;
     font-size: 0.8rem;
     font-weight: 500;
-    color: rgba(228, 226, 228, 0.75);
+    color: rgba(var(--on-surface-rgb), 0.75);
 
     &--active {
-      background: rgba(170, 199, 255, 0.16);
-      color: #aac7ff;
+      background: rgba(var(--primary-rgb), 0.16);
+      color: var(--primary);
     }
   }
 
@@ -211,19 +217,19 @@
     align-items: baseline;
     gap: 0.6rem;
     font-size: 0.95rem;
-    color: rgba(228, 226, 228, 0.8);
+    color: rgba(var(--on-surface-rgb), 0.8);
     font-variant-numeric: tabular-nums;
   }
 
   &__walk-day {
     min-width: 4.5rem;
     font-weight: 600;
-    color: #f4f3f5;
+    color: var(--text-strong);
   }
 
   &__walk-figures {
     margin-left: auto;
-    color: #f4f3f5;
+    color: var(--text-strong);
   }
 
   &__walks-hint {

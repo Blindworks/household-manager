@@ -5,6 +5,8 @@
 //  benoetigten Regeln hier noch einmal - bewusst nur der Kopf und die Leiste,
 //  nicht das ganze Kachel-Design.
 // ============================================================================
+@use '../../shared/styles/lumina-theme';
+
 :host {
   display: flex;
   flex-direction: column;
@@ -13,10 +15,7 @@
 }
 
 .lumina {
-  --primary: #aac7ff;
-  --secondary: #53e16f;
-  --on-surface: #e4e2e4;
-  --on-surface-variant: #c0c6d6;
+  @include lumina-theme.dark-tokens;
 
   --gutter: 24px;
   --radius-xl: 1rem;
@@ -41,19 +40,21 @@
   padding: 24px 40px 28px;
   color: var(--on-surface);
   font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
-  background:
-    radial-gradient(1200px 600px at 70% -10%, rgba(170, 199, 255, 0.08), transparent 60%),
-    radial-gradient(900px 500px at 10% 110%, rgba(83, 225, 111, 0.06), transparent 60%),
-    #050505;
+  background: var(--lumina-bg);
   overflow: hidden;
+
+  // Helles Design: aktiviert von aussen (App-Einstellung, siehe AppearanceService).
+  &.lumina--light {
+    @include lumina-theme.light-tokens;
+  }
 }
 
 .lumina-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
   border-radius: var(--radius-xl);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -65,7 +66,7 @@
   letter-spacing: 0.15em;
   line-height: 16px;
   text-transform: uppercase;
-  color: rgba(192, 198, 214, 0.7);
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
 }
 
 // ---- Uhr & Wetter (Kopfzeile) --------------------------------------------
@@ -93,8 +94,8 @@
   font-size: clamp(34px, 4.4vw, 56px);
   line-height: 1.05;
   letter-spacing: -0.03em;
-  color: #fff;
-  text-shadow: 0 0 24px rgba(255, 255, 255, 0.18);
+  color: var(--text-strong);
+  text-shadow: 0 0 24px rgba(var(--tint-rgb), 0.18);
 }
 
 .lumina__clock-meta {
@@ -125,7 +126,7 @@
 .lumina__divider {
   width: 1px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--tint-rgb), 0.2);
 }
 
 .lumina__weather {
@@ -165,8 +166,8 @@
   font-weight: 500;
   letter-spacing: -0.01em;
   // Ohne diese Zeile faerbt die globale Regel h1..h6 aus styles.scss den
-  // Titel dunkel - auf dem schwarzen Grund praktisch unsichtbar.
-  color: #f4f3f5;
+  // Titel dunkel - auf dem dunklen Grund praktisch unsichtbar.
+  color: var(--text-strong);
 }
 
 // ---- Inhaltsbereich ------------------------------------------------------

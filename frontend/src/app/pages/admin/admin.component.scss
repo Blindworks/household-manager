@@ -212,6 +212,88 @@
   color: var(--color-gray);
 }
 
+// ---- Darstellung: Auswahl Hell/Dunkel mit Mini-Vorschau -------------------
+.theme-choice {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-md);
+}
+
+.theme-choice__option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-sm);
+  width: 180px;
+  padding: var(--spacing-sm);
+  border: 2px solid var(--color-light-gray);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-dark);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-base);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  &--active {
+    border-color: var(--color-primary);
+  }
+}
+
+.theme-choice__label {
+  font-weight: 600;
+  text-align: center;
+}
+
+// Vorschau: Seitengrund, zwei Karten, ein ausgewaehlter (blauer) Knopf -
+// Farben wie im lumina-Design (shared/styles/_lumina-theme.scss).
+.theme-choice__preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  height: 84px;
+  padding: 8px;
+  border-radius: 6px;
+
+  &--dark {
+    background: #050505;
+
+    .theme-choice__preview-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &--light {
+    background: #eef0f4;
+
+    .theme-choice__preview-card {
+      background: #ffffff;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+  }
+}
+
+.theme-choice__preview-card {
+  border-radius: 4px;
+}
+
+.theme-choice__preview-button {
+  grid-column: 1 / -1;
+  height: 16px;
+  border-radius: 3px;
+  background: #3e6ae1;
+}
+
 @media (max-width: 720px) {
   .admin__header {
     flex-direction: column;

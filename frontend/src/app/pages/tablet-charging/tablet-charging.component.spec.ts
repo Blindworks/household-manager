@@ -1,3 +1,4 @@
+import { AppearanceService } from '../../services/appearance.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -51,7 +52,8 @@ describe('TabletChargingComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ChargingService, useValue: chargingSpy },
-        { provide: WeatherService, useValue: weatherSpy }
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]
     }).compileComponents();
 

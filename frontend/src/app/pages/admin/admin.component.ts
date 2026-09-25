@@ -9,6 +9,10 @@ import { WeatherPollingService } from '../../services/weather-polling.service';
 import { WeatherPollingStatus } from '../../models/weather-polling.model';
 import { UtilityPricesComponent } from '../utility-prices/utility-prices.component';
 import { SmartDeviceListComponent } from '../../components/smart-device-list/smart-device-list.component';
+import { AppearanceService } from '../../services/appearance.service';
+import { DashboardTheme } from '../../models/appearance.model';
+
+type AdminTab = 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' | 'versorgerpreise' | 'darstellung';
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -24,6 +28,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly pollingService = inject(TasmotaPollingService);
   private readonly liveService = inject(TasmotaLiveService);
   private readonly weatherPollingService = inject(WeatherPollingService);
+  private readonly appearanceService = inject(AppearanceService);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -42,7 +47,17 @@ export class AdminComponent implements OnInit, OnDestroy {
   isWeatherTriggering = false;
   weatherErrorMessage: string | null = null;
   weatherSuccessMessage: string | null = null;
-  activeTab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' | 'versorgerpreise' = 'airrohr-config';
+  activeTab: AdminTab = 'airrohr-config';
+
+  readonly themeOptions: ReadonlyArray<{ value: DashboardTheme; label: string }> = [
+    { value: 'DARK', label: 'Dunkel' },
+    { value: 'LIGHT', label: 'Hell' }
+  ];
+  /** null, solange die Einstellung noch nicht geladen ist. */
+  dashboardTheme: DashboardTheme | null = null;
+  isThemeSaving = false;
+  themeSuccessMessage: string | null = null;
+  themeErrorMessage: string | null = null;
 
   ngOnInit(): void {
     this.loadStatus();
@@ -148,8 +163,42 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  setActiveTab(tab: 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' | 'versorgerpreise'): void {
+  setActiveTab(tab: AdminTab): void {
     this.activeTab = tab;
+    if (tab === 'darstellung') {
+      this.loadAppearance();
+    }
+  }
+
+  loadAppearance(): void {
+    this.themeErrorMessage = null;
+    this.themeSuccessMessage = null;
+    this.appearanceService.get().subscribe({
+      next: settings => (this.dashboardTheme = settings.dashboardTheme),
+      error: () => (this.themeErrorMessage = 'Die Einstellung konnte nicht geladen werden.')
+    });
+  }
+
+  selectTheme(theme: DashboardTheme): void {
+    if (theme === this.dashboardTheme || this.isThemeSaving) {
+      return;
+    }
+    this.isThemeSaving = true;
+    this.themeErrorMessage = null;
+    this.themeSuccessMessage = null;
+    this.appearanceService.save(theme).subscribe({
+      next: settings => {
+        this.dashboardTheme = settings.dashboardTheme;
+        this.themeSuccessMessage = settings.dashboardTheme === 'LIGHT'
+          ? 'Helles Design ist aktiv.'
+          : 'Dunkles Design ist aktiv.';
+        this.isThemeSaving = false;
+      },
+      error: () => {
+        this.themeErrorMessage = 'Das Design konnte nicht gespeichert werden.';
+        this.isThemeSaving = false;
+      }
+    });
   }
 
   loadWeatherStatus(): void {

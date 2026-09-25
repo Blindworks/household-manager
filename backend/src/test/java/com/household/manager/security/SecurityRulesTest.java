@@ -709,6 +709,30 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
     }
 
+    /** Das Wandtablet muss das Dashboard-Design lesen, um hell/dunkel mitzuwechseln. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDasDashboardDesignLesen() throws Exception {
+        mockMvc.perform(get("/v1/appearance")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDasDashboardDesignNichtUmstellen() throws Exception {
+        mockMvc.perform(put("/v1/appearance").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"dashboardTheme\": \"LIGHT\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDasDashboardDesignUmstellen() throws Exception {
+        // Kein AppearanceController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(put("/v1/appearance").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"dashboardTheme\": \"LIGHT\"}"))
+                .andExpect(status().isNotFound());
+    }
+
     /** Die generische GET-Regel fuer Preise bleibt: das Wandtablet liest weiter Preise. */
     @Test
     @WithMockUser(roles = "KIOSK")

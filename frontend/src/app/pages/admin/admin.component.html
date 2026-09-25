@@ -3,7 +3,7 @@
     <div>
       <p class="admin__eyebrow">Systemsteuerung</p>
       <h1>Admin</h1>
-      <p class="admin__subtitle">Verwaltung von Airrohr, Stromverbrauch, Smart Plugs und Versorgerpreisen</p>
+      <p class="admin__subtitle">Verwaltung von Airrohr, Stromverbrauch, Smart Plugs, Versorgerpreisen und Darstellung</p>
     </div>
     <button
       class="btn btn--ghost"
@@ -55,6 +55,14 @@
       (click)="setActiveTab('versorgerpreise')"
     >
       Versorgerpreise
+    </button>
+    <button
+      type="button"
+      class="admin__tab"
+      [class.admin__tab--active]="activeTab === 'darstellung'"
+      (click)="setActiveTab('darstellung')"
+    >
+      Darstellung
     </button>
   </nav>
 
@@ -175,5 +183,40 @@
 
   <section class="admin__tab-content" *ngIf="activeTab === 'versorgerpreise'">
     <app-utility-prices></app-utility-prices>
+  </section>
+
+  <section class="admin__tab-content" *ngIf="activeTab === 'darstellung'">
+    <section class="admin__card">
+      <h2>Dashboard-Design</h2>
+      <p class="muted">
+        Gilt für das Dashboard und alle Tablet-Ansichten auf allen Geräten. Das Wandtablet
+        übernimmt eine Umstellung spätestens nach einer Minute.
+      </p>
+
+      <p class="muted" *ngIf="dashboardTheme === null && !themeErrorMessage">Lade Einstellung...</p>
+
+      <div class="theme-choice" role="radiogroup" aria-label="Dashboard-Design" *ngIf="dashboardTheme !== null">
+        <button
+          *ngFor="let option of themeOptions"
+          type="button"
+          role="radio"
+          class="theme-choice__option"
+          [class.theme-choice__option--active]="dashboardTheme === option.value"
+          [attr.aria-checked]="dashboardTheme === option.value"
+          [disabled]="isThemeSaving"
+          (click)="selectTheme(option.value)"
+        >
+          <span class="theme-choice__preview" [ngClass]="'theme-choice__preview--' + option.value.toLowerCase()">
+            <span class="theme-choice__preview-card"></span>
+            <span class="theme-choice__preview-card"></span>
+            <span class="theme-choice__preview-button"></span>
+          </span>
+          <span class="theme-choice__label">{{ option.label }}</span>
+        </button>
+      </div>
+
+      <p class="message message--success" *ngIf="themeSuccessMessage">{{ themeSuccessMessage }}</p>
+      <p class="message message--error" *ngIf="themeErrorMessage">{{ themeErrorMessage }}</p>
+    </section>
   </section>
 </div>
