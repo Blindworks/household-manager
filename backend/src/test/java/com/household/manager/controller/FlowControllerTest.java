@@ -257,6 +257,18 @@ class FlowControllerTest {
         verify(flowService).update(1L, null, null, "Taster", null);
     }
 
+    /** "" muss beim Service ankommen — nur so lässt sich ein Bereich wieder entfernen. */
+    @Test
+    void passesEmptyCategoryOnUpdateSoItCanBeCleared() throws Exception {
+        when(flowService.update(1L, null, null, "", null)).thenReturn(flow());
+
+        mockMvc.perform(put("/v1/flows/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"\"}"))
+                .andExpect(status().isOk());
+
+        verify(flowService).update(1L, null, null, "", null);
+    }
+
     @Test
     void passesCategoryOnImport() throws Exception {
         when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), eq("Taster"), any())).thenReturn(flow());
