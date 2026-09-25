@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -70,7 +71,7 @@ class FlowControllerTest {
 
     @Test
     void createsFlow() throws Exception {
-        when(flowService.create("Neu", "Desc")).thenReturn(flow());
+        when(flowService.create("Neu", "Desc", null)).thenReturn(flow());
 
         mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Neu\",\"description\":\"Desc\"}"))
@@ -125,7 +126,7 @@ class FlowControllerTest {
     void importDelegatesToServiceAndMapsResponse() throws Exception {
         Flow saved = Flow.builder().id(7L).name("Imported").description("desc")
                 .enabled(false).draftDefinition("{\"nodes\":[],\"wires\":[]}").build();
-        when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), any())).thenReturn(saved);
+        when(flowService.importFlow(eq(1), eq("Imported"), eq("desc"), isNull(), any())).thenReturn(saved);
 
         mockMvc.perform(post("/v1/flows/import").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"schemaVersion\":1,\"name\":\"Imported\",\"description\":\"desc\","
@@ -135,7 +136,7 @@ class FlowControllerTest {
                 .andExpect(jsonPath("$.name").value("Imported"))
                 .andExpect(jsonPath("$.enabled").value(false));
 
-        verify(flowService).importFlow(eq(1), eq("Imported"), eq("desc"), eq("{\"nodes\":[],\"wires\":[]}"));
+        verify(flowService).importFlow(eq(1), eq("Imported"), eq("desc"), isNull(), eq("{\"nodes\":[],\"wires\":[]}"));
     }
 
     @Test
@@ -164,7 +165,7 @@ class FlowControllerTest {
     @Test
     void acceptsDescriptionOfExactlyMaxLengthOnCreate() throws Exception {
         String description = "x".repeat(1000);
-        when(flowService.create("Neu", description)).thenReturn(flow());
+        when(flowService.create("Neu", description, null)).thenReturn(flow());
 
         mockMvc.perform(post("/v1/flows").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Neu\",\"description\":\"" + description + "\"}"))

@@ -39,14 +39,14 @@ public class FlowController {
 
     @PostMapping
     public FlowDetailResponse createFlow(@Valid @RequestBody CreateFlowRequest request) {
-        return toDetail(flowService.create(request.name(), request.description()));
+        return toDetail(flowService.create(request.name(), request.description(), null));
     }
 
     @PostMapping("/import")
     public FlowDetailResponse importFlow(@Valid @RequestBody ImportFlowRequest request) {
         String definitionJson = request.definition() == null ? null : request.definition().toString();
         return toDetail(flowService.importFlow(
-                request.schemaVersion(), request.name(), request.description(), definitionJson));
+                request.schemaVersion(), request.name(), request.description(), null, definitionJson));
     }
 
     @GetMapping("/{id}")
@@ -58,7 +58,7 @@ public class FlowController {
 
     @PutMapping("/{id}")
     public FlowDetailResponse updateFlow(@PathVariable Long id, @Valid @RequestBody UpdateFlowRequest request) {
-        return toDetail(flowService.update(id, request.name(), request.description(), request.draftDefinition()));
+        return toDetail(flowService.update(id, request.name(), request.description(), null, request.draftDefinition()));
     }
 
     @PostMapping("/{id}/deploy")

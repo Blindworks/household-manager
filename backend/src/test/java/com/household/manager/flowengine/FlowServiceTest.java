@@ -139,7 +139,7 @@ class FlowServiceTest {
 
     @Test
     void importCreatesDisabledDraft() {
-        Flow saved = service.importFlow(1, "Imported", "desc", VALID_DEF);
+        Flow saved = service.importFlow(1, "Imported", "desc", null, VALID_DEF);
 
         assertEquals("Imported", saved.getName());
         assertEquals("desc", saved.getDescription());
@@ -151,22 +151,76 @@ class FlowServiceTest {
 
     @Test
     void importRejectsUnsupportedSchemaVersion() {
-        assertThrows(IllegalArgumentException.class, () -> service.importFlow(2, "n", "", VALID_DEF));
-        assertThrows(IllegalArgumentException.class, () -> service.importFlow(null, "n", "", VALID_DEF));
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(2, "n", "", null, VALID_DEF));
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(null, "n", "", null, VALID_DEF));
     }
 
     @Test
     void importRejectsBlankName() {
-        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "  ", "", VALID_DEF));
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "  ", "", null, VALID_DEF));
     }
 
     @Test
     void importRejectsMissingDefinition() {
-        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "n", "", null));
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "n", "", null, null));
     }
 
     @Test
     void importRejectsUnparseableDefinition() {
-        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "n", "", "{ broken json"));
+        assertThrows(IllegalArgumentException.class, () -> service.importFlow(1, "n", "", null, "{ broken json"));
+    }
+
+    @Test
+    void createTrimsCategory() {
+        Flow saved = service.create("n", "", "  Licht  ");
+
+        assertEquals("Licht", saved.getCategory());
+    }
+
+    @Test
+    void createStoresBlankCategoryAsNull() {
+        Flow saved = service.create("n", "", "   ");
+
+        assertNull(saved.getCategory());
+    }
+
+    @Test
+    void updateKeepsCategoryWhenNotGiven() {
+        Flow entity = flow(1L, VALID_DEF, null, true);
+        entity.setCategory("Licht");
+        when(flowRepository.findById(1L)).thenReturn(Optional.of(entity));
+
+        service.update(1L, null, "neue Beschreibung", null, null);
+
+        assertEquals("Licht", entity.getCategory());
+        assertEquals("neue Beschreibung", entity.getDescription());
+    }
+
+    @Test
+    void updateClearsCategoryWhenBlank() {
+        Flow entity = flow(1L, VALID_DEF, null, true);
+        entity.setCategory("Licht");
+        when(flowRepository.findById(1L)).thenReturn(Optional.of(entity));
+
+        service.update(1L, null, null, "  ", null);
+
+        assertNull(entity.getCategory());
+    }
+
+    @Test
+    void updateSetsTrimmedCategory() {
+        Flow entity = flow(1L, VALID_DEF, null, true);
+        when(flowRepository.findById(1L)).thenReturn(Optional.of(entity));
+
+        service.update(1L, null, null, " Taster ", null);
+
+        assertEquals("Taster", entity.getCategory());
+    }
+
+    @Test
+    void importStoresTrimmedCategory() {
+        Flow saved = service.importFlow(1, "Imported", "desc", " Taster ", VALID_DEF);
+
+        assertEquals("Taster", saved.getCategory());
     }
 }
