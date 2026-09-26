@@ -34,6 +34,9 @@ public class UtilityPriceService {
      * Validates that:
      * - validFrom is before validTo (if validTo is provided)
      * - No overlapping validity periods exist for the same meter type
+     * <p>
+     * An open-ended new price that starts after the currently open-ended price
+     * is its successor: the predecessor is closed at the new start date first.
      *
      * @param request the utility price request containing price data
      * @return response containing the created utility price
@@ -44,6 +47,7 @@ public class UtilityPriceService {
         log.info("Creating new utility price for type: {}", request.getMeterType());
 
         validateValidityPeriod(request.getValidFrom(), request.getValidTo());
+        closeOpenEndedPredecessor(request.getMeterType(), request.getValidFrom(), request.getValidTo());
         validateNoOverlappingPeriods(request.getMeterType(), request.getValidFrom(), request.getValidTo(), null);
 
         UtilityPrice utilityPrice = UtilityPrice.builder()
@@ -130,6 +134,29 @@ public class UtilityPriceService {
 
         utilityPriceRepository.deleteById(id);
         log.info("Successfully deleted utility price with ID: {}", id);
+    }
+
+    /**
+     * Close the open-ended price of this meter type at the start of its successor.
+     * <p>
+     * validTo is exclusive, so predecessor.validTo == successor.validFrom leaves
+     * neither a gap nor an overlap. Only an open-ended new price counts as successor:
+     * closing the predecessor for a limited one would leave no price after its end.
+     * A predecessor that does not start before the new price is left untouched and
+     * the overlap check rejects the request. Runs in the caller's transaction, so a
+     * failing overlap check rolls the closing back.
+     */
+    private void closeOpenEndedPredecessor(MeterType meterType, LocalDate validFrom, LocalDate validTo) {
+        if (validTo != null) {
+            return;
+        }
+        utilityPriceRepository.findByMeterTypeAndValidToIsNull(meterType).stream()
+                .filter(open -> open.getValidFrom().isBefore(validFrom))
+                .forEach(open -> {
+                    log.info("Closing open-ended utility price {} ({}) at {}", open.getId(), meterType, validFrom);
+                    open.setValidTo(validFrom);
+                    utilityPriceRepository.save(open);
+                });
     }
 
     /**

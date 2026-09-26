@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -48,5 +49,71 @@ class UtilityPriceServiceTest {
 
         assertThat(response.getMeterType()).isEqualTo(MeterType.WATER);
         assertThat(response.getId()).isEqualTo(7L);
+    }
+
+    /**
+     * Ein kuenftiger Nachfolgetarif beendet den laufenden, unbefristeten Preis
+     * zu seinem eigenen Beginn (validTo ist exklusiv, das ergibt keine Luecke).
+     */
+    @Test
+    void beendetDenUnbefristetenVorgaengerZumBeginnDesNachfolgers() {
+        UtilityPrice laufend = price(1L, MeterType.GAS, LocalDate.of(2025, 1, 1), null);
+        when(repository.findByMeterTypeAndValidToIsNull(MeterType.GAS)).thenReturn(List.of(laufend));
+        when(repository.findOverlappingPrices(any(), any(), any())).thenReturn(List.of());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.createUtilityPrice(request(MeterType.GAS, LocalDate.of(2026, 11, 1), null));
+
+        assertThat(laufend.getValidTo()).isEqualTo(LocalDate.of(2026, 11, 1));
+    }
+
+    /**
+     * Ein befristeter neuer Preis darf den unbefristeten nicht beenden - nach
+     * seinem Ende stuende sonst gar kein Preis mehr. Das bleibt eine Ueberschneidung.
+     */
+    @Test
+    void befristeterNeuerPreisLaesstDenUnbefristetenStehen() {
+        UtilityPrice laufend = price(1L, MeterType.GAS, LocalDate.of(2025, 1, 1), null);
+        when(repository.findOverlappingPrices(any(), any(), any())).thenReturn(List.of(laufend));
+
+        assertThatThrownBy(() -> service.createUtilityPrice(
+                request(MeterType.GAS, LocalDate.of(2026, 11, 1), LocalDate.of(2027, 1, 1))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(laufend.getValidTo()).isNull();
+    }
+
+    /**
+     * Beginnt der unbefristete Preis nicht VOR dem neuen, laesst er sich nicht
+     * sinnvoll beenden (validTo <= validFrom) - dann bleibt es beim 400.
+     */
+    @Test
+    void unbefristeterPreisAbGleichemTagBleibtEineUeberschneidung() {
+        UtilityPrice laufend = price(1L, MeterType.GAS, LocalDate.of(2026, 11, 1), null);
+        when(repository.findByMeterTypeAndValidToIsNull(MeterType.GAS)).thenReturn(List.of(laufend));
+        when(repository.findOverlappingPrices(any(), any(), any())).thenReturn(List.of(laufend));
+
+        assertThatThrownBy(() -> service.createUtilityPrice(
+                request(MeterType.GAS, LocalDate.of(2026, 11, 1), null)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(laufend.getValidTo()).isNull();
+    }
+
+    private static UtilityPrice price(Long id, MeterType type, LocalDate from, LocalDate to) {
+        return UtilityPrice.builder()
+                .id(id)
+                .meterType(type)
+                .price(new BigDecimal("0.1000"))
+                .validFrom(from)
+                .validTo(to)
+                .build();
+    }
+
+    private static UtilityPriceRequest request(MeterType type, LocalDate from, LocalDate to) {
+        UtilityPriceRequest request = new UtilityPriceRequest();
+        request.setMeterType(type);
+        request.setPrice(new BigDecimal("0.1142"));
+        request.setValidFrom(from);
+        request.setValidTo(to);
+        return request;
     }
 }

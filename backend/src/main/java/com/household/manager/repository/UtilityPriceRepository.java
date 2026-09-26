@@ -31,6 +31,14 @@ public interface UtilityPriceRepository extends JpaRepository<UtilityPrice, Long
     List<UtilityPrice> findByMeterTypeOrderByValidFromDesc(MeterType meterType);
 
     /**
+     * Find the open-ended prices (no validTo) of a meter type.
+     *
+     * @param meterType the type of meter
+     * @return prices without an end date
+     */
+    List<UtilityPrice> findByMeterTypeAndValidToIsNull(MeterType meterType);
+
+    /**
      * Find the current price for a specific meter type on a given date.
      * <p>
      * Returns the price where:
