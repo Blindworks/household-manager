@@ -1,4 +1,4 @@
-import { buildDoorInsights } from './door-insight.util';
+import { buildDoorInsights, buildWindowInsights } from './door-insight.util';
 import { EntityState } from '../models/entity-state.model';
 
 function contact(entityId: string, overrides: Partial<EntityState> = {}): EntityState {
@@ -78,5 +78,51 @@ describe('buildDoorInsights', () => {
     ];
 
     expect(buildDoorInsights(entities, NOW_MS)[0].text).toBe('Die Tür ist gerade offen.');
+  });
+});
+
+describe('buildWindowInsights', () => {
+
+  const fenster = (room: string, overrides: Partial<EntityState> = {}): EntityState =>
+    contact(`binary_sensor.zigbee_fenster_${room}_contact`, {
+      displayName: `Fenster ${room.charAt(0).toUpperCase()}${room.slice(1)} Kontakt`,
+      ...overrides
+    });
+
+  it('liefert keine Karten, wenn alle Fenster zu sind', () => {
+    expect(buildWindowInsights([fenster('badezimmer')], NOW_MS)).toEqual([]);
+  });
+
+  it('baut je offenem Fenster eine Karte, ohne den Kontakt-Zusatz im Titel', () => {
+    const insights = buildWindowInsights([fenster('badezimmer', { state: 'on' })], NOW_MS);
+
+    expect(insights.length).toBe(1);
+    expect(insights[0].title).toBe('Fenster Badezimmer offen');
+    expect(insights[0].icon).toBe('window');
+    expect(insights[0].tone).toBe('tertiary');
+    expect(insights[0].text).toBe('Offen seit 17:46 Uhr.');
+  });
+
+  it('erkennt neue Fensterkontakte am Namen und sortiert stabil nach Entity-ID', () => {
+    const insights = buildWindowInsights([
+      fenster('schlafzimmer', { state: 'on' }),
+      fenster('badezimmer', { state: 'on' })
+    ], NOW_MS);
+
+    expect(insights.map(i => i.title)).toEqual(['Fenster Badezimmer offen', 'Fenster Schlafzimmer offen']);
+  });
+
+  it('ignoriert andere Kontakte wie den Gaszaehler und die Tueren', () => {
+    const entities = [
+      contact('binary_sensor.zigbee_sensor_gas_contact', { state: 'on' }),
+      contact('binary_sensor.zigbee_eingangstuer_contact', { state: 'on' }),
+      contact('binary_sensor.zigbee_fenster_flur_battery_low', { state: 'on' })
+    ];
+
+    expect(buildWindowInsights(entities, NOW_MS)).toEqual([]);
+  });
+
+  it('wertet unavailable nicht als offen', () => {
+    expect(buildWindowInsights([fenster('badezimmer', { state: 'unavailable' })], NOW_MS)).toEqual([]);
   });
 });

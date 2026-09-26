@@ -39,7 +39,7 @@ import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
 import { buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
-import { buildDoorInsights } from '../../shared/door-insight.util';
+import { buildDoorInsights, buildWindowInsights } from '../../shared/door-insight.util';
 import { buildApplianceInsights } from '../../shared/appliance-insight.util';
 import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
@@ -1670,7 +1670,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.rebuildInsights();
   }
 
-  /** Komponiert den Hub: offene Tueren voran, dann fertige Maschinen, Muell, Termine, Lueften, Tracker-Akku. */
+  /** Komponiert den Hub: offene Tueren und Fenster voran, dann fertige Maschinen, Muell, Termine, Lueften, Tracker-Akku. */
   private rebuildInsights(): void {
     this.insights = [
       ...this.doorInsights,
@@ -1683,7 +1683,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Haelt die Tuer-offen-Karten im Hub aktuell. Ein Ladefehler leert die Karten
+   * Haelt die Tuer- und Fenster-offen-Karten im Hub aktuell. Ein Ladefehler leert die Karten
    * bewusst (Muster Lueftung): eine veraltete "Tuer offen"-Meldung waere schlimmer
    * als eine kurz fehlende — bei einem Zigbee-Ausfall werden die Kontakte ohnehin
    * `unavailable` und zaehlen dann nicht als offen.
@@ -1696,7 +1696,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           .pipe(catchError(() => of([]))))
       )
       .subscribe(entities => {
-        this.doorInsights = buildDoorInsights(entities, Date.now());
+        const now = Date.now();
+        this.doorInsights = [...buildDoorInsights(entities, now), ...buildWindowInsights(entities, now)];
         this.rebuildInsights();
       });
   }
