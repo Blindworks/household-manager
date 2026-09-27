@@ -3385,6 +3385,32 @@ describe('DashboardComponent (Dog-Mode-Screen)', () => {
     discardPeriodicTasks();
   }));
 
+  it('behaelt bei einem fehlgeschlagenen Refresh den letzten Stand', fakeAsync(() => {
+    const reading: CurrentTemperatureReading = {
+      sensorId: 'alexa:GAJ2300425330047',
+      name: 'Wohnzimmer',
+      source: 'ALEXA',
+      temperature: 22.4,
+      measuredAt: new Date().toISOString()
+    };
+    // Erster Abruf liefert den Messwert, jeder weitere schlaegt fehl — der Dog-Screen
+    // muss den letzten guten Stand behalten, egal wie oft der Refresh danach scheitert.
+    let firstCall = true;
+    temperatureSpy.getCurrent.and.callFake(() => {
+      const result = firstCall ? of([reading]) : throwError(() => new Error('down'));
+      firstCall = false;
+      return result;
+    });
+    const fixture = createFixture(true);
+
+    tick(60000);
+    fixture.detectChanges();
+
+    expect(screen(fixture)?.querySelector('.dog-mode__indoor-value')?.textContent?.trim()).toBe('22°');
+
+    discardPeriodicTasks();
+  }));
+
   it('schaltet Toni allein ueber den Knopf aus', fakeAsync(() => {
     const fixture = createFixture(true);
 

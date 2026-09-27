@@ -1466,14 +1466,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         startWith(0),
         switchMap(() =>
           this.temperatureService.getCurrent().pipe(
-            catchError(() => of<CurrentTemperatureReading[]>([]))
+            catchError(() => of<CurrentTemperatureReading[] | null>(null))
           )
         )
       )
       .subscribe(readings => {
-        this.currentTemperatures = readings;
-        this.climate = buildClimateView(readings, Date.now());
-        this.dogModeClimate = buildDogModeClimate(readings, Date.now());
+        const current = readings ?? [];
+        this.currentTemperatures = current;
+        this.climate = buildClimateView(current, Date.now());
+        // Dog-Screen behaelt bei Ladefehler den letzten Stand, die Kachel verhaelt sich wie bisher.
+        if (readings) {
+          this.dogModeClimate = buildDogModeClimate(readings, Date.now());
+        }
         this.refreshSensorDetail();
       });
   }
