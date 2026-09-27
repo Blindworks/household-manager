@@ -28,6 +28,14 @@ import {
   buildSensorDetail
 } from '../../shared/temperature-comfort.util';
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
+import { DogModeScreenComponent } from '../../components/dog-mode-screen/dog-mode-screen.component';
+import {
+  DOG_MODE_ENTITY_ID,
+  DogModeClimate,
+  EMPTY_DOG_MODE_CLIMATE,
+  buildDogModeClimate,
+  isDogModeActive
+} from '../../shared/dog-mode.util';
 import { WasteCollectionService } from '../../services/waste-collection.service';
 import { buildWasteInsight } from '../../shared/waste-insight.util';
 import { CalendarService } from '../../services/calendar.service';
@@ -94,7 +102,7 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective],
+  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
   // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro
@@ -328,6 +336,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Entity-IDs mit laufendem Modus-Schaltbefehl (verhindert Doppelklicks). */
   readonly pendingModeIds = new Set<string>();
   modeError: string | null = null;
+  /** Temperaturen fuer den Dog-Mode-Screen, mit jedem Klima-Refresh neu gebaut. */
+  dogModeClimate: DogModeClimate = EMPTY_DOG_MODE_CLIMATE;
 
   /**
    * Modi mit Aktivierungs-Checks (Fenster/Türen, Großverbraucher): beim
@@ -762,6 +772,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     const current = this.findModeOrQuickAccess(dialogMode.entityId);
     if (!current || current.state === 'on') {
+      return;
+    }
+    this.performModeToggle(current);
+  }
+
+  /** Dog-Mode-Screen (Muster Tesla): nur am Wandtablet und nur solange „Toni allein" an ist. */
+  get dogModeVisible(): boolean {
+    return this.viewMode.isTabletView() && isDogModeActive(this.modes);
+  }
+
+  get dogModeBusy(): boolean {
+    return this.pendingModeIds.has(DOG_MODE_ENTITY_ID);
+  }
+
+  /**
+   * Beendet „Toni allein" vom Dog-Mode-Screen aus. Der Modus wird aus der aktuellen
+   * Liste re-resolved (Muster confirmToggle): ist er dort schon aus, wuerde der Toggle
+   * ihn ausgerechnet wieder einschalten — dann passiert nichts. Ausschalten ist direkt,
+   * die Aktivierungs-Checks gelten nur beim Einschalten.
+   */
+  endDogMode(): void {
+    const current = this.modes.find(mode => mode.entityId === DOG_MODE_ENTITY_ID);
+    if (!current || current.state !== 'on') {
       return;
     }
     this.performModeToggle(current);
@@ -1440,6 +1473,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(readings => {
         this.currentTemperatures = readings;
         this.climate = buildClimateView(readings, Date.now());
+        this.dogModeClimate = buildDogModeClimate(readings, Date.now());
         this.refreshSensorDetail();
       });
   }

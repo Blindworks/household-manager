@@ -1089,4 +1089,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Dog-Mode-Screen (Muster Tesla): Vollbild, solange „Toni allein" an ist, nur Tablet-Ansicht -->
+  @if (dogModeVisible) {
+    <app-dog-mode-screen
+      [clockTime]="clockTime"
+      [climate]="dogModeClimate"
+      [busy]="dogModeBusy"
+      [error]="modeError"
+      (endMode)="endDogMode()"
+    ></app-dog-mode-screen>
+  }
 </div>

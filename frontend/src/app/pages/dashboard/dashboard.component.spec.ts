@@ -3274,3 +3274,139 @@ describe('DashboardComponent (Footer-Kacheln: Hoehe und Klappen)', () => {
     discardPeriodicTasks();
   }));
 });
+
+/**
+ * Dog-Mode-Screen: nur Tablet-Ansicht UND „Toni allein" an. `viewMode` wird wie in der
+ * Schnellzugriff-Suite nicht gemockt — der Schluessel im localStorage wird vor jedem
+ * Test entfernt und die Tablet-Ansicht per toggle() eingeschaltet.
+ */
+describe('DashboardComponent (Dog-Mode-Screen)', () => {
+  let modeServiceSpy: jasmine.SpyObj<ModeService>;
+  let temperatureSpy: jasmine.SpyObj<TemperatureService>;
+
+  const toniAllein = (state: string): ModeEntity => ({
+    entityId: 'input_boolean.manual_toni_allein',
+    displayName: 'Toni allein',
+    icon: 'pets',
+    state
+  });
+
+  beforeEach(async () => {
+    localStorage.removeItem('household-manager-view-mode');
+
+    modeServiceSpy = jasmine.createSpyObj('ModeService', ['getModes', 'toggle']);
+    modeServiceSpy.getModes.and.returnValue(of([toniAllein('on')]));
+    modeServiceSpy.toggle.and.returnValue(of(toniAllein('off')));
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+
+    temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ModeService, useValue: modeServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  afterAll(() => localStorage.removeItem('household-manager-view-mode'));
+
+  function createFixture(tablet: boolean): ComponentFixture<DashboardComponent> {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    if (tablet) {
+      fixture.componentInstance.viewMode.toggle();
+    }
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const screen = (fixture: ComponentFixture<DashboardComponent>): HTMLElement | null =>
+    (fixture.nativeElement as HTMLElement).querySelector('app-dog-mode-screen');
+
+  it('zeigt den Screen in der Tablet-Ansicht, wenn Toni allein an ist', fakeAsync(() => {
+    const fixture = createFixture(true);
+
+    expect(screen(fixture)).not.toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt den Screen nicht in der Website-Ansicht', fakeAsync(() => {
+    const fixture = createFixture(false);
+
+    expect(screen(fixture)).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt den Screen nicht, wenn Toni allein aus ist', fakeAsync(() => {
+    modeServiceSpy.getModes.and.returnValue(of([toniAllein('off')]));
+    const fixture = createFixture(true);
+
+    expect(screen(fixture)).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt die Wohnzimmer-Temperatur aus den Messwerten', fakeAsync(() => {
+    const reading: CurrentTemperatureReading = {
+      sensorId: 'alexa:GAJ2300425330047',
+      name: 'Wohnzimmer',
+      source: 'ALEXA',
+      temperature: 22.4,
+      measuredAt: new Date().toISOString()
+    };
+    temperatureSpy.getCurrent.and.returnValue(of([reading]));
+    const fixture = createFixture(true);
+
+    expect(screen(fixture)?.querySelector('.dog-mode__indoor-value')?.textContent?.trim()).toBe('22°');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet Toni allein ueber den Knopf aus', fakeAsync(() => {
+    const fixture = createFixture(true);
+
+    (screen(fixture)!.querySelector('.dog-mode__end') as HTMLButtonElement).click();
+    tick();
+    fixture.detectChanges();
+
+    expect(modeServiceSpy.toggle).toHaveBeenCalledOnceWith('input_boolean.manual_toni_allein');
+    expect(screen(fixture)).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
+  it('schaltet nicht, wenn Toni allein in der aktuellen Liste schon aus ist', fakeAsync(() => {
+    const fixture = createFixture(true);
+    // Ein Refresh hat den Modus inzwischen als "off" geliefert: ein Toggle schaltete ihn wieder EIN.
+    fixture.componentInstance.modes = [toniAllein('off')];
+
+    fixture.componentInstance.endDogMode();
+
+    expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+});
