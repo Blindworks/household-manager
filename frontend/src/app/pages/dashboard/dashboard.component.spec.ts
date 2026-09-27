@@ -3131,6 +3131,38 @@ describe('DashboardComponent (Footer-Kacheln: Hoehe und Klappen)', () => {
     return CARDS.map(selector => (fixture.nativeElement as HTMLElement).querySelector(selector) as HTMLElement);
   }
 
+  it('sind eingeklappt so hoch wie die Ansichtsknoepfe', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    (fixture.nativeElement as HTMLElement).style.width = '1400px';
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('.lumina__viewbar-btn') as HTMLElement;
+    const buttonHeight = Math.round(button.getBoundingClientRect().height);
+    cards(fixture).forEach(card =>
+      expect(Math.round(card.getBoundingClientRect().height)).withContext(card.className).toBe(buttonHeight));
+
+    discardPeriodicTasks();
+  }));
+
+  it('tragen eingeklappt eine Beschriftung, die aufgeklappt verschwindet', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    (fixture.nativeElement as HTMLElement).style.width = '1400px';
+    fixture.detectChanges();
+    const labels = () => cards(fixture).map(card => card.querySelector('.lumina__card-label') as HTMLElement);
+
+    expect(labels().map(label => label.textContent?.trim())).toEqual(['Tür', 'Toni', 'Modi']);
+    labels().forEach(label => expect(getComputedStyle(label).display).not.toBe('none'));
+
+    fixture.componentInstance.toggleNukiCard();
+    fixture.componentInstance.toggleToniCard();
+    fixture.componentInstance.toggleModesBar();
+    fixture.detectChanges();
+
+    labels().forEach(label => expect(getComputedStyle(label).display).toBe('none'));
+
+    discardPeriodicTasks();
+  }));
+
   it('stehen aufgeklappt alle drei gleich hoch', fakeAsync(() => {
     const fixture = expandedFixture();
 

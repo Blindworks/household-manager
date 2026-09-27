@@ -281,6 +281,9 @@
       <div class="lumina__secured-icon">
         <span class="material-symbols-outlined">{{ nukiLocks[0] ? nukiStateIcon(nukiLocks[0]) : 'security' }}</span>
       </div>
+      <!-- Beschriftung nur eingeklappt (wie die Ansichtsknoepfe); aufgeklappt
+           traegt der Inhalt einen eigenen Titel. -->
+      <span class="lumina__card-label">Tür</span>
       <!-- Klappt beim Zusammenschrumpfen auf Breite 0; das Symbol bleibt stehen. -->
       <div class="lumina__lock-collapsible" [attr.aria-hidden]="!nukiExpanded">
         <div class="lumina__lock-collapsible-inner">
@@ -336,6 +339,7 @@
              Rot-Gruen-Sehschwaeche kein Hinweis. -->
         <span class="lumina__toni-alert" *ngIf="toniTone === 'critical'" aria-hidden="true"></span>
       </div>
+      <span class="lumina__card-label">Toni</span>
       <!-- Klappt beim Zusammenschrumpfen auf Breite 0; das Symbol bleibt stehen. -->
       <div class="lumina__lock-collapsible" [attr.aria-hidden]="!toniExpanded">
         <div class="lumina__lock-collapsible-inner">
@@ -413,6 +417,7 @@
             <span class="material-symbols-outlined" *ngFor="let mode of activeModes">{{ modeIcon(mode) }}</span>
             <span class="material-symbols-outlined" *ngIf="activeModes.length === 0">tune</span>
           </div>
+          <span class="lumina__card-label">Modi</span>
           <div class="lumina__lock-collapsible" [attr.aria-hidden]="!modesExpanded">
             <div class="lumina__lock-collapsible-inner">
               <div class="lumina__modes">

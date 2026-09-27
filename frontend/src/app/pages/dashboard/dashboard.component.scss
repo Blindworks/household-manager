@@ -51,6 +51,12 @@
   // Kacheln stellen ihren Inhalt darauf, damit sie nebeneinander gleich hoch
   // stehen - vorher waren es 65, 77 und 93 px.
   --footer-content-height: calc(var(--btn-height) + 8px);
+  // Eingeklappte Footer-Kacheln (Tuerschloss, Toni, Modi) sehen aus wie die
+  // Ansichtsknoepfe darueber: gleiche Hoehe (--btn-height, der 1-px-Rand kommt
+  // bei beiden obendrauf), dasselbe 20-px-Symbol, dieselbe Beschriftung und
+  // dasselbe seitliche Polster.
+  --btn-icon-size: 20px;
+  --collapsed-card-padding: calc((var(--btn-height) - var(--btn-icon-size)) / 2) 24px;
   --btn-bg: #f4f4f4;
   --btn-fg: #393c41;
   --btn-border: #d0d1d2;
@@ -1049,15 +1055,15 @@
   // Eingeklappt bleibt nur das Symbol stehen: quadratisches Feld ohne Abstand
   // daneben, sonst sitzt es sichtbar aus der Mitte der runden Kachel.
   gap: 0;
-  padding: 8px;
+  padding: var(--collapsed-card-padding);
   cursor: pointer;
   transition:
     padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     gap 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 
   .lumina__secured-icon {
-    width: 24px;
-    height: 24px;
+    width: var(--btn-icon-size);
+    height: var(--btn-icon-size);
 
     // Ohne feste Zeilenhoehe macht die Standardzeilenhoehe der Symbolschrift
     // das Feld hoeher als breit – die eingeklappte Kachel waere ein Ei.
@@ -1075,15 +1081,15 @@
 // Die Toni-Kachel klappt genauso: eingeklappt nur das Pfoten-Symbol.
 .lumina__toni-card {
   gap: 0;
-  padding: 8px;
+  padding: var(--collapsed-card-padding);
   cursor: pointer;
   transition:
     padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     gap 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 
   > .lumina__secured-icon {
-    width: 24px;
-    height: 24px;
+    width: var(--btn-icon-size);
+    height: var(--btn-icon-size);
 
     // Ohne feste Zeilenhoehe waere die eingeklappte Kachel ein Ei, siehe
     // dieselbe Begruendung bei .lumina__lock-card.
@@ -1106,6 +1112,21 @@
 
   &[data-tone='critical'] > .lumina__secured-icon {
     color: var(--btn-danger-bg);
+  }
+}
+
+// Beschriftung der eingeklappten Footer-Kacheln - Schrift und Abstand wie
+// .lumina__viewbar-label. Aufgeklappt verschwindet sie: dort traegt der
+// Inhalt seinen eigenen Titel.
+.lumina__card-label {
+  margin-left: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: var(--btn-icon-size);
+  white-space: nowrap;
+
+  .lumina__secured--expanded > & {
+    display: none;
   }
 }
 
@@ -1265,7 +1286,7 @@
   color: var(--secondary);
 
   .material-symbols-outlined {
-    font-size: 24px;
+    font-size: var(--btn-icon-size);
   }
 }
 
@@ -1473,7 +1494,7 @@
 // Dauer). Eingeklappt bleibt nur die Symbolgruppe stehen.
 .lumina__modes-card {
   gap: 0;
-  padding: 8px;
+  padding: var(--collapsed-card-padding);
   cursor: pointer;
   transition:
     padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1489,9 +1510,10 @@
 // Modus, traegt sie das Blau der ausgewaehlten Zustaende.
 .lumina__modes-icons {
   gap: 6px;
+  height: var(--btn-icon-size);
 
   .material-symbols-outlined {
-    font-size: 24px;
+    font-size: var(--btn-icon-size);
     line-height: 1;
   }
 
