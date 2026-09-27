@@ -95,3 +95,56 @@ export function bridgeEventText(event: ZigbeeBridgeEvent): string {
       return `${name} hat das Netz verlassen`;
   }
 }
+
+export type ZigbeeDeviceCategoryKey = 'buttons' | 'water' | 'motion' | 'contacts' | 'climate' | 'light' | 'other';
+
+export interface ZigbeeDeviceCategory {
+  key: ZigbeeDeviceCategoryKey;
+  title: string;
+  devices: ZigbeeDevice[];
+  /** Geraete, die nicht ACTIVE sind oder zigbee2mqtt nicht mehr kennt. */
+  attentionCount: number;
+}
+
+/**
+ * Reihenfolge = Prioritaet: ein Geraet landet in der ERSTEN passenden Kategorie. Ein
+ * Bewegungsmelder mit Helligkeitswert ist ein Bewegungsmelder, ein Wassermelder mit
+ * Temperatur ein Wassermelder. Erkannt wird am Suffix der Entity-ID, das der
+ * ZigbeeEntityMapper aus dem Messtyp bildet (`..._occupancy`, `..._action`, …).
+ */
+const CATEGORY_RULES: { key: Exclude<ZigbeeDeviceCategoryKey, 'other'>; title: string; suffixes: string[] }[] = [
+  { key: 'buttons', title: 'Taster', suffixes: ['_action'] },
+  { key: 'water', title: 'Wassermelder', suffixes: ['_water_leak'] },
+  { key: 'motion', title: 'Bewegungsmelder', suffixes: ['_occupancy'] },
+  { key: 'contacts', title: 'Tür- und Fensterkontakte', suffixes: ['_contact'] },
+  { key: 'climate', title: 'Klima (Temperatur, Luftfeuchte)', suffixes: ['_temperature', '_humidity', '_pressure'] },
+  { key: 'light', title: 'Helligkeit', suffixes: ['_illuminance'] }
+];
+
+const OTHER_TITLE = 'Sonstige (ohne Messwerte, Router)';
+
+export function deviceCategory(device: ZigbeeDevice): ZigbeeDeviceCategoryKey {
+  const rule = CATEGORY_RULES.find(r =>
+    device.entities.some(e => r.suffixes.some(suffix => e.entityId.endsWith(suffix))));
+  return rule?.key ?? 'other';
+}
+
+/**
+ * Einzige Gruppierungsregel der Zigbee-Seite. Leere Kategorien entfallen; innerhalb
+ * einer Kategorie bleibt die Sortierung von sortDevicesForDisplay (Kranke zuerst).
+ */
+export function groupDevicesByCategory(devices: ZigbeeDevice[]): ZigbeeDeviceCategory[] {
+  const sorted = sortDevicesForDisplay(devices);
+  const all = [...CATEGORY_RULES.map(r => ({ key: r.key, title: r.title })), { key: 'other' as const, title: OTHER_TITLE }];
+  return all
+    .map(({ key, title }) => {
+      const members = sorted.filter(d => deviceCategory(d) === key);
+      return {
+        key,
+        title,
+        devices: members,
+        attentionCount: members.filter(d => !d.knownToBridge || d.health.status !== 'ACTIVE').length
+      };
+    })
+    .filter(category => category.devices.length > 0);
+}

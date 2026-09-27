@@ -20,12 +20,16 @@ import {
   ZigbeeMeasurementType
 } from '../../models/zigbee.model';
 import {
+  ZigbeeDeviceCategory,
+  ZigbeeDeviceCategoryKey,
   bridgeEventText,
+  groupDevicesByCategory,
   healthBadge,
   permitJoinRemainingSeconds,
   silentText,
   sortDevicesForDisplay
 } from '../../shared/zigbee-device-view.util';
+import { loadCollapsedSections, saveCollapsedSections } from '../flows/flow-section-storage.util';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -60,6 +64,7 @@ const PERMIT_JOIN_SECONDS = 240;
 const DEVICES_REFRESH_MS = 30_000;
 const EVENTS_VISIBLE_AFTER_CLOSE_MS = 120_000;
 const LIVE_RELOAD_MS = 5000;
+export const ZIGBEE_COLLAPSED_SECTIONS_KEY = 'zigbee.collapsedSections';
 
 /**
  * Zigbee-Geraeteverwaltung: Bridge-Status, Anlernen, Ereignisse, Gerätekarten mit
@@ -84,6 +89,12 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
   readonly bridgeEventText = bridgeEventText;
 
   devices: ZigbeeDevice[] = [];
+  /** Aus devices und searchTerm abgeleitet — als Feld, nicht als Getter, damit das Template nicht bei jeder Change Detection neu gruppiert. */
+  categories: ZigbeeDeviceCategory[] = [];
+  /** Ungefiltert — die Verlaufsauswahl soll nicht von der Suche abhaengen. */
+  historyGroups: ZigbeeDeviceCategory[] = [];
+  searchTerm = '';
+  private collapsedSections = loadCollapsedSections(ZIGBEE_COLLAPSED_SECTIONS_KEY);
   health: ZigbeeHealth | null = null;
   bridge: ZigbeeBridgeStatus | null = null;
   bridgeEvents: ZigbeeBridgeEvent[] = [];
@@ -170,6 +181,8 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
         this.initialLoadDone = true;
         this.loadError = null;
         this.devices = sortDevicesForDisplay(devices);
+        this.historyGroups = groupDevicesByCategory(devices);
+        this.updateCategories();
         if (!this.selectedDevice && devices.length > 0) {
           this.selectedDevice = this.devices[0].friendlyName;
           this.loadHistory();
@@ -286,6 +299,33 @@ export class ZigbeeComponent implements OnInit, OnDestroy {
     const thresholdMs = (device.battery ? 25 * 3600 : 15 * 60) * 1000;
     const updated = Date.parse(lastUpdated);
     return !isNaN(updated) && Date.now() - updated > thresholdMs;
+  }
+
+  // --- Kategorien und Suche ----------------------------------------------------
+
+  updateCategories(): void {
+    const term = this.searchTerm.trim().toLocaleLowerCase('de');
+    const matching = term
+      ? this.devices.filter(d => [d.friendlyName, d.model, d.vendor, d.description]
+          .some(text => text?.toLocaleLowerCase('de').includes(term)))
+      : this.devices;
+    this.categories = groupDevicesByCategory(matching);
+  }
+
+  get searching(): boolean {
+    return this.searchTerm.trim().length > 0;
+  }
+
+  /** Waehrend einer Suche ist alles aufgeklappt; der gemerkte Zustand bleibt unberuehrt (Muster Flow-Uebersicht). */
+  isCollapsed(key: ZigbeeDeviceCategoryKey): boolean {
+    return !this.searching && this.collapsedSections.has(key);
+  }
+
+  toggleSection(key: ZigbeeDeviceCategoryKey): void {
+    const next = new Set(this.collapsedSections);
+    if (next.has(key)) { next.delete(key); } else { next.add(key); }
+    this.collapsedSections = next;
+    saveCollapsedSections(next, ZIGBEE_COLLAPSED_SECTIONS_KEY);
   }
 
   toggleMenu(ieeeAddress: string | null): void {

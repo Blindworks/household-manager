@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
-import { ZigbeeComponent } from './zigbee.component';
+import { ZIGBEE_COLLAPSED_SECTIONS_KEY, ZigbeeComponent } from './zigbee.component';
 import { ZigbeeService } from '../../services/zigbee.service';
 import { ZigbeeLiveService } from '../../services/zigbee-live.service';
 import { AuthService } from '../../services/auth.service';
@@ -72,8 +72,55 @@ describe('ZigbeeComponent', () => {
     return fixture;
   }
 
+  beforeEach(() => localStorage.removeItem(ZIGBEE_COLLAPSED_SECTIONS_KEY));
+
   afterEach(() => {
     TestBed.resetTestingModule();
+    localStorage.removeItem(ZIGBEE_COLLAPSED_SECTIONS_KEY);
+  });
+
+  describe('Kategorien', () => {
+    const withEntity = (name: string, suffix: string): ZigbeeDevice => device(name, 'ACTIVE', {
+      entities: [{ entityId: `sensor.zigbee_${name.toLowerCase()}_${suffix}`, displayName: suffix, domain: 'SENSOR',
+        state: '1', lastChanged: '2026-09-27T10:00:00', lastUpdated: '2026-09-27T10:00:00' }]
+    });
+    const sectionTitles = (fixture: ComponentFixture<ZigbeeComponent>) =>
+      Array.from(fixture.nativeElement.querySelectorAll('.device-section__title'))
+        .map(el => (el as HTMLElement).textContent?.trim());
+    const cardNames = (fixture: ComponentFixture<ZigbeeComponent>) =>
+      Array.from(fixture.nativeElement.querySelectorAll('.device-card h2'))
+        .map(el => (el as HTMLElement).textContent?.trim());
+
+    it('zeigt je Kategorie einen Abschnitt mit ihren Geraeten', () => {
+      const fixture = setup(false, [withEntity('Kueche', 'temperature'), withEntity('Flur', 'action')], bridge());
+
+      expect(sectionTitles(fixture)).toEqual(['Taster', 'Klima (Temperatur, Luftfeuchte)']);
+      expect(cardNames(fixture)).toEqual(['Flur', 'Kueche']);
+    });
+
+    it('klappt einen Abschnitt zu und merkt sich das', () => {
+      const fixture = setup(false, [withEntity('Kueche', 'temperature'), withEntity('Flur', 'action')], bridge());
+
+      (fixture.nativeElement.querySelector('.device-section__toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(cardNames(fixture)).toEqual(['Kueche']);
+      expect(JSON.parse(localStorage.getItem(ZIGBEE_COLLAPSED_SECTIONS_KEY)!)).toEqual(['buttons']);
+    });
+
+    it('filtert per Suche und klappt dabei alles auf, ohne den gemerkten Zustand zu aendern', () => {
+      localStorage.setItem(ZIGBEE_COLLAPSED_SECTIONS_KEY, JSON.stringify(['buttons']));
+      const fixture = setup(false, [withEntity('Kueche', 'temperature'), withEntity('Flur', 'action')], bridge());
+      const component = fixture.componentInstance;
+
+      component.searchTerm = 'flu';
+      component.updateCategories();
+      fixture.detectChanges();
+
+      expect(cardNames(fixture)).toEqual(['Flur']);
+      expect(sectionTitles(fixture)).toEqual(['Taster']);
+      expect(JSON.parse(localStorage.getItem(ZIGBEE_COLLAPSED_SECTIONS_KEY)!)).toEqual(['buttons']);
+    });
   });
 
   it('zeigt kranke Geraete vor aktiven', () => {

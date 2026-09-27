@@ -62,12 +62,60 @@
 
   .muted { color: #999; font-size: 0.85rem; }
 
+  .device-search {
+    margin: 0 0 1rem;
+
+    input {
+      width: 100%;
+      max-width: 28rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+  }
+
+  .device-section {
+    margin-bottom: 1.25rem;
+
+    &__toggle {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.4rem 0;
+      margin-bottom: 0.75rem;
+      background: none;
+      border: none;
+      border-bottom: 1px solid #e0e0e0;
+      border-radius: 0;
+      color: #222;
+      text-align: left;
+
+      &:disabled { opacity: 1; }
+    }
+
+    &__chevron { display: inline-block; transition: transform 0.15s; }
+    &__chevron--collapsed { transform: rotate(-90deg); }
+    &__title { font-size: 1.05rem; }
+    &__count { color: #888; font-weight: 500; }
+    &__attention {
+      margin-left: auto;
+      font-size: 0.75rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      background: #fff8e1;
+      color: #b26a00;
+    }
+  }
+
   .device-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1rem;
-    margin-bottom: 2rem;
   }
+
+  .history { margin-top: 2rem; }
 
   .device-card {
     border: 1px solid #e0e0e0;

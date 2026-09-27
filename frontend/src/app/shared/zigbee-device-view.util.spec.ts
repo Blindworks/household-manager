@@ -1,5 +1,7 @@
 import {
   bridgeEventText,
+  deviceCategory,
+  groupDevicesByCategory,
   healthBadge,
   permitJoinRemainingSeconds,
   silentText,
@@ -35,6 +37,43 @@ describe('zigbee-device-view.util', () => {
       const input = [device('B', 'ACTIVE'), device('A', 'ACTIVE')];
       sortDevicesForDisplay(input);
       expect(input.map(d => d.friendlyName)).toEqual(['B', 'A']);
+    });
+  });
+
+  describe('Kategorien', () => {
+    const entity = (suffix: string) => ({
+      entityId: `sensor.zigbee_x_${suffix}`, displayName: suffix, domain: 'SENSOR', state: '1',
+      lastChanged: '', lastUpdated: ''
+    });
+    const withEntities = (name: string, ...suffixes: string[]) =>
+      device(name, 'ACTIVE', { entities: suffixes.map(entity) });
+
+    it('ordnet nach Messtyp zu, die erste passende Regel gewinnt', () => {
+      expect(deviceCategory(withEntities('T', 'action'))).toBe('buttons');
+      expect(deviceCategory(withEntities('W', 'temperature', 'water_leak'))).toBe('water');
+      expect(deviceCategory(withEntities('B', 'illuminance', 'occupancy'))).toBe('motion');
+      expect(deviceCategory(withEntities('K', 'contact'))).toBe('contacts');
+      expect(deviceCategory(withEntities('Kl', 'humidity', 'pressure'))).toBe('climate');
+      expect(deviceCategory(withEntities('H', 'illuminance'))).toBe('light');
+      expect(deviceCategory(withEntities('R'))).toBe('other');
+    });
+
+    it('laesst leere Kategorien weg, behaelt die feste Reihenfolge und sortiert Kranke zuerst', () => {
+      const groups = groupDevicesByCategory([
+        withEntities('Router'),
+        withEntities('Wohnzimmer', 'temperature'),
+        device('Bad', 'SILENT', { entities: [entity('temperature')] }),
+        withEntities('Flur Taster', 'action')
+      ]);
+
+      expect(groups.map(g => g.key)).toEqual(['buttons', 'climate', 'other']);
+      expect(groups[1].devices.map(d => d.friendlyName)).toEqual(['Bad', 'Wohnzimmer']);
+      expect(groups[1].attentionCount).toBe(1);
+    });
+
+    it('zaehlt in zigbee2mqtt unbekannte Geraete als auffaellig', () => {
+      const groups = groupDevicesByCategory([device('Alt', 'ACTIVE', { knownToBridge: false })]);
+      expect(groups[0].attentionCount).toBe(1);
     });
   });
 

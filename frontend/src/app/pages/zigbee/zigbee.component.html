@@ -71,78 +71,110 @@
     </ul>
   </details>
 
-  <div class="device-grid">
-    @for (device of devices; track device.ieeeAddress ?? device.friendlyName) {
-      <article class="device-card" [class.device-card--orphan]="!device.knownToBridge">
-        <header>
-          <h2>{{ device.friendlyName }}</h2>
-          @if (device.knownToBridge) {
-            <span class="badge" [class]="'badge ' + healthBadge(device.health.status).cssClass">
-              {{ healthBadge(device.health.status).label }}
-            </span>
-          } @else {
-            <span class="badge badge--neutral">in zigbee2mqtt nicht bekannt</span>
-          }
-          @if (isAdmin() && device.knownToBridge && device.ieeeAddress) {
-            <button type="button" class="actions-toggle" aria-label="Aktionen" (click)="toggleMenu(device.ieeeAddress)">⋯</button>
-            @if (menuOpenFor === device.ieeeAddress) {
-              <div class="actions-menu" role="menu">
-                <button type="button" (click)="openDialog('rename', device)">Umbenennen</button>
-                <button type="button" (click)="openDialog('interview', device)">Neu interviewen</button>
-                <button type="button" (click)="openDialog('configure', device)">Neu konfigurieren</button>
-                <button type="button" class="danger" (click)="openDialog('remove', device)">Aus zigbee2mqtt entfernen</button>
-              </div>
-            }
-          }
-        </header>
-
-        <p class="health-text">
-          @if (device.health.status === 'INTERVIEW') {
-            Interview läuft
-          } @else {
-            {{ silentText(device.health.silentSeconds) }}
-          }
-        </p>
-
-        <p class="meta-row">
-          @if (device.model) { <span>{{ device.model }}</span> }
-          @if (device.vendor) { <span>{{ device.vendor }}</span> }
-          @if (device.powerSource) {
-            <span>{{ device.battery ? '🔋' : '🔌' }} {{ device.powerSource }}</span>
-          }
-          @if (device.lastBatteryPercent != null) { <span>Bat: {{ device.lastBatteryPercent }}%</span> }
-          @if (device.lastLinkQuality != null) { <span>LQ: {{ device.lastLinkQuality }}</span> }
-        </p>
-
-        @if (device.entities.length > 0) {
-          <ul class="entities">
-            @for (entity of device.entities; track entity.entityId) {
-              <li [class.stale]="entityStale(device, entity.lastUpdated)">
-                <span class="entity-name">{{ entity.displayName }}</span>
-                <span class="entity-state">{{ entity.state }}</span>
-                <span class="entity-updated" [title]="entity.entityId">{{ entity.lastUpdated | date:'dd.MM. HH:mm' }}</span>
-              </li>
-            }
-          </ul>
-        } @else {
-          <p class="muted">Noch keine Entitäten — das Gerät hat nie Daten gesendet.</p>
-        }
-
-        @if (!device.knownToBridge && isAdmin() && device.id != null) {
-          <button type="button" class="purge-button danger" (click)="openDialog('purge', device)">
-            Aus Household Manager entfernen
-          </button>
-        }
-      </article>
-    }
+  <div class="device-search">
+    <input type="search" placeholder="Gerät suchen (Name, Modell, Hersteller) …" aria-label="Gerät suchen"
+           [(ngModel)]="searchTerm" (ngModelChange)="updateCategories()">
   </div>
+
+  @if (searching && categories.length === 0) {
+    <p class="muted">Kein Gerät passt zu „{{ searchTerm }}".</p>
+  }
+
+  @for (category of categories; track category.key) {
+    <section class="device-section">
+      <button type="button" class="device-section__toggle"
+              [attr.aria-expanded]="!isCollapsed(category.key)"
+              [disabled]="searching"
+              (click)="toggleSection(category.key)">
+        <span class="device-section__chevron" aria-hidden="true"
+              [class.device-section__chevron--collapsed]="isCollapsed(category.key)">▾</span>
+        <span class="device-section__title">{{ category.title }}</span>
+        <span class="device-section__count">({{ category.devices.length }})</span>
+        @if (category.attentionCount > 0) {
+          <span class="device-section__attention">{{ category.attentionCount }} auffällig</span>
+        }
+      </button>
+
+      @if (!isCollapsed(category.key)) {
+        <div class="device-grid">
+          @for (device of category.devices; track device.ieeeAddress ?? device.friendlyName) {
+            <article class="device-card" [class.device-card--orphan]="!device.knownToBridge">
+              <header>
+                <h2>{{ device.friendlyName }}</h2>
+                @if (device.knownToBridge) {
+                  <span class="badge" [class]="'badge ' + healthBadge(device.health.status).cssClass">
+                    {{ healthBadge(device.health.status).label }}
+                  </span>
+                } @else {
+                  <span class="badge badge--neutral">in zigbee2mqtt nicht bekannt</span>
+                }
+                @if (isAdmin() && device.knownToBridge && device.ieeeAddress) {
+                  <button type="button" class="actions-toggle" aria-label="Aktionen" (click)="toggleMenu(device.ieeeAddress)">⋯</button>
+                  @if (menuOpenFor === device.ieeeAddress) {
+                    <div class="actions-menu" role="menu">
+                      <button type="button" (click)="openDialog('rename', device)">Umbenennen</button>
+                      <button type="button" (click)="openDialog('interview', device)">Neu interviewen</button>
+                      <button type="button" (click)="openDialog('configure', device)">Neu konfigurieren</button>
+                      <button type="button" class="danger" (click)="openDialog('remove', device)">Aus zigbee2mqtt entfernen</button>
+                    </div>
+                  }
+                }
+              </header>
+
+              <p class="health-text">
+                @if (device.health.status === 'INTERVIEW') {
+                  Interview läuft
+                } @else {
+                  {{ silentText(device.health.silentSeconds) }}
+                }
+              </p>
+
+              <p class="meta-row">
+                @if (device.model) { <span>{{ device.model }}</span> }
+                @if (device.vendor) { <span>{{ device.vendor }}</span> }
+                @if (device.powerSource) {
+                  <span>{{ device.battery ? '🔋' : '🔌' }} {{ device.powerSource }}</span>
+                }
+                @if (device.lastBatteryPercent != null) { <span>Bat: {{ device.lastBatteryPercent }}%</span> }
+                @if (device.lastLinkQuality != null) { <span>LQ: {{ device.lastLinkQuality }}</span> }
+              </p>
+
+              @if (device.entities.length > 0) {
+                <ul class="entities">
+                  @for (entity of device.entities; track entity.entityId) {
+                    <li [class.stale]="entityStale(device, entity.lastUpdated)">
+                      <span class="entity-name">{{ entity.displayName }}</span>
+                      <span class="entity-state">{{ entity.state }}</span>
+                      <span class="entity-updated" [title]="entity.entityId">{{ entity.lastUpdated | date:'dd.MM. HH:mm' }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="muted">Noch keine Entitäten — das Gerät hat nie Daten gesendet.</p>
+              }
+
+              @if (!device.knownToBridge && isAdmin() && device.id != null) {
+                <button type="button" class="purge-button danger" (click)="openDialog('purge', device)">
+                  Aus Household Manager entfernen
+                </button>
+              }
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
 
   <div class="history">
     <h2>Verlauf</h2>
     <div class="controls">
       <select [(ngModel)]="selectedDevice" (change)="loadHistory()">
-        @for (device of devices; track device.friendlyName) {
-          <option [value]="device.friendlyName">{{ device.friendlyName }}</option>
+        @for (group of historyGroups; track group.key) {
+          <optgroup [label]="group.title">
+            @for (device of group.devices; track device.friendlyName) {
+              <option [value]="device.friendlyName">{{ device.friendlyName }}</option>
+            }
+          </optgroup>
         }
       </select>
       <select [(ngModel)]="selectedType" (change)="loadHistory()">
