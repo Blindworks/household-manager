@@ -59,8 +59,8 @@ describe('TabletTemperaturesComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('lädt beim Start den Standardzeitraum WEEK und baut eine Kachel je Sensor', () => {
-    expect(serviceSpy.getSeries).toHaveBeenCalledWith('WEEK');
+  it('lädt beim Start den Standardzeitraum DAY und baut eine Kachel je Sensor', () => {
+    expect(serviceSpy.getSeries).toHaveBeenCalledWith('DAY');
     expect(component.charts.length).toBe(2);
   });
 
@@ -131,14 +131,14 @@ describe('TabletTemperaturesComponent', () => {
 
   it('lädt bei einem Zeitraumwechsel genau einmal nach', () => {
     serviceSpy.getSeries.calls.reset();
-    component.setRange('DAY');
-    expect(serviceSpy.getSeries).toHaveBeenCalledOnceWith('DAY');
-    expect(component.activeRange).toBe('DAY');
+    component.setRange('WEEK');
+    expect(serviceSpy.getSeries).toHaveBeenCalledOnceWith('WEEK');
+    expect(component.activeRange).toBe('WEEK');
   });
 
   it('lädt nicht nach, wenn der aktive Zeitraum erneut gewählt wird', () => {
     serviceSpy.getSeries.calls.reset();
-    component.setRange('WEEK');
+    component.setRange('DAY');
     expect(serviceSpy.getSeries).not.toHaveBeenCalled();
   });
 
@@ -159,7 +159,7 @@ describe('TabletTemperaturesComponent', () => {
 
   it('nutzt zwei Spalten bis fünf Sensoren und drei ab sechs', () => {
     serviceSpy.getSeries.and.returnValue(of(sensors(5)));
-    component.setRange('DAY');
+    component.setRange('WEEK');
     expect(component.columns).toBe(2);
 
     serviceSpy.getSeries.and.returnValue(of(sensors(6)));
@@ -227,7 +227,7 @@ describe('TabletTemperaturesComponent', () => {
 
   it('zeigt den Leerzustand, wenn kein Sensor geliefert wird', () => {
     serviceSpy.getSeries.and.returnValue(of([]));
-    component.setRange('DAY');
+    component.setRange('WEEK');
     expect(component.isEmpty).toBeTrue();
   });
 

@@ -107,7 +107,8 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
     { value: 'humidity', label: 'Luftfeuchte' }
   ];
 
-  activeRange: TimeRange = 'WEEK';
+  /** Standardmaessig die letzten 24 Stunden (Nutzerentscheidung 2026-09-27). */
+  activeRange: TimeRange = 'DAY';
   /** Standardmaessig zeigt die Ansicht nur die Temperatur. */
   activeMetrics = new Set<Metric>(['temperature']);
   charts: ChartTile[] = [];

@@ -69,8 +69,8 @@ describe('TabletAirQualityComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('lädt beim Start den Standardzeitraum WEEK', () => {
-    expect(serviceSpy.getSeries).toHaveBeenCalledWith('WEEK');
+  it('lädt beim Start den Standardzeitraum DAY', () => {
+    expect(serviceSpy.getSeries).toHaveBeenCalledWith('DAY');
   });
 
   it('baut je Sensor und Messgroesse eine eigene Kachel', () => {
@@ -141,7 +141,7 @@ describe('TabletAirQualityComponent', () => {
       ...outdoor,
       metrics: { pm25: [{ time: '2026-08-22T10:00:00', value: 60 }] }
     }]));
-    component.setRange('DAY');
+    component.setRange('WEEK');
 
     // 60 µg/m³ PM2.5 liegt oberhalb des obersten EEA-Bands.
     expect(component.charts[0].currentColor).toBe(AIR_QUALITY_LEVEL_COLORS[4]);
@@ -150,14 +150,14 @@ describe('TabletAirQualityComponent', () => {
 
   it('lädt bei einem Zeitraumwechsel genau einmal nach', () => {
     serviceSpy.getSeries.calls.reset();
-    component.setRange('DAY');
-    expect(serviceSpy.getSeries).toHaveBeenCalledOnceWith('DAY');
-    expect(component.activeRange).toBe('DAY');
+    component.setRange('WEEK');
+    expect(serviceSpy.getSeries).toHaveBeenCalledOnceWith('WEEK');
+    expect(component.activeRange).toBe('WEEK');
   });
 
   it('lädt nicht nach, wenn der aktive Zeitraum erneut gewählt wird', () => {
     serviceSpy.getSeries.calls.reset();
-    component.setRange('WEEK');
+    component.setRange('DAY');
     expect(serviceSpy.getSeries).not.toHaveBeenCalled();
   });
 
@@ -178,7 +178,7 @@ describe('TabletAirQualityComponent', () => {
 
   it('meldet leer, wenn keine Sensoren Werte liefern', () => {
     serviceSpy.getSeries.and.returnValue(of([]));
-    component.setRange('DAY');
+    component.setRange('WEEK');
     expect(component.isEmpty).toBeTrue();
   });
 
@@ -187,7 +187,7 @@ describe('TabletAirQualityComponent', () => {
     expect(component.columns).toBe(3);
 
     serviceSpy.getSeries.and.returnValue(of(singleMetricSensors(2)));
-    component.setRange('DAY');
+    component.setRange('WEEK');
     expect(component.columns).toBe(2);
 
     serviceSpy.getSeries.and.returnValue(of(singleMetricSensors(9)));

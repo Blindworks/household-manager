@@ -77,7 +77,8 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
     { value: 'MONTH', label: '30 Tage' }
   ];
 
-  activeRange: TimeRange = 'WEEK';
+  /** Standardmaessig die letzten 24 Stunden (Nutzerentscheidung 2026-09-27). */
+  activeRange: TimeRange = 'DAY';
   charts: ChartTile[] = [];
   isLoading = true;
   isEmpty = false;
