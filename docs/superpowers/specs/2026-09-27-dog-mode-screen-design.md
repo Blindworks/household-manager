@@ -32,19 +32,21 @@ links, der Uhrzeit groß und der Temperatur (innen groß, außen klein).
 - **Quelle:** die bereits vorhandene 30-s-Modusabfrage des Dashboards. Kein neuer
   Endpunkt, kein neuer Poll. Ein Ein-/Ausschalten per Flow, Telegram oder Website wird
   spätestens mit dem nächsten Refresh (≤ 30 s) sichtbar.
-- **Uhr:** Stunden:Minuten in Europe/Berlin-Lokalzeit des Tablets, eigener Minuten-Takt
-  in der Komponente (läuft nur, solange der Screen angezeigt wird).
+- **Uhr:** dieselbe `clockTime` (HH:MM) wie die Dashboard-Kopfzeile, als Input
+  durchgereicht — kein zweiter Takt, die Uhren können nicht auseinanderlaufen.
 - **Innentemperatur:** aus den aktuellen Temperaturmesswerten, die das Dashboard
   ohnehin lädt (`GET /v1/temperatures`), ausgewählt über die **`sensorId`**
   (`alexa:<applianceId>`) — **nicht** über den Anzeigenamen. Grund: die Temperatur-API
   liefert den per Custom-Name umbenannten Anzeigenamen; eine Namensprüfung bräche beim
-  nächsten Umbenennen still. Die genaue Schreibweise der `applianceId` (Groß-/Kleinschreibung)
-  wird bei der Umsetzung aus der echten API-Antwort übernommen, nicht aus der Entity-ID
-  abgeleitet (die ist kleingeschrieben).
+  nächsten Umbenennen still. Die `applianceId` ist die Hardware-Seriennummer
+  (`GAJ2300425330047`); verglichen wird **ohne Groß-/Kleinschreibung**, weil die Entity-ID
+  sie kleingeschrieben führt und die Schreibweise in der Temperatur-API nicht verifiziert ist.
 - **Außentemperatur:** der primäre reale Außenfühler aus `splitTemperatureReadings`
   (`shared/temperature-comfort.util.ts`); fehlt er, der DWD-Wert (`source: WEATHER`);
   fehlen beide, entfällt die Zeile.
-- **Veraltete Werte:** ein Innenwert älter als 30 Minuten wird abgedunkelt angezeigt,
+- **Veraltete Werte:** ein Innenwert älter als 60 Minuten — dieselbe Schwelle wie die
+  Klima-Kachel, über die dann exportierte `isReadingStale` aus `temperature-comfort.util.ts`,
+  keine zweite Kopie — wird abgedunkelt angezeigt,
   fehlt er ganz, steht „–". Ein fehlgeschlagener Refresh behält den letzten Stand
   (Muster aller Dashboard-Kacheln).
 - **Text:** „Toni ist allein zu Haus. Herrchen kommt bald zurück – keine Sorge!"
@@ -63,9 +65,10 @@ links, der Uhrzeit groß und der Temperatur (innen groß, außen klein).
    - `DOG_MODE_ENTITY_ID = 'input_boolean.manual_toni_allein'`
    - `DOG_MODE_INDOOR_SENSOR_ID` (fest, siehe oben)
    - `isDogModeActive(modes)` → boolean
-   - `buildDogModeClimate(readings, now)` → `{ indoor: { value, stale } | null, outdoor: number | null }`
+   - `buildDogModeClimate(readings, nowMs)` → `{ indoor: { label, stale } | null, outdoorLabel: string | null }`
+     (ganze Grad, z. B. `"22°"`)
 2. **`frontend/src/app/components/dog-mode-screen/`** (`.ts`/`.html`/`.scss`) — Standalone-
-   Komponente, Inputs: Klima-Daten, `busy`, Fehlertext; Output: `endMode`. Eigene
+   Komponente, Inputs: `clockTime`, Klima-Daten, `busy`, Fehlertext; Output: `endMode`. Eigene
    Styles, **keine** `lumina`-Klassen (die sind in `dashboard.component.scss` gekapselt und
    griffen hier lautlos nicht). Farben ausschließlich über die Theme-Tokens aus
    `shared/styles/_lumina-theme.scss`, die per CSS-Vererbung vom `.lumina`-Wurzelelement
@@ -92,7 +95,7 @@ nicht Teil dieses Features.
 ## Tests
 
 - `dog-mode.util.spec.ts`: aktiv nur bei `on`; Modus fehlt ⇒ inaktiv; Innenwert per
-  `sensorId` gefunden, trotz abweichendem Namen; veraltet ab 30 min; Außen: realer
+  `sensorId` gefunden, trotz abweichendem Namen; veraltet ab 60 min; Außen: realer
   Fühler vor DWD, beide fehlen ⇒ `null`.
 - `dog-mode-screen.component.spec.ts`: zeigt Uhrzeit, Innen-/Außenwert, „–" ohne
   Innenwert, keine Außenzeile ohne Außenwert; Knopf emittiert `endMode`, gesperrt bei `busy`.
