@@ -86,20 +86,33 @@
   color: var(--error, #ffb4ab);
 }
 
+// Standardknopf des Dashboards (Tesla-Styleguide): die --btn-*-Token haengen am
+// .lumina-Wurzelelement und erben bis hierher - gleiche Optik in hell und dunkel.
 .dog-mode__end {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 999px;
-  border: 1px solid var(--card-border, rgba(255, 255, 255, 0.08));
-  background: var(--surface-control, rgba(30, 41, 59, 0.8));
-  color: var(--on-surface, #e4e2e4);
-  font-size: 1rem;
+  gap: 8px;
+  min-height: var(--btn-height, 40px);
+  padding: var(--btn-padding, 4px 24px);
+  border-radius: var(--radius-btn, 4px);
+  border: 1px solid var(--btn-border, #d0d1d2);
+  background: var(--btn-bg, #f4f4f4);
+  color: var(--btn-fg, #393c41);
+  font: var(--btn-font, 500 14px/20px -apple-system, Arial, sans-serif);
+  box-shadow: none;
   cursor: pointer;
 
+  .material-symbols-outlined {
+    font-size: var(--btn-icon-size, 20px);
+    line-height: 1;
+  }
+
+  &:hover:not(:disabled) {
+    background: #ffffff;
+  }
+
   &:disabled {
-    opacity: 0.5;
+    color: var(--btn-fg-muted, rgba(57, 60, 65, 0.72));
     cursor: default;
   }
 }
