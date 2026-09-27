@@ -129,7 +129,7 @@ export function buildSensorDetail(
   if (!reading) {
     return null;
   }
-  const stale = isStale(reading, nowMs);
+  const stale = isReadingStale(reading, nowMs);
   const comfort = comfortRating(reading.temperature);
   return {
     sensorId: reading.sensorId,
@@ -163,12 +163,12 @@ function toOutdoorReading(reading: CurrentTemperatureReading, nowMs: number): Ou
     name: reading.name,
     shortName: shortenSensorName(reading.name),
     valueLabel: formatCelsius(reading.temperature, 1),
-    stale: isStale(reading, nowMs)
+    stale: isReadingStale(reading, nowMs)
   };
 }
 
 function toRow(reading: CurrentTemperatureReading, nowMs: number): TemperatureRow {
-  const stale = isStale(reading, nowMs);
+  const stale = isReadingStale(reading, nowMs);
   const comfort = comfortRating(reading.temperature);
   return {
     sensorId: reading.sensorId,
@@ -180,7 +180,11 @@ function toRow(reading: CurrentTemperatureReading, nowMs: number): TemperatureRo
   };
 }
 
-function isStale(reading: CurrentTemperatureReading, nowMs: number): boolean {
+/**
+ * Messung gilt als veraltet, wenn aelter als STALE_THRESHOLD_MS. Einzige Definition —
+ * die Klima-Kachel und der Dog-Mode-Screen fragen dieselbe Funktion.
+ */
+export function isReadingStale(reading: CurrentTemperatureReading, nowMs: number): boolean {
   return nowMs - new Date(reading.measuredAt).getTime() > STALE_THRESHOLD_MS;
 }
 
