@@ -1,0 +1,27 @@
+<section class="dog-mode" aria-label="Toni ist allein zu Haus">
+  <div class="dog-mode__body">
+    <img class="dog-mode__image" src="assets/dog-mode/dog.svg" alt="Hund" />
+
+    <div class="dog-mode__info">
+      <div class="dog-mode__time">{{ clockTime }}</div>
+      <div class="dog-mode__indoor" [class.dog-mode__indoor--stale]="climate.indoor?.stale">
+        <span class="dog-mode__indoor-label">Wohnzimmer</span>
+        <span class="dog-mode__indoor-value">{{ climate.indoor?.label ?? '–' }}</span>
+      </div>
+      @if (climate.outdoorLabel) {
+        <div class="dog-mode__outdoor">Draußen {{ climate.outdoorLabel }}</div>
+      }
+    </div>
+  </div>
+
+  <footer class="dog-mode__footer">
+    <p class="dog-mode__message">Toni ist allein zu Haus. Herrchen kommt bald zurück – keine Sorge!</p>
+    @if (error) {
+      <p class="dog-mode__error">{{ error }}</p>
+    }
+    <button type="button" class="dog-mode__end" [disabled]="busy" (click)="endMode.emit()">
+      <span class="material-symbols-outlined">pets</span>
+      Toni allein beenden
+    </button>
+  </footer>
+</section>
