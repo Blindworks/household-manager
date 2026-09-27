@@ -142,9 +142,21 @@
       <div class="lumina-card lumina__hub lumina__fade" style="--delay: 0.5s">
         <div class="lumina__hub-header">
           <h3 class="lumina__label lumina__label--primary">Intelligence Hub</h3>
-          <span class="material-symbols-outlined lumina__hub-header-icon">insights</span>
+          <button
+            type="button"
+            class="lumina__hub-reload"
+            [disabled]="hubReloading"
+            (click)="reloadHub()"
+            aria-label="Intelligence Hub neu laden"
+            title="Neu laden"
+          >
+            <span
+              class="material-symbols-outlined lumina__hub-header-icon"
+              [class.lumina__hub-header-icon--spinning]="hubReloading"
+            >{{ hubReloading ? 'progress_activity' : 'insights' }}</span>
+          </button>
         </div>
-        <div class="lumina__hub-list">
+        <div class="lumina__hub-list" [class.lumina__hub-list--reloading]="hubReloading">
           <div *ngIf="insights.length === 0" class="lumina__insight lumina__insight--muted">
             <span class="material-symbols-outlined lumina__insight-icon">check_circle</span>
             <div>

@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { AppearanceService } from '../../services/appearance.service';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subscription, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, Subscription, forkJoin, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
+import { catchError, finalize, map } from 'rxjs/operators';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
@@ -193,6 +193,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly WASTE_REFRESH_MS = 3600000;
   /** Kalender-Hub-Eintraege alle 5 Minuten auffrischen (Termine aendern sich haeufiger als Muell). */
   private static readonly CALENDAR_REFRESH_MS = 300000;
+  /** Mindestdauer der Ladeanzeige im Hub-Kopf, damit ein Neuladen sichtbar ist. */
+  static readonly HUB_RELOAD_MIN_INDICATOR_MS = 800;
   private static readonly DAY_MS = 86400000;
   /** Aktualisierungsintervall der Türschloss-Kachel (30 s). */
   private static readonly NUKI_REFRESH_MS = 30000;
@@ -291,6 +293,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * {@link rebuildInsights}. Leer = keine Hinweise, der Hub zeigt eine Ruhemeldung.
    */
   insights: HubInsight[] = [];
+
+  /** true, solange ein per Knopf ausgeloestes Neuladen des Hub laeuft. */
+  hubReloading = false;
+  private hubReloadSubscription?: Subscription;
 
   /** Zuletzt gebaute Muell-Meldung; null = nichts ansteht. */
   private wasteInsight: HubInsight | null = null;
@@ -457,6 +463,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
+    this.hubReloadSubscription?.unsubscribe();
     this.clearNukiCollapseTimer();
     this.clearToniCollapseTimer();
     this.closeFlowDialog();
@@ -1440,18 +1447,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Haelt die Lueftungs-Karte im Hub aktuell (gleicher Takt wie die Messwerte). */
   private startVentilationRefresh(): void {
     this.ventilationSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
-      .pipe(
-        startWith(0),
-        switchMap(() =>
-          this.insightService.getVentilation().pipe(
-            catchError(() => of<VentilationAssessment | null>(null))
-          )
-        )
-      )
-      .subscribe(assessment => {
+      .pipe(startWith(0), switchMap(() => this.loadVentilationInsight()))
+      .subscribe();
+  }
+
+  private loadVentilationInsight(): Observable<void> {
+    return this.insightService.getVentilation().pipe(
+      catchError(() => of<VentilationAssessment | null>(null)),
+      map(assessment => {
         this.ventilationInsight = buildVentilationInsight(assessment);
         this.rebuildInsights();
-      });
+      })
+    );
   }
 
   private startSwitchRefresh(): void {
@@ -1541,14 +1548,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       interval(DashboardComponent.WASTE_REFRESH_MS),
       timer(this.msUntilNextMidnight(), DashboardComponent.DAY_MS)
     )
-      .pipe(
-        startWith(0),
-        switchMap(() => this.wasteService.getUpcoming().pipe(catchError(() => of([]))))
-      )
-      .subscribe(events => {
+      .pipe(startWith(0), switchMap(() => this.loadWasteInsight()))
+      .subscribe();
+  }
+
+  private loadWasteInsight(): Observable<void> {
+    return this.wasteService.getUpcoming().pipe(
+      catchError(() => of([])),
+      map(events => {
         this.wasteInsight = buildWasteInsight(events);
         this.rebuildInsights();
-      });
+      })
+    );
   }
 
   /** Haelt die Termin-Eintraege im Hub aktuell (gleiches Mitternachts-Muster wie der Muell). */
@@ -1557,14 +1568,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
       interval(DashboardComponent.CALENDAR_REFRESH_MS),
       timer(this.msUntilNextMidnight(), DashboardComponent.DAY_MS)
     )
-      .pipe(
-        startWith(0),
-        switchMap(() => this.calendarService.getUpcoming(3).pipe(catchError(() => of([]))))
-      )
-      .subscribe(occurrences => {
+      .pipe(startWith(0), switchMap(() => this.loadCalendarInsights()))
+      .subscribe();
+  }
+
+  private loadCalendarInsights(): Observable<void> {
+    return this.calendarService.getUpcoming(3).pipe(
+      catchError(() => of([])),
+      map(occurrences => {
         this.calendarInsights = buildCalendarInsights(occurrences);
         this.rebuildInsights();
-      });
+      })
+    );
+  }
+
+  /**
+   * Hub-Kopf-Knopf: laedt alle Quellen des Hub sofort neu, statt auf ihren jeweiligen
+   * Takt (30 s bis 1 h) zu warten. Die Taktung selbst laeuft unveraendert weiter. Jede
+   * Quelle faengt ihre Fehler selbst ab (gleiche Regeln wie im Takt), forkJoin laeuft
+   * also immer zu Ende und der Knopf bleibt nie im Ladezustand haengen.
+   */
+  reloadHub(): void {
+    if (this.hubReloading) {
+      return;
+    }
+    this.hubReloading = true;
+    this.hubReloadSubscription = forkJoin([
+      this.loadDoorInsights(),
+      this.loadApplianceInsights(),
+      this.loadWasteInsight(),
+      this.loadCalendarInsights(),
+      this.loadVentilationInsight(),
+      this.loadPets(),
+      // Im LAN antworten alle Quellen in Millisekunden — ohne Mindestdauer blitzte
+      // der Spinner nur auf, und der Klick saehe wirkungslos aus.
+      timer(DashboardComponent.HUB_RELOAD_MIN_INDICATOR_MS)
+    ])
+      .pipe(finalize(() => (this.hubReloading = false)))
+      .subscribe();
   }
 
   /**
@@ -1649,16 +1690,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   private startDoorRefresh(): void {
     this.doorSubscription = interval(DashboardComponent.DOOR_REFRESH_MS)
-      .pipe(
-        startWith(0),
-        switchMap(() => this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE')
-          .pipe(catchError(() => of([]))))
-      )
-      .subscribe(entities => {
+      .pipe(startWith(0), switchMap(() => this.loadDoorInsights()))
+      .subscribe();
+  }
+
+  private loadDoorInsights(): Observable<void> {
+    return this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE').pipe(
+      catchError(() => of([])),
+      map(entities => {
         const now = Date.now();
         this.doorInsights = [...buildDoorInsights(entities, now), ...buildWindowInsights(entities, now)];
         this.rebuildInsights();
-      });
+      })
+    );
   }
 
   /**
@@ -1669,15 +1713,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   private startApplianceRefresh(): void {
     this.applianceSubscription = interval(DashboardComponent.APPLIANCE_REFRESH_MS)
-      .pipe(
-        startWith(0),
-        switchMap(() => this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL')
-          .pipe(catchError(() => of([]))))
-      )
-      .subscribe(entities => {
+      .pipe(startWith(0), switchMap(() => this.loadApplianceInsights()))
+      .subscribe();
+  }
+
+  private loadApplianceInsights(): Observable<void> {
+    return this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL').pipe(
+      catchError(() => of([])),
+      map(entities => {
         this.applianceEntities = entities;
         this.refreshApplianceInsights();
-      });
+      })
+    );
   }
 
   /**
@@ -1714,18 +1761,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private startPetRefresh(): void {
     this.petSubscription = interval(DashboardComponent.PETS_REFRESH_MS)
-      .pipe(
-        startWith(0),
-        // Ladefehler behalten die zuletzt bekannten Tiere (null = kein Update).
-        switchMap(() => this.tractiveService.getPets().pipe(catchError(() => of<TractivePet[] | null>(null))))
-      )
-      .subscribe(pets => {
+      .pipe(startWith(0), switchMap(() => this.loadPets()))
+      .subscribe();
+  }
+
+  /** Versorgt die Hund-Kachel und die Tracker-Akku-Karte im Hub. */
+  private loadPets(): Observable<void> {
+    return this.tractiveService.getPets().pipe(
+      // Ladefehler behalten die zuletzt bekannten Tiere (null = kein Update).
+      catchError(() => of<TractivePet[] | null>(null)),
+      map(pets => {
         if (pets) {
           this.pets = pets;
           this.trackerBatteryInsight = buildTrackerBatteryInsight(pets);
           this.rebuildInsights();
         }
-      });
+      })
+    );
   }
 
   /**

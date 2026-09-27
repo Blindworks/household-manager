@@ -3,7 +3,7 @@ import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import { DashboardComponent } from './dashboard.component';
@@ -562,6 +562,87 @@ describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {
 
     discardPeriodicTasks();
   }));
+
+  describe('Neu-laden-Knopf im Hub-Kopf', () => {
+    function reloadButton(fixture: ComponentFixture<DashboardComponent>): HTMLButtonElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('.lumina__hub-reload') as HTMLButtonElement;
+    }
+
+    /** Beantwortet die offenen Hub-Abrufe, die ueber echtes HTTP laufen (Tueren, Maschinen, Lueften, Tracker). */
+    function flushHubRequests(): void {
+      const httpMock = TestBed.inject(HttpTestingController);
+      httpMock
+        .match(req => /\/entities|ventilation|tractive/.test(req.url))
+        .forEach(req => req.flush(req.request.url.includes('ventilation') ? null : []));
+    }
+
+    it('laedt die Hub-Quellen sofort neu, ohne auf den Takt zu warten', fakeAsync(() => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      expect(insightTexts(fixture)[0]).toContain('Alles ruhig');
+
+      calendarServiceSpy.getUpcoming.calls.reset();
+      wasteServiceSpy.getUpcoming.calls.reset();
+      calendarServiceSpy.getUpcoming.and.returnValue(of([occurrence()]));
+
+      reloadButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(calendarServiceSpy.getUpcoming).toHaveBeenCalledTimes(1);
+      expect(wasteServiceSpy.getUpcoming).toHaveBeenCalledTimes(1);
+      expect(insightTexts(fixture)[0]).toContain('Zahnarzt');
+
+      flushHubRequests();
+      tick(DashboardComponent.HUB_RELOAD_MIN_INDICATOR_MS);
+      discardPeriodicTasks();
+    }));
+
+    it('sperrt den Knopf, bis alle Quellen geantwortet haben', fakeAsync(() => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      flushHubRequests();
+
+      reloadButton(fixture).click();
+      fixture.detectChanges();
+      expect(reloadButton(fixture).disabled).toBeTrue();
+
+      calendarServiceSpy.getUpcoming.calls.reset();
+      fixture.componentInstance.reloadHub();
+      expect(calendarServiceSpy.getUpcoming).not.toHaveBeenCalled();
+
+      flushHubRequests();
+      fixture.detectChanges();
+      expect(reloadButton(fixture).disabled).toBeTrue();
+
+      tick(DashboardComponent.HUB_RELOAD_MIN_INDICATOR_MS);
+      fixture.detectChanges();
+      expect(reloadButton(fixture).disabled).toBeFalse();
+
+      discardPeriodicTasks();
+    }));
+
+    it('zeigt die Ladeanzeige auch bei sofortiger Antwort fuer eine Mindestdauer', fakeAsync(() => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      flushHubRequests();
+      const list = () => (fixture.nativeElement as HTMLElement).querySelector('.lumina__hub-list')!;
+      const spinning = () => (fixture.nativeElement as HTMLElement)
+        .querySelector('.lumina__hub-header-icon--spinning');
+
+      reloadButton(fixture).click();
+      flushHubRequests();
+      fixture.detectChanges();
+      expect(spinning()).not.toBeNull();
+      expect(list().classList).toContain('lumina__hub-list--reloading');
+
+      tick(DashboardComponent.HUB_RELOAD_MIN_INDICATOR_MS);
+      fixture.detectChanges();
+      expect(spinning()).toBeNull();
+      expect(list().classList).not.toContain('lumina__hub-list--reloading');
+
+      discardPeriodicTasks();
+    }));
+  });
 });
 
 describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {

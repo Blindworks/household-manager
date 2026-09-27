@@ -682,8 +682,36 @@
   margin-bottom: 24px;
 }
 
-.lumina__hub-header-icon {
+.lumina__hub-reload {
+  display: inline-flex;
+  padding: 4px;
+  margin: -4px;
+  border: none;
+  border-radius: 50%;
+  background: none;
   color: var(--primary);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+  }
+}
+
+.lumina__hub-header-icon--spinning {
+  animation: lumina-hub-spin 1s linear infinite;
+}
+
+.lumina__hub-list--reloading {
+  opacity: 0.5;
+}
+
+@keyframes lumina-hub-spin {
+  to { transform: rotate(360deg); }
 }
 
 .lumina__hub-list {
@@ -693,6 +721,7 @@
   overflow-y: auto;
   padding-right: 8px;
   flex: 1;
+  transition: opacity 0.2s ease;
 
   &::-webkit-scrollbar {
     width: 4px;
