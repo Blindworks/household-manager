@@ -1904,6 +1904,18 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('stellt die Ansichtsleiste in die linke Spalte, nicht unter Hub und Energiefluss', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+
+    const viewbar: HTMLElement = fixture.nativeElement.querySelector('.lumina__viewbar');
+    expect(viewbar.closest('.lumina__main')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.lumina__side--capped')).not.toBeNull();
+
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Aktivierungs-Checks)', () => {

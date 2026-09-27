@@ -188,10 +188,31 @@
         </div>
       </div>
 
+      <!-- Einstiege in die Tablet-Unteransichten. Nur im Tablet-Modus, denn dort
+           fehlt der Header und damit jede andere Navigation. Steht bewusst in
+           der linken Spalte unter den Schaltern: vollbreit unter dem Raster
+           schob ein wachsender Intelligence Hub die Leiste aus dem Bild. -->
+      <nav
+        *ngIf="viewMode.isTabletView()"
+        class="lumina__viewbar lumina__fade"
+        style="--delay: 0.4s"
+        aria-label="Weitere Ansichten"
+      >
+        <a
+          *ngFor="let view of tabletViews"
+          class="lumina-card lumina__viewbar-btn"
+          [routerLink]="view.route"
+        >
+          <span class="lumina__viewbar-icon">
+            <span class="material-symbols-outlined">{{ view.icon }}</span>
+          </span>
+          <span class="lumina__viewbar-label">{{ view.label }}</span>
+        </a>
+      </nav>
     </section>
 
     <!-- Intelligence Hub & Energie -->
-    <aside class="lumina__side">
+    <aside class="lumina__side" [class.lumina__side--capped]="accordionActive">
       <div class="lumina-card lumina__hub lumina__fade" style="--delay: 0.5s">
         <div class="lumina__hub-header">
           <h3 class="lumina__label lumina__label--primary">Intelligence Hub</h3>
@@ -538,26 +559,6 @@
       </div>
     </div>
   </footer>
-
-  <!-- Einstiege in die Tablet-Unteransichten. Nur im Tablet-Modus, denn dort
-       fehlt der Header und damit jede andere Navigation. -->
-  <nav
-    *ngIf="viewMode.isTabletView()"
-    class="lumina__viewbar lumina__fade"
-    style="--delay: 0.8s"
-    aria-label="Weitere Ansichten"
-  >
-    <a
-      *ngFor="let view of tabletViews"
-      class="lumina-card lumina__viewbar-btn"
-      [routerLink]="view.route"
-    >
-      <span class="lumina__viewbar-icon">
-        <span class="material-symbols-outlined">{{ view.icon }}</span>
-      </span>
-      <span class="lumina__viewbar-label">{{ view.label }}</span>
-    </a>
-  </nav>
 
   <!-- Energiefluss-Dialog (oeffnet sich beim Klick auf die Energiefluss-Kachel) -->
   <div

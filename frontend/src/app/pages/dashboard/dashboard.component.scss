@@ -1271,22 +1271,18 @@
 }
 
 // ---- Leiste mit den Tablet-Unteransichten --------------------------------
-// Bewusst NICHT umbrechend - siehe dieselbe Begruendung in
-// tablet-shell.component.scss (zweite, eigenstaendige Kopie wegen der
-// lumina-Kapselung): mit fuenf Unteransichten (+ "Dashboard") wuerde eine
-// umbrechende Leiste bei schmalem Bildschirm zweizeilig und der Kachelfuss
-// darunter enger.
+// Steht in der linken Spalte unter den Schaltern (nicht mehr vollbreit unter
+// dem Raster, wo ein wachsender Intelligence Hub sie aus dem Bild schob). In
+// der schmaleren Spalte passen nicht alle Knoepfe in eine Zeile, deshalb darf
+// sie hier - anders als die Kopie in tablet-shell.component.scss, die
+// vollbreit steht und seitwaerts scrollt - auf zwei Zeilen umbrechen.
 .lumina__viewbar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 10px;
-  padding-top: 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  // Unten in der Spalte, buendig mit der Unterkante von Hub/Energiefluss:
+  // .lumina__main ist eine Flex-Spalte, die sich auf die Rasterhoehe streckt.
+  margin-top: auto;
 }
 
 .lumina__viewbar-btn {
@@ -1719,6 +1715,19 @@
 // ============================================================================
 //  Responsiv
 // ============================================================================
+// Tablet-Ansicht, zweispaltig: die rechte Spalte bestimmt die Zeilenhoehe des
+// Rasters nicht mit (contain: size), sie streckt sich nur auf die Hoehe der
+// linken Spalte bzw. des Bildschirms. Ohne das liess jeder weitere Eintrag im
+// Intelligence Hub das Raster wachsen und schob Fussleiste und Knoepfe ueber
+// den unteren Rand (.lumina hat overflow: hidden); jetzt scrollt stattdessen
+// die Hub-Liste in ihrer Karte. Nur oberhalb des Einspalten-Umbruchs - dort
+// darunter haette die Spalte ohne Eigenhoehe schlicht die Hoehe 0.
+@media (min-width: 1101px) {
+  .lumina__side--capped {
+    contain: size;
+  }
+}
+
 @media (max-width: 1100px) {
   .lumina__grid {
     grid-template-columns: 1fr;
