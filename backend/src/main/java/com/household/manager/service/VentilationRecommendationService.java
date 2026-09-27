@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * und Flow-Trigger nie auseinanderlaufen.
  *
  * <p>"Draußen" ist nicht gleich "Quelle WEATHER": reale Außenfühler am Haus
- * (konfiguriert über {@code ventilation.outdoor-sensor-names}) hängen an derselben
+ * (konfiguriert über {@code ventilation.outdoor-sensor-entity-ids}) hängen an derselben
  * Zigbee-Quelle wie die Raumsensoren. Sie zählen deshalb nie als Raum — sonst
  * verglich die Empfehlung den Garten mit dem DWD-Wert und meldete "Lüften lohnt
  * sich" — und liefern bevorzugt die Außentemperatur.
@@ -51,8 +51,8 @@ public class VentilationRecommendationService {
         LocalDateTime staleLimit = now.minusMinutes(properties.getStaleAfterMinutes());
         List<CurrentTemperatureReading> readings = temperatureSeriesService.getCurrent();
 
-        Set<String> outdoorNames = normalizedOutdoorNames();
-        Optional<BigDecimal> outdoor = outdoorTemperature(readings, outdoorNames, staleLimit);
+        Set<String> outdoorEntityIds = normalizedOutdoorEntityIds();
+        Optional<BigDecimal> outdoor = outdoorTemperature(readings, outdoorEntityIds, staleLimit);
         if (outdoor.isEmpty()) {
             // Ohne frischen Außenwert gibt es keine Aussage — und keine Hysterese:
             // nach der Rückkehr soll wieder die volle Einschaltschwelle gelten.
@@ -67,7 +67,7 @@ public class VentilationRecommendationService {
 
         List<VentilationRoom> rooms = readings.stream()
                 .filter(r -> !OUTDOOR_SOURCE.equals(r.getSource()))
-                .filter(r -> !isOutdoorSensor(r, outdoorNames))
+                .filter(r -> !isOutdoorSensor(r, outdoorEntityIds))
                 .filter(r -> isFresh(r, staleLimit))
                 .filter(r -> r.getTemperature() != null)
                 .filter(r -> r.getTemperature().compareTo(properties.getRoomThresholdCelsius()) >= 0)
@@ -86,11 +86,11 @@ public class VentilationRecommendationService {
      * beim Öffnen des Fensters tatsächlich hereinkommt, als die DWD-Station.
      */
     private Optional<BigDecimal> outdoorTemperature(
-            List<CurrentTemperatureReading> readings, Set<String> outdoorNames, LocalDateTime staleLimit) {
-        for (String name : outdoorNames) {
+            List<CurrentTemperatureReading> readings, Set<String> outdoorEntityIds, LocalDateTime staleLimit) {
+        for (String entityId : outdoorEntityIds) {
             Optional<BigDecimal> sensor = readings.stream()
                     .filter(r -> !OUTDOOR_SOURCE.equals(r.getSource()))
-                    .filter(r -> name.equals(normalize(r.getName())))
+                    .filter(r -> entityId.equals(normalize(r.getEntityId())))
                     .filter(r -> isFresh(r, staleLimit))
                     .map(CurrentTemperatureReading::getTemperature)
                     .filter(Objects::nonNull)
@@ -111,23 +111,23 @@ public class VentilationRecommendationService {
      * Reihenfolge erhalten: sie ist die Priorität der Außenfühler untereinander,
      * ein {@link java.util.HashSet} würde sie verwerfen.
      */
-    private Set<String> normalizedOutdoorNames() {
-        List<String> configured = properties.getOutdoorSensorNames();
+    private Set<String> normalizedOutdoorEntityIds() {
+        List<String> configured = properties.getOutdoorSensorEntityIds();
         if (configured == null) {
             return Set.of();
         }
         return configured.stream()
                 .map(this::normalize)
-                .filter(name -> !name.isEmpty())
+                .filter(entityId -> !entityId.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private boolean isOutdoorSensor(CurrentTemperatureReading reading, Set<String> outdoorNames) {
-        return outdoorNames.contains(normalize(reading.getName()));
+    private boolean isOutdoorSensor(CurrentTemperatureReading reading, Set<String> outdoorEntityIds) {
+        return outdoorEntityIds.contains(normalize(reading.getEntityId()));
     }
 
-    private String normalize(String name) {
-        return name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
+    private String normalize(String entityId) {
+        return entityId == null ? "" : entityId.trim().toLowerCase(Locale.ROOT);
     }
 
     private boolean isFresh(CurrentTemperatureReading reading, LocalDateTime staleLimit) {

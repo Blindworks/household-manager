@@ -47,10 +47,12 @@ export interface ClimateView {
 }
 
 /**
- * Sensornamen, die als reale Außenfühler (nicht als Innenraum) behandelt werden.
- * Erweiterbar um weitere Außenfühler, ohne die Logik zu ändern.
+ * Temperatur-Entities, die als reale Außenfühler (nicht als Innenraum) behandelt werden.
+ * Bewusst die Entity-ID, nicht der Anzeigename: der ist per Custom-Name umbenennbar —
+ * nach dem Umbenennen in „Garten" griff die frühere Namensliste still nicht mehr.
+ * Zweite Kopie im Backend: `ventilation.outdoor-sensor-entity-ids` (Lüftungsempfehlung).
  */
-export const OUTDOOR_SENSOR_NAMES: readonly string[] = ['Temperatur Aqara Garten'];
+export const OUTDOOR_SENSOR_ENTITY_IDS: readonly string[] = ['sensor.zigbee_temperatur_aqara_garten_temperature'];
 
 /** Messung gilt als veraltet, wenn älter als diese Schwelle. */
 const STALE_THRESHOLD_MS = 60 * 60 * 1000;
@@ -71,16 +73,16 @@ export function comfortRating(celsius: number): ComfortRating {
 
 /**
  * Teilt die Messwerte in primären Außenfühler, DWD-Referenz und Innensensor-Zeilen.
- * Außenfühler werden über {@link OUTDOOR_SENSOR_NAMES} erkannt (Name, case-insensitiv).
+ * Außenfühler werden über {@link OUTDOOR_SENSOR_ENTITY_IDS} erkannt (Entity-ID).
  */
 export function buildClimateView(
   readings: CurrentTemperatureReading[],
   nowMs: number,
-  outdoorNames: readonly string[] = OUTDOOR_SENSOR_NAMES
+  outdoorEntityIds: readonly string[] = OUTDOOR_SENSOR_ENTITY_IDS
 ): ClimateView {
-  const outdoorSet = new Set(outdoorNames.map(name => name.trim().toLowerCase()));
+  const outdoorSet = new Set(outdoorEntityIds);
   const isOutdoorSensor = (reading: CurrentTemperatureReading): boolean =>
-    reading.source !== 'WEATHER' && outdoorSet.has(reading.name.trim().toLowerCase());
+    reading.source !== 'WEATHER' && outdoorSet.has(reading.entityId);
 
   const weather = readings.find(reading => reading.source === 'WEATHER');
   const weatherLabel = weather ? formatCelsius(Math.round(weather.temperature), 0) : '--';

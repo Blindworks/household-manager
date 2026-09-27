@@ -22,6 +22,11 @@ export interface TemperatureSensorSeries {
 /** Aktueller (jüngster) Wert eines Temperatursensors. */
 export interface CurrentTemperatureReading {
   sensorId: string;
+  /**
+   * Entity-ID der Temperatur-Entity, z. B. "sensor.zigbee_temperatur_aqara_garten_temperature".
+   * Stabil gegenueber einem Umbenennen in der App (anders als `name`, der den Custom-Namen traegt).
+   */
+  entityId: string;
   name: string;
   source: TemperatureSource;
   temperature: number;

@@ -17,16 +17,22 @@ import java.util.List;
 public class VentilationProperties {
 
     /**
-     * Sensoren, die trotz Quelle ZIGBEE/ALEXA draußen hängen (Pendant zum DWD-Wert).
-     * Sie zählen nie als Raum und liefern — in dieser Reihenfolge, erster frischer
-     * gewinnt — die Außentemperatur; erst wenn keiner davon frisch meldet, greift der
-     * DWD-Wert als Fallback. Vergleich über den Anzeigenamen, case-insensitiv.
+     * Temperatur-Entities, die trotz Quelle ZIGBEE/ALEXA draußen hängen (Pendant zum
+     * DWD-Wert). Sie zählen nie als Raum und liefern — in dieser Reihenfolge, erster
+     * frischer gewinnt — die Außentemperatur; erst wenn keiner davon frisch meldet,
+     * greift der DWD-Wert als Fallback.
+     *
+     * <p>Bewusst die Entity-ID, nicht der Anzeigename: die Temperatur-API liefert den
+     * Custom-Namen, und nach dem Umbenennen des Gartenfühlers in „Garten" griff die
+     * frühere Namensliste still nicht mehr (Garten zählte als Raum). Die Entity-ID
+     * entsteht aus dem zigbee2mqtt-Namen und ändert sich nur, wenn das Gerät dort
+     * umbenannt wird.
      *
      * <p>Zweite Kopie: das Frontend führt dieselbe Liste in
-     * {@code shared/temperature-comfort.util.ts} (OUTDOOR_SENSOR_NAMES) für die
+     * {@code shared/temperature-comfort.util.ts} (OUTDOOR_SENSOR_ENTITY_IDS) für die
      * Außenfühler-Chips im Dashboard-Kopf. Ein neuer Außenfühler gehört an beide Stellen.
      */
-    private List<String> outdoorSensorNames = List.of("Temperatur Aqara Garten");
+    private List<String> outdoorSensorEntityIds = List.of("sensor.zigbee_temperatur_aqara_garten_temperature");
     /** Ab dieser Raumtemperatur gilt ein Raum als "zu warm". */
     private BigDecimal roomThresholdCelsius = new BigDecimal("24");
     /** Draußen muss es mindestens so viel kühler sein, damit die Empfehlung entsteht. */

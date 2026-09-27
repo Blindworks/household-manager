@@ -201,6 +201,7 @@ public class TemperatureSeriesService {
                         .map(ZigbeeMeasurement::getValue).orElse(null);
                 result.add(CurrentTemperatureReading.builder()
                         .sensorId("zigbee:" + device.getId())
+                        .entityId(temperatureEntityId(EntitySource.ZIGBEE, device.getFriendlyName()))
                         .name(temperatureName(EntitySource.ZIGBEE, device.getFriendlyName(), device.getFriendlyName()))
                         .source("ZIGBEE")
                         .temperature(temp.getValue())
@@ -216,6 +217,7 @@ public class TemperatureSeriesService {
         return weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc()
                 .map(r -> CurrentTemperatureReading.builder()
                         .sensorId("weather:outdoor")
+                        .entityId(temperatureEntityId(EntitySource.WEATHER, "dwd"))
                         .name(temperatureName(EntitySource.WEATHER, "dwd", "Außen"))
                         .source("WEATHER")
                         .temperature(r.getTemperature())
@@ -233,6 +235,7 @@ public class TemperatureSeriesService {
                     .filter(r -> r.getTemperature() != null)
                     .ifPresent(r -> result.add(CurrentTemperatureReading.builder()
                             .sensorId("alexa:" + applianceId)
+                            .entityId(temperatureEntityId(EntitySource.ALEXA, applianceId))
                             .name(temperatureName(EntitySource.ALEXA, applianceId,
                                     r.getDeviceName() != null ? r.getDeviceName() : applianceId))
                             .source("ALEXA")
@@ -260,11 +263,14 @@ public class TemperatureSeriesService {
      * Entity-Mapper, sodass sie ohne zusätzliche Verknüpfungstabelle zueinander finden.
      */
     private String temperatureName(EntitySource source, String sourceRef, String rawName) {
-        String entityId = EntityIds.build(EntityDomain.SENSOR, source, sourceRef, "temperature");
-        return entityStateService.getByEntityId(entityId)
+        return entityStateService.getByEntityId(temperatureEntityId(source, sourceRef))
                 .map(EntityState::getCustomName)
                 .filter(name -> name != null && !name.isBlank())
                 .orElse(rawName);
+    }
+
+    private static String temperatureEntityId(EntitySource source, String sourceRef) {
+        return EntityIds.build(EntityDomain.SENSOR, source, sourceRef, "temperature");
     }
 
     private List<TemperatureSensorSeries> zigbeeSeries(LocalDateTime from, LocalDateTime to) {

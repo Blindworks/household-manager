@@ -10,12 +10,11 @@ import { buildClimateView, isReadingStale } from './temperature-comfort.util';
 export const DOG_MODE_ENTITY_ID = 'input_boolean.manual_toni_allein';
 
 /**
- * Wohnzimmer = Amazon-Luftqualitaetsmonitor (Hardware-Seriennummer). Bewusst die
- * sensorId statt des Anzeigenamens: die Temperatur-API liefert den Custom-Namen, ein
- * Umbenennen braeche eine Namenspruefung still. Vergleich ohne Gross-/Kleinschreibung,
- * weil die Entity-ID die Seriennummer kleingeschrieben fuehrt.
+ * Wohnzimmer = Amazon-Luftqualitaetsmonitor. Bewusst die Entity-ID statt des
+ * Anzeigenamens: die Temperatur-API liefert den Custom-Namen, ein Umbenennen braeche
+ * eine Namenspruefung still (Muster OUTDOOR_SENSOR_ENTITY_IDS).
  */
-export const DOG_MODE_INDOOR_SENSOR_ID = 'alexa:gaj2300425330047';
+export const DOG_MODE_INDOOR_ENTITY_ID = 'sensor.alexa_gaj2300425330047_temperature';
 
 export interface DogModeIndoor {
   /** Ganze Grad, z. B. "22°". */
@@ -37,8 +36,7 @@ export function isDogModeActive(modes: readonly ModeEntity[]): boolean {
 }
 
 export function buildDogModeClimate(readings: CurrentTemperatureReading[], nowMs: number): DogModeClimate {
-  const indoorReading = readings.find(
-    reading => reading.sensorId.toLowerCase() === DOG_MODE_INDOOR_SENSOR_ID);
+  const indoorReading = readings.find(reading => reading.entityId === DOG_MODE_INDOOR_ENTITY_ID);
   const indoor = indoorReading
     ? { label: wholeDegrees(indoorReading.temperature), stale: isReadingStale(indoorReading, nowMs) }
     : null;

@@ -11,6 +11,7 @@ describe('dog-mode.util', () => {
 
   const reading = (overrides: Partial<CurrentTemperatureReading>): CurrentTemperatureReading => ({
     sensorId: 'zigbee:1',
+    entityId: 'sensor.zigbee_buero_temperature',
     name: 'Büro',
     source: 'ZIGBEE',
     temperature: 21,
@@ -35,10 +36,10 @@ describe('dog-mode.util', () => {
   });
 
   describe('buildDogModeClimate', () => {
-    it('findet den Wohnzimmer-Monitor ueber die sensorId, unabhaengig von Name und Schreibweise', () => {
+    it('findet den Wohnzimmer-Monitor ueber die Entity-ID, unabhaengig vom Namen', () => {
       const climate = buildDogModeClimate([
         reading({ sensorId: 'zigbee:7', name: 'Wohnzimmer', temperature: 30 }),
-        reading({ sensorId: 'alexa:GAJ2300425330047', name: 'Irgendein Name', source: 'ALEXA', temperature: 22.4 })
+        reading({ sensorId: 'alexa:GAJ2300425330047', entityId: 'sensor.alexa_gaj2300425330047_temperature', name: 'Irgendein Name', source: 'ALEXA', temperature: 22.4 })
       ], now);
 
       expect(climate.indoor).toEqual({ label: '22°', stale: false });
@@ -46,14 +47,14 @@ describe('dog-mode.util', () => {
 
     it('rundet auf ganze Grad', () => {
       const climate = buildDogModeClimate(
-        [reading({ sensorId: 'alexa:gaj2300425330047', source: 'ALEXA', temperature: 22.6 })], now);
+        [reading({ sensorId: 'alexa:GAJ2300425330047', entityId: 'sensor.alexa_gaj2300425330047_temperature', source: 'ALEXA', temperature: 22.6 })], now);
 
       expect(climate.indoor?.label).toBe('23°');
     });
 
     it('markiert einen Innenwert aelter als 60 Minuten als veraltet', () => {
       const climate = buildDogModeClimate([reading({
-        sensorId: 'alexa:GAJ2300425330047', source: 'ALEXA', measuredAt: minutesAgo(61)
+        sensorId: 'alexa:GAJ2300425330047', entityId: 'sensor.alexa_gaj2300425330047_temperature', source: 'ALEXA', measuredAt: minutesAgo(61)
       })], now);
 
       expect(climate.indoor?.stale).toBeTrue();
@@ -66,7 +67,7 @@ describe('dog-mode.util', () => {
     it('nimmt den realen Aussenfuehler vor dem DWD-Wert', () => {
       const climate = buildDogModeClimate([
         reading({ sensorId: 'weather:outdoor', name: 'Außen', source: 'WEATHER', temperature: 12 }),
-        reading({ sensorId: 'zigbee:3', name: 'Temperatur Aqara Garten', temperature: 14.4 })
+        reading({ sensorId: 'zigbee:3', entityId: 'sensor.zigbee_temperatur_aqara_garten_temperature', name: 'Garten', temperature: 14.4 })
       ], now);
 
       expect(climate.outdoorLabel).toBe('14°');

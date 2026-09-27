@@ -34,7 +34,7 @@ describe('buildClimateView', () => {
 
   function reading(partial: Partial<CurrentTemperatureReading>): CurrentTemperatureReading {
     return {
-      sensorId: 's', name: 'Raum', source: 'ZIGBEE',
+      sensorId: 's', entityId: 'sensor.zigbee_raum_temperature', name: 'Raum', source: 'ZIGBEE',
       temperature: 21, measuredAt: '2026-07-15T11:59:00Z', ...partial
     };
   }
@@ -62,7 +62,7 @@ describe('buildClimateView', () => {
   it('fuehrt den Gartenfuehler als primaeren Aussenwert, nicht als Innenzeile', () => {
     const view = buildClimateView([
       reading({ sensorId: 'weather:outdoor', name: 'Außen', source: 'WEATHER', temperature: 12 }),
-      reading({ sensorId: 'zigbee:9', name: 'Temperatur Aqara Garten', temperature: 11.4 }),
+      reading({ sensorId: 'zigbee:9', entityId: 'sensor.zigbee_temperatur_aqara_garten_temperature', name: 'Temperatur Aqara Garten', temperature: 11.4 }),
       reading({ sensorId: 'zigbee:1', name: 'Wohnzimmer', temperature: 21.4 })
     ], now);
 
@@ -77,33 +77,34 @@ describe('buildClimateView', () => {
 
   it('laesst einen Aussenfuehler ohne Temperatur-Praefix unveraendert', () => {
     const view = buildClimateView(
-      [reading({ sensorId: 'zigbee:9', name: 'Garten', temperature: 11.4 })],
-      now,
-      ['Garten']
+      [reading({ sensorId: 'zigbee:9', entityId: 'sensor.zigbee_temperatur_aqara_garten_temperature', name: 'Garten', temperature: 11.4 })],
+      now
     );
 
     expect(view.outdoor[0].shortName).toBe('Garten');
   });
 
-  it('erkennt den Aussenfuehler unabhaengig von Gross-/Kleinschreibung', () => {
-    const view = buildClimateView(
-      [reading({ sensorId: 'zigbee:9', name: 'garten' })],
-      now,
-      ['Garten']
-    );
-    expect(view.outdoor.length).toBe(1);
-    expect(view.rows.length).toBe(0);
+  it('erkennt den umbenannten Gartenfuehler ueber die Entity-ID, nicht den Namen', () => {
+    // Real passiert: Custom-Name "Garten" statt "Temperatur Aqara Garten" — ueber den
+    // Namen erkannt, stand der Garten als Innenraum in der Kachel.
+    const view = buildClimateView([
+      reading({ sensorId: 'zigbee:9', entityId: 'sensor.zigbee_temperatur_aqara_garten_temperature', name: 'Garten' }),
+      reading({ sensorId: 'zigbee:1', entityId: 'sensor.zigbee_x_temperature', name: 'Temperatur Aqara Garten' })
+    ], now);
+
+    expect(view.outdoor.map(o => o.name)).toEqual(['Garten']);
+    expect(view.rows.map(r => r.name)).toEqual(['Temperatur Aqara Garten']);
   });
 
   it('zeigt mehrere konfigurierte Aussenfuehler und verliert keinen', () => {
     const view = buildClimateView(
       [
-        reading({ sensorId: 'zigbee:9', name: 'Garten', temperature: 11.4 }),
-        reading({ sensorId: 'zigbee:8', name: 'Terrasse', temperature: 13.1 }),
+        reading({ sensorId: 'zigbee:9', entityId: 'sensor.zigbee_garten_temperature', name: 'Garten', temperature: 11.4 }),
+        reading({ sensorId: 'zigbee:8', entityId: 'sensor.zigbee_terrasse_temperature', name: 'Terrasse', temperature: 13.1 }),
         reading({ sensorId: 'zigbee:1', name: 'Wohnzimmer', temperature: 21.4 })
       ],
       now,
-      ['Garten', 'Terrasse']
+      ['sensor.zigbee_garten_temperature', 'sensor.zigbee_terrasse_temperature']
     );
 
     expect(view.outdoor.map(o => o.name)).toEqual(['Garten', 'Terrasse']);
@@ -117,7 +118,7 @@ describe('buildClimateView', () => {
 
   it('markiert einen veralteten Gartenfuehler', () => {
     const view = buildClimateView([
-      reading({ sensorId: 'zigbee:9', name: 'Temperatur Aqara Garten', measuredAt: '2026-07-15T09:00:00Z' })
+      reading({ sensorId: 'zigbee:9', entityId: 'sensor.zigbee_temperatur_aqara_garten_temperature', name: 'Temperatur Aqara Garten', measuredAt: '2026-07-15T09:00:00Z' })
     ], now);
 
     expect(view.outdoor[0].stale).toBe(true);
@@ -135,7 +136,7 @@ describe('buildClimateView', () => {
 
   it('fuehrt die Sensor-Id mit, damit Zeilen den Detaildialog oeffnen koennen', () => {
     const view = buildClimateView([
-      reading({ sensorId: 'zigbee:9', name: 'Temperatur Aqara Garten' }),
+      reading({ sensorId: 'zigbee:9', entityId: 'sensor.zigbee_temperatur_aqara_garten_temperature', name: 'Temperatur Aqara Garten' }),
       reading({ sensorId: 'zigbee:1', name: 'Wohnzimmer' })
     ], now);
 
@@ -149,7 +150,7 @@ describe('buildSensorDetail', () => {
 
   function reading(partial: Partial<CurrentTemperatureReading>): CurrentTemperatureReading {
     return {
-      sensorId: 's', name: 'Raum', source: 'ZIGBEE',
+      sensorId: 's', entityId: 'sensor.zigbee_raum_temperature', name: 'Raum', source: 'ZIGBEE',
       temperature: 21, measuredAt: '2026-07-15T11:59:00Z', ...partial
     };
   }

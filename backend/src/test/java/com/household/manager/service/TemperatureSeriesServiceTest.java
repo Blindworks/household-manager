@@ -176,6 +176,7 @@ class TemperatureSeriesServiceTest {
         assertThat(result).hasSize(1);
         CurrentTemperatureReading reading = result.get(0);
         assertThat(reading.getSensorId()).isEqualTo("zigbee:1");
+        assertThat(reading.getEntityId()).isEqualTo("sensor.zigbee_wohnzimmer_temperature");
         assertThat(reading.getName()).isEqualTo("Wohnzimmer");
         assertThat(reading.getSource()).isEqualTo("ZIGBEE");
         assertThat(reading.getTemperature()).isEqualByComparingTo("21.5");

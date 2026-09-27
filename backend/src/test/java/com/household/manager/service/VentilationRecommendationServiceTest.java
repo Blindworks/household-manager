@@ -3,6 +3,9 @@ package com.household.manager.service;
 import com.household.manager.config.VentilationProperties;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.VentilationAssessment;
+import com.household.manager.entitystate.EntityDomain;
+import com.household.manager.entitystate.EntityIds;
+import com.household.manager.entitystate.EntitySource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -26,10 +29,21 @@ class VentilationRecommendationServiceTest {
                 temperatureSeriesService, new VentilationProperties());
     }
 
+    private static final String GARDEN_ENTITY_ID = "sensor.zigbee_temperatur_aqara_garten_temperature";
+
+    /** Entity-ID wie in TemperatureSeriesService: aus Quelle und Rohname der Quelle. */
     private CurrentTemperatureReading reading(
             String source, String name, String temp, int ageMinutes) {
+        return reading(source, name,
+                EntityIds.build(EntityDomain.SENSOR, EntitySource.valueOf(source), name, "temperature"),
+                temp, ageMinutes);
+    }
+
+    private CurrentTemperatureReading reading(
+            String source, String name, String entityId, String temp, int ageMinutes) {
         return CurrentTemperatureReading.builder()
                 .sensorId(source.toLowerCase() + ":" + name)
+                .entityId(entityId)
                 .name(name)
                 .source(source)
                 .temperature(new BigDecimal(temp))
@@ -166,13 +180,13 @@ class VentilationRecommendationServiceTest {
     void aussenfuehlerLiefertDieAussentemperaturVorDemDwdWert() {
         when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
                 reading("WEATHER", "Außen", "21.0", 5),
-                reading("ZIGBEE", " temperatur aqara GARTEN ", "27.0", 5),
+                reading("ZIGBEE", "Temperatur Aqara Garten", "27.0", 5),
                 reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
 
         VentilationAssessment result = service.assess();
 
         // Draussen (Gartenfuehler) waermer als der Raum: kein Lueften, obwohl der DWD-Wert
-        // 5 Grad tiefer liegt. Name case-insensitiv und mit Rand-Leerzeichen erkannt.
+        // 5 Grad tiefer liegt.
         assertThat(result.outdoorTemperature()).isEqualByComparingTo("27.0");
         assertThat(result.recommended()).isFalse();
     }
@@ -193,7 +207,7 @@ class VentilationRecommendationServiceTest {
     @Test
     void ersterKonfigurierterAussenfuehlerGewinnt() {
         VentilationProperties properties = new VentilationProperties();
-        properties.setOutdoorSensorNames(List.of("Terrasse", "Temperatur Aqara Garten"));
+        properties.setOutdoorSensorEntityIds(List.of("sensor.zigbee_terrasse_temperature", GARDEN_ENTITY_ID));
         service = new VentilationRecommendationService(temperatureSeriesService, properties);
         when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
                 reading("WEATHER", "Außen", "21.0", 5),
@@ -210,7 +224,7 @@ class VentilationRecommendationServiceTest {
     @Test
     void ohneKonfigurierteAussenfuehlerBleibtNurDerDwdWert() {
         VentilationProperties properties = new VentilationProperties();
-        properties.setOutdoorSensorNames(List.of());
+        properties.setOutdoorSensorEntityIds(List.of());
         service = new VentilationRecommendationService(temperatureSeriesService, properties);
         when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
                 reading("WEATHER", "Außen", "21.0", 5),
@@ -220,5 +234,20 @@ class VentilationRecommendationServiceTest {
 
         assertThat(result.outdoorTemperature()).isEqualByComparingTo("21.0");
         assertThat(result.recommended()).isTrue();
+    }
+
+    @Test
+    void umbenannterAussenfuehlerWirdUeberDieEntityIdErkannt() {
+        // Real passiert: der Gartenfuehler traegt den Custom-Namen "Garten". Ueber den
+        // Anzeigenamen erkannt, zaehlte er als Raum und lieferte keine Aussentemperatur.
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(
+                reading("WEATHER", "Außen", "21.0", 5),
+                reading("ZIGBEE", "Garten", GARDEN_ENTITY_ID, "27.0", 5),
+                reading("ZIGBEE", "Schlafzimmer", "26.0", 5)));
+
+        VentilationAssessment result = service.assess();
+
+        assertThat(result.outdoorTemperature()).isEqualByComparingTo("27.0");
+        assertThat(result.rooms()).isEmpty();
     }
 }

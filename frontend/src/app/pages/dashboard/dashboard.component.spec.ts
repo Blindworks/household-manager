@@ -1706,6 +1706,7 @@ describe('DashboardComponent (Sensor-Detaildialog)', () => {
 
   const wohnzimmer: CurrentTemperatureReading = {
     sensorId: 'zigbee:1',
+    entityId: 'sensor.zigbee_wohnzimmer_temperature',
     name: 'Wohnzimmer',
     source: 'ZIGBEE',
     temperature: 21.4,
@@ -1828,6 +1829,7 @@ describe('DashboardComponent (Sensor-Detaildialog)', () => {
     );
     temperatureServiceSpy.getCurrent.and.returnValue(of([{
       sensorId: 'zigbee:1',
+      entityId: 'sensor.zigbee_wohnzimmer_temperature',
       name: 'Wohnzimmer',
       source: 'ZIGBEE',
       temperature: 21,
@@ -1852,6 +1854,7 @@ describe('DashboardComponent (Sensor-Detaildialog)', () => {
 describe('DashboardComponent (Kachel-Layout)', () => {
   const wohnzimmer: CurrentTemperatureReading = {
     sensorId: 'zigbee:1',
+    entityId: 'sensor.zigbee_wohnzimmer_temperature',
     name: 'Wohnzimmer',
     source: 'ZIGBEE',
     temperature: 21.4,
@@ -3372,6 +3375,7 @@ describe('DashboardComponent (Dog-Mode-Screen)', () => {
   it('zeigt die Wohnzimmer-Temperatur aus den Messwerten', fakeAsync(() => {
     const reading: CurrentTemperatureReading = {
       sensorId: 'alexa:GAJ2300425330047',
+      entityId: 'sensor.alexa_gaj2300425330047_temperature',
       name: 'Wohnzimmer',
       source: 'ALEXA',
       temperature: 22.4,
@@ -3388,6 +3392,7 @@ describe('DashboardComponent (Dog-Mode-Screen)', () => {
   it('behaelt bei einem fehlgeschlagenen Refresh den letzten Stand', fakeAsync(() => {
     const reading: CurrentTemperatureReading = {
       sensorId: 'alexa:GAJ2300425330047',
+      entityId: 'sensor.alexa_gaj2300425330047_temperature',
       name: 'Wohnzimmer',
       source: 'ALEXA',
       temperature: 22.4,
