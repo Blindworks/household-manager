@@ -79,31 +79,16 @@
           </ng-container>
         </div>
       </header>
-      <div class="lumina__rooms" [class.lumina__rooms--accordion]="accordionActive">
+      <div class="lumina__rooms lumina__rooms--accordion">
         <!-- Schalter-Kachel: meistgenutzte Schalter, direkt schaltbar -->
         <div
-          class="lumina-card lumina__room lumina__switch-tile lumina__fade"
-          [class.lumina__room--accordion]="accordionActive"
-          [class.lumina__room--static]="isTileStatic('switches')"
-          [class.lumina__room--collapsible]="isTileCollapsible('switches')"
-          [class.lumina__room--collapsed]="!isTileOpen('switches')"
+          class="lumina-card lumina__room lumina__room--accordion lumina__room--static lumina__switch-tile lumina__fade"
           style="--delay: 0.2s"
         >
           <div class="lumina__room-top">
             <div class="lumina__room-icon">
               <span class="material-symbols-outlined">toggle_on</span>
             </div>
-            <button
-              *ngIf="isTileCollapsible('switches')"
-              type="button"
-              class="lumina__room-toggle"
-              [attr.aria-expanded]="isTileOpen('switches')"
-              aria-controls="lumina-panel-switches"
-              (click)="toggleTile('switches')"
-            >
-              <span class="lumina__room-toggle-title">Schalter</span>
-              <span class="material-symbols-outlined lumina__room-chevron">expand_more</span>
-            </button>
             <button
               type="button"
               class="lumina__switch-all"
@@ -114,7 +99,7 @@
               <span class="material-symbols-outlined">expand_content</span>
             </button>
           </div>
-          <div class="lumina__room-body" id="lumina-panel-switches">
+          <div class="lumina__room-body">
             <p *ngIf="topSwitches.length === 0" class="lumina__switch-empty">
               Keine Schalter
             </p>
@@ -122,78 +107,19 @@
               [switches]="topSwitches"
               [pendingIds]="pendingSwitchIds"
               variant="tile"
-              [layout]="accordionActive ? 'grid' : 'list'"
+              layout="grid"
               (toggled)="toggleSwitch($event)"
             ></app-switch-list>
             <p *ngIf="switchError" class="lumina__switch-error">{{ switchError }}</p>
           </div>
         </div>
-
-        <!-- Verbraucher-Kachel: Stromverbraucher, groesster zuerst. In der
-             Tablet-Ansicht stehen die Verbraucher stattdessen in der
-             Energiefluss-Kachel, wo rechts unten Platz frei war. -->
-        <div
-          *ngIf="!accordionActive"
-          class="lumina-card lumina__room lumina__consumer-tile lumina__fade"
-          [class.lumina__room--accordion]="accordionActive"
-          [class.lumina__room--static]="isTileStatic('consumers')"
-          [class.lumina__room--collapsible]="isTileCollapsible('consumers')"
-          [class.lumina__room--collapsed]="!isTileOpen('consumers')"
-          style="--delay: 0.3s"
-        >
-          <div class="lumina__room-top">
-            <div class="lumina__room-icon">
-              <span class="material-symbols-outlined">bolt</span>
-            </div>
-            <button
-              *ngIf="isTileCollapsible('consumers')"
-              type="button"
-              class="lumina__room-toggle"
-              [attr.aria-expanded]="isTileOpen('consumers')"
-              aria-controls="lumina-panel-consumers"
-              (click)="toggleTile('consumers')"
-            >
-              <span class="lumina__room-toggle-title">Verbraucher</span>
-              <span class="material-symbols-outlined lumina__room-chevron">expand_more</span>
-            </button>
-            <button
-              type="button"
-              class="lumina__switch-all"
-              (click)="openConsumerDialog()"
-              title="Alle Verbraucher anzeigen"
-              aria-label="Alle Verbraucher anzeigen"
-            >
-              <span class="material-symbols-outlined">expand_content</span>
-            </button>
-          </div>
-          <div class="lumina__room-body" id="lumina-panel-consumers">
-            <h3 class="lumina__room-name">Verbraucher</h3>
-            <div class="lumina__consumer-rows">
-              <p *ngIf="topConsumers.length === 0" class="lumina__consumer-empty">
-                Keine Verbraucher
-              </p>
-              <button
-                *ngFor="let consumer of topConsumers"
-                type="button"
-                class="lumina__consumer-row"
-                [class.lumina__consumer-row--unavailable]="consumer.unavailable"
-                (click)="openHistoryDialog(consumer)"
-                [attr.aria-label]="'Verlauf von ' + consumer.displayName + ' anzeigen'"
-              >
-                <span class="lumina__consumer-name">{{ consumer.displayName }}</span>
-                <span class="lumina__consumer-value">{{ powerLabel(consumer) }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Einstiege in die Tablet-Unteransichten. Nur im Tablet-Modus, denn dort
-           fehlt der Header und damit jede andere Navigation. Steht bewusst in
+      <!-- Einstiege in die Tablet-Unteransichten. Im Tablet-Modus fehlt der
+           Header und damit jede andere Navigation. Steht bewusst in
            der linken Spalte unter den Schaltern: vollbreit unter dem Raster
            schob ein wachsender Intelligence Hub die Leiste aus dem Bild. -->
       <nav
-        *ngIf="viewMode.isTabletView()"
         class="lumina__viewbar lumina__fade"
         style="--delay: 0.4s"
         aria-label="Weitere Ansichten"
@@ -212,7 +138,7 @@
     </section>
 
     <!-- Intelligence Hub & Energie -->
-    <aside class="lumina__side" [class.lumina__side--capped]="accordionActive">
+    <aside class="lumina__side">
       <div class="lumina-card lumina__hub lumina__fade" style="--delay: 0.5s">
         <div class="lumina__hub-header">
           <h3 class="lumina__label lumina__label--primary">Intelligence Hub</h3>
@@ -253,8 +179,7 @@
       </div>
 
       <div
-        class="lumina-card lumina__energy lumina__fade"
-        [class.lumina__energy--with-consumers]="accordionActive"
+        class="lumina-card lumina__energy lumina__energy--with-consumers lumina__fade"
         style="--delay: 0.6s"
       >
         <!-- Nur dieser Bereich oeffnet den Energiefluss-Dialog: die Verbraucher
@@ -306,9 +231,8 @@
             </div>
           </div>
         </div>
-        <!-- Groesste Verbraucher (nur Tablet-Ansicht): ersetzt dort die
-             Verbraucher-Kachel; der Knopf oeffnet dieselbe Gesamtliste. -->
-        <div *ngIf="accordionActive" class="lumina__energy-consumers">
+        <!-- Groesste Verbraucher; der Knopf oeffnet die Gesamtliste. -->
+        <div class="lumina__energy-consumers">
           <div class="lumina__energy-consumers-head">
             <h3 class="lumina__label">Größte Verbraucher</h3>
             <button
@@ -326,7 +250,7 @@
               Keine Verbraucher
             </p>
             <button
-              *ngFor="let consumer of topConsumers | slice: 0 : consumerEnergyRows"
+              *ngFor="let consumer of topConsumers"
               type="button"
               class="lumina__consumer-row"
               [class.lumina__consumer-row--unavailable]="consumer.unavailable"

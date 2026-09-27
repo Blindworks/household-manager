@@ -1303,20 +1303,19 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(4);
+    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(3);
     expect(fixture.componentInstance.topConsumers.length).toBe(1);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Waschmaschine');
 
     discardPeriodicTasks();
   }));
 
-  describe('in der Tablet-Ansicht', () => {
+  describe('in der Energiefluss-Kachel', () => {
     beforeEach(() => localStorage.removeItem('household-manager-view-mode'));
     afterEach(() => localStorage.removeItem('household-manager-view-mode'));
 
     const tabletFixture = () => {
       const fixture = TestBed.createComponent(DashboardComponent);
-      fixture.componentInstance.viewMode.toggle();
       fixture.detectChanges();
       return fixture;
     };
@@ -1375,34 +1374,22 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
     }));
   });
 
-  it('zeigt auf der Website-Kachel vier, im Tablet-Energiefluss nur die drei groessten Verbraucher', fakeAsync(() => {
+  it('zeigt die Verbraucher in Website- und Tablet-Ansicht gleich, ohne eigene Verbraucher-Kachel', fakeAsync(() => {
     localStorage.removeItem('household-manager-view-mode');
-    consumerServiceSpy.getConsumers.and.returnValue(of(
-      Array.from({ length: 4 }, (_, i) => consumer({ entityId: `sensor.c${i}_power`, displayName: `Gerät ${i}` }))));
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
+    const rowCount = () =>
+      fixture.nativeElement.querySelectorAll('.lumina__energy-consumers .lumina__consumer-row').length;
 
-    expect(fixture.nativeElement.querySelectorAll('.lumina__consumer-tile .lumina__consumer-row').length).toBe(4);
+    expect(rowCount()).toBe(1);
+    expect(fixture.nativeElement.querySelector('.lumina__consumer-tile')).toBeNull();
 
     fixture.componentInstance.viewMode.toggle();
     fixture.detectChanges();
-    const rows: HTMLElement[] =
-      Array.from(fixture.nativeElement.querySelectorAll('.lumina__energy-consumers .lumina__consumer-row'));
-    expect(rows.length).toBe(3);
-    expect(rows[0].textContent).toContain('Gerät 0');
+
+    expect(rowCount()).toBe(1);
 
     localStorage.removeItem('household-manager-view-mode');
-    discardPeriodicTasks();
-  }));
-
-  it('zeigt in der Website-Ansicht keine Verbraucher in der Energiefluss-Kachel', fakeAsync(() => {
-    localStorage.removeItem('household-manager-view-mode');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('.lumina__energy-consumers')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.lumina__consumer-tile')).not.toBeNull();
-
     discardPeriodicTasks();
   }));
 
@@ -1449,7 +1436,7 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
 
     tick(30000);
 
-    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(4);
+    expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(3);
     expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith();
 
     discardPeriodicTasks();
@@ -1781,7 +1768,7 @@ describe('DashboardComponent (Sensor-Detaildialog)', () => {
   }));
 });
 
-describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
+describe('DashboardComponent (Kachel-Layout)', () => {
   const wohnzimmer: CurrentTemperatureReading = {
     sensorId: 'zigbee:1',
     name: 'Wohnzimmer',
@@ -1792,7 +1779,6 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
   };
 
   beforeEach(async () => {
-    localStorage.removeItem('household-manager-dashboard-tile');
     localStorage.removeItem('household-manager-view-mode');
 
     const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
@@ -1827,75 +1813,50 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
   });
 
   afterAll(() => {
-    localStorage.removeItem('household-manager-dashboard-tile');
     localStorage.removeItem('household-manager-view-mode');
   });
 
-  it('zeigt in der Website-Ansicht beide Kacheln offen und ohne Aufklapp-Kopf', fakeAsync(() => {
+  /** Die Umschaltung blendet nur den Header aus - der Inhalt bleibt derselbe. */
+  function layoutSignature(fixture: ComponentFixture<DashboardComponent>): string {
+    const root = fixture.nativeElement as HTMLElement;
+    return [
+      root.querySelectorAll('.lumina__room').length,
+      root.querySelectorAll('.lumina__room--static').length,
+      root.querySelectorAll('.lumina__energy-consumers').length,
+      root.querySelectorAll('.lumina__viewbar-btn').length
+    ].join('|');
+  }
+
+  it('zeigt in Website- und Tablet-Ansicht denselben Inhalt', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    const component = fixture.componentInstance;
+    const website = layoutSignature(fixture);
 
-    expect(component.accordionActive).toBeFalse();
-    expect(component.isTileOpen('switches')).toBeTrue();
-    expect(component.isTileOpen('consumers')).toBeTrue();
+    fixture.componentInstance.viewMode.toggle();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.viewMode.isTabletView()).toBeTrue();
+    expect(layoutSignature(fixture)).toBe(website);
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt die Schalter dauerhaft offen als einzige Kachel, ohne Aufklapp-Kopf', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.lumina__room').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.lumina__switch-tile.lumina__room--static')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.lumina__room-toggle')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
 
     discardPeriodicTasks();
   }));
 
-  it('zeigt in der Tablet-Ansicht die Schalter dauerhaft offen', fakeAsync(() => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.componentInstance.viewMode.toggle();
-    fixture.detectChanges();
-    const component = fixture.componentInstance;
-
-    expect(component.accordionActive).toBeTrue();
-    expect(component.isTileOpen('switches')).toBeTrue();
-    expect(component.isTileCollapsible('switches')).toBeFalse();
-
-    // Die Verbraucher stehen in der Tablet-Ansicht in der Energiefluss-Kachel:
-    // eine eigene Verbraucher-Kachel samt Aufklapp-Kopf gibt es dort nicht.
-    expect(fixture.nativeElement.querySelector('.lumina__consumer-tile')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.lumina__room-toggle')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
-
-    // Die dauerhaft offene Kachel traegt ihren Titel wieder im Inhalt.
-    const staticTiles = fixture.nativeElement.querySelectorAll('.lumina__room--static');
-    expect(staticTiles.length).toBe(1);
-
-    discardPeriodicTasks();
-  }));
-
-  it('stellt die Kacheln beim Zurueckschalten auf die Website-Ansicht wieder alle offen dar', fakeAsync(() => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.componentInstance.viewMode.toggle();
-    fixture.detectChanges();
-    // Verbraucher aufklappen, danach zurueck in die Website-Ansicht.
-    fixture.componentInstance.toggleTile('consumers');
-    fixture.detectChanges();
-
-    fixture.componentInstance.viewMode.toggle();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.isTileOpen('switches')).toBeTrue();
-    expect(fixture.componentInstance.isTileOpen('consumers')).toBeTrue();
-    expect(fixture.nativeElement.querySelector('.lumina__room--collapsed')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.lumina__room--static')).toBeNull();
-
-    discardPeriodicTasks();
-  }));
-
-  it('zeigt die Leiste mit den Tablet-Ansichten nur in der Tablet-Ansicht', fakeAsync(() => {
+  it('zeigt die Leiste mit den Tablet-Ansichten auch in der Website-Ansicht', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.lumina__viewbar')).toBeNull();
-
-    fixture.componentInstance.viewMode.toggle();
-    fixture.detectChanges();
-
+    expect(fixture.componentInstance.viewMode.isTabletView()).toBeFalse();
     const links: HTMLAnchorElement[] =
       Array.from(fixture.nativeElement.querySelectorAll('.lumina__viewbar-btn'));
     expect(links.length).toBe(fixture.componentInstance.tabletViews.length);
@@ -1912,7 +1873,7 @@ describe('DashboardComponent (Kachel-Layout in der Tablet-Ansicht)', () => {
 
     const viewbar: HTMLElement = fixture.nativeElement.querySelector('.lumina__viewbar');
     expect(viewbar.closest('.lumina__main')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.lumina__side--capped')).not.toBeNull();
+    expect(viewbar.closest('.lumina__side')).toBeNull();
 
     discardPeriodicTasks();
   }));
@@ -2751,12 +2712,13 @@ describe('DashboardComponent (Modus-Schnellzugriff)', () => {
     discardPeriodicTasks();
   }));
 
-  it('zeigt keinen Schnellzugriff in der Website-Ansicht', fakeAsync(() => {
+  /** Seit 2026-09-27 unterscheiden sich die Ansichten nur im Header. */
+  it('zeigt den Schnellzugriff auch in der Website-Ansicht', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
 
     expect(fixture.componentInstance.viewMode.isTabletView()).toBeFalse();
-    expect(quickButtons(fixture).length).toBe(0);
+    expect(quickButtons(fixture).length).toBe(1);
 
     discardPeriodicTasks();
   }));

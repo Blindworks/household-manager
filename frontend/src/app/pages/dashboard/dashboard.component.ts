@@ -14,10 +14,6 @@ import { WeatherService } from '../../services/weather.service';
 import { EnergyLiveService } from '../../services/energy-live.service';
 import { AnkerSolixService } from '../../services/ankersolix.service';
 import { ViewModeService } from '../../services/view-mode.service';
-import {
-  DashboardAccordionService,
-  DashboardTileKey
-} from '../../services/dashboard-accordion.service';
 import { TemperatureService } from '../../services/temperature.service';
 import { EnergyLive } from '../../models/energy-live.model';
 import { AnkerSolixLive } from '../../models/ankersolix.model';
@@ -127,53 +123,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly petSupplyService = inject(PetSupplyService);
   private readonly presenceService = inject(PresenceService);
 
-  /** Umschalter zwischen Website- und Tablet-Ansicht (blendet den Header aus). */
+  /**
+   * Umschalter zwischen Website- und Tablet-Ansicht. Er blendet nur den Header
+   * aus und ein - der Inhalt des Dashboards ist in beiden Ansichten derselbe
+   * (Nutzerentscheidung 2026-09-27).
+   */
   readonly viewMode = inject(ViewModeService);
 
   /**
    * Einstiege in die Tablet-Unteransichten. In der Tablet-Ansicht fehlt der
    * Header komplett, deshalb ist diese Leiste dort der einzige Weg weg vom
    * Dashboard – und jede verlinkte Seite braucht einen eigenen Zurueck-Knopf.
+   * Sie steht in beiden Ansichten, weil sich deren Inhalt nicht unterscheidet.
    * Ein weiterer Eintrag kostet genau eine Zeile.
    */
   readonly tabletViews = TABLET_VIEWS;
-
-  private readonly tileAccordion = inject(DashboardAccordionService);
-
-  /**
-   * True, wenn die Kacheln Schalter/Verbraucher in der kompakten
-   * Tablet-Darstellung stehen. Nur in der Tablet-Ansicht – in der
-   * Website-Ansicht bleibt das mehrspaltige Raster.
-   */
-  get accordionActive(): boolean {
-    return this.viewMode.isTabletView();
-  }
-
-  /**
-   * Kacheln, die in der Tablet-Ansicht dauerhaft offen stehen.
-   * Die Schalter sollen auf dem Wandtablet immer sichtbar sein – nur was
-   * darueber hinausgeht, wird aufklappbar.
-   */
-  private static readonly ALWAYS_OPEN_TILES: readonly DashboardTileKey[] = ['switches'];
-
-  /** True, wenn die Kachel in der Tablet-Ansicht einen Aufklapp-Kopf hat. */
-  isTileCollapsible(key: DashboardTileKey): boolean {
-    return this.accordionActive && !DashboardComponent.ALWAYS_OPEN_TILES.includes(key);
-  }
-
-  /** True, wenn die Kachel in der Tablet-Ansicht ohne Aufklapp-Kopf dauerhaft offen steht. */
-  isTileStatic(key: DashboardTileKey): boolean {
-    return this.accordionActive && !this.isTileCollapsible(key);
-  }
-
-  /** True, wenn der Inhalt der Kachel sichtbar ist (nur aufklappbare Kacheln koennen zu sein). */
-  isTileOpen(key: DashboardTileKey): boolean {
-    return !this.isTileCollapsible(key) || this.tileAccordion.isOpen(key);
-  }
-
-  toggleTile(key: DashboardTileKey): void {
-    this.tileAccordion.toggle(key);
-  }
 
   private clockSubscription?: Subscription;
   private weatherSubscription?: Subscription;
@@ -236,10 +200,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly DOOR_REFRESH_MS = 30000;
   /** Wie die Tuerkarten: die Helfer aendern sich selten, 30 s reichen. */
   private static readonly APPLIANCE_REFRESH_MS = 30000;
-  /** Anzahl der Verbraucher auf der Kachel; alle weiteren stehen im Dialog. */
-  private static readonly CONSUMER_TILE_LIMIT = 4;
-  /** Zeilen der Verbraucher in der Tablet-Energiefluss-Kachel (Teilmenge der Kachel-Liste). */
-  readonly consumerEnergyRows = 3;
+  /** Anzahl der Verbraucher in der Energiefluss-Kachel; alle weiteren stehen im Dialog. */
+  private static readonly CONSUMER_TILE_LIMIT = 3;
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
   private static readonly CONSUMER_REFRESH_MS = 30000;
   private static readonly PETS_REFRESH_MS = 60000;
@@ -663,8 +625,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /**
    * Helfer, die gerade per Schnellzugriff neben der eingeklappten Leiste stehen.
    *
-   * Zwei Bedingungen hier, alle bewusst: nur im Tablet-Modus (die Browser-Ansicht bleibt
-   * unveraendert) und nur bei eingeklappter Leiste (ausgeklappt stuende ein Modus doppelt).
+   * Nur bei eingeklappter Leiste (ausgeklappt stuende ein Modus doppelt) - in beiden
+   * Ansichten, weil sich deren Inhalt seit 2026-09-27 nicht mehr unterscheidet.
    * Ob ein Fenster offen ist, entscheidet allein das Backend — `quickAccessEntities`
    * enthaelt nur faellige Helfer; hier wird keine Uhrzeit ausgewertet.
    *
@@ -673,10 +635,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * (Nutzerentscheidung 2026-09-15; die erste Fassung blendete ihn bei „an" aus).
    */
   get quickAccessModes(): ModeEntity[] {
-    if (!this.viewMode.isTabletView() || this.modesExpanded) {
-      return [];
-    }
-    return this.quickAccessEntities;
+    return this.modesExpanded ? [] : this.quickAccessEntities;
   }
 
   /**

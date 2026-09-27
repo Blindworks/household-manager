@@ -501,17 +501,7 @@
   color: #b91c1c;
 }
 
-// ---- Verbraucher-Kachel & -Dialog (Top-4-Stromverbraucher) ---------------
-.lumina__consumer-tile {
-  // Reine Anzeige: nur der Aufklapp-Knopf reagiert, die Kachel selbst nicht.
-  cursor: default;
-
-  &:hover,
-  &:active {
-    transform: none;
-  }
-}
-
+// ---- Verbraucher-Zeilen (Energiefluss-Kachel) & -Dialog ------------------
 .lumina__consumer-rows {
   display: flex;
   flex-direction: column;
@@ -614,28 +604,16 @@
   color: var(--on-primary);
 }
 
-.lumina__room-name {
-  margin: 0 0 4px;
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--on-surface);
-}
-
-// ---- Kompakte Kachel-Darstellung (nur Tablet-Ansicht) --------------------
-// Nebeneinander sind die Kacheln auf dem Wandtablet zu gedraengt: der Inhalt
-// wird beschnitten und Namen brechen um. Die Schalter stehen deshalb allein
-// ueber die volle Breite und dauerhaft offen; alles Weitere liegt darunter,
-// ebenfalls ueber die volle Breite, und ist aufklappbar. Dieser Block muss
-// NACH den Kachel-Bloecken stehen: er ueberschreibt u. a. das Raster und die
-// aspect-ratio bei gleicher Spezifitaet.
+// ---- Kompakte Kachel-Darstellung -----------------------------------------
+// Nebeneinander waren die Kacheln auf dem Wandtablet zu gedraengt: der Inhalt
+// wurde beschnitten und Namen brachen um. Die Schalter stehen deshalb allein
+// ueber die volle Breite und dauerhaft offen - seit 2026-09-27 in Tablet- und
+// Website-Ansicht gleich, die Umschaltung blendet nur noch den Header aus.
+// Dieser Block muss NACH den Kachel-Bloecken stehen: er ueberschreibt u. a.
+// das Raster und die aspect-ratio bei gleicher Spezifitaet.
 .lumina__rooms--accordion {
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-}
-
-// Aufklappbare Kacheln stehen alleine in ihrer Zeile.
-.lumina__room--collapsible {
-  grid-column: 1 / -1;
 }
 
 .lumina__room--accordion {
@@ -643,7 +621,7 @@
   gap: 0;
   padding: 12px 18px;
 
-  // Die Kachel ist im Akkordeon kein Klickziel – nur der Kopf reagiert.
+  // Die Kachel ist kein Klickziel – nur ihre Zeilen und Knoepfe reagieren.
   &:hover,
   &:active {
     transform: none;
@@ -653,12 +631,7 @@
     align-items: center;
   }
 
-  // Der Titel steht jetzt im Kopf, nicht mehr im Inhalt.
-  .lumina__room-name {
-    display: none;
-  }
-
-  // Flacheres Icon, damit eine geschlossene Kachel wenig Hoehe kostet.
+  // Flacheres Icon, damit der Kachelkopf wenig Hoehe kostet.
   .lumina__room-icon {
     padding: 8px;
     border-radius: var(--radius-xl);
@@ -673,16 +646,7 @@
   }
 }
 
-// Die dauerhaft offenen Kacheln haben keinen Aufklapp-Kopf, der ihren Titel
-// traegt – dort steht der Name wieder im Inhalt. Muss NACH .lumina__room--
-// accordion stehen, das ihn ausblendet (gleiche Spezifitaet).
 .lumina__room--static {
-  .lumina__room-name {
-    display: block;
-    margin: 0 0 2px;
-    font-size: 19px;
-  }
-
   // Acht Schalter (oder viele Sensorzeilen) passen nicht in jede Kachelhoehe
   // des Wandtablets - lieber innen scrollen als die Kachelzeile ueber den
   // Bildschirmrand hinaus wachsen lassen. Ueberschreibt das overflow: hidden
@@ -692,52 +656,6 @@
     max-height: 46vh;
     overflow-y: auto;
   }
-}
-
-// Drei Klassen: .lumina__switch-tile .lumina__room-body setzt display: flex mit
-// derselben Spezifitaet – die zusaetzliche Klasse macht das Zuklappen
-// unabhaengig von der Reihenfolge im Stylesheet.
-.lumina__room.lumina__room--collapsed .lumina__room-body {
-  display: none;
-}
-
-.lumina__room-toggle {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-  margin: 0 4px;
-  padding: 10px 8px 10px 14px;
-  border: none;
-  border-radius: var(--radius-xl);
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: rgba(var(--tint-rgb), 0.05);
-  }
-}
-
-.lumina__room-toggle-title {
-  font-size: 19px;
-  font-weight: 500;
-  color: var(--on-surface);
-}
-
-.lumina__room-chevron {
-  font-size: 26px;
-  color: rgba(var(--on-surface-variant-rgb), 0.7);
-  transition: transform 0.25s ease;
-}
-
-.lumina__room--accordion:not(.lumina__room--collapsed) .lumina__room-chevron {
-  transform: rotate(180deg);
 }
 
 // ============================================================================
@@ -890,7 +808,7 @@
   padding: 24px 28px;
 }
 
-// ---- Groesste Verbraucher in der Energiefluss-Kachel (nur Tablet) ---------
+// ---- Groesste Verbraucher in der Energiefluss-Kachel ----------------------
 // Die Karte bleibt bei ihrer Inhaltshoehe: gestreckt bis zum unteren Rand
 // liefe sie unter den drei Zeilen leer aus.
 .lumina__energy-consumers {
@@ -1715,7 +1633,7 @@
 // ============================================================================
 //  Responsiv
 // ============================================================================
-// Tablet-Ansicht, zweispaltig: die rechte Spalte bestimmt die Zeilenhoehe des
+// Zweispaltig: die rechte Spalte bestimmt die Zeilenhoehe des
 // Rasters nicht mit (contain: size), sie streckt sich nur auf die Hoehe der
 // linken Spalte bzw. des Bildschirms. Ohne das liess jeder weitere Eintrag im
 // Intelligence Hub das Raster wachsen und schob Fussleiste und Knoepfe ueber
@@ -1723,7 +1641,7 @@
 // die Hub-Liste in ihrer Karte. Nur oberhalb des Einspalten-Umbruchs - dort
 // darunter haette die Spalte ohne Eigenhoehe schlicht die Hoehe 0.
 @media (min-width: 1101px) {
-  .lumina__side--capped {
+  .lumina__side {
     contain: size;
   }
 }
@@ -1818,12 +1736,8 @@
   }
 }
 
-// Ohne Verbraucher ist der Klickbereich die ganze Karte: dann hebt sie sich
-// wie bisher. Mit Verbrauchern wuerde das die fremden Klickziele mitheben.
-.lumina__energy:not(.lumina__energy--with-consumers):hover {
-  transform: translateY(-2px);
-}
-
+// Nur der Gauge-Bereich hebt sich hervor, nicht die ganze Karte: sonst
+// hoebe er die Verbraucherzeilen - fremde Klickziele - mit.
 .lumina__energy--with-consumers .lumina__energy-flow:hover {
   background: rgba(var(--tint-rgb), 0.03);
 }
