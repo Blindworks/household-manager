@@ -110,6 +110,11 @@ public class TapoKlapDeviceConnection implements TapoLocalDeviceConnection {
         return executeRequest(buildRequest("get_current_power", null));
     }
 
+    @Override
+    public JsonNode request(String method, ObjectNode params) {
+        return executeRequest(buildRequest(method, params));
+    }
+
     /** Builds a KLAP request node including requestTimeMils as required by newer firmware. */
     private ObjectNode buildRequest(String method, ObjectNode params) {
         ObjectNode req = objectMapper.createObjectNode();

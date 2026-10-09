@@ -1,0 +1,79 @@
+<app-tablet-shell heading="Heizung">
+  <div shellActions class="tablet-heating__controls">
+    <div class="tablet-heating__bulk" role="group" aria-label="Alle Thermostate setzen">
+      <span class="tablet-heating__bulk-label">Alle auf</span>
+      @for (level of bulkLevels; track level) {
+        <button
+          type="button"
+          class="tablet-heating__bulk-btn"
+          [attr.data-bulk]="level"
+          [disabled]="onlineCount === 0"
+          (click)="openBulk(level)">
+          {{ level }} °C
+        </button>
+      }
+    </div>
+    <div class="tablet-heating__ranges" role="group" aria-label="Zeitraum">
+      @for (range of ranges; track range.value) {
+        <button
+          type="button"
+          class="tablet-heating__range"
+          [class.tablet-heating__range--active]="range.value === activeRange"
+          (click)="setRange(range.value)">
+          {{ range.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <section class="tablet-heating">
+    @if (thermostats.length > 0) {
+      <div class="tablet-heating__grid" [style.grid-template-columns]="'repeat(' + columns + ', 1fr)'">
+        @for (thermostat of thermostats; track thermostat.id) {
+          <app-thermostat-tile
+            [thermostat]="thermostat"
+            [busy]="busyIds.has(thermostat.id)"
+            [errorMessage]="tileErrors.get(thermostat.id) ?? null"
+            (targetChange)="setTarget(thermostat, $event)"
+            (modeChange)="setMode(thermostat, $event)">
+            @if (sparklines.get(thermostat.id); as options) {
+              <div
+                echarts
+                class="tablet-heating__spark"
+                [options]="options"
+                [autoResize]="true"></div>
+            } @else {
+              <p class="tablet-heating__spark-hint">
+                {{ sparklines.has(thermostat.id) ? 'Kein Verlauf' : 'Lade Verlauf…' }}
+              </p>
+            }
+          </app-thermostat-tile>
+        }
+      </div>
+    } @else {
+      <p class="tablet-heating__hint">
+        {{ loadError ?? (loaded ? 'Keine Thermostate eingerichtet.' : 'Lade Thermostate…') }}
+      </p>
+    }
+  </section>
+
+  @if (bulkTemp !== null) {
+    <div class="confirm-overlay" (click)="cancelBulk()">
+      <div class="confirm-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <h3>Alle Thermostate auf {{ formatTemp(bulkTemp) }} °C setzen?</h3>
+        <p>
+          Betroffen sind alle {{ onlineCount }} erreichbaren Thermostate. Die Betriebsart wird dabei auf „Manuell" gestellt.
+        </p>
+        @if (bulkError) {
+          <p class="confirm-error" role="alert">{{ bulkError }}</p>
+        }
+        <div class="confirm-actions">
+          <button type="button" class="dialog-cancel" (click)="cancelBulk()">Abbrechen</button>
+          <button type="button" class="dialog-confirm" [disabled]="bulkBusy" (click)="confirmBulk()">
+            {{ bulkBusy ? 'Setze…' : 'Bestätigen' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</app-tablet-shell>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261009-0058-create-thermostat" author="claude">
+        <comment>
+            Heizkoerperthermostate (Tapo KE100) am Tapo-Hub H100. child_device_id ist der
+            stabile Schluessel (Hardware-Id des Kindgeraets), die Hub-IP wird von Hand gepflegt.
+            Bewusst eigene Changesets je Tabelle: MariaDB committet jedes DDL implizit.
+        </comment>
+        <createTable tableName="thermostat">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="child_device_id" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uk_thermostat_child_device_id"/>
+            </column>
+            <column name="hub_device_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hub_ip" type="VARCHAR(45)"/>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="thermostat"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

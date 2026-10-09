@@ -1,0 +1,45 @@
+<div class="admin-heating">
+  <h1>Heizung</h1>
+  <p class="admin-heating__hint">
+    IP-Adresse des Thermostat-Hubs im Heimnetz (feste DHCP-Reservierung empfohlen).
+    „Hub suchen“ speichert die Adresse und liest die angelernten Thermostate aus.
+  </p>
+
+  <form class="admin-heating__hub" (ngSubmit)="searchHub()">
+    <label class="admin-heating__field">
+      <span>Hub-IP</span>
+      <input type="text" name="ip" [(ngModel)]="ip" placeholder="192.168.1.60" autocomplete="off">
+    </label>
+    <button type="submit" data-test="search" [disabled]="!canSearch" [attr.aria-busy]="searching()">
+      {{ searching() ? 'Sucht …' : 'Hub suchen' }}
+    </button>
+  </form>
+
+  @if (errorMessage()) {
+    <div class="admin-heating__error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <section>
+    <h2>Thermostate</h2>
+    @if (thermostats().length === 0) {
+      <p class="admin-heating__hint">Noch keine Thermostate gefunden.</p>
+    } @else {
+      <ul class="admin-heating__list">
+        @for (thermostat of thermostats(); track thermostat.id) {
+          <li class="admin-heating__item" data-test="thermostat">
+            <input
+              type="text"
+              class="admin-heating__name"
+              [name]="'name-' + thermostat.id"
+              [attr.aria-label]="'Name von ' + thermostat.name"
+              [(ngModel)]="names[thermostat.id]">
+            <span class="admin-heating__status">{{ thermostat.online ? 'online' : 'offline' }}</span>
+            <button type="button" data-test="rename" [disabled]="!canRename(thermostat)" (click)="rename(thermostat)">
+              Umbenennen
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

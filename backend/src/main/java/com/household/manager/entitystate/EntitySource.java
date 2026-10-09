@@ -41,5 +41,7 @@ public enum EntitySource {
     /** Oeffentliche Ladesaeulen (inoffizielles EnBW-Backend), je Favorit sensor.charging_<stationId>_free. */
     CHARGING,
     /** Sonnenstand am Haushaltsstandort (sensor.sun; berechnet, keine externe Quelle). */
-    SUN
+    SUN,
+    /** Heizkoerperthermostate (Tapo KE100 am H100-Hub), je Thermostat drei Entitaeten. */
+    THERMOSTAT
 }

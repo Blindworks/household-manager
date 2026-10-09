@@ -28,7 +28,7 @@ Die im Haus verteilten Tapo-Heizkörperthermostate (KE100, angebunden über den 
 ### Persistenz (Liquibase, DDL in getrennten Changesets wegen MariaDB-Autocommit)
 
 - `thermostat`: Kind-`device_id` (Schlüssel), Hub-Referenz, Anzeigename, Raum, Aktiv-Flag.
-- `thermostat_history`: Ist-/Solltemperatur und Heiz-Flag mit Zeitstempel. Verdichtung und Aufbewahrung nach dem Muster `entity_power_history` (nur **abgeschlossene** Buckets verdichten).
+- `thermostat_history`: Ist-/Solltemperatur und Heiz-Flag mit Zeitstempel. Aufbewahrung 30 Tage (nachts 03:40), **ohne Verdichtung** (bewusste Vereinfachung gegenueber dem Muster `entity_power_history`: bei hoechstens einem Punkt pro Minute und Thermostat bleibt die Tabelle klein; das Downsampling passiert beim Lesen ueber den `SeriesDownsampler`).
 - Keine Fremdschlüssel auf `entity_states`.
 
 ### Entity-State-Spiegelung
@@ -88,12 +88,12 @@ Je Thermostat: `sensor.thermostat_<id>_temperature`, `sensor.thermostat_<id>_tar
 
 ## Tests
 
-- Backend: Hub-Client gegen aufgezeichnete Fixtures bzw. Fake-Hub (wie das Fake-KLAP-Gerät), Validierung der Sollwerte, Bulk, Historien-Verdichtung (nur abgeschlossene Buckets), `unavailable` mit erhaltenen Attributen, `SecurityRulesTest`.
+- Backend: Hub-Client gegen aufgezeichnete Fixtures bzw. Fake-Hub (wie das Fake-KLAP-Gerät), Validierung der Sollwerte, Bulk, Historien-Downsampling beim Lesen, `unavailable` mit erhaltenen Attributen, `SecurityRulesTest`.
 - Frontend: Höhenketten-Test (Messung bei 900 und 1200 px, weil die Kachel festen Inhalt trägt), Entprellen/Optimismus mit Rollback, Zustände (offline, Frostschutz, heizt), Modus-Wechsel, Sammelaktion mit Bestätigung und Neuauflösung.
 
 ## Rollout und offene Punkte
 
-- Hub-IP von Hand eintragen, im Router fest reservieren.
+- Hub-IP von Hand eintragen (`PUT /v1/thermostats/hub`, ADMIN; ergaenzt gegenueber der urspruenglichen Spec, die keinen Weg dafuer nannte), im Router fest reservieren.
 - Migrationen laufen erstmals nie gegen die echte DB → Backup vor dem Deploy.
 - **Offen bis zum Realtest:** exakte Feldnamen von `get_child_device_list`/`control_child` beim KE100, ob der H100 lokal KLAP oder AES spricht, Temperatur-Offset-Semantik, Melde-Intervall der Kindgeräte (bestimmt die sinnvolle Poll-Frequenz).
 - Phase 2 (Regelung) baut auf den gespiegelten Entitäten und der Verlaufstabelle auf; dafür ist hier nichts vorzuhalten.

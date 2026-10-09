@@ -210,6 +210,13 @@ public class SecurityConfig {
                         // ueber die generische GET-Regel KIOSK (das Wandtablet muss es wissen),
                         // Umstellen nur im Admin-Menue - ohne diese Zeile waere es MEMBER.
                         .requestMatchers(HttpMethod.PUT, "/v1/appearance").hasRole("ADMIN")
+                        // Hub-Pflege der Heizung (Hub-IP setzen, Thermostat umbenennen) ist ADMIN.
+                        // Methodenspezifisch und VOR der KIOSK-Whitelist weiter unten: lesen und
+                        // bedienen (target/mode/bulk) soll das Wandtablet weiter koennen. "/hub"
+                        // steht ausdruecklich vor "/*": ein literales Segment darf nie als {id}
+                        // einer weniger strengen Regel durchrutschen.
+                        .requestMatchers(HttpMethod.PUT, "/v1/thermostats/hub", "/v1/thermostats/*")
+                        .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet
@@ -238,7 +245,13 @@ public class SecurityConfig {
                                 "/v1/blink/system/*/arm", "/v1/blink/system/*/disarm",
                                 "/v1/pet-supplies/*/purchases", "/v1/pet-supplies/*/corrections",
                                 // Ladesaeulen-Refresh zieht nur Daten - sonst waere der Knopf am Tablet tot.
-                                "/v1/charging/refresh")
+                                "/v1/charging/refresh",
+                                // Sammelaktion der Heizung; der Schutz ist der Bestaetigungsdialog
+                                // der Tablet-Ansicht, keine serverseitige Sperre (Spec Heizungssteuerung).
+                                "/v1/thermostats/bulk")
+                        .hasRole("KIOSK")
+                        // Solltemperatur und Modus je Thermostat: das Wandtablet ist der Nutzen.
+                        .requestMatchers(HttpMethod.PUT, "/v1/thermostats/*/target", "/v1/thermostats/*/mode")
                         .hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")

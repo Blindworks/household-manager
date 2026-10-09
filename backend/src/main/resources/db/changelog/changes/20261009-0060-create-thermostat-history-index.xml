@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Eigenes Changeset: MariaDB committet jedes DDL implizit, ein gebuendeltes
+         CREATE TABLE + CREATE INDEX stuende nach einem Fehlschlag halb angewendet da. -->
+    <changeSet id="20261009-0060-create-thermostat-history-index" author="claude">
+        <createIndex tableName="thermostat_history" indexName="idx_thermostat_history_thermostat_time">
+            <column name="thermostat_id"/>
+            <column name="recorded_at"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="thermostat_history" indexName="idx_thermostat_history_thermostat_time"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -110,6 +110,12 @@ export const routes: Routes = [
     title: 'Laden Tablet - Household Manager'
   },
   {
+    path: 'tablet/heating',
+    loadComponent: () => import('./pages/tablet-heating/tablet-heating.component').then(m => m.TabletHeatingComponent),
+    canActivate: [authGuard],
+    title: 'Heizung Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
@@ -189,6 +195,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/admin-charging/admin-charging.component').then(m => m.AdminChargingComponent),
     canActivate: [adminGuard],
     title: 'Ladesäulen-Einstellungen - Household Manager'
+  },
+  {
+    path: 'admin/heating',
+    loadComponent: () => import('./pages/admin-heating/admin-heating.component')
+      .then(m => m.AdminHeatingComponent),
+    canActivate: [adminGuard],
+    title: 'Heizung - Household Manager'
   },
   {
     path: 'admin/presence',

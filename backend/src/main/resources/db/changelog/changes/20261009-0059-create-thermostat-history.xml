@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261009-0059-create-thermostat-history" author="claude">
+        <comment>
+            Verlauf von Ist-/Solltemperatur und Ventilzustand je Thermostat. Rohpunkte,
+            Aufbewahrung 30 Tage (ThermostatHistoryRetentionJob), keine Verdichtung.
+        </comment>
+        <createTable tableName="thermostat_history">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="thermostat_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_thermostat_history_thermostat"
+                             references="thermostat(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="recorded_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_temp" type="DOUBLE"/>
+            <column name="target_temp" type="DOUBLE"/>
+            <column name="heating" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="thermostat_history"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
