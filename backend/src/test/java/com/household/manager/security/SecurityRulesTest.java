@@ -1116,4 +1116,61 @@ class SecurityRulesTest {
     void adminDarfDieLadesaeulenEinstellungenLesen() throws Exception {
         mockMvc.perform(get("/v1/charging/settings")).andExpect(status().isNotFound());
     }
+
+    // --- Heizungssteuerung (Thermostate). Kein ThermostatController im Slice: 404 statt 403
+    // belegt, dass die Regel durchlaesst.
+
+    /**
+     * Das Wandtablet bedient die Heizung (Nutzerentscheidung, Spec Heizungssteuerung): Sollwert,
+     * Modus und Sammelaktion stehen in der KIOSK-Whitelist. Der Schutz ist die Bestaetigung der
+     * Sammelaktion in der UI, keine serverseitige Sperre.
+     */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfThermostateLesenUndBedienen() throws Exception {
+        mockMvc.perform(get("/v1/thermostats")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/thermostats/1/history")).andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/thermostats/1/target").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"targetTemp\": 21.0}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/thermostats/1/mode").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"mode\": \"OFF\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/thermostats/bulk").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"targetTemp\": 17.0}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieHubPflegeNichtBenutzen() throws Exception {
+        mockMvc.perform(put("/v1/thermostats/hub").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"ip\": \"192.168.1.50\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/thermostats/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDieHubPflegeNichtBenutzen() throws Exception {
+        mockMvc.perform(put("/v1/thermostats/hub").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"ip\": \"192.168.1.50\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/thermostats/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfDieHubPflegeBenutzen() throws Exception {
+        mockMvc.perform(put("/v1/thermostats/hub").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"ip\": \"192.168.1.50\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/thermostats/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
+                .andExpect(status().isNotFound());
+    }
 }
