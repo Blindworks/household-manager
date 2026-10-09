@@ -1,0 +1,187 @@
+// Inhalt der Tablet-Heizungsansicht. Kopfzeile und Ansichtsleiste liefert
+// app-tablet-shell; hier bleibt das Kachelraster und der Bestaetigungsdialog.
+//
+// Farben kommen ueber die von der Shell vererbten Custom Properties
+// (--card-bg, --on-surface-rgb, ...) - siehe _lumina-theme.scss. Diese Seite
+// kann .lumina--light wegen der Stil-Kapselung nicht selbst sehen.
+
+// Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
+// ueber Shell und Raster bis in die Kachel und das Verlaufsdiagramm. Fehlt
+// flex: 1 oder min-height: 0 an EINER Stelle, faellt alles darunter auf
+// Inhaltshoehe zurueck.
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tablet-heating {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  color: var(--on-surface);
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__bulk,
+  &__ranges {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(var(--tint-rgb), 0.04);
+    border: 1px solid rgba(var(--tint-rgb), 0.08);
+    border-radius: 12px;
+    padding: 0.3rem;
+    flex: 0 0 auto;
+  }
+
+  &__bulk-label {
+    padding: 0 0.5rem 0 0.7rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(var(--on-surface-rgb), 0.7);
+  }
+
+  &__bulk-btn,
+  &__range {
+    border: none;
+    background: transparent;
+    padding: 0.6rem 1.2rem;
+    min-height: 2.75rem;
+    border-radius: 9px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.95rem;
+    color: rgba(var(--on-surface-rgb), 0.75);
+    touch-action: manipulation;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+
+  &__bulk-btn {
+    background: rgba(var(--heat-warm-rgb), 0.12);
+    color: var(--heat-warm);
+    font-weight: 600;
+
+    &[data-bulk='17'] {
+      background: rgba(var(--heat-cool-rgb), 0.14);
+      color: var(--heat-cool);
+    }
+  }
+
+  &__range--active {
+    background: rgba(var(--primary-rgb), 0.16);
+    color: var(--primary);
+  }
+
+  &__grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-auto-rows: 1fr;
+    gap: 1rem;
+    min-height: 0;
+  }
+
+  &__spark {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  &__spark-hint {
+    flex: 1 1 auto;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(var(--on-surface-rgb), 0.5);
+  }
+
+  &__hint {
+    flex: 1 1 auto;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    color: rgba(var(--on-surface-rgb), 0.6);
+    font-size: 1.1rem;
+    text-align: center;
+  }
+}
+
+// Bestaetigungsdialog der Sammelaktion (eigenes Markup wegen der Stilkapselung).
+// Der Scrim bleibt in beiden Designs dunkel.
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+
+.confirm-dialog {
+  background: var(--surface-solid);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  max-width: 28rem;
+  color: var(--on-surface);
+
+  h3 {
+    margin: 0 0 0.6rem;
+    color: var(--text-strong);
+    font-size: 1.25rem;
+  }
+
+  p {
+    margin: 0 0 1.1rem;
+    color: var(--on-surface-variant);
+  }
+
+  .confirm-error {
+    color: var(--error);
+    font-weight: 600;
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+
+  button {
+    border: none;
+    border-radius: 10px;
+    padding: 0.8rem 1.5rem;
+    min-height: 3rem;
+    font: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
+  .dialog-cancel {
+    background: rgba(148, 163, 184, 0.25);
+    color: var(--on-surface);
+  }
+
+  // Keine Warnfarbe: die Sammelaktion ist umkehrbar, kein Ausschalten.
+  .dialog-confirm {
+    background: var(--btn-selected-bg, #3e6ae1);
+    color: var(--btn-selected-fg, #fff);
+  }
+}

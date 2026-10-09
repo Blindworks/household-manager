@@ -1,0 +1,350 @@
+// Raumkachel mit Ring-Zifferblatt. Farben ausschliesslich ueber die von der
+// Tablet-Shell vererbten Tokens (_lumina-theme.scss) - die Komponente steht
+// innerhalb von .lumina und sieht .lumina--light wegen der Kapselung nicht,
+// erbt die Werte aber ueber die Custom Properties.
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tile {
+  --accent: var(--heat-cool);
+  --accent-rgb: var(--heat-cool-rgb);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0.8rem 1rem 0.7rem;
+  gap: 0.35rem;
+  color: var(--on-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 1.25rem;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+  // Warmer Schimmer hinter dem Ring, solange das Ventil offen ist.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 22% 48%, rgba(var(--accent-rgb), 0.12), transparent 62%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  &[data-tone='heating'] {
+    --accent: var(--heat-warm);
+    --accent-rgb: var(--heat-warm-rgb);
+    border-color: rgba(var(--heat-warm-rgb), 0.35);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  &[data-tone='frost']::before {
+    opacity: 0.6;
+  }
+
+  &[data-tone='off'] {
+    --accent: rgba(var(--tint-rgb), 0.4);
+    --accent-rgb: var(--tint-rgb);
+  }
+
+  &[data-tone='offline'] {
+    .tile__main,
+    .tile__extra {
+      opacity: 0.4;
+      filter: grayscale(0.7);
+    }
+  }
+
+  // ---- Kopf ---------------------------------------------------------------
+  &__head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+    min-height: 1.6rem;
+  }
+
+  &__name {
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
+    // schlaegt sonst die vererbte Farbe.
+    color: var(--text-strong);
+  }
+
+  &__chips {
+    display: flex;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.55rem 0.15rem 0.4rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: rgba(var(--tint-rgb), 0.08);
+    color: rgba(var(--on-surface-rgb), 0.8);
+
+    .material-symbols-outlined {
+      font-size: 0.95rem;
+    }
+
+    &--heating {
+      background: rgba(var(--heat-warm-rgb), 0.16);
+      color: var(--heat-warm);
+    }
+
+    &--battery {
+      background: rgba(var(--warning-rgb), 0.16);
+      color: var(--warning);
+    }
+
+    &--offline {
+      background: rgba(var(--error-rgb), 0.14);
+      color: var(--error);
+    }
+  }
+
+  // ---- Zifferblatt + Steuerung --------------------------------------------
+  &__main {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 1rem;
+    flex: 3 1 0;
+    min-height: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &__dial {
+    flex: 0 0 auto;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
+  }
+
+  &__ring {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  &__track,
+  &__arc {
+    fill: none;
+    stroke-width: 14;
+    stroke-linecap: round;
+  }
+
+  &__track {
+    stroke: rgba(var(--tint-rgb), 0.1);
+  }
+
+  &__arc {
+    stroke: var(--accent);
+    transition: stroke-dasharray 0.35s ease, stroke 0.3s ease;
+
+    &--warm {
+      filter: drop-shadow(0 0 6px rgba(var(--heat-warm-rgb), 0.5));
+    }
+  }
+
+  &__knob {
+    fill: var(--text-strong);
+    stroke: var(--accent);
+    stroke-width: 4;
+  }
+
+  &__readout {
+    fill: var(--text-strong);
+  }
+
+  &__current {
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__unit {
+    font-size: 15px;
+    font-weight: 500;
+    fill: rgba(var(--on-surface-rgb), 0.6);
+  }
+
+  &__caption {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    fill: rgba(var(--on-surface-rgb), 0.62);
+  }
+
+  &__controls {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.55rem;
+  }
+
+  &__setpoint {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    line-height: 1;
+  }
+
+  &__setpoint-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(var(--on-surface-rgb), 0.6);
+  }
+
+  &__target {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-strong);
+  }
+
+  &__setpoint-unit {
+    font-size: 0.95rem;
+    color: rgba(var(--on-surface-rgb), 0.6);
+  }
+
+  &__steps {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  // Mindestens 56x56 px Beruehrungsflaeche.
+  &__step {
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0;
+    border: 1px solid var(--card-border);
+    border-radius: 50%;
+    background: rgba(var(--tint-rgb), 0.06);
+    color: var(--text-strong);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+
+    .material-symbols-outlined {
+      font-size: 1.9rem;
+    }
+
+    &--up {
+      background: rgba(var(--accent-rgb), 0.16);
+      border-color: rgba(var(--accent-rgb), 0.4);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.92);
+      background: rgba(var(--accent-rgb), 0.28);
+    }
+  }
+
+  &__modes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border-radius: 0.8rem;
+    background: rgba(var(--tint-rgb), 0.05);
+    border: 1px solid rgba(var(--tint-rgb), 0.08);
+  }
+
+  &__mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.05rem;
+    min-height: 2.9rem;
+    padding: 0.2rem 0.1rem;
+    border: none;
+    border-radius: 0.6rem;
+    background: transparent;
+    color: rgba(var(--on-surface-rgb), 0.75);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    .material-symbols-outlined {
+      font-size: 1.15rem;
+    }
+
+    &--active {
+      background: rgba(var(--primary-rgb), 0.16);
+      color: var(--primary);
+    }
+  }
+
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  // ---- Meldungen + Verlauf ------------------------------------------------
+  &__offline,
+  &__error {
+    position: relative;
+    margin: 0;
+    flex: 0 0 auto;
+    font-size: 0.8rem;
+  }
+
+  &__offline {
+    color: rgba(var(--on-surface-rgb), 0.7);
+  }
+
+  &__error {
+    color: var(--error);
+    font-weight: 600;
+  }
+
+  &__extra {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 3rem;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.3s ease;
+  }
+}
