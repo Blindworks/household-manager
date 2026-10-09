@@ -46,10 +46,17 @@ export class AdminHeatingComponent implements OnInit {
     this.errorMessage.set(null);
     this.searching.set(true);
     this.api.setHub(this.ip.trim()).subscribe({
-      next: list => {
-        this.show(list);
-        this.searching.set(false);
-      },
+      // Die Antwort enthaelt nur die Thermostate dieses Hubs; angezeigt wird die Gesamtliste.
+      next: () => this.api.list().subscribe({
+        next: list => {
+          this.show(list);
+          this.searching.set(false);
+        },
+        error: error => {
+          this.errorMessage.set(this.messageFrom(error));
+          this.searching.set(false);
+        }
+      }),
       error: error => {
         this.errorMessage.set(this.messageFrom(error));
         this.searching.set(false);

@@ -85,7 +85,10 @@ export class ThermostatTileComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['thermostat'] && !this.tapOutstanding) {
+    const newError = changes['errorMessage']?.currentValue;
+    // Fehlgeschlagenes Schreiben: zurueck auf den Serverwert, auch wenn kein frisches Objekt kommt.
+    // Waehrend busy darf ein Refresh den lokalen Stand nicht ueberschreiben (kein Zuruecksprung).
+    if (newError || (changes['thermostat'] && !this.tapOutstanding && !this.busy)) {
       this.pendingTarget = null;
       this.pendingMode = null;
     }

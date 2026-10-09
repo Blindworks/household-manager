@@ -131,4 +131,31 @@ describe('ThermostatTileComponent', () => {
     fixture.detectChanges();
     expect(q('.tile__error')?.textContent).toContain('Hub nicht erreichbar.');
   });
+
+  it('verwirft den optimistischen Sollwert, wenn eine Fehlermeldung eintrifft', fakeAsync(() => {
+    setThermostat();
+    click('.tile__step--up');
+    tick(800);
+    expect(q('.tile__target')?.textContent).toContain('21,5');
+    fixture.componentRef.setInput('errorMessage', 'Befehl fehlgeschlagen.');
+    fixture.detectChanges();
+    expect(q('.tile__target')?.textContent).toContain('21,0');
+  }));
+
+  it('verwirft den optimistischen Modus, wenn eine Fehlermeldung eintrifft', () => {
+    setThermostat();
+    click('.tile__mode:nth-child(2)');
+    expect(component.activeMode).toBe('FROST_PROTECTION');
+    fixture.componentRef.setInput('errorMessage', 'Befehl fehlgeschlagen.');
+    fixture.detectChanges();
+    expect(component.activeMode).toBe('MANUAL');
+  });
+
+  it('ein Refresh waehrend busy ueberschreibt den lokalen Modus nicht', () => {
+    setThermostat();
+    click('.tile__mode:nth-child(2)');
+    fixture.componentRef.setInput('busy', true);
+    setThermostat({ lastUpdated: '2026-10-09T18:01:00' });
+    expect(component.activeMode).toBe('FROST_PROTECTION');
+  });
 });

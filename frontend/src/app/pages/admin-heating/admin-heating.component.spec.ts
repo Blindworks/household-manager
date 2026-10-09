@@ -66,6 +66,7 @@ describe('AdminHeatingComponent', () => {
 
   it('listet nach erfolgreicher Suche die Thermostate', async () => {
     api.setHub.and.returnValue(of([WOHNZIMMER, KUECHE]));
+    api.list.and.returnValue(of([WOHNZIMMER, KUECHE]));
     await enterIp('192.168.1.60');
     searchButton().click();
     fixture.detectChanges();
@@ -87,5 +88,18 @@ describe('AdminHeatingComponent', () => {
     (el.querySelector('[data-test="rename"]') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(api.rename).toHaveBeenCalledOnceWith(1, 'Wohnen');
+  });
+
+  it('laedt nach der Hub-Suche die komplette Liste neu (andere Hubs bleiben sichtbar)', async () => {
+    api.setHub.and.returnValue(of([KUECHE]));
+    api.list.and.returnValue(of([WOHNZIMMER, KUECHE]));
+    await enterIp('192.168.1.61');
+    api.list.calls.reset();
+    searchButton().click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.list).toHaveBeenCalledTimes(1);
+    expect(el.querySelectorAll('[data-test="thermostat"]').length).toBe(2);
   });
 });
