@@ -1,0 +1,87 @@
+<article class="tile" [attr.data-tone]="tone" [attr.aria-label]="'Thermostat ' + thermostat.name">
+  <header class="tile__head">
+    <h3 class="tile__name">{{ thermostat.name }}</h3>
+    <div class="tile__chips">
+      @if (tone === 'heating') {
+        <span class="tile__chip tile__chip--heating">
+          <span class="material-symbols-outlined" aria-hidden="true">local_fire_department</span>heizt
+        </span>
+      }
+      @if (thermostat.batteryLow) {
+        <span class="tile__chip tile__chip--battery">
+          <span class="material-symbols-outlined" aria-hidden="true">battery_alert</span>Batterie niedrig
+        </span>
+      }
+      @if (tone === 'offline') {
+        <span class="tile__chip tile__chip--offline">
+          <span class="material-symbols-outlined" aria-hidden="true">wifi_off</span>offline
+        </span>
+      }
+    </div>
+  </header>
+
+  <div class="tile__main">
+    <div class="tile__dial">
+      <svg class="tile__ring" viewBox="0 0 200 200" role="img"
+           [attr.aria-label]="'Ist ' + currentText + ' Grad, ' + caption">
+        <circle class="tile__track" cx="100" cy="100" [attr.r]="ringRadius"
+                [attr.stroke-dasharray]="trackDash" transform="rotate(135 100 100)" />
+        @if (fillDash; as dash) {
+          <circle class="tile__arc" [class.tile__arc--warm]="tone === 'heating'"
+                  cx="100" cy="100" [attr.r]="ringRadius"
+                  [attr.stroke-dasharray]="dash" transform="rotate(135 100 100)" />
+        }
+        @if (knob; as k) {
+          <circle class="tile__knob" [class.tile__knob--warm]="tone === 'heating'"
+                  [attr.cx]="k.x" [attr.cy]="k.y" r="9" />
+        }
+        <text class="tile__readout" x="100" y="112" text-anchor="middle">
+          <tspan class="tile__current">{{ currentText }}</tspan><tspan class="tile__unit" dx="3" dy="-18">°C</tspan>
+        </text>
+        <text class="tile__caption" x="100" y="140" text-anchor="middle">{{ caption }}</text>
+      </svg>
+    </div>
+
+    <div class="tile__controls">
+      <div class="tile__setpoint">
+        <span class="tile__setpoint-label">Soll</span>
+        <span class="tile__target">{{ targetText }}</span>
+        <span class="tile__setpoint-unit">°C</span>
+      </div>
+
+      <div class="tile__steps">
+        <button type="button" class="tile__step tile__step--down"
+                aria-label="Solltemperatur senken" [disabled]="controlsDisabled" (click)="step(-1)">
+          <span class="material-symbols-outlined" aria-hidden="true">remove</span>
+        </button>
+        <button type="button" class="tile__step tile__step--up"
+                aria-label="Solltemperatur erhöhen" [disabled]="controlsDisabled" (click)="step(1)">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+        </button>
+      </div>
+
+      <div class="tile__modes" role="group" aria-label="Betriebsart">
+        @for (mode of modes; track mode.value) {
+          <button type="button" class="tile__mode"
+                  [class.tile__mode--active]="mode.value === activeMode"
+                  [attr.data-mode]="mode.value"
+                  [attr.aria-pressed]="mode.value === activeMode"
+                  [disabled]="controlsDisabled" (click)="selectMode(mode.value)">
+            <span class="material-symbols-outlined" aria-hidden="true">{{ mode.icon }}</span>{{ mode.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (tone === 'offline') {
+    <p class="tile__offline">Nicht erreichbar – keine aktuellen Werte.</p>
+  }
+  @if (errorMessage) {
+    <p class="tile__error" role="alert">{{ errorMessage }}</p>
+  }
+
+  <div class="tile__extra">
+    <ng-content></ng-content>
+  </div>
+</article>

@@ -68,6 +68,12 @@
   --danger: #fca5a5;
   // Schrift auf einer --secondary-getoenten Flaeche (Anwesenheitsring "da")
   --on-secondary-container: #c9f7d3;
+
+  // Heizungsansicht: Bogen/Chips warm (Ventil offen) bzw. kuehl (Ruhe)
+  --heat-warm: #ff9a4d;
+  --heat-warm-rgb: 255, 154, 77;
+  --heat-cool: #6fa8ff;
+  --heat-cool-rgb: 111, 168, 255;
 }
 
 @mixin light-tokens {
@@ -111,4 +117,9 @@
   --warning-rgb: 180, 83, 9;
   --danger: #b91c1c;
   --on-secondary-container: #14532d;
+
+  --heat-warm: #d9560b;
+  --heat-warm-rgb: 217, 86, 11;
+  --heat-cool: #2f5fd0;
+  --heat-cool-rgb: 47, 95, 208;
 }
