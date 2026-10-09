@@ -89,6 +89,35 @@ export class ThermostatMock {
     return of({ points });
   }
 
+  /** Leere oder keine IPv4-Adresse -> 400 wie das Backend; sonst die Liste. */
+  setHub(ip: string): Observable<Thermostat[]> {
+    const trimmed = ip.trim();
+    const valid = /^d{1,3}(.d{1,3}){3}$/.test(trimmed)
+      && trimmed.split('.').every(part => Number(part) <= 255);
+    if (!valid) {
+      return throwError(() => new HttpErrorResponse({
+        status: 400, error: { message: 'Ungültige IP-Adresse.' }
+      }));
+    }
+    return this.list();
+  }
+
+  rename(id: number, name: string): Observable<Thermostat> {
+    const thermostat = this.thermostats.find(t => t.id === id);
+    if (!thermostat) {
+      return throwError(() => new HttpErrorResponse({
+        status: 404, error: { message: 'Thermostat nicht gefunden.' }
+      }));
+    }
+    if (!name.trim()) {
+      return throwError(() => new HttpErrorResponse({
+        status: 400, error: { message: 'Der Name darf nicht leer sein.' }
+      }));
+    }
+    thermostat.name = name.trim();
+    return of({ ...thermostat });
+  }
+
   private writable(id: number): Thermostat | HttpErrorResponse {
     const thermostat = this.thermostats.find(t => t.id === id);
     if (!thermostat) {

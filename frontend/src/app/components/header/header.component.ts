@@ -78,6 +78,7 @@ export class HeaderComponent {
         { path: '/admin/tractive', label: 'Hundetracker-Einstellungen', minRole: 'ADMIN' },
         { path: '/admin/network-devices', label: 'Netzwerk-Geräte', minRole: 'ADMIN' },
         { path: '/admin/charging', label: 'Ladesäulen', minRole: 'ADMIN' },
+        { path: '/admin/heating', label: 'Heizung', minRole: 'ADMIN' },
         { path: '/admin/presence', label: 'Anwesenheit', minRole: 'ADMIN' },
         { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', minRole: 'ADMIN' }
       ]

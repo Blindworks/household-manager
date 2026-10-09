@@ -197,6 +197,13 @@ export const routes: Routes = [
     title: 'Ladesäulen-Einstellungen - Household Manager'
   },
   {
+    path: 'admin/heating',
+    loadComponent: () => import('./pages/admin-heating/admin-heating.component')
+      .then(m => m.AdminHeatingComponent),
+    canActivate: [adminGuard],
+    title: 'Heizung - Household Manager'
+  },
+  {
     path: 'admin/presence',
     loadComponent: () => import('./pages/admin-presence/admin-presence.component')
       .then(m => m.AdminPresenceComponent),

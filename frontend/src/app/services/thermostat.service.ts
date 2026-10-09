@@ -52,4 +52,17 @@ export class ThermostatService {
           params: { range }
         });
   }
+
+  /** Traegt die Hub-IP ein, probt sie und liefert die gefundenen Thermostate. */
+  setHub(ip: string): Observable<Thermostat[]> {
+    return this.useMock
+      ? this.mock.setHub(ip)
+      : this.http.put<Thermostat[]>(`${this.baseUrl}/hub`, { ip });
+  }
+
+  rename(id: number, name: string): Observable<Thermostat> {
+    return this.useMock
+      ? this.mock.rename(id, name)
+      : this.http.put<Thermostat>(`${this.baseUrl}/${id}`, { name });
+  }
 }
