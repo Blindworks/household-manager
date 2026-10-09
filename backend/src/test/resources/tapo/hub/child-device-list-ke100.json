@@ -1,0 +1,57 @@
+{
+  "child_device_list": [
+    {
+      "device_id": "KE100-WOHNZIMMER",
+      "model": "KE100",
+      "category": "subg.trv",
+      "nickname": "V29obnppbW1lcg==",
+      "status": "online",
+      "current_temp": 20.5,
+      "target_temp": 22.0,
+      "frost_protection_on": false,
+      "trv_state": "heating",
+      "at_low_battery": false
+    },
+    {
+      "device_id": "KE100-KUECHE",
+      "model": "KE100",
+      "category": "subg.trv",
+      "nickname": "S8O8Y2hl",
+      "status": "offline",
+      "frost_protection_on": false,
+      "at_low_battery": true
+    },
+    {
+      "device_id": "KE100-SCHLAFZIMMER",
+      "model": "KE100",
+      "category": "subg.trv",
+      "nickname": "U2NobGFmemltbWVy",
+      "status": "online",
+      "current_temp": 17.0,
+      "target_temp": 5.0,
+      "frost_protection_on": true,
+      "trv_state": "idle",
+      "at_low_battery": false
+    },
+    {
+      "device_id": "KE100-BAD",
+      "model": "KE100",
+      "category": "subg.trv",
+      "nickname": "QmFk",
+      "status": "online",
+      "current_temp": 19.0,
+      "target_temp": 5.0,
+      "frost_protection_on": false,
+      "trv_state": "something-new",
+      "at_low_battery": false
+    },
+    {
+      "device_id": "T315-FLUR",
+      "model": "T315",
+      "category": "subg.plugswitch.sensor",
+      "nickname": "Rmx1cg==",
+      "status": "online",
+      "current_temperature": 18.9
+    }
+  ]
+}

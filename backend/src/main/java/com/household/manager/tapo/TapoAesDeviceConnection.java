@@ -80,6 +80,15 @@ public class TapoAesDeviceConnection implements TapoLocalDeviceConnection {
         return executeAuthenticatedRequest(objectMapper.createObjectNode().put("method", "get_current_power"));
     }
 
+    @Override
+    public JsonNode request(String method, ObjectNode params) {
+        ObjectNode request = objectMapper.createObjectNode().put("method", method);
+        if (params != null) {
+            request.set("params", params);
+        }
+        return executeAuthenticatedRequest(request);
+    }
+
     private JsonNode executeAuthenticatedRequest(JsonNode requestData) {
         return executeAuthenticatedRequestInternal(requestData, true);
     }

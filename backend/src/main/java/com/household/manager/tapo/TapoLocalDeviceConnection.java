@@ -20,4 +20,11 @@ public interface TapoLocalDeviceConnection {
     JsonNode getEnergyUsage();
 
     JsonNode getCurrentPower();
+
+    /**
+     * Sends an arbitrary request (e.g. {@code get_child_device_list} or {@code control_child}
+     * on a hub) and returns its {@code result} node. Generalisation of the fixed-method calls
+     * above for devices whose methods are not modelled individually.
+     */
+    JsonNode request(String method, ObjectNode params);
 }
