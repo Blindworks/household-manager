@@ -29,10 +29,6 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <createIndex tableName="thermostat_history" indexName="idx_thermostat_history_thermostat_time">
-            <column name="thermostat_id"/>
-            <column name="recorded_at"/>
-        </createIndex>
         <rollback>
             <dropTable tableName="thermostat_history"/>
         </rollback>

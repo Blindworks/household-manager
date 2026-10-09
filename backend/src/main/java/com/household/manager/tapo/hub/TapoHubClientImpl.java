@@ -56,13 +56,36 @@ public class TapoHubClientImpl implements TapoHubClient {
     @Override
     public void setTargetTemp(String hubIp, String childDeviceId, double targetTemp) {
         ObjectNode params = objectMapper.createObjectNode().put("target_temp", targetTemp);
-        execute(hubIp, conn -> conn.request("control_child", controlChild(childDeviceId, params)));
+        sendChildCommand(hubIp, childDeviceId, params);
     }
 
     @Override
     public void setFrostProtection(String hubIp, String childDeviceId, boolean on) {
         ObjectNode params = objectMapper.createObjectNode().put("frost_protection_on", on);
-        execute(hubIp, conn -> conn.request("control_child", controlChild(childDeviceId, params)));
+        sendChildCommand(hubIp, childDeviceId, params);
+    }
+
+    private void sendChildCommand(String hubIp, String childDeviceId, ObjectNode setParams) {
+        JsonNode result = execute(hubIp,
+                conn -> conn.request("control_child", controlChild(childDeviceId, setParams)));
+        requireChildAccepted(childDeviceId, result);
+    }
+
+    /**
+     * Das aeussere error_code (schon von der Verbindung geprueft) sagt nur, dass der Hub den
+     * Befehl weitergereicht hat; ein vom Kind abgelehnter steht in response_data.error_code.
+     * Bewusst ausserhalb von {@code execute}: eine Ablehnung ist kein Verbindungsfehler und
+     * soll nicht mit neuer Verbindung wiederholt werden.
+     */
+    private void requireChildAccepted(String childDeviceId, JsonNode result) {
+        if (result == null) {
+            return;
+        }
+        JsonNode errorCode = result.path("response_data").path("error_code");
+        if (errorCode.isNumber() && errorCode.asInt() != 0) {
+            throw new TapoException("Thermostat " + childDeviceId + " hat den Befehl abgelehnt (error_code "
+                    + errorCode.asInt() + ").");
+        }
     }
 
     @Override

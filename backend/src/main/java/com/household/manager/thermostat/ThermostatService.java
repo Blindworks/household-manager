@@ -30,6 +30,11 @@ public class ThermostatService {
 
     /** Das Geraet kennt kein echtes "Aus": Modus OFF ist diese Zieltemperatur. */
     static final double OFF_TARGET_TEMP = 5.0;
+    /**
+     * Ziel beim Wechsel auf MANUAL, wenn das aktuelle Ziel unbekannt ist oder im OFF-Bereich liegt.
+     * Ohne ein Ziel ueber 5 Grad wertet der Mapper das Thermostat weiter als OFF.
+     */
+    static final double DEFAULT_MANUAL_TARGET = 17.0;
     static final int MAX_NAME_LENGTH = 100;
 
     private final ThermostatRepository repository;
@@ -57,7 +62,7 @@ public class ThermostatService {
         Thermostat thermostat = load(id);
         String hubIp = requireHubIp(thermostat);
 
-        applyMode(hubIp, thermostat.getChildDeviceId(), mode);
+        applyMode(hubIp, thermostat, mode);
         refreshCache(hubIp);
         auditService.record("thermostat.mode", thermostat.getName() + " (" + id + ") -> " + mode);
         return toDto(thermostat);
@@ -88,6 +93,8 @@ public class ThermostatService {
         for (Thermostat thermostat : targets) {
             String hubIp = requireHubIp(thermostat);
             hubClient.setTargetTemp(hubIp, thermostat.getChildDeviceId(), targetTemp);
+            // Sonst bliebe ein Thermostat im Frostschutz und "Alle auf 21" heizte nicht wirklich.
+            hubClient.setFrostProtection(hubIp, thermostat.getChildDeviceId(), false);
             hubIps.add(hubIp);
         }
         hubIps.forEach(this::refreshCache);
@@ -103,15 +110,29 @@ public class ThermostatService {
         return ids.stream().distinct().map(this::load).toList();
     }
 
-    private void applyMode(String hubIp, String childId, ThermostatMode mode) {
+    private void applyMode(String hubIp, Thermostat thermostat, ThermostatMode mode) {
+        String childId = thermostat.getChildDeviceId();
         switch (mode) {
             case OFF -> {
                 hubClient.setTargetTemp(hubIp, childId, OFF_TARGET_TEMP);
                 hubClient.setFrostProtection(hubIp, childId, false);
             }
             case FROST_PROTECTION -> hubClient.setFrostProtection(hubIp, childId, true);
-            case MANUAL -> hubClient.setFrostProtection(hubIp, childId, false);
+            case MANUAL -> {
+                if (!hasUsableTarget(thermostat)) {
+                    hubClient.setTargetTemp(hubIp, childId, DEFAULT_MANUAL_TARGET);
+                }
+                hubClient.setFrostProtection(hubIp, childId, false);
+            }
         }
+    }
+
+    /** Ziel exakt 5,0 ist von OFF nicht unterscheidbar und zaehlt deshalb als nicht nutzbar. */
+    private boolean hasUsableTarget(Thermostat thermostat) {
+        return cache.find(thermostat.getId())
+                .map(entry -> entry.reading().targetTemp())
+                .filter(target -> target > OFF_TARGET_TEMP)
+                .isPresent();
     }
 
     /**

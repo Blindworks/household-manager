@@ -148,5 +148,6 @@
     <!-- Heizungssteuerung: Tapo-KE100-Thermostate und ihr Verlauf -->
     <include file="db/changelog/changes/20261009-0058-create-thermostat.xml"/>
     <include file="db/changelog/changes/20261009-0059-create-thermostat-history.xml"/>
+    <include file="db/changelog/changes/20261009-0060-create-thermostat-history-index.xml"/>
 
 </databaseChangeLog>

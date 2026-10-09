@@ -46,7 +46,7 @@ public class ThermostatPollingService {
             initialDelayString = "${thermostat.initial-delay-ms:20000}")
     public void poll() {
         try {
-            groupByHub(repository.findByActiveTrue()).forEach(this::pollHub);
+            groupByHub(repository.findByActiveTrue()).forEach(this::pollHubIsolated);
         } catch (Exception ex) {
             log.warn("Thermostat-Polling fehlgeschlagen: {}", ex.getMessage());
         }
@@ -60,6 +60,14 @@ public class ThermostatPollingService {
             }
         }
         return byHub;
+    }
+
+    private void pollHubIsolated(String hubIp, List<Thermostat> thermostats) {
+        try {
+            pollHub(hubIp, thermostats);
+        } catch (Exception ex) {
+            log.warn("Polling des Hubs {} fehlgeschlagen: {}", hubIp, ex.getMessage());
+        }
     }
 
     private void pollHub(String hubIp, List<Thermostat> thermostats) {
@@ -90,9 +98,14 @@ public class ThermostatPollingService {
 
     private void markHubUnavailable(List<Thermostat> thermostats) {
         cache.markOffline(thermostats);
-        thermostats.forEach(thermostat ->
+        for (Thermostat thermostat : thermostats) {
+            try {
                 entityMapper.unavailable(thermostat, this::previousAttributes)
-                        .forEach(entityStateService::reportState));
+                        .forEach(entityStateService::reportState);
+            } catch (Exception ex) {
+                log.warn("Thermostat {} konnte nicht unavailable gemeldet werden: {}", thermostat.getId(), ex.getMessage());
+            }
+        }
     }
 
     private Map<String, Object> previousAttributes(String entityId) {

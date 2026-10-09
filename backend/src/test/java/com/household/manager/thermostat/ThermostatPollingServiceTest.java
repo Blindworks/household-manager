@@ -105,6 +105,37 @@ class ThermostatPollingServiceTest {
     }
 
     @Test
+    @DisplayName("Hub weg und reportState wirft fuer ein Thermostat: uebrige Thermostate und Hubs werden trotzdem behandelt")
+    void unavailableReportingIsIsolatedPerThermostat() {
+        when(repository.findByActiveTrue()).thenReturn(List.of(living, bedroom, otherHub));
+        when(hubClient.readThermostats("10.0.0.1")).thenThrow(new TapoException("Hub weg"));
+        when(hubClient.readThermostats("10.0.0.2")).thenReturn(List.of(reading("KE-3", 18)));
+        org.mockito.Mockito.doThrow(new RuntimeException("DB weg")).when(entityStateService)
+                .reportState(org.mockito.ArgumentMatchers.argThat(
+                        (EntityStateUpdate u) -> u.entityId().startsWith("sensor.thermostat_1_")));
+
+        assertDoesNotThrow(() -> poller.poll());
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, org.mockito.Mockito.atLeast(1)).reportState(captor.capture());
+        List<String> ids = captor.getAllValues().stream().map(EntityStateUpdate::entityId).toList();
+        assertEquals(true, ids.stream().anyMatch(id -> id.contains("thermostat_2_")));
+        assertEquals(true, ids.stream().anyMatch(id -> id.contains("thermostat_3_")));
+    }
+
+    @Test
+    @DisplayName("Ein unerwarteter Fehler bei einem Hub stoppt die weiteren Hubs nicht")
+    void failureAtOneHubDoesNotStopOthers() {
+        when(repository.findByActiveTrue()).thenReturn(List.of(living, bedroom, otherHub));
+        when(hubClient.readThermostats("10.0.0.1")).thenReturn(null);
+        when(hubClient.readThermostats("10.0.0.2")).thenReturn(List.of(reading("KE-3", 18)));
+
+        assertDoesNotThrow(() -> poller.poll());
+
+        assertEquals(true, cache.find(3L).orElseThrow().reading().online());
+    }
+
+    @Test
     @DisplayName("Kindgeraet fehlt in der Hub-Antwort: online=false und unavailable")
     void missingChildIsOffline() {
         when(repository.findByActiveTrue()).thenReturn(List.of(living, bedroom));

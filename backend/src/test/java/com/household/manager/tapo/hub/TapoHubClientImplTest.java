@@ -131,6 +131,29 @@ class TapoHubClientImplTest {
     }
 
     @Test
+    @DisplayName("Abgelehnter Kindbefehl (response_data.error_code != 0) wirft TapoException mit Code")
+    void rejectedChildCommandThrows() throws Exception {
+        when(connection.request(eq("control_child"), any())).thenReturn(objectMapper.readTree(
+                "{\"response_data\":{\"method\":\"set_device_info\",\"error_code\":-1008}}"));
+
+        TapoException ex = assertThrows(TapoException.class,
+                () -> client.setTargetTemp(HUB_IP, "KE100-WOHNZIMMER", 21.5));
+        assertEquals(true, ex.getMessage().contains("-1008"));
+        TapoException frost = assertThrows(TapoException.class,
+                () -> client.setFrostProtection(HUB_IP, "KE100-WOHNZIMMER", true));
+        assertEquals(true, frost.getMessage().contains("-1008"));
+    }
+
+    @Test
+    @DisplayName("Erfolgreicher Kindbefehl (error_code 0) wirft nicht")
+    void acceptedChildCommandPasses() throws Exception {
+        when(connection.request(eq("control_child"), any())).thenReturn(objectMapper.readTree(
+                "{\"response_data\":{\"result\":{},\"error_code\":0}}"));
+
+        client.setTargetTemp(HUB_IP, "KE100-WOHNZIMMER", 21.5);
+    }
+
+    @Test
     @DisplayName("probeHub liefert die Hub-Geraete-Id und die Thermostate")
     void probeHubReturnsIdentityAndThermostats() throws Exception {
         when(connection.getDeviceInfo()).thenReturn(objectMapper.readTree("{\"device_id\":\"HUB-1\",\"model\":\"H100\"}"));

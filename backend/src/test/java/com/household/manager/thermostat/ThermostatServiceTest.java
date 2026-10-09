@@ -144,12 +144,89 @@ class ThermostatServiceTest {
     }
 
     @Test
-    @DisplayName("setMode MANUAL schaltet Frostschutz aus und laesst das Ziel stehen")
-    void modeManualClearsFrostProtectionOnly() {
+    @DisplayName("setMode MANUAL schaltet Frostschutz aus und laesst ein Ziel ueber 5 Grad stehen")
+    void modeManualKeepsUsableTarget() {
+        cache.applyHubReadings(List.of(living), List.of(reading("KE-1", 20.5, 21.5)), LocalDateTime.now());
+
         service.setMode(1L, ThermostatMode.MANUAL);
 
         verify(hubClient).setFrostProtection(HUB_IP, "KE-1", false);
         verify(hubClient, never()).setTargetTemp(anyString(), anyString(), org.mockito.ArgumentMatchers.anyDouble());
+    }
+
+    @Test
+    @DisplayName("setMode MANUAL setzt das Standardziel, wenn das Ziel unbekannt ist")
+    void modeManualSetsDefaultTargetWhenUnknown() {
+        service.setMode(1L, ThermostatMode.MANUAL);
+
+        verify(hubClient).setTargetTemp(HUB_IP, "KE-1", ThermostatService.DEFAULT_MANUAL_TARGET);
+        verify(hubClient).setFrostProtection(HUB_IP, "KE-1", false);
+    }
+
+    @Test
+    @DisplayName("Aus, dann Manuell: der Hub meldet danach MANUAL, nicht wieder OFF")
+    void offThenManualEndsUpInManual() {
+        FakeHub hub = new FakeHub();
+        ThermostatService fakeService = new ThermostatService(repository, hub, cache, auditService,
+                Clock.fixed(Instant.parse("2026-10-09T16:30:00Z"), ZoneId.of("Europe/Berlin")));
+
+        fakeService.setMode(1L, ThermostatMode.OFF);
+        assertEquals(ThermostatMode.OFF, fakeService.list().get(0).mode());
+        fakeService.setMode(1L, ThermostatMode.MANUAL);
+
+        assertEquals(ThermostatMode.MANUAL, fakeService.list().get(0).mode());
+        assertEquals(ThermostatService.DEFAULT_MANUAL_TARGET, hub.target);
+    }
+
+    @Test
+    @DisplayName("bulk schaltet zusaetzlich den Frostschutz je Thermostat aus")
+    void bulkClearsFrostProtection() {
+        service.bulk(null, 21.0);
+
+        verify(hubClient).setFrostProtection(HUB_IP, "KE-1", false);
+        verify(hubClient).setFrostProtection(HUB_IP, "KE-2", false);
+    }
+
+    @Test
+    @DisplayName("Abgelehnter Kindbefehl (TapoException) ergibt keinen Audit-Eintrag, auch bei bulk")
+    void rejectedChildCommandWritesNoAudit() {
+        doThrow(new TapoException("Kindbefehl abgelehnt (-1008)"))
+                .when(hubClient).setFrostProtection(HUB_IP, "KE-1", false);
+
+        assertThrows(TapoException.class, () -> service.bulk(List.of(1L), 21.0));
+        assertThrows(TapoException.class, () -> service.setMode(1L, ThermostatMode.MANUAL));
+
+        verifyNoInteractions(auditService);
+    }
+
+    /** Haelt Ziel und Frostschutz von KE-1 und liefert sie ueber den echten Mapper zurueck. */
+    private static class FakeHub implements TapoHubClient {
+        double target = 21.0;
+        boolean frost = false;
+
+        @Override
+        public List<ThermostatReading> readThermostats(String hubIp) {
+            var json = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+            var child = json.putArray("child_device_list").addObject();
+            child.put("device_id", "KE-1").put("category", "subg.trv").put("status", "online")
+                    .put("current_temp", 20.0).put("target_temp", target).put("frost_protection_on", frost);
+            return new com.household.manager.tapo.hub.ThermostatReadingMapper().map(json);
+        }
+
+        @Override
+        public void setTargetTemp(String hubIp, String childDeviceId, double targetTemp) {
+            target = targetTemp;
+        }
+
+        @Override
+        public void setFrostProtection(String hubIp, String childDeviceId, boolean on) {
+            frost = on;
+        }
+
+        @Override
+        public com.household.manager.tapo.hub.HubProbeResult probeHub(String hubIp) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Test
