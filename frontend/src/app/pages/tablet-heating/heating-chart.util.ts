@@ -5,7 +5,7 @@ import { ThermostatHistoryPoint } from '../../models/thermostat.model';
 // Tablet-Ansichten.
 const ACTUAL_COLOR = '#6fa8ff';
 const TARGET_COLOR = '#94a3b8';
-const HEATING_BAND = 'rgba(255, 154, 77, 0.22)';
+const HEATING_BAND = 'rgba(255, 154, 77, 0.18)';
 
 /** Zusammenhaengende Zeitspannen mit offenem Ventil als [Beginn, Ende]. */
 export function heatingSegments(points: ThermostatHistoryPoint[]): [string, string][] {
@@ -56,7 +56,7 @@ export function buildSparklineOptions(points: ThermostatHistoryPoint[]): Record<
         showSymbol: false,
         connectNulls: false,
         data: points.map(point => [point.time, point.targetTemp]),
-        lineStyle: { width: 1.5, type: 'dashed', color: TARGET_COLOR, opacity: 0.8 }
+        lineStyle: { width: 1.2, color: TARGET_COLOR, opacity: 0.55 }
       },
       {
         name: 'Ist',

@@ -201,11 +201,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   flex: 0 0 auto;
   white-space: nowrap;
   min-height: var(--btn-height);
-  padding: var(--btn-padding);
+  // Kompakt: mit acht Unteransichten plus Dashboard passt die Leiste bei 1280 px
+  // sonst nicht mehr in eine Zeile und die aktive Ansicht laege ausserhalb.
+  padding: 4px 10px;
   border-radius: var(--radius-btn);
   background: var(--btn-bg);
   color: var(--btn-fg);
