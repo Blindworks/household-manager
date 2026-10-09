@@ -30,6 +30,7 @@ public class ThermostatService {
 
     /** Das Geraet kennt kein echtes "Aus": Modus OFF ist diese Zieltemperatur. */
     static final double OFF_TARGET_TEMP = 5.0;
+    static final int MAX_NAME_LENGTH = 100;
 
     private final ThermostatRepository repository;
     private final TapoHubClient hubClient;
@@ -59,6 +60,20 @@ public class ThermostatService {
         applyMode(hubIp, thermostat.getChildDeviceId(), mode);
         refreshCache(hubIp);
         auditService.record("thermostat.mode", thermostat.getName() + " (" + id + ") -> " + mode);
+        return toDto(thermostat);
+    }
+
+    /** Der Name ist reine Anzeige; die Entity-Ids haengen an der DB-Id und bleiben unberuehrt. */
+    public ThermostatDto rename(Long id, String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty() || trimmed.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException("Der Name muss zwischen 1 und " + MAX_NAME_LENGTH + " Zeichen lang sein.");
+        }
+        Thermostat thermostat = load(id);
+        String oldName = thermostat.getName();
+        thermostat.setName(trimmed);
+        repository.save(thermostat);
+        auditService.record("thermostat.rename", id + ": " + oldName + " -> " + trimmed);
         return toDto(thermostat);
     }
 
