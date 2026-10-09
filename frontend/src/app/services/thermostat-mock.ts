@@ -81,7 +81,7 @@ export class ThermostatMock {
       const currentTemp = round1(base + Math.sin((i / steps) * Math.PI * (range === 'DAY' ? 2 : 14)) * 1.2);
       return {
         time: toLocalIso(time),
-        currentTemp: thermostat && !thermostat.online ? null : currentTemp,
+        currentTemp: thermostat && !thermostat.online && i > steps * 0.8 ? null : currentTemp,
         targetTemp,
         heating: currentTemp < targetTemp - 0.3
       };

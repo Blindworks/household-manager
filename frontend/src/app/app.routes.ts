@@ -110,6 +110,12 @@ export const routes: Routes = [
     title: 'Laden Tablet - Household Manager'
   },
   {
+    path: 'tablet/heating',
+    loadComponent: () => import('./pages/tablet-heating/tablet-heating.component').then(m => m.TabletHeatingComponent),
+    canActivate: [authGuard],
+    title: 'Heizung Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],
