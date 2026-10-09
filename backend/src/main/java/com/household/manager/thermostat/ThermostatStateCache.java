@@ -51,6 +51,17 @@ public class ThermostatStateCache {
         return applied;
     }
 
+    /**
+     * Hub nicht erreichbar: die Thermostate gelten als offline ohne Werte (nie eine veraltete
+     * Zahl als aktuell), der Zeitpunkt der letzten erfolgreichen Abfrage bleibt erhalten.
+     */
+    public void markOffline(List<Thermostat> thermostats) {
+        for (Thermostat thermostat : thermostats) {
+            LocalDateTime lastUpdated = find(thermostat.getId()).map(Entry::lastUpdated).orElse(null);
+            entries.put(thermostat.getId(), new Entry(missingChild(thermostat), lastUpdated));
+        }
+    }
+
     private ThermostatReading missingChild(Thermostat thermostat) {
         return new ThermostatReading(thermostat.getChildDeviceId(), thermostat.getName(), false,
                 null, null, ThermostatMode.MANUAL, false, false);
