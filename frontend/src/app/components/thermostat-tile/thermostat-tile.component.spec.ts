@@ -158,4 +158,67 @@ describe('ThermostatTileComponent', () => {
     setThermostat({ lastUpdated: '2026-10-09T18:01:00' });
     expect(component.activeMode).toBe('FROST_PROTECTION');
   });
+
+  describe('Layout in kleinen Kacheln (Wandtablet)', () => {
+    // Die Kachel bezieht ihre Groesse aus dem Raster. Hier ersetzt ein Container
+    // mit fester Groesse das Raster; das Fixture wird dafuer umgehaengt (Muster
+    // der Hoehenketten-Tests: nicht den <body> als Flex-Spalte missbrauchen).
+    function renderIn(widthPx: number, heightPx: number): HTMLElement {
+      const box = document.createElement('div');
+      box.style.cssText = `display:flex;flex-direction:column;width:${widthPx}px;height:${heightPx}px`;
+      document.body.appendChild(box);
+      el.style.flex = '1';
+      box.appendChild(el);
+      setThermostat();
+      return box;
+    }
+
+    const rect = (selector: string): DOMRect => (q(selector) as HTMLElement).getBoundingClientRect();
+
+    // Aus jeder getesteten Groesse muss gelten: Soll-Zahl, Knoepfe und
+    // Modus-Leiste stehen untereinander, ohne sich zu ueberlappen, und enden
+    // innerhalb der Kachel.
+    [
+      { width: 420, height: 260 },
+      { width: 420, height: 230 },
+      { width: 420, height: 200 },
+      { width: 330, height: 260 },
+      { width: 330, height: 220 },
+      { width: 330, height: 190 },
+      { width: 280, height: 190 },
+      { width: 560, height: 360 }
+    ].forEach(({ width, height }) => {
+      it(`ueberlagert nichts in einer ${width}x${height}-Kachel`, () => {
+        const box = renderIn(width, height);
+        const tile = rect('.tile');
+        const target = rect('.tile__setpoint');
+        const steps = rect('.tile__steps');
+        const modes = rect('.tile__modes');
+        const main = rect('.tile__main');
+        const head = rect('.tile__head');
+
+        // Der Steuerblock bleibt im Hauptbereich: nach oben nicht in die
+        // Kopfzeile, nach unten nicht in den Verlauf.
+        expect(target.top).toBeGreaterThanOrEqual(Math.max(main.top, head.bottom) - 1);
+        expect(modes.bottom).toBeLessThanOrEqual(main.bottom + 1);
+        expect(steps.top).toBeGreaterThanOrEqual(target.bottom - 1);
+        expect(modes.top).toBeGreaterThanOrEqual(steps.bottom - 1);
+        expect(modes.bottom).toBeLessThanOrEqual(tile.bottom + 1);
+        box.remove();
+      });
+    });
+
+    it('blendet den Verlauf aus, wenn die Kachel dafuer zu niedrig ist, und zeigt ihn in grossen Kacheln', () => {
+      const small = renderIn(330, 190);
+      expect(getComputedStyle(q('.tile__extra') as HTMLElement).display).toBe('none');
+      small.remove();
+
+      fixture.destroy();
+      fixture = TestBed.createComponent(ThermostatTileComponent);
+      el = fixture.nativeElement as HTMLElement;
+      const large = renderIn(560, 360);
+      expect(getComputedStyle(q('.tile__extra') as HTMLElement).display).not.toBe('none');
+      large.remove();
+    });
+  });
 });

@@ -14,6 +14,10 @@
   --accent: var(--heat-cool);
   --accent-rgb: var(--heat-cool-rgb);
 
+  // Groessen-Container fuer die @container-Regeln unten. Die Kachel bezieht
+  // ihre Groesse aus dem Raster (Zeilenmindesthoehe), nicht aus dem Inhalt.
+  container: tile / size;
+
   position: relative;
   display: flex;
   flex-direction: column;
@@ -137,7 +141,10 @@
     align-items: stretch;
     gap: 1rem;
     flex: 3 1 0;
-    min-height: 0;
+    // Soll-Zahl, Knoepfe und Modus-Leiste duerfen nie unter ihre Inhaltshoehe
+    // gedrueckt werden - sonst laufen sie ueber Ring und Verlauf. Nachgeben
+    // muss stattdessen der Verlauf (&__extra).
+    min-height: var(--tile-main-min, 9.75rem);
     transition: opacity 0.3s ease;
   }
 
@@ -346,5 +353,82 @@
     display: flex;
     flex-direction: column;
     transition: opacity 0.3s ease;
+  }
+}
+
+// ---- Kleine Kacheln (Wandtablet) -------------------------------------------
+// Entscheidend ist die Groesse der KACHEL, nicht des Bildschirms: bei acht
+// Thermostaten teilen sich drei Zeilen die Hoehe, bei zwei Raeumen ist jede
+// Kachel gross. Die Schwellen folgen aus dem Platzbedarf (rem):
+//   voll      Kopf+Abstaende 3,8 + Steuerblock 9,75 + Verlauf 3   = 16,55
+//   kompakt   Kopf+Abstaende 3,8 + Steuerblock 7,75 + Verlauf 3   = 14,55
+//   ohne Verlauf                  Steuerblock 7,75                = 11,55
+// Die Mindesthoehe der Rasterzeilen (tablet-heating.component.scss) steht
+// auf dem letzten Wert - beide Dateien muessen gemeinsam geaendert werden.
+// Grosse Displays bleiben unberuehrt: dort ist die Kachel hoeher als 16,55.
+
+@container tile (max-height: 16.5rem) {
+  .tile {
+    --tile-main-min: 7.75rem;
+
+    &__target {
+      font-size: 1.5rem;
+    }
+
+    &__controls {
+      gap: 0.4rem;
+    }
+
+    &__step {
+      width: 2.75rem;
+      height: 2.75rem;
+
+      .material-symbols-outlined {
+        font-size: 1.5rem;
+      }
+    }
+
+    &__mode {
+      flex-direction: row;
+      gap: 0.25rem;
+      min-height: 2.2rem;
+    }
+  }
+}
+
+// Zu niedrig fuer den Verlauf: die Steuerung behaelt den Platz.
+@container tile (max-height: 14.5rem) {
+  .tile__extra {
+    display: none;
+  }
+}
+
+// Schmal: Ring und Steuerung teilen sich eine kleine Kachelbreite.
+@container tile (max-width: 24rem) {
+  .tile {
+    &__main {
+      gap: 0.6rem;
+    }
+
+    &__steps {
+      gap: 0.5rem;
+    }
+
+    &__step {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    &__mode {
+      font-size: 0.68rem;
+
+      .material-symbols-outlined {
+        display: none;
+      }
+    }
+
+    &__chip {
+      font-size: 0.66rem;
+    }
   }
 }
