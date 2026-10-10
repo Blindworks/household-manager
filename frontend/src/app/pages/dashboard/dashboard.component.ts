@@ -384,6 +384,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * im Ruhezustand nur zeigen, WAS laeuft, nicht alle Schaltflaechen.
    */
   modesExpanded = false;
+  private modesCollapseTimer: ReturnType<typeof setTimeout> | null = null;
   /** Wartezeit, bis eine ausgefahrene Fusszeilen-Kachel von selbst wieder zuklappt. */
   private static readonly CARD_COLLAPSE_DELAY_MS = 6000;
   private nukiCollapseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -452,6 +453,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearNukiCollapseTimer();
+    this.clearToniCollapseTimer();
+    this.clearModesCollapseTimer();
     this.clockSubscription?.unsubscribe();
     this.weatherSubscription?.unsubscribe();
     this.liveSubscription?.unsubscribe();
@@ -673,6 +677,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Klappt die Modus-Leiste auf oder zu (Muster toggleNukiCard). */
   toggleModesBar(): void {
     this.modesExpanded = !this.modesExpanded;
+    if (this.modesExpanded) {
+      this.scheduleModesCollapse();
+    } else {
+      this.clearModesCollapseTimer();
+    }
+  }
+
+  /** Startet die Wartezeit bis zum automatischen Zusammenklappen der Leiste neu. */
+  private scheduleModesCollapse(): void {
+    this.clearModesCollapseTimer();
+    this.modesCollapseTimer = setTimeout(() => {
+      this.modesCollapseTimer = null;
+      this.modesExpanded = false;
+    }, DashboardComponent.CARD_COLLAPSE_DELAY_MS);
+  }
+
+  private clearModesCollapseTimer(): void {
+    if (this.modesCollapseTimer !== null) {
+      clearTimeout(this.modesCollapseTimer);
+      this.modesCollapseTimer = null;
+    }
   }
 
   /** Icon eines Modus: im Aus-Zustand die durchgestrichene Variante, falls es eine gibt. */
@@ -686,6 +711,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Ausschalten bleibt immer direkt.
    */
   toggleMode(mode: ModeEntity): void {
+    // Wer gerade schaltet, soll das Ergebnis noch sehen: Wartezeit neu starten.
+    if (this.modesExpanded) {
+      this.scheduleModesCollapse();
+    }
     if (mode.state !== 'on' && DashboardComponent.CHECKED_MODE_IDS.has(mode.entityId)) {
       this.openModeCheckDialog(mode);
       return;
