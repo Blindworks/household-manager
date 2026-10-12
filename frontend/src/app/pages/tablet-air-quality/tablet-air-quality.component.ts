@@ -191,12 +191,23 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
    * ohne dass die Kachel eine eigene Signalfarbe traegt.
    */
   chartOptionsFor(tile: ChartTile): Record<string, unknown> {
-    const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
+    // Handy: kleinere Schrift, weniger Teilstriche und eine Randberechnung, die
+    // die Achsenbeschriftung einrechnet. Sonst wird der lange Wert links
+    // abgeschnitten und die Zeitachse beschriftet sich uebereinander. Das Tablet
+    // behaelt seine festen Raender.
+    const compact = window.matchMedia('(max-width: 600px)').matches;
+    const axisLabel = { color: AXIS_COLOR, fontSize: compact ? 11 : 13 };
 
     return {
-      grid: { left: 56, right: 16, top: 12, bottom: 28, containLabel: false },
+      grid: compact
+        ? { left: 8, right: 8, top: 12, bottom: 4, containLabel: true }
+        : { left: 56, right: 16, top: 12, bottom: 28, containLabel: false },
       tooltip: { trigger: 'axis' },
-      xAxis: { type: 'time', axisLabel },
+      xAxis: {
+        type: 'time',
+        axisLabel: compact ? { ...axisLabel, hideOverlap: true } : axisLabel,
+        ...(compact ? { splitNumber: 4 } : {})
+      },
       visualMap: {
         show: false,
         type: 'piecewise',
@@ -208,6 +219,7 @@ export class TabletAirQualityComponent implements OnInit, OnDestroy {
       yAxis: [{
         type: 'value',
         scale: true,
+        ...(compact ? { splitNumber: 3 } : {}),
         axisLabel: {
           ...axisLabel,
           formatter: tile.metric.unit ? `{value} ${tile.metric.unit}` : '{value}'
