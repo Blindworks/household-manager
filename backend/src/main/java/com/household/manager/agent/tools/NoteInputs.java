@@ -30,6 +30,11 @@ final class NoteInputs {
         return asLong(input.get("id"), "id");
     }
 
+    /** Pflicht-Ganzzahl eines beliebigen Feldes; auch von den Haus-Tools genutzt. */
+    static long integer(Map<String, Object> input, String field) {
+        return asLong(input.get(field), field);
+    }
+
     static String text(Map<String, Object> input) {
         Object raw = input.get("text");
         if (raw == null) {
