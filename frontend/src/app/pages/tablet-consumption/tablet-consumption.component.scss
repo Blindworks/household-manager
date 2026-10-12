@@ -37,6 +37,11 @@
     flex: 0 0 auto;
   }
 
+  /* Das Symbol der Ansicht gibt es nur auf dem Handy (siehe unten). */
+  &__btn-icon {
+    display: none;
+  }
+
   &__btn {
     border: none;
     background: transparent;
@@ -316,5 +321,123 @@
   &__estimated {
     margin-right: 0.2rem;
     color: var(--primary);
+  }
+}
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Deshalb: Kacheln untereinander mit fester
+// Diagrammhoehe, die Tabelle waechst mit der Seite statt in sich zu scrollen.
+@media (max-width: 600px) {
+  .tablet-consumption {
+    flex: 0 0 auto;
+
+    // Zwei Zeilen: Ansicht (nur Symbole) und Aufloesung teilen sich die erste,
+    // der Zeitraum steht allein in der zweiten - alle drei Gruppen in einer
+    // Zeile waeren breiter als der Bildschirm.
+    &__controls {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    &__btn {
+      padding: 0.5rem 0.7rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    &__btn-icon {
+      display: block;
+      font-size: 20px;
+    }
+
+    &__btn-label {
+      display: none;
+    }
+
+    // Die Spaltenzahl steht hier fest im CSS (drei Zaehler), braucht also kein
+    // !important wie die Seiten mit Inline-Style.
+    &__grid {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+      gap: 12px;
+    }
+
+    &__card {
+      min-height: 0;
+    }
+
+    // Kopf in zwei Zeilen: Titel mit Umschalter, darunter die grosse Zahl samt
+    // Vergleich in einer Zeile - nebeneinander waeren sie breiter als die Kachel.
+    &__card-head {
+      flex-wrap: wrap;
+    }
+
+    &__figures {
+      flex: 1 1 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.1rem 0.5rem;
+    }
+
+    &__chart {
+      flex: 0 0 auto;
+      height: 200px;
+    }
+
+    &__empty {
+      min-height: 120px;
+    }
+
+    // Tabelle: waechst mit der Seite statt in sich zu scrollen. Kleinere Schrift
+    // und Polster, damit vier Spalten in 347 px passen; wird sie doch breiter
+    // (grosse Jahreswerte), scrollt sie seitwaerts, statt eine Spalte abzuschneiden.
+    // Preis: der Tabellenkopf klebt dann nicht mehr (overflow-x macht den Rahmen
+    // zum Scroll-Container) - bei wenigen Zeilen verkraftbar.
+    &__table-wrap {
+      flex: 0 0 auto;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    &__table {
+      font-size: 0.78rem;
+
+      th,
+      td {
+        padding: 0.35rem 0.35rem;
+      }
+
+      thead th {
+        font-size: 0.65rem;
+        letter-spacing: 0.02em;
+      }
+    }
+
+    &__year-btn {
+      flex-wrap: wrap;
+      gap: 0 0.25rem;
+      text-align: left;
+    }
+
+    &__chevron {
+      width: 0.8rem;
+    }
+
+    // "(laufend)" in eine eigene Zeile: neben dem Jahr kostet es zu viel Breite.
+    &__running {
+      flex: 0 0 100%;
+      padding-left: 1.05rem;
+      font-size: 0.7rem;
+    }
+
+    &__month-row th[scope='row'] {
+      padding-left: 1.2rem;
+    }
+
+    &__cell-cost {
+      font-size: 0.7rem;
+    }
   }
 }

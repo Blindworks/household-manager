@@ -7,8 +7,11 @@
           class="tablet-consumption__btn"
           [class.tablet-consumption__btn--active]="view.value === viewMode"
           [attr.aria-pressed]="view.value === viewMode"
+          [attr.aria-label]="view.label"
+          [title]="view.label"
           (click)="setViewMode(view.value)">
-          {{ view.label }}
+          <span class="material-symbols-outlined tablet-consumption__btn-icon" aria-hidden="true">{{ view.icon }}</span>
+          <span class="tablet-consumption__btn-label">{{ view.label }}</span>
         </button>
       }
     </div>

@@ -49,6 +49,8 @@ export type ViewMode = 'chart' | 'table';
 interface ViewModeOption {
   readonly value: ViewMode;
   readonly label: string;
+  /** Material-Symbol, das auf dem Handy statt des Wortes steht. */
+  readonly icon: string;
 }
 
 /** Eine Zaehlerkachel des Rasters. */
@@ -106,8 +108,8 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
   ];
 
   readonly viewModes: ViewModeOption[] = [
-    { value: 'chart', label: 'Diagramm' },
-    { value: 'table', label: 'Tabelle' }
+    { value: 'chart', label: 'Diagramm', icon: 'bar_chart' },
+    { value: 'table', label: 'Tabelle', icon: 'table_rows' }
   ];
 
   readonly modes: ModeOption[] = [
@@ -348,7 +350,11 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
     mode: TileMode
   ): Record<string, unknown> {
     const color = MeterTypeUtils.getColor(series.meterType);
-    const axisLabel = { color: AXIS_COLOR, fontSize: 12 };
+    // Handy: Raender mit eingerechneter Achsenbeschriftung (sonst schneidet die
+    // feste Randbreite lange Werte wie "2.392,5 kWh" ab) und weniger Teilstriche.
+    // Das Tablet behaelt seine festen Raender.
+    const compact = window.matchMedia('(max-width: 600px)').matches;
+    const axisLabel = { color: AXIS_COLOR, fontSize: compact ? 11 : 12 };
     const isCost = mode === 'cost';
     const unitLabel = isCost ? '€' : series.unit;
     const valueOf = (p: ConsumptionPoint): number | null => (isCost ? p.cost : p.consumption);
@@ -356,7 +362,9 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
       isCost ? formatCost(value, series.currency) : formatConsumption(value, series.unit);
 
     return {
-      grid: { left: 52, right: 12, top: 12, bottom: 30, containLabel: false },
+      grid: compact
+        ? { left: 8, right: 8, top: 12, bottom: 4, containLabel: true }
+        : { left: 52, right: 12, top: 12, bottom: 30, containLabel: false },
       tooltip: {
         trigger: 'axis',
         valueFormatter: (value: number) => format(value)
@@ -368,6 +376,7 @@ export class TabletConsumptionComponent implements OnInit, OnDestroy {
       },
       yAxis: {
         type: 'value',
+        ...(compact ? { splitNumber: 3 } : {}),
         axisLabel: { ...axisLabel, formatter: `{value} ${unitLabel}` },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       },
