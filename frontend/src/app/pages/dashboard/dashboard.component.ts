@@ -49,6 +49,9 @@ import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
 import { VentilationAssessment } from '../../models/ventilation.model';
 import { HubInsight } from '../../shared/hub-insight.model';
+import { AgentService } from '../../services/agent.service';
+import { AgentSummary } from '../../models/agent.model';
+import { buildAgentInsight } from '../../shared/agent-insight.util';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeService } from '../../services/mode.service';
@@ -130,6 +133,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly entityStateService = inject(EntityStateService);
   private readonly petSupplyService = inject(PetSupplyService);
   private readonly presenceService = inject(PresenceService);
+  private readonly agentService = inject(AgentService);
 
   /**
    * Umschalter zwischen Website- und Tablet-Ansicht. Er blendet nur den Header
@@ -168,6 +172,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private applianceSubscription?: Subscription;
   private petSupplySubscription?: Subscription;
   private presenceSubscription?: Subscription;
+  private agentSubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -221,6 +226,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PET_SUPPLY_REFRESH_MS = 600000;
   /** Anwesenheits-Kachel: 30-s-Rhythmus wie der Backend-Poller. */
   private static readonly PRESENCE_REFRESH_MS = 30000;
+  /** Offene Vorschlaege des Hausverstands. */
+  private static readonly AGENT_REFRESH_MS = 60_000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -308,6 +315,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Zuletzt gebaute Muell-Meldung; null = nichts ansteht. */
   private wasteInsight: HubInsight | null = null;
+  /** Karte "Hausverstand"; null = keine offenen Vorschlaege. */
+  agentInsight: HubInsight | null = null;
   /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
   private calendarInsights: HubInsight[] = [];
   /** Zuletzt gebaute Lueftungs-Karte; null = keine Empfehlung. */
@@ -450,6 +459,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startApplianceRefresh();
     this.startPetSupplyRefresh();
     this.startPresenceRefresh();
+    this.startAgentRefresh();
   }
 
   ngOnDestroy(): void {
@@ -476,6 +486,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.applianceSubscription?.unsubscribe();
     this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
+    this.agentSubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.hubReloadSubscription?.unsubscribe();
     this.clearNukiCollapseTimer();
@@ -1742,6 +1753,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.insights = [
       ...this.doorInsights,
       ...this.applianceInsights,
+      ...(this.agentInsight ? [this.agentInsight] : []),
       ...(this.wasteInsight ? [this.wasteInsight] : []),
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
@@ -2040,6 +2052,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * behaelt den letzten Stand (null = kein Update) statt die Anzeige
    * verschwinden zu lassen.
    */
+  /** Ein Fehler laesst die letzte Karte stehen (Muster Anwesenheit). */
+  private startAgentRefresh(): void {
+    this.agentSubscription = interval(DashboardComponent.AGENT_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.agentService.getSummary()
+          .pipe(catchError(() => of<AgentSummary | null>(null))))
+      )
+      .subscribe(summary => {
+        if (summary) {
+          this.agentInsight = buildAgentInsight(summary);
+          this.rebuildInsights();
+        }
+      });
+  }
+
   private startPresenceRefresh(): void {
     this.presenceSubscription = interval(DashboardComponent.PRESENCE_REFRESH_MS)
       .pipe(

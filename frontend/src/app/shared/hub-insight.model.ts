@@ -15,4 +15,6 @@ export interface HubInsight {
    * reine Anzeige.
    */
   readonly dismissEntityId?: string;
+  /** Interne Route, auf die ein Antippen der Karte fuehrt (nur in der Website-Ansicht). */
+  readonly link?: string;
 }
