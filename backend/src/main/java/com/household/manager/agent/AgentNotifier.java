@@ -65,6 +65,11 @@ public class AgentNotifier {
         for (long chatId : telegramProperties.getAllowedChatIds()) {
             try {
                 long messageId = apiClient.sendMessage(chatId, text, keyboard);
+                if (messageId == 0L) {
+                    // Ohne Id liesse sich die Nachricht nie mehr bearbeiten; eine Zeile mit 0 waere nur Muell.
+                    log.warn("Vorschlag {} an Chat {}: Telegram lieferte keine message_id", p.getId(), chatId);
+                    continue;
+                }
                 messageRepository.save(AgentProposalMessage.builder()
                         .proposalId(p.getId()).chatId(chatId).messageId(messageId).build());
             } catch (Exception ex) {
@@ -86,11 +91,18 @@ public class AgentNotifier {
             return;
         }
         for (AgentProposalMessage message : messages) {
+            // Getrennte Versuche: ist die Nachricht nicht mehr bearbeitbar (z. B. aelter als 48 h),
+            // soll der Chat das Ergebnis trotzdem erfahren.
             try {
                 apiClient.editReplyMarkup(message.getChatId(), message.getMessageId(), List.of());
+            } catch (Exception ex) {
+                log.warn("Knöpfe zu Vorschlag {} in Chat {} nicht entfernbar: {}", p.getId(), message.getChatId(),
+                        ex.getMessage());
+            }
+            try {
                 apiClient.sendMessage(message.getChatId(), "→ " + label);
             } catch (Exception ex) {
-                log.warn("Vorschlag {} in Chat {} nicht aktualisierbar: {}", p.getId(), message.getChatId(),
+                log.warn("Ergebnis zu Vorschlag {} an Chat {} nicht zustellbar: {}", p.getId(), message.getChatId(),
                         ex.getMessage());
             }
         }

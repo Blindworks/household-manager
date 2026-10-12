@@ -87,15 +87,18 @@ public class TelegramApiClient {
     public void answerCallbackQuery(String callbackQueryId, String text) {
         try {
             restTemplate.postForObject(apiUrl("answerCallbackQuery"),
-                    Map.of("callback_query_id", callbackQueryId, "text", text), String.class);
+                    Map.of("callback_query_id", String.valueOf(callbackQueryId), "text", text == null ? "" : text),
+                    String.class);
         } catch (RestClientException ex) {
             throw new TelegramException("Telegram answerCallbackQuery fehlgeschlagen: " + masked(ex), ex);
         }
     }
 
+    /** Map.of wirft bei null eine NPE, die sonst ungewrappt am TelegramException-Vertrag vorbeiliefe. */
     private List<List<Map<String, String>>> keyboardRows(List<List<InlineButton>> keyboard) {
         return keyboard.stream().map(row -> row.stream()
-                .map(b -> Map.of("text", b.text(), "callback_data", b.callbackData())).toList()).toList();
+                .map(b -> Map.of("text", b.text() == null ? "" : b.text(),
+                        "callback_data", b.callbackData() == null ? "" : b.callbackData())).toList()).toList();
     }
 
     private String apiUrl(String method) {

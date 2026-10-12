@@ -127,6 +127,31 @@ class AgentNotifierTest {
 
         verify(apiClient).editReplyMarkup(2L, 20L, List.of());
         verify(apiClient).sendMessage(2L, "→ Abgelehnt");
+        // Auch wenn die Knoepfe nicht entfernbar waren, erfaehrt der Chat das Ergebnis.
+        verify(apiClient).sendMessage(1L, "→ Abgelehnt");
+    }
+
+    @Test
+    void markDecidedEditsEvenWhenFollowUpFails() {
+        configure(1L);
+        when(messageRepository.findByProposalId(7L)).thenReturn(List.of(
+                AgentProposalMessage.builder().proposalId(7L).chatId(1L).messageId(10L).build()));
+        doThrow(new TelegramException("weg", null)).when(apiClient).sendMessage(1L, "→ Abgelehnt");
+
+        assertDoesNotThrow(() -> notifier().markDecided(proposal(), "Abgelehnt"));
+
+        verify(apiClient).editReplyMarkup(1L, 10L, List.of());
+    }
+
+    @Test
+    void sendProposalStoresNothingWithoutMessageId() {
+        configure(1L);
+        when(apiClient.sendMessage(eq(1L), anyString(), anyList())).thenReturn(0L);
+
+        notifier().sendProposal(proposal());
+
+        verify(apiClient).sendMessage(eq(1L), anyString(), anyList());
+        verifyNoInteractions(messageRepository);
     }
 
     @Test

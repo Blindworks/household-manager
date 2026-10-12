@@ -36,6 +36,16 @@ public interface AgentProposalRepository extends JpaRepository<AgentProposal, Lo
     int claim(@Param("id") long id, @Param("from") ProposalStatus from, @Param("to") ProposalStatus to,
               @Param("decidedBy") String decidedBy, @Param("decidedAt") LocalDateTime decidedAt);
 
+    /**
+     * Setzt den Zustellzeitpunkt nur, solange der Vorschlag noch offen ist — ein inzwischen
+     * entschiedener darf keine frischen Knöpfe bekommen. 1 = zustellen, 0 = überspringen.
+     */
+    @Transactional
+    @Modifying
+    @Query("update AgentProposal p set p.deliveredAt = :now where p.id = :id and p.status = :pending")
+    int markDelivered(@Param("id") long id, @Param("pending") ProposalStatus pending,
+                      @Param("now") LocalDateTime now);
+
     List<AgentProposal> findByStatusInAndCreatedAtAfterOrderByCreatedAtDesc(
             Collection<ProposalStatus> statuses, LocalDateTime after);
 }

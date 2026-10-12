@@ -52,6 +52,7 @@ class AgentProposalServiceTest {
         clock = Clock.fixed(ZonedDateTime.of(NOW, BERLIN).toInstant(), BERLIN);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(1);
+        when(repository.markDelivered(anyLong(), any(), any())).thenReturn(1);
     }
 
     private AgentProposalService service() {
@@ -298,6 +299,23 @@ class AgentProposalServiceTest {
         assertEquals(ProposalStatus.PENDING, fresh.getStatus());
         verify(notifier).markDecided(eq(old), contains("Verfallen"));
         verify(notifier, never()).markDecided(eq(fresh), any());
+        verify(repository).claim(1L, ProposalStatus.PENDING, ProposalStatus.EXPIRED, "system", NOW);
+        verify(repository, never()).claim(eq(2L), any(), any(), any(), any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void expireStaleSkipsRowWhenClaimReturnsZero() {
+        AgentProposal old = pending(1L);
+        old.setCreatedAt(LocalDateTime.of(2026, 10, 12, 9, 0));
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(old));
+        when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(0);
+
+        assertEquals(0, service().expireStale());
+
+        assertEquals(ProposalStatus.PENDING, old.getStatus());
+        verifyNoInteractions(notifier);
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -325,6 +343,40 @@ class AgentProposalServiceTest {
         assertNull(held.getError());
         verify(notifier, never()).sendProposal(any());
         verify(executor, never()).execute(any());
+        verify(repository).claim(1L, ProposalStatus.PENDING, ProposalStatus.EXECUTED, "system", NOW);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deliverPendingSkipsWhenClaimLost() {
+        AgentProposal held = pending(1L);
+        held.setDeliveredAt(null);
+        when(quietHours.isQuietNow()).thenReturn(false);
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(held));
+        when(executor.isSatisfied(any())).thenReturn(true);
+        when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(0);
+
+        assertEquals(0, service().deliverPending());
+
+        assertEquals(ProposalStatus.PENDING, held.getStatus());
+        verifyNoInteractions(notifier);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deliverPendingDoesNotSendWhenMarkDeliveredReturnsZero() {
+        AgentProposal held = pending(1L);
+        held.setDeliveredAt(null);
+        when(quietHours.isQuietNow()).thenReturn(false);
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(held));
+        when(executor.isSatisfied(any())).thenReturn(false);
+        when(repository.markDelivered(anyLong(), any(), any())).thenReturn(0);
+
+        assertEquals(0, service().deliverPending());
+
+        assertNull(held.getDeliveredAt());
+        verifyNoInteractions(notifier);
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -342,6 +394,9 @@ class AgentProposalServiceTest {
         assertEquals(NOW, held.getDeliveredAt());
         verify(notifier).sendProposal(held);
         verify(notifier, never()).sendProposal(alreadyDelivered);
+        verify(repository).markDelivered(1L, ProposalStatus.PENDING, NOW);
+        verify(repository, never()).markDelivered(eq(2L), any(), any());
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -405,6 +460,40 @@ class AgentProposalServiceTest {
         assertEquals(ProposalStatus.FAILED, p.getStatus());
         assertTrue(p.getError().contains("Hub weg"));
         verify(notifier).sendInfo(contains("fehlgeschlagen: Hub weg"));
+    }
+
+    @Test
+    void executeDirectWithoutReasonOrMessageNeverWritesNull() {
+        AgentAction noReason = new AgentAction(ActionClass.HEATING, "3", Map.of("targetTemp", 21.0), null, false);
+        when(executor.execute(any())).thenThrow(new NullPointerException());
+
+        AgentProposal p = service().executeDirect(noReason);
+
+        assertEquals("(keine Begründung)", p.getReason());
+        assertEquals("NullPointerException", p.getError());
+        verify(notifier).sendInfo(contains("fehlgeschlagen: NullPointerException"));
+    }
+
+    @Test
+    void executeDirectInfoUsesReasonFallback() {
+        AgentAction noReason = new AgentAction(ActionClass.HEATING, "3", Map.of("targetTemp", 21.0), " ", false);
+        when(executor.execute(any())).thenReturn(new ActionOutcome(false, "ok"));
+
+        service().executeDirect(noReason);
+
+        verify(notifier).sendInfo(argThat(text -> text.endsWith("(keine Begründung)") && !text.contains("null")));
+    }
+
+    @Test
+    void decideFailureWithoutMessageNamesExceptionType() {
+        AgentProposal p = pending(1L);
+        when(repository.findById(1L)).thenReturn(Optional.of(p));
+        when(executor.execute(any())).thenThrow(new NullPointerException());
+
+        service().decide(1L, ProposalDecision.APPROVE, "Benedikt");
+
+        assertEquals("NullPointerException", p.getError());
+        verify(notifier).markDecided(p, "Fehlgeschlagen: NullPointerException");
     }
 
     // --- Lesen ---

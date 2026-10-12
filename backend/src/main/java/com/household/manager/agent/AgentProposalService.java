@@ -35,6 +35,7 @@ public class AgentProposalService {
     static final int ERROR_MAX = 1000;
     static final int REJECTION_MEMORY_HOURS = 24;
     static final int PROMPT_LOOKBACK_HOURS = 24;
+    static final String NO_REASON = "(keine Begründung)";
 
     private final AgentProposalRepository repository;
     private final AgentActionExecutor executor;
@@ -86,7 +87,7 @@ public class AgentProposalService {
                 .actionClass(action.actionClass())
                 .target(action.target())
                 .actionJson(AgentActionJson.write(objectMapper, action))
-                .reason(abbreviate(action.reason(), ERROR_MAX))
+                .reason(abbreviate(reasonOf(action), ERROR_MAX))
                 .urgent(action.urgent())
                 .status(ProposalStatus.PENDING)
                 .createdAt(now)
@@ -110,7 +111,7 @@ public class AgentProposalService {
                 .actionClass(action.actionClass())
                 .target(action.target())
                 .actionJson(AgentActionJson.write(objectMapper, action))
-                .reason(abbreviate(action.reason(), ERROR_MAX))
+                .reason(abbreviate(reasonOf(action), ERROR_MAX))
                 .urgent(action.urgent())
                 .decidedBy(SYSTEM_ACTOR)
                 .decidedAt(now)
@@ -120,11 +121,11 @@ public class AgentProposalService {
         try {
             ActionOutcome outcome = executor.execute(action);
             p.setStatus(ProposalStatus.EXECUTED);
-            info = outcome.alreadySatisfied() ? null : "Hausverstand: " + action.describe() + " — " + action.reason();
+            info = outcome.alreadySatisfied() ? null : "Hausverstand: " + action.describe() + " — " + reasonOf(action);
         } catch (Exception ex) {
             p.setStatus(ProposalStatus.FAILED);
-            p.setError(abbreviate(ex.getMessage(), ERROR_MAX));
-            info = "Hausverstand: " + action.describe() + " fehlgeschlagen: " + ex.getMessage();
+            p.setError(abbreviate(messageOf(ex), ERROR_MAX));
+            info = "Hausverstand: " + action.describe() + " fehlgeschlagen: " + messageOf(ex);
         }
         AgentProposal saved = repository.save(p);
         if (info != null) {
@@ -191,10 +192,13 @@ public class AgentProposalService {
                     continue;
                 }
                 try {
+                    // Per Claim statt save(): ein parallel entschiedener Vorschlag wuerde sonst ueberschrieben.
+                    if (repository.claim(p.getId(), ProposalStatus.PENDING, ProposalStatus.EXPIRED, SYSTEM_ACTOR, now) == 0) {
+                        continue;
+                    }
                     p.setStatus(ProposalStatus.EXPIRED);
                     p.setDecidedBy(SYSTEM_ACTOR);
                     p.setDecidedAt(now);
-                    repository.save(p);
                     notifier.markDecided(p, "Verfallen (unbeantwortet)");
                     expired++;
                 } catch (Exception ex) {
@@ -213,6 +217,11 @@ public class AgentProposalService {
      * inzwischen erreicht ist (jemand hat die Heizung schon selbst hochgedreht) — dann wäre die Frage
      * am Morgen nur Lärm, der Vorschlag gilt als erledigt. Scheitert die Prüfung, bleibt er liegen und
      * wird im nächsten Lauf erneut versucht (oder verfällt).
+     *
+     * <p>Kein {@code save()} der geladenen Zeile: {@code isSatisfied} kann Sekunden dauern, und wer in
+     * dieser Zeit auf der Admin-Seite entscheidet, dessen Status würde mit PENDING überschrieben — samt
+     * frischer Knöpfe, über die die Aktion ein zweites Mal liefe. Beide Übergänge laufen deshalb als
+     * bedingte UPDATEs, die nur auf einer noch offenen Zeile greifen.
      */
     public int deliverPending() {
         try {
@@ -227,14 +236,18 @@ public class AgentProposalService {
                 try {
                     LocalDateTime now = LocalDateTime.now(clock);
                     if (executor.isSatisfied(actionOf(p))) {
+                        if (repository.claim(p.getId(), ProposalStatus.PENDING, ProposalStatus.EXECUTED,
+                                SYSTEM_ACTOR, now) == 0) {
+                            continue;
+                        }
                         p.setStatus(ProposalStatus.EXECUTED);
                         p.setDecidedBy(SYSTEM_ACTOR);
                         p.setDecidedAt(now);
-                        p.setError(null);
-                        repository.save(p);
                     } else {
+                        if (repository.markDelivered(p.getId(), ProposalStatus.PENDING, now) == 0) {
+                            continue;
+                        }
                         p.setDeliveredAt(now);
-                        repository.save(p);
                         notifier.sendProposal(p);
                     }
                     handled++;
@@ -274,8 +287,8 @@ public class AgentProposalService {
             return outcome.alreadySatisfied() ? "War bereits so" : successLabel;
         } catch (Exception ex) {
             p.setStatus(ProposalStatus.FAILED);
-            p.setError(abbreviate(ex.getMessage(), ERROR_MAX));
-            return "Fehlgeschlagen: " + ex.getMessage();
+            p.setError(abbreviate(messageOf(ex), ERROR_MAX));
+            return "Fehlgeschlagen: " + messageOf(ex);
         }
     }
 
@@ -289,6 +302,18 @@ public class AgentProposalService {
         } catch (Exception ex) {
             log.warn("Notiz zur Entscheidung nicht gespeichert: {}", ex.getMessage());
         }
+    }
+
+    /** Eine fehlende Begruendung soll in Zeile und Nachricht nicht als Wort "null" erscheinen. */
+    private static String reasonOf(AgentAction action) {
+        String reason = action.reason();
+        return reason == null || reason.isBlank() ? NO_REASON : reason;
+    }
+
+    /** Manche Exceptions (z. B. NPE) tragen keine Nachricht — dann wenigstens den Typ nennen. */
+    private static String messageOf(Exception ex) {
+        String message = ex.getMessage();
+        return message == null || message.isBlank() ? ex.getClass().getSimpleName() : message;
     }
 
     private static String abbreviate(String text, int max) {

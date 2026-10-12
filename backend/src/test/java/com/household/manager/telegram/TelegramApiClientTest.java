@@ -109,6 +109,25 @@ class TelegramApiClientTest {
     }
 
     @Test
+    void answerCallbackQueryWithNullTextSendsEmptyText() {
+        server.expect(requestTo("https://api.telegram.org/bot123:SECRET/answerCallbackQuery"))
+                .andExpect(jsonPath("$.text").value(""))
+                .andRespond(withSuccess("{\"ok\":true}", MediaType.APPLICATION_JSON));
+
+        assertDoesNotThrow(() -> client.answerCallbackQuery("cb1", null));
+        server.verify();
+    }
+
+    @Test
+    void keyboardWithNullFieldsDoesNotThrowNpe() {
+        server.expect(requestTo("https://api.telegram.org/bot123:SECRET/sendMessage"))
+                .andExpect(jsonPath("$.reply_markup.inline_keyboard[0][0].text").value(""))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":1}}", MediaType.APPLICATION_JSON));
+
+        assertEquals(1L, client.sendMessage(5L, "Hallo", List.of(List.of(new InlineButton(null, "agent:1:REJECT")))));
+    }
+
+    @Test
     void getUpdatesParsesCallbackQuery() {
         server.expect(requestTo("https://api.telegram.org/bot123:SECRET/getUpdates?offset=0&timeout=30"))
                 .andRespond(withSuccess("""
