@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -20,6 +20,7 @@ import {
   NOTE_KIND_LABELS,
   POLICY_LABELS,
   PROPOSAL_STATUS_LABELS,
+  TRIGGER_LABELS,
   sourceLabel
 } from '../../shared/agent-labels.util';
 
@@ -53,6 +54,7 @@ export class AdminAgentComponent implements OnInit {
 
   readonly actionClassLabels = ACTION_CLASS_LABELS;
   readonly policyLabels = POLICY_LABELS;
+  readonly triggerLabels = TRIGGER_LABELS;
   readonly statusLabels = PROPOSAL_STATUS_LABELS;
   readonly noteKindLabels = NOTE_KIND_LABELS;
   readonly sourceLabel = sourceLabel;
@@ -75,6 +77,12 @@ export class AdminAgentComponent implements OnInit {
   readonly runsError = signal<string | null>(null);
 
   readonly settingsSaving = signal(false);
+  /** Bei Speicherfehlern erhöht, damit Select/Checkbox neu aufgebaut werden (ngModel-Rücksetzung). */
+  readonly policiesVersion = signal(0);
+  readonly settingsVersion = signal(0);
+  /** Zeilen mit Versionsschlüssel: ein neuer Schlüssel baut die Zeile (und ihr ngModel) neu auf. */
+  readonly policyRows = computed(() =>
+    this.policies().map(p => ({ ...p, key: `${p.actionClass}:${this.policiesVersion()}` })));
   readonly noteSaving = signal(false);
   readonly decidingId = signal<number | null>(null);
   readonly running = signal(false);
@@ -125,7 +133,15 @@ export class AdminAgentComponent implements OnInit {
       },
       error: error => {
         this.settingsSaving.set(false);
-        this.settingsError.set(this.messageFrom(error));
+        const message = this.messageFrom(error);
+        this.api.getSummary().subscribe({
+          next: summary => {
+            this.summary.set(summary);
+            this.settingsVersion.update(v => v + 1);
+            this.settingsError.set(message);
+          },
+          error: () => this.settingsError.set(message)
+        });
       }
     });
   }
@@ -136,11 +152,20 @@ export class AdminAgentComponent implements OnInit {
     this.policiesError.set(null);
     this.api.updatePolicy(actionClass, policy).subscribe({
       next: policies => this.policies.set(policies),
-      error: error => {
-        this.policiesError.set(this.messageFrom(error));
-        // Auswahl auf den gespeicherten Stand zurückspringen lassen.
-        this.policies.update(list => [...list]);
-      }
+      // ngModel behält die verworfene Auswahl, solange sich der gebundene Wert nicht ändert:
+      // Serverstand nachladen und die Zeilen über die Version im track-Ausdruck neu aufbauen.
+      error: error => this.reloadPolicies(this.messageFrom(error))
+    });
+  }
+
+  private reloadPolicies(message: string): void {
+    this.api.getPolicies().subscribe({
+      next: policies => {
+        this.policies.set(policies);
+        this.policiesVersion.update(v => v + 1);
+        this.policiesError.set(message);
+      },
+      error: () => this.policiesError.set(message)
     });
   }
 

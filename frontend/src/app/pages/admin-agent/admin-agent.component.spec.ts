@@ -98,6 +98,38 @@ describe('AdminAgentComponent', () => {
     req.flush(POLICIES.map(p => p.actionClass === 'HEATING' ? { ...p, policy: 'DIRECT' } : p));
   });
 
+  it('setzt die Freigabe nach einem Speicherfehler zurück', async () => {
+    await load();
+
+    const heating = el.querySelector<HTMLSelectElement>('select[name="policy-HEATING"]')!;
+    heating.value = 'DIRECT';
+    heating.dispatchEvent(new Event('change'));
+    httpMock.expectOne(`${POLICIES_URL}/HEATING`).flush({ message: 'nein' }, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne(POLICIES_URL).flush(POLICIES);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.querySelector<HTMLSelectElement>('select[name="policy-HEATING"]')!.value).toBe('PROPOSE');
+    expect(el.querySelector('.admin-agent__policies .admin-agent__error')?.textContent).toContain('nein');
+  });
+
+  it('setzt den Aktiv-Schalter nach einem Speicherfehler zurück', async () => {
+    await load();
+
+    const box = el.querySelector<HTMLInputElement>('input[name="agent-active"]')!;
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+    httpMock.expectOne(`${BASE}/settings`).flush({ message: 'nein' }, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne(SUMMARY_URL).flush(SUMMARY);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.querySelector<HTMLInputElement>('input[name="agent-active"]')!.checked).toBeTrue();
+    expect(el.querySelector('.admin-agent__settings .admin-agent__error')?.textContent).toContain('nein');
+  });
+
   it('sendet eine Entscheidung und ersetzt die Zeile', async () => {
     await load();
 

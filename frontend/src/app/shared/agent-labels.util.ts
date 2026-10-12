@@ -2,8 +2,15 @@ import {
   ActionClass,
   ActionPolicy,
   NoteKind,
-  ProposalStatus
+  ProposalStatus,
+  RunTriggerType
 } from '../models/agent.model';
+
+export const TRIGGER_LABELS: Record<RunTriggerType, string> = {
+  SCHEDULED: 'Grundtakt',
+  WAKE: 'Wecker',
+  MANUAL: 'Manuell'
+};
 
 /** Einzige Definition der deutschen Anzeigetexte des Hausverstands. */
 export const ACTION_CLASS_LABELS: Record<ActionClass, string> = {

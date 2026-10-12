@@ -20,15 +20,17 @@
       <div class="admin-agent__error" role="alert">{{ settingsError() }}</div>
     }
     @if (summary(); as s) {
-      <label class="admin-agent__toggle">
-        <input
-          type="checkbox"
-          name="agent-active"
-          [ngModel]="s.active"
-          [disabled]="settingsSaving()"
-          (ngModelChange)="setActive($event)">
-        <span>Hausverstand aktiv</span>
-      </label>
+      @for (version of [settingsVersion()]; track version) {
+        <label class="admin-agent__toggle">
+          <input
+            type="checkbox"
+            name="agent-active"
+            [ngModel]="s.active"
+            [disabled]="settingsSaving()"
+            (ngModelChange)="setActive($event)">
+          <span>Hausverstand aktiv</span>
+        </label>
+      }
       <p class="admin-agent__hint">Offene Vorschläge: {{ s.pendingProposals }}</p>
     }
   </section>
@@ -38,7 +40,7 @@
     @if (policiesError()) {
       <div class="admin-agent__error" role="alert">{{ policiesError() }}</div>
     }
-    @for (p of policies(); track p.actionClass) {
+    @for (p of policyRows(); track p.key) {
       <div class="admin-agent__policy-row">
         <span class="admin-agent__policy-name">{{ actionClassLabels[p.actionClass] }}</span>
         <select
@@ -218,7 +220,7 @@
             @for (run of runs(); track $index) {
               <tr>
                 <td>{{ run.startedAt | date: 'dd.MM. HH:mm' }}</td>
-                <td>{{ run.triggerType }}{{ run.triggerDetail ? ' (' + run.triggerDetail + ')' : '' }}</td>
+                <td>{{ triggerLabels[run.triggerType] }}{{ run.triggerDetail ? ' (' + run.triggerDetail + ')' : '' }}</td>
                 <td>{{ durationSeconds(run) }} s</td>
                 <td>{{ run.inputTokens }} / {{ run.outputTokens }}</td>
                 <td>{{ run.toolCalls }}</td>
