@@ -7,6 +7,7 @@ import com.household.manager.agent.AgentPolicyService;
 import com.household.manager.agent.AgentProposalService;
 import com.household.manager.agent.AgentRunRecorder;
 import com.household.manager.agent.AgentSettingsService;
+import com.household.manager.agent.AgentTokenBudget;
 import com.household.manager.agent.AgentWakeService;
 import com.household.manager.audit.AuditService;
 import com.household.manager.calendar.CalendarCategoryController;
@@ -126,6 +127,8 @@ class SecurityRulesTest {
     private AgentRunRecorder agentRunRecorder;
     @MockitoBean
     private AgentWakeService agentWakeService;
+    @MockitoBean
+    private AgentTokenBudget agentTokenBudget;
     @MockitoBean
     private AgentNotifier agentNotifier;
     @MockitoBean

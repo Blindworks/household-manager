@@ -59,6 +59,7 @@ services:
       AGENT_ENABLED: ${AGENT_ENABLED:-true}
       AGENT_MODEL: ${AGENT_MODEL:-claude-sonnet-4-5}
       AGENT_QUIET_HOURS: ${AGENT_QUIET_HOURS:-22:00-07:00}
+      AGENT_DAILY_TOKEN_BUDGET: ${AGENT_DAILY_TOKEN_BUDGET:-300000}
       CHARGING_ENBW_API_KEY: ${CHARGING_ENBW_API_KEY:-}
 
       # Blink-Gesichtserkennung (blink-vision-Sidecar)

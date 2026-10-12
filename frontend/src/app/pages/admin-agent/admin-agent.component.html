@@ -181,8 +181,20 @@
     @if (runsError()) {
       <div class="admin-agent__error" role="alert">{{ runsError() }}</div>
     }
+    @if (budgetExhausted()) {
+      <div class="admin-agent__banner" role="alert">
+        Tagesbudget erreicht – der Hausverstand läuft erst ab Mitternacht wieder.
+      </div>
+    }
     <div class="admin-agent__run-bar">
-      <span>Heute: {{ inputTokensToday() }} Eingabe- / {{ outputTokensToday() }} Ausgabe-Tokens</span>
+      <span>
+        Heute: {{ inputTokensToday() }} Eingabe- / {{ outputTokensToday() }} Ausgabe-Tokens
+        @if (dailyTokenBudget() > 0) {
+          ({{ tokensUsedToday() }} von {{ dailyTokenBudget() }})
+        } @else {
+          (kein Limit)
+        }
+      </span>
       <button
         type="button"
         class="admin-agent__run-button"

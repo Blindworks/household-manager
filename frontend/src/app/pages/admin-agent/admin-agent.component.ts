@@ -68,6 +68,9 @@ export class AdminAgentComponent implements OnInit {
   readonly runs = signal<AgentRun[]>([]);
   readonly inputTokensToday = signal(0);
   readonly outputTokensToday = signal(0);
+  readonly dailyTokenBudget = signal(0);
+  readonly budgetExhausted = signal(false);
+  readonly tokensUsedToday = computed(() => this.inputTokensToday() + this.outputTokensToday());
 
   /** Ein Fehlerfeld je Abschnitt, damit ein Abruf den anderen nicht überschreibt. */
   readonly settingsError = signal<string | null>(null);
@@ -116,6 +119,8 @@ export class AdminAgentComponent implements OnInit {
         this.runs.set(response.runs);
         this.inputTokensToday.set(response.inputTokensToday);
         this.outputTokensToday.set(response.outputTokensToday);
+        this.dailyTokenBudget.set(response.dailyTokenBudget);
+        this.budgetExhausted.set(response.budgetExhausted);
       },
       error: error => this.runsError.set(this.messageFrom(error))
     });

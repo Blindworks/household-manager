@@ -61,6 +61,8 @@ class AgentControllerTest {
     @MockitoBean
     private AgentWakeService wakeService;
     @MockitoBean
+    private AgentTokenBudget tokenBudget;
+    @MockitoBean
     private AgentNotifier notifier;
     @MockitoBean
     private CurrentUserService currentUserService;
@@ -105,6 +107,20 @@ class AgentControllerTest {
         mockMvc.perform(post("/v1/agent/proposals/7/decide")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void runsLiefertTagesbudgetUndErschoepfung() throws Exception {
+        when(runRecorder.recent()).thenReturn(java.util.List.of());
+        when(runRecorder.tokensToday()).thenReturn(new long[]{200, 100});
+        when(tokenBudget.budget()).thenReturn(300_000L);
+        when(tokenBudget.isExhausted()).thenReturn(true);
+
+        mockMvc.perform(get("/v1/agent/runs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.inputTokensToday").value(200))
+                .andExpect(jsonPath("$.dailyTokenBudget").value(300000))
+                .andExpect(jsonPath("$.budgetExhausted").value(true));
     }
 
     @Test
