@@ -240,9 +240,12 @@
       row-gap: 0.1rem;
     }
 
+    // Einzug als Innenabstand, nicht als Aussenrand: flex-basis 100% plus
+    // margin-left machte die Zeile breiter als die Kachel.
     &__device-seen {
       flex: 0 0 100%;
-      margin-left: 1.2rem;
+      box-sizing: border-box;
+      padding-left: 1.2rem;
       white-space: normal;
     }
   }

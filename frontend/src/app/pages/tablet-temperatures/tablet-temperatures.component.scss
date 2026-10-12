@@ -168,11 +168,18 @@
     // die Messgroessen nur ihr Symbol (das Wort steht im aria-label/title).
     &__controls {
       flex-wrap: nowrap;
-      gap: 8px;
+      gap: 6px;
+    }
+
+    // Knapp gehalten: bei 360 px Bildschirmbreite bleiben fuer beide Gruppen
+    // nur 346 px.
+    &__ranges {
+      gap: 0.1rem;
+      padding: 0.25rem;
     }
 
     &__range {
-      padding: 0.5rem 0.6rem;
+      padding: 0.5rem 0.5rem;
       font-size: 0.85rem;
       white-space: nowrap;
     }
