@@ -166,17 +166,25 @@ export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
     const now = new Date();
     const totals = walkDayTotals(this.walks, this.walkDays, now);
 
+    // Handy: Raender mit eingerechneter Achsenbeschriftung und weniger Teilstriche.
+    // Das Tablet behaelt seine festen Raender.
+    const compact = window.matchMedia('(max-width: 600px)').matches;
+    const fontSize = compact ? 11 : 12;
+
     this.walkChartOptions = {
-      grid: { left: 48, right: 12, top: 10, bottom: 24, containLabel: false },
+      grid: compact
+        ? { left: 8, right: 8, top: 10, bottom: 4, containLabel: true }
+        : { left: 48, right: 12, top: 10, bottom: 24, containLabel: false },
       tooltip: { trigger: 'axis' },
       xAxis: {
         type: 'category',
         data: totals.map(total => total.label),
-        axisLabel: { color: AXIS_COLOR, fontSize: 12 }
+        axisLabel: { color: AXIS_COLOR, fontSize, ...(compact ? { hideOverlap: true } : {}) }
       },
       yAxis: {
         type: 'value',
-        axisLabel: { color: AXIS_COLOR, fontSize: 12, formatter: '{value} min' },
+        ...(compact ? { splitNumber: 3 } : {}),
+        axisLabel: { color: AXIS_COLOR, fontSize, formatter: '{value} min' },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       },
       series: [{
@@ -280,7 +288,11 @@ export class TabletToniComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     const position: L.LatLngExpression = [this.pet!.latitude!, this.pet!.longitude!];
     if (!this.map) {
-      this.map = L.map(container).setView(position, 16);
+      // Handy: Die Karte steht mitten in der scrollenden Seite. Mit Ziehen
+      // fing sie jede Wischgeste ab und die Seite liess sich dort nicht mehr
+      // scrollen; Pinch-Zoom bleibt, die Position folgt dem Tracker ohnehin.
+      const compact = window.matchMedia('(max-width: 600px)').matches;
+      this.map = L.map(container, { dragging: !compact }).setView(position, 16);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19

@@ -263,3 +263,66 @@
     background: rgba(0, 0, 0, 0.45);
   }
 }
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Deshalb: eine Spalte, und Diagramm und
+// Karte bekommen eine feste Hoehe statt einen Anteil der Resthoehe.
+@media (max-width: 600px) {
+  .tablet-toni {
+    flex: 0 0 auto;
+
+    &__grid {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+      gap: 12px;
+    }
+
+    &__card {
+      min-height: 0;
+    }
+
+    // Kacheln mit Zahlen brauchen keine Mindesthoehe mehr: ohne Resthoehe zum
+    // Verteilen stuende ein "Keine Daten"-Hinweis sonst nur einzeilig da.
+    &__hint {
+      min-height: 80px;
+    }
+
+    // Die grossen Zahlen sind auf dem Wandtablet aus Armlaenge gedacht.
+    &__figure {
+      font-size: 2.4rem;
+    }
+
+    &__supply {
+      .tablet-toni__figure {
+        font-size: 2rem;
+      }
+    }
+
+    // Zeitraum-Knoepfe unter den Titel, sonst sind Titel und Knoepfe zu breit.
+    &__card--walks &__card-title {
+      flex-wrap: wrap;
+    }
+
+    &__range {
+      padding: 0.45rem 0.6rem;
+    }
+
+    &__chart {
+      flex: 0 0 auto;
+      height: 180px;
+    }
+
+    // Zeile darf umbrechen: Tag, Uhrzeit und Dauer/Strecke sind zusammen
+    // breiter als die Kachel.
+    &__walk {
+      flex-wrap: wrap;
+      gap: 0.1rem 0.6rem;
+    }
+
+    &__map-frame {
+      flex: 0 0 auto;
+      height: 260px;
+    }
+  }
+}
