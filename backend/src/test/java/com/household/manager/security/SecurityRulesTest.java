@@ -1,5 +1,13 @@
 package com.household.manager.security;
 
+import com.household.manager.agent.AgentController;
+import com.household.manager.agent.AgentNoteService;
+import com.household.manager.agent.AgentNotifier;
+import com.household.manager.agent.AgentPolicyService;
+import com.household.manager.agent.AgentProposalService;
+import com.household.manager.agent.AgentRunRecorder;
+import com.household.manager.agent.AgentSettingsService;
+import com.household.manager.agent.AgentWakeService;
 import com.household.manager.audit.AuditService;
 import com.household.manager.calendar.CalendarCategoryController;
 import com.household.manager.calendar.CalendarCategoryService;
@@ -82,7 +90,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
         HouseholdUserController.class, SystemController.class, PetSupplyController.class,
         PushController.class, SmartDeviceController.class, ZigbeeController.class,
-        ZigbeeManagementController.class},
+        ZigbeeManagementController.class, AgentController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
@@ -91,6 +99,20 @@ class SecurityRulesTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean
+    private AgentSettingsService agentSettingsService;
+    @MockitoBean
+    private AgentPolicyService agentPolicyService;
+    @MockitoBean
+    private AgentNoteService agentNoteService;
+    @MockitoBean
+    private AgentProposalService agentProposalService;
+    @MockitoBean
+    private AgentRunRecorder agentRunRecorder;
+    @MockitoBean
+    private AgentWakeService agentWakeService;
+    @MockitoBean
+    private AgentNotifier agentNotifier;
     @MockitoBean
     private SwitchQueryService switchQueryService;
     @MockitoBean
@@ -1172,5 +1194,34 @@ class SecurityRulesTest {
         mockMvc.perform(put("/v1/thermostats/1").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
                 .andExpect(status().isNotFound());
+    }
+
+    /** Die Hausverstand-Kachel am Wandtablet liest nur die Zusammenfassung; der Matcher steht vor dem ADMIN-Block. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfAgentSummaryLesen() throws Exception {
+        mockMvc.perform(get("/v1/agent/summary")).andExpect(status().isOk());
+    }
+
+    /** Notizen enthalten Gewohnheiten des Haushalts; die Summary-Freigabe darf sie nicht mit oeffnen. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfAgentNotizenNichtLesen() throws Exception {
+        mockMvc.perform(get("/v1/agent/notes")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfAgentNichtKonfigurieren() throws Exception {
+        mockMvc.perform(get("/v1/agent/policies")).andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/agent/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":true}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfAgentKonfigurieren() throws Exception {
+        mockMvc.perform(get("/v1/agent/policies")).andExpect(status().isOk());
     }
 }

@@ -149,6 +149,9 @@ public class SecurityConfig {
                         // Faellige Schnellzugriffe fuer das Wandtablet: MUSS vor dem ADMIN-Matcher
                         // auf /v1/mode-quick-access/** stehen, sonst waere der Knopf am Tablet tot.
                         .requestMatchers(HttpMethod.GET, "/v1/mode-quick-access/due").hasRole("KIOSK")
+                        // Hausverstand-Kachel am Wandtablet: nur die Zusammenfassung. MUSS vor dem
+                        // ADMIN-Matcher auf /v1/agent/** stehen, sonst waere die Kachel dort tot.
+                        .requestMatchers(HttpMethod.GET, "/v1/agent/summary").hasRole("KIOSK")
                         .requestMatchers("/v1/flows/**", "/v1/admin/**", "/v1/vision/**",
                                 "/v1/alexa/auth/**", "/v1/tractive/login", "/v1/tractive/logout",
                                 "/v1/tractive/home-settings", "/v1/presence/settings",
@@ -164,7 +167,11 @@ public class SecurityConfig {
                                 "/v1/mode-quick-access", "/v1/mode-quick-access/**",
                                 // Ladesaeulen: Zuhause/Radius/Mindestleistung nur ADMIN, auch lesen -
                                 // methodenlos, VOR der generischen GET-Regel (Muster tractive/home-settings).
-                                "/v1/charging/settings").hasRole("ADMIN")
+                                "/v1/charging/settings",
+                                // Hausverstand: Notizen enthalten Gewohnheiten des Haushalts, daher ist auch
+                                // LESEN ADMIN. Methodenlos und beide Formen, VOR der generischen GET-Regel;
+                                // nur /summary ist davor fuer KIOSK freigegeben.
+                                "/v1/agent", "/v1/agent/**").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
