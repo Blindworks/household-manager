@@ -1,6 +1,8 @@
 package com.household.manager.telegram;
 
+import com.household.manager.agent.AgentProposalService;
 import com.household.manager.ai.AiProperties;
+import com.household.manager.telegram.dto.TelegramCallbackQuery;
 import com.household.manager.telegram.dto.TelegramUpdate;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class TelegramPollingService {
     private final AiProperties aiProperties;
     private final TelegramApiClient apiClient;
     private final TelegramAgentService agentService;
+    private final AgentProposalService proposalService;
 
     private volatile boolean running;
     private ExecutorService executor;
@@ -73,6 +76,10 @@ public class TelegramPollingService {
 
     /** Package-private für Tests (Verarbeitung ohne Polling-Thread). */
     void handleUpdate(TelegramUpdate update) {
+        if (update.callbackQuery() != null) {
+            handleCallback(update.callbackQuery());
+            return;
+        }
         if (update.message() == null || update.message().text() == null
                 || update.message().chat() == null) {
             return;
@@ -87,6 +94,54 @@ public class TelegramPollingService {
             apiClient.sendMessage(chatId, reply);
         } catch (Exception ex) {
             log.warn("Antwort an Chat {} konnte nicht gesendet werden: {}", chatId, ex.getMessage());
+        }
+    }
+
+    /**
+     * Knopfdruck unter einem Vorschlag des Hausverstands. Die Allowlist gilt hier genauso wie fuer
+     * Texte (Chat aus der Nachricht, an der der Knopf hing) — ein fremder Chat darf nie bis zu
+     * {@code decide} kommen. Jeder erlaubte Druck wird per {@code answerCallbackQuery} beantwortet,
+     * sonst dreht der Knopf in der App weiter.
+     */
+    private void handleCallback(TelegramCallbackQuery callback) {
+        if (callback.message() == null || callback.message().chat() == null) {
+            log.warn("Telegram-Knopfdruck ohne Nachricht/Chat ignoriert");
+            return;
+        }
+        long chatId = callback.message().chat().id();
+        if (!properties.getAllowedChatIds().contains(chatId)) {
+            log.warn("Telegram-Knopfdruck von nicht erlaubtem Chat {} ignoriert", chatId);
+            return;
+        }
+        var parsed = AgentProposalService.parseCallback(callback.data());
+        if (parsed.isEmpty()) {
+            answer(callback.id(), "Unbekannter Knopf");
+            return;
+        }
+        String answer;
+        try {
+            proposalService.decide(parsed.get().proposalId(), parsed.get().decision(), decidedBy(callback, chatId));
+            answer = "Erledigt";
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            answer = ex.getMessage() != null ? ex.getMessage() : "Nicht mehr entscheidbar";
+        } catch (Exception ex) {
+            log.warn("Entscheidung per Telegram-Knopf fehlgeschlagen: {}", ex.getMessage(), ex);
+            answer = "Fehler, siehe Admin-Seite";
+        }
+        answer(callback.id(), answer);
+    }
+
+    private String decidedBy(TelegramCallbackQuery callback, long chatId) {
+        String name = callback.from() != null ? callback.from().firstName() : null;
+        return name != null && !name.isBlank() ? name.trim() : "Chat " + chatId;
+    }
+
+    /** Eine gescheiterte Antwort darf die Verarbeitung nicht abbrechen; die Entscheidung ist da schon gefallen. */
+    private void answer(String callbackId, String text) {
+        try {
+            apiClient.answerCallbackQuery(callbackId, text);
+        } catch (Exception ex) {
+            log.warn("Knopf-Antwort konnte nicht gesendet werden: {}", ex.getMessage());
         }
     }
 
