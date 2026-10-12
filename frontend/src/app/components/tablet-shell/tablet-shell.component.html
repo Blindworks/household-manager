@@ -30,7 +30,7 @@
   </div>
 
   <nav class="lumina__viewbar" aria-label="Ansichten">
-    <a class="lumina-card lumina__viewbar-btn" routerLink="/">
+    <a class="lumina-card lumina__viewbar-btn" routerLink="/" aria-label="Dashboard" title="Dashboard">
       <span class="lumina__viewbar-icon">
         <span class="material-symbols-outlined">home</span>
       </span>
@@ -41,6 +41,8 @@
       class="lumina-card lumina__viewbar-btn"
       [routerLink]="view.route"
       routerLinkActive="lumina__viewbar-btn--active"
+      [attr.aria-label]="view.label"
+      [title]="view.label"
     >
       <span class="lumina__viewbar-icon">
         <span class="material-symbols-outlined">{{ view.icon }}</span>

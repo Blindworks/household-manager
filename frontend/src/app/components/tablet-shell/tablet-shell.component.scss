@@ -359,7 +359,23 @@
     background: var(--surface-solid);
   }
 
+  // Nur Symbole, alle Ansichten in EINER Zeile ohne Seitwaerts-Scrollen: mit
+  // Beschriftung lief die Leiste rechts aus dem Bild, und die letzten Ansichten
+  // sah man nur, wenn man zufaellig seitwaerts wischte. Die Eintraege teilen
+  // sich die Breite gleichmaessig; das Wort steht im aria-label/title der Links.
+  .lumina__viewbar {
+    gap: 4px;
+    overflow-x: visible;
+  }
+
   .lumina__viewbar-btn {
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 44px;
+    padding: 4px 0;
+  }
+
+  .lumina__viewbar-label {
+    display: none;
   }
 }
