@@ -1743,6 +1743,206 @@
   }
 }
 
+// ---- Handy (bis 600 px): gleicher Inhalt, einspaltig, scrollbar -------------
+// Das Dashboard ist auf einen Wandtablet-Schirm gebaut. Auf dem Handy waere
+// dort alles unterhalb der Bildschirmkante abgeschnitten: .lumina schneidet
+// mit overflow: hidden, und im Tablet-Modus steckt die Seite zusaetzlich in
+// einer 100dvh-Huelle (.app-layout--tablet). Deshalb scrollt hier .lumina
+// selbst - im Website-Modus waechst die Seite ohnehin mit, dort aendert
+// overflow-y: auto nichts. Oberhalb von 600 px bleibt alles beim Alten.
+@media (max-width: 600px) {
+  // Glied der Hoehenkette (app-layout--tablet -> main-content -> Host): ohne
+  // min-height: 0 schrumpft der Host nie unter seinen Inhalt, und .lumina
+  // bekommt gar keine begrenzte Hoehe, in der es scrollen koennte.
+  :host {
+    min-height: 0;
+  }
+
+  .lumina {
+    --gutter: 14px;
+    padding: 14px 14px 28px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  // Oben rechts neben der Uhrzeit statt in einer eigenen Zeile (absolut
+  // positioniert, kostet also keine Hoehe).
+  .lumina__view-toggle {
+    top: 14px;
+    left: auto;
+    right: 14px;
+  }
+
+  .lumina__clock {
+    justify-content: flex-start;
+    gap: 6px 12px;
+    padding: 0;
+  }
+
+  .lumina__time {
+    font-size: 40px;
+  }
+
+  // Die Trennstriche taugen nur, solange die Meta-Zeile einzeilig bleibt; beim
+  // Umbruch standen sie allein am Zeilenende bzw. -anfang. Der Abstand der
+  // Eintraege traegt die Trennung.
+  .lumina__divider {
+    display: none;
+  }
+
+  // Die Meta-Zeile loest sich auf, damit ihre Eintraege direkt mit der
+  // Uhrzeit umbrechen: Uhrzeit und Anwesenheit teilen sich die erste Zeile,
+  // Datum, Wetter und Aussenfuehler stehen darunter.
+  .lumina__clock-meta {
+    display: contents;
+  }
+
+  .lumina__time {
+    order: -2;
+  }
+
+  // Rechtsbuendig, aber links vom Umschalter (40 px breit + 8 px Abstand).
+  .lumina__presence-group {
+    order: -1;
+    margin-left: auto;
+    margin-right: 48px;
+  }
+
+  // Datum, Wetter und Aussenfuehler teilen sich eine Zeile. Das Datum behaelt
+  // seine Breite, Wetter und Aussenfuehler nehmen den Rest (Basis 0, damit sie
+  // nie allein deshalb umbrechen) und kuerzen ihre langen Beschriftungen
+  // ("DWD · LEICHT BEWOELKT", "AQARA GARTEN") mit "...".
+  .lumina__date {
+    flex: 0 0 auto;
+  }
+
+  .lumina__clock .lumina__weather {
+    flex: 3 1 0;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .lumina__clock .lumina__outdoor {
+    flex: 2 1 0;
+    padding: 2px 0;
+  }
+
+  .lumina__clock .lumina__weather-icon {
+    flex: 0 0 auto;
+    font-size: 24px;
+  }
+
+  .lumina__clock .lumina__weather-text {
+    min-width: 0;
+
+    .lumina__label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+  }
+
+  // Das Beet-Symbol des Aussenfuehlers entfaellt: der Name darunter sagt
+  // schon, was es ist, und die Breite fehlt dem Namen.
+  .lumina__clock .lumina__outdoor .lumina__weather-icon {
+    display: none;
+  }
+
+  // Zeilenumbruch nach Uhrzeit und Anwesenheit: das Datum soll nicht noch in
+  // die erste Zeile rutschen und dort unter den Umschalter laufen.
+  .lumina__clock::after {
+    content: '';
+    order: -1;
+    flex: 0 0 100%;
+    height: 0;
+  }
+
+  .lumina__presence-circle {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lumina__rooms {
+    gap: 12px;
+  }
+
+  // Zwei Knoepfe je Zeile statt eines langen Umbruchs; 44 px sind das
+  // uebliche Mindestmass fuer ein Touch-Ziel.
+  .lumina__viewbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .lumina__viewbar-btn {
+    min-height: 44px;
+    padding: 4px 12px;
+  }
+
+  // Alle Footer-Kacheln in voller Breite untereinander, auch die Modus-Leiste
+  // (die 768-px-Regel darueber zentriert sie).
+  .lumina__footer {
+    gap: 12px;
+  }
+
+  .lumina__modes-area {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .lumina__modes-row {
+    width: 100%;
+  }
+
+  .lumina__modes-card {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    &.lumina__secured--expanded {
+      padding: 12px 14px;
+    }
+  }
+
+  // Aufgeklappt bekommt der Inhalt jeder Kachel die volle Kartenbreite und
+  // bricht zeilenweise um (Info, dann Knoepfe; je Vorrat eine Zeile). Auf dem
+  // Tablet steht er in einer Zeile mit fester Breite und wird beschnitten -
+  // auf 347 px Kartenbreite waere dort alles abgeschnitten. Der Vorfahr
+  // .lumina im Selektor schlaegt die Regeln unten (Klapp-Mechanik und
+  // Container-Query), die spaeter in der Datei stehen.
+  .lumina .lumina__secured .lumina__lock-collapsible-inner {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .lumina .lumina__secured .lumina__lock-collapsible-inner > * {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .lumina__dialog-backdrop {
+    padding: 12px;
+  }
+
+  .lumina__dialog,
+  .lumina__dialog--history,
+  .lumina__dialog--walks,
+  .lumina__dialog--sensor {
+    width: 100%;
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+
+  .lumina__dialog-head {
+    padding: 14px 16px;
+  }
+
+  .lumina__dialog-body {
+    padding: 16px;
+  }
+}
+
 // Auf dem Handy muss der Klapp-Inhalt schrumpfen duerfen (Modus-Knoepfe
 // umbrechen, Vorratstexte umbrechen), sonst ragt die Kachel aus dem
 // Bildschirm. Preis: dort bleibt der Aufklapp-Umbruch, wie er vorher war.
