@@ -192,3 +192,66 @@
     color: var(--btn-selected-fg, #fff);
   }
 }
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Deshalb: eine Spalte, jede Kachel mit
+// fester Hoehe (die Kachel selbst ist ein Groessen-Container und braucht eine
+// definite Hoehe aus dem Raster), und das Raster scrollt nicht mehr in sich.
+@media (max-width: 600px) {
+  .tablet-heating {
+    flex: 0 0 auto;
+
+    // Zwei Zeilen: Sammelaktion, darunter der Zeitraum - beide zusammen sind
+    // breiter als der Bildschirm.
+    &__controls {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    &__bulk-label {
+      padding: 0 0.3rem 0 0.5rem;
+    }
+
+    &__bulk-btn,
+    &__range {
+      padding: 0.5rem 0.9rem;
+    }
+
+    // Die Spaltenzahl steht als Inline-Style am Element (abhaengig von der
+    // Thermostatzahl, fuer das Tablet); !important ist der einzige Weg darueber.
+    &__grid {
+      grid-template-columns: 1fr !important;
+      // 24 rem: Kopf, Ring samt Steuerung, Modus-Leiste und Verlauf brauchen
+      // ~21 rem; der Rest ist Platz fuer die Zusatzzeile bei einem
+      // nicht erreichbaren Thermostat bzw. einer Fehlermeldung.
+      grid-auto-rows: 24rem;
+      gap: 12px;
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    &__spark {
+      min-height: 4rem;
+    }
+
+    &__hint {
+      min-height: 120px;
+    }
+  }
+
+  // Sammelaktions-Dialog: volle Breite mit Rand, grosse Knoepfe.
+  .confirm-overlay {
+    padding: 12px;
+  }
+
+  .confirm-dialog {
+    width: 100%;
+    padding: 1.25rem;
+  }
+
+  .confirm-actions button {
+    flex: 1;
+    min-height: 44px;
+  }
+}

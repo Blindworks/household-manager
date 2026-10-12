@@ -432,3 +432,86 @@
     }
   }
 }
+
+// ---- Handy (bis 600 px) ----------------------------------------------------
+// Auf dem Wandtablet stehen Ring und Steuerung nebeneinander; in ~347 px
+// Kachelbreite blieben der Modus-Leiste dann nur ~46 px je Knopf. Hier wird
+// der Hauptbereich ein Raster: Ring links, daneben Soll und Plus/Minus, die
+// Modus-Leiste darunter ueber die volle Breite. `display: contents` auf dem
+// Steuerbereich macht seine Kinder zu Raster-Teilnehmern, ohne das Template
+// zu aendern.
+// Die Regeln stehen bewusst ans Dateiende: sie muessen die @container-Regeln
+// oben (gleiche Spezifitaet) ueberstimmen.
+@media (max-width: 600px) {
+  .tile {
+    --tile-main-min: 0;
+
+    &__main {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas:
+        'dial setpoint'
+        'dial steps'
+        'modes modes';
+      align-items: center;
+      column-gap: 1rem;
+      row-gap: 0.6rem;
+      flex: 0 0 auto;
+      min-height: 0;
+    }
+
+    // Der Ring schrumpft mit der Kachelbreite (cqw = Container-Einheit der
+    // Kachel): bei 320 px Bildschirm reicht die Breite sonst nicht fuer Ring
+    // plus Soll und Plus/Minus nebeneinander.
+    &__dial {
+      grid-area: dial;
+      width: min(9.75rem, 42cqw);
+      height: min(9.75rem, 42cqw);
+    }
+
+    &__controls {
+      display: contents;
+    }
+
+    &__setpoint {
+      grid-area: setpoint;
+      align-self: end;
+    }
+
+    &__steps {
+      grid-area: steps;
+      align-self: start;
+    }
+
+    &__target {
+      font-size: 2rem;
+    }
+
+    &__step {
+      width: 3rem;
+      height: 3rem;
+    }
+
+    &__modes {
+      grid-area: modes;
+    }
+
+    // Grosse Beruehrungsflaeche, Symbol und Text nebeneinander (die schmale
+    // Kachel blendet das Symbol sonst aus).
+    &__mode {
+      flex-direction: row;
+      gap: 0.35rem;
+      min-height: 2.75rem;
+      font-size: 0.8rem;
+
+      .material-symbols-outlined {
+        display: inline-block;
+        font-size: 1.2rem;
+      }
+    }
+
+    &__extra {
+      min-height: 4rem;
+    }
+  }
+}
