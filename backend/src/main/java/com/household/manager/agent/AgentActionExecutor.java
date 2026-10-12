@@ -102,6 +102,9 @@ public class AgentActionExecutor {
     }
 
     private boolean heatingSatisfied(AgentAction action, ThermostatDto current) {
+        if (action.doubleParam("targetTemp") == null && action.stringParam("mode") == null) {
+            throw new IllegalArgumentException("targetTemp oder mode angeben");
+        }
         return targetSatisfied(action, current) && modeSatisfied(action, current);
     }
 
@@ -109,7 +112,7 @@ public class AgentActionExecutor {
         ThermostatDto current = currentThermostat(action);
         boolean targetOk = targetSatisfied(action, current);
         boolean modeOk = modeSatisfied(action, current);
-        if (targetOk && modeOk) {
+        if (heatingSatisfied(action, current)) {
             return new ActionOutcome(true, current.name() + " steht bereits so.");
         }
         if (!modeOk) {
@@ -143,8 +146,17 @@ public class AgentActionExecutor {
         return desired;
     }
 
+    /**
+     * Die Toggle-Endpunkte waehlen die Richtung aus dem Ist-Zustand und schalten bei allem ausser "on"
+     * EIN. Bei unavailable/unknown wuerde "off" also einschalten; deshalb wird ein anderer Ist-Zustand
+     * als on/off hier fuer execute und isSatisfied gleichermassen abgelehnt.
+     */
     private boolean stateSatisfied(AgentAction action, String currentState) {
-        return desiredState(action).equals(currentState);
+        String desired = desiredState(action);
+        if (!"on".equals(currentState) && !"off".equals(currentState)) {
+            throw new IllegalArgumentException("Zustand von " + action.target() + " ist " + currentState + " — nicht schaltbar");
+        }
+        return desired.equals(currentState);
     }
 
     private ActionOutcome toggleEntity(AgentAction action, String currentState, Runnable toggle) {

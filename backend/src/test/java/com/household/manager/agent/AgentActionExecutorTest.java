@@ -113,6 +113,21 @@ class AgentActionExecutorTest {
         verifyNoInteractions(switchCommandService);
         verifyNoInteractions(auditService);
     }
+    @Test void executeRefusesSwitchWhenCurrentStateUnavailable() {
+        when(switchQueryService.listSwitches(null)).thenReturn(List.of(SwitchResponse.builder().entityId("switch.x").state("unavailable").displayName("X").build()));
+        assertThrows(IllegalArgumentException.class, () -> executor().execute(new AgentAction(ActionClass.SWITCH, "switch.x", Map.of("state", "off"), "r", false)));
+        verifyNoInteractions(switchCommandService);
+    }
+    @Test void executeRefusesModeWhenCurrentStateUnknown() {
+        when(houseModeQueryService.listModes()).thenReturn(List.of(ModeResponse.builder().entityId("input_boolean.m").state("unknown").displayName("M").build()));
+        assertThrows(IllegalArgumentException.class, () -> executor().execute(new AgentAction(ActionClass.MODE, "input_boolean.m", Map.of("state", "off"), "r", false)));
+        verifyNoInteractions(manualEntityService);
+    }
+    @Test void heatingWithoutTargetOrModeIsRejected() {
+        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 20.0, 21.0, ThermostatMode.MANUAL, false, false, null)));
+        assertThrows(IllegalArgumentException.class, () -> executor().execute(new AgentAction(ActionClass.HEATING, "3", Map.of(), "r", false)));
+        verify(thermostatService, never()).setTarget(anyLong(), anyDouble());
+    }
     @Test void isSatisfiedFalseForNotify() {
         assertFalse(executor().isSatisfied(new AgentAction(ActionClass.NOTIFY, "push", Map.of("channel", "push", "message", "x"), "r", false)));
         verifyNoInteractions(pushNotificationService);
