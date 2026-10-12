@@ -188,6 +188,39 @@ class AgentRunServiceTest {
     }
 
     @Test
+    void runSurvivesThrowingRecorder() {
+        when(client.createMessage(any())).thenReturn(endTurn("ok", 1, 1));
+        doThrow(new RuntimeException("db")).when(recorder).record(any(), any(), any(), any());
+
+        AgentRunResult r = assertDoesNotThrow(() -> service().run(scheduled()));
+
+        assertTrue(r.success());
+        verify(failureStreak).onResult(r);
+    }
+
+    @Test
+    void runSurvivesThrowingFailureStreak() {
+        when(client.createMessage(any())).thenReturn(endTurn("ok", 1, 1));
+        doThrow(new RuntimeException("telegram")).when(failureStreak).onResult(any());
+
+        AgentRunResult r = assertDoesNotThrow(() -> service().run(scheduled()));
+
+        assertTrue(r.success());
+        verify(recorder).record(any(), eq(r), any(), any());
+    }
+
+    @Test
+    void restoresPreviousAuditActor() {
+        AuditActor admin = AuditActor.user("admin");
+        AuditActorContext.set(admin);
+        when(client.createMessage(any())).thenReturn(endTurn("ok", 1, 1));
+
+        service().run(scheduled());
+
+        assertEquals(admin, AuditActorContext.get());
+    }
+
+    @Test
     void staticRulesContainTheBindingRules() {
         String rules = AgentRunService.STATIC_RULES;
         assertTrue(rules.contains("Hausverstand"));

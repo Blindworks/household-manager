@@ -66,6 +66,8 @@ public class AgentRunService {
     public AgentRunResult run(AgentTrigger trigger) {
         LocalDateTime startedAt = LocalDateTime.now(clock);
         long startNanos = System.nanoTime();
+        // Ein MANUAL-Lauf kann auf einem Request-Thread mit gesetztem Aktor laufen; den danach zurueckgeben.
+        AuditActor previousActor = AuditActorContext.get();
         AuditActorContext.set(AuditActor.agent());
         int inputTokens = 0;
         int outputTokens = 0;
@@ -110,14 +112,31 @@ public class AgentRunService {
                         inputTokens, outputTokens, toolCalls, startNanos);
             }
         } catch (Exception ex) {
-            log.warn("Hausverstand-Lauf fehlgeschlagen: {}", ex.getMessage(), ex);
             String reason = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+            log.warn("Hausverstand-Lauf fehlgeschlagen: {}", reason);
+            log.debug("Stacktrace des fehlgeschlagenen Hausverstand-Laufs", ex);
             result = failure(reason, inputTokens, outputTokens, toolCalls, startNanos);
         } finally {
-            AuditActorContext.clear();
+            if (previousActor == null) {
+                AuditActorContext.clear();
+            } else {
+                AuditActorContext.set(previousActor);
+            }
         }
-        recorder.record(trigger, result, properties.getModel(), startedAt);
-        failureStreak.onResult(result);
+        // Getrennt gekapselt: ein Fehler im Protokoll darf weder die Fehlerserie ueberspringen
+        // noch den Scheduler erreichen.
+        try {
+            recorder.record(trigger, result, properties.getModel(), startedAt);
+        } catch (Exception ex) {
+            log.warn("Laufprotokoll des Hausverstands fehlgeschlagen: {}", ex.getMessage());
+            log.debug("Stacktrace", ex);
+        }
+        try {
+            failureStreak.onResult(result);
+        } catch (Exception ex) {
+            log.warn("Fehlerserie des Hausverstands nicht auswertbar: {}", ex.getMessage());
+            log.debug("Stacktrace", ex);
+        }
         return result;
     }
 
