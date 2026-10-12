@@ -89,4 +89,10 @@ class AnthropicApiClientTest {
         assertThrows(AiException.class,
                 () -> client.createMessage(AnthropicRequest.of("m", 100, "s", List.of(AnthropicMessage.user("hi")), List.of())));
     }
+
+    @Test
+    void readTimeoutIs45Seconds() {
+        // Muss unter dem Laufbudget des Hausverstands bleiben (Budget wird nur zwischen Aufrufen geprueft).
+        assertEquals(java.time.Duration.ofSeconds(45), AnthropicApiClient.READ_TIMEOUT);
+    }
 }

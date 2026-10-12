@@ -9,10 +9,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -28,7 +34,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = AgentController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(AgentControllerTest.FixedClock.class)
 class AgentControllerTest {
+
+    @TestConfiguration
+    static class FixedClock {
+        @Bean
+        Clock clock() {
+            // 08:15 UTC = 10:15 Berlin: der Startzeitpunkt muss aus dem Clock-Bean kommen, nicht aus der Systemzone.
+            return Clock.fixed(Instant.parse("2026-10-12T08:15:00Z"), ZoneId.of("Europe/Berlin"));
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -113,6 +129,7 @@ class AgentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.triggerType").value("MANUAL"))
                 .andExpect(jsonPath("$.triggerDetail").value("Manuell"))
+                .andExpect(jsonPath("$.startedAt").value("2026-10-12T10:15:00"))
                 .andExpect(jsonPath("$.summary").value("ok"))
                 .andExpect(jsonPath("$.inputTokens").value(10))
                 .andExpect(jsonPath("$.toolCalls").value(2));

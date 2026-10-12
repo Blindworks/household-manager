@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -60,6 +61,7 @@ public class AgentController {
     private final AgentNotifier notifier;
     private final CurrentUserService currentUserService;
     private final AppUserRepository appUserRepository;
+    private final Clock clock;
 
     @GetMapping("/summary")
     public SummaryResponse summary() {
@@ -137,7 +139,7 @@ public class AgentController {
     @PostMapping("/runs")
     public RunDto runNow() {
         AgentRunResult r = wakeService.runNow();
-        return new RunDto(null, AgentTriggerType.MANUAL, "Manuell", LocalDateTime.now(), r.durationMs(), null,
+        return new RunDto(null, AgentTriggerType.MANUAL, "Manuell", LocalDateTime.now(clock), r.durationMs(), null,
                 r.inputTokens(), r.outputTokens(), r.toolCalls(), r.summary(), r.error());
     }
 

@@ -24,14 +24,19 @@ import java.util.Map;
  *
  * <p>{@link #run} wirft nie — der Aufrufer ist ein Scheduler, und ein Fehler muss im Protokoll und in
  * der Fehlerserie landen statt den Takt zu töten. Protokoll und Fehlerserie werden deshalb genau einmal
- * je Lauf gerufen, egal wie er endet. Das Zeitbudget wird vor jedem API-Aufruf geprüft (nicht währenddessen);
- * ein Lauf, der Zeit oder Iterationsdeckel reißt, gilt als Fehlschlag, damit hängende Läufe auffallen.
+ * je Lauf gerufen, egal wie er endet. Das Zeitbudget wird vor jedem API-Aufruf UND unmittelbar vor der
+ * Ausführung der Tool-Blöcke einer Antwort geprüft: ein Aufruf, der das Budget aufgebraucht hat, darf danach
+ * nichts mehr im Haus schalten. Während eines API-Aufrufs selbst begrenzt nur dessen Read-Timeout (45 s,
+ * {@code AnthropicApiClient}); ein Lauf kann das Budget also um höchstens einen Aufruf überziehen. Ein Lauf,
+ * der Zeit oder Iterationsdeckel reißt, gilt als Fehlschlag, damit hängende Läufe auffallen.
  * Der Audit-Aktor ist während des Laufs {@code AGENT}, damit Aktionen im Audit-Log zuordenbar sind.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AgentRunService {
+
+    static final String BUDGET_EXCEEDED = "Zeitbudget überschritten";
 
     static final String TASK_INSTRUCTION =
             "Prüfe, ob etwas zu tun ist. Wenn nein, antworte mit einem Satz Begründung und ohne Tool-Aufruf.";
@@ -82,8 +87,8 @@ public class AgentRunService {
             List<Map<String, Object>> tools = toolRegistry.toolDefinitions(AgentScope.HOUSE);
 
             for (int i = 0; i < properties.getMaxToolIterations() && result == null; i++) {
-                if (elapsedSeconds(startNanos) > properties.getRunTimeoutSeconds()) {
-                    result = failure("Zeitbudget überschritten", inputTokens, outputTokens, toolCalls, startNanos);
+                if (budgetExceeded(startNanos)) {
+                    result = failure(BUDGET_EXCEEDED, inputTokens, outputTokens, toolCalls, startNanos);
                     break;
                 }
                 AnthropicResponse response = client.createMessage(new AnthropicRequest(
@@ -93,6 +98,11 @@ public class AgentRunService {
                 if (!response.wantsToolUse()) {
                     result = new AgentRunResult(true, response.text(), null,
                             inputTokens, outputTokens, toolCalls, elapsedMs(startNanos));
+                    break;
+                }
+                if (budgetExceeded(startNanos)) {
+                    // Die Antwort kam zu spaet: ihre Tool-Wuensche werden verworfen statt ausgefuehrt.
+                    result = failure(BUDGET_EXCEEDED, inputTokens, outputTokens, toolCalls, startNanos);
                     break;
                 }
                 messages.add(AnthropicMessage.assistant(response.content()));
@@ -140,6 +150,10 @@ public class AgentRunService {
         return result;
     }
 
+    private boolean budgetExceeded(long startNanos) {
+        return elapsedMs(startNanos) > properties.getRunTimeoutSeconds() * 1000L;
+    }
+
     private AgentRunResult failure(String error, int inputTokens, int outputTokens, int toolCalls, long startNanos) {
         return new AgentRunResult(false, null, error, inputTokens, outputTokens, toolCalls, elapsedMs(startNanos));
     }
@@ -148,7 +162,4 @@ public class AgentRunService {
         return (System.nanoTime() - startNanos) / 1_000_000;
     }
 
-    private static long elapsedSeconds(long startNanos) {
-        return (System.nanoTime() - startNanos) / 1_000_000_000L;
-    }
 }

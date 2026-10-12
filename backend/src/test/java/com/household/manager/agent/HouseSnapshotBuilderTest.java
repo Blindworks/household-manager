@@ -10,6 +10,8 @@ import com.household.manager.dto.PowerConsumerResponse;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.entitystate.PowerConsumerQueryService;
+import com.household.manager.entitystate.SwitchQueryService;
+import com.household.manager.dto.SwitchResponse;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.model.entity.AgentProposal;
 import com.household.manager.entitystate.EntityDomain;
@@ -59,6 +61,7 @@ class HouseSnapshotBuilderTest {
     private TemperatureSeriesService temperatureSeriesService;
     private EntityStateService entityStateService;
     private PowerConsumerQueryService powerConsumerQueryService;
+    private SwitchQueryService switchQueryService;
     private PetSupplyService petSupplyService;
     private CalendarEventService calendarEventService;
     private NetworkStatusService networkStatusService;
@@ -77,6 +80,8 @@ class HouseSnapshotBuilderTest {
         temperatureSeriesService = mock(TemperatureSeriesService.class);
         entityStateService = mock(EntityStateService.class);
         powerConsumerQueryService = mock(PowerConsumerQueryService.class);
+        switchQueryService = mock(SwitchQueryService.class);
+        lenient().when(switchQueryService.listSwitches(null)).thenReturn(List.of());
         petSupplyService = mock(PetSupplyService.class);
         calendarEventService = mock(CalendarEventService.class);
         networkStatusService = mock(NetworkStatusService.class);
@@ -109,7 +114,7 @@ class HouseSnapshotBuilderTest {
     private HouseSnapshotBuilder builder() {
         Clock clock = Clock.fixed(ZonedDateTime.of(NOW, BERLIN).toInstant(), BERLIN);
         return new HouseSnapshotBuilder(clock, presenceStatusService, houseModeQueryService, thermostatService,
-                temperatureSeriesService, entityStateService, mapper, powerConsumerQueryService, petSupplyService,
+                temperatureSeriesService, entityStateService, mapper, powerConsumerQueryService, switchQueryService, petSupplyService,
                 calendarEventService, networkStatusService, zigbeeStreamMonitor, nukiLockService, proposalService,
                 noteService, policyService);
     }
@@ -176,7 +181,7 @@ class HouseSnapshotBuilderTest {
 
         String s = builder().build();
 
-        assertTrue(s.contains("Nachtmodus: aus, Toni allein: an"), s);
+        assertTrue(s.contains("Nachtmodus (input_boolean.manual_nacht): aus, Toni allein (input_boolean.manual_toni): an"), s);
     }
 
     @Test
@@ -246,7 +251,7 @@ class HouseSnapshotBuilderTest {
 
         String s = builder().build();
 
-        assertTrue(s.contains("Waschmaschine läuft: an (seit 13:40)"), s);
+        assertTrue(s.contains("Waschmaschine läuft (input_boolean.manual_wm): an (seit 13:40)"), s);
         assertFalse(s.contains("Nachtmodus: aus (seit"), s);
     }
 
@@ -297,13 +302,91 @@ class HouseSnapshotBuilderTest {
         assertTrue(s.contains("21 Grad reichen"));
     }
 
+    private void manyTemperatureSensors() {
+        List<CurrentTemperatureReading> readings = new java.util.ArrayList<>();
+        for (int i = 0; i < 400; i++) {
+            readings.add(CurrentTemperatureReading.builder().sensorId("zigbee:" + i).name("Sensor " + i)
+                    .temperature(new BigDecimal("20.1")).measuredAt(NOW.minusMinutes(3)).build());
+        }
+        when(temperatureSeriesService.getCurrent()).thenReturn(readings);
+    }
+
     @Test
     void snapshotIsCapped() {
-        when(noteService.renderForPrompt()).thenReturn("x".repeat(20000));
+        manyTemperatureSensors();
 
         String s = builder().build();
 
         assertTrue(s.length() <= 12_050);
         assertTrue(s.endsWith("… [gekürzt]"));
+    }
+
+    @Test
+    void notesSurviveTheOverallCap() {
+        manyTemperatureSensors();
+        when(noteService.renderForPrompt()).thenReturn("#1 [PREFERENCE, USER, unbefristet] Nie unter 19 Grad");
+        when(policyService.all()).thenReturn(Map.of(ActionClass.HEATING, ActionPolicy.PROPOSE));
+
+        String s = builder().build();
+
+        assertTrue(s.endsWith("… [gekürzt]"));
+        assertTrue(s.contains("Nie unter 19 Grad"));
+        assertTrue(s.contains("HEATING: nur vorschlagen"));
+    }
+
+    @Test
+    void notesAreCappedOnTheirOwn() {
+        when(noteService.renderForPrompt()).thenReturn("x".repeat(20000));
+
+        String s = builder().build();
+
+        assertTrue(s.contains("… [Notizen gekürzt]"), s);
+        assertFalse(s.contains("x".repeat(4001)));
+        assertTrue(s.contains("Heizung:"), "Zustandsabschnitte bleiben trotz langer Notizen erhalten");
+    }
+
+    @Test
+    void proposalsAreCappedOnTheirOwn() {
+        List<AgentProposal> proposals = new java.util.ArrayList<>();
+        for (long i = 0; i < 100; i++) {
+            AgentProposal p = AgentProposal.builder().id(i).status(ProposalStatus.REJECTED)
+                    .actionClass(ActionClass.HEATING).target("3").reason("y".repeat(50)).build();
+            proposals.add(p);
+            when(proposalService.actionOf(p)).thenThrow(new RuntimeException("kaputt"));
+        }
+        when(proposalService.recentForPrompt()).thenReturn(proposals);
+
+        String s = builder().build();
+
+        assertTrue(s.contains("… [Vorschläge gekürzt]"), s);
+    }
+
+    @Test
+    void sectionsStartWithBindingOnesAndEndWithProposals() {
+        String s = builder().build();
+
+        List<String> order = List.of("Zeit:", "Freigaben:", "Notizen:", "Anwesenheit:", "Modi:", "Heizung:",
+                "Schalter:", "Temperaturen:", "Haustür:", "Offene und letzte Vorschläge (24 h):");
+        int last = -1;
+        for (String title : order) {
+            int at = s.indexOf(title);
+            assertTrue(at > last, title + " steht nicht an der erwarteten Stelle:\n" + s);
+            last = at;
+        }
+    }
+
+    @Test
+    void switchSectionListsSwitchesWithIds() {
+        when(switchQueryService.listSwitches(null)).thenReturn(List.of(
+                SwitchResponse.builder().entityId("switch.meross_wm").displayName("Waschmaschine").state("on")
+                        .powerWatts(540.4).build(),
+                SwitchResponse.builder().entityId("switch.kasa_50").displayName("Kamera").state("off").build(),
+                SwitchResponse.builder().entityId("switch.tapo_9").displayName("Flur").state("unavailable").build()));
+
+        String s = builder().build();
+
+        assertTrue(s.contains("Schalter:\n  Waschmaschine (switch.meross_wm): an, 540 W"), s);
+        assertTrue(s.contains("Kamera (switch.kasa_50): aus"), s);
+        assertTrue(s.contains("Flur (switch.tapo_9): unbekannt"), s);
     }
 }

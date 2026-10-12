@@ -1,6 +1,5 @@
 package com.household.manager.agent;
 
-import com.household.manager.alexa.AlexaTtsMode;
 import com.household.manager.audit.AuditActor;
 import com.household.manager.audit.AuditService;
 import com.household.manager.dto.ModeResponse;
@@ -13,7 +12,6 @@ import com.household.manager.nuki.NukiLockAction;
 import com.household.manager.nuki.NukiLockService;
 import com.household.manager.nuki.dto.NukiLockResponse;
 import com.household.manager.push.PushNotificationService;
-import com.household.manager.service.AlexaAnnouncementService;
 import com.household.manager.tapo.hub.ThermostatMode;
 import com.household.manager.telegram.TelegramNotificationService;
 import com.household.manager.thermostat.ThermostatDto;
@@ -40,13 +38,12 @@ class AgentActionExecutorTest {
     @Mock NukiLockService nukiLockService;
     @Mock TelegramNotificationService telegramNotificationService;
     @Mock PushNotificationService pushNotificationService;
-    @Mock AlexaAnnouncementService alexaAnnouncementService;
     @Mock AuditService auditService;
 
     AgentActionExecutor executor() {
         return new AgentActionExecutor(thermostatService, switchQueryService, switchCommandService,
                 houseModeQueryService, manualEntityService, nukiLockService, telegramNotificationService,
-                pushNotificationService, alexaAnnouncementService, auditService);
+                pushNotificationService, auditService);
     }
 
     @Test void heatingSetsTargetAndMode() {
@@ -98,9 +95,12 @@ class AgentActionExecutorTest {
         executor().execute(new AgentAction(ActionClass.NOTIFY, "push", Map.of("channel", "push", "message", "Hallo"), "r", false));
         verify(pushNotificationService).sendToAll("Hausverstand", "Hallo");
     }
-    @Test void notifyAlexaAnnouncesWithChime() {
-        executor().execute(new AgentAction(ActionClass.NOTIFY, "alexa", Map.of("channel", "alexa", "message", "Hallo"), "r", false));
-        verify(alexaAnnouncementService).announce("Hallo", List.of(), AlexaTtsMode.ANNOUNCE);
+    @Test void notifyAlexaIsRejected() {
+        // Alexa braucht eine Zielgeraete-Liste, die der Agent nicht kennt — der Kanal ist bewusst entfernt.
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> executor().execute(
+                new AgentAction(ActionClass.NOTIFY, "alexa", Map.of("channel", "alexa", "message", "Hallo"), "r", false)));
+        assertTrue(ex.getMessage().contains("telegram oder push"));
+        verifyNoInteractions(telegramNotificationService, pushNotificationService, auditService);
     }
     @Test void everyExecutedActionIsAudited() {
         when(switchQueryService.listSwitches(null)).thenReturn(List.of(SwitchResponse.builder().entityId("switch.x").state("off").displayName("X").build()));

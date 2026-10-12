@@ -28,7 +28,7 @@ public class NotifyTool implements AgentTool {
 
     @Override
     public String description() {
-        return "Schickt den Bewohnern eine Nachricht (telegram, push oder alexa). "
+        return "Schickt den Bewohnern eine Nachricht (telegram oder push). "
                 + "urgent nur bei echter Gefahr setzen — dringende Nachrichten ignorieren die Ruhezeit.";
     }
 
@@ -37,7 +37,7 @@ public class NotifyTool implements AgentTool {
         return Map.of(
                 "type", "object",
                 "properties", Map.of(
-                        "channel", Map.of("type", "string", "enum", List.of("telegram", "push", "alexa")),
+                        "channel", Map.of("type", "string", "enum", List.of("telegram", "push")),
                         "message", Map.of("type", "string", "maxLength", 500),
                         "urgent", Map.of("type", "boolean", "description", "Nur bei echter Gefahr"),
                         "reason", ActionInputs.REASON_PROPERTY),

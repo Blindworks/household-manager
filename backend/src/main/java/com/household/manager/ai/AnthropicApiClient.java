@@ -16,12 +16,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** HTTP-Client fuer die Anthropic Messages API (Tool-Use), geteilt von Telegram-Bot und Hausverstand. */
+/**
+ * HTTP-Client fuer die Anthropic Messages API (Tool-Use), geteilt von Telegram-Bot und Hausverstand.
+ *
+ * <p>Read-Timeout einheitlich 45 s je Aufruf, fuer beide Nutzer: der Hausverstand prueft sein Zeitbudget
+ * nur zwischen den Aufrufen, ein einzelner Aufruf darf es also hoechstens um diese Spanne ueberziehen. Der
+ * manuelle Lauf ({@code POST /v1/agent/runs}) haelt dabei den Request-Thread; nginx gibt dieser Route deshalb
+ * einen eigenen, laengeren {@code proxy_read_timeout} (150 s, {@code frontend/nginx.conf}).
+ */
 @Component
 public class AnthropicApiClient {
 
     private static final String API_VERSION = "2023-06-01";
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(60);
+    static final Duration READ_TIMEOUT = Duration.ofSeconds(45);
 
     private final AiProperties properties;
     private final RestTemplate restTemplate;

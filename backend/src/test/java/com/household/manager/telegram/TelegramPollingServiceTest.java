@@ -2,6 +2,8 @@ package com.household.manager.telegram;
 
 import com.household.manager.agent.AgentProposalService;
 import com.household.manager.agent.ProposalDecision;
+import com.household.manager.agent.ProposalStatus;
+import com.household.manager.model.entity.AgentProposal;
 import com.household.manager.ai.AiProperties;
 import com.household.manager.telegram.dto.TelegramCallbackQuery;
 import com.household.manager.telegram.dto.TelegramUser;
@@ -118,6 +120,27 @@ class TelegramPollingServiceTest {
         service().handleUpdate(callback(42L, "Benedikt", "agent:7:APPROVE"));
 
         verify(apiClient).answerCallbackQuery("cb1", "bereits entschieden");
+    }
+
+    @Test
+    void failedActionIsAnsweredWithItsError() {
+        AgentProposal failed = AgentProposal.builder().id(7L).status(ProposalStatus.FAILED).error("Hub offline").build();
+        when(proposalService.decide(anyLong(), any(), any())).thenReturn(failed);
+
+        service().handleUpdate(callback(42L, "Benedikt", "agent:7:APPROVE"));
+
+        verify(apiClient).answerCallbackQuery("cb1", "Fehlgeschlagen: Hub offline");
+    }
+
+    @Test
+    void longFailureTextIsShortenedFor190Chars() {
+        AgentProposal failed = AgentProposal.builder().id(7L).status(ProposalStatus.FAILED).error("x".repeat(500)).build();
+        when(proposalService.decide(anyLong(), any(), any())).thenReturn(failed);
+
+        service().handleUpdate(callback(42L, "Benedikt", "agent:7:APPROVE"));
+
+        verify(apiClient).answerCallbackQuery(eq("cb1"), argThat(text -> text.length() == 190
+                && text.startsWith("Fehlgeschlagen: x") && text.endsWith("…")));
     }
 
     @Test

@@ -290,6 +290,7 @@ class AgentProposalServiceTest {
     void expireStaleMarksOldPendingAndRemovesButtons() {
         AgentProposal old = pending(1L);
         old.setCreatedAt(LocalDateTime.of(2026, 10, 12, 9, 0));
+        old.setDeliveredAt(LocalDateTime.of(2026, 10, 12, 9, 0));
         AgentProposal fresh = pending(2L);
         when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(old, fresh));
 
@@ -308,6 +309,7 @@ class AgentProposalServiceTest {
     void expireStaleSkipsRowWhenClaimReturnsZero() {
         AgentProposal old = pending(1L);
         old.setCreatedAt(LocalDateTime.of(2026, 10, 12, 9, 0));
+        old.setDeliveredAt(LocalDateTime.of(2026, 10, 12, 9, 0));
         when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(old));
         when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(0);
 
@@ -316,6 +318,41 @@ class AgentProposalServiceTest {
         assertEquals(ProposalStatus.PENDING, old.getStatus());
         verifyNoInteractions(notifier);
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void expireStaleCountsFromDeliveryNotCreation() {
+        // Nachts angelegt, erst vor einer Stunde zugestellt: die Frist (2 h) laeuft ab der Zustellung.
+        AgentProposal p = pending(1L);
+        p.setCreatedAt(LocalDateTime.of(2026, 10, 11, 23, 0));
+        p.setDeliveredAt(NOW.minusHours(1));
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(p));
+
+        assertEquals(0, service().expireStale());
+
+        assertEquals(ProposalStatus.PENDING, p.getStatus());
+        verify(repository, never()).claim(anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
+    void heldProposalCreatedAt23IsDeliveredAt0701NotExpired() {
+        clock = Clock.fixed(ZonedDateTime.of(LocalDateTime.of(2026, 10, 12, 7, 1), BERLIN).toInstant(), BERLIN);
+        AgentProposal held = pending(1L);
+        held.setCreatedAt(LocalDateTime.of(2026, 10, 11, 23, 0));
+        held.setDeliveredAt(null);
+        when(quietHours.isQuietNow()).thenReturn(false);
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(held));
+        when(executor.isSatisfied(any())).thenReturn(false);
+        AgentProposalService service = service();
+
+        // Reihenfolge wie im AgentMaintenanceJob: erst verfallen lassen, dann nachreichen.
+        assertEquals(0, service.expireStale());
+        assertEquals(1, service.deliverPending());
+
+        assertEquals(ProposalStatus.PENDING, held.getStatus());
+        verify(repository, never()).claim(eq(1L), eq(ProposalStatus.PENDING), eq(ProposalStatus.EXPIRED), any(), any());
+        verify(notifier).sendProposal(held);
+        verify(notifier, never()).markDecided(any(), any());
     }
 
     @Test
@@ -482,6 +519,117 @@ class AgentProposalServiceTest {
         service().executeDirect(noReason);
 
         verify(notifier).sendInfo(argThat(text -> text.endsWith("(keine Begründung)") && !text.contains("null")));
+    }
+
+    // --- NOTIFY und Ruhezeit ---
+
+    private AgentAction telegramMessage(boolean urgent) {
+        return new AgentAction(ActionClass.NOTIFY, "telegram",
+                Map.of("channel", "telegram", "message", "Fenster offen"), "Regen", urgent);
+    }
+
+    private AgentProposal heldMessage(long id) {
+        return AgentProposal.builder().id(id).actionClass(ActionClass.NOTIFY).target("telegram")
+                .actionJson(AgentActionJson.write(objectMapper, telegramMessage(false))).reason("Regen")
+                .status(ProposalStatus.PENDING).createdAt(NOW.minusHours(6)).build();
+    }
+
+    @Test
+    void executeDirectNotifySendsNoExtraInfo() {
+        when(executor.execute(any())).thenReturn(new ActionOutcome(false, "Nachricht gesendet."));
+
+        AgentProposal p = service().executeDirect(telegramMessage(false));
+
+        assertEquals(ProposalStatus.EXECUTED, p.getStatus());
+        verify(executor).execute(any());
+        verify(notifier, never()).sendInfo(any());
+    }
+
+    @Test
+    void nonUrgentNotificationIsHeldDuringQuietHoursAndSentInTheMorning() {
+        when(quietHours.isQuietNow()).thenReturn(true);
+
+        AgentProposal held = service().executeDirect(telegramMessage(false));
+
+        assertEquals(ProposalStatus.PENDING, held.getStatus());
+        assertNull(held.getDeliveredAt());
+        assertNull(held.getDecidedBy());
+        verify(executor, never()).execute(any());
+        verifyNoInteractions(notifier);
+
+        held.setId(7L);
+        when(quietHours.isQuietNow()).thenReturn(false);
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(held));
+        when(executor.execute(any())).thenReturn(new ActionOutcome(false, "Nachricht gesendet."));
+
+        assertEquals(1, service().deliverPending());
+
+        InOrder order = inOrder(repository, executor);
+        order.verify(repository).claim(7L, ProposalStatus.PENDING, ProposalStatus.EXECUTED, "system", NOW);
+        order.verify(executor).execute(telegramMessage(false));
+        assertEquals(ProposalStatus.EXECUTED, held.getStatus());
+        verify(executor, never()).isSatisfied(any());
+        verify(notifier, never()).sendProposal(any());
+        verify(notifier, never()).sendInfo(any());
+    }
+
+    @Test
+    void urgentNotificationGoesOutImmediatelyDuringQuietHours() {
+        when(quietHours.isQuietNow()).thenReturn(true);
+        when(executor.execute(any())).thenReturn(new ActionOutcome(false, "Nachricht gesendet."));
+
+        AgentProposal p = service().executeDirect(telegramMessage(true));
+
+        assertEquals(ProposalStatus.EXECUTED, p.getStatus());
+        verify(executor).execute(telegramMessage(true));
+    }
+
+    @Test
+    void heldNotificationIsNotSentWhenClaimLost() {
+        when(quietHours.isQuietNow()).thenReturn(false);
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(heldMessage(7L)));
+        when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(0);
+
+        assertEquals(0, service().deliverPending());
+
+        verify(executor, never()).execute(any());
+    }
+
+    @Test
+    void heldNotificationFailureIsSavedAsFailed() {
+        AgentProposal held = heldMessage(7L);
+        when(quietHours.isQuietNow()).thenReturn(false);
+        when(repository.findByStatus(ProposalStatus.PENDING)).thenReturn(List.of(held));
+        when(executor.execute(any())).thenThrow(new RuntimeException("Telegram weg"));
+
+        assertEquals(1, assertDoesNotThrow(() -> service().deliverPending()));
+
+        assertEquals(ProposalStatus.FAILED, held.getStatus());
+        assertEquals("Telegram weg", held.getError());
+        verify(repository).save(held);
+        verify(executor, times(1)).execute(any());
+    }
+
+    @Test
+    void infoMessagesAreSuppressedDuringQuietHours() {
+        when(quietHours.isQuietNow()).thenReturn(true);
+        when(executor.execute(any())).thenReturn(new ActionOutcome(false, "ok"));
+
+        AgentProposal p = service().executeDirect(heating21());
+
+        assertEquals(ProposalStatus.EXECUTED, p.getStatus());
+        verify(repository).save(p);
+        verify(notifier, never()).sendInfo(any());
+    }
+
+    @Test
+    void urgentActionStillInformsDuringQuietHours() {
+        when(quietHours.isQuietNow()).thenReturn(true);
+        when(executor.execute(any())).thenReturn(new ActionOutcome(false, "ok"));
+
+        service().executeDirect(heating21(true));
+
+        verify(notifier).sendInfo(contains("Heizung 3 auf 21.0 °C"));
     }
 
     @Test

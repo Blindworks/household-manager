@@ -116,6 +116,14 @@ class HouseActionToolsTest {
         assertTrue(a.urgent());
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    void notifySchemaOffersOnlyTelegramAndPush() {
+        Map<String, Object> properties = (Map<String, Object>) new NotifyTool(gate).inputSchema().get("properties");
+        Map<String, Object> channel = (Map<String, Object>) properties.get("channel");
+        assertEquals(List.of("telegram", "push"), channel.get("enum"));
+    }
+
     @Test
     void notifyDefaultsToNotUrgent() throws Exception {
         new NotifyTool(gate).execute(Map.of("channel", "telegram", "message", "Hi", "reason", "r"));

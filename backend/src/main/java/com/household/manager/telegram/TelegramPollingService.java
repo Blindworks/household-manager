@@ -1,6 +1,7 @@
 package com.household.manager.telegram;
 
 import com.household.manager.agent.AgentProposalService;
+import com.household.manager.agent.ProposalStatus;
 import com.household.manager.ai.AiProperties;
 import com.household.manager.telegram.dto.TelegramCallbackQuery;
 import com.household.manager.telegram.dto.TelegramUpdate;
@@ -24,6 +25,8 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 @Slf4j
 public class TelegramPollingService {
+
+    static final int CALLBACK_ANSWER_MAX = 190;
 
     private final TelegramProperties properties;
     private final AiProperties aiProperties;
@@ -120,8 +123,11 @@ public class TelegramPollingService {
         }
         String answer;
         try {
-            proposalService.decide(parsed.get().proposalId(), parsed.get().decision(), decidedBy(callback, chatId));
-            answer = "Erledigt";
+            var decided = proposalService.decide(parsed.get().proposalId(), parsed.get().decision(),
+                    decidedBy(callback, chatId));
+            answer = decided != null && decided.getStatus() == ProposalStatus.FAILED
+                    ? abbreviate("Fehlgeschlagen: " + decided.getError(), CALLBACK_ANSWER_MAX)
+                    : "Erledigt";
         } catch (IllegalStateException | IllegalArgumentException ex) {
             answer = ex.getMessage() != null ? ex.getMessage() : "Nicht mehr entscheidbar";
         } catch (Exception ex) {
@@ -129,6 +135,11 @@ public class TelegramPollingService {
             answer = "Fehler, siehe Admin-Seite";
         }
         answer(callback.id(), answer);
+    }
+
+    /** Telegram begrenzt den Text einer Knopf-Antwort auf 200 Zeichen; mit etwas Reserve kuerzen. */
+    private static String abbreviate(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max - 1) + "…";
     }
 
     private String decidedBy(TelegramCallbackQuery callback, long chatId) {

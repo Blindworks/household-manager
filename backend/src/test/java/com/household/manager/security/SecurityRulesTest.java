@@ -50,6 +50,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
@@ -58,6 +60,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -93,8 +98,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ZigbeeManagementController.class, AgentController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
-@Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class})
+@Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
+        SecurityRulesTest.FixedClock.class})
 class SecurityRulesTest {
+
+    /** {@code AgentController} braucht das Clock-Bean (Startzeit des manuellen Laufs). */
+    @TestConfiguration
+    static class FixedClock {
+        @Bean
+        Clock clock() {
+            return Clock.fixed(Instant.parse("2026-10-12T10:00:00Z"), ZoneId.of("Europe/Berlin"));
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;

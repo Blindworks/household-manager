@@ -20,6 +20,12 @@ public interface AgentProposalRepository extends JpaRepository<AgentProposal, Lo
 
     long countByStatus(ProposalStatus status);
 
+    /**
+     * Zählt nur zugestellte Zeilen: in der Ruhezeit zurückgehaltene Vorschläge und Nachrichten hat
+     * noch niemand gesehen, sie dürfen das Limit offener Vorschläge nicht belegen.
+     */
+    long countByStatusAndDeliveredAtIsNotNull(ProposalStatus status);
+
     boolean existsByStatusAndTarget(ProposalStatus status, String target);
 
     List<AgentProposal> findTop50ByOrderByCreatedAtDesc();

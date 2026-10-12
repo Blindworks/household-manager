@@ -101,34 +101,44 @@ public class AgentProposalService {
 
     /**
      * Führt eine freigabefreie Aktion sofort aus und protokolliert sie trotzdem als Zeile, damit die
-     * Admin-Seite und der nächste Prompt sehen, was der Agent getan hat. Eine Info-Nachricht geht nur
-     * bei echter Ausführung raus — "war schon so" ist keine Nachricht wert —, ein Fehlschlag wird
-     * dagegen immer gemeldet, sonst bliebe er unbemerkt.
+     * Admin-Seite und der nächste Prompt sehen, was der Agent getan hat.
+     *
+     * <p>Info-Nachrichten: nur bei echter Ausführung ("war schon so" ist keine Nachricht wert), ein
+     * Fehlschlag dagegen immer, sonst bliebe er unbemerkt. Bei NOTIFY gibt es keine Erfolgs-Info — die
+     * Nachricht IST die Aktion, eine zweite käme doppelt an. In der Ruhezeit geht keine Info-Nachricht
+     * raus (Zeile und Audit genügen), außer die Aktion ist {@code urgent}.
+     *
+     * <p>Eine nicht dringende NOTIFY in der Ruhezeit wird gar nicht ausgeführt, sondern als PENDING ohne
+     * {@code deliveredAt} gespeichert; {@link #deliverPending} sendet sie nach dem Ende der Ruhezeit.
      */
     public AgentProposal executeDirect(AgentAction action) {
         LocalDateTime now = LocalDateTime.now(clock);
-        AgentProposal p = AgentProposal.builder()
+        boolean quiet = !action.urgent() && quietHours.isQuietNow();
+        AgentProposal.AgentProposalBuilder row = AgentProposal.builder()
                 .actionClass(action.actionClass())
                 .target(action.target())
                 .actionJson(AgentActionJson.write(objectMapper, action))
                 .reason(abbreviate(reasonOf(action), ERROR_MAX))
                 .urgent(action.urgent())
-                .decidedBy(SYSTEM_ACTOR)
-                .decidedAt(now)
-                .createdAt(now)
-                .build();
+                .createdAt(now);
+        if (quiet && action.actionClass() == ActionClass.NOTIFY) {
+            return repository.save(row.status(ProposalStatus.PENDING).deliveredAt(null).build());
+        }
+        AgentProposal p = row.decidedBy(SYSTEM_ACTOR).decidedAt(now).build();
         String info;
         try {
             ActionOutcome outcome = executor.execute(action);
             p.setStatus(ProposalStatus.EXECUTED);
-            info = outcome.alreadySatisfied() ? null : "Hausverstand: " + action.describe() + " — " + reasonOf(action);
+            info = outcome.alreadySatisfied() || action.actionClass() == ActionClass.NOTIFY
+                    ? null
+                    : "Hausverstand: " + action.describe() + " — " + reasonOf(action);
         } catch (Exception ex) {
             p.setStatus(ProposalStatus.FAILED);
             p.setError(abbreviate(messageOf(ex), ERROR_MAX));
             info = "Hausverstand: " + action.describe() + " fehlgeschlagen: " + messageOf(ex);
         }
         AgentProposal saved = repository.save(p);
-        if (info != null) {
+        if (info != null && !quiet) {
             notifier.sendInfo(info);
         }
         return saved;
@@ -181,14 +191,19 @@ public class AgentProposalService {
         return p;
     }
 
-    /** Unbeantwortete Vorschläge verfallen: eine Stunden alte Frage passt meist nicht mehr zur Lage. */
+    /**
+     * Unbeantwortete Vorschläge verfallen: eine Stunden alte Frage passt meist nicht mehr zur Lage. Die
+     * Frist läuft ab der Zustellung, nicht ab dem Anlegen — ein um 23:00 in der Ruhezeit zurückgehaltener
+     * Vorschlag verfiele sonst um 01:00 und käme morgens nie an. Nicht zugestellte Zeilen (auch
+     * zurückgehaltene Nachrichten) bleiben deshalb hier unberührt; sie stellt {@link #deliverPending} zu.
+     */
     public int expireStale() {
         try {
             LocalDateTime now = LocalDateTime.now(clock);
             LocalDateTime cutoff = now.minusHours(properties.getProposalTtlHours());
             int expired = 0;
             for (AgentProposal p : repository.findByStatus(ProposalStatus.PENDING)) {
-                if (p.getCreatedAt() == null || !p.getCreatedAt().isBefore(cutoff)) {
+                if (p.getDeliveredAt() == null || !p.getDeliveredAt().isBefore(cutoff)) {
                     continue;
                 }
                 try {
@@ -222,6 +237,11 @@ public class AgentProposalService {
      * dieser Zeit auf der Admin-Seite entscheidet, dessen Status würde mit PENDING überschrieben — samt
      * frischer Knöpfe, über die die Aktion ein zweites Mal liefe. Beide Übergänge laufen deshalb als
      * bedingte UPDATEs, die nur auf einer noch offenen Zeile greifen.
+     *
+     * <p>Zurückgehaltene Nachrichten (NOTIFY) sind keine Frage, sie werden ohne Knöpfe gesendet:
+     * erst per Claim auf EXECUTED beansprucht, dann gesendet (höchstens einmal, auch bei zwei parallelen
+     * Läufen). Scheitert der Versand, wird die schon beanspruchte Zeile auf FAILED samt Fehlertext gespeichert —
+     * ohne Wettlauf mit {@code decide}, dessen Claim auf PENDING dann ins Leere geht.
      */
     public int deliverPending() {
         try {
@@ -235,6 +255,12 @@ public class AgentProposalService {
                 }
                 try {
                     LocalDateTime now = LocalDateTime.now(clock);
+                    if (p.getActionClass() == ActionClass.NOTIFY) {
+                        if (deliverHeldNotification(p, now)) {
+                            handled++;
+                        }
+                        continue;
+                    }
                     if (executor.isSatisfied(actionOf(p))) {
                         if (repository.claim(p.getId(), ProposalStatus.PENDING, ProposalStatus.EXECUTED,
                                 SYSTEM_ACTOR, now) == 0) {
@@ -260,6 +286,24 @@ public class AgentProposalService {
             log.warn("Nachreichen der Vorschläge fehlgeschlagen: {}", ex.getMessage());
             return 0;
         }
+    }
+
+    private boolean deliverHeldNotification(AgentProposal p, LocalDateTime now) {
+        if (repository.claim(p.getId(), ProposalStatus.PENDING, ProposalStatus.EXECUTED, SYSTEM_ACTOR, now) == 0) {
+            return false;
+        }
+        p.setStatus(ProposalStatus.EXECUTED);
+        p.setDecidedBy(SYSTEM_ACTOR);
+        p.setDecidedAt(now);
+        try {
+            executor.execute(actionOf(p));
+        } catch (Exception ex) {
+            log.warn("Zurückgehaltene Nachricht {} nicht zustellbar: {}", p.getId(), messageOf(ex));
+            p.setStatus(ProposalStatus.FAILED);
+            p.setError(abbreviate(messageOf(ex), ERROR_MAX));
+            repository.save(p);
+        }
+        return true;
     }
 
     public long countPending() {

@@ -144,6 +144,23 @@ class AgentRunServiceTest {
     }
 
     @Test
+    void toolBlocksAreNotExecutedWhenBudgetRunsOutDuringApiCall() {
+        properties.setRunTimeoutSeconds(1);
+        when(client.createMessage(any())).thenAnswer(inv -> {
+            Thread.sleep(1_100);
+            return toolUse("t1");
+        });
+
+        AgentRunResult r = service().run(scheduled());
+
+        assertFalse(r.success());
+        assertEquals("Zeitbudget überschritten", r.error());
+        assertEquals(0, r.toolCalls());
+        verify(registry, never()).execute(any(), any(), any());
+        verify(client, times(1)).createMessage(any());
+    }
+
+    @Test
     void apiFailureIsRecordedNotThrown() {
         when(client.createMessage(any())).thenThrow(new AiException("down", null));
 

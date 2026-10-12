@@ -12,8 +12,15 @@ import org.springframework.stereotype.Component;
  * umgehen kann), dann die Richtlinie der Aktionsklasse: DIRECT führt aus, PROPOSE stellt einen
  * Vorschlag zur Freigabe.
  *
+ * <p>Vor der Richtlinie wird das Ziel frisch gegen den Ist-Zustand geprüft ({@link AgentActionExecutor#isSatisfied}):
+ * ein unbekanntes oder erfundenes Ziel (das Modell kennt Entity-IDs nur aus dem Snapshot) und ein nicht
+ * schaltbarer Zustand enden als Tool-Fehler fürs Modell — ohne Vorschlag und ohne Telegram-Nachricht —, und
+ * ein bereits erreichtes Ziel erzeugt weder Vorschlag noch Ausführung. Das gilt für DIRECT und PROPOSE gleich.
+ *
  * <p>Duplikat- und Limitprüfung gelten nur im Vorschlagspfad: direkte Aktionen belegen keinen
- * offenen Vorschlag, und eine Benachrichtigung soll nie am Limit offener Vorschläge scheitern.
+ * offenen Vorschlag, und eine Benachrichtigung soll nie am Limit offener Vorschläge scheitern. Das Limit
+ * zählt nur zugestellte Vorschläge — in der Ruhezeit zurückgehaltene hat noch niemand gesehen. Die
+ * Doppel-Ziel-Sperre zählt dagegen auch sie, sonst stünden morgens zwei Fragen fürs selbe Ziel da.
  */
 @Component
 @RequiredArgsConstructor
@@ -26,21 +33,30 @@ public class AgentActionGate {
     private final AgentProposalService proposalService;
     private final AgentProposalRepository repository;
     private final AgentProperties properties;
+    private final AgentActionExecutor executor;
 
+    /**
+     * Wirft {@link IllegalArgumentException} bei ungültiger Aktion oder unbekanntem/nicht schaltbarem Ziel —
+     * das Tool-Register macht daraus einen Tool-Fehler, den das Modell sieht.
+     */
     public GateResult submit(AgentAction action) {
         validate(action);
+        if (action.actionClass() != ActionClass.NOTIFY && executor.isSatisfied(action)) {
+            return new GateResult(action.describe() + " ist bereits so — nichts zu tun.", null, false);
+        }
         if (policyService.policyFor(action.actionClass()) == ActionPolicy.DIRECT) {
             AgentProposal row = proposalService.executeDirect(action);
-            String message = row.getStatus() == ProposalStatus.FAILED
-                    ? "Fehlgeschlagen: " + row.getError()
-                    : "Ausgeführt: " + action.describe();
-            return new GateResult(message, row.getId(), true);
+            return switch (row.getStatus()) {
+                case FAILED -> new GateResult("Fehlgeschlagen: " + row.getError(), row.getId(), true);
+                case PENDING -> new GateResult("Nachricht wird nach der Ruhezeit zugestellt.", row.getId(), false);
+                default -> new GateResult("Ausgeführt: " + action.describe(), row.getId(), true);
+            };
         }
         if (repository.existsByStatusAndTarget(ProposalStatus.PENDING, action.target())) {
             return new GateResult("Für " + action.target()
                     + " ist bereits ein Vorschlag offen — nicht erneut vorschlagen.", null, false);
         }
-        if (repository.countByStatus(ProposalStatus.PENDING) >= properties.getMaxOpenProposals()) {
+        if (repository.countByStatusAndDeliveredAtIsNotNull(ProposalStatus.PENDING) >= properties.getMaxOpenProposals()) {
             return new GateResult("Es sind bereits " + properties.getMaxOpenProposals()
                     + " Vorschläge offen — keine weiteren, bis entschieden wurde.", null, false);
         }

@@ -4,12 +4,14 @@ import com.household.manager.calendar.CalendarEventService;
 import com.household.manager.dto.CalendarOccurrenceResponse;
 import com.household.manager.dto.CalendarPersonView;
 import com.household.manager.dto.CurrentTemperatureReading;
+import com.household.manager.dto.SwitchResponse;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.entitystate.HouseModes;
 import com.household.manager.entitystate.PowerConsumerQueryService;
+import com.household.manager.entitystate.SwitchQueryService;
 import com.household.manager.entitystate.mapper.EntityStateResponseMapper;
 import com.household.manager.model.entity.AgentProposal;
 import com.household.manager.model.entity.EntityState;
@@ -51,8 +53,13 @@ import java.util.stream.Collectors;
  * der Rest bleibt erhalten — ein halber Zustand ist besser als gar keiner, und der Agent soll
  * die Luecke sehen statt einen geratenen Wert. Ein ausgefallener Sensor wird nie als
  * "geschlossen"/"aus" dargestellt, sondern als "unbekannt".
- * Die Gesamtlaenge ist gedeckelt, damit ein ausufernder Abschnitt (Notizen, Vorschlaege) den
- * Prompt nicht sprengt.
+ * Die Gesamtlaenge ist gedeckelt, damit ein ausufernder Abschnitt den Prompt nicht sprengt. Weil die
+ * Kappung hinten abschneidet, stehen die bindenden Abschnitte (Zeit, Freigaben, USER-Notizen) vorn und
+ * die Vorschlagshistorie zuletzt; Notizen und Vorschlaege sind zusaetzlich je fuer sich gedeckelt, damit
+ * sie die Zustandsabschnitte nicht verdraengen.
+ * <p>
+ * Modi, Helfer und Schalter tragen ihre Entity-ID: die Schalt-Tools verlangen eine ID aus dem Snapshot,
+ * ohne sie muesste das Modell raten (und die Schleuse lehnt erfundene Ziele dann ab).
  */
 @Component
 @RequiredArgsConstructor
@@ -60,6 +67,8 @@ import java.util.stream.Collectors;
 public class HouseSnapshotBuilder {
 
     static final int MAX_LENGTH = 12_000;
+    static final int MAX_NOTES_LENGTH = 4_000;
+    static final int MAX_PROPOSALS_LENGTH = 2_000;
     private static final String TRUNCATION_MARK = "\n… [gekürzt]";
     private static final long STALE_MINUTES = 60;
     private static final int TOP_CONSUMERS = 10;
@@ -83,6 +92,7 @@ public class HouseSnapshotBuilder {
     private final EntityStateService entityStateService;
     private final EntityStateResponseMapper entityMapper;
     private final PowerConsumerQueryService powerConsumerQueryService;
+    private final SwitchQueryService switchQueryService;
     private final PetSupplyService petSupplyService;
     private final CalendarEventService calendarEventService;
     private final NetworkStatusService networkStatusService;
@@ -96,9 +106,12 @@ public class HouseSnapshotBuilder {
     public String build() {
         List<String> sections = List.of(
                 section("Zeit", this::timeSection),
+                section("Freigaben", this::policiesSection),
+                section("Notizen", "keine", this::notesSection),
                 section("Anwesenheit", this::presenceSection),
                 section("Modi", this::modesSection),
                 section("Heizung", this::heatingSection),
+                section("Schalter", this::switchesSection),
                 section("Temperaturen", this::temperatureSection),
                 section("Kontakte offen", "keine", this::contactsSection),
                 section("Verbraucher", this::consumersSection),
@@ -108,9 +121,7 @@ public class HouseSnapshotBuilder {
                 section("Netzwerk", this::networkSection),
                 section("Zigbee", this::zigbeeSection),
                 section("Haustür", this::locksSection),
-                section("Offene und letzte Vorschläge (24 h)", "keine", this::proposalsSection),
-                section("Freigaben", this::policiesSection),
-                section("Notizen", "keine", this::notesSection));
+                section("Offene und letzte Vorschläge (24 h)", "keine", this::proposalsSection));
         String snapshot = String.join("\n\n", sections);
         return snapshot.length() <= MAX_LENGTH
                 ? snapshot
@@ -197,7 +208,7 @@ public class HouseSnapshotBuilder {
 
     private String modesSection() {
         return houseModeQueryService.listModes().stream()
-                .map(mode -> mode.displayName() + ": " + onOff(mode.state()))
+                .map(mode -> mode.displayName() + " (" + mode.entityId() + "): " + onOff(mode.state()))
                 .collect(Collectors.joining(", "));
     }
 
@@ -207,6 +218,22 @@ public class HouseSnapshotBuilder {
             case "off" -> "aus";
             default -> state == null || state.isBlank() ? "unbekannt" : state;
         };
+    }
+
+    private String switchesSection() {
+        return switchQueryService.listSwitches(null).stream().map(this::switchLine).collect(Collectors.joining("\n"));
+    }
+
+    /** Alles ausser on/off (unavailable, unknown) ist "unbekannt" — nie als "aus" darstellen. */
+    private String switchLine(SwitchResponse s) {
+        String state = switch (s.state() == null ? "" : s.state()) {
+            case "on" -> "an";
+            case "off" -> "aus";
+            default -> "unbekannt";
+        };
+        String power = s.powerWatts() == null ? ""
+                : ", " + Math.round(s.powerWatts()) + " W";
+        return s.displayName() + " (" + s.entityId() + "): " + state + power;
     }
 
     private String heatingSection() {
@@ -290,7 +317,7 @@ public class HouseSnapshotBuilder {
             if (HouseModes.isMode(entityMapper.parseAttributes(helper.getAttributes()))) {
                 continue;
             }
-            lines.add(displayName(helper) + ": " + onOff(helper.getState())
+            lines.add(displayName(helper) + " (" + helper.getEntityId() + "): " + onOff(helper.getState())
                     + (helper.getLastChanged() == null ? "" : " (seit " + formatTimeOrDate(helper.getLastChanged()) + ")"));
         }
         return String.join("\n", lines);
@@ -352,7 +379,8 @@ public class HouseSnapshotBuilder {
     }
 
     private String proposalsSection() {
-        return proposalService.recentForPrompt().stream().map(this::proposalLine).collect(Collectors.joining("\n"));
+        return capped(proposalService.recentForPrompt().stream().map(this::proposalLine)
+                .collect(Collectors.joining("\n")), MAX_PROPOSALS_LENGTH, "… [Vorschläge gekürzt]");
     }
 
     private String proposalLine(AgentProposal p) {
@@ -372,6 +400,10 @@ public class HouseSnapshotBuilder {
     }
 
     private String notesSection() {
-        return noteService.renderForPrompt();
+        return capped(noteService.renderForPrompt(), MAX_NOTES_LENGTH, "… [Notizen gekürzt]");
+    }
+
+    private static String capped(String text, int max, String mark) {
+        return text == null || text.length() <= max ? text : text.substring(0, max) + "\n" + mark;
     }
 }

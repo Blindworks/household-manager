@@ -1,6 +1,5 @@
 package com.household.manager.agent;
 
-import com.household.manager.alexa.AlexaTtsMode;
 import com.household.manager.audit.AuditActor;
 import com.household.manager.audit.AuditService;
 import com.household.manager.dto.ModeResponse;
@@ -13,7 +12,6 @@ import com.household.manager.nuki.NukiLockAction;
 import com.household.manager.nuki.NukiLockService;
 import com.household.manager.nuki.dto.NukiLockResponse;
 import com.household.manager.push.PushNotificationService;
-import com.household.manager.service.AlexaAnnouncementService;
 import com.household.manager.tapo.hub.ThermostatMode;
 import com.household.manager.telegram.TelegramNotificationService;
 import com.household.manager.thermostat.ThermostatDto;
@@ -21,8 +19,6 @@ import com.household.manager.thermostat.ThermostatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * Die einzige Schleuse, ueber die der Hausverstand Geraete anfasst. Der Zustand wird vor
@@ -48,7 +44,6 @@ public class AgentActionExecutor {
     private final NukiLockService nukiLockService;
     private final TelegramNotificationService telegramNotificationService;
     private final PushNotificationService pushNotificationService;
-    private final AlexaAnnouncementService alexaAnnouncementService;
     private final AuditService auditService;
 
     /** Fuehrt die Aktion aus, sofern das Ziel nicht schon erreicht ist; wirft bei Geraetefehlern. */
@@ -192,6 +187,11 @@ public class AgentActionExecutor {
 
     // --- NOTIFY ---
 
+    /**
+     * Nur Telegram und Push. Alexa ist bewusst kein Kanal: {@code AlexaAnnouncementService.announce}
+     * verlangt eine Geräteliste, die der Hausverstand nicht kennt — mit leerer Liste scheiterte jede
+     * Ansage. Erst mit einer konfigurierbaren Zielgeräte-Liste wieder aufnehmen.
+     */
     private ActionOutcome notify(AgentAction action) {
         String message = action.stringParam("message");
         if (message == null || message.isBlank()) {
@@ -200,8 +200,7 @@ public class AgentActionExecutor {
         switch (String.valueOf(action.stringParam("channel"))) {
             case "telegram" -> telegramNotificationService.sendToAllowedChats(message);
             case "push" -> pushNotificationService.sendToAll(PUSH_TITLE, message);
-            case "alexa" -> alexaAnnouncementService.announce(message, List.of(), AlexaTtsMode.ANNOUNCE);
-            default -> throw new IllegalArgumentException("channel muss telegram, push oder alexa sein");
+            default -> throw new IllegalArgumentException("channel muss telegram oder push sein");
         }
         return new ActionOutcome(false, "Nachricht gesendet.");
     }
