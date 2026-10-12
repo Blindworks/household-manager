@@ -144,7 +144,20 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     if (!options.fromMap) {
       this.map.panTo(marker.getLatLng(), { animate: true });
       marker.openPopup();
+      this.bringMapIntoView();
     }
+  }
+
+  /**
+   * Handy: die Karte steht ueber der Liste, und ein Tipp auf eine Zeile waere
+   * sonst unsichtbar (die Karte ist dann ausser Bild). Auf dem Tablet stehen
+   * beide nebeneinander, dort bleibt es beim Verschieben der Karte.
+   */
+  private bringMapIntoView(): void {
+    if (!window.matchMedia('(max-width: 600px)').matches) {
+      return;
+    }
+    this.mapContainer?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /**

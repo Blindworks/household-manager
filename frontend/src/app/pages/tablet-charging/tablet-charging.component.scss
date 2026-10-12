@@ -418,3 +418,98 @@
     box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.18), 0 0 18px rgba(255, 255, 255, 0.35);
   }
 }
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Karte und Liste stehen deshalb
+// untereinander: die Karte mit fester Hoehe oben, die Liste waechst darunter
+// mit der Seite statt in sich zu scrollen.
+// Die Karte laesst sich mit einem Finger ziehen (ihr Kern ist das Erkunden des
+// Umkreises) - dafuer faengt sie dort Wischgesten ab; die Seite scrollt man
+// ausserhalb der Karte.
+@media (max-width: 600px) {
+  .tablet-charging {
+    flex: 0 0 auto;
+
+    // Aktualisieren-Knopf mit 44 px Touch-Ziel; "Stand: ..." darf umbrechen.
+    &__controls {
+      gap: 8px;
+    }
+
+    &__stand {
+      font-size: 0.85rem;
+    }
+
+    &__refresh {
+      min-height: 44px;
+      padding: 0.5rem 0.8rem;
+      white-space: nowrap;
+    }
+
+    &__unconfigured {
+      min-height: 120px;
+    }
+
+    // minmax(0, 1fr) statt 1fr: ein Spaltenmindestmass aus dem Inhalt (lange
+    // Namen, Preise) darf die Spalte nicht ueber die Bildschirmbreite dehnen.
+    &__body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto;
+      gap: 12px;
+    }
+
+    &__body > * {
+      min-width: 0;
+    }
+
+    &__map {
+      height: 300px;
+    }
+
+    &__list {
+      overflow: visible;
+      padding-right: 0;
+    }
+
+    &__hint {
+      min-height: 80px;
+    }
+
+    // Name oben ueber die ganze Breite, darunter die Eckdaten: nebeneinander
+    // blieb dem Namen kaum Platz, er wurde zu "..." gekuerzt.
+    &__row-head {
+      flex-wrap: wrap;
+      row-gap: 0.1rem;
+    }
+
+    // Einzug als Innenabstand, nicht als Aussenrand: flex-basis 100% plus
+    // margin-left machte die Zeile um den Einzug breiter als die Karte, die
+    // Eckdaten ragten rechts heraus.
+    &__meta {
+      flex: 0 0 100%;
+      box-sizing: border-box;
+      padding-left: 1.6rem;
+      white-space: normal;
+    }
+
+    &__sub {
+      flex-wrap: wrap;
+    }
+
+    // Ladepunkte: Leistung, Status, Preis und Dauer duerfen umbrechen.
+    &__point {
+      flex-wrap: wrap;
+      gap: 0.1rem 0.8rem;
+    }
+
+    &__row {
+      padding: 0.7rem 0.8rem;
+    }
+  }
+
+  // Popup nicht breiter als die Karte (Standard: min-width 250 px plus Rand).
+  :host ::ng-deep .leaflet-popup-content {
+    min-width: 0;
+    width: 230px;
+  }
+}
