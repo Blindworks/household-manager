@@ -73,7 +73,7 @@ public class AgentController {
     }
 
     @PutMapping("/settings")
-    public SettingsDto updateSettings(@RequestBody SettingsDto request) {
+    public SettingsDto updateSettings(@Valid @RequestBody SettingsDto request) {
         settingsService.setActive(request.active());
         return new SettingsDto(settingsService.isActive());
     }

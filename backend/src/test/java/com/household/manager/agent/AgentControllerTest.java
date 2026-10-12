@@ -15,11 +15,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -128,5 +131,27 @@ class AgentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\":\"PREFERENCE\",\"text\":\"  \"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unknownActionClassGives400() throws Exception {
+        mockMvc.perform(put("/v1/agent/policies/FOO")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"policy\":\"DIRECT\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void invalidPolicyEnumInBodyGives400() throws Exception {
+        mockMvc.perform(put("/v1/agent/policies/SWITCH")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"policy\":\"MAYBE\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void settingsWithoutActiveGives400() throws Exception {
+        mockMvc.perform(put("/v1/agent/settings")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        verify(settingsService, never()).setActive(anyBoolean());
     }
 }

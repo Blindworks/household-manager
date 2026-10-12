@@ -21,7 +21,7 @@ public final class AgentDtos {
     public record SummaryResponse(long pendingProposals, boolean active, boolean telegramConfigured) {
     }
 
-    public record SettingsDto(boolean active) {
+    public record SettingsDto(@NotNull Boolean active) {
     }
 
     public record PolicyDto(ActionClass actionClass, ActionPolicy policy) {
