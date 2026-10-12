@@ -7,6 +7,7 @@ import com.household.manager.repository.AgentProposalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -50,6 +51,7 @@ class AgentProposalServiceTest {
         properties.setProposalTtlHours(2);
         clock = Clock.fixed(ZonedDateTime.of(NOW, BERLIN).toInstant(), BERLIN);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(1);
     }
 
     private AgentProposalService service() {
@@ -127,6 +129,7 @@ class AgentProposalServiceTest {
         assertEquals("Benedikt", p.getDecidedBy());
         assertEquals(NOW, p.getDecidedAt());
         assertNull(p.getError());
+        verify(repository).claim(1L, ProposalStatus.PENDING, ProposalStatus.APPROVED, "Benedikt", NOW);
         verify(executor).execute(heating21());
         verify(notifier).markDecided(eq(p), contains("Benedikt"));
         verify(auditService).record(eq("agent.proposal.decide"), contains("APPROVE"));
@@ -160,6 +163,53 @@ class AgentProposalServiceTest {
     }
 
     @Test
+    void failingExecutorIsSavedAsFailedBeforeButtonsAreRemoved() {
+        AgentProposal p = pending(1L);
+        when(repository.findById(1L)).thenReturn(Optional.of(p));
+        when(executor.execute(any())).thenThrow(new IllegalStateException("Hub weg"));
+        ArgumentCaptor<AgentProposal> saved = ArgumentCaptor.forClass(AgentProposal.class);
+        ProposalStatus[] statusAtSave = new ProposalStatus[1];
+        when(repository.save(saved.capture())).thenAnswer(inv -> {
+            statusAtSave[0] = inv.<AgentProposal>getArgument(0).getStatus();
+            return inv.getArgument(0);
+        });
+
+        service().decide(1L, ProposalDecision.APPROVE, "Benedikt");
+
+        assertEquals(ProposalStatus.FAILED, statusAtSave[0]);
+        InOrder order = inOrder(repository, executor, auditService, notifier);
+        order.verify(repository).claim(1L, ProposalStatus.PENDING, ProposalStatus.APPROVED, "Benedikt", NOW);
+        order.verify(executor).execute(any());
+        order.verify(repository).save(p);
+        order.verify(auditService).record(eq("agent.proposal.decide"), anyString());
+        order.verify(notifier).markDecided(eq(p), contains("Fehlgeschlagen"));
+    }
+
+    @Test
+    void secondDecisionLosesRaceWhenClaimReturnsZero() {
+        AgentProposal p = pending(1L);
+        when(repository.findById(1L)).thenReturn(Optional.of(p));
+        when(repository.claim(anyLong(), any(), any(), any(), any())).thenReturn(0);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> service().decide(1L, ProposalDecision.APPROVE_AND_REMEMBER, "Benedikt"));
+
+        assertTrue(ex.getMessage().contains("bereits entschieden"));
+        verifyNoInteractions(executor, noteService, notifier, auditService);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void rejectClaimsAsRejected() {
+        AgentProposal p = pending(1L);
+        when(repository.findById(1L)).thenReturn(Optional.of(p));
+
+        service().decide(1L, ProposalDecision.REJECT, "Benedikt");
+
+        verify(repository).claim(1L, ProposalStatus.PENDING, ProposalStatus.REJECTED, "Benedikt", NOW);
+    }
+
+    @Test
     void decideRejectCreatesObservationNote() {
         AgentProposal p = pending(1L);
         when(repository.findById(1L)).thenReturn(Optional.of(p));
@@ -167,8 +217,11 @@ class AgentProposalServiceTest {
         service().decide(1L, ProposalDecision.REJECT, "Benedikt");
 
         assertEquals(ProposalStatus.REJECTED, p.getStatus());
-        verify(noteService).create(eq(NoteKind.OBSERVATION), contains("abgelehnt"), eq(NoteSource.USER),
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(noteService).create(eq(NoteKind.OBSERVATION), text.capture(), eq(NoteSource.USER),
                 eq(LocalDateTime.of(2026, 10, 13, 12, 0)));
+        assertEquals("Benedikt hat abgelehnt: Heizung 3 auf 21.0 °C", text.getValue());
+        assertFalse(text.getValue().contains("Wohnzimmer ist kalt"));
         verify(notifier).markDecided(eq(p), contains("Abgelehnt"));
         verifyNoInteractions(executor);
     }
@@ -185,7 +238,20 @@ class AgentProposalServiceTest {
         ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
         verify(noteService).create(eq(NoteKind.PREFERENCE), text.capture(), eq(NoteSource.USER), isNull());
         assertTrue(text.getValue().contains("stimmt zu"));
-        assertTrue(text.getValue().contains("Wohnzimmer ist kalt"));
+        assertEquals("Benedikt stimmt zu: Heizung 3 auf 21.0 °C", text.getValue());
+        // Die Begruendung ist freier Modelltext und darf keine Nutzer-Autoritaet bekommen.
+        assertFalse(text.getValue().contains("Wohnzimmer ist kalt"));
+    }
+
+    @Test
+    void decisionNoteUsesTruncatedDecidedBy() {
+        AgentProposal p = pending(1L);
+        when(repository.findById(1L)).thenReturn(Optional.of(p));
+
+        service().decide(1L, ProposalDecision.REJECT, "x".repeat(150));
+
+        verify(noteService).create(eq(NoteKind.OBSERVATION), startsWith("x".repeat(100) + " hat abgelehnt"),
+                eq(NoteSource.USER), any());
     }
 
     @Test
@@ -197,6 +263,7 @@ class AgentProposalServiceTest {
         assertThrows(IllegalStateException.class, () -> service().decide(1L, ProposalDecision.APPROVE, "x"));
 
         verifyNoInteractions(executor, notifier);
+        verify(repository, never()).claim(anyLong(), any(), any(), any(), any());
     }
 
     @Test

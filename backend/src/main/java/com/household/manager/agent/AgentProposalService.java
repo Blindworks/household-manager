@@ -7,7 +7,6 @@ import com.household.manager.repository.AgentProposalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -138,8 +137,14 @@ public class AgentProposalService {
      * Entscheidet einen offenen Vorschlag. Nur {@code PENDING} ist entscheidbar — ein zweiter Knopfdruck
      * (anderer Chat, Admin-Seite) darf die Aktion nicht ein zweites Mal auslösen. Eine Ablehnung wird
      * 24 h als Beobachtung gemerkt, damit der Agent nicht im nächsten Lauf dasselbe wieder fragt.
+     *
+     * <p>Bewusst NICHT {@code @Transactional}: der Vorschlag wird zuerst per {@link AgentProposalRepository#claim}
+     * atomar von PENDING weg geschaltet (Schutz gegen den Doppelklick — der zweite Aufrufer verliert), erst
+     * danach läuft die Aktion außerhalb jeder Transaktion. Liefe sie in einer, könnte eine Exception eines
+     * transaktionalen Geräte-Services die umgebende Transaktion auf rollback-only setzen, und der Status
+     * {@code FAILED} ginge beim Commit verloren. {@code markDecided} kommt zuletzt, nach dem Speichern des
+     * Endstands, damit die Knöpfe nie verschwinden, ohne dass die Entscheidung gespeichert ist.
      */
-    @Transactional
     public AgentProposal decide(long id, ProposalDecision decision, String decidedBy) {
         AgentProposal p = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Unbekannter Vorschlag: " + id));
@@ -149,19 +154,23 @@ public class AgentProposalService {
         AgentAction action = AgentActionJson.read(objectMapper, p.getActionJson());
         LocalDateTime now = LocalDateTime.now(clock);
         String actor = abbreviate(decidedBy == null || decidedBy.isBlank() ? "unbekannt" : decidedBy, DECIDED_BY_MAX);
+        ProposalStatus claimed = decision == ProposalDecision.REJECT ? ProposalStatus.REJECTED : ProposalStatus.APPROVED;
+        if (repository.claim(id, ProposalStatus.PENDING, claimed, actor, now) == 0) {
+            throw new IllegalStateException("Vorschlag #" + id + " ist bereits entschieden.");
+        }
+        p.setStatus(claimed);
         p.setDecidedBy(actor);
         p.setDecidedAt(now);
         String label;
         if (decision == ProposalDecision.REJECT) {
-            p.setStatus(ProposalStatus.REJECTED);
             rememberQuietly(NoteKind.OBSERVATION, actor + " hat abgelehnt: " + action.describe(),
                     now.plusHours(REJECTION_MEMORY_HOURS));
             label = "Abgelehnt von " + actor;
         } else {
-            p.setStatus(ProposalStatus.APPROVED);
             if (decision == ProposalDecision.APPROVE_AND_REMEMBER) {
-                rememberQuietly(NoteKind.PREFERENCE,
-                        actor + " stimmt zu: " + action.describe() + " (" + p.getReason() + ")", null);
+                // Bewusst ohne die Begruendung des Modells: die Notiz traegt Nutzer-Autoritaet und ist fuer den
+                // Agenten unveraenderbar — freier Modelltext darin waere eine Selbstanweisung mit Nutzerrang.
+                rememberQuietly(NoteKind.PREFERENCE, actor + " stimmt zu: " + action.describe(), null);
             }
             label = runAction(p, action, "Ausgeführt von " + actor);
         }
