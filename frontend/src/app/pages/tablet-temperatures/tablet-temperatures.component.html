@@ -18,8 +18,11 @@
           class="tablet-temps__range"
           [class.tablet-temps__range--active]="isMetricActive(metric.value)"
           [attr.aria-pressed]="isMetricActive(metric.value)"
+          [attr.aria-label]="metric.label"
+          [title]="metric.label"
           (click)="toggleMetric(metric.value)">
-          {{ metric.label }}
+          <span class="material-symbols-outlined tablet-temps__metric-icon" aria-hidden="true">{{ metric.icon }}</span>
+          <span class="tablet-temps__metric-label">{{ metric.label }}</span>
         </button>
       }
     </div>

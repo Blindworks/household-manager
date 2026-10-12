@@ -40,6 +40,8 @@ export type Metric = 'temperature' | 'humidity';
 interface MetricOption {
   value: Metric;
   label: string;
+  /** Material-Symbol, das auf dem Handy statt des Wortes steht. */
+  icon: string;
 }
 
 /** Eine Sensorkachel des Rasters. */
@@ -103,8 +105,8 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
   ];
 
   readonly metrics: MetricOption[] = [
-    { value: 'temperature', label: 'Temperatur' },
-    { value: 'humidity', label: 'Luftfeuchte' }
+    { value: 'temperature', label: 'Temperatur', icon: 'thermostat' },
+    { value: 'humidity', label: 'Luftfeuchte', icon: 'water_drop' }
   ];
 
   /** Standardmaessig die letzten 24 Stunden (Nutzerentscheidung 2026-09-27). */
@@ -233,7 +235,12 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
    * bekommt eine eigene Y-Achse; fehlt eine, entfaellt sie samt Achse.
    */
   chartOptionsFor(series: TemperatureSensorSeries): Record<string, unknown> {
-    const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
+    // Handy: kleinere Schrift, weniger Teilstriche und eine Randberechnung, die
+    // die Achsenbeschriftung einrechnet. Sonst wird der lange Wert links
+    // abgeschnitten und die Zeitachse beschriftet sich uebereinander. Das Tablet
+    // behaelt seine festen Raender.
+    const compact = window.matchMedia('(max-width: 600px)').matches;
+    const axisLabel = { color: AXIS_COLOR, fontSize: compact ? 11 : 13 };
     const showTemperature = this.isMetricActive('temperature') && series.temperature.length > 0;
     const showHumidity = this.isMetricActive('humidity') && series.humidity.length > 0;
 
@@ -244,6 +251,7 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
       yAxis.push({
         type: 'value',
         scale: true,
+        ...(compact ? { splitNumber: 3 } : {}),
         axisLabel: { ...axisLabel, formatter: '{value} °C' },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       });
@@ -263,6 +271,7 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
       yAxis.push({
         type: 'value',
         scale: true,
+        ...(compact ? { splitNumber: 3 } : {}),
         axisLabel: { ...axisLabel, formatter: '{value} %' },
         // Nur die erste Achse zieht Hilfslinien, sonst ueberlagern sich zwei Raster.
         splitLine: showTemperature
@@ -282,15 +291,21 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
     }
 
     return {
-      grid: {
-        left: 56,
-        right: showTemperature && showHumidity ? 56 : 16,
-        top: 12,
-        bottom: 28,
-        containLabel: false
-      },
+      grid: compact
+        ? { left: 8, right: 8, top: 12, bottom: 4, containLabel: true }
+        : {
+            left: 56,
+            right: showTemperature && showHumidity ? 56 : 16,
+            top: 12,
+            bottom: 28,
+            containLabel: false
+          },
       tooltip: { trigger: 'axis' },
-      xAxis: { type: 'time', axisLabel },
+      xAxis: {
+        type: 'time',
+        axisLabel: compact ? { ...axisLabel, hideOverlap: true } : axisLabel,
+        ...(compact ? { splitNumber: 4 } : {})
+      },
       // Faerbt die Temperaturlinie abschnittsweise nach ihrem eigenen Wert; man
       // sieht damit im Verlauf, wann es warm wurde. Die Temperatur ist immer die
       // erste Serie, weil sie zuerst angehaengt wird - ohne sie entfaellt die

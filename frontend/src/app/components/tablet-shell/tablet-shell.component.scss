@@ -267,3 +267,99 @@
   text-transform: uppercase;
   transition: color 0.3s ease;
 }
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Tablet-Ansichten sind auf einen festen Wandtablet-Schirm gebaut: der
+// Inhalt teilt sich die Resthoehe, .lumina schneidet mit overflow: hidden. Auf
+// dem Handy scrollt stattdessen die Shell selbst, und der Inhalt bekommt seine
+// natuerliche Hoehe - die Seiten legen ihre Kachelhoehen dann selbst fest.
+// Oberhalb von 600 px aendert sich nichts.
+@media (max-width: 600px) {
+  .lumina {
+    --gutter: 14px;
+    gap: 12px;
+    // Unten kein Polster: die Ansichtsleiste klebt dort und bringt ihr eigenes mit.
+    padding: 14px 14px 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lumina__content {
+    flex: 0 0 auto;
+  }
+
+  // Zeile 1: Uhrzeit, Datum, Wetter; Zeile 2: Bedienelemente der Seite. Die
+  // Meta-Zeile loest sich auf, damit ihre Eintraege direkt mit der Uhrzeit in
+  // einer Zeile stehen.
+  .lumina__clock {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 0;
+  }
+
+  .lumina__time {
+    font-size: 40px;
+  }
+
+  .lumina__clock-meta {
+    display: contents;
+  }
+
+  // Die Trennstriche taugen nur in einer einzeiligen Meta-Zeile; der Titel
+  // entfaellt, weil ihn die aktive Taste der Ansichtsleiste schon zeigt.
+  .lumina__divider,
+  .lumina__heading {
+    display: none;
+  }
+
+  .lumina__weather {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .lumina__weather-icon {
+    flex: 0 0 auto;
+    font-size: 24px;
+  }
+
+  .lumina__weather-text {
+    min-width: 0;
+
+    .lumina__label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+  }
+
+  // Volle Zeile; was nicht passt, scrollt seitwaerts statt aus dem Bild zu laufen.
+  .lumina__actions {
+    flex: 0 0 100%;
+    margin-left: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  // Die Ansichtsleiste klebt am unteren Rand, damit man die Ansicht wechseln
+  // kann, ohne erst ans Seitenende zu scrollen. Deckender Grund, sonst scheint
+  // der Inhalt durch.
+  .lumina__viewbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0 -14px;
+    padding: 10px 14px 14px;
+    background: var(--surface-solid);
+  }
+
+  .lumina__viewbar-btn {
+    min-height: 44px;
+  }
+}

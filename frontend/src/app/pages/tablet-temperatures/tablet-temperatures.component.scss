@@ -58,6 +58,11 @@
     }
   }
 
+  /* Das Symbol der Messgroesse gibt es nur auf dem Handy (siehe unten). */
+  &__metric-icon {
+    display: none;
+  }
+
   &__status {
     flex: 1 1 auto;
     display: grid;
@@ -148,5 +153,58 @@
     flex: 1 1 auto;
     width: 100%;
     min-height: 0;
+  }
+}
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Deshalb: eine Spalte, und jedes
+// Diagramm bekommt eine feste Hoehe statt einen Anteil der Resthoehe.
+@media (max-width: 600px) {
+  .tablet-temps {
+    flex: 0 0 auto;
+
+    // Zeitraum und Messgroessen stehen in EINER Zeile: damit sie passt, zeigen
+    // die Messgroessen nur ihr Symbol (das Wort steht im aria-label/title).
+    &__controls {
+      flex-wrap: nowrap;
+      gap: 8px;
+    }
+
+    &__range {
+      padding: 0.5rem 0.6rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    &__metric-icon {
+      display: block;
+      font-size: 20px;
+    }
+
+    &__metric-label {
+      display: none;
+    }
+
+    // Die Spaltenzahl steht als Inline-Style am Element (abhaengig von der
+    // Sensorzahl, fuer das Tablet); !important ist der einzige Weg darueber.
+    &__grid {
+      grid-template-columns: 1fr !important;
+      grid-auto-rows: auto;
+      gap: 12px;
+    }
+
+    &__card {
+      min-height: 0;
+    }
+
+    &__chart {
+      flex: 0 0 auto;
+      height: 200px;
+    }
+
+    &__card-empty {
+      min-height: 120px;
+    }
   }
 }
