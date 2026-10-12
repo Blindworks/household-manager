@@ -211,6 +211,13 @@ export const routes: Routes = [
     title: 'Anwesenheit - Household Manager'
   },
   {
+    path: 'admin/agent',
+    loadComponent: () => import('./pages/admin-agent/admin-agent.component')
+      .then(m => m.AdminAgentComponent),
+    canActivate: [adminGuard],
+    title: 'Hausverstand - Household Manager'
+  },
+  {
     path: 'admin/audit-log',
     loadComponent: () => import('./pages/admin-audit-log/admin-audit-log.component').then(m => m.AdminAuditLogComponent),
     canActivate: [adminGuard],

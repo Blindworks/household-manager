@@ -80,7 +80,8 @@ export class HeaderComponent {
         { path: '/admin/charging', label: 'Ladesäulen', minRole: 'ADMIN' },
         { path: '/admin/heating', label: 'Heizung', minRole: 'ADMIN' },
         { path: '/admin/presence', label: 'Anwesenheit', minRole: 'ADMIN' },
-        { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', minRole: 'ADMIN' }
+        { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', minRole: 'ADMIN' },
+        { path: '/admin/agent', label: 'Hausverstand', minRole: 'ADMIN' }
       ]
     },
     {
