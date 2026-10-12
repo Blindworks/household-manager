@@ -210,22 +210,39 @@ export class TabletNetworkComponent implements OnInit, OnDestroy {
     return this.statusData.online ? 'Online' : 'Offline';
   }
 
+  /**
+   * Handybreite: die Diagramme bekommen Raender mit eingerechneter
+   * Achsenbeschriftung und weniger Teilstriche; das Tablet behaelt seine festen
+   * Raender. Gilt fuer beide Verlaufsdiagramme.
+   */
+  private isCompact(): boolean {
+    return window.matchMedia('(max-width: 600px)').matches;
+  }
+
   private buildSpeedChartOptions(history: NetworkHistoryResponse): Record<string, unknown> {
     const points = history.speedtests;
-    const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
+    const compact = this.isCompact();
+    const axisLabel = { color: AXIS_COLOR, fontSize: compact ? 11 : 13 };
 
     return {
-      grid: { left: 56, right: 16, top: 36, bottom: 28, containLabel: false },
+      grid: compact
+        ? { left: 8, right: 8, top: 32, bottom: 4, containLabel: true }
+        : { left: 56, right: 16, top: 36, bottom: 28, containLabel: false },
       tooltip: { trigger: 'axis' },
       legend: {
         top: 0,
         textStyle: { color: AXIS_COLOR },
         data: ['Download', 'Upload']
       },
-      xAxis: { type: 'time', axisLabel },
+      xAxis: {
+        type: 'time',
+        axisLabel: compact ? { ...axisLabel, hideOverlap: true } : axisLabel,
+        ...(compact ? { splitNumber: 4 } : {})
+      },
       yAxis: {
         type: 'value',
         scale: true,
+        ...(compact ? { splitNumber: 3 } : {}),
         axisLabel: { ...axisLabel, formatter: '{value} Mbit/s' },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       },
@@ -255,15 +272,23 @@ export class TabletNetworkComponent implements OnInit, OnDestroy {
     range: TimeRange
   ): Record<string, unknown> {
     const gapAware = insertGaps(history.latency, BUCKET_MINUTES[range]);
-    const axisLabel = { color: AXIS_COLOR, fontSize: 13 };
+    const compact = this.isCompact();
+    const axisLabel = { color: AXIS_COLOR, fontSize: compact ? 11 : 13 };
 
     return {
-      grid: { left: 56, right: 16, top: 12, bottom: 28, containLabel: false },
+      grid: compact
+        ? { left: 8, right: 8, top: 12, bottom: 4, containLabel: true }
+        : { left: 56, right: 16, top: 12, bottom: 28, containLabel: false },
       tooltip: { trigger: 'axis' },
-      xAxis: { type: 'time', axisLabel },
+      xAxis: {
+        type: 'time',
+        axisLabel: compact ? { ...axisLabel, hideOverlap: true } : axisLabel,
+        ...(compact ? { splitNumber: 4 } : {})
+      },
       yAxis: {
         type: 'value',
         scale: true,
+        ...(compact ? { splitNumber: 3 } : {}),
         axisLabel: { ...axisLabel, formatter: '{value} ms' },
         splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.25)', type: 'dashed' } }
       },

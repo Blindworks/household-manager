@@ -185,3 +185,65 @@
     white-space: nowrap;
   }
 }
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Deshalb: eine Spalte, Diagramme mit
+// fester Hoehe und eine Geraeteliste, die mit der Seite waechst.
+@media (max-width: 600px) {
+  .tablet-network {
+    flex: 0 0 auto;
+
+    &__range {
+      padding: 0.5rem 0.6rem;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    &__grid {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+      gap: 12px;
+    }
+
+    &__card {
+      min-height: 0;
+    }
+
+    // Ohne Resthoehe zum Verteilen stuende ein Hinweistext sonst einzeilig da.
+    &__hint {
+      min-height: 80px;
+    }
+
+    &__chart {
+      flex: 0 0 auto;
+      height: 200px;
+    }
+
+    // 44 px Touch-Ziel wie bei den anderen Handy-Knoepfen.
+    &__test-btn {
+      min-height: 44px;
+    }
+
+    // Die Liste scrollte auf dem Tablet in ihrer Kachel; hier waechst sie mit
+    // der Seite.
+    &__devices {
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    // "zuletzt gesehen: ..." steht immer in einer eigenen Zeile unter dem Namen:
+    // neben langen Namen ist es zu breit, und je nach Namenslaenge mal daneben,
+    // mal darunter sah die Liste uneinheitlich aus.
+    &__device {
+      flex-wrap: wrap;
+      row-gap: 0.1rem;
+    }
+
+    &__device-seen {
+      flex: 0 0 100%;
+      margin-left: 1.2rem;
+      white-space: normal;
+    }
+  }
+}
