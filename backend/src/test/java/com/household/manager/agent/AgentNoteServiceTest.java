@@ -99,7 +99,7 @@ class AgentNoteServiceTest {
         when(repository.findById(3L)).thenReturn(Optional.of(existing));
         when(repository.save(any(AgentNote.class))).thenAnswer(i -> i.getArgument(0));
 
-        AgentNote result = service().update(3, " neuer Text ", NOW.plusHours(1));
+        AgentNote result = service().update(3, " neuer Text ", NOW.plusHours(1), NoteSource.USER);
 
         assertEquals("neuer Text", result.getText());
         assertEquals(NoteKind.PREFERENCE, result.getKind());
@@ -113,9 +113,35 @@ class AgentNoteServiceTest {
     @Test
     void updateRejectsUnknownIdAndBlankText() {
         when(repository.findById(9L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class, () -> service().update(9, "x", null));
-        assertThrows(IllegalArgumentException.class, () -> service().update(1, " ", null));
+        assertThrows(IllegalArgumentException.class, () -> service().update(9, "x", null, NoteSource.USER));
+        assertThrows(IllegalArgumentException.class, () -> service().update(1, " ", null, NoteSource.USER));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void agentMayNotUpdateUserNote() {
+        when(repository.findById(1L)).thenReturn(Optional.of(note(1, NoteKind.PREFERENCE, NoteSource.USER, null)));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service().update(1, "umgeschrieben", NOW.plusHours(1), NoteSource.AGENT));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void userMayUpdateAnyNote() {
+        AgentNote agentNote = note(2, NoteKind.OBSERVATION, NoteSource.AGENT, null);
+        when(repository.findById(2L)).thenReturn(Optional.of(agentNote));
+        when(repository.save(any(AgentNote.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertEquals("vom Nutzer", service().update(2, "vom Nutzer", null, NoteSource.USER).getText());
+    }
+
+    @Test
+    void agentMayUpdateOwnNote() {
+        when(repository.findById(2L)).thenReturn(Optional.of(note(2, NoteKind.OBSERVATION, NoteSource.AGENT, null)));
+        when(repository.save(any(AgentNote.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertEquals("neu", service().update(2, "neu", null, NoteSource.AGENT).getText());
     }
 
     @Test

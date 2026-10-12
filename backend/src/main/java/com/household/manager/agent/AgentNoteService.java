@@ -55,9 +55,13 @@ public class AgentNoteService {
     }
 
     /** Art und Herkunft bleiben bewusst erhalten: eine Nutzer-Vorliebe wird durch Umformulieren nicht zur Agentennotiz. */
-    public AgentNote update(long id, String text, LocalDateTime expiresAt) {
+    public AgentNote update(long id, String text, LocalDateTime expiresAt, NoteSource requester) {
         String cleaned = validatedText(text);
         AgentNote note = find(id);
+        // Sonst liesse sich Loeschschutz umgehen: Umschreiben oder Ablauf setzen entfernt die Notiz faktisch.
+        if (requester == NoteSource.AGENT && note.getSource() == NoteSource.USER) {
+            throw new IllegalArgumentException("Notiz #" + id + " stammt vom Nutzer und darf nicht vom Agenten geaendert werden.");
+        }
         note.setText(cleaned);
         note.setExpiresAt(expiresAt);
         note.setUpdatedAt(LocalDateTime.now(clock));

@@ -1,6 +1,7 @@
 package com.household.manager.agent.tools;
 
 import com.household.manager.agent.AgentNoteService;
+import com.household.manager.agent.NoteSource;
 import com.household.manager.ai.AgentScope;
 import com.household.manager.ai.AgentTool;
 import com.household.manager.model.entity.AgentNote;
@@ -49,7 +50,7 @@ public class NoteUpdateTool implements AgentTool {
     @Override
     public String execute(Map<String, Object> input) {
         AgentNote note = noteService.update(NoteInputs.id(input), NoteInputs.text(input),
-                NoteInputs.expiresAt(input, clock));
+                NoteInputs.expiresAt(input, clock), NoteSource.AGENT);
         return "Notiz #" + note.getId() + " aktualisiert.";
     }
 }

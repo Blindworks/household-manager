@@ -60,13 +60,22 @@ class NoteToolsTest {
 
     @Test
     void noteUpdateCallsServiceWithExpiry() throws Exception {
-        when(service.update(anyLong(), any(), any())).thenReturn(AgentNote.builder().id(4L).build());
+        when(service.update(anyLong(), any(), any(), any())).thenReturn(AgentNote.builder().id(4L).build());
 
         String result = new NoteUpdateTool(service, CLOCK).execute(
                 Map.of("id", 4, "text", "neu", "expiresInHours", 2));
 
-        verify(service).update(4L, "neu", NOW.plusHours(2));
+        verify(service).update(4L, "neu", NOW.plusHours(2), NoteSource.AGENT);
         assertTrue(result.contains("4"));
+    }
+
+    @Test
+    void noteUpdateWithoutHoursMakesNoteUnlimited() throws Exception {
+        when(service.update(anyLong(), any(), any(), any())).thenReturn(AgentNote.builder().id(4L).build());
+
+        new NoteUpdateTool(service, CLOCK).execute(Map.of("id", 4, "text", "neu"));
+
+        verify(service).update(4L, "neu", null, NoteSource.AGENT);
     }
 
     @Test
