@@ -1,5 +1,12 @@
 package com.household.manager.telegram;
 
+import com.household.manager.ai.AgentScope;
+import com.household.manager.ai.AgentToolRegistry;
+import com.household.manager.ai.AnthropicApiClient;
+import com.household.manager.ai.AnthropicMessage;
+import com.household.manager.ai.AnthropicRequest;
+import com.household.manager.ai.AnthropicResponse;
+import com.household.manager.ai.ToolResult;
 import com.household.manager.audit.AuditActor;
 import com.household.manager.audit.AuditActorContext;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +44,7 @@ public class TelegramAgentService {
 
     private final TelegramProperties properties;
     private final AnthropicApiClient anthropicApiClient;
-    private final TelegramToolRegistry toolRegistry;
+    private final AgentToolRegistry toolRegistry;
     private final TelegramConversationStore conversationStore;
 
     public String handleUserMessage(long chatId, String text) {
@@ -47,8 +54,9 @@ public class TelegramAgentService {
             messages.add(AnthropicMessage.user(text));
 
             for (int iteration = 0; iteration < properties.getMaxToolIterations(); iteration++) {
-                AnthropicResponse response = anthropicApiClient.createMessage(
-                        SYSTEM_PROMPT, messages, toolRegistry.toolDefinitions());
+                AnthropicResponse response = anthropicApiClient.createMessage(AnthropicRequest.of(
+                        properties.getModel(), properties.getMaxTokens(), SYSTEM_PROMPT, messages,
+                        toolRegistry.toolDefinitions(AgentScope.TELEGRAM)));
 
                 if (!response.wantsToolUse()) {
                     String answer = response.text();
@@ -80,7 +88,7 @@ public class TelegramAgentService {
             String toolName = String.valueOf(block.get("name"));
             Map<String, Object> input = block.get("input") instanceof Map<?, ?> map
                     ? (Map<String, Object>) map : Map.of();
-            ToolResult result = toolRegistry.execute(toolName, input);
+            ToolResult result = toolRegistry.execute(AgentScope.TELEGRAM, toolName, input);
 
             Map<String, Object> resultBlock = new HashMap<>();
             resultBlock.put("type", "tool_result");

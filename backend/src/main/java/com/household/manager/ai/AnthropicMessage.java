@@ -1,4 +1,4 @@
-package com.household.manager.telegram;
+package com.household.manager.ai;
 
 import java.util.List;
 import java.util.Map;

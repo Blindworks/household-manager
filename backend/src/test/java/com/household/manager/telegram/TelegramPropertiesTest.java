@@ -11,13 +11,12 @@ class TelegramPropertiesTest {
     private TelegramProperties configured() {
         TelegramProperties props = new TelegramProperties();
         props.setBotToken("123:abc");
-        props.setAnthropicApiKey("sk-test");
         props.setAllowedChatIds(List.of(42L));
         return props;
     }
 
     @Test
-    void configuredOnlyWithTokenKeyAndAllowlist() {
+    void configuredOnlyWithTokenAndAllowlist() {
         assertTrue(configured().isConfigured());
     }
 
@@ -26,10 +25,6 @@ class TelegramPropertiesTest {
         TelegramProperties noToken = configured();
         noToken.setBotToken(" ");
         assertFalse(noToken.isConfigured());
-
-        TelegramProperties noKey = configured();
-        noKey.setAnthropicApiKey("");
-        assertFalse(noKey.isConfigured());
 
         TelegramProperties noChats = configured();
         noChats.setAllowedChatIds(List.of());

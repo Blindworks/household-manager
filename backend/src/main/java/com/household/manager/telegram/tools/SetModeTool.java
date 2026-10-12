@@ -1,5 +1,6 @@
 package com.household.manager.telegram.tools;
 
+import com.household.manager.ai.AgentTool;
 import com.household.manager.dto.ModeResponse;
 import com.household.manager.entitystate.HouseModeQueryService;
 import com.household.manager.entitystate.ManualEntityService;

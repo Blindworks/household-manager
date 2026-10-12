@@ -1,5 +1,6 @@
 package com.household.manager.telegram;
 
+import com.household.manager.ai.AiProperties;
 import com.household.manager.telegram.dto.TelegramUpdate;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 public class TelegramPollingService {
 
     private final TelegramProperties properties;
+    private final AiProperties aiProperties;
     private final TelegramApiClient apiClient;
     private final TelegramAgentService agentService;
 
@@ -32,7 +34,7 @@ public class TelegramPollingService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
-        if (!properties.isConfigured()) {
+        if (!properties.isConfigured() || !aiProperties.isConfigured()) {
             log.info("Telegram-Assistent nicht konfiguriert (Token/Key/Chat-IDs fehlen) — Polling aus");
             return;
         }

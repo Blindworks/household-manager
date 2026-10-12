@@ -1,5 +1,6 @@
 package com.household.manager.telegram.tools;
 
+import com.household.manager.ai.AgentTool;
 import com.household.manager.nuki.NukiLockAction;
 import com.household.manager.nuki.NukiLockService;
 import com.household.manager.nuki.dto.NukiLockResponse;

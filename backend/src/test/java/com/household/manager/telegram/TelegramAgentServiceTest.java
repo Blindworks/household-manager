@@ -1,5 +1,6 @@
 package com.household.manager.telegram;
 
+import com.household.manager.ai.*;
 import com.household.manager.audit.AuditActor;
 import com.household.manager.audit.AuditActorContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +24,7 @@ class TelegramAgentServiceTest {
     @Mock
     private AnthropicApiClient anthropicApiClient;
     @Mock
-    private TelegramToolRegistry toolRegistry;
+    private AgentToolRegistry toolRegistry;
 
     private TelegramProperties props;
     private TelegramConversationStore store;
@@ -35,7 +36,7 @@ class TelegramAgentServiceTest {
         props.setMaxToolIterations(3);
         store = new TelegramConversationStore(props);
         service = new TelegramAgentService(props, anthropicApiClient, toolRegistry, store);
-        lenient().when(toolRegistry.toolDefinitions()).thenReturn(List.of());
+        lenient().when(toolRegistry.toolDefinitions(AgentScope.TELEGRAM)).thenReturn(List.of());
     }
 
     private AnthropicResponse endTurn(String text) {
@@ -49,7 +50,7 @@ class TelegramAgentServiceTest {
 
     @Test
     void plainAnswerWithoutTools() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
                 .thenReturn(endTurn("Hallo!"));
 
         assertEquals("Hallo!", service.handleUserMessage(1L, "hi"));
@@ -57,19 +58,18 @@ class TelegramAgentServiceTest {
 
     @Test
     void executesToolsAndFeedsResultsBack() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
                 .thenReturn(toolUse("tu_1", "list_switches"))
                 .thenReturn(endTurn("2 Lampen sind an."));
-        when(toolRegistry.execute("list_switches", Map.of())).thenReturn(ToolResult.ok("[...]"));
+        when(toolRegistry.execute(eq(AgentScope.TELEGRAM), eq("list_switches"), eq(Map.of()))).thenReturn(ToolResult.ok("[...]"));
 
         String answer = service.handleUserMessage(1L, "Was ist an?");
 
         assertEquals("2 Lampen sind an.", answer);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<AnthropicMessage>> captor = ArgumentCaptor.forClass(List.class);
-        verify(anthropicApiClient, times(2)).createMessage(anyString(), captor.capture(), anyList());
-        List<AnthropicMessage> secondCall = captor.getAllValues().get(1);
+        ArgumentCaptor<AnthropicRequest> captor = ArgumentCaptor.forClass(AnthropicRequest.class);
+        verify(anthropicApiClient, times(2)).createMessage(captor.capture());
+        List<AnthropicMessage> secondCall = captor.getAllValues().get(1).messages();
         AnthropicMessage toolResultMessage = secondCall.get(secondCall.size() - 1);
         assertEquals("user", toolResultMessage.role());
         assertEquals("tool_result", toolResultMessage.content().get(0).get("type"));
@@ -78,20 +78,20 @@ class TelegramAgentServiceTest {
 
     @Test
     void stopsAfterMaxIterations() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
                 .thenReturn(toolUse("tu_1", "list_switches"));
-        when(toolRegistry.execute(anyString(), anyMap())).thenReturn(ToolResult.ok("x"));
+        when(toolRegistry.execute(eq(AgentScope.TELEGRAM), anyString(), anyMap())).thenReturn(ToolResult.ok("x"));
 
         String answer = service.handleUserMessage(1L, "loop");
 
-        verify(anthropicApiClient, times(3)).createMessage(anyString(), anyList(), anyList());
+        verify(anthropicApiClient, times(3)).createMessage(any(AnthropicRequest.class));
         assertFalse(answer.isBlank());
     }
 
     @Test
     void apiErrorYieldsFriendlyMessage() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
-                .thenThrow(new TelegramException("kaputt", null));
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
+                .thenThrow(new AiException("kaputt", null));
 
         String answer = service.handleUserMessage(1L, "hi");
 
@@ -101,11 +101,11 @@ class TelegramAgentServiceTest {
 
     @Test
     void setztDenTelegramAktorWaehrendDerToolAusfuehrungUndLoeschtIhnDanach() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
                 .thenReturn(toolUse("tu_1", "list_switches"))
                 .thenReturn(endTurn("2 Lampen sind an."));
         AtomicReference<AuditActor> actorDuringTool = new AtomicReference<>();
-        when(toolRegistry.execute(eq("list_switches"), anyMap())).thenAnswer(invocation -> {
+        when(toolRegistry.execute(eq(AgentScope.TELEGRAM), eq("list_switches"), anyMap())).thenAnswer(invocation -> {
             actorDuringTool.set(AuditActorContext.get());
             return ToolResult.ok("[...]");
         });
@@ -118,8 +118,8 @@ class TelegramAgentServiceTest {
 
     @Test
     void loeschtDenTelegramAktorAuchNachEinemFehler() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
-                .thenThrow(new TelegramException("kaputt", null));
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
+                .thenThrow(new AiException("kaputt", null));
 
         service.handleUserMessage(7L, "hi");
 
@@ -128,7 +128,7 @@ class TelegramAgentServiceTest {
 
     @Test
     void successfulExchangeLandsInHistory() {
-        when(anthropicApiClient.createMessage(anyString(), anyList(), anyList()))
+        when(anthropicApiClient.createMessage(any(AnthropicRequest.class)))
                 .thenReturn(endTurn("Antwort"));
 
         service.handleUserMessage(1L, "Frage");

@@ -1,4 +1,4 @@
-package com.household.manager.telegram;
+package com.household.manager.ai;
 
 /** Ergebnis einer Tool-Ausführung für den tool_result-Block. */
 public record ToolResult(String content, boolean error) {

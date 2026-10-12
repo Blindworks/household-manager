@@ -1,5 +1,6 @@
 package com.household.manager.telegram;
 
+import com.household.manager.ai.AiProperties;
 import com.household.manager.telegram.dto.TelegramChat;
 import com.household.manager.telegram.dto.TelegramMessage;
 import com.household.manager.telegram.dto.TelegramUpdate;
@@ -24,9 +25,10 @@ class TelegramPollingServiceTest {
     private TelegramPollingService service() {
         TelegramProperties props = new TelegramProperties();
         props.setBotToken("t");
-        props.setAnthropicApiKey("k");
+        AiProperties ai = new AiProperties();
+        ai.setAnthropicApiKey("k");
         props.setAllowedChatIds(List.of(42L));
-        return new TelegramPollingService(props, apiClient, agentService);
+        return new TelegramPollingService(props, ai, apiClient, agentService);
     }
 
     private TelegramUpdate update(long chatId, String text) {
