@@ -215,6 +215,10 @@
 
   h3 {
     margin: 0 0 0.5rem;
+    // Die globale Regel h1..h6 { color: var(--color-dark) } aus styles.scss
+    // schlaegt die vererbte Farbe: auf dem dunklen Dialoggrund war die
+    // Ueberschrift sonst kaum lesbar.
+    color: var(--text-strong);
   }
 
   p {
@@ -280,5 +284,86 @@
 
   @keyframes spinner-pulse {
     50% { opacity: 0.35; }
+  }
+}
+
+// ---- Handy (bis 600 px) --------------------------------------------------
+// Die Shell scrollt hier selbst und gibt dem Inhalt seine natuerliche Hoehe
+// (siehe tablet-shell.component.scss). Die Liste scrollt deshalb nicht mehr in
+// sich, sondern waechst mit der Seite; Kameras stehen untereinander, weil zwei
+// 16:9-Standbilder nebeneinander in 347 px zu klein waeren.
+@media (max-width: 600px) {
+  // Der Host ist oben eine Zeilen-Flexbox, und app-tablet-shell darin hat
+  // min-width: auto: die natuerliche Breite der Standbilder (hier 1178 px)
+  // dehnte die ganze Shell weit ueber den Bildschirm. Als Block bekommt die
+  // Shell schlicht die Breite des Hosts.
+  :host {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .camera-groups {
+    flex: 0 0 auto;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .camera-grid {
+    grid-template-columns: 1fr;
+  }
+
+  // Titel und Systemschalter duerfen umbrechen ("System: Deaktiviert" ist
+  // neben einem langen Namen zu breit).
+  .sync-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  // 44 px Touch-Ziele wie bei den anderen Handy-Knoepfen.
+  .camera-arm-toggle,
+  .system-arm-toggle {
+    min-height: 44px;
+    padding: 0.4rem 1rem;
+  }
+
+  .last-motion {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .tile-actions button {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .clip-list button {
+    min-height: 44px;
+  }
+
+  // Videoplayer und Bestaetigungsdialog fuellen die Breite mit etwas Rand.
+  .clip-player {
+    padding: 12px;
+
+    video {
+      max-width: 100%;
+    }
+
+    button {
+      min-height: 44px;
+    }
+  }
+
+  .confirm-overlay {
+    padding: 12px;
+  }
+
+  .confirm-dialog {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .confirm-actions button {
+    min-height: 44px;
   }
 }
