@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,15 +88,7 @@ public class TelegramAgentService {
             Map<String, Object> input = block.get("input") instanceof Map<?, ?> map
                     ? (Map<String, Object>) map : Map.of();
             ToolResult result = toolRegistry.execute(AgentScope.TELEGRAM, toolName, input);
-
-            Map<String, Object> resultBlock = new HashMap<>();
-            resultBlock.put("type", "tool_result");
-            resultBlock.put("tool_use_id", block.get("id"));
-            resultBlock.put("content", result.content());
-            if (result.error()) {
-                resultBlock.put("is_error", true);
-            }
-            results.add(resultBlock);
+            results.add(AnthropicMessage.toolResult(String.valueOf(block.get("id")), result));
         }
         return results;
     }
