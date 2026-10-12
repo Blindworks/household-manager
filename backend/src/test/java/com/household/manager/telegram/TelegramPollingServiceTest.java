@@ -32,7 +32,7 @@ class TelegramPollingServiceTest {
     }
 
     private TelegramUpdate update(long chatId, String text) {
-        return new TelegramUpdate(1, new TelegramMessage(new TelegramChat(chatId), text));
+        return new TelegramUpdate(1, new TelegramMessage(new TelegramChat(chatId), text, null), null);
     }
 
     @Test
@@ -54,7 +54,7 @@ class TelegramPollingServiceTest {
 
     @Test
     void updatesWithoutTextAreIgnored() {
-        service().handleUpdate(new TelegramUpdate(1, null));
+        service().handleUpdate(new TelegramUpdate(1, null, null));
         service().handleUpdate(update(42L, null));
 
         verifyNoInteractions(agentService);
