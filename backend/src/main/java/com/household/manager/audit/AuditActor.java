@@ -21,6 +21,11 @@ public record AuditActor(AuditActorType type, String name) {
         return new AuditActor(AuditActorType.TELEGRAM, "TELEGRAM:" + chatId);
     }
 
+    /** Der Hausverstand-Agent; SYSTEM-Typ, weil er ohne Nutzerkontext handelt. */
+    public static AuditActor agent() {
+        return new AuditActor(AuditActorType.SYSTEM, "AGENT");
+    }
+
     public static AuditActor flow(long flowId) {
         return new AuditActor(AuditActorType.SYSTEM, "FLOW:" + flowId);
     }

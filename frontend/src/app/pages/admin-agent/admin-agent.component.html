@@ -1,0 +1,235 @@
+<div class="admin-agent">
+  <h1>Hausverstand</h1>
+  <p class="admin-agent__hint">
+    Der Hausverstand beobachtet das Haus, schlägt Aktionen vor und führt – je nach Freigabe –
+    freigegebene Aktionen selbst aus. Entscheidungen werden auch per Telegram abgefragt.
+  </p>
+
+  @if (summary(); as s) {
+    @if (!s.telegramConfigured) {
+      <div class="admin-agent__banner" role="alert">
+        Telegram ist nicht konfiguriert – Vorschläge können nicht zugestellt werden und
+        bleiben nur auf dieser Seite sichtbar.
+      </div>
+    }
+  }
+
+  <section class="admin-agent__settings">
+    <h2>Betrieb</h2>
+    @if (settingsError()) {
+      <div class="admin-agent__error" role="alert">{{ settingsError() }}</div>
+    }
+    @if (summary(); as s) {
+      @for (version of [settingsVersion()]; track version) {
+        <label class="admin-agent__toggle">
+          <input
+            type="checkbox"
+            name="agent-active"
+            [ngModel]="s.active"
+            [disabled]="settingsSaving()"
+            (ngModelChange)="setActive($event)">
+          <span>Hausverstand aktiv</span>
+        </label>
+      }
+      <p class="admin-agent__hint">Offene Vorschläge: {{ s.pendingProposals }}</p>
+    }
+  </section>
+
+  <section class="admin-agent__policies">
+    <h2>Freigaben</h2>
+    @if (policiesError()) {
+      <div class="admin-agent__error" role="alert">{{ policiesError() }}</div>
+    }
+    @for (p of policyRows(); track p.key) {
+      <div class="admin-agent__policy-row">
+        <span class="admin-agent__policy-name">{{ actionClassLabels[p.actionClass] }}</span>
+        <select
+          [name]="'policy-' + p.actionClass"
+          [attr.name]="'policy-' + p.actionClass"
+          [ngModel]="p.policy"
+          [disabled]="isPolicyLocked(p.actionClass)"
+          (ngModelChange)="changePolicy(p.actionClass, $event)">
+          @for (option of policyOptions; track option) {
+            <option [value]="option">{{ policyLabels[option] }}</option>
+          }
+        </select>
+        @if (isPolicyLocked(p.actionClass)) {
+          <span class="admin-agent__hint admin-agent__hint--inline">
+            Nachrichten werden immer direkt gesendet.
+          </span>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="admin-agent__notes">
+    <h2>Notizen</h2>
+    @if (notesError()) {
+      <div class="admin-agent__error" role="alert">{{ notesError() }}</div>
+    }
+
+    <form class="admin-agent__note-form" (ngSubmit)="createNote()">
+      <label class="admin-agent__field">
+        <span>Art</span>
+        <select name="newKind" [(ngModel)]="newNote.kind">
+          @for (kind of noteKinds; track kind) {
+            <option [value]="kind">{{ noteKindLabels[kind] }}</option>
+          }
+        </select>
+      </label>
+      <label class="admin-agent__field admin-agent__field--wide">
+        <span>Text</span>
+        <textarea name="newText" rows="2" maxlength="500" [(ngModel)]="newNote.text"></textarea>
+      </label>
+      <label class="admin-agent__field">
+        <span>Läuft ab (optional)</span>
+        <input type="datetime-local" name="newExpiry" [(ngModel)]="newNote.expiresAt">
+      </label>
+      <button type="submit" [disabled]="noteSaving()">Notiz anlegen</button>
+    </form>
+
+    @if (notes().length === 0) {
+      <p class="admin-agent__hint">Noch keine Notizen.</p>
+    }
+    <ul class="admin-agent__note-list">
+      @for (note of notes(); track note.id) {
+        <li class="admin-agent__note">
+          @if (editingNoteId === note.id) {
+            <div class="admin-agent__note-edit">
+              <select name="editKind" [(ngModel)]="editNote.kind">
+                @for (kind of noteKinds; track kind) {
+                  <option [value]="kind">{{ noteKindLabels[kind] }}</option>
+                }
+              </select>
+              <textarea name="editText" rows="2" maxlength="500" [(ngModel)]="editNote.text"></textarea>
+              <input type="datetime-local" name="editExpiry" [(ngModel)]="editNote.expiresAt">
+              <div class="admin-agent__actions">
+                <button type="button" [disabled]="noteSaving()" (click)="saveEditNote()">Speichern</button>
+                <button type="button" class="ghost" (click)="cancelEditNote()">Abbrechen</button>
+              </div>
+            </div>
+          } @else {
+            <div class="admin-agent__note-body">
+              <strong>{{ noteKindLabels[note.kind] }}</strong>
+              <span class="admin-agent__note-meta">
+                {{ sourceLabel(note.source) }} · {{ note.createdAt | date: 'dd.MM. HH:mm' }}
+                @if (note.expiresAt) {
+                  · läuft ab {{ note.expiresAt | date: 'dd.MM. HH:mm' }}
+                }
+              </span>
+              <p>{{ note.text }}</p>
+            </div>
+            <div class="admin-agent__actions">
+              <button type="button" class="ghost" (click)="startEditNote(note)">Bearbeiten</button>
+              <button type="button" class="danger" (click)="deleteNote(note)">Löschen</button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="admin-agent__proposals">
+    <h2>Vorschläge</h2>
+    @if (proposalsError()) {
+      <div class="admin-agent__error" role="alert">{{ proposalsError() }}</div>
+    }
+    @if (proposals().length === 0) {
+      <p class="admin-agent__hint">Keine Vorschläge.</p>
+    } @else {
+      <div class="admin-agent__table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Erstellt</th>
+              <th>Vorschlag</th>
+              <th>Begründung</th>
+              <th>Status</th>
+              <th>Entschieden von</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (proposal of proposals(); track proposal.id) {
+              <tr>
+                <td>{{ proposal.createdAt | date: 'dd.MM. HH:mm' }}</td>
+                <td>{{ proposal.description }}</td>
+                <td>{{ proposal.reason }}</td>
+                <td>
+                  {{ statusLabels[proposal.status] }}
+                  @if (proposal.error) {
+                    <div class="admin-agent__note-meta">{{ proposal.error }}</div>
+                  }
+                  @if (proposal.status === 'PENDING') {
+                    <div class="admin-agent__actions">
+                      <button type="button" [disabled]="decidingId() !== null" (click)="decide(proposal, 'APPROVE')">Ja</button>
+                      <button type="button" class="ghost" [disabled]="decidingId() !== null" (click)="decide(proposal, 'REJECT')">Nein</button>
+                      <button type="button" class="ghost" [disabled]="decidingId() !== null" (click)="decide(proposal, 'APPROVE_AND_REMEMBER')">Ja, und merken</button>
+                    </div>
+                  }
+                </td>
+                <td>{{ proposal.decidedBy ?? '–' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <section class="admin-agent__runs">
+    <h2>Läufe</h2>
+    @if (runsError()) {
+      <div class="admin-agent__error" role="alert">{{ runsError() }}</div>
+    }
+    <div class="admin-agent__run-bar">
+      <span>Heute: {{ inputTokensToday() }} Eingabe- / {{ outputTokensToday() }} Ausgabe-Tokens</span>
+      <button
+        type="button"
+        class="admin-agent__run-button"
+        [disabled]="running()"
+        [attr.aria-busy]="running()"
+        (click)="runNow()">
+        {{ running() ? 'Läuft …' : 'Jetzt laufen lassen' }}
+      </button>
+      @if (running()) {
+        <span class="admin-agent__spinner" aria-hidden="true"></span>
+      }
+    </div>
+    @if (runMessage()) {
+      <div
+        class="admin-agent__run-message"
+        [class.admin-agent__run-message--error]="runMessageType() === 'error'"
+        role="status">
+        {{ runMessage() }}
+      </div>
+    }
+    @if (runs().length > 0) {
+      <div class="admin-agent__table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Start</th>
+              <th>Auslöser</th>
+              <th>Dauer</th>
+              <th>Tokens ein / aus</th>
+              <th>Werkzeuge</th>
+              <th>Ergebnis</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (run of runs(); track $index) {
+              <tr>
+                <td>{{ run.startedAt | date: 'dd.MM. HH:mm' }}</td>
+                <td>{{ triggerLabels[run.triggerType] }}{{ run.triggerDetail ? ' (' + run.triggerDetail + ')' : '' }}</td>
+                <td>{{ durationSeconds(run) }} s</td>
+                <td>{{ run.inputTokens }} / {{ run.outputTokens }}</td>
+                <td>{{ run.toolCalls }}</td>
+                <td>{{ run.error ?? run.summary ?? '–' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

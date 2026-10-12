@@ -1,5 +1,9 @@
 package com.household.manager.telegram;
 
+import com.household.manager.agent.AgentProposalService;
+import com.household.manager.agent.ProposalStatus;
+import com.household.manager.ai.AiProperties;
+import com.household.manager.telegram.dto.TelegramCallbackQuery;
 import com.household.manager.telegram.dto.TelegramUpdate;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +26,13 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class TelegramPollingService {
 
+    static final int CALLBACK_ANSWER_MAX = 190;
+
     private final TelegramProperties properties;
+    private final AiProperties aiProperties;
     private final TelegramApiClient apiClient;
     private final TelegramAgentService agentService;
+    private final AgentProposalService proposalService;
 
     private volatile boolean running;
     private ExecutorService executor;
@@ -32,7 +40,7 @@ public class TelegramPollingService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
-        if (!properties.isConfigured()) {
+        if (!properties.isConfigured() || !aiProperties.isConfigured()) {
             log.info("Telegram-Assistent nicht konfiguriert (Token/Key/Chat-IDs fehlen) — Polling aus");
             return;
         }
@@ -71,6 +79,10 @@ public class TelegramPollingService {
 
     /** Package-private für Tests (Verarbeitung ohne Polling-Thread). */
     void handleUpdate(TelegramUpdate update) {
+        if (update.callbackQuery() != null) {
+            handleCallback(update.callbackQuery());
+            return;
+        }
         if (update.message() == null || update.message().text() == null
                 || update.message().chat() == null) {
             return;
@@ -85,6 +97,62 @@ public class TelegramPollingService {
             apiClient.sendMessage(chatId, reply);
         } catch (Exception ex) {
             log.warn("Antwort an Chat {} konnte nicht gesendet werden: {}", chatId, ex.getMessage());
+        }
+    }
+
+    /**
+     * Knopfdruck unter einem Vorschlag des Hausverstands. Die Allowlist gilt hier genauso wie fuer
+     * Texte (Chat aus der Nachricht, an der der Knopf hing) — ein fremder Chat darf nie bis zu
+     * {@code decide} kommen. Jeder erlaubte Druck wird per {@code answerCallbackQuery} beantwortet,
+     * sonst dreht der Knopf in der App weiter.
+     */
+    private void handleCallback(TelegramCallbackQuery callback) {
+        if (callback.message() == null || callback.message().chat() == null) {
+            log.warn("Telegram-Knopfdruck ohne Nachricht/Chat ignoriert");
+            return;
+        }
+        long chatId = callback.message().chat().id();
+        if (!properties.getAllowedChatIds().contains(chatId)) {
+            log.warn("Telegram-Knopfdruck von nicht erlaubtem Chat {} ignoriert", chatId);
+            return;
+        }
+        var parsed = AgentProposalService.parseCallback(callback.data());
+        if (parsed.isEmpty()) {
+            answer(callback.id(), "Unbekannter Knopf");
+            return;
+        }
+        String answer;
+        try {
+            var decided = proposalService.decide(parsed.get().proposalId(), parsed.get().decision(),
+                    decidedBy(callback, chatId));
+            answer = decided != null && decided.getStatus() == ProposalStatus.FAILED
+                    ? abbreviate("Fehlgeschlagen: " + decided.getError(), CALLBACK_ANSWER_MAX)
+                    : "Erledigt";
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            answer = ex.getMessage() != null ? ex.getMessage() : "Nicht mehr entscheidbar";
+        } catch (Exception ex) {
+            log.warn("Entscheidung per Telegram-Knopf fehlgeschlagen: {}", ex.getMessage(), ex);
+            answer = "Fehler, siehe Admin-Seite";
+        }
+        answer(callback.id(), answer);
+    }
+
+    /** Telegram begrenzt den Text einer Knopf-Antwort auf 200 Zeichen; mit etwas Reserve kuerzen. */
+    private static String abbreviate(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max - 1) + "…";
+    }
+
+    private String decidedBy(TelegramCallbackQuery callback, long chatId) {
+        String name = callback.from() != null ? callback.from().firstName() : null;
+        return name != null && !name.isBlank() ? name.trim() : "Chat " + chatId;
+    }
+
+    /** Eine gescheiterte Antwort darf die Verarbeitung nicht abbrechen; die Entscheidung ist da schon gefallen. */
+    private void answer(String callbackId, String text) {
+        try {
+            apiClient.answerCallbackQuery(callbackId, text);
+        } catch (Exception ex) {
+            log.warn("Knopf-Antwort konnte nicht gesendet werden: {}", ex.getMessage());
         }
     }
 

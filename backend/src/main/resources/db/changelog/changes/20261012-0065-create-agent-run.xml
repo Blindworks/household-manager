@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261012-0065-create-agent-run" author="claude">
+        <comment>Protokoll der Agentenlaeufe mit Tokenverbrauch.</comment>
+        <createTable tableName="agent_run">
+            <column name="id" type="BIGINT" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="trigger_type" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="trigger_detail" type="VARCHAR(1000)"/>
+            <column name="started_at" type="DATETIME"><constraints nullable="false"/></column>
+            <column name="duration_ms" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="model" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="input_tokens" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="output_tokens" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="tool_calls" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="summary" type="VARCHAR(2000)"/>
+            <column name="error" type="VARCHAR(1000)"/>
+        </createTable>
+        <rollback><dropTable tableName="agent_run"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,5 +1,6 @@
 package com.household.manager.telegram;
 
+import com.household.manager.ai.AnthropicMessage;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;

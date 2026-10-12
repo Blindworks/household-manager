@@ -1,5 +1,6 @@
 package com.household.manager.telegram.tools;
 
+import com.household.manager.ai.AgentTool;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.SwitchCommandService;
 import com.household.manager.model.entity.EntityState;

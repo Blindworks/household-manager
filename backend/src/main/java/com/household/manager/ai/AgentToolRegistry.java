@@ -1,6 +1,5 @@
-package com.household.manager.telegram;
+package com.household.manager.ai;
 
-import com.household.manager.telegram.tools.AgentTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -9,25 +8,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Sammelt alle {@link AgentTool}-Beans ein und kapselt ihre Ausführung:
- * Fehler werden nie geworfen, sondern als Fehler-Result zurückgegeben,
- * damit das Modell sinnvoll darauf antworten kann.
+ * Sammelt alle {@link AgentTool}-Beans ein und kapselt ihre Ausfuehrung je Scope:
+ * Fehler werden nie geworfen, sondern als Fehler-Result zurueckgegeben, damit das
+ * Modell sinnvoll darauf antworten kann. Ein Tool des falschen Scopes gilt als unbekannt.
  */
 @Component
 @Slf4j
-public class TelegramToolRegistry {
+public class AgentToolRegistry {
 
     private final Map<String, AgentTool> tools;
 
-    public TelegramToolRegistry(List<AgentTool> agentTools) {
+    public AgentToolRegistry(List<AgentTool> agentTools) {
         Map<String, AgentTool> byName = new LinkedHashMap<>();
         agentTools.forEach(tool -> byName.put(tool.name(), tool));
         this.tools = byName;
     }
 
-    /** Tool-Definitionen im Format der Anthropic Messages API. */
-    public List<Map<String, Object>> toolDefinitions() {
+    public List<Map<String, Object>> toolDefinitions(AgentScope scope) {
         return tools.values().stream()
+                .filter(tool -> tool.scope() == scope)
                 .map(tool -> Map.<String, Object>of(
                         "name", tool.name(),
                         "description", tool.description(),
@@ -35,9 +34,9 @@ public class TelegramToolRegistry {
                 .toList();
     }
 
-    public ToolResult execute(String name, Map<String, Object> input) {
+    public ToolResult execute(AgentScope scope, String name, Map<String, Object> input) {
         AgentTool tool = tools.get(name);
-        if (tool == null) {
+        if (tool == null || tool.scope() != scope) {
             return ToolResult.failure("Unbekanntes Tool: " + name);
         }
         try {

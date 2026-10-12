@@ -28,6 +28,8 @@ import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
 import { PresenceService } from '../../services/presence.service';
+import { AgentService } from '../../services/agent.service';
+import { AgentSummary } from '../../models/agent.model';
 import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
 import { PetSupplyService } from '../../services/pet-supply.service';
 import { PetSupply } from '../../models/pet-supply.model';
@@ -3437,6 +3439,84 @@ describe('DashboardComponent (Dog-Mode-Screen)', () => {
     fixture.componentInstance.endDogMode();
 
     expect(modeServiceSpy.toggle).not.toHaveBeenCalled();
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Hausverstand im Intelligence Hub)', () => {
+  let agentServiceSpy: jasmine.SpyObj<AgentService>;
+
+  const summary = (pendingProposals: number): AgentSummary =>
+    ({ pendingProposals, active: true, telegramConfigured: true });
+
+  const titles = (fixture: ComponentFixture<DashboardComponent>): string[] =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__insight-title'))
+      .map(el => el.textContent?.trim() ?? '');
+
+  beforeEach(async () => {
+    agentServiceSpy = jasmine.createSpyObj('AgentService', ['getSummary']);
+
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgentService, useValue: agentServiceSpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('zeigt bei offenen Vorschlaegen die Karte "Hausverstand"', fakeAsync(() => {
+    agentServiceSpy.getSummary.and.returnValue(of(summary(2)));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(titles(fixture)).toContain('Hausverstand');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('2 Vorschläge offen');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt ohne offene Vorschlaege keine Karte', fakeAsync(() => {
+    agentServiceSpy.getSummary.and.returnValue(of(summary(0)));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(titles(fixture)).not.toContain('Hausverstand');
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaelt die letzte Karte, wenn ein spaeterer Abruf fehlschlaegt', fakeAsync(() => {
+    agentServiceSpy.getSummary.and.returnValue(of(summary(1)));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.agentInsight?.text).toBe('1 Vorschlag offen');
+
+    agentServiceSpy.getSummary.and.returnValue(throwError(() => new Error('kaputt')));
+    tick(60_000);
+    fixture.detectChanges();
+
+    expect(titles(fixture)).toContain('Hausverstand');
 
     discardPeriodicTasks();
   }));

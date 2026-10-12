@@ -1,4 +1,4 @@
-package com.household.manager.telegram;
+package com.household.manager.ai;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,19 +16,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** HTTP-Client für die Anthropic Messages API (Tool-Use). */
+/**
+ * HTTP-Client fuer die Anthropic Messages API (Tool-Use), geteilt von Telegram-Bot und Hausverstand.
+ *
+ * <p>Read-Timeout einheitlich 45 s je Aufruf, fuer beide Nutzer: der Hausverstand prueft sein Zeitbudget
+ * nur zwischen den Aufrufen, ein einzelner Aufruf darf es also hoechstens um diese Spanne ueberziehen. Der
+ * manuelle Lauf ({@code POST /v1/agent/runs}) haelt dabei den Request-Thread; nginx gibt dieser Route deshalb
+ * einen eigenen, laengeren {@code proxy_read_timeout} (150 s, {@code frontend/nginx.conf}).
+ */
 @Component
 public class AnthropicApiClient {
 
     private static final String API_VERSION = "2023-06-01";
-    /** Antworten der Claude API brauchen deutlich länger als lokale Aufrufe. */
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(60);
+    static final Duration READ_TIMEOUT = Duration.ofSeconds(45);
 
-    private final TelegramProperties properties;
+    private final AiProperties properties;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AnthropicApiClient(TelegramProperties properties, RestTemplateBuilder builder) {
+    public AnthropicApiClient(AiProperties properties, RestTemplateBuilder builder) {
         this.properties = properties;
         this.restTemplate = builder
                 .connectTimeout(Duration.ofMillis(properties.getHttpTimeoutMs()))
@@ -36,15 +42,14 @@ public class AnthropicApiClient {
                 .build();
     }
 
-    public AnthropicResponse createMessage(String system, List<AnthropicMessage> messages,
-                                           List<Map<String, Object>> tools) {
+    public AnthropicResponse createMessage(AnthropicRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", properties.getModel());
-        body.put("max_tokens", properties.getMaxTokens());
-        body.put("system", system);
-        body.put("messages", messages);
-        if (!tools.isEmpty()) {
-            body.put("tools", tools);
+        body.put("model", request.model());
+        body.put("max_tokens", request.maxTokens());
+        body.put("system", request.system());
+        body.put("messages", request.messages());
+        if (request.tools() != null && !request.tools().isEmpty()) {
+            body.put("tools", request.tools());
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -57,18 +62,20 @@ public class AnthropicApiClient {
                     properties.getAnthropicBaseUrl() + "/v1/messages",
                     new HttpEntity<>(body, headers), JsonNode.class);
             if (root == null) {
-                throw new TelegramException("Claude API lieferte keine Antwort", null);
+                throw new AiException("Claude API lieferte keine Antwort", null);
             }
             List<Map<String, Object>> content = objectMapper.convertValue(
                     root.path("content"), new TypeReference<>() {
                     });
-            return new AnthropicResponse(root.path("stop_reason").asText(), content);
+            JsonNode usage = root.path("usage");
+            return new AnthropicResponse(root.path("stop_reason").asText(), content,
+                    usage.path("input_tokens").asInt(0), usage.path("output_tokens").asInt(0));
         } catch (RestClientException ex) {
-            throw new TelegramException("Claude API-Aufruf fehlgeschlagen: " + ex.getMessage(), ex);
+            throw new AiException("Claude API-Aufruf fehlgeschlagen: " + ex.getMessage(), ex);
         }
     }
 
-    /** Nur für Tests (MockRestServiceServer). */
+    /** Nur fuer Tests (MockRestServiceServer). */
     RestTemplate restTemplate() {
         return restTemplate;
     }

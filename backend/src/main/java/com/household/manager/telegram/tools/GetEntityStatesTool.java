@@ -1,5 +1,6 @@
 package com.household.manager.telegram.tools;
 
+import com.household.manager.ai.AgentTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityStateService;

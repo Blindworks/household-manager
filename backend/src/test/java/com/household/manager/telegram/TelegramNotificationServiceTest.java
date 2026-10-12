@@ -19,7 +19,6 @@ class TelegramNotificationServiceTest {
     private TelegramProperties props(List<Long> chatIds) {
         TelegramProperties p = new TelegramProperties();
         p.setBotToken("t");
-        p.setAnthropicApiKey("k");
         p.setAllowedChatIds(chatIds);
         return p;
     }
