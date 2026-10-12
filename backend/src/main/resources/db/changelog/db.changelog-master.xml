@@ -150,4 +150,11 @@
     <include file="db/changelog/changes/20261009-0059-create-thermostat-history.xml"/>
     <include file="db/changelog/changes/20261009-0060-create-thermostat-history-index.xml"/>
 
+    <!-- Hausverstand: proaktiver KI-Agent -->
+    <include file="db/changelog/changes/20261012-0061-create-agent-action-policy.xml"/>
+    <include file="db/changelog/changes/20261012-0062-create-agent-note.xml"/>
+    <include file="db/changelog/changes/20261012-0063-create-agent-proposal.xml"/>
+    <include file="db/changelog/changes/20261012-0064-create-agent-proposal-message.xml"/>
+    <include file="db/changelog/changes/20261012-0065-create-agent-run.xml"/>
+
 </databaseChangeLog>

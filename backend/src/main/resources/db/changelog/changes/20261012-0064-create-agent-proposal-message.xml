@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261012-0064-create-agent-proposal-message" author="claude">
+        <comment>
+            Telegram-Nachrichten je Vorschlag. Der Fremdschluessel haengt inline an der Spalte,
+            weil MariaDB jedes DDL implizit committet (kein separates addForeignKeyConstraint).
+        </comment>
+        <createTable tableName="agent_proposal_message">
+            <column name="id" type="BIGINT" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="proposal_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_agent_proposal_message_proposal"
+                             references="agent_proposal(id)" deleteCascade="true"/>
+            </column>
+            <column name="chat_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="message_id" type="BIGINT"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="agent_proposal_message"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
