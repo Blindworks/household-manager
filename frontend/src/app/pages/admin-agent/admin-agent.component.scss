@@ -457,7 +457,8 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
   }
 
   // ---- Läufe-Tabelle ----
-  &__runs table {
+  &__runs table,
+  &__proposals table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
@@ -484,6 +485,23 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
 
   &__trigger {
     min-width: 10rem;
+  }
+
+  &__proposal-title {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__reason {
+    color: var(--color-gray);
+    min-width: 16rem;
+    max-width: 36rem;
+    line-height: 1.5;
+  }
+
+  &__status-cell,
+  &__decided {
+    white-space: nowrap;
   }
 
   &__trigger-label {

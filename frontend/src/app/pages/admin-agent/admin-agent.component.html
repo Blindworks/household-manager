@@ -187,10 +187,10 @@
           <tbody>
             @for (proposal of proposals(); track proposal.id) {
               <tr [class.admin-agent__row--pending]="proposal.status === 'PENDING'">
-                <td>{{ proposal.createdAt | date: 'dd.MM. HH:mm' }}</td>
-                <td>{{ proposal.description }}</td>
-                <td>{{ proposal.reason }}</td>
-                <td>
+                <td class="admin-agent__when">{{ proposal.createdAt | date: 'dd.MM. HH:mm' }}</td>
+                <td class="admin-agent__proposal-title">{{ proposal.description }}</td>
+                <td class="admin-agent__reason">{{ proposal.reason }}</td>
+                <td class="admin-agent__status-cell">
                   <span class="admin-agent__badge" [ngClass]="'admin-agent__badge--' + proposal.status.toLowerCase()">{{ statusLabels[proposal.status] }}</span>
                   @if (proposal.error) {
                     <div class="admin-agent__meta">{{ proposal.error }}</div>
@@ -205,7 +205,7 @@
                     </div>
                   }
                 </td>
-                <td>{{ proposal.decidedBy ?? '–' }}</td>
+                <td class="admin-agent__decided">{{ proposal.decidedBy ?? '–' }}</td>
               </tr>
             }
           </tbody>
