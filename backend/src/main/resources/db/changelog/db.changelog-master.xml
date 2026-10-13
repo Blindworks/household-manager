@@ -157,4 +157,9 @@
     <include file="db/changelog/changes/20261012-0064-create-agent-proposal-message.xml"/>
     <include file="db/changelog/changes/20261012-0065-create-agent-run.xml"/>
 
+    <!-- Bluetooth-Thermometer (ThermoBeacon) ueber das Wandtablet -->
+    <include file="db/changelog/changes/20261013-0066-create-ble-sensor.xml"/>
+    <include file="db/changelog/changes/20261013-0067-create-ble-sensor-reading.xml"/>
+    <include file="db/changelog/changes/20261013-0068-create-ble-sensor-reading-index.xml"/>
+
 </databaseChangeLog>

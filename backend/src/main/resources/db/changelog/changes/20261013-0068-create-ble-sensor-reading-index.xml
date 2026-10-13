@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261013-0068-create-ble-sensor-reading-index" author="claude">
+        <comment>Index fuer Zeitreihenabfragen je Sensor (eigenes Changeset wegen MariaDB-DDL-Autocommit).</comment>
+        <createIndex tableName="ble_sensor_reading" indexName="idx_ble_sensor_reading_sensor_time">
+            <column name="sensor_id"/>
+            <column name="measured_at"/>
+        </createIndex>
+        <rollback><dropIndex tableName="ble_sensor_reading" indexName="idx_ble_sensor_reading_sensor_time"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

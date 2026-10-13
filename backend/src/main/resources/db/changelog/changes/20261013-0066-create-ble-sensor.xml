@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261013-0066-create-ble-sensor" author="claude">
+        <comment>Bluetooth-Thermometer (ThermoBeacon), je gesehener MAC eine Zeile; aktiv erst nach Uebernahme.</comment>
+        <createTable tableName="ble_sensor">
+            <column name="id" type="BIGINT" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="mac" type="VARCHAR(17)"><constraints nullable="false" unique="true" uniqueConstraintName="uk_ble_sensor_mac"/></column>
+            <column name="name" type="VARCHAR(100)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="tablet_id" type="VARCHAR(100)"/>
+            <column name="last_seen_at" type="DATETIME"/>
+            <column name="last_temperature" type="DECIMAL(5,2)"/>
+            <column name="last_humidity" type="DECIMAL(5,2)"/>
+            <column name="last_battery_mv" type="INT"/>
+            <column name="last_rssi" type="INT"/>
+            <column name="created_at" type="DATETIME"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="ble_sensor"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261013-0067-create-ble-sensor-reading" author="claude">
+        <comment>Historie der Bluetooth-Thermometer, hoechstens ein Punkt pro Minute und Sensor.</comment>
+        <createTable tableName="ble_sensor_reading">
+            <column name="id" type="BIGINT" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="sensor_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="measured_at" type="DATETIME"><constraints nullable="false"/></column>
+            <column name="temperature" type="DECIMAL(5,2)"/>
+            <column name="humidity" type="DECIMAL(5,2)"/>
+            <column name="battery_mv" type="INT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="ble_sensor_reading" baseColumnNames="sensor_id"
+                                 referencedTableName="ble_sensor" referencedColumnNames="id"
+                                 constraintName="fk_ble_sensor_reading_sensor" onDelete="CASCADE"/>
+        <rollback><dropTable tableName="ble_sensor_reading"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
