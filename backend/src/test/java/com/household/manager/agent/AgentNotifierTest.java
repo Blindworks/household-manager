@@ -62,6 +62,26 @@ class AgentNotifierTest {
 
     @SuppressWarnings("unchecked")
     @Test
+    void notificationProposalOffersNoRememberButton() {
+        configure(1L);
+        when(apiClient.sendMessage(eq(1L), anyString(), anyList())).thenReturn(55L);
+        AgentAction action = new AgentAction(ActionClass.NOTIFY, "telegram",
+                Map.of("channel", "telegram", "message", "Fenster offen"), "Regen", false);
+        AgentProposal p = AgentProposal.builder().id(8L).actionClass(ActionClass.NOTIFY).target("telegram")
+                .actionJson(AgentActionJson.write(objectMapper, action)).reason("Regen")
+                .status(ProposalStatus.PENDING).createdAt(LocalDateTime.of(2026, 10, 12, 12, 0)).build();
+
+        notifier().sendProposal(p);
+
+        ArgumentCaptor<List<List<InlineButton>>> keyboard = ArgumentCaptor.forClass(List.class);
+        verify(apiClient).sendMessage(eq(1L), anyString(), keyboard.capture());
+        assertEquals(List.of(
+                new InlineButton("Ja", "agent:8:APPROVE"),
+                new InlineButton("Nein", "agent:8:REJECT")), keyboard.getValue().get(0));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
     void sendProposalSendsKeyboardAndStoresMessagePerChat() {
         configure(1L);
         when(apiClient.sendMessage(eq(1L), anyString(), anyList())).thenReturn(55L);

@@ -33,4 +33,16 @@ public record AgentAction(ActionClass actionClass, String target, Map<String, Ob
             case LOCK -> "Schloss " + target + " verriegeln";
         };
     }
+
+    /**
+     * Beschreibung fuer Notizen mit Nutzer-Autoritaet: wie {@link #describe()}, aber ohne jeden
+     * freien Modelltext. Bei einer Nachricht steckt der Inhalt im Parameter {@code message} — landete
+     * er in einer USER-Notiz, haette sich das Modell eine Anweisung mit Nutzerrang geschrieben.
+     */
+    public String describeForNote() {
+        if (actionClass == ActionClass.NOTIFY) {
+            return "Nachricht an " + target;
+        }
+        return describe();
+    }
 }

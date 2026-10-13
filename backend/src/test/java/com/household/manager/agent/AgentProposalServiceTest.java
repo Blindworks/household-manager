@@ -535,6 +535,34 @@ class AgentProposalServiceTest {
     }
 
     @Test
+    void rejectedNotificationNoteOmitsTheModelText() {
+        AgentProposal held = heldMessage(9L);
+        held.setDeliveredAt(NOW.minusMinutes(5));
+        when(repository.findById(9L)).thenReturn(Optional.of(held));
+        when(repository.claim(eq(9L), eq(ProposalStatus.PENDING), eq(ProposalStatus.REJECTED), any(), any())).thenReturn(1);
+
+        service().decide(9L, ProposalDecision.REJECT, "Benedikt");
+
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(noteService).create(eq(NoteKind.OBSERVATION), text.capture(), eq(NoteSource.USER), any());
+        assertEquals("Benedikt hat abgelehnt: Nachricht an telegram", text.getValue());
+        assertFalse(text.getValue().contains("Fenster offen"));
+    }
+
+    @Test
+    void rememberingANotificationIsRefusedBeforeAnyClaim() {
+        AgentProposal held = heldMessage(9L);
+        held.setDeliveredAt(NOW.minusMinutes(5));
+        when(repository.findById(9L)).thenReturn(Optional.of(held));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service().decide(9L, ProposalDecision.APPROVE_AND_REMEMBER, "Benedikt"));
+
+        verify(repository, never()).claim(anyLong(), any(), any(), any(), any());
+        verifyNoInteractions(noteService, executor);
+    }
+
+    @Test
     void executeDirectNotifySendsNoExtraInfo() {
         when(executor.execute(any())).thenReturn(new ActionOutcome(false, "Nachricht gesendet."));
 
