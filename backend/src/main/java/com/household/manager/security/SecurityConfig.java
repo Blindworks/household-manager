@@ -143,6 +143,8 @@ public class SecurityConfig {
                                 "/v1/blink/motion").hasAuthority(SERVICE_AUTHORITY)
                         .requestMatchers(HttpMethod.GET, "/v1/vision/embeddings").hasAuthority(SERVICE_AUTHORITY)
                         .requestMatchers("/v1/tablet-presence/**").hasAuthority(SERVICE_AUTHORITY)
+                        // Bluetooth-Thermometer: Sammelmeldung des Wandtablets (Muster tablet-presence)
+                        .requestMatchers(HttpMethod.POST, "/v1/ble-sensors/readings").hasAuthority(SERVICE_AUTHORITY)
                         // Admin-Bereiche (inkl. bestehender /v1/admin/*-Polling-Controller)
                         // /v1/tractive/home-settings MUSS vor der generischen GET-Regel weiter
                         // unten stehen, sonst duerfte das Kiosk-Tablet die Home-Definition lesen.
@@ -171,6 +173,9 @@ public class SecurityConfig {
                                 // Hausverstand: Notizen enthalten Gewohnheiten des Haushalts, daher ist auch
                                 // LESEN ADMIN. Methodenlos und beide Formen, VOR der generischen GET-Regel;
                                 // nur /summary ist davor fuer KIOSK freigegeben.
+                                // Bluetooth-Thermometer: die Liste traegt MACs fremder Geraete in Funkreichweite,
+                                // auch LESEN ist ADMIN. Methodenlos, beide Formen, VOR der generischen GET-Regel.
+                                "/v1/ble-sensors", "/v1/ble-sensors/**",
                                 "/v1/agent", "/v1/agent/**").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
