@@ -207,25 +207,40 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
     overflow: hidden;
   }
 
-  &__segment {
+  // Verschachtelt unter __segments, damit die Regel die globale Admin-Button-Regel
+  // (`.admin-agent button:not(...)`, Spezifität 0,2,1) sicher schlägt — sonst sind beide
+  // Segmente einheitlich primärblau und die Auswahl ist unsichtbar.
+  &__segments &__segment {
     padding: 6px 14px;
     border: 0;
     border-radius: 0;
+    box-shadow: none;
     background: var(--color-white);
     color: var(--color-dark);
     font-size: 0.85rem;
+    font-weight: 500;
     transition: background-color 0.15s;
 
     & + & {
       border-left: 1px solid var(--color-light-gray);
     }
 
-    &--active {
-      background: var(--color-primary);
-      color: var(--color-white);
+    &:hover:not(:disabled) {
+      background: var(--color-light-gray);
+      color: var(--color-dark);
+      box-shadow: none;
+      transform: none;
     }
 
-    &--active#{&}--direct {
+    &--active,
+    &--active:hover:not(:disabled) {
+      background: var(--color-primary);
+      color: var(--color-white);
+      font-weight: 600;
+    }
+
+    &--active#{&}--direct,
+    &--active#{&}--direct:hover:not(:disabled) {
       background: var(--color-warning);
     }
 
@@ -475,7 +490,8 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
     }
   }
 
-  &__link {
+  &__result &__link,
+  &__result &__link:hover:not(:disabled) {
     margin-left: 4px;
     padding: 0;
     border: 0;
@@ -486,11 +502,7 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
     font-size: 0.85rem;
     text-decoration: underline;
     cursor: pointer;
-
-    &:hover {
-      background: none;
-      color: var(--color-primary-dark);
-    }
+    transform: none;
   }
 
   &__spinner {
