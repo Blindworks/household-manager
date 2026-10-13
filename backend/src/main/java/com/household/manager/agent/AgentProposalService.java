@@ -163,6 +163,11 @@ public class AgentProposalService {
             throw new IllegalStateException("Vorschlag #" + id + " ist bereits entschieden (" + p.getStatus() + ").");
         }
         AgentAction action = AgentActionJson.read(objectMapper, p.getActionJson());
+        if (decision == ProposalDecision.APPROVE_AND_REMEMBER && action.actionClass() == ActionClass.NOTIFY) {
+            // Eine Nachricht ist der Text des Modells; sie als Vorliebe zu merken, hiesse diesen Text
+            // mit Nutzer-Autoritaet zu versehen. Vor dem Claim pruefen, damit nichts halb entschieden bleibt.
+            throw new IllegalArgumentException("Nachrichten lassen sich nicht merken — nur Ja oder Nein.");
+        }
         LocalDateTime now = LocalDateTime.now(clock);
         String actor = abbreviate(decidedBy == null || decidedBy.isBlank() ? "unbekannt" : decidedBy, DECIDED_BY_MAX);
         ProposalStatus claimed = decision == ProposalDecision.REJECT ? ProposalStatus.REJECTED : ProposalStatus.APPROVED;
@@ -174,14 +179,14 @@ public class AgentProposalService {
         p.setDecidedAt(now);
         String label;
         if (decision == ProposalDecision.REJECT) {
-            rememberQuietly(NoteKind.OBSERVATION, actor + " hat abgelehnt: " + action.describe(),
+            rememberQuietly(NoteKind.OBSERVATION, actor + " hat abgelehnt: " + action.describeForNote(),
                     now.plusHours(REJECTION_MEMORY_HOURS));
             label = "Abgelehnt von " + actor;
         } else {
             if (decision == ProposalDecision.APPROVE_AND_REMEMBER) {
                 // Bewusst ohne die Begruendung des Modells: die Notiz traegt Nutzer-Autoritaet und ist fuer den
                 // Agenten unveraenderbar — freier Modelltext darin waere eine Selbstanweisung mit Nutzerrang.
-                rememberQuietly(NoteKind.PREFERENCE, actor + " stimmt zu: " + action.describe(), null);
+                rememberQuietly(NoteKind.PREFERENCE, actor + " stimmt zu: " + action.describeForNote(), null);
             }
             label = runAction(p, action, "Ausgeführt von " + actor);
         }

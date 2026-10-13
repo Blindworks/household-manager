@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -57,11 +58,15 @@ public class AgentNotifier {
             log.warn("Vorschlag {} nicht darstellbar: {}", p.getId(), ex.getMessage());
             return;
         }
-        List<List<InlineButton>> keyboard = List.of(List.of(
+        List<InlineButton> row = new ArrayList<>(List.of(
                 new InlineButton(LABEL_YES, AgentProposalService.callbackData(p.getId(), ProposalDecision.APPROVE)),
-                new InlineButton(LABEL_NO, AgentProposalService.callbackData(p.getId(), ProposalDecision.REJECT)),
-                new InlineButton(LABEL_REMEMBER,
-                        AgentProposalService.callbackData(p.getId(), ProposalDecision.APPROVE_AND_REMEMBER))));
+                new InlineButton(LABEL_NO, AgentProposalService.callbackData(p.getId(), ProposalDecision.REJECT))));
+        if (p.getActionClass() != ActionClass.NOTIFY) {
+            // Eine Nachricht laesst sich nicht "merken": ihr Text stammt vom Modell (siehe decide).
+            row.add(new InlineButton(LABEL_REMEMBER,
+                    AgentProposalService.callbackData(p.getId(), ProposalDecision.APPROVE_AND_REMEMBER)));
+        }
+        List<List<InlineButton>> keyboard = List.of(row);
         for (long chatId : telegramProperties.getAllowedChatIds()) {
             try {
                 long messageId = apiClient.sendMessage(chatId, text, keyboard);

@@ -151,6 +151,16 @@ describe('AdminAgentComponent', () => {
     expect(Array.from(section.querySelectorAll('button')).some(b => b.textContent?.trim() === 'Ja')).toBeFalse();
   });
 
+  it('bietet bei Nachrichten-Vorschlägen kein „Ja, und merken" an', async () => {
+    await load(SUMMARY, [{ ...PROPOSAL, id: 8, actionClass: 'NOTIFY', target: 'telegram', description: 'Nachricht an telegram' }]);
+
+    const labels = Array.from(el.querySelectorAll<HTMLButtonElement>('.admin-agent__proposals button'))
+      .map(b => b.textContent?.trim());
+    expect(labels).toContain('Ja');
+    expect(labels).toContain('Nein');
+    expect(labels).not.toContain('Ja, und merken');
+  });
+
   it('zeigt die 429-Meldung beim manuellen Lauf inline', async () => {
     await load();
 

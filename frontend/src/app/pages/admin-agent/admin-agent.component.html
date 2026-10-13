@@ -163,7 +163,9 @@
                     <div class="admin-agent__actions">
                       <button type="button" [disabled]="decidingId() !== null" (click)="decide(proposal, 'APPROVE')">Ja</button>
                       <button type="button" class="ghost" [disabled]="decidingId() !== null" (click)="decide(proposal, 'REJECT')">Nein</button>
-                      <button type="button" class="ghost" [disabled]="decidingId() !== null" (click)="decide(proposal, 'APPROVE_AND_REMEMBER')">Ja, und merken</button>
+                      @if (proposal.actionClass !== 'NOTIFY') {
+                        <button type="button" class="ghost" [disabled]="decidingId() !== null" (click)="decide(proposal, 'APPROVE_AND_REMEMBER')">Ja, und merken</button>
+                      }
                     </div>
                   }
                 </td>
