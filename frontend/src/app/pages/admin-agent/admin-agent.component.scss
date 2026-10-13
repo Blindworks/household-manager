@@ -250,24 +250,49 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
   }
 
   // ---- Notizen ----
+  // Raster statt Flex, damit alle Beschriftungen auf einer Zeile und alle Felder auf einer
+  // Grundlinie stehen; die Textarea beginnt einzeilig und waechst nur, wenn man sie aufzieht.
   &__note-form {
-    display: flex;
-    align-items: flex-end;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 10rem minmax(14rem, 1fr) 14rem auto;
+    align-items: end;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-md);
+
+    textarea {
+      min-height: 2.9rem;
+      resize: vertical;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      min-height: 2.9rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      min-height: 2.9rem;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   &__field {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
     font-size: 0.8rem;
     color: var(--color-gray);
-
-    &--wide {
-      flex: 1 1 20rem;
-    }
   }
 
   &__note-list {
