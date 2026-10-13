@@ -10,6 +10,9 @@ import com.household.manager.agent.AgentSettingsService;
 import com.household.manager.agent.AgentTokenBudget;
 import com.household.manager.agent.AgentWakeService;
 import com.household.manager.audit.AuditService;
+import com.household.manager.blesensor.BleSensorAdminService;
+import com.household.manager.blesensor.BleSensorController;
+import com.household.manager.blesensor.BleSensorIngestService;
 import com.household.manager.calendar.CalendarCategoryController;
 import com.household.manager.calendar.CalendarCategoryService;
 import com.household.manager.calendar.CalendarEventController;
@@ -37,9 +40,6 @@ import com.household.manager.repository.ZigbeeMeasurementRepository;
 import com.household.manager.service.SmartDeviceService;
 import com.household.manager.system.SystemController;
 import com.household.manager.system.SystemRebootService;
-import com.household.manager.blesensor.BleSensorAdminService;
-import com.household.manager.blesensor.BleSensorController;
-import com.household.manager.blesensor.BleSensorIngestService;
 import com.household.manager.tablet.TabletPresenceService;
 import com.household.manager.zigbee.controller.ZigbeeController;
 import com.household.manager.zigbee.controller.ZigbeeManagementController;
@@ -397,6 +397,9 @@ class SecurityRulesTest {
         // 200/204 statt 403: die Regel laesst durch, der gemockte Service antwortet. (Der Slice schliesst
         // den GlobalExceptionHandler aus, ein 404 per ResourceNotFoundException waere hier nicht abbildbar.)
         mockMvc.perform(get("/v1/ble-sensors")).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/ble-sensors/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
         mockMvc.perform(delete("/v1/ble-sensors/1").with(csrf())).andExpect(status().isNoContent());
     }
 
