@@ -245,4 +245,21 @@ describe('AdminAgentComponent', () => {
     expect(el.querySelectorAll('.admin-agent__policy-row').length).toBe(5);
     expect(el.querySelector('.admin-agent__proposals')?.textContent).toContain('Heizung auf 21 Grad');
   });
+
+  it('zeigt die Statuszeile mit Aktiv-Pille und Vorschlagszahl', async () => {
+    await load();
+
+    const pills = Array.from(el.querySelectorAll('.admin-agent__status .admin-agent__pill'))
+      .map(pill => pill.textContent?.trim());
+    expect(pills).toEqual(['Aktiv', '1 Vorschlag offen', 'Telegram verbunden']);
+    expect(el.querySelector('.admin-agent__pill--on')).not.toBeNull();
+  });
+
+  it('färbt den Token-Balken rot, wenn das Budget erschöpft ist', async () => {
+    await load(SUMMARY, [PROPOSAL], { ...RUNS, budgetExhausted: true, inputTokensToday: 290000 });
+
+    const fill = el.querySelector<HTMLElement>('.admin-agent__gauge-fill')!;
+    expect(fill.classList).toContain('admin-agent__gauge-fill--error');
+    expect(fill.style.width).toBe('97%');
+  });
 });
