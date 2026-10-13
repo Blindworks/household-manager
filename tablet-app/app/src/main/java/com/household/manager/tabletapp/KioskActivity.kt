@@ -3,6 +3,7 @@ package com.household.manager.tabletapp
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -20,6 +21,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.household.manager.tabletapp.ble.SensorReporter
+import com.household.manager.tabletapp.ble.ThermoBeaconScanner
 import com.household.manager.tabletapp.presence.FacePresenceDetector
 import com.household.manager.tabletapp.presence.MotionDetector
 import com.household.manager.tabletapp.presence.PresenceAnalyzer
@@ -64,6 +67,15 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
             }
         }
 
+    private var bleScanner: ThermoBeaconScanner? = null
+    private var sensorReporter: SensorReporter? = null
+    private var bleFailed = false
+
+    private val bluetoothPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            if (result.values.all { it }) startBleScanning() else onBleFailure("Bluetooth-Berechtigung verweigert")
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_kiosk)
@@ -85,6 +97,9 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
 
         reporter.startHeartbeat()
         cameraPermission.launch(Manifest.permission.CAMERA)
+        if (settings.bleReportingEnabled) {
+            requestBluetoothOrStart()
+        }
         handler.post(tickRunnable)
     }
 
@@ -114,6 +129,7 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
     override fun onDestroy() {
         handler.removeCallbacks(tickRunnable)
         handler.removeCallbacks(retryRunnable)
+        bleScanner?.stop()
         scope.cancel()
         webView.destroy()
         super.onDestroy()
@@ -174,6 +190,29 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
         }
         cameraFailed = true
         applyDisplayState(DisplayState.ON)
+    }
+
+    private fun requestBluetoothOrStart() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            onBleFailure("Android < 12: BLE-Scan braeuchte Standort, nicht unterstuetzt")
+            return
+        }
+        bluetoothPermissions.launch(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT))
+    }
+
+    private fun startBleScanning() {
+        val scanner = ThermoBeaconScanner(this) { reason -> runOnUiThread { onBleFailure(reason) } }
+        bleScanner = scanner
+        scanner.start()
+        sensorReporter = SensorReporter(settings, scope, { scanner.snapshot() }).also { it.start() }
+    }
+
+    /** Fail-safe: ein Bluetooth-Problem beruehrt Dashboard und Praesenz nicht. */
+    private fun onBleFailure(reason: String) {
+        if (!bleFailed) {
+            Log.w(TAG, "Bluetooth-Thermometer nicht nutzbar: $reason")
+        }
+        bleFailed = true
     }
 
     @SuppressLint("SetJavaScriptEnabled")

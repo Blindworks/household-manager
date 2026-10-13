@@ -37,6 +37,11 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_MOTION_THRESHOLD, 25)
         set(value) = prefs.edit().putInt(KEY_MOTION_THRESHOLD, value.coerceIn(5, 100)).apply()
 
+    /** Bluetooth-Thermometer scannen und ans Backend melden (Default an). */
+    var bleReportingEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BLE_REPORTING, true)
+        set(value) = prefs.edit().putBoolean(KEY_BLE_REPORTING, value).apply()
+
     private companion object {
         const val KEY_DASHBOARD_URL = "dashboardUrl"
         const val KEY_BACKEND_URL = "backendBaseUrl"
@@ -44,5 +49,6 @@ class AppSettings(context: Context) {
         const val KEY_API_TOKEN = "api_token"
         const val KEY_TIMEOUT_SECONDS = "displayTimeoutSeconds"
         const val KEY_MOTION_THRESHOLD = "motionPixelThreshold"
+        const val KEY_BLE_REPORTING = "bleReportingEnabled"
     }
 }
