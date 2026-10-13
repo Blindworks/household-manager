@@ -1,52 +1,240 @@
+$warn-tint: color-mix(in srgb, var(--color-warning) 14%, white);
+$warn-line: color-mix(in srgb, var(--color-warning) 45%, white);
+$success-tint: color-mix(in srgb, var(--color-success) 14%, white);
+$primary-tint: color-mix(in srgb, var(--color-primary) 12%, white);
+$error-tint: color-mix(in srgb, var(--color-error) 12%, white);
+$gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
+
 .admin-agent {
+  max-width: 1100px;
   padding: var(--spacing-lg);
+
+  h1 {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1.75rem;
+    font-weight: 600;
+  }
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+
+    .material-symbols-outlined {
+      color: var(--color-primary);
+      font-size: 1.4rem;
+    }
+  }
 
   section {
     margin-bottom: var(--spacing-lg);
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
     border: 1px solid var(--color-light-gray);
-    border-radius: var(--radius-sm, 6px);
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.95rem;
   }
 
-  &__hint {
-    max-width: 70ch;
-    margin-bottom: var(--spacing-md);
-    color: var(--color-gray);
-    font-size: 0.9rem;
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  &__switch input:focus-visible + &__switch-track {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 
-    &--inline {
-      margin: 0;
-    }
+  &__intro {
+    max-width: 70ch;
+    margin: 0 0 var(--spacing-md);
+    color: var(--color-gray);
+  }
+
+  &__subtitle,
+  &__meta {
+    color: var(--color-gray);
+    font-size: 0.8rem;
+  }
+
+  &__subtitle {
+    margin: 4px 0 var(--spacing-md);
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--color-gray);
+  }
+
+  &__visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   &__banner,
   &__error {
     margin-bottom: var(--spacing-md);
-    padding: var(--spacing-sm);
-    border: 1px solid rgba(239, 68, 68, 0.25);
+    padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-sm, 6px);
-    background: rgba(239, 68, 68, 0.1);
+  }
+
+  &__banner {
+    border: 1px solid $warn-line;
+    background: $warn-tint;
+    color: var(--color-dark);
+  }
+
+  &__error {
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    background: $error-tint;
     color: var(--color-error);
   }
 
-  &__toggle {
+  // ---- Statuszeile ----
+  &__status {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
   }
 
+  &__pill {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: $gray-tint;
+    color: var(--color-dark);
+    font-size: 0.8rem;
+    font-weight: 600;
+
+    &--on {
+      background: $success-tint;
+    }
+
+    &--off {
+      color: var(--color-gray);
+    }
+
+    &--warn {
+      background: $warn-tint;
+    }
+  }
+
+  &__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+
+    input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+  }
+
+  &__switch-track {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--color-gray);
+    transition: background-color 0.15s;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-white);
+    }
+  }
+
+  &__switch input:checked + &__switch-track {
+    background: var(--color-success);
+
+    &::after {
+      left: 21px;
+    }
+  }
+
+  &__switch input:disabled + &__switch-track {
+    opacity: 0.5;
+  }
+
+  // ---- Freigaben ----
   &__policy-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
+    gap: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+    border-top: 1px solid var(--color-light-gray);
+  }
+
+  &__policy-text,
+  &__policy-control {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__policy-control {
+    position: relative;
+    align-items: flex-end;
   }
 
   &__policy-name {
-    min-width: 12rem;
+    font-weight: 600;
   }
 
+  &__segments {
+    display: inline-flex;
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+    overflow: hidden;
+  }
+
+  &__segment {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-white);
+    color: var(--color-dark);
+    font-size: 0.85rem;
+    transition: background-color 0.15s;
+
+    & + & {
+      border-left: 1px solid var(--color-light-gray);
+    }
+
+    &--active {
+      background: var(--color-primary);
+      color: var(--color-white);
+    }
+
+    &--active#{&}--direct {
+      background: var(--color-warning);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  // ---- Notizen ----
   &__note-form {
     display: flex;
     align-items: flex-end;
@@ -59,6 +247,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    font-size: 0.8rem;
+    color: var(--color-gray);
 
     &--wide {
       flex: 1 1 20rem;
@@ -82,13 +272,7 @@
   }
 
   &__note-body p {
-    margin: 4px 0 0;
-  }
-
-  &__note-meta {
-    margin-left: var(--spacing-sm);
-    color: var(--color-gray);
-    font-size: 0.85rem;
+    margin: 6px 0 2px;
   }
 
   &__note-edit {
@@ -98,6 +282,32 @@
     width: 100%;
   }
 
+  &__chips {
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+
+  &__chip,
+  &__badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: $gray-tint;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  &__chip--preference {
+    background: $primary-tint;
+    color: var(--color-primary);
+  }
+
+  &__chip--source {
+    background: transparent;
+    border: 1px solid var(--color-light-gray);
+    color: var(--color-gray);
+  }
+
   &__actions {
     display: flex;
     flex-wrap: wrap;
@@ -105,8 +315,88 @@
     margin-top: var(--spacing-sm);
   }
 
+  // ---- Vorschläge ----
   &__table-wrap {
     overflow-x: auto;
+  }
+
+  &__badge {
+    &--pending {
+      background: $warn-tint;
+    }
+
+    &--executed,
+    &--approved {
+      background: $success-tint;
+    }
+
+    &--failed {
+      background: $error-tint;
+      color: var(--color-error);
+    }
+
+    &--rejected,
+    &--expired {
+      color: var(--color-gray);
+    }
+  }
+
+  &__row--pending {
+    background: color-mix(in srgb, var(--color-warning) 6%, white);
+  }
+
+  // ---- Läufe ----
+  &__metrics {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-light-gray);
+    border-radius: var(--radius-sm, 6px);
+
+    strong {
+      font-size: 1.1rem;
+    }
+  }
+
+  &__gauge {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-light-gray);
+    overflow: hidden;
+  }
+
+  &__gauge-fill {
+    height: 100%;
+    background: var(--color-success);
+
+    &--warn {
+      background: var(--color-warning);
+    }
+
+    &--error {
+      background: var(--color-error);
+    }
+  }
+
+  &__dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: var(--color-success);
+
+    &--error {
+      background: var(--color-error);
+    }
   }
 
   &__run-bar {
@@ -119,11 +409,24 @@
 
   &__run-message {
     margin-bottom: var(--spacing-md);
-    color: var(--color-success, inherit);
+    color: var(--color-success);
 
     &--error {
       color: var(--color-error);
     }
+  }
+
+  &__result {
+    min-width: 16rem;
+
+    &--error {
+      color: var(--color-error);
+    }
+  }
+
+  &__link {
+    padding: 0 6px;
+    font-size: 0.8rem;
   }
 
   &__spinner {
@@ -133,6 +436,29 @@
     border-top-color: var(--color-gray);
     border-radius: 50%;
     animation: admin-agent-spin 0.8s linear infinite;
+  }
+
+  @media (max-width: 700px) {
+    padding: var(--spacing-md);
+
+    &__metrics {
+      grid-template-columns: 1fr;
+    }
+
+    &__policy-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    &__policy-control {
+      align-items: flex-start;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__spinner {
+      animation: none;
+    }
   }
 }
 

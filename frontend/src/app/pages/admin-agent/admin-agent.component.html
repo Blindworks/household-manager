@@ -1,69 +1,100 @@
 <div class="admin-agent">
   <h1>Hausverstand</h1>
-  <p class="admin-agent__hint">
-    Der Hausverstand beobachtet das Haus, schlägt Aktionen vor und führt – je nach Freigabe –
-    freigegebene Aktionen selbst aus. Entscheidungen werden auch per Telegram abgefragt.
+  <p class="admin-agent__intro">
+    Der Hausverstand beobachtet das Haus, schlägt Aktionen vor und führt sie – je nach Freigabe –
+    selbst aus. Entscheidungen werden auch per Telegram abgefragt.
   </p>
 
-  @if (summary(); as s) {
-    @if (!s.telegramConfigured) {
-      <div class="admin-agent__banner" role="alert">
-        Telegram ist nicht konfiguriert – Vorschläge können nicht zugestellt werden und
-        bleiben nur auf dieser Seite sichtbar.
-      </div>
-    }
-  }
-
-  <section class="admin-agent__settings">
-    <h2>Betrieb</h2>
+  <div class="admin-agent__settings">
     @if (settingsError()) {
       <div class="admin-agent__error" role="alert">{{ settingsError() }}</div>
     }
     @if (summary(); as s) {
-      @for (version of [settingsVersion()]; track version) {
-        <label class="admin-agent__toggle">
-          <input
-            type="checkbox"
-            name="agent-active"
-            [ngModel]="s.active"
-            [disabled]="settingsSaving()"
-            (ngModelChange)="setActive($event)">
-          <span>Hausverstand aktiv</span>
-        </label>
+      <div class="admin-agent__status">
+        @for (version of [settingsVersion()]; track version) {
+          <label class="admin-agent__switch">
+            <input
+              type="checkbox"
+              name="agent-active"
+              [ngModel]="s.active"
+              [disabled]="settingsSaving()"
+              (ngModelChange)="setActive($event)">
+            <span class="admin-agent__switch-track" aria-hidden="true"></span>
+            <span>Hausverstand aktiv</span>
+          </label>
+        }
+        <span class="admin-agent__pill" [class.admin-agent__pill--on]="s.active" [class.admin-agent__pill--off]="!s.active">
+          {{ s.active ? 'Aktiv' : 'Aus' }}
+        </span>
+        <span class="admin-agent__pill">
+          {{ s.pendingProposals === 1 ? '1 Vorschlag offen' : s.pendingProposals + ' Vorschläge offen' }}
+        </span>
+        <span class="admin-agent__pill"
+              [class.admin-agent__pill--on]="s.telegramConfigured"
+              [class.admin-agent__pill--warn]="!s.telegramConfigured">
+          {{ s.telegramConfigured ? 'Telegram verbunden' : 'Telegram fehlt' }}
+        </span>
+      </div>
+      @if (!s.telegramConfigured) {
+        <div class="admin-agent__banner" role="alert">
+          Telegram ist nicht konfiguriert – Vorschläge können nicht zugestellt werden und
+          bleiben nur auf dieser Seite sichtbar.
+        </div>
       }
-      <p class="admin-agent__hint">Offene Vorschläge: {{ s.pendingProposals }}</p>
     }
-  </section>
+  </div>
 
   <section class="admin-agent__policies">
-    <h2>Freigaben</h2>
+    <h2><span class="material-symbols-outlined" aria-hidden="true">verified_user</span>Freigaben</h2>
+    <p class="admin-agent__subtitle">Legt je Aktionsklasse fest, ob der Hausverstand nur vorschlägt oder selbst handelt.</p>
     @if (policiesError()) {
       <div class="admin-agent__error" role="alert">{{ policiesError() }}</div>
     }
     @for (p of policyRows(); track p.key) {
       <div class="admin-agent__policy-row">
-        <span class="admin-agent__policy-name">{{ actionClassLabels[p.actionClass] }}</span>
-        <select
-          [name]="'policy-' + p.actionClass"
-          [attr.name]="'policy-' + p.actionClass"
-          [ngModel]="p.policy"
-          [disabled]="isPolicyLocked(p.actionClass)"
-          (ngModelChange)="changePolicy(p.actionClass, $event)">
-          @for (option of policyOptions; track option) {
-            <option [value]="option">{{ policyLabels[option] }}</option>
+        <div class="admin-agent__policy-text">
+          <span class="admin-agent__policy-name">{{ actionClassLabels[p.actionClass] }}</span>
+          <span class="admin-agent__meta">{{ policyHints[p.actionClass] }}</span>
+        </div>
+        <div class="admin-agent__policy-control">
+          <select
+            class="admin-agent__visually-hidden"
+            tabindex="-1"
+            [name]="'policy-' + p.actionClass"
+            [attr.name]="'policy-' + p.actionClass"
+            [attr.aria-label]="'Freigabe ' + actionClassLabels[p.actionClass]"
+            [ngModel]="p.policy"
+            [disabled]="isPolicyLocked(p.actionClass)"
+            (ngModelChange)="changePolicy(p.actionClass, $event)">
+            @for (option of policyOptions; track option) {
+              <option [value]="option">{{ policyLabels[option] }}</option>
+            }
+          </select>
+          <div class="admin-agent__segments" role="group" [attr.aria-label]="'Freigabe ' + actionClassLabels[p.actionClass]">
+            @for (option of policyOptions; track option) {
+              <button
+                type="button"
+                class="admin-agent__segment"
+                [class.admin-agent__segment--active]="p.policy === option"
+                [class.admin-agent__segment--direct]="option === 'DIRECT'"
+                [attr.aria-pressed]="p.policy === option"
+                [disabled]="isPolicyLocked(p.actionClass)"
+                (click)="changePolicy(p.actionClass, option)">
+                {{ segmentLabels[option] }}
+              </button>
+            }
+          </div>
+          @if (isPolicyLocked(p.actionClass)) {
+            <span class="admin-agent__meta">Nachrichten sind immer direkt</span>
           }
-        </select>
-        @if (isPolicyLocked(p.actionClass)) {
-          <span class="admin-agent__hint admin-agent__hint--inline">
-            Nachrichten werden immer direkt gesendet.
-          </span>
-        }
+        </div>
       </div>
     }
   </section>
 
   <section class="admin-agent__notes">
-    <h2>Notizen</h2>
+    <h2><span class="material-symbols-outlined" aria-hidden="true">sticky_note_2</span>Notizen</h2>
+    <p class="admin-agent__subtitle">Der Hausverstand merkt sich hier Beobachtungen, du hältst Vorlieben fest. Beides fließt in jeden Lauf ein.</p>
     @if (notesError()) {
       <div class="admin-agent__error" role="alert">{{ notesError() }}</div>
     }
@@ -85,11 +116,11 @@
         <span>Läuft ab (optional)</span>
         <input type="datetime-local" name="newExpiry" [(ngModel)]="newNote.expiresAt">
       </label>
-      <button type="submit" [disabled]="noteSaving()">Notiz anlegen</button>
+      <button type="submit" [disabled]="noteSaving()">Notiz speichern</button>
     </form>
 
     @if (notes().length === 0) {
-      <p class="admin-agent__hint">Noch keine Notizen.</p>
+      <p class="admin-agent__empty">Noch keine Notizen – der Hausverstand merkt sich hier Beobachtungen, du Vorlieben.</p>
     }
     <ul class="admin-agent__note-list">
       @for (note of notes(); track note.id) {
@@ -110,14 +141,18 @@
             </div>
           } @else {
             <div class="admin-agent__note-body">
-              <strong>{{ noteKindLabels[note.kind] }}</strong>
-              <span class="admin-agent__note-meta">
-                {{ sourceLabel(note.source) }} · {{ note.createdAt | date: 'dd.MM. HH:mm' }}
+              <div class="admin-agent__chips">
+                <span class="admin-agent__chip" [class.admin-agent__chip--preference]="note.kind === 'PREFERENCE'">{{ noteKindLabels[note.kind] }}</span>
+                <span class="admin-agent__chip admin-agent__chip--source">{{ sourceLabel(note.source) }}</span>
+              </div>
+              <p>{{ note.text }}</p>
+              <span class="admin-agent__meta">
                 @if (note.expiresAt) {
-                  · läuft ab {{ note.expiresAt | date: 'dd.MM. HH:mm' }}
+                  bis {{ note.expiresAt | date: 'dd.MM. HH:mm' }}
+                } @else {
+                  unbefristet
                 }
               </span>
-              <p>{{ note.text }}</p>
             </div>
             <div class="admin-agent__actions">
               <button type="button" class="ghost" (click)="startEditNote(note)">Bearbeiten</button>
@@ -130,12 +165,13 @@
   </section>
 
   <section class="admin-agent__proposals">
-    <h2>Vorschläge</h2>
+    <h2><span class="material-symbols-outlined" aria-hidden="true">lightbulb</span>Vorschläge</h2>
+    <p class="admin-agent__subtitle">Was der Hausverstand tun möchte und wie darüber entschieden wurde.</p>
     @if (proposalsError()) {
       <div class="admin-agent__error" role="alert">{{ proposalsError() }}</div>
     }
     @if (proposals().length === 0) {
-      <p class="admin-agent__hint">Keine Vorschläge.</p>
+      <p class="admin-agent__empty">Keine Vorschläge – sobald der Hausverstand etwas vorschlägt, erscheint es hier.</p>
     } @else {
       <div class="admin-agent__table-wrap">
         <table>
@@ -150,14 +186,14 @@
           </thead>
           <tbody>
             @for (proposal of proposals(); track proposal.id) {
-              <tr>
+              <tr [class.admin-agent__row--pending]="proposal.status === 'PENDING'">
                 <td>{{ proposal.createdAt | date: 'dd.MM. HH:mm' }}</td>
                 <td>{{ proposal.description }}</td>
                 <td>{{ proposal.reason }}</td>
                 <td>
-                  {{ statusLabels[proposal.status] }}
+                  <span class="admin-agent__badge" [ngClass]="'admin-agent__badge--' + proposal.status.toLowerCase()">{{ statusLabels[proposal.status] }}</span>
                   @if (proposal.error) {
-                    <div class="admin-agent__note-meta">{{ proposal.error }}</div>
+                    <div class="admin-agent__meta">{{ proposal.error }}</div>
                   }
                   @if (proposal.status === 'PENDING') {
                     <div class="admin-agent__actions">
@@ -179,7 +215,8 @@
   </section>
 
   <section class="admin-agent__runs">
-    <h2>Läufe</h2>
+    <h2><span class="material-symbols-outlined" aria-hidden="true">history</span>Läufe</h2>
+    <p class="admin-agent__subtitle">Wann der Hausverstand gelaufen ist und was ihn das gekostet hat.</p>
     @if (runsError()) {
       <div class="admin-agent__error" role="alert">{{ runsError() }}</div>
     }
@@ -188,15 +225,45 @@
         Tagesbudget erreicht – der Hausverstand läuft erst ab Mitternacht wieder.
       </div>
     }
-    <div class="admin-agent__run-bar">
-      <span>
-        Heute: {{ inputTokensToday() }} Eingabe- / {{ outputTokensToday() }} Ausgabe-Tokens
+    <div class="admin-agent__metrics">
+      <div class="admin-agent__metric">
+        <span class="admin-agent__meta">Tokens heute</span>
+        <strong>
+          @if (dailyTokenBudget() > 0) {
+            {{ tokensUsedToday() }} von {{ dailyTokenBudget() }}
+          } @else {
+            {{ tokensUsedToday() }} (kein Limit)
+          }
+        </strong>
         @if (dailyTokenBudget() > 0) {
-          ({{ tokensUsedToday() }} von {{ dailyTokenBudget() }})
-        } @else {
-          (kein Limit)
+          <div class="admin-agent__gauge" role="progressbar" aria-label="Tokens heute"
+               [attr.aria-valuenow]="gaugePercent()" aria-valuemin="0" aria-valuemax="100">
+            <div class="admin-agent__gauge-fill"
+                 [class.admin-agent__gauge-fill--warn]="gaugeLevel() === 'warn'"
+                 [class.admin-agent__gauge-fill--error]="gaugeLevel() === 'error'"
+                 [style.width.%]="gaugePercent()"></div>
+          </div>
         }
-      </span>
+        <span class="admin-agent__meta">{{ inputTokensToday() }} Eingabe- / {{ outputTokensToday() }} Ausgabe-Tokens</span>
+      </div>
+      <div class="admin-agent__metric">
+        <span class="admin-agent__meta">Läufe heute</span>
+        <strong>{{ runsToday() }}</strong>
+      </div>
+      <div class="admin-agent__metric">
+        <span class="admin-agent__meta">Letzter Lauf</span>
+        @if (runs()[0]; as last) {
+          <strong>
+            <span class="admin-agent__dot" [class.admin-agent__dot--error]="!!last.error" aria-hidden="true"></span>
+            {{ last.startedAt | date: 'dd.MM. HH:mm' }}
+          </strong>
+          <span class="admin-agent__meta">{{ last.error ? 'mit Fehler' : 'ohne Fehler' }}</span>
+        } @else {
+          <strong>–</strong>
+        }
+      </div>
+    </div>
+    <div class="admin-agent__run-bar">
       <button
         type="button"
         class="admin-agent__run-button"
@@ -233,12 +300,22 @@
           <tbody>
             @for (run of runs(); track $index) {
               <tr>
-                <td>{{ run.startedAt | date: 'dd.MM. HH:mm' }}</td>
+                <td>
+                  <span class="admin-agent__dot" [class.admin-agent__dot--error]="!!run.error" aria-hidden="true"></span>
+                  {{ run.startedAt | date: 'dd.MM. HH:mm' }}
+                </td>
                 <td>{{ triggerLabels[run.triggerType] }}{{ run.triggerDetail ? ' (' + run.triggerDetail + ')' : '' }}</td>
                 <td>{{ durationSeconds(run) }} s</td>
                 <td>{{ run.inputTokens }} / {{ run.outputTokens }}</td>
                 <td>{{ run.toolCalls }}</td>
-                <td>{{ run.error ?? run.summary ?? '–' }}</td>
+                <td class="admin-agent__result" [class.admin-agent__result--error]="!!run.error">
+                  {{ resultText(run, $index) }}
+                  @if (isLongResult(run)) {
+                    <button type="button" class="ghost admin-agent__link" (click)="toggleRun($index)">
+                      {{ expandedRuns().has($index) ? 'weniger' : 'mehr' }}
+                    </button>
+                  }
+                </td>
               </tr>
             }
           </tbody>

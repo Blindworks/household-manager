@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AgentService } from '../../services/agent.service';
@@ -25,6 +25,7 @@ import {
 } from '../../shared/agent-labels.util';
 
 const PROPOSAL_LIMIT = 50;
+const RESULT_PREVIEW_LENGTH = 120;
 const RATE_LIMIT_MESSAGE = 'Bitte warten – der letzte manuelle Lauf ist noch zu frisch.';
 
 /** Formularzustand einer Notiz; `expiresAt` im `datetime-local`-Format (yyyy-MM-ddTHH:mm) oder leer. */
@@ -45,7 +46,7 @@ function emptyNoteForm(): NoteForm {
 @Component({
   selector: 'app-admin-agent',
   standalone: true,
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, NgClass],
   templateUrl: './admin-agent.component.html',
   styleUrl: './admin-agent.component.scss'
 })
@@ -58,6 +59,14 @@ export class AdminAgentComponent implements OnInit {
   readonly statusLabels = PROPOSAL_STATUS_LABELS;
   readonly noteKindLabels = NOTE_KIND_LABELS;
   readonly sourceLabel = sourceLabel;
+  readonly policyHints: Record<ActionClass, string> = {
+    HEATING: 'Zieltemperatur 5–24 °C',
+    SWITCH: 'Schalter und Licht an/aus',
+    MODE: 'Modi und Helfer schalten',
+    NOTIFY: 'Telegram und Push, immer direkt',
+    LOCK: 'Haustür nur verriegeln'
+  };
+  readonly segmentLabels: Record<ActionPolicy, string> = { PROPOSE: 'nur vorschlagen', DIRECT: 'direkt ausführen' };
   readonly policyOptions: ActionPolicy[] = ['PROPOSE', 'DIRECT'];
   readonly noteKinds: NoteKind[] = ['OBSERVATION', 'PREFERENCE'];
 
@@ -71,6 +80,20 @@ export class AdminAgentComponent implements OnInit {
   readonly dailyTokenBudget = signal(0);
   readonly budgetExhausted = signal(false);
   readonly tokensUsedToday = computed(() => this.inputTokensToday() + this.outputTokensToday());
+
+  /** Prozentfüllung des Token-Balkens, auf 0..100 begrenzt. */
+  readonly gaugePercent = computed(() => {
+    const budget = this.dailyTokenBudget();
+    return budget > 0 ? Math.min(100, Math.round(this.tokensUsedToday() / budget * 100)) : 0;
+  });
+  readonly gaugeLevel = computed<'ok' | 'warn' | 'error'>(() =>
+    this.budgetExhausted() ? 'error' : this.gaugePercent() >= 70 ? 'warn' : 'ok');
+  /** Läufe mit heutigem Berliner Datum; startedAt ist lokale Haushaltszeit ohne Zone. */
+  readonly runsToday = computed(() => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
+    return this.runs().filter(run => run.startedAt.startsWith(today)).length;
+  });
+  readonly expandedRuns = signal<ReadonlySet<number>>(new Set());
 
   /** Ein Fehlerfeld je Abschnitt, damit ein Abruf den anderen nicht überschreibt. */
   readonly settingsError = signal<string | null>(null);
@@ -310,7 +333,32 @@ export class AdminAgentComponent implements OnInit {
   }
 
   durationSeconds(run: AgentRun): string {
-    return (run.durationMs / 1000).toFixed(1);
+    return (run.durationMs / 1000).toFixed(1).replace('.', ',');
+  }
+
+  private fullResult(run: AgentRun): string {
+    return run.error ?? run.summary ?? '–';
+  }
+
+  isLongResult(run: AgentRun): boolean {
+    return this.fullResult(run).length > RESULT_PREVIEW_LENGTH;
+  }
+
+  resultText(run: AgentRun, index: number): string {
+    const text = this.fullResult(run);
+    return this.expandedRuns().has(index) || text.length <= RESULT_PREVIEW_LENGTH
+      ? text
+      : `${text.slice(0, RESULT_PREVIEW_LENGTH).trimEnd()} …`;
+  }
+
+  toggleRun(index: number): void {
+    this.expandedRuns.update(current => {
+      const next = new Set(current);
+      if (!next.delete(index)) {
+        next.add(index);
+      }
+      return next;
+    });
   }
 
   private messageFrom(error: HttpErrorResponse): string {
