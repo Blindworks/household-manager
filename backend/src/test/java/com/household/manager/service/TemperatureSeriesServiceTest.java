@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.blesensor.BleSensorEntityMapper;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
@@ -9,9 +10,13 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.AlexaAirQualityReading;
+import com.household.manager.model.entity.BleSensor;
+import com.household.manager.model.entity.BleSensorReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
+import com.household.manager.repository.BleSensorReadingRepository;
+import com.household.manager.repository.BleSensorRepository;
 import com.household.manager.repository.WeatherReadingRepository;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
@@ -46,6 +51,8 @@ class TemperatureSeriesServiceTest {
     @Mock private WeatherReadingRepository weatherRepository;
     @Mock private AlexaAirQualityReadingRepository alexaRepository;
     @Mock private EntityStateService entityStateService;
+    @Mock private BleSensorRepository bleSensorRepository;
+    @Mock private BleSensorReadingRepository bleReadingRepository;
 
     @InjectMocks private TemperatureSeriesService service;
 
@@ -378,5 +385,63 @@ class TemperatureSeriesServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
         assertThatThrownBy(() -> service.getSensorSeries(null, SeriesRange.DAY))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    private BleSensor bleSensor(long id, String name, LocalDateTime lastSeen) {
+        return BleSensor.builder().id(id).mac("aa:bb:cc:dd:ee:ff").name(name).active(true)
+                .lastSeenAt(lastSeen).lastTemperature(new BigDecimal("21.5")).lastHumidity(new BigDecimal("50"))
+                .build();
+    }
+
+    @Test
+    void bleSeriesLiefertTemperaturUndFeuchteAktiverSensoren() {
+        LocalDateTime now = LocalDateTime.now();
+        when(bleSensorRepository.findByActiveTrue()).thenReturn(List.of(bleSensor(7L, "Küche", now)));
+        when(bleReadingRepository.findBySensorIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(eq(7L), any(), any()))
+                .thenReturn(List.of(BleSensorReading.builder().sensorId(7L).measuredAt(now)
+                        .temperature(new BigDecimal("21.5")).humidity(new BigDecimal("50")).build()));
+        lenient().when(downsampler.downsample(anyList(), any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<TemperatureSensorSeries> series = service.getSeries(SeriesRange.DAY);
+
+        TemperatureSensorSeries ble = series.stream().filter(s -> s.getSource().equals("BLE")).findFirst().orElseThrow();
+        assertThat(ble.getSensorId()).isEqualTo("ble:7");
+        assertThat(ble.getName()).isEqualTo("Küche");
+        assertThat(ble.getTemperature()).hasSize(1);
+        assertThat(ble.getHumidity()).hasSize(1);
+    }
+
+    @Test
+    void bleCurrentNutztDieLetztwerteUndDieMapperEntityId() {
+        LocalDateTime now = LocalDateTime.now();
+        when(bleSensorRepository.findByActiveTrue()).thenReturn(List.of(bleSensor(7L, "Küche", now.minusMinutes(2))));
+
+        List<CurrentTemperatureReading> current = service.getCurrent();
+
+        CurrentTemperatureReading ble = current.stream().filter(c -> c.getSource().equals("BLE")).findFirst().orElseThrow();
+        assertThat(ble.getSensorId()).isEqualTo("ble:7");
+        assertThat(ble.getEntityId())
+                .isEqualTo(BleSensorEntityMapper.entityId("aa:bb:cc:dd:ee:ff", BleSensorEntityMapper.Measurement.TEMPERATURE));
+        assertThat(ble.getTemperature()).isEqualByComparingTo("21.5");
+        assertThat(ble.getMeasuredAt()).isEqualTo(now.minusMinutes(2));
+    }
+
+    @Test
+    void bleCurrentLaesstSensorenOhneWertInDenLetztenSiebenTagenWeg() {
+        when(bleSensorRepository.findByActiveTrue()).thenReturn(List.of(bleSensor(7L, "Küche", LocalDateTime.now().minusDays(8))));
+
+        assertThat(service.getCurrent()).noneMatch(c -> c.getSource().equals("BLE"));
+    }
+
+    @Test
+    void bleSensorSeriesUnbekannteOderInaktiveIdIst404() {
+        when(bleSensorRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.getSensorSeries("ble:9", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+
+        BleSensor inactive = bleSensor(8L, "Alt", LocalDateTime.now());
+        inactive.setActive(false);
+        when(bleSensorRepository.findById(8L)).thenReturn(Optional.of(inactive));
+        assertThatThrownBy(() -> service.getSensorSeries("ble:8", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.getSensorSeries("ble:x", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
     }
 }

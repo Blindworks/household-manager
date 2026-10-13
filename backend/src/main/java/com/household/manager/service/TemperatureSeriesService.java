@@ -1,5 +1,7 @@
 package com.household.manager.service;
 
+import com.household.manager.blesensor.BleMacs;
+import com.household.manager.blesensor.BleSensorEntityMapper;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
@@ -9,9 +11,13 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.AlexaAirQualityReading;
+import com.household.manager.model.entity.BleSensor;
+import com.household.manager.model.entity.BleSensorReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
+import com.household.manager.repository.BleSensorReadingRepository;
+import com.household.manager.repository.BleSensorRepository;
 import com.household.manager.repository.WeatherReadingRepository;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
@@ -51,6 +57,8 @@ public class TemperatureSeriesService {
     private final ZigbeeDeviceRepository zigbeeDeviceRepository;
     private final WeatherReadingRepository weatherRepository;
     private final AlexaAirQualityReadingRepository alexaRepository;
+    private final BleSensorRepository bleSensorRepository;
+    private final BleSensorReadingRepository bleReadingRepository;
     private final EntityStateService entityStateService;
     private final SeriesDownsampler downsampler;
 
@@ -62,6 +70,7 @@ public class TemperatureSeriesService {
         series.addAll(safe("zigbee", () -> zigbeeSeries(from, to)));
         series.addAll(safe("weather", () -> weatherSeries(from, to)));
         series.addAll(safe("alexa", () -> alexaSeries(from, to)));
+        series.addAll(safe("ble", () -> bleSeries(from, to)));
         return series;
     }
 
@@ -73,6 +82,7 @@ public class TemperatureSeriesService {
         result.addAll(safe("zigbee", () -> zigbeeCurrent(since, now)));
         result.addAll(safe("weather", this::weatherCurrent));
         result.addAll(safe("alexa", () -> alexaCurrent(since)));
+        result.addAll(safe("ble", () -> bleCurrent(since)));
         return result;
     }
 
@@ -101,6 +111,9 @@ public class TemperatureSeriesService {
         }
         if (sensorId.startsWith("alexa:")) {
             return alexaSensorSeries(sensorId.substring("alexa:".length()), from, to, range);
+        }
+        if (sensorId.startsWith("ble:")) {
+            return bleSensorSeries(sensorId.substring("ble:".length()), from, to, range);
         }
         throw new ResourceNotFoundException("Sensor", "sensorId", sensorId);
     }
@@ -367,5 +380,79 @@ public class TemperatureSeriesService {
 
     private TimeValue point(LocalDateTime time, BigDecimal value) {
         return TimeValue.builder().time(time).value(value).build();
+    }
+
+    private static final String BLE_SOURCE = "BLE";
+
+    private List<TemperatureSensorSeries> bleSeries(LocalDateTime from, LocalDateTime to) {
+        List<TemperatureSensorSeries> result = new ArrayList<>();
+        for (BleSensor sensor : activeBleSensorsSorted()) {
+            result.add(bleSeriesFor(sensor, from, to, null));
+        }
+        return result;
+    }
+
+    private TemperatureSensorSeries bleSensorSeries(String rawId, LocalDateTime from, LocalDateTime to, SeriesRange range) {
+        long id;
+        try {
+            id = Long.parseLong(rawId);
+        } catch (NumberFormatException ex) {
+            throw new ResourceNotFoundException("Sensor", "sensorId", "ble:" + rawId);
+        }
+        BleSensor sensor = bleSensorRepository.findById(id)
+                .filter(BleSensor::isActive)
+                .orElseThrow(() -> new ResourceNotFoundException("Sensor", "sensorId", "ble:" + id));
+        return bleSeriesFor(sensor, from, to, range);
+    }
+
+    /** range == null: Rohpunkte (Sammelabfrage); sonst gemittelt (Einzelsensor) — wie bei Zigbee. */
+    private TemperatureSensorSeries bleSeriesFor(BleSensor sensor, LocalDateTime from, LocalDateTime to, SeriesRange range) {
+        List<BleSensorReading> readings = bleReadingRepository
+                .findBySensorIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(sensor.getId(), from, to);
+        List<TimeValue> temperature = readings.stream()
+                .filter(r -> r.getTemperature() != null)
+                .map(r -> point(r.getMeasuredAt(), r.getTemperature()))
+                .toList();
+        List<TimeValue> humidity = readings.stream()
+                .filter(r -> r.getHumidity() != null)
+                .map(r -> point(r.getMeasuredAt(), r.getHumidity()))
+                .toList();
+        return TemperatureSensorSeries.builder()
+                .sensorId("ble:" + sensor.getId())
+                .name(temperatureName(EntitySource.BLE, BleMacs.entityRef(sensor.getMac()), bleDisplayName(sensor)))
+                .source(BLE_SOURCE)
+                .temperature(range == null ? temperature : downsampler.downsample(temperature, range))
+                .humidity(range == null ? humidity : downsampler.downsample(humidity, range))
+                .build();
+    }
+
+    /** Aktuellwerte direkt aus den Letztwerten der Zeile — kein Historienzugriff noetig. */
+    private List<CurrentTemperatureReading> bleCurrent(LocalDateTime since) {
+        List<CurrentTemperatureReading> result = new ArrayList<>();
+        for (BleSensor sensor : activeBleSensorsSorted()) {
+            if (sensor.getLastSeenAt() == null || sensor.getLastSeenAt().isBefore(since) || sensor.getLastTemperature() == null) {
+                continue;
+            }
+            result.add(CurrentTemperatureReading.builder()
+                    .sensorId("ble:" + sensor.getId())
+                    .entityId(BleSensorEntityMapper.entityId(sensor.getMac(), BleSensorEntityMapper.Measurement.TEMPERATURE))
+                    .name(temperatureName(EntitySource.BLE, BleMacs.entityRef(sensor.getMac()), bleDisplayName(sensor)))
+                    .source(BLE_SOURCE)
+                    .temperature(sensor.getLastTemperature())
+                    .humidity(sensor.getLastHumidity())
+                    .measuredAt(sensor.getLastSeenAt())
+                    .build());
+        }
+        return result;
+    }
+
+    private List<BleSensor> activeBleSensorsSorted() {
+        return bleSensorRepository.findByActiveTrue().stream()
+                .sorted(Comparator.comparing(this::bleDisplayName))
+                .toList();
+    }
+
+    private String bleDisplayName(BleSensor sensor) {
+        return sensor.getName() != null && !sensor.getName().isBlank() ? sensor.getName() : sensor.getMac();
     }
 }
