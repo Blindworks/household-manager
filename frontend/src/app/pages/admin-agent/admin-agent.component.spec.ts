@@ -35,7 +35,9 @@ const PROPOSAL: AgentProposal = {
   reason: 'Kalt im Bad', urgent: false, status: 'PENDING', decidedBy: null, decidedAt: null,
   deliveredAt: null, error: null, createdAt: '2026-10-12T07:30:00'
 };
-const RUNS: AgentRunsResponse = { runs: [], inputTokensToday: 1200, outputTokensToday: 300 };
+const RUNS: AgentRunsResponse = {
+  runs: [], inputTokensToday: 1200, outputTokensToday: 300, dailyTokenBudget: 300000, budgetExhausted: false
+};
 
 describe('AdminAgentComponent', () => {
   let fixture: ComponentFixture<AdminAgentComponent>;
@@ -54,13 +56,14 @@ describe('AdminAgentComponent', () => {
 
   afterEach(() => httpMock.verify());
 
-  async function load(summary: AgentSummary = SUMMARY, proposals: AgentProposal[] = [PROPOSAL]): Promise<void> {
+  async function load(summary: AgentSummary = SUMMARY, proposals: AgentProposal[] = [PROPOSAL],
+                      runs: AgentRunsResponse = RUNS): Promise<void> {
     fixture.detectChanges();
     httpMock.expectOne(SUMMARY_URL).flush(summary);
     httpMock.expectOne(POLICIES_URL).flush(POLICIES);
     httpMock.expectOne(NOTES_URL).flush([NOTE]);
     httpMock.expectOne(PROPOSALS_URL).flush(proposals);
-    httpMock.expectOne(RUNS_URL).flush(RUNS);
+    httpMock.expectOne(RUNS_URL).flush(runs);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -173,6 +176,25 @@ describe('AdminAgentComponent', () => {
 
     expect(el.querySelector('.admin-agent__run-message')?.textContent).toContain('Alles ruhig');
     expect(el.querySelectorAll('.admin-agent__runs tbody tr').length).toBe(1);
+  });
+
+  it('zeigt das Budget in der Kopfzeile der Läufe', async () => {
+    await load();
+
+    expect(el.querySelector('.admin-agent__runs')?.textContent).toContain('von 300000');
+  });
+
+  it('zeigt das Budget-Banner, wenn das Tagesbudget erschöpft ist', async () => {
+    await load(SUMMARY, [PROPOSAL], { ...RUNS, budgetExhausted: true });
+
+    expect(el.querySelector('.admin-agent__runs .admin-agent__banner')?.textContent)
+      .toContain('Tagesbudget erreicht');
+  });
+
+  it('zeigt „kein Limit“, wenn das Budget 0 ist', async () => {
+    await load(SUMMARY, [PROPOSAL], { ...RUNS, dailyTokenBudget: 0 });
+
+    expect(el.querySelector('.admin-agent__runs')?.textContent).toContain('kein Limit');
   });
 
   it('zeigt das Telegram-Banner, wenn nicht konfiguriert', async () => {

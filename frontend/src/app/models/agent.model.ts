@@ -68,4 +68,7 @@ export interface AgentRunsResponse {
   runs: AgentRun[];
   inputTokensToday: number;
   outputTokensToday: number;
+  /** Tagesbudget für Eingabe- plus Ausgabe-Tokens; 0 = kein Limit. */
+  dailyTokenBudget: number;
+  budgetExhausted: boolean;
 }

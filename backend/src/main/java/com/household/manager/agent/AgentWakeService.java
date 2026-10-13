@@ -60,6 +60,7 @@ public class AgentWakeService {
     private final AgentRunService runService;
     private final ExecutorService executor;
     private final ScheduledExecutorService debounceScheduler;
+    private final AgentTokenBudget tokenBudget;
     private final Clock clock;
 
     /** Schuetzt {@link #running}, {@link #followUp} und {@link #followUpReasons}. */
@@ -80,12 +81,14 @@ public class AgentWakeService {
                             AgentRunService runService,
                             @Qualifier("agentExecutor") ExecutorService executor,
                             @Qualifier("agentDebounceScheduler") ScheduledExecutorService debounceScheduler,
+                            AgentTokenBudget tokenBudget,
                             Clock clock) {
         this.properties = properties;
         this.settings = settings;
         this.runService = runService;
         this.executor = executor;
         this.debounceScheduler = debounceScheduler;
+        this.tokenBudget = tokenBudget;
         this.clock = clock;
     }
 
@@ -141,6 +144,10 @@ public class AgentWakeService {
     public AgentRunResult runNow() {
         if (!isOperational()) {
             throw new IllegalStateException("Hausverstand ist ausgeschaltet.");
+        }
+        // Vor der Reservierung des Mindestabstands: ein abgelehnter Klick darf ihn nicht verbrauchen.
+        if (tokenBudget.isExhausted()) {
+            throw new TooManyRequestsException("Tagesbudget erreicht — keine Läufe mehr bis Mitternacht.");
         }
         Instant now = clock.instant();
         Instant last = lastManualRun.get();
@@ -211,6 +218,10 @@ public class AgentWakeService {
     private void submit(AgentTrigger trigger) {
         if (!isOperational()) {
             log.debug("Hausverstand ausgeschaltet, Anlass verworfen: {}", trigger.describe());
+            return;
+        }
+        if (tokenBudget.isExhausted()) {
+            log.debug("Tagesbudget des Hausverstands erschöpft, Anlass verworfen: {}", trigger.describe());
             return;
         }
         synchronized (runLock) {

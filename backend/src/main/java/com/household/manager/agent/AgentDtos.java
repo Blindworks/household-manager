@@ -52,6 +52,7 @@ public final class AgentDtos {
                          String summary, String error) {
     }
 
-    public record RunsResponse(List<RunDto> runs, long inputTokensToday, long outputTokensToday) {
+    public record RunsResponse(List<RunDto> runs, long inputTokensToday, long outputTokensToday,
+                               long dailyTokenBudget, boolean budgetExhausted) {
     }
 }

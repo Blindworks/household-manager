@@ -58,6 +58,7 @@ public class AgentController {
     private final AgentProposalService proposalService;
     private final AgentRunRecorder runRecorder;
     private final AgentWakeService wakeService;
+    private final AgentTokenBudget tokenBudget;
     private final AgentNotifier notifier;
     private final CurrentUserService currentUserService;
     private final AppUserRepository appUserRepository;
@@ -132,7 +133,7 @@ public class AgentController {
     public RunsResponse runs() {
         long[] tokens = runRecorder.tokensToday();
         return new RunsResponse(runRecorder.recent().stream().map(AgentController::toDto).toList(),
-                tokens[0], tokens[1]);
+                tokens[0], tokens[1], tokenBudget.budget(), tokenBudget.isExhausted());
     }
 
     /** Antwort aus dem frischen Ergebnis statt aus der DB: der Lauf selbst schreibt sein Protokoll im Recorder. */

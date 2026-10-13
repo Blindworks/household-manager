@@ -31,6 +31,8 @@ public class AgentProperties {
     private int maxActiveNotes = 50;
     private int runRetentionDays = 30;
     private long manualRunMinIntervalMs = 60_000;
+    /** Tagesbudget für Eingabe- plus Ausgabe-Tokens; 0 = kein Limit. */
+    private long dailyTokenBudget = 300_000;
 
     /** Ruhezeit als Fenster; ein unlesbarer Wert faellt auf 22-7 zurueck statt den Start zu kippen. */
     public TimeWindow quietWindow() {

@@ -44,6 +44,7 @@ class AgentWakeServiceTest {
     private final AgentProperties properties = new AgentProperties();
     private final AgentSettingsService settings = mock(AgentSettingsService.class);
     private final AgentRunService runService = mock(AgentRunService.class);
+    private final AgentTokenBudget tokenBudget = mock(AgentTokenBudget.class);
     private final ManualScheduler debounce = new ManualScheduler();
     private ExecutorService executor = new DirectExecutorService();
     private AgentWakeService service;
@@ -65,7 +66,7 @@ class AgentWakeServiceTest {
 
     private AgentWakeService service() {
         if (service == null) {
-            service = new AgentWakeService(properties, settings, runService, executor, debounce, CLOCK);
+            service = new AgentWakeService(properties, settings, runService, executor, debounce, tokenBudget, CLOCK);
         }
         return service;
     }
@@ -100,6 +101,29 @@ class AgentWakeServiceTest {
 
         assertFalse(debounce.isScheduled());
         verifyNoInteractions(runService);
+    }
+
+    @Test
+    void exhaustedBudgetDropsWake() {
+        when(tokenBudget.isExhausted()).thenReturn(true);
+
+        service().onEntityStateChanged(event("binary_sensor.presence_household"));
+        debounce.fire();
+
+        verifyNoInteractions(runService);
+    }
+
+    @Test
+    void runNowRefusedWhenBudgetExhausted() {
+        when(tokenBudget.isExhausted()).thenReturn(true);
+
+        assertThrows(TooManyRequestsException.class, () -> service().runNow());
+        verifyNoInteractions(runService);
+
+        when(tokenBudget.isExhausted()).thenReturn(false);
+        service().runNow();
+
+        verify(runService).run(new AgentTrigger(AgentTriggerType.MANUAL, List.of()));
     }
 
     @Test
