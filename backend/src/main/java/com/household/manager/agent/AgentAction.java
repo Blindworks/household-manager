@@ -41,7 +41,8 @@ public record AgentAction(ActionClass actionClass, String target, Map<String, Ob
      */
     public String describeForNote() {
         if (actionClass == ActionClass.NOTIFY) {
-            return "Nachricht an " + target;
+            // Konstante statt target: auch der Kanalname ist ein Modellstring und gehoert nicht in die Notiz.
+            return "Nachricht";
         }
         return describe();
     }
