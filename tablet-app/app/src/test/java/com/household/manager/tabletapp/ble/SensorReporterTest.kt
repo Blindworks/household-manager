@@ -41,4 +41,16 @@ class SensorReporterTest {
         val json = SensorReporter.buildPayload("wand\"tablet", listOf(seen("aa:bb:cc:dd:ee:ff", 0, 10)), 10, 300_000)!!
         assertTrue(json.startsWith("""{"tabletId":"wand\"tablet""""))
     }
+
+    @Test
+    fun `hoechstens 50 Messwerte, die staerksten nach RSSI`() {
+        val now = 1_000_000L
+        val many = (1..60).map { i ->
+            SeenReading(ThermoBeaconReading("aa:bb:cc:dd:ee:%02x".format(i), 20.0, 50.0, 3000), rssi = -i, seenAtElapsedMs = now)
+        }
+        val json = SensorReporter.buildPayload("wandtablet", many, now, 300_000)!!
+        assertEquals(50, Regex("\"mac\"").findAll(json).count())
+        assertTrue(json.contains("aa:bb:cc:dd:ee:01"))
+        assertTrue(!json.contains("aa:bb:cc:dd:ee:3c"))
+    }
 }

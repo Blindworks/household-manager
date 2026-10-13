@@ -80,7 +80,12 @@ class ThermoBeaconScanner(
         scanning = false
     }
 
-    fun snapshot(): List<SeenReading> = seen.values.toList()
+    /** Liefert die frischen Messwerte und raeumt dabei veraltete aus, damit die Map nicht unbegrenzt waechst. */
+    fun snapshot(): List<SeenReading> {
+        val cutoff = SystemClock.elapsedRealtime() - MAX_AGE_MS
+        seen.values.removeIf { it.seenAtElapsedMs < cutoff }
+        return seen.values.toList()
+    }
 
     private fun startScan() {
         if (scanning) return
@@ -120,5 +125,6 @@ class ThermoBeaconScanner(
 
     private companion object {
         const val TAG = "ThermoBeaconScanner"
+        const val MAX_AGE_MS = 300_000L
     }
 }

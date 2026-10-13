@@ -46,11 +46,11 @@ class SensorReporter(
 
     private fun post(payload: String) {
         val url = "${settings.backendBaseUrl}/v1/ble-sensors/readings"
-        val builder = Request.Builder().url(url).post(payload.toRequestBody("application/json".toMediaType()))
-        if (settings.apiToken.isNotBlank()) {
-            builder.addHeader("X-API-Token", settings.apiToken)
-        }
         try {
+            val builder = Request.Builder().url(url).post(payload.toRequestBody("application/json".toMediaType()))
+            if (settings.apiToken.isNotBlank()) {
+                builder.addHeader("X-API-Token", settings.apiToken)
+            }
             client.newCall(builder.build()).execute().use { response ->
                 if (!response.isSuccessful) {
                     Log.w(TAG, "Backend antwortete mit ${response.code} auf $url")
@@ -64,9 +64,14 @@ class SensorReporter(
     companion object {
         private const val TAG = "SensorReporter"
 
+        /** Backend lehnt Sammelmeldungen mit mehr Eintraegen komplett ab (400). */
+        const val MAX_READINGS = 50
+
         /** Reine Funktion fuer den Unit-Test: null, wenn nichts Frisches zu melden ist. */
         fun buildPayload(tabletId: String, seen: List<SeenReading>, nowElapsedMs: Long, maxAgeMs: Long): String? {
             val fresh = seen.filter { nowElapsedMs - it.seenAtElapsedMs <= maxAgeMs }
+                .sortedByDescending { it.rssi }
+                .take(MAX_READINGS)
             if (fresh.isEmpty()) return null
             val items = fresh.joinToString(",") {
                 val age = (nowElapsedMs - it.seenAtElapsedMs) / 1000

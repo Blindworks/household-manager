@@ -3,6 +3,7 @@ package com.household.manager.tabletapp
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -18,6 +19,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -65,6 +67,10 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
             } else {
                 onCameraFailure("Kamera-Berechtigung verweigert")
             }
+            // Erst nach der Kamera-Anfrage: Android erlaubt nur eine Berechtigungsanfrage gleichzeitig
+            if (settings.bleReportingEnabled) {
+                requestBluetoothOrStart()
+            }
         }
 
     private var bleScanner: ThermoBeaconScanner? = null
@@ -73,7 +79,10 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
 
     private val bluetoothPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-            if (result.values.all { it }) startBleScanning() else onBleFailure("Bluetooth-Berechtigung verweigert")
+            val granted = result.isNotEmpty() && result.values.all { it } &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
+                PackageManager.PERMISSION_GRANTED
+            if (granted) startBleScanning() else onBleFailure("Bluetooth-Berechtigung verweigert")
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,9 +106,6 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
 
         reporter.startHeartbeat()
         cameraPermission.launch(Manifest.permission.CAMERA)
-        if (settings.bleReportingEnabled) {
-            requestBluetoothOrStart()
-        }
         handler.post(tickRunnable)
     }
 
