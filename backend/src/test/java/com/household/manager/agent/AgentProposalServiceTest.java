@@ -545,7 +545,7 @@ class AgentProposalServiceTest {
 
         ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
         verify(noteService).create(eq(NoteKind.OBSERVATION), text.capture(), eq(NoteSource.USER), any());
-        assertEquals("Benedikt hat abgelehnt: Nachricht an telegram", text.getValue());
+        assertEquals("Benedikt hat abgelehnt: Nachricht", text.getValue());
         assertFalse(text.getValue().contains("Fenster offen"));
     }
 

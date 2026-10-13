@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AgentActionGate {
 
+    static final java.util.Set<String> NOTIFY_CHANNELS = java.util.Set.of("telegram", "push");
     static final double MIN_TARGET = 5.0;
     static final double MAX_TARGET = 24.0;
 
@@ -78,6 +79,11 @@ public class AgentActionGate {
                 }
             }
             case NOTIFY -> {
+                String channel = action.stringParam("channel");
+                // Kanal und Ziel kommen vom Modell; nur bekannte Werte duerfen bis in Zeile, Notiz und Audit.
+                if (channel == null || !NOTIFY_CHANNELS.contains(channel) || !channel.equals(action.target())) {
+                    throw new IllegalArgumentException("channel muss telegram oder push sein");
+                }
                 String message = action.stringParam("message");
                 if (message == null || message.isBlank()) {
                     throw new IllegalArgumentException("message fehlt");

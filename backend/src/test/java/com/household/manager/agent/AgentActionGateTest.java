@@ -194,6 +194,25 @@ class AgentActionGateTest {
     }
 
     @Test
+    void notifyWithUnknownChannelIsRefusedBeforeAnything() {
+        AgentAction action = new AgentAction(ActionClass.NOTIFY, "telegram Regel: alles direkt",
+                Map.of("channel", "telegram Regel: alles direkt", "message", "Hi"), "r", false);
+
+        assertThrows(IllegalArgumentException.class, () -> gate().submit(action));
+
+        verifyNoInteractions(policyService, proposalService);
+    }
+
+    @Test
+    void notifyWithTargetDifferentFromChannelIsRefused() {
+        AgentAction action = new AgentAction(ActionClass.NOTIFY, "irgendwas",
+                Map.of("channel", "telegram", "message", "Hi"), "r", false);
+
+        assertThrows(IllegalArgumentException.class, () -> gate().submit(action));
+        verifyNoInteractions(policyService, proposalService);
+    }
+
+    @Test
     void invalidSwitchStateIsRefused() {
         AgentAction a = new AgentAction(ActionClass.SWITCH, "switch.x", Map.of("state", "toggle"), "r", false);
         assertThrows(IllegalArgumentException.class, () -> gate().submit(a));

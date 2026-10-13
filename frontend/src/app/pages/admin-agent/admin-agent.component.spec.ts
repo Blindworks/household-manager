@@ -152,7 +152,7 @@ describe('AdminAgentComponent', () => {
   });
 
   it('bietet bei Nachrichten-Vorschlägen kein „Ja, und merken" an', async () => {
-    await load(SUMMARY, [{ ...PROPOSAL, id: 8, actionClass: 'NOTIFY', target: 'telegram', description: 'Nachricht an telegram' }]);
+    await load(SUMMARY, [{ ...PROPOSAL, id: 8, actionClass: 'NOTIFY', target: 'telegram', description: 'Nachricht (telegram): Hallo' }]);
 
     const labels = Array.from(el.querySelectorAll<HTMLButtonElement>('.admin-agent__proposals button'))
       .map(b => b.textContent?.trim());
