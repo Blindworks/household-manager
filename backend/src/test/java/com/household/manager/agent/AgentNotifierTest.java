@@ -39,8 +39,14 @@ class AgentNotifierTest {
         properties.setAllowedChatIds(List.of(chats));
     }
 
+    private static AgentActionDescriber describer() {
+        AgentActionDescriber describer = mock(AgentActionDescriber.class);
+        when(describer.describe(any())).thenReturn("Heizung Wohnzimmer auf 21,0 °C");
+        return describer;
+    }
+
     private AgentNotifier notifier() {
-        return new AgentNotifier(properties, apiClient, messageRepository, objectMapper);
+        return new AgentNotifier(properties, apiClient, messageRepository, objectMapper, describer());
     }
 
     private AgentProposal proposal() {
@@ -93,7 +99,7 @@ class AgentNotifierTest {
         verify(apiClient).sendMessage(eq(1L), text.capture(), keyboard.capture());
         assertTrue(text.getValue().contains("Vorschlag #7"));
         assertTrue(text.getValue().contains("Wohnzimmer ist kalt"));
-        assertTrue(text.getValue().contains("Heizung 3 auf 21.0 °C"));
+        assertTrue(text.getValue().contains("Heizung Wohnzimmer auf 21,0 °C"));
         assertEquals(List.of(
                 new InlineButton("Ja", "agent:7:APPROVE"),
                 new InlineButton("Nein", "agent:7:REJECT"),

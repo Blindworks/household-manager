@@ -70,6 +70,7 @@ class HouseSnapshotBuilderTest {
     private AgentProposalService proposalService;
     private AgentNoteService noteService;
     private AgentPolicyService policyService;
+    private AgentActionDescriber describer;
     private final EntityStateResponseMapper mapper = new EntityStateResponseMapper(new ObjectMapper());
 
     @BeforeEach
@@ -90,6 +91,8 @@ class HouseSnapshotBuilderTest {
         proposalService = mock(AgentProposalService.class);
         noteService = mock(AgentNoteService.class);
         policyService = mock(AgentPolicyService.class);
+        describer = mock(AgentActionDescriber.class);
+        lenient().when(describer.describe(any())).thenReturn("Heizung Wohnzimmer auf 21,0 °C");
 
         lenient().when(presenceStatusService.getStatus())
                 .thenReturn(new PresenceDtos.StatusResponse("unknown", List.of()));
@@ -116,7 +119,7 @@ class HouseSnapshotBuilderTest {
         return new HouseSnapshotBuilder(clock, presenceStatusService, houseModeQueryService, thermostatService,
                 temperatureSeriesService, entityStateService, mapper, powerConsumerQueryService, switchQueryService, petSupplyService,
                 calendarEventService, networkStatusService, zigbeeStreamMonitor, nukiLockService, proposalService,
-                noteService, policyService);
+                noteService, policyService, describer);
     }
 
     private static EntityState contact(String entityId, String customName, String state, String attributes) {
@@ -286,7 +289,7 @@ class HouseSnapshotBuilderTest {
 
         String s = builder().build();
 
-        assertTrue(s.contains("#17 PENDING Heizung 3 auf 21.0 °C — kalt bei Anwesenheit"), s);
+        assertTrue(s.contains("#17 PENDING Heizung Wohnzimmer auf 21,0 °C — kalt bei Anwesenheit"), s);
     }
 
     @Test

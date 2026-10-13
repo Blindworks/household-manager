@@ -35,6 +35,7 @@ class AgentProposalServiceTest {
     private AgentNotifier notifier;
     private AgentQuietHours quietHours;
     private AuditService auditService;
+    private AgentActionDescriber describer;
     private AgentProperties properties;
     private Clock clock;
 
@@ -46,6 +47,10 @@ class AgentProposalServiceTest {
         notifier = mock(AgentNotifier.class);
         quietHours = mock(AgentQuietHours.class);
         auditService = mock(AuditService.class);
+        describer = mock(AgentActionDescriber.class);
+        when(describer.describe(any())).thenReturn("Heizung Wohnzimmer auf 21,0 °C");
+        when(describer.describeForNote(any())).thenAnswer(inv ->
+                ((AgentAction) inv.getArgument(0)).actionClass() == ActionClass.NOTIFY ? "Nachricht" : "Heizung Wohnzimmer auf 21,0 °C");
         properties = new AgentProperties();
         properties.setMaxOpenProposals(3);
         properties.setProposalTtlHours(2);
@@ -57,7 +62,7 @@ class AgentProposalServiceTest {
 
     private AgentProposalService service() {
         return new AgentProposalService(repository, executor, noteService, notifier, quietHours,
-                properties, objectMapper, auditService, clock);
+                properties, objectMapper, describer, auditService, clock);
     }
 
     private AgentAction heating21() {
@@ -221,7 +226,7 @@ class AgentProposalServiceTest {
         ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
         verify(noteService).create(eq(NoteKind.OBSERVATION), text.capture(), eq(NoteSource.USER),
                 eq(LocalDateTime.of(2026, 10, 13, 12, 0)));
-        assertEquals("Benedikt hat abgelehnt: Heizung 3 auf 21.0 °C", text.getValue());
+        assertEquals("Benedikt hat abgelehnt: Heizung Wohnzimmer auf 21,0 °C", text.getValue());
         assertFalse(text.getValue().contains("Wohnzimmer ist kalt"));
         verify(notifier).markDecided(eq(p), contains("Abgelehnt"));
         verifyNoInteractions(executor);
@@ -239,7 +244,7 @@ class AgentProposalServiceTest {
         ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
         verify(noteService).create(eq(NoteKind.PREFERENCE), text.capture(), eq(NoteSource.USER), isNull());
         assertTrue(text.getValue().contains("stimmt zu"));
-        assertEquals("Benedikt stimmt zu: Heizung 3 auf 21.0 °C", text.getValue());
+        assertEquals("Benedikt stimmt zu: Heizung Wohnzimmer auf 21,0 °C", text.getValue());
         // Die Begruendung ist freier Modelltext und darf keine Nutzer-Autoritaet bekommen.
         assertFalse(text.getValue().contains("Wohnzimmer ist kalt"));
     }
@@ -485,7 +490,7 @@ class AgentProposalServiceTest {
         assertEquals(NOW, p.getDecidedAt());
         assertNull(p.getError());
         verify(repository).save(p);
-        verify(notifier).sendInfo(contains("Heizung 3 auf 21.0 °C"));
+        verify(notifier).sendInfo(contains("Heizung Wohnzimmer auf 21,0 °C"));
     }
 
     @Test
@@ -657,7 +662,7 @@ class AgentProposalServiceTest {
 
         service().executeDirect(heating21(true));
 
-        verify(notifier).sendInfo(contains("Heizung 3 auf 21.0 °C"));
+        verify(notifier).sendInfo(contains("Heizung Wohnzimmer auf 21,0 °C"));
     }
 
     @Test
