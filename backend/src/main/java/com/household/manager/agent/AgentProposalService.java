@@ -44,6 +44,7 @@ public class AgentProposalService {
     private final AgentQuietHours quietHours;
     private final AgentProperties properties;
     private final ObjectMapper objectMapper;
+    private final AgentActionDescriber describer;
     private final AuditService auditService;
     private final Clock clock;
 
@@ -131,11 +132,11 @@ public class AgentProposalService {
             p.setStatus(ProposalStatus.EXECUTED);
             info = outcome.alreadySatisfied() || action.actionClass() == ActionClass.NOTIFY
                     ? null
-                    : "Hausverstand: " + action.describe() + " — " + reasonOf(action);
+                    : "Hausverstand: " + describer.describe(action) + " — " + reasonOf(action);
         } catch (Exception ex) {
             p.setStatus(ProposalStatus.FAILED);
             p.setError(abbreviate(messageOf(ex), ERROR_MAX));
-            info = "Hausverstand: " + action.describe() + " fehlgeschlagen: " + messageOf(ex);
+            info = "Hausverstand: " + describer.describe(action) + " fehlgeschlagen: " + messageOf(ex);
         }
         AgentProposal saved = repository.save(p);
         if (info != null && !quiet) {
@@ -179,14 +180,14 @@ public class AgentProposalService {
         p.setDecidedAt(now);
         String label;
         if (decision == ProposalDecision.REJECT) {
-            rememberQuietly(NoteKind.OBSERVATION, actor + " hat abgelehnt: " + action.describeForNote(),
+            rememberQuietly(NoteKind.OBSERVATION, actor + " hat abgelehnt: " + describer.describeForNote(action),
                     now.plusHours(REJECTION_MEMORY_HOURS));
             label = "Abgelehnt von " + actor;
         } else {
             if (decision == ProposalDecision.APPROVE_AND_REMEMBER) {
                 // Bewusst ohne die Begruendung des Modells: die Notiz traegt Nutzer-Autoritaet und ist fuer den
                 // Agenten unveraenderbar — freier Modelltext darin waere eine Selbstanweisung mit Nutzerrang.
-                rememberQuietly(NoteKind.PREFERENCE, actor + " stimmt zu: " + action.describeForNote(), null);
+                rememberQuietly(NoteKind.PREFERENCE, actor + " stimmt zu: " + describer.describeForNote(action), null);
             }
             label = runAction(p, action, "Ausgeführt von " + actor);
         }

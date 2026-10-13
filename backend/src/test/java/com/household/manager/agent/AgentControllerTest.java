@@ -65,6 +65,8 @@ class AgentControllerTest {
     @MockitoBean
     private AgentNotifier notifier;
     @MockitoBean
+    private AgentActionDescriber describer;
+    @MockitoBean
     private CurrentUserService currentUserService;
     @MockitoBean
     private AppUserRepository appUserRepository;
@@ -186,5 +188,22 @@ class AgentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
         verify(settingsService, never()).setActive(anyBoolean());
+    }
+
+    @Test
+    void decideLiefertDieDarstellungDesDescribers() throws Exception {
+        when(currentUserService.currentUserId()).thenReturn(Optional.empty());
+        AgentProposal decided = AgentProposal.builder().id(8L).actionClass(ActionClass.SWITCH).target("switch.x")
+                .actionJson("{}").reason("weil").status(ProposalStatus.EXECUTED).build();
+        AgentAction action = new AgentAction(ActionClass.SWITCH, "switch.x", java.util.Map.of("state", "on"), "weil", false);
+        when(proposalService.decide(8L, ProposalDecision.APPROVE, "Admin")).thenReturn(decided);
+        when(proposalService.actionOf(decided)).thenReturn(action);
+        when(describer.describe(action)).thenReturn("Stehlampe an");
+
+        mockMvc.perform(post("/v1/agent/proposals/8/decide")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"APPROVE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("Stehlampe an"));
     }
 }

@@ -132,6 +132,8 @@ class SecurityRulesTest {
     @MockitoBean
     private AgentNotifier agentNotifier;
     @MockitoBean
+    private com.household.manager.agent.AgentActionDescriber agentActionDescriber;
+    @MockitoBean
     private SwitchQueryService switchQueryService;
     @MockitoBean
     private SwitchCommandService switchCommandService;

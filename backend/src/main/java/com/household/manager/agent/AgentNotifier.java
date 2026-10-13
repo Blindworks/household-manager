@@ -36,6 +36,7 @@ public class AgentNotifier {
     private final TelegramApiClient apiClient;
     private final AgentProposalMessageRepository messageRepository;
     private final ObjectMapper objectMapper;
+    private final AgentActionDescriber describer;
 
     public boolean isConfigured() {
         return telegramProperties.isConfigured();
@@ -128,6 +129,6 @@ public class AgentNotifier {
     }
 
     private String describe(AgentProposal p) {
-        return AgentActionJson.read(objectMapper, p.getActionJson()).describe();
+        return describer.describe(AgentActionJson.read(objectMapper, p.getActionJson()));
     }
 }

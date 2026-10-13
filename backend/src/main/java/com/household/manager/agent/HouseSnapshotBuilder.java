@@ -101,6 +101,7 @@ public class HouseSnapshotBuilder {
     private final AgentProposalService proposalService;
     private final AgentNoteService noteService;
     private final AgentPolicyService policyService;
+    private final AgentActionDescriber describer;
 
     /** Wirft nie: jeder Abschnitt faengt seine eigenen Fehler. */
     public String build() {
@@ -386,7 +387,7 @@ public class HouseSnapshotBuilder {
     private String proposalLine(AgentProposal p) {
         String description;
         try {
-            description = proposalService.actionOf(p).describe();
+            description = describer.describe(proposalService.actionOf(p));
         } catch (Exception ex) {
             description = p.getActionClass() + " " + p.getTarget();
         }

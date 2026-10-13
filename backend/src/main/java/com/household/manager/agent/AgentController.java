@@ -60,6 +60,7 @@ public class AgentController {
     private final AgentWakeService wakeService;
     private final AgentTokenBudget tokenBudget;
     private final AgentNotifier notifier;
+    private final AgentActionDescriber describer;
     private final CurrentUserService currentUserService;
     private final AppUserRepository appUserRepository;
     private final Clock clock;
@@ -161,7 +162,7 @@ public class AgentController {
     /** Ein unlesbares Aktions-JSON darf die ganze Liste nicht kippen. */
     private String describe(AgentProposal p) {
         try {
-            return proposalService.actionOf(p).describe();
+            return describer.describe(proposalService.actionOf(p));
         } catch (Exception ex) {
             log.warn("Aktion von Vorschlag {} nicht lesbar: {}", p.getId(), ex.getMessage());
             return p.getActionClass() + " " + p.getTarget();
