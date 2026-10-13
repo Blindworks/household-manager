@@ -332,6 +332,25 @@ export class AdminAgentComponent implements OnInit {
     });
   }
 
+  /** Tausenderpunkt wie im Rest der Website, ohne Locale-Registrierung fuer die DecimalPipe. */
+  formatTokens(value: number): string {
+    return value.toLocaleString('de-DE');
+  }
+
+  /**
+   * Das Detail aus dem Backend wiederholt das Label („Wecker: …", „Grundtakt"); hier bleibt nur,
+   * was ueber das Label hinausgeht, sonst stuende „Grundtakt (Grundtakt)" in der Tabelle.
+   */
+  triggerDetailText(run: AgentRun): string {
+    const label = this.triggerLabels[run.triggerType];
+    const detail = (run.triggerDetail ?? '').trim();
+    if (!detail || detail === label) {
+      return '';
+    }
+    const prefix = `${label}: `;
+    return detail.startsWith(prefix) ? detail.slice(prefix.length) : detail;
+  }
+
   durationSeconds(run: AgentRun): string {
     return (run.durationMs / 1000).toFixed(1).replace('.', ',');
   }

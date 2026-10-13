@@ -291,27 +291,31 @@
             <tr>
               <th>Start</th>
               <th>Auslöser</th>
-              <th>Dauer</th>
-              <th>Tokens ein / aus</th>
-              <th>Werkzeuge</th>
+              <th class="admin-agent__num">Dauer</th>
+              <th class="admin-agent__num">Tokens ein → aus</th>
+              <th class="admin-agent__num">Werkzeuge</th>
               <th>Ergebnis</th>
             </tr>
           </thead>
           <tbody>
             @for (run of runs(); track $index) {
               <tr>
-                <td>
-                  <span class="admin-agent__dot" [class.admin-agent__dot--error]="!!run.error" aria-hidden="true"></span>
-                  {{ run.startedAt | date: 'dd.MM. HH:mm' }}
+                <td class="admin-agent__when">
+                  <span class="admin-agent__dot" [class.admin-agent__dot--error]="!!run.error" aria-hidden="true"></span>{{ run.startedAt | date: 'dd.MM. HH:mm' }}
                 </td>
-                <td>{{ triggerLabels[run.triggerType] }}{{ run.triggerDetail ? ' (' + run.triggerDetail + ')' : '' }}</td>
-                <td>{{ durationSeconds(run) }} s</td>
-                <td>{{ run.inputTokens }} / {{ run.outputTokens }}</td>
-                <td>{{ run.toolCalls }}</td>
+                <td class="admin-agent__trigger">
+                  <span class="admin-agent__trigger-label">{{ triggerLabels[run.triggerType] }}</span>
+                  @if (triggerDetailText(run); as detail) {
+                    <span class="admin-agent__trigger-detail">{{ detail }}</span>
+                  }
+                </td>
+                <td class="admin-agent__num">{{ durationSeconds(run) }} s</td>
+                <td class="admin-agent__num">{{ formatTokens(run.inputTokens) }} → {{ formatTokens(run.outputTokens) }}</td>
+                <td class="admin-agent__num">{{ run.toolCalls }}</td>
                 <td class="admin-agent__result" [class.admin-agent__result--error]="!!run.error">
                   {{ resultText(run, $index) }}
                   @if (isLongResult(run)) {
-                    <button type="button" class="ghost admin-agent__link" (click)="toggleRun($index)">
+                    <button type="button" class="admin-agent__link" (click)="toggleRun($index)">
                       {{ expandedRuns().has($index) ? 'weniger' : 'mehr' }}
                     </button>
                   }
