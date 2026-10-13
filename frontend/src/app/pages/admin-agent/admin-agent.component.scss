@@ -416,8 +416,59 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
     }
   }
 
+  // ---- Läufe-Tabelle ----
+  &__runs table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+
+    th,
+    td {
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+      border-bottom: 1px solid var(--color-light-gray);
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--color-gray);
+      white-space: nowrap;
+    }
+  }
+
+  &__when {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__trigger {
+    min-width: 10rem;
+  }
+
+  &__trigger-label {
+    display: block;
+    font-weight: 600;
+  }
+
+  &__trigger-detail {
+    display: block;
+    margin-top: 2px;
+    color: var(--color-gray);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+  }
+
+  &__num {
+    white-space: nowrap;
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__result {
-    min-width: 16rem;
+    min-width: 18rem;
+    max-width: 40rem;
+    line-height: 1.5;
 
     &--error {
       color: var(--color-error);
@@ -425,8 +476,21 @@ $gray-tint: color-mix(in srgb, var(--color-gray) 14%, white);
   }
 
   &__link {
-    padding: 0 6px;
-    font-size: 0.8rem;
+    margin-left: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--color-primary);
+    font: inherit;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      background: none;
+      color: var(--color-primary-dark);
+    }
   }
 
   &__spinner {
