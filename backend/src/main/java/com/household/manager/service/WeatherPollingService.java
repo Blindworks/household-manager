@@ -70,16 +70,18 @@ public class WeatherPollingService {
                 throw new IllegalStateException("DWD overview has no current conditions.");
             }
 
-            WeatherReading entity = WeatherReading.builder()
-                    .readingTime(current.getTime())
-                    .temperature(current.getTemperature())
-                    .precipitation(current.getPrecipitation())
-                    .windSpeed(current.getWindSpeed())
-                    .windDirection(current.getWindDirection())
-                    .humidity(current.getHumidity())
-                    .pressure(current.getPressure())
-                    .icon(current.getIcon())
-                    .build();
+            // Der Zeitstempel ist der Beginn der Vorhersagestunde, gepollt wird viertelstündlich:
+            // dieselbe Stunde wird überschrieben (neueste DWD-Vorhersage gewinnt), sonst entstünden
+            // mehrere Werte mit identischem Zeitpunkt und der Verlauf zeigte einen Sägezahn.
+            WeatherReading entity = repository.findByReadingTime(current.getTime())
+                    .orElseGet(() -> WeatherReading.builder().readingTime(current.getTime()).build());
+            entity.setTemperature(current.getTemperature());
+            entity.setPrecipitation(current.getPrecipitation());
+            entity.setWindSpeed(current.getWindSpeed());
+            entity.setWindDirection(current.getWindDirection());
+            entity.setHumidity(current.getHumidity());
+            entity.setPressure(current.getPressure());
+            entity.setIcon(current.getIcon());
 
             repository.save(entity);
             reportEntityStates(current);

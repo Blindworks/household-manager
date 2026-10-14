@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261014-0070-unique-weather-reading-time" author="claude">
+        <comment>Ein Wert je Vorhersagestunde (eigenes Changeset wegen MariaDB-DDL-Autocommit).</comment>
+        <addUniqueConstraint tableName="weather_readings" columnNames="reading_time"
+                             constraintName="uk_weather_readings_time"/>
+        <rollback><dropUniqueConstraint tableName="weather_readings" constraintName="uk_weather_readings_time"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

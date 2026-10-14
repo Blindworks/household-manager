@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261014-0069-dedupe-weather-readings" author="claude">
+        <comment>Bisher schrieb jeder 15-Minuten-Poll eine eigene Zeile mit demselben Stunden-Zeitstempel.
+            Je Stunde bleibt die juengste Zeile (hoechste id = neueste DWD-Vorhersage) stehen.</comment>
+        <sql dbms="mariadb,mysql">
+            DELETE older FROM weather_readings older
+            JOIN weather_readings newer
+              ON newer.reading_time = older.reading_time AND newer.id &gt; older.id
+        </sql>
+        <rollback><!-- geloeschte Duplikate sind nicht wiederherstellbar --></rollback>
+    </changeSet>
+
+</databaseChangeLog>

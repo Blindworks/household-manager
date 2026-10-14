@@ -163,4 +163,8 @@
     <include file="db/changelog/changes/20261013-0067b-create-ble-sensor-reading-fk.xml"/>
     <include file="db/changelog/changes/20261013-0068-create-ble-sensor-reading-index.xml"/>
 
+    <!-- DWD-Wetter: ein Wert je Vorhersagestunde -->
+    <include file="db/changelog/changes/20261014-0069-dedupe-weather-readings.xml"/>
+    <include file="db/changelog/changes/20261014-0070-unique-weather-reading-time.xml"/>
+
 </databaseChangeLog>
