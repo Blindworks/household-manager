@@ -61,6 +61,15 @@ class BleSensorReadingRecorderTest {
     }
 
     @Test
+    void aufSpaltenmassGerundeterWertMatchtLetztenPunkt() {
+        when(repository.findTopBySensorIdOrderByMeasuredAtDesc(7L)).thenReturn(Optional.of(last("21.56", "53.56", T0)));
+
+        recorder.record(sensor("21.56", "53.56"), T0.plusMinutes(4));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void geaenderteTemperaturWirdSofortGeschrieben() {
         when(repository.findTopBySensorIdOrderByMeasuredAtDesc(7L)).thenReturn(Optional.of(last("21.5", "50", T0)));
 

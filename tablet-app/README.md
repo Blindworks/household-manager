@@ -23,7 +23,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 1. Auf dem Tablet "Unbekannte Quellen" für den Datei-Manager erlauben.
 2. APK aufs Tablet kopieren (USB, Netzwerkfreigabe) und installieren —
    oder per ADB: `adb install app/build/outputs/apk/debug/app-debug.apk`
-3. App starten, Kamera-Berechtigung erteilen. Beim ersten Start zusätzlich die Bluetooth-Berechtigung („Geräte in der Nähe“) erteilen; danach erscheinen ThermoBeacon-Thermometer in Funkreichweite im Backend unter Admin → Bluetooth-Thermometer. Schalter „Bluetooth-Thermometer melden“ in den Einstellungen.
+3. App starten, Kamera-Berechtigung erteilen. Beim ersten Start zusätzlich die Bluetooth-Berechtigung („Geräte in der Nähe“) erteilen; danach erscheinen ThermoBeacon-Thermometer in Funkreichweite im Backend unter Admin → Bluetooth-Thermometer. Schalter „Bluetooth-Thermometer melden“ in den Einstellungen (wirkt nach einem Neustart der App).
 4. Einstellungen öffnen: **langes Drücken oben links** — Dashboard-URL,
    Backend-URL (inkl. `/api`), Tablet-ID, Display-Timeout und
    Bewegungs-Schwellwert setzen.

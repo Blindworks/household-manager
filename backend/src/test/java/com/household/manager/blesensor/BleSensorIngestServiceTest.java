@@ -76,6 +76,18 @@ class BleSensorIngestServiceTest {
     }
 
     @Test
+    void werteWerdenAufSpaltenmassGerundet() {
+        when(repository.findByMac("aa:bb:cc:dd:ee:ff")).thenReturn(Optional.empty());
+
+        service.ingest(new ReadingsRequest("wandtablet", List.of(item("aa:bb:cc:dd:ee:ff", "21.5625", "53.5625", 0))));
+
+        ArgumentCaptor<BleSensor> captor = ArgumentCaptor.forClass(BleSensor.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getLastTemperature()).isEqualByComparingTo("21.56");
+        assertThat(captor.getValue().getLastHumidity()).isEqualByComparingTo("53.56");
+    }
+
+    @Test
     void aktiverSensorBekommtHistorieUndEntitaeten() {
         BleSensor active = BleSensor.builder().id(7L).mac("aa:bb:cc:dd:ee:ff").name("Küche").active(true)
                 .createdAt(NOW.minusDays(1)).build();

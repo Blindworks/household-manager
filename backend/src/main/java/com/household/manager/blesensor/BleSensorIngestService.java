@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
 
@@ -63,8 +64,8 @@ public class BleSensorIngestService {
                 .mac(mac).active(false).createdAt(now).build());
         sensor.setTabletId(tabletId);
         sensor.setLastSeenAt(measuredAt);
-        sensor.setLastTemperature(item.temperature());
-        sensor.setLastHumidity(item.humidity());
+        sensor.setLastTemperature(toColumnScale(item.temperature()));
+        sensor.setLastHumidity(toColumnScale(item.humidity()));
         sensor.setLastBatteryMv(item.batteryMillivolts());
         sensor.setLastRssi(item.rssi());
         BleSensor saved = repository.save(sensor);
@@ -107,5 +108,10 @@ public class BleSensorIngestService {
             }
             BleMacs.normalize(item.mac());   // wirft IllegalArgumentException bei ungueltiger Syntax
         }
+    }
+
+    /** Spaltenmass DECIMAL(5,2): sonst weicht der Speicherwert (21.5625) vom DB-Wert (21.56) ab. */
+    private static BigDecimal toColumnScale(BigDecimal value) {
+        return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
     }
 }

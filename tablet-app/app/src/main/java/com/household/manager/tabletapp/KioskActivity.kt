@@ -79,7 +79,7 @@ class KioskActivity : AppCompatActivity(), PresenceListener {
 
     private val bluetoothPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-            val granted = result.isNotEmpty() && result.values.all { it } &&
+            val granted = result.isNotEmpty() &&
                 ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
                 PackageManager.PERMISSION_GRANTED
             if (granted) startBleScanning() else onBleFailure("Bluetooth-Berechtigung verweigert")

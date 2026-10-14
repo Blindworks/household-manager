@@ -34,8 +34,8 @@ class ThermoBeaconScanner(
 ) {
 
     private val seen = ConcurrentHashMap<String, SeenReading>()
-    private var scanning = false
-    private var receiverRegistered = false
+    @Volatile private var scanning = false
+    @Volatile private var receiverRegistered = false
 
     private val callback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
