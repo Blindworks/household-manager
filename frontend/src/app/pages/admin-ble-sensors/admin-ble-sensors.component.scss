@@ -1,0 +1,21 @@
+.admin-ble-sensors {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+
+  &__hint { color: #555; max-width: 70ch; }
+  &__error { background: #fde8e8; color: #8a1f1f; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+  &__table { width: 100%; border-collapse: collapse; margin-top: 1rem;
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
+  }
+  &__row--inactive td { color: #777; }
+  &__mac { font-family: monospace; font-size: 0.8rem; color: #777; }
+  &__name-input { width: 12rem; }
+  &__badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem;
+    &--active { background: #e3f6e8; color: #1d6b32; }
+    &--inactive { background: #eee; color: #555; }
+    &--unadopted { background: #fff4d6; color: #7a5200; }
+  }
+  &__actions { white-space: nowrap; button + button { margin-left: 0.5rem; } }
+  &__sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}

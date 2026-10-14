@@ -43,5 +43,7 @@ public enum EntitySource {
     /** Sonnenstand am Haushaltsstandort (sensor.sun; berechnet, keine externe Quelle). */
     SUN,
     /** Heizkoerperthermostate (Tapo KE100 am H100-Hub), je Thermostat drei Entitaeten. */
-    THERMOSTAT
+    THERMOSTAT,
+    /** Bluetooth-Thermometer (ThermoBeacon/SensorBlue), empfangen ueber das Wandtablet; je Sensor Temperatur + Feuchte. */
+    BLE
 }

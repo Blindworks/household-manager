@@ -10,6 +10,9 @@ import com.household.manager.agent.AgentSettingsService;
 import com.household.manager.agent.AgentTokenBudget;
 import com.household.manager.agent.AgentWakeService;
 import com.household.manager.audit.AuditService;
+import com.household.manager.blesensor.BleSensorAdminService;
+import com.household.manager.blesensor.BleSensorController;
+import com.household.manager.blesensor.BleSensorIngestService;
 import com.household.manager.calendar.CalendarCategoryController;
 import com.household.manager.calendar.CalendarCategoryService;
 import com.household.manager.calendar.CalendarEventController;
@@ -96,7 +99,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
         HouseholdUserController.class, SystemController.class, PetSupplyController.class,
         PushController.class, SmartDeviceController.class, ZigbeeController.class,
-        ZigbeeManagementController.class, AgentController.class},
+        ZigbeeManagementController.class, AgentController.class, BleSensorController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
@@ -145,6 +148,10 @@ class SecurityRulesTest {
     private NukiLockService nukiLockService;
     @MockitoBean
     private TabletPresenceService tabletPresenceService;
+    @MockitoBean
+    private BleSensorIngestService bleSensorIngestService;
+    @MockitoBean
+    private BleSensorAdminService bleSensorAdminService;
     @MockitoBean
     private SystemRebootService systemRebootService;
     @MockitoBean
@@ -345,6 +352,55 @@ class SecurityRulesTest {
         mockMvc.perform(post("/v1/tablet-presence/wandtablet").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"present\":true}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void serviceTokenDarfBleSensorenMelden() throws Exception {
+        when(serviceTokenService.authenticate(anyString())).thenReturn(Optional.of(
+                ServiceToken.builder().name("tablet").role(UserRole.KIOSK).enabled(true).build()));
+        mockMvc.perform(post("/v1/ble-sensors/readings")
+                        .header("X-API-Token", "hm_ok")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tabletId\":\"wandtablet\",\"readings\":[]}"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void browserSessionOhneServiceAuthorityKommtNichtAnBleReadings() throws Exception {
+        mockMvc.perform(post("/v1/ble-sensors/readings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tabletId\":\"wandtablet\",\"readings\":[]}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /** Die Liste enthaelt MACs fremder Geraete in Funkreichweite - kein KIOSK-Lesen. */
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskKommtNichtAnBleSensorliste() throws Exception {
+        mockMvc.perform(get("/v1/ble-sensors")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberKommtNichtAnBleSensoren() throws Exception {
+        mockMvc.perform(get("/v1/ble-sensors")).andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/ble-sensors/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/v1/ble-sensors/1").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminKommtAnBleSensorenVorbei() throws Exception {
+        // 200/204 statt 403: die Regel laesst durch, der gemockte Service antwortet. (Der Slice schliesst
+        // den GlobalExceptionHandler aus, ein 404 per ResourceNotFoundException waere hier nicht abbildbar.)
+        mockMvc.perform(get("/v1/ble-sensors")).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/ble-sensors/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/v1/ble-sensors/1").with(csrf())).andExpect(status().isNoContent());
     }
 
     @Test

@@ -1,0 +1,70 @@
+<div class="admin-ble-sensors">
+  <h1>Bluetooth-Thermometer</h1>
+
+  <p class="admin-ble-sensors__hint">
+    Das Wandtablet meldet alle ThermoBeacon-Thermometer in Funkreichweite. Ein Sensor liefert erst
+    nach dem Übernehmen Entitäten und Historie; fremde Geräte bleiben einfach in dieser Liste stehen.
+    Zum Wiedererkennen ein Thermometer in die Hand nehmen — der Wert steigt binnen einer Minute.
+  </p>
+
+  @if (errorMessage()) {
+    <div class="admin-ble-sensors__error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  @if (loading()) {
+    <p>Wird geladen …</p>
+  } @else if (loadFailed()) {
+    <p>Die Sensoren konnten nicht geladen werden. Bitte die Seite neu laden.</p>
+  } @else if (sensors().length === 0) {
+    <p>Noch kein Thermometer gesehen. Läuft die Tablet-App mit Bluetooth-Berechtigung?</p>
+  } @else {
+    <table class="admin-ble-sensors__table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Status</th>
+          <th scope="col">Temperatur</th>
+          <th scope="col">Feuchte</th>
+          <th scope="col">Batterie</th>
+          <th scope="col">Zuletzt gesehen</th>
+          <th scope="col">Tablet</th>
+          <th scope="col"><span class="admin-ble-sensors__sr-only">Aktionen</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (sensor of sensors(); track sensor.id) {
+          <tr [class.admin-ble-sensors__row--inactive]="!sensor.active">
+            <td>
+              @if (editingId === sensor.id) {
+                <input class="admin-ble-sensors__name-input" type="text" maxlength="100"
+                       [(ngModel)]="editingName" name="name-{{ sensor.id }}" placeholder="z. B. Küche">
+                <div class="admin-ble-sensors__mac">{{ sensor.mac }}</div>
+              } @else {
+                <div>{{ displayName(sensor) }}</div>
+                @if (sensor.name) { <div class="admin-ble-sensors__mac">{{ sensor.mac }}</div> }
+              }
+            </td>
+            <td><span class="admin-ble-sensors__badge admin-ble-sensors__badge--{{ status(sensor) }}">{{ statusLabel(sensor) }}</span></td>
+            <td>{{ sensor.lastTemperature === null ? '–' : (sensor.lastTemperature | number:'1.1-1':'de') + ' °C' }}</td>
+            <td>{{ sensor.lastHumidity === null ? '–' : (sensor.lastHumidity | number:'1.0-0':'de') + ' %' }}</td>
+            <td>{{ sensor.batteryPercent === null ? '–' : sensor.batteryPercent + ' %' }}</td>
+            <td>{{ sensor.lastSeenAt ? (sensor.lastSeenAt | date:'dd.MM. HH:mm:ss') : '–' }}</td>
+            <td>{{ sensor.tabletId ?? '–' }}</td>
+            <td class="admin-ble-sensors__actions">
+              @if (editingId === sensor.id) {
+                <button type="button" (click)="saveName()" [disabled]="saving() || !editingName.trim()">Speichern</button>
+                <button type="button" class="ghost" (click)="cancelEdit()">Abbrechen</button>
+              } @else if (sensor.active) {
+                <button type="button" class="ghost" (click)="startEdit(sensor)" [disabled]="saving()">Umbenennen</button>
+                <button type="button" class="ghost" (click)="deactivate(sensor)" [disabled]="saving()">Deaktivieren</button>
+              } @else {
+                <button type="button" (click)="startEdit(sensor)" [disabled]="saving()">Übernehmen</button>
+                <button type="button" class="danger" (click)="remove(sensor)" [disabled]="saving()">Löschen</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

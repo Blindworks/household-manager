@@ -8,7 +8,7 @@ export interface TimeValue {
 }
 
 /** Quelle eines Temperatursensors. */
-export type TemperatureSource = 'ZIGBEE' | 'WEATHER' | 'ALEXA';
+export type TemperatureSource = 'ZIGBEE' | 'WEATHER' | 'ALEXA' | 'BLE';
 
 /** Zeitreihe eines Temperatursensors inkl. optionaler Luftfeuchtigkeit. */
 export interface TemperatureSensorSeries {

@@ -211,6 +211,13 @@ export const routes: Routes = [
     title: 'Anwesenheit - Household Manager'
   },
   {
+    path: 'admin/ble-sensors',
+    loadComponent: () => import('./pages/admin-ble-sensors/admin-ble-sensors.component')
+      .then(m => m.AdminBleSensorsComponent),
+    canActivate: [adminGuard],
+    title: 'Bluetooth-Thermometer - Household Manager'
+  },
+  {
     path: 'admin/agent',
     loadComponent: () => import('./pages/admin-agent/admin-agent.component')
       .then(m => m.AdminAgentComponent),

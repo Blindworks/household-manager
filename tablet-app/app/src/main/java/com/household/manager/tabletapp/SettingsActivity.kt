@@ -20,12 +20,15 @@ class SettingsActivity : AppCompatActivity() {
         val timeout = findViewById<EditText>(R.id.input_timeout)
         val motionThreshold = findViewById<EditText>(R.id.input_motion_threshold)
 
+        val bleReporting = findViewById<android.widget.CheckBox>(R.id.check_ble_reporting)
+
         dashboardUrl.setText(settings.dashboardUrl)
         backendUrl.setText(settings.backendBaseUrl)
         tabletId.setText(settings.tabletId)
         apiToken.setText(settings.apiToken)
         timeout.setText(settings.displayTimeoutSeconds.toString())
         motionThreshold.setText(settings.motionPixelThreshold.toString())
+        bleReporting.isChecked = settings.bleReportingEnabled
 
         findViewById<Button>(R.id.button_save).setOnClickListener {
             settings.dashboardUrl = dashboardUrl.text.toString().ifBlank { settings.dashboardUrl }
@@ -34,6 +37,7 @@ class SettingsActivity : AppCompatActivity() {
             settings.apiToken = apiToken.text.toString()
             settings.displayTimeoutSeconds = timeout.text.toString().toIntOrNull() ?: 60
             settings.motionPixelThreshold = motionThreshold.text.toString().toIntOrNull() ?: 25
+            settings.bleReportingEnabled = bleReporting.isChecked
             finish()
         }
     }

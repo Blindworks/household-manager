@@ -87,6 +87,13 @@
             android:layout_height="wrap_content"
             android:inputType="number" />
 
+        <CheckBox
+            android:id="@+id/check_ble_reporting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Bluetooth-Thermometer melden" />
+
         <Button
             android:id="@+id/button_save"
             android:layout_width="wrap_content"
