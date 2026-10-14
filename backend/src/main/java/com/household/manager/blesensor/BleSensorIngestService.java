@@ -78,6 +78,9 @@ public class BleSensorIngestService {
     }
 
     private static boolean plausible(ReadingItem item) {
+        if (!sane(item.temperature()) || !sane(item.humidity())) {
+            return false;
+        }
         if (item.temperature() == null && item.humidity() == null) {
             return false;
         }
@@ -108,6 +111,11 @@ public class BleSensorIngestService {
             }
             BleMacs.normalize(item.mac());   // wirft IllegalArgumentException bei ungueltiger Syntax
         }
+    }
+
+    /** Schutz vor BigDecimal-Exponenten-Bomben (1e999999999 liesse setScale/compareTo explodieren). */
+    private static boolean sane(BigDecimal value) {
+        return value == null || (Math.abs(value.scale()) <= 6 && value.precision() <= 12);
     }
 
     /** Spaltenmass DECIMAL(5,2): sonst weicht der Speicherwert (21.5625) vom DB-Wert (21.56) ab. */

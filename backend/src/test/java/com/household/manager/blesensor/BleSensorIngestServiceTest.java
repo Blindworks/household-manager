@@ -139,6 +139,19 @@ class BleSensorIngestServiceTest {
     }
 
     @Test
+    void exponentenBombeWirdUebersprungenOhneZuRechnen() {
+        when(repository.findByMac("aa:bb:cc:dd:ee:ff")).thenReturn(Optional.empty());
+        ReadingItem bomb = new ReadingItem("11:22:33:44:55:66", new BigDecimal("1e999999999"), new BigDecimal("50"), 3030, -60, 0L);
+
+        service.ingest(new ReadingsRequest("wandtablet", List.of(bomb, item("aa:bb:cc:dd:ee:ff", "21.5", "50", 0))));
+
+        ArgumentCaptor<BleSensor> captor = ArgumentCaptor.forClass(BleSensor.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getAllValues()).hasSize(1);
+        assertThat(captor.getValue().getMac()).isEqualTo("aa:bb:cc:dd:ee:ff");
+    }
+
+    @Test
     void fehlerBeiEinemSensorReisstDieAnderenNichtMit() {
         when(repository.findByMac("11:22:33:44:55:66")).thenThrow(new RuntimeException("db"));
         when(repository.findByMac("aa:bb:cc:dd:ee:ff")).thenReturn(Optional.empty());
