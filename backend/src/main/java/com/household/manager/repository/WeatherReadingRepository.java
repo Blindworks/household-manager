@@ -17,6 +17,9 @@ public interface WeatherReadingRepository extends JpaRepository<WeatherReading, 
     List<WeatherReading> findByReadingTimeBetweenOrderByReadingTimeAsc(
             LocalDateTime from, LocalDateTime to);
 
+    /** Zeile einer Vorhersagestunde; je Stunde gibt es höchstens eine (Unique-Constraint). */
+    Optional<WeatherReading> findByReadingTime(LocalDateTime readingTime);
+
     /** Jüngste Wettermessung, die eine Temperatur gesetzt hat. */
     Optional<WeatherReading> findTopByTemperatureIsNotNullOrderByReadingTimeDesc();
 }

@@ -40,7 +40,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * Aggregiert Temperatur-/Feuchte-Zeitreihen aus Zigbee, Wetter und Alexa
+ * Aggregiert Temperatur-/Feuchte-Zeitreihen aus Zigbee, Alexa und BLE (DWD-Wetter nur als aktueller Wert und Einzelserie)
  * in ein einheitliches Serienformat. Jede Quelle ist gekapselt: fällt sie aus,
  * wird sie geloggt und übersprungen, ohne die Gesamtantwort zu gefährden.
  */
@@ -62,13 +62,18 @@ public class TemperatureSeriesService {
     private final EntityStateService entityStateService;
     private final SeriesDownsampler downsampler;
 
+    /**
+     * Verläufe aller echten Fühler für die Temperaturansichten. Die DWD-Vorhersage gehört bewusst
+     * nicht dazu: sie ist ein stündlicher Modellwert, kein Messwert, und stand dort als
+     * irreführender Fühler „Außen" neben dem realen Gartenfühler. Als Ersatz-Außenwert lebt sie
+     * in {@link #getCurrent()} und als Einzelserie in {@link #getSensorSeries} weiter.
+     */
     public List<TemperatureSensorSeries> getSeries(SeriesRange range) {
         LocalDateTime to = LocalDateTime.now();
         LocalDateTime from = to.minusDays(range.getDays());
 
         List<TemperatureSensorSeries> series = new ArrayList<>();
         series.addAll(safe("zigbee", () -> zigbeeSeries(from, to)));
-        series.addAll(safe("weather", () -> weatherSeries(from, to)));
         series.addAll(safe("alexa", () -> alexaSeries(from, to)));
         series.addAll(safe("ble", () -> bleSeries(from, to)));
         return series;
@@ -313,31 +318,6 @@ public class TemperatureSeriesService {
                     .build());
         }
         return result;
-    }
-
-    private List<TemperatureSensorSeries> weatherSeries(LocalDateTime from, LocalDateTime to) {
-        List<WeatherReading> readings =
-                weatherRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(from, to);
-
-        List<TimeValue> temperature = readings.stream()
-                .filter(r -> r.getTemperature() != null)
-                .map(r -> point(r.getReadingTime(), r.getTemperature()))
-                .toList();
-        if (temperature.isEmpty()) {
-            return List.of();
-        }
-        List<TimeValue> humidity = readings.stream()
-                .filter(r -> r.getHumidity() != null)
-                .map(r -> point(r.getReadingTime(), BigDecimal.valueOf(r.getHumidity())))
-                .toList();
-
-        return List.of(TemperatureSensorSeries.builder()
-                .sensorId("weather:outdoor")
-                .name(temperatureName(EntitySource.WEATHER, "dwd", "Außen"))
-                .source("WEATHER")
-                .temperature(temperature)
-                .humidity(humidity)
-                .build());
     }
 
     private List<TemperatureSensorSeries> alexaSeries(LocalDateTime from, LocalDateTime to) {
