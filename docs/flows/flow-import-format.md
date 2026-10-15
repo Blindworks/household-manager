@@ -239,6 +239,29 @@ Kasa-Gerät (siehe CLAUDE.md, Abschnitt TP-Link Kasa) nimmt diesen Node an.
 
 \* mindestens eines der vier Felder muss gesetzt sein.
 
+### `thermostat-set` — Heizung schalten (1 Ausgang)
+Schaltet ein Thermostat (Tapo KE100) über denselben Weg wie die Heizungsansicht des Wandtablets
+(Validierung, Nachlesen, Audit `thermostat.mode`/`thermostat.target`). Gedacht für „Fenster auf ⇒
+Heizung aus, Fenster zu ⇒ wie vorher":
+
+- `off` merkt sich den aktuellen Sollwert (nur wenn er über 5 °C liegt — ein zweites `off` bei
+  schon ausgeschaltetem Thermostat überschreibt ihn nicht) und schaltet aus (Ziel 5 °C).
+- `restore` stellt den gemerkten Sollwert wieder her und vergisst ihn. Hat jemand das Thermostat
+  in der Zwischenzeit von Hand eingeschaltet, bleibt es unverändert. Ohne gemerkten Wert
+  (Backend-Neustart, nie ausgeschaltet) schaltet es auf MANUAL — beim Aus-Zustand heißt das 17 °C.
+- `target` setzt `targetCelsius` (5,0–30,0 in 0,5-Schritten, geprüft beim Deploy).
+
+Der gemerkte Wert gilt je Thermostat, unabhängig davon, welcher Node oder Flow `off` ausgelöst
+hat, und lebt nur im Speicher. Gerätefehler (Hub nicht erreichbar) brechen den Zweig ab und
+landen im Flow-Debug; parallele Zweige laufen weiter. Die Existenz des Thermostats wird erst zur
+Laufzeit geprüft.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `thermostatId` | ja | DB-Id des Thermostats (die Zahl in `sensor.thermostat_<id>_target`) |
+| `action` | ja | `off`, `restore` oder `target` |
+| `targetCelsius` | bei `target` | Solltemperatur in °C |
+
 > Referenzen müssen zu deiner Umgebung passen. Ist eine **`entityId`** beim Deploy noch
 > unbekannt, meldet der Validator eine **Warnung** (kein Fehler) — der Flow greift, sobald
 > die Entität existiert. **`deviceId`** und **`deviceSerials`** werden beim Deploy dagegen
