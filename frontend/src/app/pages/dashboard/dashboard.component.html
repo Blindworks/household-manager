@@ -244,10 +244,20 @@
             </div>
           </div>
         </div>
-        <!-- Groesste Verbraucher; der Knopf oeffnet die Gesamtliste. -->
-        <div class="lumina__energy-consumers">
+        <!-- Groesste Verbraucher, standardmaessig eingeklappt (Platz fuer den
+             Intelligence Hub); der Knopf rechts oeffnet die Gesamtliste. -->
+        <div class="lumina__energy-consumers" [class.lumina__energy-consumers--expanded]="consumersExpanded">
           <div class="lumina__energy-consumers-head">
-            <h3 class="lumina__label">Größte Verbraucher</h3>
+            <button
+              type="button"
+              class="lumina__energy-consumers-toggle"
+              (click)="toggleConsumers()"
+              [attr.aria-expanded]="consumersExpanded"
+              aria-controls="lumina-energy-consumer-rows"
+            >
+              <span class="lumina__label">Größte Verbraucher</span>
+              <span class="material-symbols-outlined lumina__energy-consumers-chevron" aria-hidden="true">expand_more</span>
+            </button>
             <button
               type="button"
               class="lumina__switch-all"
@@ -258,7 +268,7 @@
               <span class="material-symbols-outlined">expand_content</span>
             </button>
           </div>
-          <div class="lumina__consumer-rows">
+          <div *ngIf="consumersExpanded" id="lumina-energy-consumer-rows" class="lumina__consumer-rows">
             <p *ngIf="topConsumers.length === 0" class="lumina__consumer-empty">
               Keine Verbraucher
             </p>

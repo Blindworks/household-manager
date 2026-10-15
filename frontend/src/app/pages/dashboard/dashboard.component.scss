@@ -839,8 +839,8 @@
 .lumina__energy-flow {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px 28px;
+  gap: 12px;
+  padding: 18px 28px 14px;
 }
 
 // ---- Groesste Verbraucher in der Energiefluss-Kachel ----------------------
@@ -850,7 +850,7 @@
   display: flex;
   flex-direction: column;
   margin: 0 28px;
-  padding: 10px 0 12px;
+  padding: 6px 0 8px;
   border-top: 1px solid rgba(var(--tint-rgb), 0.08);
 
   .lumina__consumer-rows {
@@ -890,6 +890,42 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+// Der Abschnittstitel ist zugleich der Klappknopf der Verbraucherzeilen.
+.lumina__energy-consumers-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  .lumina__label {
+    margin: 0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+.lumina__energy-consumers-chevron {
+  font-size: 18px;
+  color: rgba(var(--on-surface-variant-rgb), 0.7);
+  transition: transform 0.2s ease;
+
+  .lumina__energy-consumers--expanded & {
+    transform: rotate(180deg);
+  }
 }
 
 .lumina__energy-head {
@@ -936,7 +972,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 
   // Farbton je Kennzahl: PV gruen, Verbrauch blau, Bezug rot, Einspeisung gruen.
@@ -959,7 +995,7 @@
 
 .lumina__gauge-ring {
   position: relative;
-  width: min(5.5rem, 100%);
+  width: min(4.25rem, 100%);
   aspect-ratio: 1 / 1;
   height: auto;
   display: flex;
@@ -987,7 +1023,7 @@
   position: absolute;
   color: var(--gauge-color);
   opacity: 0.55;
-  font-size: 26px;
+  font-size: 22px;
 }
 
 .lumina__gauge-readout {

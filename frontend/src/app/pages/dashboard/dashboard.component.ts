@@ -284,6 +284,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   allConsumers: PowerConsumer[] = [];
   /** True, wenn der Verbraucher-Dialog geöffnet ist. */
   consumerDialogOpen = false;
+  /**
+   * Klappzustand der Verbraucherzeilen in der Energiefluss-Kachel. Standardmäßig
+   * zu, damit der Intelligence Hub darüber Platz behält; nicht gespeichert.
+   */
+  consumersExpanded = false;
 
   /** Verbraucher, dessen Verlauf gerade angezeigt wird (null = Dialog zu). */
   historyConsumer: PowerConsumer | null = null;
@@ -1085,6 +1090,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (updated) {
       this.sensorDetail = updated;
     }
+  }
+
+  /** Klappt die größten Verbraucher in der Energiefluss-Kachel auf oder zu. */
+  toggleConsumers(): void {
+    this.consumersExpanded = !this.consumersExpanded;
   }
 
   /** Öffnet den Verbraucher-Dialog und lädt dafür die vollständige Liste. */

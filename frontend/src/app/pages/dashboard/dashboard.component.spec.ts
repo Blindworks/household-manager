@@ -1388,6 +1388,8 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
 
     expect(consumerServiceSpy.getConsumers).toHaveBeenCalledWith(3);
     expect(fixture.componentInstance.topConsumers.length).toBe(1);
+    fixture.componentInstance.consumersExpanded = true;
+    fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Waschmaschine');
 
     discardPeriodicTasks();
@@ -1403,8 +1405,47 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
       return fixture;
     };
 
+    const expandConsumers = (fixture: ComponentFixture<DashboardComponent>) => {
+      const toggle: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.lumina__energy-consumers-toggle');
+      toggle.click();
+      fixture.detectChanges();
+    };
+
+    it('haelt die Verbraucherzeilen standardmaessig eingeklappt', fakeAsync(() => {
+      const fixture = tabletFixture();
+      const section: HTMLElement =
+        fixture.nativeElement.querySelector('.lumina__energy .lumina__energy-consumers');
+      const toggle: HTMLButtonElement = section.querySelector('.lumina__energy-consumers-toggle')!;
+
+      expect(section.querySelectorAll('.lumina__consumer-row').length).toBe(0);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      // Der Knopf zur Gesamtliste bleibt auch eingeklappt erreichbar.
+      expect(section.querySelector('.lumina__switch-all')).not.toBeNull();
+
+      discardPeriodicTasks();
+    }));
+
+    it('klappt die Verbraucherzeilen per Knopf auf und wieder zu, ohne den Energiefluss zu oeffnen', fakeAsync(() => {
+      const fixture = tabletFixture();
+      const rowCount = () =>
+        fixture.nativeElement.querySelectorAll('.lumina__energy-consumers .lumina__consumer-row').length;
+
+      expandConsumers(fixture);
+      expect(rowCount()).toBe(1);
+      expect(fixture.componentInstance.flowDialogOpen).toBeFalse();
+      expect(fixture.nativeElement.querySelector('.lumina__energy-consumers-toggle')
+        .getAttribute('aria-expanded')).toBe('true');
+
+      expandConsumers(fixture);
+      expect(rowCount()).toBe(0);
+
+      discardPeriodicTasks();
+    }));
+
     it('zeigt die groessten Verbraucher in der Energiefluss-Kachel', fakeAsync(() => {
       const fixture = tabletFixture();
+      expandConsumers(fixture);
       const section: HTMLElement | null =
         fixture.nativeElement.querySelector('.lumina__energy .lumina__energy-consumers');
 
@@ -1432,6 +1473,7 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
 
     it('oeffnet per Zeilenklick den Verlauf, nicht den Energiefluss', fakeAsync(() => {
       const fixture = tabletFixture();
+      expandConsumers(fixture);
       const row: HTMLButtonElement =
         fixture.nativeElement.querySelector('.lumina__energy-consumers .lumina__consumer-row');
 
@@ -1460,6 +1502,8 @@ describe('DashboardComponent (Verbraucher-Kachel)', () => {
   it('zeigt die Verbraucher in Website- und Tablet-Ansicht gleich, ohne eigene Verbraucher-Kachel', fakeAsync(() => {
     localStorage.removeItem('household-manager-view-mode');
     const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.consumersExpanded = true;
     fixture.detectChanges();
     const rowCount = () =>
       fixture.nativeElement.querySelectorAll('.lumina__energy-consumers .lumina__consumer-row').length;
