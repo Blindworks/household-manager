@@ -182,7 +182,8 @@ The application uses Liquibase for database migrations. Migration files are loca
   - The device page has no such hole: it calls explicit `/on`/`/off` endpoints rather than a toggle, so a stale client state there can only cause a redundant turn-ON, never an unconfirmed turn-OFF
 - **Switch Power Display**: switch rows show live wattage (no schema change)
   - `GET /api/v1/switches` enriches each switch with `powerWatts` from the matching `sensor.<source>_<ref>_power` entity (same source + sourceRef)
-  - Only shown while the switch is on and the reading is fresh (<5 min); display-only, no threshold logic; today effectively Meross (Shelly has no switch entities)
+  - Only shown while the switch is on and the reading is fresh (<5 min); display-only, no threshold logic; today Meross and metering Tapo plugs (Shelly has no switch entities)
+- **Tapo Power Polling**: `TapoPowerPollingService` polls `get_current_power` (watts — `current_power` from `get_energy_usage` would be milliwatts) every minute for online Tapo plugs with an IP whose model starts with `P110`/`P115`/`P125` (`METERING_MODEL_PREFIXES`; Tapo doesn't self-report metering, and probing bulbs would cost a protocol fallback each cycle) and reports `sensor.tapo_<deviceId>_power` with `deviceClass: power`. Anlass: das Laufband (P110) fehlte in der Verbraucher-Kachel. Like Meross, a read error reports nothing (no `unavailable`); a new metering model needs its prefix added there
 - **Meross Electricity Polling**: polls *all* metering plugs of the account, no curated device list
   - One cloud login + one device-list call per cycle (the list call is uncached — never fetch it per device)
   - Offline devices are skipped; devices whose MQTT answer shows no `Appliance.Control.Electricity` ability are remembered and skipped from then on, so only real metering plugs cost an MQTT connect per cycle
