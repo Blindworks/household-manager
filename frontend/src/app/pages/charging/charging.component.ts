@@ -11,7 +11,7 @@ import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../mo
 import {
   formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
 } from '../../shared/charging-status.util';
-import { homeIcon, stationIcon, stationPopupText } from '../../shared/charging-map.util';
+import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 
 useLocalLeafletIcons();
@@ -215,7 +215,8 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
       L.circle(home, { radius: radiusMeters, color: '#0284c7', weight: 1, fillOpacity: 0.04 }).addTo(this.map);
       L.marker(home, { icon: homeIcon(), interactive: false }).addTo(this.map);
       this.markerLayer = L.layerGroup().addTo(this.map);
-      this.map.fitBounds(L.latLng(home).toBounds(radiusMeters * 2), { padding: [8, 8] });
+      const viewRadiusMeters = initialViewRadiusMeters(this.stations, this.data.radiusKm ?? 10);
+      this.map.fitBounds(L.latLng(home).toBounds(viewRadiusMeters * 2), { padding: [8, 8] });
     }
     this.markerLayer!.clearLayers();
     this.markers.clear();

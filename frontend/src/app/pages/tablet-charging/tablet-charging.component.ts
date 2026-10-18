@@ -11,7 +11,7 @@ import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../mo
 import {
   formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
 } from '../../shared/charging-status.util';
-import { homeIcon, stationIcon, stationPopupText } from '../../shared/charging-map.util';
+import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 
 useLocalLeafletIcons();
@@ -288,7 +288,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       const radiusMeters = (this.data.radiusKm ?? 10) * 1000;
       L.circle(home, { radius: radiusMeters, color: 'rgba(255, 255, 255, 0.45)', weight: 1, dashArray: '6 6', fillOpacity: 0.03 }).addTo(this.homeLayer);
       L.marker(home, { icon: homeIcon(), interactive: false }).addTo(this.homeLayer);
-      this.map.fitBounds(L.latLng(home).toBounds(radiusMeters * 2), { padding: [8, 8] });
+      const viewRadiusMeters = initialViewRadiusMeters(this.stations, this.data.radiusKm ?? 10);
+      this.map.fitBounds(L.latLng(home).toBounds(viewRadiusMeters * 2), { padding: [8, 8] });
     }
     this.markerLayer!.clearLayers();
     this.markers.clear();

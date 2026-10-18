@@ -109,3 +109,28 @@ export function homeIcon(): L.DivIcon {
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+/** So viele naechste Stationen zeigt der Startausschnitt der Karte. */
+export const INITIAL_VIEW_STATION_COUNT = 5;
+/** Untergrenze des Startausschnitts - sonst zoomte eine Saeule vor der Tuer auf Strassenebene. */
+export const INITIAL_VIEW_MIN_RADIUS_METERS = 1000;
+/** Ausschnitt ohne jede Station im Umkreis (z. B. alle zu schwach fuer die Mindestleistung). */
+export const INITIAL_VIEW_FALLBACK_RADIUS_METERS = 3000;
+
+/**
+ * Radius des Startausschnitts um das Zuhause, fuer Tablet- und Website-Karte gleich.
+ * Frueher passte der Start den ganzen Suchkreis ein (bis 50 km) - auf Handy und Tablet ein
+ * Gewimmel aus Pins. Jetzt reicht der Ausschnitt bis zur fuenftnaechsten Station, mindestens
+ * 1 km und nie ueber den Suchradius hinaus; wer mehr sehen will, zoomt heraus.
+ */
+export function initialViewRadiusMeters(stations: ChargingStation[], searchRadiusKm: number): number {
+  const searchRadiusMeters = searchRadiusKm * 1000;
+  const distances = stations
+    .map(station => station.distanceMeters)
+    .filter(distance => Number.isFinite(distance))
+    .sort((a, b) => a - b);
+  const wanted = distances.length
+    ? distances[Math.min(INITIAL_VIEW_STATION_COUNT, distances.length) - 1]
+    : INITIAL_VIEW_FALLBACK_RADIUS_METERS;
+  return Math.min(searchRadiusMeters, Math.max(INITIAL_VIEW_MIN_RADIUS_METERS, wanted));
+}
