@@ -84,6 +84,10 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    // Ohne min-width: 0 ist die Mindestbreite eines Rasterelements sein Inhalt:
+    // der nicht umbrechende Sensorname und die einmal gezeichnete Canvas dehnten
+    // die 1fr-Spalte am Handy ueber den Bildschirmrand.
+    min-width: 0;
     padding: 0.75rem 0.9rem;
     border: 1px solid var(--card-border);
     border-radius: 1rem;
@@ -164,7 +168,7 @@
     // Die Spaltenzahl steht als Inline-Style am Element (abhaengig von der
     // Kachelzahl, fuer das Tablet); !important ist der einzige Weg darueber.
     &__grid {
-      grid-template-columns: 1fr !important;
+      grid-template-columns: minmax(0, 1fr) !important;
       grid-auto-rows: auto;
       gap: 12px;
     }

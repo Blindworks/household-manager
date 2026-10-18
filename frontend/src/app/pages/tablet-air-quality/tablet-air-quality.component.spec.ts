@@ -233,4 +233,32 @@ describe('TabletAirQualityComponent', () => {
     document.body.appendChild(host);
     frame.remove();
   });
+  it('dehnt keine Kachel ueber die verfuegbare Breite, auch bei langem Sensornamen', () => {
+    // Handy-Fall: eine Spalte, schmaler Schirm. Ein Rasterelement darf mit 1fr
+    // sonst nicht schmaler werden als sein Inhalt - der nicht umbrechende
+    // Sensorname (und die einmal breit gezeichnete Canvas) schob die Graphen
+    // rechts aus dem Bildschirm.
+    serviceSpy.getSeries.and.returnValue(of([{
+      ...indoor,
+      name: 'Amazon Smart Air Quality Monitor im Wohnzimmer neben dem Fenster'
+    }]));
+    component.setRange('WEEK');
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const frame = document.createElement('div');
+    frame.style.width = '320px';
+    document.body.appendChild(frame);
+    frame.appendChild(host);
+    const grid = host.querySelector('.tablet-air__grid') as HTMLElement;
+    grid.style.setProperty('grid-template-columns', '1fr', 'important');
+    fixture.detectChanges();
+
+    const cards = Array.from(host.querySelectorAll('.tablet-air__card'));
+    expect(cards.length).toBeGreaterThan(0);
+    cards.forEach(card => expect(card.getBoundingClientRect().width).toBeLessThanOrEqual(320));
+
+    document.body.appendChild(host);
+    frame.remove();
+  });
 });
