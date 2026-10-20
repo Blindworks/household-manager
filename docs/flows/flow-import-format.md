@@ -103,7 +103,7 @@ Weitere Eigenheiten rund um `unavailable`, die beim Autoren zählen:
 
 | config | Pflicht | Wert |
 |--------|---------|------|
-| `cron` | ja | Spring-Cron mit 6 Feldern: `Sek Min Std Tag Monat Wochentag`, z. B. `0 0 7 * * *` (täglich 07:00) |
+| `cron` | ja | Spring-Cron mit 6 Feldern: `Sek Min Std Tag Monat Wochentag`, z. B. `0 0 7 * * *` (täglich 07:00). Ausgewertet in Haushaltszeit (Europe/Berlin, `Clock`-Bean), unabhängig von der Systemzone — eine feste Uhrzeit braucht keinen Umweg über `time-condition` |
 
 ### `sun-trigger` — Sonnenstand (Trigger, 1 Ausgang)
 Feuert zu einem Sonnenereignis am Haushaltsstandort (= Koordinaten des Hundetracker-Zuhauses,

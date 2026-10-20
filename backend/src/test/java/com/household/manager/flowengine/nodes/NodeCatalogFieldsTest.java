@@ -46,7 +46,7 @@ class NodeCatalogFieldsTest {
 
     @Test
     void scheduleTriggerHasCronField() {
-        assertEquals(NodeFieldType.STRING, field(new ScheduleTriggerHandler().fields(), "cron").type());
+        assertEquals(NodeFieldType.STRING, field(new ScheduleTriggerHandler(java.time.Clock.systemUTC()).fields(), "cron").type());
     }
 
     @Test

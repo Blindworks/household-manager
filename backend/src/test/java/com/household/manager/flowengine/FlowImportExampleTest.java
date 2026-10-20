@@ -43,7 +43,7 @@ class FlowImportExampleTest {
         when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
         List<NodeHandler> handlers = List.of(
                 new EntityStateTriggerHandler(entityStateService),
-                new ScheduleTriggerHandler(),
+                new ScheduleTriggerHandler(java.time.Clock.systemUTC()),
                 new EntityConditionHandler(entityStateService),
                 new DelayNodeHandler(),
                 new RateLimitNodeHandler(),

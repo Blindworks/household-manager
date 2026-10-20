@@ -33,8 +33,7 @@ import java.util.Optional;
  * dunkel" mittags.
  *
  * <p>Gerechnet wird mit dem {@link Clock}-Bean (Haushaltszeit), nicht mit der
- * Systemzone: die Cron-Trigger haengen noch an {@code systemDefault}, dieser Node
- * soll die UTC-Falle nicht wiederholen.
+ * Systemzone — dieselbe Zone, in der auch {@code schedule-trigger} seinen Cron auswertet.
  *
  * <p>Zur Laufzeit wirft der Node bei validierter Konfiguration nie — Grammatik und Nicht-Leere
  * des Fensters prueft {@link #validate(NodeConfig)} beim Deploy.
