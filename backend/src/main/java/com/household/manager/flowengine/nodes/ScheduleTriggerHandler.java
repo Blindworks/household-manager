@@ -10,6 +10,7 @@ import org.springframework.scheduling.support.CronExpression;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -19,9 +20,20 @@ import java.util.concurrent.ScheduledFuture;
 /**
  * Zeitplan-Trigger (Spring-Cron). Wird beim Deploy registriert; das
  * Cleanup-Runnable storniert den Job beim Undeploy/Re-Deploy.
+ *
+ * <p>Der Cron wird in der Zone des {@link Clock}-Beans (Haushaltszeit) ausgewertet,
+ * nicht in der Systemzone der JVM: ohne {@code TZ} im Container liefe er sonst in UTC
+ * und feuerte im Sommer zwei Stunden zu spaet. {@code 0 0 6 * * *} heisst damit
+ * immer 6 Uhr Berliner Zeit — ein Umweg ueber {@code time-condition} ist nicht noetig.
  */
 @Component
 public class ScheduleTriggerHandler implements TriggerNodeHandler {
+
+    private final Clock clock;
+
+    public ScheduleTriggerHandler(Clock clock) {
+        this.clock = clock;
+    }
 
     @Override
     public String type() {
@@ -60,9 +72,9 @@ public class ScheduleTriggerHandler implements TriggerNodeHandler {
         String cron = config.string("cron").orElseThrow();
         ScheduledFuture<?> future = ctx.scheduler().schedule(
                 () -> ctx.emit(0, FlowMessage.of(Map.of(
-                        "timestamp", LocalDateTime.now(),
+                        "timestamp", LocalDateTime.now(clock),
                         "triggerNodeId", ctx.nodeId()))),
-                new CronTrigger(cron));
+                new CronTrigger(cron, clock.getZone()));
         return () -> future.cancel(false);
     }
 }
