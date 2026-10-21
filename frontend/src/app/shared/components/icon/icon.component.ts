@@ -21,7 +21,9 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
       display: inline-flex;
       line-height: 0;
     }
-    ::ng-deep svg {
+    /* Nur die eigenen Icons: ohne :host galt die Regel fuer jedes SVG der Seite
+       und gab z. B. dem Text im Thermostat-Ring eine 2-px-Kontur. */
+    :host ::ng-deep svg {
       width: 100%;
       height: 100%;
       stroke: currentColor;
