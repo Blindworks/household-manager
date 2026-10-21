@@ -19,6 +19,12 @@ describe('buildCalendarInsights', () => {
     expect(buildCalendarInsights(occurrences).length).toBe(3);
   });
 
+  it('zeigt nur Termine der naechsten fuenf Tage', () => {
+    const occurrences = [0, 4, 5, 30].map(daysUntil =>
+      occurrence({ eventId: daysUntil, daysUntil, title: `T${daysUntil}` }));
+    expect(buildCalendarInsights(occurrences).map(i => i.title)).toEqual(['T0', 'T4']);
+  });
+
   it('liefert eine leere Liste, wenn nichts ansteht', () => {
     expect(buildCalendarInsights([])).toEqual([]);
   });

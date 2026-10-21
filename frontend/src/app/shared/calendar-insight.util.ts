@@ -7,21 +7,30 @@ const URGENT_DAYS_UNTIL = 1;
 /** Uebermorgen kuendigt sich der Termin an — der Indikator wird gelb. */
 const SOON_DAYS_UNTIL = 2;
 
+/**
+ * Der Hub zeigt nur Termine der naechsten fuenf Tage (heute plus vier weitere) —
+ * ein Termin in einem Monat ist dort kein Hinweis, sondern Rauschen.
+ */
+const HORIZON_DAYS_UNTIL = 4;
+
 /** Trennt die Zeitangabe von den zugeordneten Personen. */
 const PERSON_SEPARATOR = ' · ';
 
 /**
- * Baut aus den naechsten Vorkommen bis zu `max` einzelne Hub-Eintraege
- * (Titel = Terminname, Text = "Morgen, 14:30 Uhr · Anna").
+ * Baut aus den naechsten Vorkommen innerhalb von fuenf Tagen bis zu `max` einzelne
+ * Hub-Eintraege (Titel = Terminname, Text = "Morgen, 14:30 Uhr · Anna").
  */
 export function buildCalendarInsights(
   occurrences: CalendarOccurrence[], max = 3): HubInsight[] {
-  return occurrences.slice(0, max).map(occ => ({
-    icon: 'event',
-    tone: toneFor(occ),
-    title: occ.title,
-    text: describe(occ)
-  }));
+  return occurrences
+    .filter(occ => occ.daysUntil <= HORIZON_DAYS_UNTIL)
+    .slice(0, max)
+    .map(occ => ({
+      icon: 'event',
+      tone: toneFor(occ),
+      title: occ.title,
+      text: describe(occ)
+    }));
 }
 
 /**
