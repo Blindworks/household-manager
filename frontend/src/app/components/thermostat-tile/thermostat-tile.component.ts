@@ -16,6 +16,7 @@ import {
   arcFraction,
   formatTemp,
   stepTarget,
+  thermostatCaption,
   thermostatTone
 } from '../../shared/thermostat-view.util';
 
@@ -144,18 +145,7 @@ export class ThermostatTileComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   get caption(): string {
-    switch (this.tone) {
-      case 'offline':
-        return 'Keine Daten';
-      case 'off':
-        return 'Heizung aus';
-      case 'frost':
-        return 'Frostschutz';
-      case 'heating':
-        return 'Heizt';
-      case 'idle':
-        return 'Ziel erreicht';
-    }
+    return thermostatCaption(this.thermostat);
   }
 
   private get ringFraction(): number | null {

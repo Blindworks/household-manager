@@ -38,6 +38,33 @@ export function thermostatTone(thermostat: Thermostat): ThermostatTone {
   }
 }
 
+/**
+ * Beschriftung im Ring. `heating: false` heisst nur "Ventil gerade zu", nicht
+ * "Ziel erreicht": das KE100 regelt selbst (eigener Fuehler am Heizkoerper,
+ * Hysterese) und schliesst oft, obwohl der gemeldete Istwert noch unter dem
+ * Soll liegt. "Ziel erreicht" steht deshalb nur, wenn die Zahlen es belegen.
+ */
+export function thermostatCaption(thermostat: Thermostat): string {
+  const tone = thermostatTone(thermostat);
+  switch (tone) {
+    case 'offline':
+      return 'Keine Daten';
+    case 'off':
+      return 'Heizung aus';
+    case 'frost':
+      return 'Frostschutz';
+    case 'heating':
+      return 'Heizt';
+    case 'idle':
+      return isTargetReached(thermostat) ? 'Ziel erreicht' : 'Heizt nicht';
+  }
+}
+
+function isTargetReached(thermostat: Thermostat): boolean {
+  const { currentTemp, targetTemp } = thermostat;
+  return currentTemp !== null && targetTemp !== null && currentTemp >= targetTemp;
+}
+
 /** Anteil von 5 bis 30 Grad fuer den Bogen, null wenn kein Wert vorliegt. */
 export function arcFraction(target: number | null): number | null {
   if (target === null) {

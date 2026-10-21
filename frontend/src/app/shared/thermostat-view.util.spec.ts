@@ -5,6 +5,7 @@ import {
   formatTemp,
   gridColumns,
   stepTarget,
+  thermostatCaption,
   thermostatTone
 } from './thermostat-view.util';
 
@@ -53,6 +54,29 @@ describe('thermostat-view.util', () => {
     it('Frostschutz und Aus zeigen kein Heizen an, auch wenn das Ventil offen ist', () => {
       expect(thermostatTone({ ...base, mode: 'FROST_PROTECTION', heating: true })).toBe('frost');
       expect(thermostatTone({ ...base, mode: 'OFF', heating: true })).toBe('off');
+    });
+  });
+
+  describe('thermostatCaption', () => {
+    it('meldet "Heizt nicht" statt "Ziel erreicht", solange der Istwert unter dem Soll liegt', () => {
+      expect(thermostatCaption({ ...base, currentTemp: 18.4, targetTemp: 19.5 })).toBe('Heizt nicht');
+    });
+
+    it('meldet "Ziel erreicht" ab Istwert gleich Soll', () => {
+      expect(thermostatCaption({ ...base, currentTemp: 20, targetTemp: 20 })).toBe('Ziel erreicht');
+      expect(thermostatCaption({ ...base, currentTemp: 20.9, targetTemp: 19.5 })).toBe('Ziel erreicht');
+    });
+
+    it('behauptet ohne Werte kein erreichtes Ziel', () => {
+      expect(thermostatCaption({ ...base, currentTemp: null })).toBe('Heizt nicht');
+      expect(thermostatCaption({ ...base, targetTemp: null })).toBe('Heizt nicht');
+    });
+
+    it('beschriftet die uebrigen Zustaende unveraendert', () => {
+      expect(thermostatCaption({ ...base, heating: true })).toBe('Heizt');
+      expect(thermostatCaption({ ...base, online: false })).toBe('Keine Daten');
+      expect(thermostatCaption({ ...base, mode: 'OFF' })).toBe('Heizung aus');
+      expect(thermostatCaption({ ...base, mode: 'FROST_PROTECTION' })).toBe('Frostschutz');
     });
   });
 
