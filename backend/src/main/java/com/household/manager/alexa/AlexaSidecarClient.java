@@ -141,6 +141,10 @@ public class AlexaSidecarClient {
                                 body == null ? "{}" : mapper.writeValueAsString(body)));
             }
             HttpResponse<String> response = httpClient.send(req.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 409) {
+                throw new AlexaNotLoggedInException("Alexa-Sidecar " + path + " HTTP 409: "
+                        + extractError(response.body()));
+            }
             if (response.statusCode() / 100 != 2) {
                 throw new AlexaException("Alexa-Sidecar " + path + " HTTP " + response.statusCode()
                         + ": " + extractError(response.body()));

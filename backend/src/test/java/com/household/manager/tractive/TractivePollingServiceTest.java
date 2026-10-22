@@ -435,4 +435,16 @@ class TractivePollingServiceTest {
 
         verifyNoInteractions(jobMonitor);
     }
+
+    @Test
+    void poll_expiredToken_reportsFailure() {
+        when(authService.getValidToken()).thenReturn(Optional.empty());
+        when(authService.status()).thenReturn(new com.household.manager.tractive.dto.TractiveAuthStatusDto(
+                false, "a@b.de", java.time.LocalDateTime.now().minusDays(1)));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure("Tractive-Anmeldung abgelaufen");
+        verify(jobMonitor, never()).reportInactive(anyString());
+    }
 }

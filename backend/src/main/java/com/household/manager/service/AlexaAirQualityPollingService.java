@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.alexa.AlexaNotLoggedInException;
 import com.household.manager.alexa.AlexaSidecarClient;
 import com.household.manager.alexa.AlexaSidecarClient.SidecarAirQualityState;
 import com.household.manager.dto.AlexaAirQualityPollingStatusResponse;
@@ -74,6 +75,11 @@ public class AlexaAirQualityPollingService {
             }
             lastError = null;
             log.debug("Saved {} Alexa air quality readings", states.size());
+        } catch (AlexaNotLoggedInException ex) {
+            // Dauerzustand ohne Amazon-Anmeldung, keine Stoerung.
+            lastError = ex.getMessage();
+            log.debug("Alexa-Luftqualitaet: nicht angemeldet");
+            jobMonitor.reportInactive("nicht bei Alexa angemeldet");
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Failed to poll Alexa air quality monitors", ex);

@@ -40,6 +40,10 @@ public class MerossElectricityPollingService {
             jobMonitor.reportInactive("Meross-Verbrauchs-Polling deaktiviert");
             return;
         }
+        if (!merossDeviceService.isConfigured()) {
+            jobMonitor.reportInactive("Meross nicht konfiguriert");
+            return;
+        }
         for (MerossElectricityReading reading : readAllQuietly()) {
             reportPowerState(reading);
         }

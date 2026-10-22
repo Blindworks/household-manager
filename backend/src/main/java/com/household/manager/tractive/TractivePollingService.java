@@ -65,10 +65,24 @@ public class TractivePollingService {
         } catch (TractiveAuthException ex) {
             // Ohne Anmeldung ist das der Dauerzustand — als Warnung pro Minute waere es Laerm.
             log.debug("Tractive-Polling ohne gueltiges Token: {}", ex.getMessage());
-            jobMonitor.reportInactive("keine Tractive-Anmeldung");
+            if (hasStoredToken()) {
+                // Ein abgelaufenes Token ist eine Stoerung (die Entitaeten stehen auf unavailable).
+                jobMonitor.reportFailure("Tractive-Anmeldung abgelaufen");
+            } else {
+                jobMonitor.reportInactive("keine Tractive-Anmeldung");
+            }
         } catch (Exception ex) {
             log.warn("Tractive-Polling fehlgeschlagen: {}", ex.getMessage());
             jobMonitor.reportFailure(ex.getMessage());
+        }
+    }
+
+    private boolean hasStoredToken() {
+        try {
+            var status = authService.status();
+            return status != null && status.expiresAt() != null;
+        } catch (Exception ex) {
+            return false;
         }
     }
 

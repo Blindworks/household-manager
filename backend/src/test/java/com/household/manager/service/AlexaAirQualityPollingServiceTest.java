@@ -133,4 +133,15 @@ class AlexaAirQualityPollingServiceTest {
 
         verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.contains("Sidecar weg"));
     }
+
+    @Test
+    void poll_notLoggedIn_reportsInactive() {
+        when(sidecarClient.getAirQualityStates())
+                .thenThrow(new com.household.manager.alexa.AlexaNotLoggedInException("HTTP 409: not logged in"));
+
+        service.scheduledPoll();
+
+        verify(jobMonitor).reportInactive(org.mockito.ArgumentMatchers.anyString());
+        verify(jobMonitor, org.mockito.Mockito.never()).reportFailure(org.mockito.ArgumentMatchers.anyString());
+    }
 }

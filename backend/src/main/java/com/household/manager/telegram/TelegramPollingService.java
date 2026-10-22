@@ -81,7 +81,8 @@ public class TelegramPollingService {
                 }
             } catch (Exception ex) {
                 // Nur ein gescheitertes getUpdates ist eine Störung der Anbindung, kein Fehler in handleUpdate.
-                if (!fetched) {
+                // Beim Herunterfahren unterbricht shutdownNow() das Long-Polling - das ist keine Stoerung.
+                if (!fetched && running) {
                     jobMonitor.recordOutcome(JOB_KEY, JobState.FAILING, ex.getMessage());
                 }
                 log.warn("Telegram-Polling gestört, warte {} ms: {}",

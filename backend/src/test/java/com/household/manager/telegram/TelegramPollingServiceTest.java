@@ -213,7 +213,10 @@ class TelegramPollingServiceTest {
         props.setAllowedChatIds(List.of(42L));
         AiProperties ai = new AiProperties();
         ai.setAnthropicApiKey("k");
-        when(apiClient.getUpdates(anyLong(), anyInt())).thenReturn(List.of());
+        when(apiClient.getUpdates(anyLong(), anyInt())).thenAnswer(inv -> {
+            Thread.sleep(50);
+            return List.of();
+        });
         TelegramPollingService polling = new TelegramPollingService(
                 props, ai, apiClient, agentService, proposalService, jobMonitor);
 
@@ -224,5 +227,30 @@ class TelegramPollingServiceTest {
         } finally {
             polling.stop();
         }
+    }
+
+    @Test
+    void shutdownInterruptingGetUpdates_doesNotRecordFailing() throws Exception {
+        TelegramProperties props = new TelegramProperties();
+        props.setBotToken("t");
+        props.setAllowedChatIds(List.of(42L));
+        AiProperties ai = new AiProperties();
+        ai.setAnthropicApiKey("k");
+        java.util.concurrent.CountDownLatch inCall = new java.util.concurrent.CountDownLatch(1);
+        when(apiClient.getUpdates(anyLong(), anyInt())).thenAnswer(inv -> {
+            inCall.countDown();
+            Thread.sleep(10_000);
+            return List.of();
+        });
+        TelegramPollingService polling = new TelegramPollingService(
+                props, ai, apiClient, agentService, proposalService, jobMonitor);
+
+        polling.start();
+        inCall.await(3, java.util.concurrent.TimeUnit.SECONDS);
+        polling.stop();
+        Thread.sleep(300);
+
+        verify(jobMonitor, org.mockito.Mockito.never())
+                .recordOutcome(eq(TelegramPollingService.JOB_KEY), eq(JobState.FAILING), any());
     }
 }

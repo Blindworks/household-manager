@@ -41,6 +41,7 @@ class MerossElectricityPollingServiceTest {
     @BeforeEach
     void setUp() {
         properties = new MerossElectricityPollingProperties();
+        org.mockito.Mockito.lenient().when(merossDeviceService.isConfigured()).thenReturn(true);
         service = new MerossElectricityPollingService(properties, merossDeviceService, entityStateService, jobMonitor);
     }
 
@@ -136,5 +137,16 @@ class MerossElectricityPollingServiceTest {
         service.poll();
 
         verify(jobMonitor).reportInactive(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void poll_notConfigured_reportsInactive() {
+        when(merossDeviceService.isConfigured()).thenReturn(false);
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(org.mockito.ArgumentMatchers.anyString());
+        verify(jobMonitor, org.mockito.Mockito.never()).reportFailure(org.mockito.ArgumentMatchers.anyString());
+        verifyNoInteractions(entityStateService);
     }
 }
