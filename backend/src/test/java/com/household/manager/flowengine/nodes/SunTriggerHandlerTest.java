@@ -96,6 +96,25 @@ class SunTriggerHandlerTest {
     }
 
     @Test
+    void occurrencesBetween_returnsSunsetsWithOffset() {
+        ZonedDateTime from = at(TODAY, "12:00");
+
+        List<ZonedDateTime> result = handlerAt("12:00").occurrencesBetween(
+                config("sunset", -30), from, from.plusDays(2).plusHours(12), 10);
+
+        assertEquals(List.of(at(TODAY, "18:40"), at(TODAY.plusDays(1), "18:40"), at(TODAY.plusDays(2), "18:40")), result);
+    }
+
+    @Test
+    void occurrencesBetween_respectsLimitAndEmptyWithoutTimes() {
+        ZonedDateTime from = at(TODAY, "12:00");
+        assertEquals(2, handlerAt("12:00").occurrencesBetween(config("sunset", null), from, from.plusDays(10), 2).size());
+
+        when(sunTimes.timesFor(any(LocalDate.class))).thenReturn(Optional.empty());
+        assertTrue(handlerAt("12:00").occurrencesBetween(config("sunset", null), from, from.plusDays(10), 5).isEmpty());
+    }
+
+    @Test
     void appliesNegativeOffset() {
         handlerAt("12:00").register(config("sunset", -30), ctx);
         assertEquals(at(TODAY, "18:40").toInstant(), instants.getValue());

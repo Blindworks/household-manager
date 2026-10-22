@@ -169,6 +169,23 @@ public class SunTriggerHandler implements TriggerNodeHandler {
         scheduleNext(event, offset, now.isAfter(scheduledFor) ? now : scheduledFor, ctx);
     }
 
+    @Override
+    public List<ZonedDateTime> occurrencesBetween(NodeConfig config, ZonedDateTime from, ZonedDateTime to, int limit) {
+        SunEvent event = SunEvent.fromKey(config.string(EVENT).orElseThrow()).orElseThrow();
+        int offset = parseOffset(config, new ArrayList<>()).orElse(0);
+        List<ZonedDateTime> result = new ArrayList<>();
+        ZonedDateTime after = from;
+        while (result.size() < limit) {
+            Optional<ZonedDateTime> next = nextOccurrence(event, offset, after);
+            if (next.isEmpty() || next.get().isAfter(to)) {
+                break;
+            }
+            result.add(next.get());
+            after = next.get();
+        }
+        return result;
+    }
+
     /** Heute, morgen und uebermorgen decken auch einen negativen Versatz ab, der das heutige Ereignis schon vorbeischiebt. */
     Optional<ZonedDateTime> nextOccurrence(SunEvent event, int offset, ZonedDateTime after) {
         LocalDate day = after.withZoneSameInstant(clock.getZone()).toLocalDate();

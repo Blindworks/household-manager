@@ -77,4 +77,17 @@ public class ScheduleTriggerHandler implements TriggerNodeHandler {
                 new CronTrigger(cron, clock.getZone()));
         return () -> future.cancel(false);
     }
+
+    @Override
+    public List<java.time.ZonedDateTime> occurrencesBetween(NodeConfig config, java.time.ZonedDateTime from,
+                                                            java.time.ZonedDateTime to, int limit) {
+        CronExpression cron = CronExpression.parse(config.string("cron").orElseThrow());
+        List<java.time.ZonedDateTime> result = new java.util.ArrayList<>();
+        java.time.ZonedDateTime next = cron.next(from.withZoneSameInstant(clock.getZone()));
+        while (next != null && !next.isAfter(to) && result.size() < limit) {
+            result.add(next);
+            next = cron.next(next);
+        }
+        return result;
+    }
 }

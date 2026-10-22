@@ -36,6 +36,16 @@ public interface TriggerNodeHandler extends NodeHandler {
         };
     }
 
+    /**
+     * Geplante Termine im Fenster {@code (from, to]}, aufsteigend, höchstens {@code limit}.
+     * Nur für zeitgesteuerte Trigger sinnvoll (Cron, Sonne); das Systemprotokoll fragt damit,
+     * was während eines Backend-Ausfalls verpasst wurde. Ereignis-Trigger liefern leer.
+     */
+    default java.util.List<java.time.ZonedDateTime> occurrencesBetween(NodeConfig config,
+            java.time.ZonedDateTime from, java.time.ZonedDateTime to, int limit) {
+        return java.util.List.of();
+    }
+
     /** Trigger haben keinen Eingang. */
     @Override
     default NodeResult handle(FlowMessage message, NodeConfig config, NodeContext ctx) {
