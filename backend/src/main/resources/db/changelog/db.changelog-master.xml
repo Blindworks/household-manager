@@ -167,4 +167,10 @@
     <include file="db/changelog/changes/20261014-0069-dedupe-weather-readings.xml"/>
     <include file="db/changelog/changes/20261014-0070-unique-weather-reading-time.xml"/>
 
+    <!-- Systemprotokoll -->
+    <include file="db/changelog/changes/20261022-0071-create-system-log-entry.xml"/>
+    <include file="db/changelog/changes/20261022-0072-create-system-log-entry-indexes.xml"/>
+    <include file="db/changelog/changes/20261022-0073-create-system-job-status.xml"/>
+    <include file="db/changelog/changes/20261022-0074-create-system-flow-pending-run.xml"/>
+
 </databaseChangeLog>
