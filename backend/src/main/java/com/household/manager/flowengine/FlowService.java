@@ -33,6 +33,7 @@ public class FlowService {
     private final FlowRegistry registry;
     private final FlowEngine engine;
     private final AuditService auditService;
+    private final FlowRunRecorder runRecorder;
 
     @Transactional(readOnly = true)
     public List<Flow> getAll() {
@@ -63,6 +64,7 @@ public class FlowService {
         Flow flow = require(id);
         if (name != null) {
             flow.setName(name);
+            runRecorder.forgetName(id);
         }
         if (description != null) {
             flow.setDescription(description);
@@ -147,6 +149,7 @@ public class FlowService {
         require(id);
         registry.undeploy(id);
         flowRepository.deleteById(id);
+        runRecorder.forgetName(id);
         auditService.record("flow.delete", "Flow " + id);
     }
 
@@ -161,6 +164,7 @@ public class FlowService {
         Map<String, Object> values = new HashMap<>();
         values.put("timestamp", LocalDateTime.now());
         values.put("triggerNodeId", nodeId);
+        values.put(FlowRunTrace.INJECTED_KEY, true);
         if (payload != null) {
             values.putAll(payload);
         }

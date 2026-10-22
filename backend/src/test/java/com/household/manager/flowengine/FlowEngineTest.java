@@ -91,7 +91,8 @@ class FlowEngineTest {
         registry = new FlowRegistry(handlers);
         // Synchroner "Executor" (Runnable::run) macht die Tests deterministisch.
         engine = new FlowEngine(registry, Runnable::run,
-                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder);
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class));
         registry.setEngine(engine);
     }
 
@@ -213,7 +214,8 @@ class FlowEngineTest {
                 mock(org.springframework.scheduling.TaskScheduler.class);
         ScheduledFuture<?> future = mock(ScheduledFuture.class);
         doReturn(future).when(delayScheduler).schedule(any(Runnable.class), any(Instant.class));
-        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer(), triggerRecorder);
+        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class));
         reg.setEngine(delayEngine);
 
         reg.deploy(2L, parser.parse("""
@@ -235,7 +237,8 @@ class FlowEngineTest {
         ContextCapturingHandler capturing = new ContextCapturingHandler();
         FlowRegistry reg = new FlowRegistry(List.of(new TestTriggerHandler(), capturing));
         FlowEngine capturingEngine = new FlowEngine(reg, Runnable::run,
-                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder);
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class));
         reg.setEngine(capturingEngine);
         reg.deploy(7L, parser.parse("""
                 { "nodes": [

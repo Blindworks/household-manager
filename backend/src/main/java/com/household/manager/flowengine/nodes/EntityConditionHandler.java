@@ -5,7 +5,7 @@ import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
 import com.household.manager.flowengine.NodeFieldType;
-import com.household.manager.flowengine.NodeHandler;
+import com.household.manager.flowengine.ConditionNodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.StateComparator;
 import com.household.manager.flowengine.model.NodeConfig;
@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Component
 @RequiredArgsConstructor
-public class EntityConditionHandler implements NodeHandler {
+public class EntityConditionHandler implements ConditionNodeHandler {
 
     private final EntityStateService entityStateService;
 

@@ -29,4 +29,11 @@ public interface NodeContext {
 
     /** Schreibt in den Debug-Ringpuffer dieser Node (genutzt von debug-Node und Fehlerpfaden). */
     void debug(String label, FlowMessage message);
+
+    /**
+     * Meldet „hat nicht geklappt“, ohne zu werfen (z. B. Zustellfehler): der Lauf gilt im
+     * Systemprotokoll als ERROR, die Traversierung läuft unverändert weiter. Außerhalb eines
+     * Engine-Laufs (z. B. aus einem Timer-Thread) ein No-op.
+     */
+    void reportFailure(String reason);
 }

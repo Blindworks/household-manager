@@ -39,6 +39,7 @@ class DelayNodeHandlerTest {
             public void emit(int port, FlowMessage message) { emitted.add(message); }
             public TaskScheduler scheduler() { return taskScheduler; }
             public void debug(String label, FlowMessage message) { }
+            public void reportFailure(String reason) { }
         };
         ScheduledFuture<?> future = mock(ScheduledFuture.class);
         ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);

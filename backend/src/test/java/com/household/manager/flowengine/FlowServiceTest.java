@@ -40,6 +40,8 @@ class FlowServiceTest {
     private FlowEngine engine;
     @Mock
     private AuditService auditService;
+    @Mock
+    private FlowRunRecorder runRecorder;
 
     private FlowRegistry registry;
     private FlowService service;
@@ -51,7 +53,7 @@ class FlowServiceTest {
         FlowDefinitionParser parser = new FlowDefinitionParser(new ObjectMapper());
         FlowValidator validator = new FlowValidator(List.of(new TestTriggerHandler()),
                 mock(com.household.manager.entitystate.EntityStateService.class));
-        service = new FlowService(flowRepository, parser, validator, registry, engine, auditService);
+        service = new FlowService(flowRepository, parser, validator, registry, engine, auditService, runRecorder);
         lenient().when(flowRepository.save(any(Flow.class))).thenAnswer(inv -> inv.getArgument(0));
         // undeploy() clears the flow's debug buffer via engine.debugBuffer() -- stub with a
         // real instance so FlowRegistry.undeploy doesn't NPE on the mocked FlowEngine.
@@ -125,7 +127,17 @@ class FlowServiceTest {
         service.inject(1L, "t", Map.of("newState", "5"));
 
         verify(engine).emitAsync(eq(1L), eq("t"), eq(0), argThat(msg ->
-                "5".equals(msg.get("newState")) && "t".equals(msg.get("triggerNodeId"))));
+                "5".equals(msg.get("newState")) && "t".equals(msg.get("triggerNodeId"))
+                        && Boolean.TRUE.equals(msg.get(FlowRunTrace.INJECTED_KEY))));
+    }
+
+    @Test
+    void renameForgetsCachedFlowNameForTheSystemLog() {
+        when(flowRepository.findById(1L)).thenReturn(Optional.of(flow(1L, VALID_DEF, null, true)));
+
+        service.update(1L, "Neuer Name", null, null, null);
+
+        verify(runRecorder).forgetName(1L);
     }
 
     @Test

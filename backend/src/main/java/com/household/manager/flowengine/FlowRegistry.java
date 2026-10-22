@@ -192,5 +192,9 @@ public class FlowRegistry {
         public void debug(String label, FlowMessage message) {
             engine.debugBuffer().add(flowId, nodeId, label, message);
         }
+
+        public void reportFailure(String reason) {
+            FlowRunTrace.failCurrent(nodeId, reason);
+        }
     }
 }

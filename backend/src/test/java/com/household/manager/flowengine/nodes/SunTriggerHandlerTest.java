@@ -82,6 +82,7 @@ class SunTriggerHandlerTest {
             }
             public TaskScheduler scheduler() { return taskScheduler; }
             public void debug(String label, FlowMessage message) { }
+            public void reportFailure(String reason) { }
         };
         lenient().when(sunTimes.timesFor(any(LocalDate.class)))
                 .thenAnswer(inv -> Optional.of(timesOf(inv.getArgument(0))));

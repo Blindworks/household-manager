@@ -46,6 +46,7 @@ class TimeConditionNodeHandlerTest {
         public void emit(int port, FlowMessage message) { }
         public TaskScheduler scheduler() { return null; }
         public void debug(String label, FlowMessage message) { debugLabels.add(label); }
+        public void reportFailure(String reason) { }
     };
 
     private static ZonedDateTime at(LocalDate day, String time) {

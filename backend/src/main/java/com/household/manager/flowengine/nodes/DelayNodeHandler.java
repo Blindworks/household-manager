@@ -4,7 +4,7 @@ import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
 import com.household.manager.flowengine.NodeFieldType;
-import com.household.manager.flowengine.NodeHandler;
+import com.household.manager.flowengine.DeferringNodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,7 @@ import java.util.concurrent.ScheduledFuture;
  * dafür parkt diese Node ihre {@link ScheduledFuture}s im Node-State.
  */
 @Component
-public class DelayNodeHandler implements NodeHandler {
+public class DelayNodeHandler implements DeferringNodeHandler {
 
     static final String STATE_KEY_PENDING = "pendingDelays";
 
