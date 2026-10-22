@@ -44,9 +44,12 @@
     </button>
     @if (inactiveExpanded) {
       @for (job of inactiveJobs; track job.jobKey) {
-        <div class="admin-system-log__job">
+        <div class="admin-system-log__job admin-system-log__job--inactive">
           <strong>{{ job.jobKey }}</strong>
           <span class="admin-system-log__muted">zuletzt {{ job.lastRunAt | date: 'dd.MM. HH:mm:ss' }}</span>
+          @if (job.lastMessage) {
+            <div class="admin-system-log__job-reason">{{ job.lastMessage }}</div>
+          }
         </div>
       }
     }

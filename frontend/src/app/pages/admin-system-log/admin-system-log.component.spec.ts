@@ -60,6 +60,21 @@ describe('AdminSystemLogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('ok (1)');
   });
 
+  it('shows the reason of inactive jobs', () => {
+    const inactiveJob: SystemLogJob = {
+      jobKey: 'TractivePollingService.poll', state: 'INACTIVE', lastRunAt: '2026-10-22T10:00:00',
+      lastSuccessAt: null, lastFailureAt: null, failingSince: null, lastMessage: 'keine Tractive-Anmeldung'
+    };
+    flush([], [okJob, inactiveJob]);
+    const toggles = Array.from(fixture.nativeElement.querySelectorAll('.admin-system-log__group-toggle')) as HTMLElement[];
+    toggles.find(b => b.textContent?.includes('inaktiv'))!.click();
+    fixture.detectChanges();
+
+    const inactive = fixture.nativeElement.querySelector('.admin-system-log__job--inactive') as HTMLElement;
+    expect(inactive).toBeTruthy();
+    expect(inactive.textContent).toContain('keine Tractive-Anmeldung');
+  });
+
   it('problemsOnly toggle sends problemsOnly=true', () => {
     flush();
     const toggle = fixture.nativeElement.querySelector('input[data-test="problems-only"]') as HTMLInputElement;
