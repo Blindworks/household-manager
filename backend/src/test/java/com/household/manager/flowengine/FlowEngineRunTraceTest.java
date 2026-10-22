@@ -116,9 +116,10 @@ class FlowEngineRunTraceTest {
     @BeforeEach
     void setUp() {
         registry = new FlowRegistry(List.of(new ActionHandler(), new TestConditionHandler(), new TestGateHandler(),
-                new TestDeferringHandler(), new FailingHandler(), new ReportingHandler(), new EmitThenReportHandler(), new TestTriggerHandler()));
+                new TestDeferringHandler(), new FailingHandler(), new ReportingHandler(), new EmitThenReportHandler(), new TestTriggerHandler()), mock(com.household.manager.systemlog.FlowPendingRunTracker.class));
         engine = new FlowEngine(registry, Runnable::run, mock(TaskScheduler.class), new DebugBuffer(),
-                mock(FlowTriggerRecorder.class), runRecorder);
+                mock(FlowTriggerRecorder.class), runRecorder,
+                mock(com.household.manager.systemlog.FlowPendingRunTracker.class));
         registry.setEngine(engine);
     }
 

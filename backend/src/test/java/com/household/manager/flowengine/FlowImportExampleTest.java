@@ -1,5 +1,6 @@
 package com.household.manager.flowengine;
 
+import com.household.manager.systemlog.FlowPendingRunTracker;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntityStateService;
@@ -42,10 +43,10 @@ class FlowImportExampleTest {
         EntityStateService entityStateService = mock(EntityStateService.class);
         when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
         List<NodeHandler> handlers = List.of(
-                new EntityStateTriggerHandler(entityStateService),
+                new EntityStateTriggerHandler(entityStateService, mock(FlowPendingRunTracker.class)),
                 new ScheduleTriggerHandler(java.time.Clock.systemUTC()),
                 new EntityConditionHandler(entityStateService),
-                new DelayNodeHandler(),
+                new DelayNodeHandler(mock(FlowPendingRunTracker.class)),
                 new RateLimitNodeHandler(),
                 new DebugNodeHandler(),
                 new AlexaAnnounceNodeHandler(mock(AlexaAnnouncementService.class)),

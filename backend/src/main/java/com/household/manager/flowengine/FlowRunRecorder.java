@@ -60,7 +60,8 @@ public class FlowRunRecorder {
         flowNames.remove(flowId);
     }
 
-    private String flowName(long flowId) {
+    /** Anzeigename eines Flows aus dem Cache bzw. der DB, ersatzweise „Flow <id>“. Wirft nie. */
+    public String flowName(long flowId) {
         String cached = flowNames.get(flowId);
         if (cached != null) {
             return cached;

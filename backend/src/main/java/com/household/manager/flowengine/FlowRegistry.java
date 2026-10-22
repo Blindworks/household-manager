@@ -2,6 +2,7 @@ package com.household.manager.flowengine;
 
 import com.household.manager.flowengine.model.FlowDefinition;
 import com.household.manager.flowengine.model.FlowNode;
+import com.household.manager.systemlog.FlowPendingRunTracker;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -36,6 +37,7 @@ public class FlowRegistry {
     }
 
     private final Map<String, NodeHandler> handlersByType = new HashMap<>();
+    private final FlowPendingRunTracker pendingRuns;
     private final ConcurrentMap<Long, DeployedFlow> deployed = new ConcurrentHashMap<>();
     /** entityId -> Trigger, die darauf lauschen. Wird bei jedem Deploy/Undeploy neu aufgebaut. */
     private volatile Map<String, List<TriggerRef>> triggerIndex = Map.of();
@@ -44,7 +46,8 @@ public class FlowRegistry {
     @Setter
     private FlowEngine engine;
 
-    public FlowRegistry(List<NodeHandler> handlers) {
+    public FlowRegistry(List<NodeHandler> handlers, FlowPendingRunTracker pendingRuns) {
+        this.pendingRuns = pendingRuns;
         for (NodeHandler handler : handlers) {
             handlersByType.put(handler.type(), handler);
         }
@@ -78,6 +81,8 @@ public class FlowRegistry {
         DeployedFlow old = deployed.put(flowId, flow); // atomarer Swap
         rebuildTriggerIndex();
         if (old != null) {
+            // Vor den Cleanups: das Cleanup des Verweildauer-Timers loescht seinen Vermerk sonst still.
+            pendingRuns.abortAll(flowId, FlowPendingRunTracker.REASON_REDEPLOY);
             runCleanups(flowId, old.cleanups);
             cancelScheduledFutures(old);
         }
@@ -88,6 +93,7 @@ public class FlowRegistry {
         DeployedFlow old = deployed.remove(flowId);
         if (old != null) {
             rebuildTriggerIndex();
+            pendingRuns.abortAll(flowId, FlowPendingRunTracker.REASON_UNDEPLOY);
             runCleanups(flowId, old.cleanups);
             cancelScheduledFutures(old);
             if (engine != null) {

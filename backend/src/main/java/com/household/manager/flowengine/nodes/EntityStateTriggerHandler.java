@@ -3,12 +3,14 @@ package com.household.manager.flowengine.nodes;
 import com.household.manager.entitystate.EntityStateChangedEvent;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.flowengine.FlowMessage;
+import com.household.manager.flowengine.FlowRunTrace;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
 import com.household.manager.flowengine.NodeFieldType;
 import com.household.manager.flowengine.StateComparator;
 import com.household.manager.flowengine.TriggerNodeHandler;
 import com.household.manager.flowengine.model.NodeConfig;
+import com.household.manager.systemlog.FlowPendingRunTracker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -30,16 +33,23 @@ import java.util.concurrent.ScheduledFuture;
  * "unavailable" wird unterdrückt, der Übergang AUS "unavailable" heraus feuert
  * dagegen bewusst wieder normal (Details und die bekannte Ausnahme für
  * operator "!=" stehen im Kommentar in {@link #onEntityEvent}).
+ * <p>
+ * Ein laufender Verweildauer-Timer ist ein wartender Lauf mit eigener runId: er wird im
+ * {@link FlowPendingRunTracker} vermerkt und beim Ablauf als {@code _runId} weitergereicht.
+ * Verwirft der Timer regulär (Bereich verlassen, Bedingung beim Ablauf nicht mehr erfüllt),
+ * wird der Vermerk still gelöscht.
  */
 @Component
 @RequiredArgsConstructor
 public class EntityStateTriggerHandler implements TriggerNodeHandler {
 
     static final String STATE_KEY_TIMER = "pendingTimer";
+    static final String STATE_KEY_TIMER_RUN_ID = "pendingTimerRunId";
     private static final String OP_CHANGED = "changed";
     private static final String STATE_UNAVAILABLE = "unavailable";
 
     private final EntityStateService entityStateService;
+    private final FlowPendingRunTracker pendingRuns;
 
     @Override
     public String type() {
@@ -140,21 +150,47 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
         synchronized (ctx.state()) {
             cancelTimerLocked(ctx);
             String entityId = config.string("entityId").orElseThrow();
-            ScheduledFuture<?> future = ctx.scheduler().schedule(() -> {
-                ctx.state().remove(STATE_KEY_TIMER);
-                String currentState = entityStateService.getByEntityId(entityId)
-                        .map(e -> e.getState()).orElse(null);
-                // Ohne diese Sperre koennte "!=" bei unavailable (String-Vergleich, "wahr")
-                // beim Ablauf ein Ereignis mit newState="unavailable" emittieren — genau
-                // der Ausfall, den der Guard in onEntityEvent eigentlich verhindern soll.
-                if (STATE_UNAVAILABLE.equals(currentState)) {
-                    return;
-                }
-                if (StateComparator.matches(currentState, operator, value)) {
-                    ctx.emit(0, toMessage(event, ctx).with("newState", currentState));
-                }
-            }, Instant.now().plusSeconds(forSeconds));
+            String runId = UUID.randomUUID().toString();
+            pendingRuns.register(ctx.flowId(), ctx.nodeId(), runId);
+            ScheduledFuture<?> future;
+            try {
+                future = ctx.scheduler().schedule(
+                        () -> onTimerExpired(event, ctx, entityId, operator, value, runId),
+                        Instant.now().plusSeconds(forSeconds));
+            } catch (RuntimeException ex) {
+                pendingRuns.complete(runId);
+                throw ex;
+            }
             ctx.state().put(STATE_KEY_TIMER, future);
+            ctx.state().put(STATE_KEY_TIMER_RUN_ID, runId);
+        }
+    }
+
+    /** Ohne Emit (Bedingung nicht mehr erfuellt, Fehler) wird der wartende Lauf still abgeschlossen. */
+    private void onTimerExpired(EntityStateChangedEvent event, NodeContext ctx, String entityId,
+                                String operator, String value, String runId) {
+        ctx.state().remove(STATE_KEY_TIMER);
+        // Bedingt entfernen: ein inzwischen neu gestarteter Timer behaelt seine eigene runId.
+        ctx.state().remove(STATE_KEY_TIMER_RUN_ID, runId);
+        boolean emitted = false;
+        try {
+            String currentState = entityStateService.getByEntityId(entityId)
+                    .map(e -> e.getState()).orElse(null);
+            // Ohne diese Sperre koennte "!=" bei unavailable (String-Vergleich, "wahr")
+            // beim Ablauf ein Ereignis mit newState="unavailable" emittieren — genau
+            // der Ausfall, den der Guard in onEntityEvent eigentlich verhindern soll.
+            if (STATE_UNAVAILABLE.equals(currentState)) {
+                return;
+            }
+            if (StateComparator.matches(currentState, operator, value)) {
+                ctx.emit(0, toMessage(event, ctx).with("newState", currentState)
+                        .with(FlowRunTrace.RUN_ID_KEY, runId));
+                emitted = true;
+            }
+        } finally {
+            if (!emitted) {
+                pendingRuns.complete(runId);
+            }
         }
     }
 
@@ -168,6 +204,10 @@ public class EntityStateTriggerHandler implements TriggerNodeHandler {
         Object pending = ctx.state().remove(STATE_KEY_TIMER);
         if (pending instanceof ScheduledFuture<?> future) {
             future.cancel(false);
+        }
+        Object runId = ctx.state().remove(STATE_KEY_TIMER_RUN_ID);
+        if (runId != null) {
+            pendingRuns.complete(runId.toString());
         }
     }
 

@@ -16,7 +16,7 @@ class NodeCatalogFieldsTest {
 
     @Test
     void entityStateTriggerFieldsAndPorts() {
-        var h = new EntityStateTriggerHandler(null);
+        var h = new EntityStateTriggerHandler(null, null);
         var fields = h.fields();
         assertEquals(NodeFieldType.ENTITY_REF, field(fields, "entityId").type());
         assertTrue(field(fields, "entityId").required());
@@ -63,7 +63,7 @@ class NodeCatalogFieldsTest {
 
     @Test
     void delayAndRateLimitHaveNumberFields() {
-        assertEquals(NodeFieldType.NUMBER, field(new DelayNodeHandler().fields(), "seconds").type());
+        assertEquals(NodeFieldType.NUMBER, field(new DelayNodeHandler(null).fields(), "seconds").type());
         assertEquals(NodeFieldType.NUMBER, field(new RateLimitNodeHandler().fields(), "minIntervalSeconds").type());
     }
 

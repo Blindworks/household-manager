@@ -3,6 +3,7 @@ package com.household.manager.flowengine;
 import com.household.manager.audit.AuditActor;
 import com.household.manager.audit.AuditActorContext;
 import com.household.manager.flowengine.model.FlowNode;
+import com.household.manager.systemlog.FlowPendingRunTracker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
@@ -34,19 +35,22 @@ public class FlowEngine {
     private final DebugBuffer debugBuffer;
     private final FlowTriggerRecorder triggerRecorder;
     private final FlowRunRecorder runRecorder;
+    private final FlowPendingRunTracker pendingRuns;
 
     public FlowEngine(FlowRegistry registry,
                       @Qualifier("flowEngineExecutor") Executor executor,
                       @Qualifier("flowTaskScheduler") TaskScheduler scheduler,
                       DebugBuffer debugBuffer,
                       FlowTriggerRecorder triggerRecorder,
-                      FlowRunRecorder runRecorder) {
+                      FlowRunRecorder runRecorder,
+                      FlowPendingRunTracker pendingRuns) {
         this.registry = registry;
         this.executor = executor;
         this.scheduler = scheduler;
         this.debugBuffer = debugBuffer;
         this.triggerRecorder = triggerRecorder;
         this.runRecorder = runRecorder;
+        this.pendingRuns = pendingRuns;
     }
 
     /** Asynchrone Fortsetzung ab einem Node-Ausgang (von NodeContext.emit gerufen). */
@@ -78,6 +82,9 @@ public class FlowEngine {
             recordIfTrigger(flowId, startNode);
             Object givenRunId = message.get(FlowRunTrace.RUN_ID_KEY);
             String runId = givenRunId != null ? givenRunId.toString() : UUID.randomUUID().toString();
+            if (givenRunId != null) {
+                completePendingRun(runId);
+            }
             FlowRunTrace trace = FlowRunTrace.start(runId);
             try {
                 traverse(flowId, graph, startNode, nodeId, port, message.with(FlowRunTrace.RUN_ID_KEY, runId), trace);
@@ -189,6 +196,20 @@ public class FlowEngine {
             runRecorder.record(flowId, trace.runId(), trace.status(), trace.steps(), continuation, injected);
         } catch (Exception ex) {
             log.warn("Flow {}: Lauf nicht protokolliert: {}", flowId, ex.getMessage());
+        }
+    }
+
+    /**
+     * Eine mitgebrachte runId heißt: dieser Lauf hat gewartet (Delay-Fortsetzung oder abgelaufener
+     * Verweildauer-Timer an der Trigger-Node) und wird jetzt fortgesetzt. Abgeschlossen wird VOR der
+     * Traversierung, nicht danach: trifft derselbe Lauf erneut auf ein Delay, registriert er dieselbe
+     * runId neu, und ein Abschluss am Ende löschte genau diese neue Registrierung.
+     */
+    private void completePendingRun(String runId) {
+        try {
+            pendingRuns.complete(runId);
+        } catch (Exception ex) {
+            log.warn("Wartender Lauf {} nicht abgeschlossen: {}", runId, ex.getMessage());
         }
     }
 

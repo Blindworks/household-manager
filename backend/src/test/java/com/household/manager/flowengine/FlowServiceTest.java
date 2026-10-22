@@ -48,7 +48,8 @@ class FlowServiceTest {
 
     @BeforeEach
     void setUp() {
-        registry = new FlowRegistry(List.of(new TestTriggerHandler()));
+        registry = new FlowRegistry(List.of(new TestTriggerHandler()),
+                mock(com.household.manager.systemlog.FlowPendingRunTracker.class));
         registry.setEngine(engine);
         FlowDefinitionParser parser = new FlowDefinitionParser(new ObjectMapper());
         FlowValidator validator = new FlowValidator(List.of(new TestTriggerHandler()),
