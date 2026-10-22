@@ -23,7 +23,7 @@ import java.util.List;
  * Anders als switch-device schluckt dieser Handler Fehler beim Ansprechen des Geraets
  * (nicht erreichbar, Faehigkeit/Bereich vom Geraet abgelehnt): eine unerreichbare Lampe
  * darf einen nachgelagerten Telegram- oder Push-Zweig im selben Flow nicht mit abbrechen.
- * Der Fehler landet als Warnung im Log, die Message laeuft trotzdem auf dem Ausgang weiter.
+ * Der Fehler landet als Warnung im Log und markiert den Lauf als fehlgeschlagen, die Message laeuft trotzdem auf dem Ausgang weiter.
  */
 @Slf4j
 @Component
@@ -93,6 +93,7 @@ public class LightSetNodeHandler implements NodeHandler {
             smartDeviceService.setLightState(deviceId, request);
         } catch (Exception ex) {
             log.warn("Konnte Lichtwert fuer Geraet {} nicht setzen: {}", deviceId, ex.getMessage());
+            ctx.reportFailure("Licht " + deviceId + " nicht gesetzt: " + ex.getMessage());
         }
         return NodeResult.single(message);
     }

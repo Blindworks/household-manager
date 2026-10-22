@@ -2,6 +2,7 @@ package com.household.manager.push;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.common.DeliveryResult;
 import com.household.manager.model.entity.PushSubscription;
 import com.household.manager.repository.PushSubscriptionRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,57 +24,63 @@ import java.util.Map;
 @Slf4j
 public class PushNotificationService {
 
+    private static final String NO_DEVICES = "keine Push-Geräte";
+
     private final PushSubscriptionRepository repository;
     private final WebPushClient webPushClient;
     private final ObjectMapper objectMapper;
 
-    public void sendToAll(String title, String body) {
+    public DeliveryResult sendToAll(String title, String body) {
         List<PushSubscription> subscriptions;
         try {
             subscriptions = repository.findAll();
         } catch (Exception ex) {
             log.warn("Push-Subscriptions konnten nicht geladen werden: {}", ex.getMessage());
-            return;
+            return DeliveryResult.failed("Push-Geräte nicht ladbar: " + ex.getMessage());
         }
-        send(subscriptions, title, body);
+        return send(subscriptions, title, body);
     }
 
-    public void sendToUser(Long userId, String title, String body) {
+    public DeliveryResult sendToUser(Long userId, String title, String body) {
         List<PushSubscription> subscriptions;
         try {
             subscriptions = repository.findByUserId(userId);
         } catch (Exception ex) {
             log.warn("Push-Subscriptions fuer Nutzer {} konnten nicht geladen werden: {}", userId, ex.getMessage());
-            return;
+            return DeliveryResult.failed("Push-Geräte nicht ladbar: " + ex.getMessage());
         }
         if (subscriptions.isEmpty()) {
             log.warn("Keine Push-Subscriptions fuer Nutzer {} — Nachricht verworfen", userId);
-            return;
+            return DeliveryResult.failed(NO_DEVICES);
         }
-        send(subscriptions, title, body);
+        return send(subscriptions, title, body);
     }
 
-    private void send(List<PushSubscription> subscriptions, String title, String body) {
+    private DeliveryResult send(List<PushSubscription> subscriptions, String title, String body) {
         if (subscriptions.isEmpty()) {
             log.debug("Keine Push-Subscriptions vorhanden — Nachricht verworfen");
-            return;
+            return DeliveryResult.failed(NO_DEVICES);
         }
         String payload;
         try {
             payload = buildPayload(title, body);
         } catch (JsonProcessingException ex) {
             log.warn("Push-Payload nicht serialisierbar: {}", ex.getMessage());
-            return;
+            return DeliveryResult.failed("Push-Payload nicht serialisierbar: " + ex.getMessage());
         }
+        DeliveryResult result = DeliveryResult.ok();
         for (PushSubscription subscription : subscriptions) {
-            if (!sendTo(subscription, payload)) {
+            DeliveryResult single = sendTo(subscription, payload);
+            result = result.and(single);
+            if (Thread.currentThread().isInterrupted()) {
                 break;
             }
         }
+        return result;
     }
 
-    /** @return false wenn der Versand unterbrochen wurde und keine weiteren Geraete mehr bedient werden sollen. */
-    private boolean sendTo(PushSubscription subscription, String payload) {
+    /** Nach einer Unterbrechung ist der Thread als interrupted markiert; die Schleife bricht dann ab. */
+    private DeliveryResult sendTo(PushSubscription subscription, String payload) {
         try {
             int status = webPushClient.send(subscription, payload);
             if (status == 404 || status == 410) {
@@ -82,6 +89,7 @@ public class PushNotificationService {
                         subscription.getDeviceLabel(), status);
             } else if (status >= 400) {
                 log.warn("Push an '{}' fehlgeschlagen: HTTP {}", subscription.getDeviceLabel(), status);
+                return DeliveryResult.failed("Push an '" + subscription.getDeviceLabel() + "': HTTP " + status);
             } else {
                 subscription.setLastUsedAt(LocalDateTime.now());
                 repository.save(subscription);
@@ -89,11 +97,12 @@ public class PushNotificationService {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("Push-Versand unterbrochen — breche restliche Geraete ab");
-            return false;
+            return DeliveryResult.failed("Push-Versand unterbrochen");
         } catch (Exception ex) {
             log.warn("Push an '{}' fehlgeschlagen: {}", subscription.getDeviceLabel(), ex.toString());
+            return DeliveryResult.failed("Push an '" + subscription.getDeviceLabel() + "': " + ex.getMessage());
         }
-        return true;
+        return DeliveryResult.ok();
     }
 
     /** Payload im ngsw-Notification-Schema — der Angular Service Worker zeigt sie selbst an. */

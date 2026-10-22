@@ -1,5 +1,6 @@
 package com.household.manager.flowengine.nodes;
 
+import com.household.manager.common.DeliveryResult;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
@@ -17,7 +18,7 @@ import java.util.List;
 /**
  * Aktions-Node: Web-Push-Benachrichtigung an alle abonnierten Geraete (oder
  * nur die eines Nutzers). Platzhalter: {entityId}, {newState}, {oldState}.
- * Sendefehler schluckt der PushNotificationService — der Flow laeuft weiter.
+ * Sendefehler schluckt der PushNotificationService — der Flow laeuft weiter, der Lauf wird aber als fehlgeschlagen markiert.
  */
 @Component
 @RequiredArgsConstructor
@@ -60,12 +61,14 @@ public class PushSendNodeHandler implements NodeHandler {
     public NodeResult handle(FlowMessage message, NodeConfig config, NodeContext ctx) {
         String title = render(config.string("title").filter(s -> !s.isBlank()).orElse(DEFAULT_TITLE), message);
         String body = render(config.string("message").orElse(""), message);
-        config.string("userId")
+        DeliveryResult result = config.string("userId")
                 .map(String::trim)
                 .filter(userId -> !userId.isEmpty())
-                .ifPresentOrElse(
-                        userId -> notificationService.sendToUser(Long.parseLong(userId), title, body),
-                        () -> notificationService.sendToAll(title, body));
+                .map(userId -> notificationService.sendToUser(Long.parseLong(userId), title, body))
+                .orElseGet(() -> notificationService.sendToAll(title, body));
+        if (!result.delivered()) {
+            ctx.reportFailure("Push nicht zugestellt: " + result.failure());
+        }
         return NodeResult.single(message);
     }
 
