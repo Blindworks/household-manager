@@ -136,6 +136,74 @@ class SystemLogWriterTest {
     }
 
     @Test
+    void writeOrIncrement_looksUpWithOriginalMessage_andKeepsDropCountForNextNewRow() throws Exception {
+        SystemLogEntry existing = new SystemLogEntry();
+        existing.setRepeatCount(1);
+        when(repository.findTopByKindAndSourceAndMessageAndOccurredAtAfterOrderByOccurredAtDesc(
+                any(), any(), eq("boom"), any())).thenReturn(Optional.of(existing));
+        CountDownLatch release = new CountDownLatch(1);
+        when(repository.save(any())).thenAnswer(i -> {
+            release.await();
+            return i.getArgument(0);
+        });
+        blockFirstSaveAndDropTwoWith(release, event("boom"));
+        release.countDown();
+        writer.flushForTest();
+
+        assertThat(existing.getRepeatCount()).isEqualTo(2);
+        writer.write(event("neu"));
+        writer.flushForTest();
+
+        verify(repository).save(argThat((SystemLogEntry e) -> "neu (2 Einträge verworfen)".equals(e.getMessage())));
+    }
+
+    @Test
+    void persist_restoresDropCount_whenSaveFails() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        when(repository.save(any())).thenAnswer(i -> {
+            int n = calls.incrementAndGet();
+            if (n == 1) {
+                release.await();
+            } else if (n == 2) {
+                throw new RuntimeException("db down");
+            }
+            return i.getArgument(0);
+        });
+        blockFirstSaveAndDropTwoWith(release, event("queued"));
+        release.countDown();
+        writer.flushForTest();
+
+        writer.write(event("danach"));
+        writer.flushForTest();
+
+        verify(repository).save(argThat((SystemLogEntry e) -> "danach (2 Einträge verworfen)".equals(e.getMessage())));
+    }
+
+    @Test
+    void writerThread_survivesError() throws Exception {
+        when(repository.save(any())).thenThrow(new AssertionError("fatal")).thenAnswer(i -> i.getArgument(0));
+        writer = new SystemLogWriter(CLOCK, repository, 10);
+
+        writer.write(event("eins"));
+        writer.flushForTest();
+        writer.write(event("zwei"));
+        writer.flushForTest();
+
+        verify(repository, times(2)).save(any());
+    }
+
+    private void blockFirstSaveAndDropTwoWith(CountDownLatch release, SystemLogEvent queued) throws Exception {
+        writer = new SystemLogWriter(CLOCK, repository, 1);
+        writer.write(event("blocker"));
+        verify(repository, timeout(2000)).save(any());
+        writer.writeOrIncrement(queued, Duration.ofMinutes(10));
+        writer.write(event("verworfen1"));
+        writer.write(event("verworfen2"));
+        assertThat(writer.droppedCount()).isEqualTo(2);
+    }
+
+    @Test
     void isWriterThread_isFalseOnCallerThread() {
         writer = new SystemLogWriter(CLOCK, repository, 10);
 

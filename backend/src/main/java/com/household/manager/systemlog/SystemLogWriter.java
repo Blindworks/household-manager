@@ -30,7 +30,7 @@ public class SystemLogWriter {
     static final int DEFAULT_CAPACITY = 5000;
     private static final int MAX_MESSAGE = 2000;
     private static final int MAX_SHORT = 200;
-    private static final String WRITER_THREAD = "system-log-writer";
+    private static final String WRITER_THREAD = SystemLogThreads.WRITER;
 
     private record Item(SystemLogEvent event, Duration window) { }
 
@@ -102,7 +102,8 @@ public class SystemLogWriter {
             }
             try {
                 persist(item);
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
+                // Auch ein Error darf den Schreib-Thread nicht beenden, sonst bliebe das Protokoll still stehen.
                 log.debug("Systemprotokoll: Speichern fehlgeschlagen", ex);
             } finally {
                 inFlight.decrementAndGet();
@@ -113,7 +114,7 @@ public class SystemLogWriter {
     private void persist(Item item) {
         SystemLogEvent event = item.event();
         LocalDateTime at = event.occurredAt() != null ? event.occurredAt() : LocalDateTime.now(clock);
-        String message = withDroppedSuffix(truncate(event.message(), MAX_MESSAGE));
+        String message = truncate(event.message(), MAX_MESSAGE);
         String source = truncate(event.source(), MAX_SHORT);
         if (item.window() != null) {
             var existing = repository.findTopByKindAndSourceAndMessageAndOccurredAtAfterOrderByOccurredAtDesc(
@@ -125,22 +126,29 @@ public class SystemLogWriter {
                 return;
             }
         }
+        // Das Verwerfen-Suffix nur an neuen Zeilen: sonst traefe die Suche oben nach Verlusten nie.
+        long droppedNow = unreportedDropped.getAndSet(0);
         SystemLogEntry entry = new SystemLogEntry();
         entry.setOccurredAt(at);
         entry.setKind(event.kind());
         entry.setStatus(event.status());
         entry.setSource(source);
         entry.setTitle(truncate(event.title(), MAX_SHORT));
-        entry.setMessage(message);
+        entry.setMessage(withDroppedSuffix(message, droppedNow));
         entry.setDetails(event.detailsJson());
         entry.setFlowId(event.flowId());
         entry.setRunId(event.runId());
-        repository.save(entry);
+        try {
+            repository.save(entry);
+        } catch (Throwable ex) {
+            // Die Zaehlung gehoert zu einer Zeile, die nie entstand - fuer die naechste aufbewahren.
+            unreportedDropped.addAndGet(droppedNow);
+            throw ex;
+        }
     }
 
     /** Haengt einmalig an, wie viele Eintraege zwischenzeitlich verworfen wurden. */
-    private String withDroppedSuffix(String message) {
-        long n = unreportedDropped.getAndSet(0);
+    private static String withDroppedSuffix(String message, long n) {
         if (n == 0) {
             return message;
         }

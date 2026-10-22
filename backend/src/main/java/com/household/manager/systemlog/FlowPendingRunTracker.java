@@ -35,7 +35,7 @@ public class FlowPendingRunTracker {
     public static final String REASON_RESTART = "Backend-Neustart";
 
     private static final long AWAIT_SECONDS = 5;
-    private static final String THREAD_NAME = "flow-pending-runs";
+    private static final String THREAD_NAME = SystemLogThreads.PENDING_RUNS;
 
     private final SystemFlowPendingRunRepository repository;
     private final SystemLogWriter writer;

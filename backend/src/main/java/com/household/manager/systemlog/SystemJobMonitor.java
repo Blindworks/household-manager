@@ -41,7 +41,7 @@ public class SystemJobMonitor {
     private static final Duration LOAD_RETRY = Duration.ofMinutes(1);
     private static final int MAX_MESSAGE = 2000;
     private static final int QUEUE_CAPACITY = 1000;
-    private static final String THREAD_NAME = "system-job-monitor";
+    private static final String THREAD_NAME = SystemLogThreads.JOB_MONITOR;
     private static final DateTimeFormatter SINCE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     public record JobStatusView(String jobKey, JobState state, LocalDateTime lastRunAt,
