@@ -1,6 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { SystemLogService } from '../../services/system-log.service';
 import {
   FlowRunStep, SystemLogEntry, SystemLogFlowRef, SystemLogJob, SystemLogKind, SystemLogQuery, SystemLogStatus
@@ -21,11 +22,11 @@ interface RunSection {
 @Component({
   selector: 'app-admin-system-log',
   standalone: true,
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, NgTemplateOutlet],
   templateUrl: './admin-system-log.component.html',
   styleUrl: './admin-system-log.component.scss'
 })
-export class AdminSystemLogComponent implements OnInit {
+export class AdminSystemLogComponent implements OnInit, OnDestroy {
   private readonly systemLog = inject(SystemLogService);
 
   readonly kinds = ALL_KINDS;
@@ -49,22 +50,28 @@ export class AdminSystemLogComponent implements OnInit {
   inactiveExpanded = false;
 
   loading = false;
-  errorMessage: string | null = null;
+  jobsError: string | null = null;
+  entriesError: string | null = null;
+
+  /** Angewendeter Filterstand inkl. eingefrorenem from; Seitenabrufe nutzen immer ihn, nie den Formularstand. */
+  private applied: SystemLogQuery = {};
+  private entriesSub?: Subscription;
 
   expandedId: number | null = null;
   runSections: RunSection[] | null = null;
   runLoading = false;
 
   ngOnInit(): void {
-    this.loadJobs();
-    this.loadFlows();
-    this.loadEntries(0);
+    this.reload();
+  }
+
+  ngOnDestroy(): void {
+    this.entriesSub?.unsubscribe();
   }
 
   reload(): void {
     this.loadJobs();
-    this.loadFlows();
-    this.loadEntries(0);
+    this.applyFilters();
   }
 
   get failingJobs(): SystemLogJob[] {
@@ -83,12 +90,18 @@ export class AdminSystemLogComponent implements OnInit {
     return this.entries.length < this.totalElements;
   }
 
+  /** Friert den Formularstand samt Zeitfenster ein und lädt Seite 0 neu. */
   applyFilters(): void {
+    this.applied = this.buildQuery();
+    this.loadFlows(this.applied.from);
     this.loadEntries(0);
   }
 
   toggleKind(kind: SystemLogKind): void {
     if (this.selectedKinds.has(kind)) {
+      if (this.selectedKinds.size === 1) {
+        return; // mindestens eine Art bleibt gewählt
+      }
       this.selectedKinds.delete(kind);
     } else {
       this.selectedKinds.add(kind);
@@ -113,6 +126,7 @@ export class AdminSystemLogComponent implements OnInit {
     }
     this.expandedId = entry.id;
     this.runSections = null;
+    this.runLoading = false;
     if (entry.kind === 'FLOW_RUN' && entry.runId) {
       this.loadRun(entry);
     }
@@ -141,56 +155,71 @@ export class AdminSystemLogComponent implements OnInit {
     this.runLoading = true;
     this.systemLog.getRun(entry.runId as string).subscribe({
       next: run => {
+        if (this.expandedId !== entry.id) { return; }
         this.runLoading = false;
-        if (this.expandedId === entry.id && run.length > 1) {
+        if (run.length > 1) {
           this.runSections = run.map(e => ({ entry: e, steps: this.stepsOf(e) }));
         }
       },
-      error: () => (this.runLoading = false)
+      error: () => {
+        if (this.expandedId === entry.id) { this.runLoading = false; }
+      }
     });
   }
 
   private loadJobs(): void {
     this.systemLog.getJobs().subscribe({
-      next: jobs => (this.jobs = jobs),
-      error: () => (this.errorMessage = 'Die Job-Tafel konnte nicht geladen werden.')
+      next: jobs => { this.jobs = jobs; this.jobsError = null; },
+      error: () => (this.jobsError = 'Die Job-Tafel konnte nicht geladen werden.')
     });
   }
 
-  private loadFlows(): void {
-    this.systemLog.getFlows(this.fromIso()).subscribe({
+  private loadFlows(from?: string): void {
+    this.systemLog.getFlows(from).subscribe({
       next: flows => (this.flows = flows),
       error: () => (this.flows = [])
     });
   }
 
   private loadEntries(pageNo: number): void {
+    if (pageNo === 0) {
+      this.entriesSub?.unsubscribe();
+    }
+    const snapshot = this.applied;
     this.loading = true;
-    this.errorMessage = null;
-    this.systemLog.getEntries(this.buildQuery(pageNo)).subscribe({
+    this.entriesError = null;
+    const sub = this.systemLog.getEntries({ ...snapshot, page: pageNo, size: PAGE_SIZE }).subscribe({
       next: result => {
+        if (snapshot !== this.applied) { return; }
         this.loading = false;
-        this.entries = pageNo === 0 ? result.content : [...this.entries, ...result.content];
-        this.totalElements = result.totalElements;
-        this.currentPage = result.page;
         if (pageNo === 0) {
+          this.entries = result.content;
           this.expandedId = null;
           this.runSections = null;
+        } else {
+          const known = new Set(this.entries.map(e => e.id));
+          this.entries = [...this.entries, ...result.content.filter(e => !known.has(e.id))];
         }
+        this.totalElements = result.totalElements;
+        this.currentPage = result.page;
       },
       error: () => {
+        if (snapshot !== this.applied) { return; }
         this.loading = false;
-        this.errorMessage = 'Das Protokoll konnte nicht geladen werden.';
+        this.entriesError = 'Das Protokoll konnte nicht geladen werden.';
       }
     });
+    if (pageNo === 0) {
+      this.entriesSub = sub;
+    }
   }
 
   private fromIso(): string {
     return toLocalIso(rangeStart(this.rangeKey, new Date()));
   }
 
-  private buildQuery(pageNo: number): SystemLogQuery {
-    const query: SystemLogQuery = { from: this.fromIso(), page: pageNo, size: PAGE_SIZE };
+  private buildQuery(): SystemLogQuery {
+    const query: SystemLogQuery = { from: this.fromIso() };
     if (this.selectedKinds.size < ALL_KINDS.length) {
       query.kinds = ALL_KINDS.filter(kind => this.selectedKinds.has(kind));
     }

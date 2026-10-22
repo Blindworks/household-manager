@@ -21,6 +21,10 @@
       <div class="admin-system-log__job-allgood">Alle Jobs laufen.</div>
     }
 
+    @if (jobsError) {
+      <div class="admin-system-log__error" role="alert">{{ jobsError }}</div>
+    }
+
     <button type="button" class="admin-system-log__group-toggle" (click)="okExpanded = !okExpanded"
             [attr.aria-expanded]="okExpanded">
       ok ({{ okJobs.length }})
@@ -79,6 +83,7 @@
     </select>
 
     <input type="search" name="q" placeholder="Suchen …" [(ngModel)]="searchText" aria-label="Freitext">
+    <button type="submit" class="ghost" data-test="search">Suchen</button>
 
     <label class="admin-system-log__problems">
       <input type="checkbox" data-test="problems-only" [checked]="problemsOnly"
@@ -87,8 +92,8 @@
     </label>
   </form>
 
-  @if (errorMessage) {
-    <div class="admin-system-log__error" role="alert">{{ errorMessage }}</div>
+  @if (entriesError) {
+    <div class="admin-system-log__error" role="alert">{{ entriesError }}</div>
   }
 
   <ul class="admin-system-log__list">
@@ -122,32 +127,10 @@
                   <div class="admin-system-log__section">
                     {{ section.entry.occurredAt | date: 'dd.MM. HH:mm:ss' }} · {{ statusText(section.entry.status) }}
                   </div>
-                  <ol class="admin-system-log__steps">
-                    @for (step of section.steps; track $index) {
-                      <li>
-                        <span [class]="'admin-system-log__dot admin-system-log__dot--' + stepToneOf(step.outcome)"></span>
-                        {{ step.label || step.type }}
-                        <span class="admin-system-log__muted">— {{ outcomeText(step.outcome) }}</span>
-                        @if (step.error) {
-                          <div class="admin-system-log__step-error">{{ step.error }}</div>
-                        }
-                      </li>
-                    }
-                  </ol>
+                  <ng-container [ngTemplateOutlet]="stepList" [ngTemplateOutletContext]="{ steps: section.steps }" />
                 }
               } @else {
-                <ol class="admin-system-log__steps">
-                  @for (step of stepsOf(entry); track $index) {
-                    <li>
-                      <span [class]="'admin-system-log__dot admin-system-log__dot--' + stepToneOf(step.outcome)"></span>
-                      {{ step.label || step.type }}
-                      <span class="admin-system-log__muted">— {{ outcomeText(step.outcome) }}</span>
-                      @if (step.error) {
-                        <div class="admin-system-log__step-error">{{ step.error }}</div>
-                      }
-                    </li>
-                  }
-                </ol>
+                <ng-container [ngTemplateOutlet]="stepList" [ngTemplateOutletContext]="{ steps: stepsOf(entry) }" />
               }
             }
             @if (stacktraceOf(entry); as trace) {
@@ -157,7 +140,7 @@
         }
       </li>
     } @empty {
-      @if (!loading && !errorMessage) {
+      @if (!loading && !entriesError) {
         <li class="admin-system-log__empty">Keine Einträge im gewählten Zeitraum.</li>
       }
     }
@@ -169,3 +152,18 @@
     </button>
   }
 </div>
+
+<ng-template #stepList let-steps="steps">
+  <ol class="admin-system-log__steps">
+    @for (step of steps; track $index) {
+      <li>
+        <span [class]="'admin-system-log__dot admin-system-log__dot--' + stepToneOf(step.outcome)"></span>
+        {{ step.label || step.type }}
+        <span class="admin-system-log__muted">— {{ outcomeText(step.outcome) }}</span>
+        @if (step.error) {
+          <div class="admin-system-log__step-error">{{ step.error }}</div>
+        }
+      </li>
+    }
+  </ol>
+</ng-template>

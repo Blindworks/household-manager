@@ -65,6 +65,7 @@ describe('AdminSystemLogComponent', () => {
     const toggle = fixture.nativeElement.querySelector('input[data-test="problems-only"]') as HTMLInputElement;
     toggle.click();
     fixture.detectChanges();
+    http.expectOne(r => r.url.endsWith('/flows')).flush([]);
     const req = entriesRequests();
     expect(req.length).toBe(1);
     expect(req[0].request.params.get('problemsOnly')).toBe('true');
@@ -126,5 +127,78 @@ describe('AdminSystemLogComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.admin-system-log__job--failing')).toBeTruthy();
+  });
+
+  const firstOfFive = () => ({ content: [entry({ id: 1 })], totalElements: 5, page: 0, size: 1 });
+
+  it('filter change resets to page 0', () => {
+    flush([]);
+    (fixture.nativeElement.querySelector('input[data-test="problems-only"]') as HTMLInputElement).click();
+    const req = entriesRequests();
+    expect(req[0].request.params.get('page')).toBe('0');
+    http.match(r => r.url.endsWith('/flows')).forEach(r => r.flush([]));
+    req[0].flush(page([]));
+  });
+
+  it('discards stale load-more response after a filter change', () => {
+    http.expectOne(r => r.url.endsWith('/jobs')).flush([]);
+    http.expectOne(r => r.url.endsWith('/flows')).flush([]);
+    http.expectOne(r => r.url.endsWith('/entries')).flush(firstOfFive());
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('[data-test="load-more"]') as HTMLButtonElement).click();
+    const stale = http.expectOne(r => r.url.endsWith('/entries'));
+    (fixture.nativeElement.querySelector('input[data-test="problems-only"]') as HTMLInputElement).click();
+    http.expectOne(r => r.url.endsWith('/flows')).flush([]);
+    const fresh = http.expectOne(r => r.url.endsWith('/entries'));
+    fresh.flush({ content: [entry({ id: 10, title: 'Neu' })], totalElements: 1, page: 0, size: 1 });
+    stale.flush({ content: [entry({ id: 99, title: 'Alt' })], totalElements: 5, page: 1, size: 1 });
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Neu');
+    expect(text).not.toContain('Alt');
+  });
+
+  it('uses the same frozen from on page 0 and page 1', () => {
+    http.expectOne(r => r.url.endsWith('/jobs')).flush([]);
+    http.expectOne(r => r.url.endsWith('/flows')).flush([]);
+    const first = http.expectOne(r => r.url.endsWith('/entries'));
+    const from0 = first.request.params.get('from');
+    first.flush(firstOfFive());
+    fixture.detectChanges();
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(Date.now() + 3_600_000));
+    (fixture.nativeElement.querySelector('[data-test="load-more"]') as HTMLButtonElement).click();
+    const second = http.expectOne(r => r.url.endsWith('/entries'));
+    jasmine.clock().uninstall();
+    expect(second.request.params.get('page')).toBe('1');
+    expect(second.request.params.get('from')).toBe(from0);
+    second.flush({ content: [], totalElements: 1, page: 1, size: 1 });
+  });
+
+  it('keeps applied search text for load more until search is submitted', () => {
+    http.expectOne(r => r.url.endsWith('/jobs')).flush([]);
+    http.expectOne(r => r.url.endsWith('/flows')).flush([]);
+    http.expectOne(r => r.url.endsWith('/entries')).flush(firstOfFive());
+    fixture.detectChanges();
+    fixture.componentInstance.searchText = 'getippt';
+    (fixture.nativeElement.querySelector('[data-test="load-more"]') as HTMLButtonElement).click();
+    const req = http.expectOne(r => r.url.endsWith('/entries'));
+    expect(req.request.params.has('q')).toBeFalse();
+    req.flush({ content: [], totalElements: 1, page: 1, size: 1 });
+  });
+
+  it('renders LOG stacktrace in pre', () => {
+    flush([entry({ kind: 'LOG', status: 'WARN', details: 'java.lang.Boom\n\tat X.y(X.java:1)' })]);
+    (fixture.nativeElement.querySelector('.admin-system-log__row') as HTMLElement).click();
+    fixture.detectChanges();
+    const pre = fixture.nativeElement.querySelector('pre') as HTMLElement;
+    expect(pre.textContent).toContain('java.lang.Boom');
+  });
+
+  it('keeps at least one kind checked', () => {
+    flush([]);
+    fixture.componentInstance.selectedKinds = new Set<'LOG'>(['LOG']);
+    fixture.componentInstance.toggleKind('LOG');
+    expect(fixture.componentInstance.selectedKinds.size).toBe(1);
   });
 });
