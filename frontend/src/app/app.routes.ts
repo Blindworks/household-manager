@@ -231,6 +231,12 @@ export const routes: Routes = [
     title: 'Audit-Log - Household Manager'
   },
   {
+    path: 'admin/system-log',
+    loadComponent: () => import('./pages/admin-system-log/admin-system-log.component').then(m => m.AdminSystemLogComponent),
+    canActivate: [adminGuard],
+    title: 'Systemprotokoll - Household Manager'
+  },
+  {
     path: 'admin/mode-quick-access',
     loadComponent: () => import('./pages/admin-mode-quick-access/admin-mode-quick-access.component')
       .then(m => m.AdminModeQuickAccessComponent),

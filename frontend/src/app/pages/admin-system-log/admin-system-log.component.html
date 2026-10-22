@@ -1,0 +1,171 @@
+<div class="admin-system-log">
+  <header class="admin-system-log__header">
+    <h1>Systemprotokoll</h1>
+    <button type="button" class="ghost" (click)="reload()" [disabled]="loading">Neu laden</button>
+  </header>
+
+  <section class="admin-system-log__jobs" aria-label="Job-Tafel">
+    @for (job of failingJobs; track job.jobKey) {
+      <div class="admin-system-log__job admin-system-log__job--failing">
+        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <div>
+          <strong>{{ job.jobKey }}</strong>
+          <span class="admin-system-log__job-since">gestört seit {{ sinceText(job) }}</span>
+          @if (job.lastMessage) {
+            <div class="admin-system-log__job-reason">{{ job.lastMessage }}</div>
+          }
+        </div>
+      </div>
+    }
+    @if (jobs.length > 0 && failingJobs.length === 0) {
+      <div class="admin-system-log__job-allgood">Alle Jobs laufen.</div>
+    }
+
+    <button type="button" class="admin-system-log__group-toggle" (click)="okExpanded = !okExpanded"
+            [attr.aria-expanded]="okExpanded">
+      ok ({{ okJobs.length }})
+    </button>
+    @if (okExpanded) {
+      @for (job of okJobs; track job.jobKey) {
+        <div class="admin-system-log__job">
+          <strong>{{ job.jobKey }}</strong>
+          <span class="admin-system-log__muted">zuletzt {{ job.lastRunAt | date: 'dd.MM. HH:mm:ss' }}</span>
+        </div>
+      }
+    }
+
+    <button type="button" class="admin-system-log__group-toggle" (click)="inactiveExpanded = !inactiveExpanded"
+            [attr.aria-expanded]="inactiveExpanded">
+      inaktiv ({{ inactiveJobs.length }})
+    </button>
+    @if (inactiveExpanded) {
+      @for (job of inactiveJobs; track job.jobKey) {
+        <div class="admin-system-log__job">
+          <strong>{{ job.jobKey }}</strong>
+          <span class="admin-system-log__muted">zuletzt {{ job.lastRunAt | date: 'dd.MM. HH:mm:ss' }}</span>
+        </div>
+      }
+    }
+  </section>
+
+  <form class="admin-system-log__filter" (ngSubmit)="applyFilters()">
+    <div class="admin-system-log__kinds">
+      @for (kind of kinds; track kind) {
+        <label>
+          <input type="checkbox" [checked]="selectedKinds.has(kind)" (change)="toggleKind(kind)">
+          {{ kindText(kind) }}
+        </label>
+      }
+    </div>
+
+    <select name="status" [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" aria-label="Status">
+      <option value="">Alle Status</option>
+      @for (status of statuses; track status) {
+        <option [value]="status">{{ statusText(status) }}</option>
+      }
+    </select>
+
+    <select name="flow" [(ngModel)]="flowFilter" (ngModelChange)="applyFilters()" aria-label="Flow">
+      <option [ngValue]="null">Alle Flows</option>
+      @for (flow of flows; track flow.id) {
+        <option [ngValue]="flow.id">{{ flow.name }}</option>
+      }
+    </select>
+
+    <select name="range" [(ngModel)]="rangeKey" (ngModelChange)="applyFilters()" aria-label="Zeitraum">
+      @for (range of ranges; track range.key) {
+        <option [value]="range.key">{{ range.label }}</option>
+      }
+    </select>
+
+    <input type="search" name="q" placeholder="Suchen …" [(ngModel)]="searchText" aria-label="Freitext">
+
+    <label class="admin-system-log__problems">
+      <input type="checkbox" data-test="problems-only" [checked]="problemsOnly"
+             (change)="setProblemsOnly($any($event.target).checked)">
+      Nur Probleme
+    </label>
+  </form>
+
+  @if (errorMessage) {
+    <div class="admin-system-log__error" role="alert">{{ errorMessage }}</div>
+  }
+
+  <ul class="admin-system-log__list">
+    @for (entry of entries; track entry.id) {
+      <li class="admin-system-log__item">
+        <div class="admin-system-log__row" role="button" tabindex="0"
+             (click)="toggleRow(entry)" (keydown.enter)="toggleRow(entry)">
+          <span class="admin-system-log__time">{{ entry.occurredAt | date: 'dd.MM. HH:mm:ss' }}</span>
+          <span class="material-symbols-outlined admin-system-log__icon" aria-hidden="true">{{ iconOf(entry.kind) }}</span>
+          <span class="admin-system-log__badge" [class]="'admin-system-log__badge admin-system-log__badge--' + toneOf(entry.status)">
+            {{ statusText(entry.status) }}
+          </span>
+          <strong class="admin-system-log__title">{{ entry.title }}</strong>
+          <span class="admin-system-log__message">{{ entry.message }}</span>
+          @if (entry.repeatCount > 1) {
+            <span class="admin-system-log__repeat">×{{ entry.repeatCount }}</span>
+          }
+        </div>
+
+        @if (expandedId === entry.id) {
+          <div class="admin-system-log__detail">
+            @if (entry.message) {
+              <p class="admin-system-log__full-message">{{ entry.message }}</p>
+            }
+            @if (entry.kind === 'FLOW_RUN') {
+              @if (runLoading) {
+                <p class="admin-system-log__muted">Lade Lauf …</p>
+              }
+              @if (runSections) {
+                @for (section of runSections; track section.entry.id) {
+                  <div class="admin-system-log__section">
+                    {{ section.entry.occurredAt | date: 'dd.MM. HH:mm:ss' }} · {{ statusText(section.entry.status) }}
+                  </div>
+                  <ol class="admin-system-log__steps">
+                    @for (step of section.steps; track $index) {
+                      <li>
+                        <span [class]="'admin-system-log__dot admin-system-log__dot--' + stepToneOf(step.outcome)"></span>
+                        {{ step.label || step.type }}
+                        <span class="admin-system-log__muted">— {{ outcomeText(step.outcome) }}</span>
+                        @if (step.error) {
+                          <div class="admin-system-log__step-error">{{ step.error }}</div>
+                        }
+                      </li>
+                    }
+                  </ol>
+                }
+              } @else {
+                <ol class="admin-system-log__steps">
+                  @for (step of stepsOf(entry); track $index) {
+                    <li>
+                      <span [class]="'admin-system-log__dot admin-system-log__dot--' + stepToneOf(step.outcome)"></span>
+                      {{ step.label || step.type }}
+                      <span class="admin-system-log__muted">— {{ outcomeText(step.outcome) }}</span>
+                      @if (step.error) {
+                        <div class="admin-system-log__step-error">{{ step.error }}</div>
+                      }
+                    </li>
+                  }
+                </ol>
+              }
+            }
+            @if (stacktraceOf(entry); as trace) {
+              <pre class="admin-system-log__trace">{{ trace }}</pre>
+            }
+          </div>
+        }
+      </li>
+    } @empty {
+      @if (!loading && !errorMessage) {
+        <li class="admin-system-log__empty">Keine Einträge im gewählten Zeitraum.</li>
+      }
+    }
+  </ul>
+
+  @if (hasMore) {
+    <button type="button" class="ghost" data-test="load-more" (click)="loadMore()" [disabled]="loading">
+      Mehr laden
+    </button>
+  }
+</div>
