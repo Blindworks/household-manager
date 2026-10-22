@@ -4,7 +4,7 @@ import com.household.manager.systemlog.SystemJobMonitor.JobStatusView;
 import com.household.manager.systemlog.SystemLogDtos.FlowRef;
 import com.household.manager.systemlog.SystemLogDtos.SystemLogEntryDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.household.manager.systemlog.SystemLogDtos.SystemLogPageDto;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +24,7 @@ public class SystemLogController {
     private final SystemLogQueryService queryService;
 
     @GetMapping("/entries")
-    public Page<SystemLogEntryDto> entries(
+    public SystemLogPageDto entries(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(required = false) List<SystemLogKind> kind,

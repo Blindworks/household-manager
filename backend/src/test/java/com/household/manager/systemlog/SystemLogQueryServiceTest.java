@@ -104,6 +104,24 @@ class SystemLogQueryServiceTest {
     }
 
     @Test
+    void flows_fromAfterTo_isRejected() {
+        assertThatThrownBy(() -> service.flows(NOW, NOW.minusHours(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void page_carriesTotalsAndPaging() {
+        when(repository.search(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(entry(1L, null)), PageRequest.of(2, 10), 21));
+
+        var result = service.entries(null, null, null, null, null, null, false, 2, 10);
+
+        assertThat(result.totalElements()).isEqualTo(21);
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(10);
+    }
+
+    @Test
     void emptyFilterListsAreForwardedAsNull() {
         stubEmptyPage();
 
@@ -114,7 +132,7 @@ class SystemLogQueryServiceTest {
 
     @Test
     void query_isLowercasedAndWildcardsEscaped() {
-        assertThat(SystemLogQueryService.likePattern("Ab_%\\")).isEqualTo("%ab\\_\\%\\\\%");
+        assertThat(SystemLogQueryService.likePattern("Ab_%!")).isEqualTo("%ab!_!%!!%");
     }
 
     @Test
@@ -141,7 +159,7 @@ class SystemLogQueryServiceTest {
                 .thenReturn(new PageImpl<>(List.of(json, text, none)));
 
         List<SystemLogEntryDto> result = service.entries(null, null, null, null, null, null, false, null, null)
-                .getContent();
+                .content();
 
         assertThat(result.get(0).details().isArray()).isTrue();
         assertThat(result.get(1).details().isTextual()).isTrue();

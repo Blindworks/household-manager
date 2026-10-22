@@ -9,6 +9,7 @@ import com.household.manager.repository.SystemLogEntryRepository;
 import com.household.manager.systemlog.SystemJobMonitor.JobStatusView;
 import com.household.manager.systemlog.SystemLogDtos.FlowRef;
 import com.household.manager.systemlog.SystemLogDtos.SystemLogEntryDto;
+import com.household.manager.systemlog.SystemLogDtos.SystemLogPageDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /** Lesepfad des Systemprotokolls fuer die Admin-Seite. */
 @Service
@@ -40,19 +42,29 @@ public class SystemLogQueryService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public Page<SystemLogEntryDto> entries(LocalDateTime from, LocalDateTime to, List<SystemLogKind> kinds,
-                                           List<SystemLogStatus> statuses, Long flowId, String query,
-                                           boolean problemsOnly, Integer page, Integer size) {
+    private record Window(LocalDateTime start, LocalDateTime end) { }
+
+    /** Einzige Fensterregel: Default letzte 24 h, von nach bis ist ein Fehler (400). */
+    private Window window(LocalDateTime from, LocalDateTime to) {
         LocalDateTime end = to != null ? to : LocalDateTime.now(clock);
         LocalDateTime start = from != null ? from : end.minus(DEFAULT_WINDOW);
         if (start.isAfter(end)) {
             throw new IllegalArgumentException("'from' liegt nach 'to'");
         }
+        return new Window(start, end);
+    }
+
+    public SystemLogPageDto entries(LocalDateTime from, LocalDateTime to, List<SystemLogKind> kinds,
+                                    List<SystemLogStatus> statuses, Long flowId, String query,
+                                    boolean problemsOnly, Integer page, Integer size) {
+        Window window = window(from, to);
         List<SystemLogStatus> statusFilter = problemsOnly ? PROBLEM_STATUSES : emptyToNull(statuses);
         int pageSize = size == null ? DEFAULT_SIZE : Math.min(Math.max(size, 1), MAX_SIZE);
         int pageNumber = page == null ? 0 : Math.max(page, 0);
-        return repository.search(start, end, emptyToNull(kinds), statusFilter, flowId, likePattern(query),
-                PageRequest.of(pageNumber, pageSize)).map(this::toDto);
+        Page<SystemLogEntry> result = repository.search(window.start(), window.end(), emptyToNull(kinds),
+                statusFilter, flowId, likePattern(query), PageRequest.of(pageNumber, pageSize));
+        return new SystemLogPageDto(result.getContent().stream().map(this::toDto).toList(),
+                result.getTotalElements(), pageNumber, pageSize);
     }
 
     public List<SystemLogEntryDto> run(String runId) {
@@ -67,9 +79,8 @@ public class SystemLogQueryService {
     }
 
     public List<FlowRef> flows(LocalDateTime from, LocalDateTime to) {
-        LocalDateTime end = to != null ? to : LocalDateTime.now(clock);
-        LocalDateTime start = from != null ? from : end.minus(DEFAULT_WINDOW);
-        return repository.findDistinctFlowIds(start, end).stream()
+        Window window = window(from, to);
+        return repository.findDistinctFlowIds(window.start(), window.end()).stream()
                 .map(id -> new FlowRef(id, flowRunRecorder.flowName(id)))
                 .sorted(Comparator.comparing(FlowRef::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
@@ -87,13 +98,16 @@ public class SystemLogQueryService {
         return list == null || list.isEmpty() ? null : list;
     }
 
-    /** Kleingeschriebenes LIKE-Muster; Prozent, Unterstrich und Backslash der Eingabe sind woertlich gemeint. */
+    /**
+     * Kleingeschriebenes LIKE-Muster mit Escape-Zeichen {@code !} (kein Backslash: MariaDB wertet ihn schon
+     * im String-Literal aus). Ausrufezeichen, Prozent und Unterstrich der Eingabe sind woertlich gemeint.
+     */
     static String likePattern(String query) {
         if (query == null || query.isBlank()) {
             return null;
         }
-        String escaped = query.trim().toLowerCase()
-                .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        String escaped = query.trim().toLowerCase(Locale.ROOT)
+                .replace("!", "!!").replace("%", "!%").replace("_", "!_");
         return "%" + escaped + "%";
     }
 

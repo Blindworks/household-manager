@@ -48,15 +48,15 @@ public interface SystemLogEntryRepository extends JpaRepository<SystemLogEntry, 
             + " and (:byKind = false or e.kind in :kinds)"
             + " and (:byStatus = false or e.status in :statuses)"
             + " and (:flowId is null or e.flowId = :flowId)"
-            + " and (:pattern is null or lower(e.title) like :pattern escape '\\'"
-            + "   or lower(e.message) like :pattern escape '\\' or lower(e.source) like :pattern escape '\\')"
+            + " and (:pattern is null or lower(e.title) like :pattern escape '!'"
+            + "   or lower(e.message) like :pattern escape '!' or lower(e.source) like :pattern escape '!')"
             + " order by e.occurredAt desc, e.id desc",
             countQuery = "select count(e) from SystemLogEntry e where e.occurredAt >= :from and e.occurredAt <= :to"
             + " and (:byKind = false or e.kind in :kinds)"
             + " and (:byStatus = false or e.status in :statuses)"
             + " and (:flowId is null or e.flowId = :flowId)"
-            + " and (:pattern is null or lower(e.title) like :pattern escape '\\'"
-            + "   or lower(e.message) like :pattern escape '\\' or lower(e.source) like :pattern escape '\\')")
+            + " and (:pattern is null or lower(e.title) like :pattern escape '!'"
+            + "   or lower(e.message) like :pattern escape '!' or lower(e.source) like :pattern escape '!')")
     Page<SystemLogEntry> searchFiltered(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                                         @Param("byKind") boolean byKind, @Param("kinds") List<SystemLogKind> kinds,
                                         @Param("byStatus") boolean byStatus,
