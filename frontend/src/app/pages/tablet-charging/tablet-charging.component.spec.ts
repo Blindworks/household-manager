@@ -136,6 +136,50 @@ describe('TabletChargingComponent', () => {
     expect(rows.length).toBe(3);
   });
 
+  it('laedt die Ladepunkte einer angetippten Station bei jedem Refresh frisch nach', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'OCCUPIED', maxPowerKw: 300, occupiedSince: '2026-09-19T09:00:00',
+        minimumDuration: false }
+    ]));
+    component.select('other');
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'FREE', maxPowerKw: 300, minimumDuration: false }
+    ]));
+
+    component.reload();
+    fixture.detectChanges();
+
+    expect(chargingSpy.getChargePoints).toHaveBeenCalledTimes(2);
+    const rows = Array.from(host.querySelectorAll('.tablet-charging__point')).map(r => r.textContent ?? '');
+    const pointRow = rows.find(r => r.includes('300 kW'));
+    expect(pointRow).toContain('frei');
+    expect(pointRow).not.toContain('seit');
+  });
+
+  it('verwirft nachgeladene Ladepunkte, wenn das Nachladen beim Refresh scheitert', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'OCCUPIED', maxPowerKw: 300, occupiedSince: '2026-09-19T09:00:00',
+        minimumDuration: false }
+    ]));
+    component.select('other');
+    chargingSpy.getChargePoints.and.returnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+
+    component.reload();
+    fixture.detectChanges();
+
+    // Nur noch die beiden Ladepunkte des Favoriten - kein eingefrorener "belegt seit"-Stand.
+    expect(host.querySelectorAll('.tablet-charging__point').length).toBe(2);
+  });
+
+  it('laedt beim erneuten Antippen frisch nach', () => {
+    component.select('other');
+    component.select('other');
+
+    expect(chargingSpy.getChargePoints).toHaveBeenCalledTimes(2);
+  });
+
   it('laedt fuer einen Favoriten nichts nach - er bringt seine Ladepunkte mit', () => {
     component.select('fav');
 

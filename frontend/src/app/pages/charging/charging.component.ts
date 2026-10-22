@@ -34,7 +34,11 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
   private map?: L.Map;
   private markerLayer?: L.LayerGroup;
   private markers = new Map<string, L.Marker>();
-  /** Nachgeladene Ladepunkte je Station (die Umkreisliste liefert nur Zaehler). */
+  /**
+   * Nachgeladene Ladepunkte je Station (die Umkreisliste liefert nur Zaehler). Jeder Refresh
+   * und jedes erneute Antippen laedt sie frisch nach, ein Fehler verwirft den alten Stand -
+   * sonst stuende ein laengst freier Ladepunkt stundenlang als "belegt seit ..." da.
+   */
   private loadedChargePoints = new Map<string, ChargePoint[]>();
   private loadingChargePoints = new Set<string>();
   private viewInitialized = false;
@@ -89,13 +93,16 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
       this.map.panTo(marker.getLatLng(), { animate: true });
       marker.openPopup();
     }
-    this.ensureChargePoints(stationId);
+    this.loadChargePoints(stationId);
   }
 
-  private ensureChargePoints(stationId: string): void {
+  private loadChargePoints(stationId: string): void {
     const station = this.data?.stations.find(s => s.stationId === stationId);
-    if (!station || station.chargePoints || this.loadedChargePoints.has(stationId)
-      || this.loadingChargePoints.has(stationId)) {
+    if (!station || station.chargePoints) {
+      this.loadedChargePoints.delete(stationId);
+      return;
+    }
+    if (this.loadingChargePoints.has(stationId)) {
       return;
     }
     this.loadingChargePoints.add(stationId);
@@ -103,18 +110,28 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
       next: points => {
         this.loadingChargePoints.delete(stationId);
         this.loadedChargePoints.set(stationId, points);
-        const marker = this.markers.get(stationId);
-        const merged = this.stations.find(s => s.stationId === stationId);
-        if (marker && merged) {
-          marker.setPopupContent(stationPopupText(merged, this.now));
-          marker.setIcon(stationIcon(merged));
-        }
+        this.refreshMarker(stationId);
       },
       error: (err: HttpErrorResponse) => {
         this.loadingChargePoints.delete(stationId);
+        this.loadedChargePoints.delete(stationId);
+        this.refreshMarker(stationId);
         console.error('Ladepunkte konnten nicht geladen werden:', err);
       }
     });
+  }
+
+  private reloadChargePoints(): void {
+    [...this.loadedChargePoints.keys()].forEach(stationId => this.loadChargePoints(stationId));
+  }
+
+  private refreshMarker(stationId: string): void {
+    const marker = this.markers.get(stationId);
+    const merged = this.stations.find(s => s.stationId === stationId);
+    if (marker && merged) {
+      marker.setPopupContent(stationPopupText(merged, this.now));
+      marker.setIcon(stationIcon(merged));
+    }
   }
 
   refreshNow(): void {
@@ -198,6 +215,7 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.error = null;
     this.now = new Date();
     this.renderMap();
+    this.reloadChargePoints();
   }
 
   private renderMap(): void {
@@ -223,7 +241,7 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
     for (const station of this.stations) {
       const marker = L.marker([station.lat, station.lon], { icon: stationIcon(station) })
         .bindPopup(stationPopupText(station, this.now))
-        .on('click', () => this.ensureChargePoints(station.stationId))
+        .on('click', () => this.loadChargePoints(station.stationId))
         .addTo(this.markerLayer!);
       this.markers.set(station.stationId, marker);
     }

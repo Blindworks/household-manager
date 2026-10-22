@@ -42,8 +42,9 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   private markers = new Map<string, L.Marker>();
   /**
    * Nachgeladene Ladepunkte je Station: die Umkreisliste liefert nur Zaehler, Details kommen
-   * erst beim Antippen. Ein Eintrag ueberlebt den Refresh, bis die Station selbst Details
-   * mitbringt (Favorit) oder erneut angetippt wird.
+   * erst beim Antippen. Jeder Refresh und jedes erneute Antippen laedt sie frisch nach (das
+   * Backend haelt sie 60 s); scheitert das, faellt der Eintrag weg. Ein dauerhaft gehaltener
+   * Stand zeigte einen laengst freien Ladepunkt stundenlang als "belegt seit ..." an.
    */
   private loadedChargePoints = new Map<string, ChargePoint[]>();
   private loadingChargePoints = new Set<string>();
@@ -136,7 +137,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   select(stationId: string, options: { fromMap?: boolean } = {}): void {
     this.selectedStationId = stationId;
     this.applySelectionToMarkers();
-    this.ensureChargePoints(stationId);
+    this.loadChargePoints(stationId);
     const marker = this.markers.get(stationId);
     if (!marker || !this.map) {
       return;
@@ -161,13 +162,16 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   /**
-   * Laedt die Ladepunkte einer Station nach, wenn sie noch fehlen, und aktualisiert danach das
-   * Popup des Pins. Ein Fehler bleibt still - das Popup zeigt dann weiter die Kennzahlen.
+   * Laedt die Ladepunkte einer Station (neu) und aktualisiert danach das Popup des Pins. Ein
+   * Fehler bleibt still, verwirft aber den alten Stand - das Popup zeigt dann die Kennzahlen.
    */
-  private ensureChargePoints(stationId: string): void {
+  private loadChargePoints(stationId: string): void {
     const station = this.data?.stations.find(s => s.stationId === stationId);
-    if (!station || station.chargePoints || this.loadedChargePoints.has(stationId)
-      || this.loadingChargePoints.has(stationId)) {
+    if (!station || station.chargePoints) {
+      this.loadedChargePoints.delete(stationId);
+      return;
+    }
+    if (this.loadingChargePoints.has(stationId)) {
       return;
     }
     this.loadingChargePoints.add(stationId);
@@ -179,9 +183,15 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       },
       error: (err: HttpErrorResponse) => {
         this.loadingChargePoints.delete(stationId);
+        this.loadedChargePoints.delete(stationId);
+        this.refreshPopup(stationId);
         console.error('Ladepunkte konnten nicht geladen werden:', err);
       }
     });
+  }
+
+  private reloadChargePoints(): void {
+    [...this.loadedChargePoints.keys()].forEach(stationId => this.loadChargePoints(stationId));
   }
 
   private refreshPopup(stationId: string): void {
@@ -264,6 +274,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     this.error = null;
     this.now = new Date();
     this.renderMap();
+    this.reloadChargePoints();
   }
 
   /**

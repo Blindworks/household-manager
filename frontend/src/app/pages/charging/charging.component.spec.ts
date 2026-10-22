@@ -98,6 +98,26 @@ describe('ChargingComponent', () => {
     expect(rows.length).toBe(3);
   });
 
+  it('laedt die Ladepunkte einer geoeffneten Zeile bei jedem Refresh frisch nach', () => {
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'OCCUPIED', maxPowerKw: 300, occupiedSince: '2026-09-19T09:00:00',
+        minimumDuration: false }
+    ]));
+    component.showDetails('other');
+    chargingSpy.getChargePoints.and.returnValue(of([
+      { chargePointId: 'X1', status: 'FREE', maxPowerKw: 300, minimumDuration: false }
+    ]));
+    chargingSpy.refresh.and.returnValue(of(response));
+
+    component.refreshNow();
+    fixture.detectChanges();
+
+    expect(chargingSpy.getChargePoints).toHaveBeenCalledTimes(2);
+    const other = component.stations.find(s => s.stationId === 'other')!;
+    expect(other.chargePoints?.[0].status).toBe('FREE');
+    expect(other.free).toBe(1);
+  });
+
   it('der Stern favorisiert, ohne die Zeile zu oeffnen', () => {
     chargingSpy.addFavorite.and.returnValue(of(response));
     const star = (fixture.nativeElement as HTMLElement)
