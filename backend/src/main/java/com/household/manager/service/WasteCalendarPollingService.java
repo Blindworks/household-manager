@@ -7,6 +7,7 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.repository.WasteCollectionEventRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -47,6 +48,7 @@ public class WasteCalendarPollingService {
     private final EntityStateService entityStateService;
     private final TaskScheduler taskScheduler;
     private final Clock clock;
+    private final SystemJobMonitor jobMonitor;
 
     public WasteCalendarPollingService(WasteCalendarIcsClient icsClient,
                                        WasteCalendarIcsParser icsParser,
@@ -55,7 +57,8 @@ public class WasteCalendarPollingService {
                                        WasteCollectionSettingsService settingsService,
                                        EntityStateService entityStateService,
                                        TaskScheduler taskScheduler,
-                                       Clock clock) {
+                                       Clock clock,
+                                       SystemJobMonitor jobMonitor) {
         this.icsClient = icsClient;
         this.icsParser = icsParser;
         this.resyncService = resyncService;
@@ -64,6 +67,7 @@ public class WasteCalendarPollingService {
         this.entityStateService = entityStateService;
         this.taskScheduler = taskScheduler;
         this.clock = clock;
+        this.jobMonitor = jobMonitor;
     }
 
     private volatile LocalDateTime lastPollTime;
@@ -96,11 +100,13 @@ public class WasteCalendarPollingService {
     public void scheduledPoll() {
         if (!settingsService.isEnabled()) {
             log.debug("Muellabfuhr-Abruf uebersprungen: Feature ist deaktiviert");
+            jobMonitor.reportInactive("Müllabfuhr-Abruf deaktiviert");
             return;
         }
         String icsUrl = settingsService.getIcsUrl();
         if (icsUrl == null || icsUrl.isBlank()) {
             log.info("Muellabfuhr-Abruf uebersprungen: keine Kalender-URL hinterlegt");
+            jobMonitor.reportInactive("keine Kalender-URL hinterlegt");
             return;
         }
         if (!pollInProgress.compareAndSet(false, true)) {
@@ -138,6 +144,7 @@ public class WasteCalendarPollingService {
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Muellabfuhr-Kalender konnte nicht abgerufen werden", ex);
+            jobMonitor.reportFailure(lastError);
         }
     }
 

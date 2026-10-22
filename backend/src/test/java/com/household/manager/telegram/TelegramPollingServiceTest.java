@@ -1,5 +1,11 @@
 package com.household.manager.telegram;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
+import com.household.manager.systemlog.JobState;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.agent.AgentProposalService;
 import com.household.manager.agent.ProposalDecision;
 import com.household.manager.agent.ProposalStatus;
@@ -24,6 +30,8 @@ import static org.mockito.Mockito.*;
 class TelegramPollingServiceTest {
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private TelegramApiClient apiClient;
     @Mock
     private TelegramAgentService agentService;
@@ -36,7 +44,7 @@ class TelegramPollingServiceTest {
         AiProperties ai = new AiProperties();
         ai.setAnthropicApiKey("k");
         props.setAllowedChatIds(List.of(42L));
-        return new TelegramPollingService(props, ai, apiClient, agentService, proposalService);
+        return new TelegramPollingService(props, ai, apiClient, agentService, proposalService, jobMonitor);
     }
 
     private TelegramUpdate update(long chatId, String text) {
@@ -165,5 +173,56 @@ class TelegramPollingServiceTest {
         doThrow(new TelegramException("weg", null)).when(apiClient).answerCallbackQuery("cb1", "Erledigt");
 
         assertDoesNotThrow(() -> service().handleUpdate(callback(42L, "Benedikt", "agent:7:APPROVE")));
+    }
+
+    @Test
+    void notConfigured_recordsInactive() {
+        TelegramPollingService unconfigured = new TelegramPollingService(
+                new TelegramProperties(), new AiProperties(), apiClient, agentService, proposalService, jobMonitor);
+
+        unconfigured.start();
+
+        verify(jobMonitor).recordOutcome(eq(TelegramPollingService.JOB_KEY), eq(JobState.INACTIVE), any());
+    }
+
+    @Test
+    void getUpdatesFails_recordsFailing() {
+        TelegramProperties props = new TelegramProperties();
+        props.setBotToken("t");
+        props.setAllowedChatIds(List.of(42L));
+        props.setErrorBackoffMs(1);
+        AiProperties ai = new AiProperties();
+        ai.setAnthropicApiKey("k");
+        when(apiClient.getUpdates(anyLong(), anyInt())).thenThrow(new RuntimeException("Telegram weg"));
+        TelegramPollingService polling = new TelegramPollingService(
+                props, ai, apiClient, agentService, proposalService, jobMonitor);
+
+        polling.start();
+        try {
+            verify(jobMonitor, timeout(3000).atLeastOnce())
+                    .recordOutcome(eq(TelegramPollingService.JOB_KEY), eq(JobState.FAILING), eq("Telegram weg"));
+        } finally {
+            polling.stop();
+        }
+    }
+
+    @Test
+    void getUpdatesSucceeds_recordsOk() {
+        TelegramProperties props = new TelegramProperties();
+        props.setBotToken("t");
+        props.setAllowedChatIds(List.of(42L));
+        AiProperties ai = new AiProperties();
+        ai.setAnthropicApiKey("k");
+        when(apiClient.getUpdates(anyLong(), anyInt())).thenReturn(List.of());
+        TelegramPollingService polling = new TelegramPollingService(
+                props, ai, apiClient, agentService, proposalService, jobMonitor);
+
+        polling.start();
+        try {
+            verify(jobMonitor, timeout(3000).atLeastOnce())
+                    .recordOutcome(TelegramPollingService.JOB_KEY, JobState.OK, null);
+        } finally {
+            polling.stop();
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.meross.config.MerossElectricityPollingProperties;
 import com.household.manager.meross.dto.MerossElectricityReading;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,11 +31,13 @@ public class MerossElectricityPollingService {
     private final MerossElectricityPollingProperties properties;
     private final MerossDeviceService merossDeviceService;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     @Scheduled(fixedDelayString = "${meross.electricity.polling.interval-ms:60000}",
             initialDelayString = "${meross.electricity.polling.initial-delay-ms:20000}")
     public void poll() {
         if (!properties.isEnabled()) {
+            jobMonitor.reportInactive("Meross-Verbrauchs-Polling deaktiviert");
             return;
         }
         for (MerossElectricityReading reading : readAllQuietly()) {
@@ -49,6 +52,8 @@ public class MerossElectricityPollingService {
             // Bewusst kein 'unavailable'-Report: ein transienter Lesefehler soll keinen
             // Zustandsübergang erzeugen, sonst feuern flankengetriggerte Flows fehl.
             log.warn("Meross electricity poll failed: {}", ex.getMessage());
+            // Einzelne offline Steckdosen fängt der Service ab; hier scheitert nur Login/Geräteliste.
+            jobMonitor.reportFailure(ex.getMessage());
             return List.of();
         }
     }

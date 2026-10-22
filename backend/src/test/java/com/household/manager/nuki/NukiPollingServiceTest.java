@@ -1,5 +1,7 @@
 package com.household.manager.nuki;
 
+import static org.mockito.ArgumentMatchers.any;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
@@ -22,6 +24,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class NukiPollingServiceTest {
 
+    @Mock
+    private SystemJobMonitor jobMonitor;
     @Mock
     private NukiApiClient apiClient;
     @Mock
@@ -46,7 +50,7 @@ class NukiPollingServiceTest {
     void setUp() {
         properties = new NukiProperties();
         properties.setApiToken("token");
-        service = new NukiPollingService(properties, apiClient, mapper, entityStateService);
+        service = new NukiPollingService(properties, apiClient, mapper, entityStateService, jobMonitor);
     }
 
     @Test
@@ -113,5 +117,24 @@ class NukiPollingServiceTest {
 
         assertDoesNotThrow(() -> service.poll());
         verify(entityStateService).reportState(LOCK_UPDATE);
+    }
+
+    @Test
+    void poll_cloudError_reportsFailure() {
+        when(apiClient.listSmartlocks()).thenThrow(new NukiException("down", null));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure(any());
+        verify(jobMonitor, never()).reportInactive(any());
+    }
+
+    @Test
+    void poll_withoutToken_reportsInactive() {
+        properties.setApiToken("");
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(any());
     }
 }

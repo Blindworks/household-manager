@@ -3,6 +3,7 @@ package com.household.manager.blink;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.BlinkEntityMapper;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.vision.VisionProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ public class BlinkPollingService {
     private final BlinkSidecarClient client;
     private final BlinkEntityMapper mapper;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     /** Zuletzt erfolgreich gemeldete Updates; Basis für die unavailable-Markierung. */
     private volatile List<EntityStateUpdate> lastUpdates = List.of();
@@ -56,6 +58,7 @@ public class BlinkPollingService {
         // Flow, der darauf triggert. Soll je nur eines von beiden abschaltbar
         // sein, braucht es ein eigenes blink.enabled.
         if (!properties.isEnabled()) {
+            jobMonitor.reportInactive("Blink-Sidecar deaktiviert (vision.enabled=false)");
             return;
         }
         try {
@@ -64,6 +67,12 @@ public class BlinkPollingService {
             lastUpdates = List.copyOf(updates);
         } catch (Exception ex) {
             log.warn("Blink polling failed: {}", ex.getMessage());
+            // Der Sidecar meldet „nicht angemeldet“ als IllegalStateException - Dauerzustand, kein Ausfall.
+            if (ex instanceof IllegalStateException) {
+                jobMonitor.reportInactive("nicht bei Blink angemeldet");
+            } else {
+                jobMonitor.reportFailure(ex.getMessage());
+            }
             markUnavailable();
         }
     }

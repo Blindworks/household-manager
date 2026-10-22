@@ -10,6 +10,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.WeatherReadingRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,7 @@ public class WeatherPollingService {
     private final WeatherReadingRepository repository;
     private final TaskScheduler taskScheduler;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     @Value("${dwd.station-id}")
     private String stationId;
@@ -90,6 +92,7 @@ public class WeatherPollingService {
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Failed to poll DWD weather", ex);
+            jobMonitor.reportFailure(lastError);
         }
     }
 

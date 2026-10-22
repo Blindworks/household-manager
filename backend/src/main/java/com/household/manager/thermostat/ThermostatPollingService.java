@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.model.entity.Thermostat;
 import com.household.manager.repository.ThermostatRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.tapo.hub.TapoHubClient;
 import com.household.manager.tapo.hub.ThermostatReading;
 import lombok.RequiredArgsConstructor;
@@ -41,14 +42,30 @@ public class ThermostatPollingService {
     private final EntityStateService entityStateService;
     private final Clock clock;
     private final ObjectMapper objectMapper;
+    private final SystemJobMonitor jobMonitor;
 
     @Scheduled(fixedDelayString = "${thermostat.poll-interval-ms:60000}",
             initialDelayString = "${thermostat.initial-delay-ms:20000}")
     public void poll() {
         try {
-            groupByHub(repository.findByActiveTrue()).forEach(this::pollHubIsolated);
+            Map<String, List<Thermostat>> byHub = groupByHub(repository.findByActiveTrue());
+            if (byHub.isEmpty()) {
+                jobMonitor.reportInactive("kein Hub mit aktiven Thermostaten");
+                return;
+            }
+            int failedHubs = 0;
+            for (Map.Entry<String, List<Thermostat>> hub : byHub.entrySet()) {
+                if (!pollHubIsolated(hub.getKey(), hub.getValue())) {
+                    failedHubs++;
+                }
+            }
+            // Ein einzelner Hub ist kein Job-Ausfall - erst wenn keiner des Zyklus antwortet.
+            if (failedHubs == byHub.size()) {
+                jobMonitor.reportFailure("kein Hub erreichbar");
+            }
         } catch (Exception ex) {
             log.warn("Thermostat-Polling fehlgeschlagen: {}", ex.getMessage());
+            jobMonitor.reportFailure(ex.getMessage());
         }
     }
 
@@ -62,22 +79,24 @@ public class ThermostatPollingService {
         return byHub;
     }
 
-    private void pollHubIsolated(String hubIp, List<Thermostat> thermostats) {
+    /** @return {@code false}, wenn der Hub nicht lesbar war. */
+    private boolean pollHubIsolated(String hubIp, List<Thermostat> thermostats) {
         try {
-            pollHub(hubIp, thermostats);
+            return pollHub(hubIp, thermostats);
         } catch (Exception ex) {
             log.warn("Polling des Hubs {} fehlgeschlagen: {}", hubIp, ex.getMessage());
+            return false;
         }
     }
 
-    private void pollHub(String hubIp, List<Thermostat> thermostats) {
+    private boolean pollHub(String hubIp, List<Thermostat> thermostats) {
         List<ThermostatReading> readings;
         try {
             readings = hubClient.readThermostats(hubIp);
         } catch (Exception ex) {
             log.warn("Hub {} nicht erreichbar, {} Thermostate unavailable: {}", hubIp, thermostats.size(), ex.getMessage());
             markHubUnavailable(thermostats);
-            return;
+            return false;
         }
         LocalDateTime now = LocalDateTime.now(clock);
         Map<Long, ThermostatReading> applied = cache.applyHubReadings(thermostats, readings, now);
@@ -88,6 +107,7 @@ public class ThermostatPollingService {
                 log.warn("Thermostat {} konnte nicht gespiegelt werden: {}", thermostat.getId(), ex.getMessage());
             }
         }
+        return true;
     }
 
     /** Historie zuerst: dieser Schritt kann nicht werfen, das Reporting steht in keinem eigenen try/catch. */

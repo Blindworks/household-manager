@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
@@ -26,11 +27,12 @@ import static org.mockito.Mockito.when;
  */
 class SmartDeviceStatePollingServiceTest {
 
+    private final SystemJobMonitor jobMonitor = mock(SystemJobMonitor.class);
     private final SmartDeviceRepository repository = mock(SmartDeviceRepository.class);
     private final SmartDeviceService smartDeviceService = mock(SmartDeviceService.class);
 
     private SmartDeviceStatePollingService service(boolean enabled) {
-        return new SmartDeviceStatePollingService(repository, smartDeviceService, enabled);
+        return new SmartDeviceStatePollingService(repository, smartDeviceService, jobMonitor, enabled);
     }
 
     private static SmartDevice device(long id, DeviceType type) {
@@ -88,5 +90,34 @@ class SmartDeviceStatePollingServiceTest {
 
         verifyNoInteractions(repository);
         verify(smartDeviceService, never()).refreshDeviceState(anyLong());
+    }
+
+    @Test
+    void poll_allDevicesFail_reportsFailure() {
+        when(repository.findByDeviceTypeInOrderByDeviceNameAsc(List.of(DeviceType.KASA, DeviceType.TAPO)))
+                .thenReturn(List.of(device(21, DeviceType.TAPO), device(25, DeviceType.KASA)));
+        doThrow(new RuntimeException("weg")).when(smartDeviceService).refreshDeviceState(anyLong());
+
+        service(true).poll();
+
+        verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void poll_oneDeviceFails_doesNotReportFailure() {
+        when(repository.findByDeviceTypeInOrderByDeviceNameAsc(List.of(DeviceType.KASA, DeviceType.TAPO)))
+                .thenReturn(List.of(device(21, DeviceType.TAPO), device(25, DeviceType.KASA)));
+        doThrow(new RuntimeException("weg")).when(smartDeviceService).refreshDeviceState(25L);
+
+        service(true).poll();
+
+        verify(jobMonitor, never()).reportFailure(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void poll_disabled_reportsInactive() {
+        service(false).poll();
+
+        verify(jobMonitor).reportInactive(org.mockito.ArgumentMatchers.anyString());
     }
 }

@@ -1,5 +1,6 @@
 package com.household.manager.network;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
@@ -42,6 +43,8 @@ class NetworkSpeedtestServiceTest {
     private static final Duration BUDGET = Duration.ofSeconds(10);
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private SpeedtestClient speedtestClient;
     @Mock
     private NetworkSpeedtestResultRepository repository;
@@ -73,7 +76,7 @@ class NetworkSpeedtestServiceTest {
             }
         };
         service = new NetworkSpeedtestService(
-                speedtestClient, repository, connectivityRepository, entityStateService, clock, 10);
+                speedtestClient, repository, connectivityRepository, entityStateService, clock, jobMonitor, 10);
         // Standardfall: online, sofern nicht ueberschrieben.
         NetworkConnectivitySample online = NetworkConnectivitySample.builder().online(true).build();
         when(connectivityRepository.findTopByOrderBySampledAtDesc()).thenReturn(Optional.of(online));
@@ -251,5 +254,25 @@ class NetworkSpeedtestServiceTest {
         when(speedtestClient.measureUploadMbps(BUDGET)).thenThrow(new RuntimeException("boom"));
 
         assertDoesNotThrow(() -> service.runScheduled());
+    }
+
+    @Test
+    void scheduledRun_bothDirectionsFail_reportsFailure() throws Exception {
+        when(speedtestClient.measureDownloadMbps(BUDGET)).thenThrow(new java.io.IOException("down"));
+        when(speedtestClient.measureUploadMbps(BUDGET)).thenThrow(new java.io.IOException("up"));
+
+        service.runScheduled();
+
+        verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.contains("Download"));
+    }
+
+    @Test
+    void scheduledRun_success_reportsNoFailure() throws Exception {
+        when(speedtestClient.measureDownloadMbps(BUDGET)).thenReturn(new BigDecimal("100"));
+        when(speedtestClient.measureUploadMbps(BUDGET)).thenReturn(new BigDecimal("50"));
+
+        service.runScheduled();
+
+        verifyNoInteractions(jobMonitor);
     }
 }

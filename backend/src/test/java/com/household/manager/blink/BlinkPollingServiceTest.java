@@ -1,5 +1,7 @@
 package com.household.manager.blink;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.blink.BlinkSidecarClient.SidecarCamera;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
@@ -16,6 +18,7 @@ import static org.mockito.Mockito.*;
 
 class BlinkPollingServiceTest {
 
+    private final SystemJobMonitor jobMonitor = mock(SystemJobMonitor.class);
     private final BlinkSidecarClient client = mock(BlinkSidecarClient.class);
     private final EntityStateService entityStateService = mock(EntityStateService.class);
     private final VisionProperties properties = new VisionProperties();
@@ -26,7 +29,7 @@ class BlinkPollingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new BlinkPollingService(properties, client, new BlinkEntityMapper(), entityStateService);
+        service = new BlinkPollingService(properties, client, new BlinkEntityMapper(), entityStateService, jobMonitor);
     }
 
     @Test
@@ -87,5 +90,33 @@ class BlinkPollingServiceTest {
         service.poll();
         // kein Throw = bestanden; ohne vorherige Updates gibt es nichts zu markieren
         verifyNoInteractions(entityStateService);
+    }
+
+    @Test
+    void poll_notLoggedIn_reportsInactive() {
+        when(client.listCameras(anyBoolean())).thenThrow(new IllegalStateException("Nicht bei Blink angemeldet"));
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(anyString());
+        verify(jobMonitor, never()).reportFailure(anyString());
+    }
+
+    @Test
+    void poll_sidecarError_reportsFailure() {
+        when(client.listCameras(anyBoolean())).thenThrow(new RuntimeException("Sidecar down"));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure(anyString());
+    }
+
+    @Test
+    void poll_disabled_reportsInactive() {
+        properties.setEnabled(false);
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(anyString());
     }
 }

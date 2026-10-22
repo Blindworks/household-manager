@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.dto.WeatherConditions;
 import com.household.manager.dto.WeatherOverviewResponse;
 import com.household.manager.entitystate.EntityStateService;
@@ -28,6 +29,7 @@ class WeatherPollingServiceTest {
 
     private static final LocalDateTime HOUR = LocalDateTime.of(2026, 10, 14, 8, 0);
 
+    @Mock private SystemJobMonitor jobMonitor;
     @Mock private DwdWeatherService dwdWeatherService;
     @Mock private WeatherReadingRepository repository;
     @Mock private TaskScheduler taskScheduler;
@@ -82,5 +84,14 @@ class WeatherPollingServiceTest {
                         .humidity(85)
                         .build())
                 .build();
+    }
+
+    @Test
+    void poll_dwdError_reportsFailure() {
+        when(dwdWeatherService.getOverview()).thenThrow(new RuntimeException("DWD weg"));
+
+        service.scheduledPoll();
+
+        verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.contains("DWD weg"));
     }
 }

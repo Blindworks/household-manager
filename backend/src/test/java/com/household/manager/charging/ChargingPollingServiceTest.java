@@ -1,5 +1,6 @@
 package com.household.manager.charging;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.ChargingEntityMapper;
@@ -32,6 +33,8 @@ class ChargingPollingServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-19T10:00:00Z");
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private ChargingStationSource source;
     @Mock
     private ChargingSettingsService settingsService;
@@ -59,7 +62,7 @@ class ChargingPollingServiceTest {
         properties = new ChargingProperties();
         snapshot = new ChargingSnapshot();
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
-                snapshot, new ChargingEntityMapper(), entityStateService, Clock.fixed(NOW, ZoneOffset.UTC));
+                snapshot, new ChargingEntityMapper(), entityStateService, Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor);
         // lenient: nicht jeder Test (z. B. die reinen Favoriten-Tests) fragt settingsService ab.
         org.mockito.Mockito.lenient().when(settingsService.getSettings())
                 .thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
@@ -196,5 +199,57 @@ class ChargingPollingServiceTest {
         when(source.searchArea(any(), anyDouble())).thenThrow(new ChargingSourceException("weg"));
 
         assertThatThrownBy(() -> service.refreshNow()).isInstanceOf(ChargingSourceException.class);
+    }
+
+    @Test
+    void poll_withoutApiKey_reportsInactive() {
+        service.scheduledArea();
+        service.scheduledFavorites();
+
+        verify(jobMonitor, times(2)).reportInactive(any());
+        verify(source, never()).searchArea(any(), anyDouble());
+    }
+
+    @Test
+    void poll_withoutHome_reportsInactive() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(null, null, 10.0, 50.0));
+
+        service.pollArea();
+
+        verify(jobMonitor).reportInactive(any());
+    }
+
+    @Test
+    void poll_sourceError_reportsFailure() {
+        properties.getEnbw().setApiKey("key");
+        when(source.searchArea(any(), anyDouble())).thenThrow(new ChargingSourceException("401"));
+
+        service.scheduledArea();
+
+        verify(jobMonitor).reportFailure(any());
+        verify(jobMonitor, never()).reportInactive(any());
+    }
+
+    @Test
+    void poll_allFavoritesFail_reportsFailure() {
+        properties.getEnbw().setApiKey("key");
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1"), favorite("S2")));
+        when(source.stationDetails(any())).thenThrow(new ChargingSourceException("502"));
+
+        service.scheduledFavorites();
+
+        verify(jobMonitor).reportFailure(any());
+    }
+
+    @Test
+    void poll_oneFavoriteFails_doesNotReportFailure() {
+        properties.getEnbw().setApiKey("key");
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1"), favorite("S2")));
+        when(source.stationDetails("S1")).thenThrow(new ChargingSourceException("502"));
+        when(source.stationDetails("S2")).thenReturn(details("S2", ChargePointStatus.FREE));
+
+        service.scheduledFavorites();
+
+        verify(jobMonitor, never()).reportFailure(any());
     }
 }

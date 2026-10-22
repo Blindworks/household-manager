@@ -3,6 +3,8 @@ package com.household.manager.telegram;
 import com.household.manager.agent.AgentProposalService;
 import com.household.manager.agent.ProposalStatus;
 import com.household.manager.ai.AiProperties;
+import com.household.manager.systemlog.JobState;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.telegram.dto.TelegramCallbackQuery;
 import com.household.manager.telegram.dto.TelegramUpdate;
 import jakarta.annotation.PreDestroy;
@@ -12,6 +14,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,12 +30,14 @@ import java.util.concurrent.Executors;
 public class TelegramPollingService {
 
     static final int CALLBACK_ANSWER_MAX = 190;
+    static final String JOB_KEY = "TelegramPollingService.poll";
 
     private final TelegramProperties properties;
     private final AiProperties aiProperties;
     private final TelegramApiClient apiClient;
     private final TelegramAgentService agentService;
     private final AgentProposalService proposalService;
+    private final SystemJobMonitor jobMonitor;
 
     private volatile boolean running;
     private ExecutorService executor;
@@ -42,6 +47,7 @@ public class TelegramPollingService {
     public void start() {
         if (!properties.isConfigured() || !aiProperties.isConfigured()) {
             log.info("Telegram-Assistent nicht konfiguriert (Token/Key/Chat-IDs fehlen) — Polling aus");
+            jobMonitor.recordOutcome(JOB_KEY, JobState.INACTIVE, "Telegram nicht konfiguriert");
             return;
         }
         running = true;
@@ -64,12 +70,20 @@ public class TelegramPollingService {
 
     private void pollLoop() {
         while (running) {
+            boolean fetched = false;
             try {
-                for (TelegramUpdate update : apiClient.getUpdates(nextOffset, properties.getPollTimeoutSeconds())) {
+                List<TelegramUpdate> updates = apiClient.getUpdates(nextOffset, properties.getPollTimeoutSeconds());
+                fetched = true;
+                jobMonitor.recordOutcome(JOB_KEY, JobState.OK, null);
+                for (TelegramUpdate update : updates) {
                     nextOffset = update.updateId() + 1;
                     handleUpdate(update);
                 }
             } catch (Exception ex) {
+                // Nur ein gescheitertes getUpdates ist eine Störung der Anbindung, kein Fehler in handleUpdate.
+                if (!fetched) {
+                    jobMonitor.recordOutcome(JOB_KEY, JobState.FAILING, ex.getMessage());
+                }
                 log.warn("Telegram-Polling gestört, warte {} ms: {}",
                         properties.getErrorBackoffMs(), ex.getMessage());
                 sleepBackoff();

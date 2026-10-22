@@ -1,5 +1,6 @@
 package com.household.manager.meross.service;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.meross.config.MerossElectricityPollingProperties;
@@ -28,6 +29,8 @@ class MerossElectricityPollingServiceTest {
     private static final String SECOND_DEVICE_ID = "aabbccddeeff00112233445566778899";
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private MerossDeviceService merossDeviceService;
     @Mock
     private EntityStateService entityStateService;
@@ -38,7 +41,7 @@ class MerossElectricityPollingServiceTest {
     @BeforeEach
     void setUp() {
         properties = new MerossElectricityPollingProperties();
-        service = new MerossElectricityPollingService(properties, merossDeviceService, entityStateService);
+        service = new MerossElectricityPollingService(properties, merossDeviceService, entityStateService, jobMonitor);
     }
 
     private MerossElectricityReading reading(String deviceId, String name, String watts) {
@@ -103,5 +106,35 @@ class MerossElectricityPollingServiceTest {
         service.poll();
 
         verifyNoInteractions(merossDeviceService, entityStateService);
+    }
+
+    @Test
+    void poll_loginFails_reportsFailure() {
+        when(merossDeviceService.readElectricityOfAllPlugs())
+                .thenThrow(new MerossException("Login fehlgeschlagen"));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.contains("Login"));
+    }
+
+    @Test
+    void poll_oneDeviceFails_doesNotReportFailure() {
+        // Der Service liefert nur die lesbaren Steckdosen; eine offline gegangene fehlt in der Liste.
+        when(merossDeviceService.readElectricityOfAllPlugs())
+                .thenReturn(List.of(reading(DEVICE_ID, "Waschmaschine", "5.0")));
+
+        service.poll();
+
+        verifyNoInteractions(jobMonitor);
+    }
+
+    @Test
+    void poll_disabled_reportsInactive() {
+        properties.setEnabled(false);
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(org.mockito.ArgumentMatchers.anyString());
     }
 }

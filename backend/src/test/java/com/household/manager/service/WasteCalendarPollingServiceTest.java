@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntityIds;
 import com.household.manager.entitystate.EntitySource;
@@ -36,6 +37,8 @@ class WasteCalendarPollingServiceTest {
             Clock.fixed(Instant.parse("2026-07-16T08:00:00Z"), ZoneId.of("Europe/Berlin"));
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private WasteCalendarIcsClient icsClient;
     @Mock
     private WasteCalendarIcsParser icsParser;
@@ -56,7 +59,7 @@ class WasteCalendarPollingServiceTest {
     void setUp() {
         service = new WasteCalendarPollingService(
                 icsClient, icsParser, resyncService, repository, settingsService,
-                entityStateService, taskScheduler, CLOCK);
+                entityStateService, taskScheduler, CLOCK, jobMonitor);
     }
 
     @Test
@@ -165,5 +168,35 @@ class WasteCalendarPollingServiceTest {
         service.scheduledPoll();
 
         verify(icsClient, times(1)).fetch(anyString());
+    }
+
+    @Test
+    void poll_disabled_reportsInactive() {
+        when(settingsService.isEnabled()).thenReturn(false);
+
+        service.scheduledPoll();
+
+        verify(jobMonitor).reportInactive(anyString());
+    }
+
+    @Test
+    void poll_withoutUrl_reportsInactive() {
+        when(settingsService.isEnabled()).thenReturn(true);
+        when(settingsService.getIcsUrl()).thenReturn("");
+
+        service.scheduledPoll();
+
+        verify(jobMonitor).reportInactive(anyString());
+    }
+
+    @Test
+    void poll_fetchFails_reportsFailure() {
+        when(settingsService.isEnabled()).thenReturn(true);
+        when(settingsService.getIcsUrl()).thenReturn("https://x/cal.ics");
+        when(icsClient.fetch(anyString())).thenThrow(new WasteCalendarException("nicht erreichbar"));
+
+        service.scheduledPoll();
+
+        verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.contains("nicht erreichbar"));
     }
 }

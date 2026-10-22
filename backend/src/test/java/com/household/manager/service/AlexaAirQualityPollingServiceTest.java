@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.alexa.AlexaException;
 import com.household.manager.alexa.AlexaSidecarClient;
 import com.household.manager.alexa.AlexaSidecarClient.SidecarAirQualityState;
@@ -29,6 +30,8 @@ import static org.mockito.Mockito.when;
 class AlexaAirQualityPollingServiceTest {
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private AlexaSidecarClient sidecarClient;
     @Mock
     private AlexaAirQualityReadingRepository repository;
@@ -42,7 +45,7 @@ class AlexaAirQualityPollingServiceTest {
     @BeforeEach
     void setUp() {
         service = new AlexaAirQualityPollingService(
-                sidecarClient, repository, taskScheduler, entityStateService);
+                sidecarClient, repository, taskScheduler, entityStateService, jobMonitor);
     }
 
     private SidecarAirQualityState wohnzimmerState() {
@@ -120,5 +123,14 @@ class AlexaAirQualityPollingServiceTest {
 
         verify(repository, atLeastOnce()).save(any());
         assertThat(service.getStatus().getLastError()).isNull();
+    }
+
+    @Test
+    void poll_sidecarError_reportsFailure() {
+        when(sidecarClient.getAirQualityStates()).thenThrow(new RuntimeException("Sidecar weg"));
+
+        service.scheduledPoll();
+
+        verify(jobMonitor).reportFailure(org.mockito.ArgumentMatchers.contains("Sidecar weg"));
     }
 }

@@ -9,6 +9,7 @@ import com.household.manager.model.entity.NetworkConnectivitySample;
 import com.household.manager.model.entity.NetworkSpeedtestResult;
 import com.household.manager.repository.NetworkConnectivitySampleRepository;
 import com.household.manager.repository.NetworkSpeedtestResultRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -46,6 +47,7 @@ public class NetworkSpeedtestService {
     private final EntityStateService entityStateService;
     private final Clock clock;
     private final Duration budget;
+    private final SystemJobMonitor jobMonitor;
 
     private final AtomicReference<Instant> lastManualRun = new AtomicReference<>();
 
@@ -59,12 +61,14 @@ public class NetworkSpeedtestService {
             NetworkConnectivitySampleRepository connectivityRepository,
             EntityStateService entityStateService,
             Clock clock,
+            SystemJobMonitor jobMonitor,
             @Value("${network.speedtest.budget-seconds:10}") int budgetSeconds) {
         this.speedtestClient = speedtestClient;
         this.repository = repository;
         this.connectivityRepository = connectivityRepository;
         this.entityStateService = entityStateService;
         this.clock = clock;
+        this.jobMonitor = jobMonitor;
         this.budget = Duration.ofSeconds(budgetSeconds);
     }
 
@@ -77,9 +81,13 @@ public class NetworkSpeedtestService {
                 log.debug("Speedtest uebersprungen - letzter Connectivity-Sample meldet offline");
                 return;
             }
-            runMeasurement();
+            NetworkSpeedtestResult result = runMeasurement();
+            if (!result.isSuccess()) {
+                jobMonitor.reportFailure(result.getErrorMessage());
+            }
         } catch (Exception e) {
             log.warn("Geplanter Speedtest fehlgeschlagen", e);
+            jobMonitor.reportFailure(e.getMessage());
         }
     }
 

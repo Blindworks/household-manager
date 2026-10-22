@@ -1,5 +1,6 @@
 package com.household.manager.tapo;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
@@ -33,6 +34,8 @@ class TapoPowerPollingServiceTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private SmartDeviceRepository smartDeviceRepository;
     @Mock
     private TapoDeviceService tapoDeviceService;
@@ -43,7 +46,7 @@ class TapoPowerPollingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TapoPowerPollingService(smartDeviceRepository, tapoDeviceService, entityStateService, true);
+        service = new TapoPowerPollingService(smartDeviceRepository, tapoDeviceService, entityStateService, jobMonitor, true);
     }
 
     private SmartDevice device(String id, String name, String model, boolean online, String ip) {
@@ -121,7 +124,7 @@ class TapoPowerPollingServiceTest {
 
     @Test
     void abgeschaltetTutNichts() {
-        new TapoPowerPollingService(smartDeviceRepository, tapoDeviceService, entityStateService, false).poll();
+        new TapoPowerPollingService(smartDeviceRepository, tapoDeviceService, entityStateService, jobMonitor, false).poll();
 
         verifyNoInteractions(smartDeviceRepository, tapoDeviceService, entityStateService);
     }
@@ -133,5 +136,48 @@ class TapoPowerPollingServiceTest {
         assertThat(TapoPowerPollingService.isMeteringModel("P100")).isFalse();
         assertThat(TapoPowerPollingService.isMeteringModel("L530")).isFalse();
         assertThat(TapoPowerPollingService.isMeteringModel(null)).isFalse();
+    }
+
+    @Test
+    void poll_allQueriesFail_reportsFailure() throws Exception {
+        when(smartDeviceRepository.findByDeviceTypeOrderByDeviceNameAsc(DeviceType.TAPO)).thenReturn(List.of(
+                device("a", "Router", "P110", true, "192.168.1.61"),
+                device("b", "Laufband", "P115", true, "192.168.1.62")));
+        when(tapoDeviceService.getCurrentPower(any(), any(), isNull())).thenThrow(new RuntimeException("timeout"));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure(any());
+    }
+
+    @Test
+    void poll_oneDeviceFails_doesNotReportFailure() throws Exception {
+        when(smartDeviceRepository.findByDeviceTypeOrderByDeviceNameAsc(DeviceType.TAPO)).thenReturn(List.of(
+                device("a", "Router", "P110", true, "192.168.1.61"),
+                device("b", "Laufband", "P115", true, "192.168.1.62")));
+        when(tapoDeviceService.getCurrentPower(eq("a"), any(), isNull())).thenThrow(new RuntimeException("timeout"));
+        when(tapoDeviceService.getCurrentPower(eq("b"), any(), isNull()))
+                .thenReturn(objectMapper.readTree("{\"current_power\": 3}"));
+
+        service.poll();
+
+        verify(jobMonitor, never()).reportFailure(any());
+    }
+
+    @Test
+    void poll_deviceListUnreadable_reportsFailure() {
+        when(smartDeviceRepository.findByDeviceTypeOrderByDeviceNameAsc(DeviceType.TAPO))
+                .thenThrow(new RuntimeException("DB weg"));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure(any());
+    }
+
+    @Test
+    void poll_disabled_reportsInactive() {
+        new TapoPowerPollingService(smartDeviceRepository, tapoDeviceService, entityStateService, jobMonitor, false).poll();
+
+        verify(jobMonitor).reportInactive(any());
     }
 }
