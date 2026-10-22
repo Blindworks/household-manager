@@ -99,7 +99,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         CalendarCategoryController.class, NukiController.class, TabletPresenceController.class,
         HouseholdUserController.class, SystemController.class, PetSupplyController.class,
         PushController.class, SmartDeviceController.class, ZigbeeController.class,
-        ZigbeeManagementController.class, AgentController.class, BleSensorController.class},
+        ZigbeeManagementController.class, AgentController.class, BleSensorController.class,
+        com.household.manager.systemlog.SystemLogController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
@@ -118,6 +119,8 @@ class SecurityRulesTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean
+    private com.household.manager.systemlog.SystemLogQueryService systemLogQueryService;
     @MockitoBean
     private AgentSettingsService agentSettingsService;
     @MockitoBean
@@ -401,6 +404,30 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/v1/ble-sensors/1").with(csrf())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void systemLog_entries_admin_ok() throws Exception {
+        mockMvc.perform(get("/v1/admin/system-log/entries")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void systemLog_entries_member_forbidden() throws Exception {
+        mockMvc.perform(get("/v1/admin/system-log/entries")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void systemLog_entries_kiosk_forbidden() throws Exception {
+        mockMvc.perform(get("/v1/admin/system-log/entries")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void systemLog_jobs_member_forbidden() throws Exception {
+        mockMvc.perform(get("/v1/admin/system-log/jobs")).andExpect(status().isForbidden());
     }
 
     @Test

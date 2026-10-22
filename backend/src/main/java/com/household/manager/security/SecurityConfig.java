@@ -176,7 +176,10 @@ public class SecurityConfig {
                                 // Bluetooth-Thermometer: die Liste traegt MACs fremder Geraete in Funkreichweite,
                                 // auch LESEN ist ADMIN. Methodenlos, beide Formen, VOR der generischen GET-Regel.
                                 "/v1/ble-sensors", "/v1/ble-sensors/**",
-                                "/v1/agent", "/v1/agent/**").hasRole("ADMIN")
+                                "/v1/agent", "/v1/agent/**",
+                                // Systemprotokoll: Fehlertexte und Flow-Details sind Admin-Daten, auch LESEN.
+                                // Methodenlos, VOR der generischen GET-Regel.
+                                "/v1/admin/system-log", "/v1/admin/system-log/**").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
