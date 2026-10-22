@@ -4,16 +4,19 @@ import com.household.manager.model.entity.SystemJobStatus;
 import com.household.manager.repository.SystemJobStatusRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -31,7 +34,7 @@ class SystemJobMonitorTest {
     };
     private final SystemJobStatusRepository repository = mock(SystemJobStatusRepository.class);
     private final SystemLogWriter writer = mock(SystemLogWriter.class);
-    private final SystemJobMonitor monitor = new SystemJobMonitor(repository, writer, clock);
+    private final SystemJobMonitor monitor = new SystemJobMonitor(repository, writer, clock, Runnable::run);
 
     @Test
     void okToFailing_writesErrorOnce() {
@@ -150,6 +153,50 @@ class SystemJobMonitorTest {
         verify(repository, times(3)).save(captor.capture());
         assertThat(captor.getValue().getState()).isEqualTo("FAILING");
         assertThat(captor.getValue().getLastMessage()).isEqualTo("kaputt");
+    }
+
+    @Test
+    void sideEffects_runOnExecutor_inDecisionOrder() {
+        List<Runnable> queued = new ArrayList<>();
+        SystemJobMonitor queuedMonitor = new SystemJobMonitor(repository, writer, clock, queued::add);
+
+        queuedMonitor.recordOutcome(KEY, JobState.FAILING, "kaputt");
+        now.set(now.get().plus(Duration.ofMinutes(3)));
+        queuedMonitor.recordOutcome(KEY, JobState.OK, null);
+
+        verifyNoInteractions(writer, repository);
+        queued.forEach(Runnable::run);
+        ArgumentCaptor<SystemLogEvent> events = ArgumentCaptor.forClass(SystemLogEvent.class);
+        ArgumentCaptor<SystemJobStatus> rows = ArgumentCaptor.forClass(SystemJobStatus.class);
+        InOrder order = inOrder(repository, writer);
+        order.verify(repository).findAll();
+        order.verify(writer).write(events.capture());
+        order.verify(repository).save(rows.capture());
+        order.verify(writer).write(events.capture());
+        order.verify(repository).save(rows.capture());
+        assertThat(events.getAllValues()).extracting(SystemLogEvent::status)
+                .containsExactly(SystemLogStatus.ERROR, SystemLogStatus.RECOVERED);
+        assertThat(rows.getAllValues()).extracting(SystemJobStatus::getState).containsExactly("FAILING", "OK");
+    }
+
+    @Test
+    void load_neverBlocksDecision_andOnlyFillsKeysNotSeenInMemory() {
+        SystemJobStatus storedSameKey = new SystemJobStatus();
+        storedSameKey.setJobKey(KEY);
+        storedSameKey.setState("OK");
+        SystemJobStatus storedOther = new SystemJobStatus();
+        storedOther.setJobKey("Other.job");
+        storedOther.setState("INACTIVE");
+        when(repository.findAll()).thenReturn(List.of(storedSameKey, storedOther));
+        List<Runnable> queued = new ArrayList<>();
+        SystemJobMonitor queuedMonitor = new SystemJobMonitor(repository, writer, clock, queued::add);
+
+        queuedMonitor.recordOutcome(KEY, JobState.FAILING, "kaputt");
+        queued.forEach(Runnable::run);
+
+        assertThat(queuedMonitor.statuses()).extracting(SystemJobMonitor.JobStatusView::jobKey,
+                SystemJobMonitor.JobStatusView::state)
+                .containsExactly(tuple(KEY, JobState.FAILING), tuple("Other.job", JobState.INACTIVE));
     }
 
     private SystemJobMonitor.JobStatusView view() {

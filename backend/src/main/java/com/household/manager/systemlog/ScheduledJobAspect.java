@@ -5,15 +5,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
  * Umschliesst jede {@code @Scheduled}-Methode und meldet den Ausgang an den {@link SystemJobMonitor}.
  * Darf das Verhalten des Jobs nie aendern: Rueckgabewert und Exception gehen unveraendert durch,
- * ein Fehler im Monitor selbst wird verschluckt.
+ * ein Fehler im Monitor selbst wird verschluckt (auch ein {@link Error}).
+ * <p>
+ * Hoechste Prioritaet, damit der Aspekt AUSSERHALB einer {@code @Transactional}-Grenze des Jobs liegt:
+ * ein gescheiterter Commit kommt so als Fehler des Jobs an, und der Monitor laeuft nie in dessen Transaktion.
  */
 @Aspect
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RequiredArgsConstructor
 @Slf4j
 public class ScheduledJobAspect {
@@ -41,7 +47,7 @@ public class ScheduledJobAspect {
             Object target = joinPoint.getTarget();
             Class<?> type = target != null ? target.getClass() : joinPoint.getSignature().getDeclaringType();
             return monitor.beginRun(jobKey(type, joinPoint.getSignature().getName()));
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             log.debug("Job-Monitor: Laufbeginn nicht erfasst", ex);
             return null;
         }
@@ -50,7 +56,7 @@ public class ScheduledJobAspect {
     private void exit(SystemJobMonitor.RunContext run, Throwable failure) {
         try {
             monitor.endRun(run, failure);
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             log.debug("Job-Monitor: Laufende nicht erfasst", ex);
         }
     }

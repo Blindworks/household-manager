@@ -11,13 +11,16 @@ import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ScheduledJobAspectTest {
 
     private final SystemJobMonitor monitor = new SystemJobMonitor(mock(SystemJobStatusRepository.class),
             mock(SystemLogWriter.class),
-            Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneId.of("Europe/Berlin")));
+            Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneId.of("Europe/Berlin")), Runnable::run);
 
     static class TestJob {
         SystemJobMonitor monitor;
@@ -130,5 +133,20 @@ class ScheduledJobAspectTest {
         job.run();
 
         assertThat(viewOf("CglibJob.run").state()).isEqualTo(JobState.OK);
+    }
+
+    @Test
+    void monitorThrowingError_neverChangesJobOutcome() {
+        SystemJobMonitor broken = mock(SystemJobMonitor.class);
+        when(broken.beginRun(any())).thenThrow(new AssertionError("monitor kaputt"));
+        doThrow(new AssertionError("monitor kaputt")).when(broken).endRun(any(), any());
+        TestJob target = new TestJob();
+        AspectJProxyFactory factory = new AspectJProxyFactory(target);
+        factory.setProxyTargetClass(true);
+        factory.addAspect(new ScheduledJobAspect(broken));
+        TestJob job = factory.getProxy();
+
+        assertThat(job.fine()).isEqualTo("ergebnis");
+        assertThatThrownBy(job::boom).isInstanceOf(IllegalStateException.class).hasMessage("Cloud weg");
     }
 }

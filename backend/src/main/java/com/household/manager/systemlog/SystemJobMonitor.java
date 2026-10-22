@@ -2,8 +2,9 @@ package com.household.manager.systemlog;
 
 import com.household.manager.model.entity.SystemJobStatus;
 import com.household.manager.repository.SystemJobStatusRepository;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -14,15 +15,24 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Statustafel der Hintergrund-Jobs. Protokolliert nur Uebergaenge OK -> FAILING ({@code ERROR}) und
  * FAILING -> OK ({@code RECOVERED}); ein dauerhaft gestoerter Job erzeugt also genau einen Eintrag statt
  * einen je Lauf. INACTIVE (z. B. „nicht konfiguriert“) erzeugt nie einen Eintrag. Wirft nie.
+ * <p>
+ * Entschieden wird im Speicher ({@code compute}), Laden, Speichern und Protokollieren laufen auf einem
+ * eigenen Ein-Thread-Executor: nie im Thread oder in der Transaktion eines Jobs (ein DB-Fehler des Monitors
+ * markierte sonst die Job-Transaktion rollback-only), und in Entscheidungsreihenfolge.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class SystemJobMonitor {
 
@@ -30,6 +40,8 @@ public class SystemJobMonitor {
     private static final Duration PERSIST_INTERVAL = Duration.ofMinutes(5);
     private static final Duration LOAD_RETRY = Duration.ofMinutes(1);
     private static final int MAX_MESSAGE = 2000;
+    private static final int QUEUE_CAPACITY = 1000;
+    private static final String THREAD_NAME = "system-job-monitor";
     private static final DateTimeFormatter SINCE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     public record JobStatusView(String jobKey, JobState state, LocalDateTime lastRunAt,
@@ -51,16 +63,39 @@ public class SystemJobMonitor {
 
     private record Entry(JobStatusView view, LocalDateTime persistedRunAt) { }
 
-    private record Transition(Entry before, Entry after, boolean persist) { }
-
     private final SystemJobStatusRepository repository;
     private final SystemLogWriter writer;
     private final Clock clock;
+    private final Executor executor;
 
     private final Map<String, Entry> board = new ConcurrentHashMap<>();
     private final ThreadLocal<RunContext> current = new ThreadLocal<>();
     private volatile boolean loaded;
-    private volatile LocalDateTime lastLoadAttempt;
+    private LocalDateTime lastLoadAttempt;
+
+    @Autowired
+    public SystemJobMonitor(SystemJobStatusRepository repository, SystemLogWriter writer, Clock clock) {
+        this(repository, writer, clock, newExecutor());
+    }
+
+    /** Mit eigenem Executor, z. B. synchron fuer Tests. */
+    SystemJobMonitor(SystemJobStatusRepository repository, SystemLogWriter writer, Clock clock, Executor executor) {
+        this.repository = repository;
+        this.writer = writer;
+        this.clock = clock;
+        this.executor = executor;
+    }
+
+    private static ExecutorService newExecutor() {
+        // Begrenzte Queue, ueberzaehlige Aufgaben werden verworfen: der Monitor darf nie einen Job aufhalten.
+        return new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(QUEUE_CAPACITY),
+                runnable -> {
+                    Thread thread = new Thread(runnable, THREAD_NAME);
+                    thread.setDaemon(true);
+                    return thread;
+                },
+                new ThreadPoolExecutor.DiscardPolicy());
+    }
 
     /** Meldet fuer den laufenden Job einen Fehler, ohne dass er eine Exception werfen muss. */
     public void reportFailure(String reason) {
@@ -114,19 +149,10 @@ public class SystemJobMonitor {
     /** Ausgang eines Laufs; auch fuer Jobs ohne {@code @Scheduled} (Telegram). Wirft nie. */
     public void recordOutcome(String jobKey, JobState state, String message) {
         try {
-            ensureLoaded();
+            scheduleLoadIfNeeded();
             LocalDateTime now = LocalDateTime.now(clock);
             String text = truncate(message);
-            Transition[] result = new Transition[1];
-            board.compute(jobKey, (key, before) -> {
-                Entry after = apply(key, before, state, text, now);
-                result[0] = new Transition(before, after, shouldPersist(before, after, now));
-                return result[0].persist() ? new Entry(after.view(), now) : after;
-            });
-            logTransition(result[0], now);
-            if (result[0].persist()) {
-                persist(result[0].after().view());
-            }
+            board.compute(jobKey, (key, before) -> decide(key, before, state, text, now));
         } catch (Exception ex) {
             log.debug("Job-Monitor: Ausgang von {} nicht erfasst", jobKey, ex);
         }
@@ -134,7 +160,7 @@ public class SystemJobMonitor {
 
     public List<JobStatusView> statuses() {
         try {
-            ensureLoaded();
+            scheduleLoadIfNeeded();
             return board.values().stream().map(Entry::view)
                     .sorted(Comparator.comparing(JobStatusView::jobKey)).toList();
         } catch (Exception ex) {
@@ -143,35 +169,50 @@ public class SystemJobMonitor {
         }
     }
 
-    private Entry apply(String key, Entry before, JobState state, String message, LocalDateTime now) {
+    /**
+     * Laeuft unter {@code compute}: entscheidet den Uebergang und reiht Protokolleintrag und Speichern
+     * mit unveraenderlichem Schnappschuss ein - innerhalb von {@code compute}, damit zwei Laeufe desselben
+     * Jobs in Entscheidungsreihenfolge landen. Das Einreihen blockiert nie.
+     */
+    private Entry decide(String key, Entry before, JobState state, String message, LocalDateTime now) {
         JobStatusView old = before != null ? before.view() : null;
-        boolean wasFailing = old != null && old.state() == JobState.FAILING;
+        JobState from = old != null ? old.state() : null;
+        boolean wasFailing = from == JobState.FAILING;
         LocalDateTime failingSince = state != JobState.FAILING ? null
                 : wasFailing && old.failingSince() != null ? old.failingSince() : now;
         JobStatusView view = new JobStatusView(key, state, now,
                 state == JobState.OK ? now : old != null ? old.lastSuccessAt() : null,
                 state == JobState.FAILING ? now : old != null ? old.lastFailureAt() : null,
                 failingSince, message);
-        return new Entry(view, before != null ? before.persistedRunAt() : null);
-    }
 
-    private static boolean shouldPersist(Entry before, Entry after, LocalDateTime now) {
-        if (before == null || before.view().state() != after.view().state()) {
-            return true;
+        SystemLogEvent event = transitionEvent(view, from, old, now);
+        // Gilt als gespeichert, sobald es eingereiht ist: ein gescheitertes Speichern wird beim naechsten
+        // Zustandswechsel oder nach spaetestens 5 min mit dem dann aktuellen Stand nachgeholt.
+        boolean persist = before == null || from != state || before.persistedRunAt() == null
+                || !before.persistedRunAt().plus(PERSIST_INTERVAL).isAfter(now);
+        if (event != null || persist) {
+            submit(() -> {
+                if (event != null) {
+                    writer.write(event);
+                }
+                if (persist) {
+                    persist(view);
+                }
+            });
         }
-        LocalDateTime persisted = before.persistedRunAt();
-        return persisted == null || !persisted.plus(PERSIST_INTERVAL).isAfter(now);
+        return new Entry(view, persist ? now : before.persistedRunAt());
     }
 
-    private void logTransition(Transition transition, LocalDateTime now) {
-        JobState from = transition.before() != null ? transition.before().view().state() : null;
-        JobStatusView to = transition.after().view();
+    private static SystemLogEvent transitionEvent(JobStatusView to, JobState from, JobStatusView old,
+                                                  LocalDateTime now) {
         if (to.state() == JobState.FAILING && from != JobState.FAILING) {
-            writer.write(event(to.jobKey(), SystemLogStatus.ERROR, to.jobKey() + " gestört", to.lastMessage(), now));
-        } else if (to.state() == JobState.OK && from == JobState.FAILING) {
-            writer.write(event(to.jobKey(), SystemLogStatus.RECOVERED, to.jobKey() + " wieder in Ordnung",
-                    recoveredMessage(transition.before().view().failingSince(), now), now));
+            return event(to.jobKey(), SystemLogStatus.ERROR, to.jobKey() + " gestört", to.lastMessage(), now);
         }
+        if (to.state() == JobState.OK && from == JobState.FAILING) {
+            return event(to.jobKey(), SystemLogStatus.RECOVERED, to.jobKey() + " wieder in Ordnung",
+                    recoveredMessage(old.failingSince(), now), now);
+        }
+        return null;
     }
 
     private static String recoveredMessage(LocalDateTime failingSince, LocalDateTime now) {
@@ -205,11 +246,12 @@ public class SystemJobMonitor {
     }
 
     /**
-     * Laedt die gespeicherte Tafel beim ersten Gebrauch, damit ein nach dem Neustart weiter gestoerter
-     * Job nicht erneut als „gestört“ protokolliert wird. Scheitert die DB, wird hoechstens minuetlich
-     * erneut versucht; bereits im Speicher stehende Eintraege sind frischer und gewinnen.
+     * Reiht das Laden der gespeicherten Tafel ein, damit ein nach dem Neustart weiter gestoerter Job nicht
+     * erneut als „gestört“ protokolliert wird. Kein Job wartet darauf: bis dahin wird mit dem Speicherstand
+     * entschieden, und bereits im Speicher stehende Jobs sind frischer und gewinnen. Scheitert die DB, wird
+     * hoechstens minuetlich erneut versucht.
      */
-    private void ensureLoaded() {
+    private void scheduleLoadIfNeeded() {
         if (loaded) {
             return;
         }
@@ -219,14 +261,18 @@ public class SystemJobMonitor {
                 return;
             }
             lastLoadAttempt = now;
-            try {
-                for (SystemJobStatus row : repository.findAll()) {
-                    toEntry(row).ifPresent(entry -> board.putIfAbsent(row.getJobKey(), entry));
-                }
-                loaded = true;
-            } catch (Exception ex) {
-                log.debug("Job-Monitor: gespeicherte Statustafel nicht lesbar", ex);
+        }
+        submit(this::load);
+    }
+
+    private void load() {
+        try {
+            for (SystemJobStatus row : repository.findAll()) {
+                toEntry(row).ifPresent(entry -> board.putIfAbsent(row.getJobKey(), entry));
             }
+            loaded = true;
+        } catch (Exception ex) {
+            log.debug("Job-Monitor: gespeicherte Statustafel nicht lesbar", ex);
         }
     }
 
@@ -239,6 +285,32 @@ public class SystemJobMonitor {
         } catch (Exception ex) {
             log.debug("Job-Monitor: unlesbare Zeile {} uebersprungen", row.getJobKey(), ex);
             return Optional.empty();
+        }
+    }
+
+    private void submit(Runnable task) {
+        try {
+            executor.execute(() -> {
+                try {
+                    task.run();
+                } catch (Exception ex) {
+                    log.debug("Job-Monitor: Hintergrundaufgabe fehlgeschlagen", ex);
+                }
+            });
+        } catch (Exception ex) {
+            log.debug("Job-Monitor: Hintergrundaufgabe nicht eingereiht", ex);
+        }
+    }
+
+    /** Wartet, bis alle bisher eingereihten Aufgaben erledigt sind (nur fuer Tests). */
+    void awaitIdleForTest() throws Exception {
+        CompletableFuture.runAsync(() -> { }, executor).get(5, TimeUnit.SECONDS);
+    }
+
+    @PreDestroy
+    void shutdown() {
+        if (executor instanceof ExecutorService service) {
+            service.shutdownNow();
         }
     }
 
