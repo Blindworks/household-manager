@@ -89,6 +89,18 @@ class FlowEngineRunTraceTest {
         }
     }
 
+    /** Setzt synchron (Runnable::run) einen zweiten Lauf an und meldet danach einen Fehler. */
+    private static class EmitThenReportHandler implements NodeHandler {
+        public String type() { return "emit-report"; }
+        public int outputPorts() { return 1; }
+        public List<String> validate(NodeConfig config) { return List.of(); }
+        public NodeResult handle(FlowMessage m, NodeConfig c, NodeContext ctx) {
+            ctx.emit(0, m);
+            ctx.reportFailure("nach Fortsetzung");
+            return NodeResult.none();
+        }
+    }
+
     private static class TestTriggerHandler implements TriggerNodeHandler {
         public String type() { return "test-trigger"; }
         public int outputPorts() { return 1; }
@@ -104,7 +116,7 @@ class FlowEngineRunTraceTest {
     @BeforeEach
     void setUp() {
         registry = new FlowRegistry(List.of(new ActionHandler(), new TestConditionHandler(), new TestGateHandler(),
-                new TestDeferringHandler(), new FailingHandler(), new ReportingHandler(), new TestTriggerHandler()));
+                new TestDeferringHandler(), new FailingHandler(), new ReportingHandler(), new EmitThenReportHandler(), new TestTriggerHandler()));
         engine = new FlowEngine(registry, Runnable::run, mock(TaskScheduler.class), new DebugBuffer(),
                 mock(FlowTriggerRecorder.class), runRecorder);
         registry.setEngine(engine);
@@ -379,6 +391,28 @@ class FlowEngineRunTraceTest {
         runFromTrigger();
 
         assertEquals(List.of("a"), received);
+        assertTrue(FlowRunTrace.currentRunId().isEmpty());
+    }
+
+    @Test
+    void nestedSynchronousRun_restoresOuterTrace() {
+        deploy("""
+                { "nodes": [
+                    { "id": "t", "type": "test-trigger", "config": {} },
+                    { "id": "er", "type": "emit-report", "config": {} },
+                    { "id": "a", "type": "action", "config": {} } ],
+                  "wires": [
+                    { "from": { "node": "t", "port": 0 }, "to": { "node": "er" } },
+                    { "from": { "node": "er", "port": 0 }, "to": { "node": "a" } } ] }
+                """);
+
+        runFromTrigger();
+
+        ArgumentCaptor<SystemLogStatus> status = ArgumentCaptor.forClass(SystemLogStatus.class);
+        verify(runRecorder, org.mockito.Mockito.times(2)).record(eq(1L), anyString(), status.capture(), anyList(),
+                anyBoolean(), anyBoolean());
+        // Erst endet die innere Fortsetzung (OK), danach der aeussere Lauf mit dem gemeldeten Fehler.
+        assertEquals(List.of(SystemLogStatus.OK, SystemLogStatus.ERROR), status.getAllValues());
         assertTrue(FlowRunTrace.currentRunId().isEmpty());
     }
 

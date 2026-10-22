@@ -79,12 +79,13 @@ public class FlowEngine {
             Object givenRunId = message.get(FlowRunTrace.RUN_ID_KEY);
             String runId = givenRunId != null ? givenRunId.toString() : UUID.randomUUID().toString();
             FlowRunTrace trace = FlowRunTrace.start(runId);
-
-            traverse(flowId, graph, startNode, nodeId, port, message.with(FlowRunTrace.RUN_ID_KEY, runId), trace);
-
-            recordRun(flowId, trace, continuation, Boolean.TRUE.equals(message.get(FlowRunTrace.INJECTED_KEY)));
+            try {
+                traverse(flowId, graph, startNode, nodeId, port, message.with(FlowRunTrace.RUN_ID_KEY, runId), trace);
+                recordRun(flowId, trace, continuation, Boolean.TRUE.equals(message.get(FlowRunTrace.INJECTED_KEY)));
+            } finally {
+                trace.end();
+            }
         } finally {
-            FlowRunTrace.clear();
             AuditActorContext.clear();
         }
     }

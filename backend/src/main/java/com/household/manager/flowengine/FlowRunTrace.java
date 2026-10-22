@@ -35,22 +35,30 @@ public final class FlowRunTrace {
     private static final ThreadLocal<FlowRunTrace> CURRENT = new ThreadLocal<>();
 
     private final String runId;
+    /** Trace eines umschliessenden Laufs auf demselben Thread (nur bei synchronem Executor, z. B. in Tests). */
+    private final FlowRunTrace outer;
     private final List<Step> steps = new ArrayList<>();
     /** Per reportFailure gemeldete Gruende je Node, bis die Engine den Step der Node abschliesst. */
     private final Map<String, String> reportedFailures = new HashMap<>();
 
-    private FlowRunTrace(String runId) {
+    private FlowRunTrace(String runId, FlowRunTrace outer) {
         this.runId = runId;
+        this.outer = outer;
     }
 
     static FlowRunTrace start(String runId) {
-        FlowRunTrace trace = new FlowRunTrace(runId);
+        FlowRunTrace trace = new FlowRunTrace(runId, CURRENT.get());
         CURRENT.set(trace);
         return trace;
     }
 
-    static void clear() {
-        CURRENT.remove();
+    /** Beendet diesen Trace; ein umschliessender Lauf bekommt seinen eigenen zurueck, sonst wird geleert. */
+    void end() {
+        if (outer != null) {
+            CURRENT.set(outer);
+        } else {
+            CURRENT.remove();
+        }
     }
 
     /** runId des auf diesem Thread laufenden Flow-Laufs. */
