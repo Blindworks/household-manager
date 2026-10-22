@@ -4,13 +4,17 @@ import ch.qos.logback.classic.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import java.time.Clock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 class SystemLogAppenderRegistrarTest {
 
-    private final SystemLogAppenderRegistrar registrar = new SystemLogAppenderRegistrar(mock(SystemLogWriter.class));
+    private final SystemLogAppenderRegistrar registrar =
+            new SystemLogAppenderRegistrar(mock(SystemLogWriter.class), Clock.systemDefaultZone());
 
     @AfterEach
     void tearDown() {
@@ -38,6 +42,22 @@ class SystemLogAppenderRegistrarTest {
         assertThat(count()).isEqualTo(before + 1);
 
         registrar.detach();
+        assertThat(count()).isEqualTo(before);
+    }
+
+    @Test
+    void attachesWhenBeanIsCreated_notOnlyAtApplicationReady_andDetachesOnClose() {
+        long before = count();
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.registerBean(SystemLogWriter.class, () -> mock(SystemLogWriter.class));
+        context.registerBean(Clock.class, Clock::systemDefaultZone);
+        context.registerBean(SystemLogAppenderRegistrar.class);
+
+        // refresh() ohne Spring Boot feuert kein ApplicationReadyEvent - angehaengt sein muss er trotzdem
+        context.refresh();
+        assertThat(count()).isEqualTo(before + 1);
+
+        context.close();
         assertThat(count()).isEqualTo(before);
     }
 }

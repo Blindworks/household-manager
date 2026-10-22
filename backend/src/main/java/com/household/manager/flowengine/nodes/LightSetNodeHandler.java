@@ -1,5 +1,6 @@
 package com.household.manager.flowengine.nodes;
 
+import com.household.manager.common.FailureReasons;
 import com.household.manager.dto.LightStateRequest;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
@@ -93,7 +94,7 @@ public class LightSetNodeHandler implements NodeHandler {
             smartDeviceService.setLightState(deviceId, request);
         } catch (Exception ex) {
             log.warn("Konnte Lichtwert fuer Geraet {} nicht setzen: {}", deviceId, ex.getMessage());
-            ctx.reportFailure("Licht " + deviceId + " nicht gesetzt: " + ex.getMessage());
+            ctx.reportFailure("Licht " + deviceId + " nicht gesetzt: " + FailureReasons.of(ex));
         }
         return NodeResult.single(message);
     }

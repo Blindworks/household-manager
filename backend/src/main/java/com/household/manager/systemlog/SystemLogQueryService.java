@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.household.manager.flowengine.FlowRunRecorder;
+import com.household.manager.model.entity.Flow;
 import com.household.manager.model.entity.SystemLogEntry;
+import com.household.manager.repository.FlowRepository;
 import com.household.manager.repository.SystemLogEntryRepository;
 import com.household.manager.systemlog.SystemJobMonitor.JobStatusView;
 import com.household.manager.systemlog.SystemLogDtos.FlowRef;
@@ -19,7 +21,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 /** Lesepfad des Systemprotokolls fuer die Admin-Seite. */
@@ -39,6 +43,7 @@ public class SystemLogQueryService {
     private final SystemLogEntryRepository repository;
     private final SystemJobMonitor jobMonitor;
     private final FlowRunRecorder flowRunRecorder;
+    private final FlowRepository flowRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -78,10 +83,20 @@ public class SystemLogQueryService {
                 .toList();
     }
 
+    /**
+     * Flows mit Eintraegen im Fenster plus alle aktiven Flows - sonst waere ein Flow, der noch nie
+     * ausgeloest hat, gar nicht waehlbar (genau den sucht man, wenn er nicht feuert).
+     */
     public List<FlowRef> flows(LocalDateTime from, LocalDateTime to) {
         Window window = window(from, to);
-        return repository.findDistinctFlowIds(window.start(), window.end()).stream()
-                .map(id -> new FlowRef(id, flowRunRecorder.flowName(id)))
+        Map<Long, FlowRef> byId = new LinkedHashMap<>();
+        for (Flow flow : flowRepository.findByEnabledTrue()) {
+            byId.put(flow.getId(), new FlowRef(flow.getId(), flow.getName()));
+        }
+        for (Long id : repository.findDistinctFlowIds(window.start(), window.end())) {
+            byId.computeIfAbsent(id, key -> new FlowRef(key, flowRunRecorder.flowName(key)));
+        }
+        return byId.values().stream()
                 .sorted(Comparator.comparing(FlowRef::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }

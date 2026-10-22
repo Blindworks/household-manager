@@ -44,7 +44,7 @@ public class MissedTriggerDetector {
 
     public void detectMissed() {
         try {
-            Instant lastAlive = heartbeat.lastAlive().orElse(null);
+            Instant lastAlive = heartbeat.lastAliveBeforeStart().orElse(null);
             if (lastAlive == null) {
                 return;
             }

@@ -3,6 +3,7 @@ package com.household.manager.push;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.common.DeliveryResult;
+import com.household.manager.common.FailureReasons;
 import com.household.manager.model.entity.PushSubscription;
 import com.household.manager.repository.PushSubscriptionRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class PushNotificationService {
             subscriptions = repository.findAll();
         } catch (Exception ex) {
             log.warn("Push-Subscriptions konnten nicht geladen werden: {}", ex.getMessage());
-            return DeliveryResult.failed("Push-Geräte nicht ladbar: " + ex.getMessage());
+            return DeliveryResult.failed("Push-Geräte nicht ladbar: " + FailureReasons.of(ex));
         }
         return send(subscriptions, title, body);
     }
@@ -47,7 +48,7 @@ public class PushNotificationService {
             subscriptions = repository.findByUserId(userId);
         } catch (Exception ex) {
             log.warn("Push-Subscriptions fuer Nutzer {} konnten nicht geladen werden: {}", userId, ex.getMessage());
-            return DeliveryResult.failed("Push-Geräte nicht ladbar: " + ex.getMessage());
+            return DeliveryResult.failed("Push-Geräte nicht ladbar: " + FailureReasons.of(ex));
         }
         if (subscriptions.isEmpty()) {
             log.warn("Keine Push-Subscriptions fuer Nutzer {} — Nachricht verworfen", userId);
@@ -66,7 +67,7 @@ public class PushNotificationService {
             payload = buildPayload(title, body);
         } catch (JsonProcessingException ex) {
             log.warn("Push-Payload nicht serialisierbar: {}", ex.getMessage());
-            return DeliveryResult.failed("Push-Payload nicht serialisierbar: " + ex.getMessage());
+            return DeliveryResult.failed("Push-Payload nicht serialisierbar: " + FailureReasons.of(ex));
         }
         DeliveryResult result = DeliveryResult.ok();
         for (PushSubscription subscription : subscriptions) {
@@ -100,7 +101,7 @@ public class PushNotificationService {
             return DeliveryResult.failed("Push-Versand unterbrochen");
         } catch (Exception ex) {
             log.warn("Push an '{}' fehlgeschlagen: {}", subscription.getDeviceLabel(), ex.toString());
-            return DeliveryResult.failed("Push an '" + subscription.getDeviceLabel() + "': " + ex.getMessage());
+            return DeliveryResult.failed("Push an '" + subscription.getDeviceLabel() + "': " + FailureReasons.of(ex));
         }
         return DeliveryResult.ok();
     }

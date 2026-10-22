@@ -76,7 +76,20 @@ class EntityEventLogListenerTest {
     void nullOldState_isLogged() {
         listener.onStateChanged(change(null, "on"));
 
-        assertThat(logged().message()).isEqualTo("null → on");
+        assertThat(logged().message()).isEqualTo("neu: on");
+    }
+
+    @Test
+    void occurredAt_isTakenFromTheEvents() {
+        LocalDateTime changedAt = LocalDateTime.of(2026, 10, 22, 7, 0, 1);
+        LocalDateTime firedAt = LocalDateTime.of(2026, 10, 22, 7, 0, 2);
+
+        listener.onStateChanged(new EntityStateChangedEvent("sensor.x", "off", "on", Map.of(), changedAt));
+        listener.onEventFired(new EntityEventFired("event.taster", "single", Map.of(), firedAt));
+
+        ArgumentCaptor<SystemLogEvent> captor = ArgumentCaptor.forClass(SystemLogEvent.class);
+        verify(writer, times(2)).write(captor.capture());
+        assertThat(captor.getAllValues()).extracting(SystemLogEvent::occurredAt).containsExactly(changedAt, firedAt);
     }
 
     @Test

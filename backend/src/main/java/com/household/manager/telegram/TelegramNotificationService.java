@@ -1,6 +1,7 @@
 package com.household.manager.telegram;
 
 import com.household.manager.common.DeliveryResult;
+import com.household.manager.common.FailureReasons;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class TelegramNotificationService {
             return DeliveryResult.ok();
         } catch (Exception ex) {
             log.warn("Telegram-Nachricht an Chat {} fehlgeschlagen: {}", chatId, ex.getMessage());
-            return DeliveryResult.failed("Telegram an Chat " + chatId + ": " + ex.getMessage());
+            return DeliveryResult.failed("Telegram an Chat " + chatId + ": " + FailureReasons.of(ex));
         }
     }
 }

@@ -70,7 +70,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void noHeartbeat_writesNothing() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.empty());
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.empty());
 
         detector.detectMissed();
 
@@ -80,7 +80,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void cronEveryHour_backendDown3h_writesThreeMissed() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.of(Instant.parse("2026-01-22T05:30:00Z"))); // 06:30 Berlin
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.of(Instant.parse("2026-01-22T05:30:00Z"))); // 06:30 Berlin
         when(flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull()).thenReturn(List.of(flow(1, "schedule-trigger")));
         when(registry.handler("schedule-trigger")).thenReturn(new ScheduleTriggerHandler(clock));
 
@@ -102,7 +102,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void downFor3Weeks_cappedAt7DaysAnd50PerFlow_plusSummary() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.of(NOW.minus(Duration.ofDays(21))));
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.of(NOW.minus(Duration.ofDays(21))));
         when(flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull()).thenReturn(List.of(flow(1, "schedule-trigger")));
         when(registry.handler("schedule-trigger")).thenReturn(new ScheduleTriggerHandler(clock));
 
@@ -122,7 +122,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void disabledFlow_isIgnored() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.of(NOW.minus(Duration.ofHours(3))));
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.of(NOW.minus(Duration.ofHours(3))));
         when(flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull()).thenReturn(List.of());
 
         detector.detectMissed();
@@ -132,7 +132,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void sunTrigger_usesOccurrencesBetween() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.of(NOW.minus(Duration.ofHours(3))));
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.of(NOW.minus(Duration.ofHours(3))));
         when(flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull()).thenReturn(List.of(flow(2, "sun-trigger")));
         TriggerNodeHandler sun = mock(TriggerNodeHandler.class);
         ZonedDateTime sunset = ZonedDateTime.of(2026, 1, 22, 8, 0, 0, 0, BERLIN);
@@ -148,7 +148,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void handlerThrows_otherFlowsStillChecked() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.of(Instant.parse("2026-01-22T05:30:00Z")));
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.of(Instant.parse("2026-01-22T05:30:00Z")));
         when(flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull())
                 .thenReturn(List.of(flow(1, "boom-trigger"), flow(2, "schedule-trigger")));
         TriggerNodeHandler boom = mock(TriggerNodeHandler.class);
@@ -163,7 +163,7 @@ class MissedTriggerDetectorTest {
 
     @Test
     void nonTriggerNodes_areIgnored() {
-        when(heartbeat.lastAlive()).thenReturn(Optional.of(NOW.minus(Duration.ofHours(3))));
+        when(heartbeat.lastAliveBeforeStart()).thenReturn(Optional.of(NOW.minus(Duration.ofHours(3))));
         when(flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull()).thenReturn(List.of(flow(1, "switch-device")));
         when(registry.handler("switch-device")).thenReturn(mock(NodeHandler.class));
 

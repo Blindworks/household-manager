@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -56,6 +57,16 @@ class TelegramNotificationServiceTest {
         service.sendTo(5L, "x");
 
         verifyNoInteractions(apiClient);
+    }
+
+    @Test
+    void sendTo_exceptionWithoutMessage_namesTheExceptionType() {
+        doThrow(new NullPointerException()).when(apiClient).sendMessage(1L, "x");
+        TelegramNotificationService service = new TelegramNotificationService(props(List.of(1L)), apiClient);
+
+        DeliveryResult result = service.sendTo(1L, "x");
+
+        assertEquals("Telegram an Chat 1: NullPointerException", result.failure());
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.household.manager.systemlog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.flowengine.FlowRunRecorder;
 import com.household.manager.model.entity.SystemLogEntry;
+import com.household.manager.model.entity.Flow;
+import com.household.manager.repository.FlowRepository;
 import com.household.manager.repository.SystemLogEntryRepository;
 import com.household.manager.systemlog.SystemJobMonitor.JobStatusView;
 import com.household.manager.systemlog.SystemLogDtos.SystemLogEntryDto;
@@ -24,6 +26,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -42,13 +45,15 @@ class SystemLogQueryServiceTest {
     private SystemJobMonitor jobMonitor;
     @Mock
     private FlowRunRecorder flowRunRecorder;
+    @Mock
+    private FlowRepository flowRepository;
 
     private SystemLogQueryService service;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(NOW.atZone(ZONE).toInstant(), ZONE);
-        service = new SystemLogQueryService(repository, jobMonitor, flowRunRecorder, new ObjectMapper(), clock);
+        service = new SystemLogQueryService(repository, jobMonitor, flowRunRecorder, flowRepository, new ObjectMapper(), clock);
     }
 
     private void stubEmptyPage() {
@@ -174,6 +179,18 @@ class SystemLogQueryServiceTest {
         when(flowRunRecorder.flowName(3L)).thenReturn("Zeta");
 
         assertThat(service.flows(null, null)).extracting(f -> f.name()).containsExactly("Alpha", "Zeta");
+    }
+
+    @Test
+    void flows_includeEnabledFlowsWithoutEntries_distinctAndSortedByName() {
+        when(repository.findDistinctFlowIds(any(), any())).thenReturn(List.of(7L, 3L));
+        when(flowRunRecorder.flowName(3L)).thenReturn("Zeta");
+        when(flowRepository.findByEnabledTrue()).thenReturn(List.of(
+                Flow.builder().id(7L).name("Alpha").enabled(true).build(),
+                Flow.builder().id(9L).name("Mitte, nie ausgelöst").enabled(true).build()));
+
+        assertThat(service.flows(null, null)).extracting(f -> f.id(), f -> f.name()).containsExactly(
+                tuple(7L, "Alpha"), tuple(9L, "Mitte, nie ausgelöst"), tuple(3L, "Zeta"));
     }
 
     private static SystemLogEntry entry(long id, String details) {

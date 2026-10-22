@@ -70,7 +70,7 @@ class ScheduledJobAspectContextTest {
     }
 
     @Test
-    void scheduledBean_isProxied_stillScheduled_andRecorded() {
+    void scheduledBean_isProxied_stillScheduled_andRecorded() throws Exception {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Config.class)) {
             InjectedJob job = context.getBean(InjectedJob.class);
             SystemJobMonitor monitor = context.getBean(SystemJobMonitor.class);
@@ -79,6 +79,8 @@ class ScheduledJobAspectContextTest {
             assertThat(context.getBean(ScheduledAnnotationBeanPostProcessor.class).getScheduledTasks()).hasSize(1);
 
             job.poll();
+            // Vor dem Laden der gespeicherten Tafel wird auf dem Monitor-Executor entschieden.
+            monitor.awaitIdleForTest();
 
             assertThat(monitor.statuses()).singleElement().satisfies(view -> {
                 assertThat(view.jobKey()).isEqualTo("InjectedJob.poll");

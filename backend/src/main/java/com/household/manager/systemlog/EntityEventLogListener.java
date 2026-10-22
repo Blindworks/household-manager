@@ -8,6 +8,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * Nimmt Zustandswechsel und Ereignisse der Entitaeten ins Systemprotokoll auf. Rein numerische Wechsel
@@ -29,7 +30,9 @@ public class EntityEventLogListener {
                 return;
             }
             SystemLogStatus status = UNAVAILABLE.equals(event.newState()) ? SystemLogStatus.WARN : SystemLogStatus.INFO;
-            writer.write(entry(event.entityId(), status, event.oldState() + " → " + event.newState()));
+            String message = event.oldState() == null ? "neu: " + event.newState()
+                    : event.oldState() + " → " + event.newState();
+            writer.write(entry(event.entityId(), status, message, event.timestamp()));
         } catch (Exception ex) {
             log.debug("Systemprotokoll: Zustandswechsel nicht protokolliert", ex);
         }
@@ -38,7 +41,7 @@ public class EntityEventLogListener {
     @EventListener
     public void onEventFired(EntityEventFired event) {
         try {
-            writer.write(entry(event.entityId(), SystemLogStatus.INFO, event.action()));
+            writer.write(entry(event.entityId(), SystemLogStatus.INFO, event.action(), event.timestamp()));
         } catch (Exception ex) {
             log.debug("Systemprotokoll: Entity-Ereignis nicht protokolliert", ex);
         }
@@ -60,8 +63,10 @@ public class EntityEventLogListener {
         }
     }
 
-    private static SystemLogEvent entry(String entityId, SystemLogStatus status, String message) {
-        return SystemLogEvent.builder().kind(SystemLogKind.ENTITY).status(status)
+    /** {@code occurredAt} null (Ereignis ohne Zeitstempel) setzt der Writer auf „jetzt“. */
+    private static SystemLogEvent entry(String entityId, SystemLogStatus status, String message,
+                                        LocalDateTime occurredAt) {
+        return SystemLogEvent.builder().occurredAt(occurredAt).kind(SystemLogKind.ENTITY).status(status)
                 .source(entityId).title(entityId).message(message).build();
     }
 }

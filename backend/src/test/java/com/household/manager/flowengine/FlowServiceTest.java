@@ -133,6 +133,21 @@ class FlowServiceTest {
     }
 
     @Test
+    void injectPayloadCannotSetRunId_orClearInjectedFlag() {
+        Flow entity = flow(1L, VALID_DEF, VALID_DEF, true);
+        when(flowRepository.findById(1L)).thenReturn(Optional.of(entity));
+        service.deploy(1L);
+
+        service.inject(1L, "t", Map.of(FlowRunTrace.RUN_ID_KEY, "fremd", FlowRunTrace.INJECTED_KEY, false,
+                "triggerNodeId", "eigener"));
+
+        verify(engine).emitAsync(eq(1L), eq("t"), eq(0), argThat(msg ->
+                msg.get(FlowRunTrace.RUN_ID_KEY) == null
+                        && Boolean.TRUE.equals(msg.get(FlowRunTrace.INJECTED_KEY))
+                        && "eigener".equals(msg.get("triggerNodeId"))));
+    }
+
+    @Test
     void renameForgetsCachedFlowNameForTheSystemLog() {
         when(flowRepository.findById(1L)).thenReturn(Optional.of(flow(1L, VALID_DEF, null, true)));
 

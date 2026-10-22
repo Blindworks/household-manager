@@ -11,7 +11,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -157,7 +158,7 @@ class SystemJobMonitorTest {
 
     @Test
     void sideEffects_runOnExecutor_inDecisionOrder() {
-        List<Runnable> queued = new ArrayList<>();
+        Deque<Runnable> queued = new ArrayDeque<>();
         SystemJobMonitor queuedMonitor = new SystemJobMonitor(repository, writer, clock, queued::add);
 
         queuedMonitor.recordOutcome(KEY, JobState.FAILING, "kaputt");
@@ -165,7 +166,7 @@ class SystemJobMonitorTest {
         queuedMonitor.recordOutcome(KEY, JobState.OK, null);
 
         verifyNoInteractions(writer, repository);
-        queued.forEach(Runnable::run);
+        drain(queued);
         ArgumentCaptor<SystemLogEvent> events = ArgumentCaptor.forClass(SystemLogEvent.class);
         ArgumentCaptor<SystemJobStatus> rows = ArgumentCaptor.forClass(SystemJobStatus.class);
         InOrder order = inOrder(repository, writer);
@@ -180,7 +181,7 @@ class SystemJobMonitorTest {
     }
 
     @Test
-    void load_neverBlocksDecision_andOnlyFillsKeysNotSeenInMemory() {
+    void load_neverBlocksCaller_andDecisionsBeforeLoadSeeStoredBoard() {
         SystemJobStatus storedSameKey = new SystemJobStatus();
         storedSameKey.setJobKey(KEY);
         storedSameKey.setState("OK");
@@ -188,15 +189,48 @@ class SystemJobMonitorTest {
         storedOther.setJobKey("Other.job");
         storedOther.setState("INACTIVE");
         when(repository.findAll()).thenReturn(List.of(storedSameKey, storedOther));
-        List<Runnable> queued = new ArrayList<>();
+        Deque<Runnable> queued = new ArrayDeque<>();
         SystemJobMonitor queuedMonitor = new SystemJobMonitor(repository, writer, clock, queued::add);
 
         queuedMonitor.recordOutcome(KEY, JobState.FAILING, "kaputt");
-        queued.forEach(Runnable::run);
+        drain(queued);
 
         assertThat(queuedMonitor.statuses()).extracting(SystemJobMonitor.JobStatusView::jobKey,
                 SystemJobMonitor.JobStatusView::state)
                 .containsExactly(tuple(KEY, JobState.FAILING), tuple("Other.job", JobState.INACTIVE));
+    }
+
+    @Test
+    void restart_firstRunsDecideBehindLoad_soStoredFailureIsKeptAndRecoveryReported() {
+        SystemJobStatus stored = new SystemJobStatus();
+        stored.setJobKey(KEY);
+        stored.setState("FAILING");
+        stored.setFailingSince(LocalDateTime.of(2026, 10, 22, 11, 0));
+        when(repository.findAll()).thenReturn(List.of(stored));
+        Deque<Runnable> queued = new ArrayDeque<>();
+        SystemJobMonitor queuedMonitor = new SystemJobMonitor(repository, writer, clock, queued::add);
+
+        queuedMonitor.recordOutcome(KEY, JobState.FAILING, "immer noch kaputt");
+        drain(queued);
+
+        verifyNoInteractions(writer);
+        ArgumentCaptor<SystemJobStatus> saved = ArgumentCaptor.forClass(SystemJobStatus.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getFailingSince()).isEqualTo(LocalDateTime.of(2026, 10, 22, 11, 0));
+
+        queuedMonitor.recordOutcome(KEY, JobState.OK, null);
+        drain(queued);
+
+        ArgumentCaptor<SystemLogEvent> events = ArgumentCaptor.forClass(SystemLogEvent.class);
+        verify(writer).write(events.capture());
+        assertThat(events.getValue().status()).isEqualTo(SystemLogStatus.RECOVERED);
+        assertThat(events.getValue().message()).isEqualTo("gestört seit 22.10.2026 11:00 (60 min)");
+    }
+
+    private static void drain(Deque<Runnable> queued) {
+        while (!queued.isEmpty()) {
+            queued.poll().run();
+        }
     }
 
     private SystemJobMonitor.JobStatusView view() {

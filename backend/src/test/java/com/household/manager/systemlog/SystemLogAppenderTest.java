@@ -9,7 +9,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,13 +22,15 @@ import static org.mockito.Mockito.*;
 
 class SystemLogAppenderTest {
 
+    private static final ZoneId ZONE = ZoneId.of("Europe/Berlin");
+
     private final SystemLogWriter writer = mock(SystemLogWriter.class);
     private final LoggerContext context = new LoggerContext();
     private SystemLogAppender appender;
 
     @BeforeEach
     void setUp() {
-        appender = new SystemLogAppender(writer);
+        appender = new SystemLogAppender(writer, Clock.system(ZONE));
         appender.setContext(context);
         appender.start();
     }
@@ -73,6 +79,40 @@ class SystemLogAppenderTest {
         assertThat(e.message()).hasSize(300);
         assertThat(e.detailsJson().split("\n")).hasSizeLessThanOrEqualTo(20);
         assertThat(e.detailsJson()).startsWith("java.lang.IllegalStateException: tief");
+    }
+
+    @Test
+    void nullMessage_getsDefaultTitleAndMessage() {
+        appender.doAppend(event("a.b.C", Level.WARN, null, new IllegalStateException()));
+
+        ArgumentCaptor<SystemLogEvent> captor = ArgumentCaptor.forClass(SystemLogEvent.class);
+        verify(writer).writeOrIncrement(captor.capture(), any());
+        assertThat(captor.getValue().title()).isEqualTo("(ohne Text)");
+        assertThat(captor.getValue().message()).isEqualTo("(ohne Text)");
+    }
+
+    @Test
+    void occurredAt_isEventTimestampInClockZone() {
+        LoggingEvent logged = event("a.b.C", Level.WARN, "x", null);
+        logged.setTimeStamp(Instant.parse("2026-10-22T08:15:30Z").toEpochMilli());
+
+        appender.doAppend(logged);
+
+        ArgumentCaptor<SystemLogEvent> captor = ArgumentCaptor.forClass(SystemLogEvent.class);
+        verify(writer).writeOrIncrement(captor.capture(), any());
+        assertThat(captor.getValue().occurredAt()).isEqualTo(LocalDateTime.of(2026, 10, 22, 10, 15, 30));
+    }
+
+    @Test
+    void flowEngineNodeFailureLine_isIgnored_becauseTheRunEntryCarriesTheError() {
+        appender.doAppend(event("com.household.manager.flowengine.FlowEngine", Level.WARN,
+                "Flow 1 node n1 failed, aborting branch: kaputt", null));
+        appender.doAppend(event("com.household.manager.flowengine.FlowEngineBootstrap", Level.ERROR,
+                "Flow 1 (X) konnte beim Start nicht geladen werden", null));
+
+        ArgumentCaptor<SystemLogEvent> captor = ArgumentCaptor.forClass(SystemLogEvent.class);
+        verify(writer, times(1)).writeOrIncrement(captor.capture(), any());
+        assertThat(captor.getValue().source()).isEqualTo("flowengine.FlowEngineBootstrap");
     }
 
     @Test

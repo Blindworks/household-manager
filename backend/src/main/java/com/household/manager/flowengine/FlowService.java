@@ -164,10 +164,13 @@ public class FlowService {
         Map<String, Object> values = new HashMap<>();
         values.put("timestamp", LocalDateTime.now());
         values.put("triggerNodeId", nodeId);
-        values.put(FlowRunTrace.INJECTED_KEY, true);
         if (payload != null) {
             values.putAll(payload);
         }
+        // Reservierte Schluessel nach dem Payload: ein Test-Lauf darf sich weder in einen fremden Lauf
+        // einhaengen (_runId) noch als echter Lauf ausgeben (_injected).
+        values.remove(FlowRunTrace.RUN_ID_KEY);
+        values.put(FlowRunTrace.INJECTED_KEY, true);
         engine.emitAsync(flowId, nodeId, 0, FlowMessage.of(values));
     }
 

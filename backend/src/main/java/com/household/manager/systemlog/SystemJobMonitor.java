@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Statustafel der Hintergrund-Jobs. Protokolliert nur Uebergaenge OK -> FAILING ({@code ERROR}) und
@@ -71,6 +72,8 @@ public class SystemJobMonitor {
     private final Map<String, Entry> board = new ConcurrentHashMap<>();
     private final ThreadLocal<RunContext> current = new ThreadLocal<>();
     private volatile boolean loaded;
+    /** Eingereihte, noch nicht ausgefuehrte Entscheidungen aus der Zeit vor dem Laden. */
+    private final AtomicInteger deferred = new AtomicInteger();
     private LocalDateTime lastLoadAttempt;
 
     @Autowired
@@ -152,7 +155,23 @@ public class SystemJobMonitor {
             scheduleLoadIfNeeded();
             LocalDateTime now = LocalDateTime.now(clock);
             String text = truncate(message);
-            board.compute(jobKey, (key, before) -> decide(key, before, state, text, now));
+            if (loaded && deferred.get() == 0) {
+                board.compute(jobKey, (key, before) -> decide(key, before, state, text, now));
+                return;
+            }
+            // Vor dem Laden haette die Entscheidung eine leere Tafel gesehen: ein schon gestoerter Job
+            // meldete nach jedem Deploy erneut ERROR, ein erholter kein RECOVERED, und das nachgereichte
+            // Speichern setzte failingSince zurueck. Deshalb hinter dem Laden einreihen (gleicher
+            // Ein-Thread-Executor, also in Reihenfolge). Solange solche Entscheidungen ausstehen, reihen
+            // auch spaetere sich ein, damit keine juengere eine aeltere ueberholt.
+            deferred.incrementAndGet();
+            submit(() -> {
+                try {
+                    board.compute(jobKey, (key, before) -> decide(key, before, state, text, now));
+                } finally {
+                    deferred.decrementAndGet();
+                }
+            });
         } catch (Exception ex) {
             log.debug("Job-Monitor: Ausgang von {} nicht erfasst", jobKey, ex);
         }
@@ -247,9 +266,9 @@ public class SystemJobMonitor {
 
     /**
      * Reiht das Laden der gespeicherten Tafel ein, damit ein nach dem Neustart weiter gestoerter Job nicht
-     * erneut als „gestört“ protokolliert wird. Kein Job wartet darauf: bis dahin wird mit dem Speicherstand
-     * entschieden, und bereits im Speicher stehende Jobs sind frischer und gewinnen. Scheitert die DB, wird
-     * hoechstens minuetlich erneut versucht.
+     * erneut als „gestört“ protokolliert wird. Kein Job wartet darauf: Entscheidungen bis dahin laufen auf
+     * dem Executor hinter dem Laden (siehe {@link #recordOutcome}). Scheitert die DB, entscheiden sie gegen
+     * die leere Tafel, und es wird hoechstens minuetlich erneut versucht.
      */
     private void scheduleLoadIfNeeded() {
         if (loaded) {
@@ -266,6 +285,10 @@ public class SystemJobMonitor {
     }
 
     private void load() {
+        if (loaded) {
+            // Ein frueher eingereihtes Laden war schon erfolgreich - dieses lief nur hinter ihm her.
+            return;
+        }
         try {
             for (SystemJobStatus row : repository.findAll()) {
                 toEntry(row).ifPresent(entry -> board.putIfAbsent(row.getJobKey(), entry));
