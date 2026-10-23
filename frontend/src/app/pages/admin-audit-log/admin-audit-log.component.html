@@ -18,9 +18,9 @@
       @for (entry of entries; track entry.id) {
         <tr>
           <td>{{ entry.timestamp | date: 'dd.MM.yyyy HH:mm:ss' }}</td>
-          <td>{{ entry.actorType }} / {{ entry.actor }}</td>
-          <td>{{ entry.action }}</td>
-          <td>{{ entry.detail }}</td>
+          <td [title]="entry.actorType + ' / ' + entry.actor">{{ entry.actorLabel ?? entry.actor }}</td>
+          <td [title]="entry.action">{{ entry.actionLabel ?? entry.action }}</td>
+          <td [title]="entry.detail ?? ''">{{ entry.detailLabel ?? entry.detail }}</td>
         </tr>
       }
     </tbody>

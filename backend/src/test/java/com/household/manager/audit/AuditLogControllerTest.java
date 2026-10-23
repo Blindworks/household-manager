@@ -3,6 +3,9 @@ package com.household.manager.audit;
 import com.household.manager.audit.AuditLogController.AuditEntryResponse;
 import com.household.manager.model.entity.AuditActorType;
 import com.household.manager.model.entity.AuditLog;
+import com.household.manager.repository.EntityStateRepository;
+import com.household.manager.repository.FlowRepository;
+import com.household.manager.repository.SmartDeviceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,9 +24,16 @@ class AuditLogControllerTest {
 
     @Mock
     private AuditService auditService;
+    @Mock
+    private SmartDeviceRepository deviceRepository;
+    @Mock
+    private FlowRepository flowRepository;
+    @Mock
+    private EntityStateRepository entityStateRepository;
 
     private AuditLogController controller() {
-        return new AuditLogController(auditService);
+        return new AuditLogController(auditService,
+                new AuditEntryDescriber(deviceRepository, flowRepository, entityStateRepository));
     }
 
     @Test
@@ -35,8 +45,8 @@ class AuditLogControllerTest {
 
         List<AuditEntryResponse> result = controller().recent(50, "bene");
 
-        assertThat(result).containsExactly(
-                new AuditEntryResponse(1L, timestamp, AuditActorType.USER, "bene", "auth.login", null));
+        assertThat(result).containsExactly(new AuditEntryResponse(1L, timestamp, AuditActorType.USER,
+                "bene", "auth.login", null, "bene", "Anmeldung", null));
         verify(auditService).recent(50, "bene");
     }
 

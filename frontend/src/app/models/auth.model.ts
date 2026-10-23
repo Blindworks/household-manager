@@ -45,4 +45,8 @@ export interface AuditEntry {
   actor: string;
   action: string;
   detail: string | null;
+  /** Lesbare Fassung vom Backend (Flow-/Gerätenamen statt Ids); die Rohwerte stehen daneben. */
+  actorLabel: string | null;
+  actionLabel: string | null;
+  detailLabel: string | null;
 }
