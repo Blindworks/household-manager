@@ -1,79 +1,215 @@
 .audit-log {
+  max-width: 1400px;
+  margin: 0 auto;
   padding: var(--spacing-lg);
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+
+    h1 {
+      margin: 0;
+    }
+  }
+
+  &__count {
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+  }
+
+  // ---- Filter ----
+  &__filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--color-white);
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--spacing-md);
+
+    // Auswahllisten, Suchfeld und Knopf auf eine Höhe, sonst springen die Feldbeschriftungen
+    select,
+    input,
+    button {
+      box-sizing: border-box;
+      height: 2.75rem;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    &--search {
+      flex: 1 1 260px;
+
+      input {
+        width: 100%;
+      }
+    }
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-gray);
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.85rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 999px;
+    background: var(--color-white);
+    color: var(--color-gray);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+
+    &:hover {
+      border-color: var(--color-primary-light);
+    }
+
+    &--on {
+      border-color: var(--color-primary);
+      background: rgba(13, 110, 189, 0.08);
+      color: var(--color-primary);
+    }
+
+    &:focus-within {
+      box-shadow: 0 0 0 3px rgba(13, 110, 189, 0.18);
+    }
+  }
+
+  // Die Checkbox bleibt für Tastatur und Screenreader da, ist aber unsichtbar — der Chip ist die Anzeige.
+  &__chip-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__submit .material-symbols-outlined {
+    font-size: 1.1rem;
+  }
 
   &__error {
     margin-bottom: var(--spacing-md);
-    padding: var(--spacing-sm);
-    border-radius: var(--radius-sm, 6px);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.25);
     color: var(--color-error);
   }
 
-  &__filter {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: var(--spacing-sm) var(--spacing-md);
-    margin-bottom: var(--spacing-md);
-
-    label {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: var(--font-size-sm);
-    }
-  }
-
-  &__kinds {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-xs) var(--spacing-sm);
-    margin: 0;
-    padding: 0;
-    border: 0;
-
-    legend {
-      width: 100%;
-      margin-bottom: 4px;
-      font-size: var(--font-size-sm);
-    }
-  }
-
-  .audit-log__kind {
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__search {
-    flex: 1 1 220px;
-  }
-
-  &__count {
-    margin: 0 0 var(--spacing-xs);
-    font-size: var(--font-size-sm);
-    color: var(--color-gray, #6b7280);
+  // ---- Tabelle ----
+  &__card {
+    overflow-x: auto;
+    background: var(--color-white);
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
 
   &__table {
     width: 100%;
+    min-width: 760px;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: var(--font-size-sm);
 
-    th,
-    td {
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border-bottom: 1px solid var(--color-light-gray);
+    th {
+      position: sticky;
+      top: 0;
+      padding: 0.65rem var(--spacing-md);
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      color: var(--color-gray);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-align: left;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 0.6rem var(--spacing-md);
+      border-bottom: 1px solid #f1f3f5;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr:hover td {
+      background: #f9fafb;
     }
   }
 
+  &__col-time { width: 11rem; }
+  &__col-actor { width: 15rem; }
+  &__col-action { width: 13rem; }
+
+  &__time {
+    white-space: nowrap;
+    color: var(--color-gray);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__actor {
+    font-weight: 600;
+    color: var(--color-dark);
+  }
+
+  &__action {
+    display: inline-block;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(13, 110, 189, 0.08);
+    color: var(--color-primary-dark);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  &__detail {
+    color: var(--color-dark);
+  }
+
   &__empty {
-    color: var(--color-gray, #6b7280);
+    padding: var(--spacing-lg) !important;
+    color: var(--color-gray);
+    text-align: center;
   }
 
   &__more {
+    display: flex;
+    justify-content: center;
     margin-top: var(--spacing-md);
   }
 }

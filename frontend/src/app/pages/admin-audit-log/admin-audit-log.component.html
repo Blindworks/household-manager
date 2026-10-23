@@ -1,73 +1,97 @@
 <div class="audit-log">
-  <h1>Audit-Log</h1>
+  <header class="audit-log__header">
+    <h1>Audit-Log</h1>
+    <span class="audit-log__count">{{ totalElements }} {{ totalElements === 1 ? 'Eintrag' : 'Einträge' }}</span>
+  </header>
 
-  <form class="audit-log__filter" (ngSubmit)="applyFilters()">
-    <fieldset class="audit-log__kinds">
-      <legend>Aktor</legend>
-      @for (option of actorKinds; track option.kind) {
-        <label class="audit-log__kind">
-          <input type="checkbox" [checked]="selectedKinds.has(option.kind)" (change)="toggleKind(option.kind)"
-                 [attr.data-test]="'kind-' + option.kind">
-          {{ option.label }}
-        </label>
-      }
-    </fieldset>
-
-    <label>
-      Aktion
-      <select name="action" [(ngModel)]="actionFilter" (ngModelChange)="applyFilters()" data-test="action">
-        <option value="">Alle</option>
-        @for (option of actions; track option.action) {
-          <option [value]="option.action">{{ option.label }}</option>
+  <form class="audit-log__filters" (ngSubmit)="applyFilters()">
+    <div class="audit-log__field audit-log__field--kinds">
+      <span class="audit-log__label">Aktor</span>
+      <div class="audit-log__chips" role="group" aria-label="Aktor-Art">
+        @for (option of actorKinds; track option.kind) {
+          <label class="audit-log__chip" [class.audit-log__chip--on]="selectedKinds.has(option.kind)">
+            <input type="checkbox" class="audit-log__chip-input" [checked]="selectedKinds.has(option.kind)"
+                   (change)="toggleKind(option.kind)" [attr.data-test]="'kind-' + option.kind">
+            {{ option.label }}
+          </label>
         }
-      </select>
-    </label>
+      </div>
+    </div>
 
-    <label>
-      Zeitraum
-      <select name="range" [(ngModel)]="rangeKey" (ngModelChange)="applyFilters()" data-test="range">
-        @for (range of ranges; track range.key) {
-          <option [value]="range.key">{{ range.label }}</option>
-        }
-      </select>
-    </label>
+    <div class="audit-log__row">
+      <label class="audit-log__field">
+        <span class="audit-log__label">Aktion</span>
+        <select name="action" [(ngModel)]="actionFilter" (ngModelChange)="applyFilters()" data-test="action">
+          <option value="">Alle Aktionen</option>
+          @for (option of actions; track option.action) {
+            <option [value]="option.action">{{ option.label }}</option>
+          }
+        </select>
+      </label>
 
-    <label class="audit-log__search">
-      Suche
-      <input name="q" placeholder="z. B. Kamera, Nachtmodus, admin" [(ngModel)]="searchText" data-test="search-input">
-    </label>
-    <button type="submit" data-test="search">Suchen</button>
+      <label class="audit-log__field">
+        <span class="audit-log__label">Zeitraum</span>
+        <select name="range" [(ngModel)]="rangeKey" (ngModelChange)="applyFilters()" data-test="range">
+          @for (range of ranges; track range.key) {
+            <option [value]="range.key">{{ range.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="audit-log__field audit-log__field--search">
+        <span class="audit-log__label">Suche</span>
+        <input type="search" name="q" placeholder="z. B. Kamera, Nachtmodus, admin" [(ngModel)]="searchText"
+               data-test="search-input">
+      </label>
+
+      <button type="submit" class="audit-log__submit" data-test="search">
+        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+        Suchen
+      </button>
+    </div>
   </form>
 
   @if (errorMessage) {
     <div class="audit-log__error" role="alert">{{ errorMessage }}</div>
   }
 
-  <p class="audit-log__count">{{ totalElements }} {{ totalElements === 1 ? 'Eintrag' : 'Einträge' }}</p>
-
-  <table class="audit-log__table">
-    <thead>
-      <tr><th>Zeitpunkt</th><th>Aktor</th><th>Aktion</th><th>Detail</th></tr>
-    </thead>
-    <tbody>
-      @for (entry of entries; track entry.id) {
-        <tr>
-          <td>{{ entry.timestamp | date: 'dd.MM.yyyy HH:mm:ss' }}</td>
-          <td [title]="entry.actorType + ' / ' + entry.actor">{{ entry.actorLabel ?? entry.actor }}</td>
-          <td [title]="entry.action">{{ entry.actionLabel ?? entry.action }}</td>
-          <td [title]="entry.detail ?? ''">{{ entry.detailLabel ?? entry.detail }}</td>
-        </tr>
-      } @empty {
-        @if (!loading && !errorMessage) {
-          <tr><td colspan="4" class="audit-log__empty">Keine Einträge für diese Filter.</td></tr>
+  <div class="audit-log__card">
+    <table class="audit-log__table">
+      <colgroup>
+        <col class="audit-log__col-time">
+        <col class="audit-log__col-actor">
+        <col class="audit-log__col-action">
+        <col>
+      </colgroup>
+      <thead>
+        <tr><th>Zeitpunkt</th><th>Aktor</th><th>Aktion</th><th>Detail</th></tr>
+      </thead>
+      <tbody>
+        @for (entry of entries; track entry.id) {
+          <tr>
+            <td class="audit-log__time">{{ entry.timestamp | date: 'dd.MM.yyyy HH:mm:ss' }}</td>
+            <td class="audit-log__actor" [title]="entry.actorType + ' / ' + entry.actor">
+              {{ entry.actorLabel ?? entry.actor }}
+            </td>
+            <td [title]="entry.action">
+              <span class="audit-log__action">{{ entry.actionLabel ?? entry.action }}</span>
+            </td>
+            <td class="audit-log__detail" [title]="entry.detail ?? ''">{{ entry.detailLabel ?? entry.detail }}</td>
+          </tr>
+        } @empty {
+          @if (!loading && !errorMessage) {
+            <tr><td colspan="4" class="audit-log__empty">Keine Einträge für diese Filter.</td></tr>
+          }
         }
-      }
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 
   @if (hasMore) {
-    <button type="button" class="ghost audit-log__more" (click)="loadMore()" [disabled]="loading" data-test="more">
-      Mehr laden
-    </button>
+    <div class="audit-log__more">
+      <button type="button" class="ghost" (click)="loadMore()" [disabled]="loading" data-test="more">
+        Mehr laden ({{ entries.length }} von {{ totalElements }})
+      </button>
+    </div>
   }
 </div>
