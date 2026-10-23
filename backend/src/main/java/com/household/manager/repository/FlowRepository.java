@@ -23,4 +23,7 @@ public interface FlowRepository extends JpaRepository<Flow, Long> {
     @Modifying
     @Query("UPDATE Flow f SET f.lastTriggeredAt = :at WHERE f.id = :id")
     int updateLastTriggeredAt(@Param("id") Long id, @Param("at") LocalDateTime at);
+
+    /** Namenssuche fuer den Freitext des Audit-Logs. */
+    List<Flow> findTop50ByNameContainingIgnoreCase(String part);
 }

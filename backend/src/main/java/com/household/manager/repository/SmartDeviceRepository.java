@@ -66,4 +66,7 @@ public interface SmartDeviceRepository extends JpaRepository<SmartDevice, Long> 
      * @return true if a device exists with this type and ID, false otherwise
      */
     boolean existsByDeviceTypeAndExternalDeviceId(DeviceType deviceType, String externalDeviceId);
+
+    /** Namenssuche fuer den Freitext des Audit-Logs. */
+    List<SmartDevice> findTop50ByDeviceNameContainingIgnoreCase(String part);
 }

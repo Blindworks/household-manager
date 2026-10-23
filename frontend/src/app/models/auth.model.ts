@@ -50,3 +50,25 @@ export interface AuditEntry {
   actionLabel: string | null;
   detailLabel: string | null;
 }
+
+/** Aktor-Art des Audit-Filters (Backend `AuditActorKind`). */
+export type AuditActorKind = 'PERSON' | 'SERVICE' | 'FLOW' | 'AGENT' | 'TELEGRAM' | 'SYSTEM';
+
+export interface AuditQuery {
+  from?: string;
+  actorKinds?: AuditActorKind[];
+  action?: string;
+  q?: string;
+}
+
+export interface AuditPage {
+  content: AuditEntry[];
+  totalElements: number;
+  page: number;
+  size: number;
+}
+
+export interface AuditActionOption {
+  action: string;
+  label: string;
+}

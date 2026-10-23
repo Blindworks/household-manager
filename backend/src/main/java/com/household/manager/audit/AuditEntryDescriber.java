@@ -11,8 +11,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -41,6 +43,7 @@ public class AuditEntryDescriber {
     private static final Pattern NUMERIC = Pattern.compile("\\d+");
     private static final Pattern DEVICE_ID_PARAM = Pattern.compile("deviceId=(\\d+)");
     private static final Pattern FLOW_REF = Pattern.compile("Flow (\\d+)");
+    private static final String NUKI_LOCK_PREFIX = "lock.nuki_";
 
     private static final Map<String, String> ACTION_LABELS = Map.ofEntries(
             Map.entry("auth.login", "Anmeldung"),
@@ -80,9 +83,59 @@ public class AuditEntryDescriber {
     }
 
     private DescribedEntry describe(AuditLog log, Names names) {
-        return new DescribedEntry(log, actorLabel(log.getActor(), names),
-                ACTION_LABELS.getOrDefault(log.getAction(), log.getAction()),
+        return new DescribedEntry(log, actorLabel(log.getActor(), names), actionLabel(log.getAction()),
                 detailLabel(log.getAction(), log.getDetail(), names));
+    }
+
+    public static String actionLabel(String action) {
+        return action == null ? null : ACTION_LABELS.getOrDefault(action, action);
+    }
+
+    /**
+     * Rohwert-Muster, unter denen ein lesbarer Suchbegriff im Bestand steht — Gegenstück zu
+     * {@link #describe}: wer „Kamera“ sucht, findet „29 -> off“, weil Gerät 29 so heißt.
+     * Wirft nie; eine scheiternde Namensquelle liefert einfach keine Muster.
+     */
+    public AuditSearchHints searchHints(String query) {
+        if (query == null || query.isBlank()) {
+            return AuditSearchHints.NONE;
+        }
+        String part = query.trim();
+        String lower = part.toLowerCase(Locale.ROOT);
+        List<String> actions = ACTION_LABELS.entrySet().stream()
+                .filter(entry -> entry.getValue().toLowerCase(Locale.ROOT).contains(lower))
+                .map(Map.Entry::getKey)
+                .toList();
+        List<String> actors = new ArrayList<>();
+        List<String> detailsExact = new ArrayList<>();
+        List<String> detailsPrefix = new ArrayList<>();
+        List<String> detailsContain = new ArrayList<>();
+        safely("Geräte", () -> deviceRepository.findTop50ByDeviceNameContainingIgnoreCase(part).forEach(device -> {
+            detailsExact.add(String.valueOf(device.getId()));
+            detailsPrefix.add(device.getId() + " -> ");
+            detailsContain.add("deviceId=" + device.getId() + ",");
+        }));
+        safely("Flows", () -> flowRepository.findTop50ByNameContainingIgnoreCase(part).forEach(flow -> {
+            actors.add("FLOW:" + flow.getId());
+            detailsExact.add("Flow " + flow.getId());
+        }));
+        safely("Entitäten", () -> entityStateRepository.findTop50ByFriendlyNameContainingIgnoreCase(part)
+                .forEach(entity -> {
+                    detailsExact.add(entity.getEntityId());
+                    detailsPrefix.add(entity.getEntityId() + " -> ");
+                    if (entity.getEntityId().startsWith(NUKI_LOCK_PREFIX)) {
+                        detailsExact.add(entity.getEntityId().substring(NUKI_LOCK_PREFIX.length()));
+                    }
+                }));
+        return new AuditSearchHints(actions, actors, detailsExact, detailsPrefix, detailsContain);
+    }
+
+    private static void safely(String what, Runnable lookup) {
+        try {
+            lookup.run();
+        } catch (Exception ex) {
+            log.debug("Audit-Suche: {} nicht durchsuchbar: {}", what, ex.getMessage());
+        }
     }
 
     private String actorLabel(String actor, Names names) {
@@ -120,7 +173,7 @@ public class AuditEntryDescriber {
             case "flow.update", "flow.deploy", "flow.delete" -> FLOW_REF.matcher(detail).matches()
                     ? names.flow(Long.parseLong(detail.substring(5))).map(name -> "„" + name + "“").orElse(detail)
                     : detail;
-            case "nuki.lock", "nuki.unlock", "nuki.unlatch" -> names.entity("lock.nuki_" + detail, detail);
+            case "nuki.lock", "nuki.unlock", "nuki.unlatch" -> names.entity(NUKI_LOCK_PREFIX + detail, detail);
             default -> detail;
         };
     }

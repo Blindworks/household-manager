@@ -1,14 +1,49 @@
 <div class="audit-log">
   <h1>Audit-Log</h1>
 
+  <form class="audit-log__filter" (ngSubmit)="applyFilters()">
+    <fieldset class="audit-log__kinds">
+      <legend>Aktor</legend>
+      @for (option of actorKinds; track option.kind) {
+        <label class="audit-log__kind">
+          <input type="checkbox" [checked]="selectedKinds.has(option.kind)" (change)="toggleKind(option.kind)"
+                 [attr.data-test]="'kind-' + option.kind">
+          {{ option.label }}
+        </label>
+      }
+    </fieldset>
+
+    <label>
+      Aktion
+      <select name="action" [(ngModel)]="actionFilter" (ngModelChange)="applyFilters()" data-test="action">
+        <option value="">Alle</option>
+        @for (option of actions; track option.action) {
+          <option [value]="option.action">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Zeitraum
+      <select name="range" [(ngModel)]="rangeKey" (ngModelChange)="applyFilters()" data-test="range">
+        @for (range of ranges; track range.key) {
+          <option [value]="range.key">{{ range.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="audit-log__search">
+      Suche
+      <input name="q" placeholder="z. B. Kamera, Nachtmodus, admin" [(ngModel)]="searchText" data-test="search-input">
+    </label>
+    <button type="submit" data-test="search">Suchen</button>
+  </form>
+
   @if (errorMessage) {
     <div class="audit-log__error" role="alert">{{ errorMessage }}</div>
   }
 
-  <form class="audit-log__filter" (ngSubmit)="load()">
-    <input name="actor" placeholder="Aktor filtern (z. B. bene)" [(ngModel)]="actorFilter">
-    <button type="submit">Filtern</button>
-  </form>
+  <p class="audit-log__count">{{ totalElements }} {{ totalElements === 1 ? 'Eintrag' : 'Einträge' }}</p>
 
   <table class="audit-log__table">
     <thead>
@@ -22,7 +57,17 @@
           <td [title]="entry.action">{{ entry.actionLabel ?? entry.action }}</td>
           <td [title]="entry.detail ?? ''">{{ entry.detailLabel ?? entry.detail }}</td>
         </tr>
+      } @empty {
+        @if (!loading && !errorMessage) {
+          <tr><td colspan="4" class="audit-log__empty">Keine Einträge für diese Filter.</td></tr>
+        }
       }
     </tbody>
   </table>
+
+  @if (hasMore) {
+    <button type="button" class="ghost audit-log__more" (click)="loadMore()" [disabled]="loading" data-test="more">
+      Mehr laden
+    </button>
+  }
 </div>

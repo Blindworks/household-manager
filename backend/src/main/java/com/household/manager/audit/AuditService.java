@@ -4,7 +4,9 @@ import com.household.manager.model.entity.AuditLog;
 import com.household.manager.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -37,6 +39,16 @@ public class AuditService {
         } catch (Exception ex) {
             log.warn("Audit-Eintrag fehlgeschlagen ({} / {}): {}", action, detail, ex.getMessage());
         }
+    }
+
+    /** Gefilterte Seite, neueste zuerst; {@code hints} übersetzen lesbare Namen in Rohwerte. */
+    public Page<AuditLog> search(AuditLogFilter filter, AuditSearchHints hints, int page, int size) {
+        return repository.findAll(AuditLogSpecifications.of(filter, hints),
+                PageRequest.of(page, size, Sort.by(Sort.Order.desc("timestamp"), Sort.Order.desc("id"))));
+    }
+
+    public List<String> actions() {
+        return repository.findDistinctActions();
     }
 
     public List<AuditLog> recent(int limit, String actorFilter) {

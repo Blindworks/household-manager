@@ -26,4 +26,7 @@ public interface EntityStateRepository extends JpaRepository<EntityState, Long> 
     List<EntityState> findByEntityIdIn(Collection<String> entityIds);
 
     void deleteByEntityId(String entityId);
+
+    /** Namenssuche fuer den Freitext des Audit-Logs. */
+    List<EntityState> findTop50ByFriendlyNameContainingIgnoreCase(String part);
 }

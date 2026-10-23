@@ -138,4 +138,41 @@ class AuditEntryDescriberTest {
         verify(deviceRepository, times(1)).findAll();
         verify(flowRepository, times(1)).findAll();
     }
+
+    @Test
+    void searchHints_translateNamesIntoRawPatterns() {
+        SmartDevice kamera = new SmartDevice();
+        kamera.setId(29L);
+        when(deviceRepository.findTop50ByDeviceNameContainingIgnoreCase("Kam")).thenReturn(List.of(kamera));
+        Flow flow = new Flow();
+        flow.setId(13L);
+        when(flowRepository.findTop50ByNameContainingIgnoreCase("Kam")).thenReturn(List.of(flow));
+        EntityState lock = new EntityState();
+        lock.setEntityId("lock.nuki_4711");
+        when(entityStateRepository.findTop50ByFriendlyNameContainingIgnoreCase("Kam")).thenReturn(List.of(lock));
+
+        AuditSearchHints hints = describer.searchHints(" Kam ");
+
+        assertThat(hints.actors()).containsExactly("FLOW:13");
+        assertThat(hints.detailsExact()).containsExactlyInAnyOrder("29", "Flow 13", "lock.nuki_4711", "4711");
+        assertThat(hints.detailsPrefix()).containsExactlyInAnyOrder("29 -> ", "lock.nuki_4711 -> ");
+        assertThat(hints.detailsContain()).containsExactly("deviceId=29,");
+    }
+
+    @Test
+    void searchHints_matchActionLabels() {
+        AuditSearchHints hints = describer.searchHints("geschaltet");
+
+        assertThat(hints.actions()).contains("switch.device");
+    }
+
+    @Test
+    void searchHints_blankQuery_isNone_andLookupFailureNeverThrows() {
+        assertThat(describer.searchHints("  ")).isEqualTo(AuditSearchHints.NONE);
+
+        when(deviceRepository.findTop50ByDeviceNameContainingIgnoreCase("x")).thenThrow(new RuntimeException("DB weg"));
+        AuditSearchHints hints = describer.searchHints("x");
+
+        assertThat(hints.detailsContain()).isEmpty();
+    }
 }

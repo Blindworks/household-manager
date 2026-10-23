@@ -12,14 +12,48 @@
 
   &__filter {
     display: flex;
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-md);
 
-    input {
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border: 1px solid var(--color-light-gray);
-      border-radius: var(--radius-sm, 6px);
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: var(--font-size-sm);
     }
+  }
+
+  &__kinds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs) var(--spacing-sm);
+    margin: 0;
+    padding: 0;
+    border: 0;
+
+    legend {
+      width: 100%;
+      margin-bottom: 4px;
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  .audit-log__kind {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__search {
+    flex: 1 1 220px;
+  }
+
+  &__count {
+    margin: 0 0 var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray, #6b7280);
   }
 
   &__table {
@@ -33,5 +67,13 @@
       border-bottom: 1px solid var(--color-light-gray);
       text-align: left;
     }
+  }
+
+  &__empty {
+    color: var(--color-gray, #6b7280);
+  }
+
+  &__more {
+    margin-top: var(--spacing-md);
   }
 }
