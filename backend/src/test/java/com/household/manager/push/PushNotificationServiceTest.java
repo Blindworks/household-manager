@@ -3,6 +3,7 @@ package com.household.manager.push;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.model.entity.PushSubscription;
 import com.household.manager.repository.PushSubscriptionRepository;
+import com.household.manager.common.DeliveryResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -12,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -115,5 +117,44 @@ class PushNotificationServiceTest {
         service().sendToAll("Titel", "Text");
 
         verify(repository, never()).deleteById(any());
+    }
+
+    @Test
+    void sendToAll_returnsFailed_whenNoSubscriptions() {
+        when(repository.findAll()).thenReturn(List.of());
+
+        DeliveryResult result = service().sendToAll("Titel", "Text");
+
+        assertFalse(result.delivered());
+        assertTrue(result.failure().contains("keine Push-Geräte"));
+    }
+
+    @Test
+    void sendToUser_returnsFailed_onHttp500() throws Exception {
+        when(repository.findByUserId(9L)).thenReturn(List.of(subscription(1)));
+        when(webPushClient.send(any(), anyString())).thenReturn(500);
+
+        DeliveryResult result = service().sendToUser(9L, "Titel", "Text");
+
+        assertFalse(result.delivered());
+        assertTrue(result.failure().contains("500"));
+    }
+
+    @Test
+    void sendToAll_returnsOk_whenOnlyExpired410() throws Exception {
+        when(repository.findAll()).thenReturn(List.of(subscription(1)));
+        when(webPushClient.send(any(), anyString())).thenReturn(410);
+
+        assertTrue(service().sendToAll("Titel", "Text").delivered());
+    }
+
+    @Test
+    void sendToAll_neverThrows_whenRepositoryFails() {
+        when(repository.findAll()).thenThrow(new RuntimeException("db weg"));
+
+        DeliveryResult result = assertDoesNotThrow(() -> service().sendToAll("Titel", "Text"));
+
+        assertFalse(result.delivered());
+        assertTrue(result.failure().contains("db weg"));
     }
 }

@@ -9,6 +9,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AirrohrReading;
 import com.household.manager.repository.AirrohrReadingRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,7 @@ public class AirrohrPollingService {
     private final AirrohrReadingRepository airrohrReadingRepository;
     private final TaskScheduler taskScheduler;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     @Value("${airrohr.url}")
     private String airrohrUrl;
@@ -82,6 +84,7 @@ public class AirrohrPollingService {
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Failed to poll Airrohr sensor", ex);
+            jobMonitor.reportFailure(lastError);
         }
     }
 

@@ -6,6 +6,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.ChargingEntityMapper;
 import com.household.manager.model.entity.ChargingFavorite;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class ChargingPollingService {
     private final ChargingEntityMapper mapper;
     private final EntityStateService entityStateService;
     private final Clock clock;
+    private final SystemJobMonitor jobMonitor;
 
     /** Zuletzt erfolgreich gemeldete Updates je Station; Basis fuer unavailable mit erhaltenen Attributen. */
     private final Map<String, EntityStateUpdate> lastReported = new HashMap<>();
@@ -46,7 +48,8 @@ public class ChargingPollingService {
     public ChargingPollingService(ChargingProperties properties, ChargingStationSource source,
                                   ChargingSettingsService settingsService, ChargingFavoriteService favoriteService,
                                   ChargingOccupancyTracker tracker, ChargingSnapshot snapshot,
-                                  ChargingEntityMapper mapper, EntityStateService entityStateService, Clock clock) {
+                                  ChargingEntityMapper mapper, EntityStateService entityStateService, Clock clock,
+                                  SystemJobMonitor jobMonitor) {
         this.properties = properties;
         this.source = source;
         this.settingsService = settingsService;
@@ -56,32 +59,49 @@ public class ChargingPollingService {
         this.mapper = mapper;
         this.entityStateService = entityStateService;
         this.clock = clock;
+        this.jobMonitor = jobMonitor;
     }
 
     @Scheduled(fixedDelayString = "#{${charging.area-poll-seconds:300} * 1000}",
             initialDelayString = "${charging.initial-delay-ms:25000}")
     public void scheduledArea() {
-        if (!properties.isEnabled()) {
+        if (isInactive()) {
             return;
         }
         try {
             pollArea();
         } catch (Exception ex) {
             log.warn("Ladesaeulen-Umkreis-Poll fehlgeschlagen: {}", ex.getMessage());
+            jobMonitor.reportFailure(ex.getMessage());
         }
     }
 
     @Scheduled(fixedDelayString = "#{${charging.favorite-poll-seconds:60} * 1000}",
             initialDelayString = "${charging.initial-delay-ms:25000}")
     public void scheduledFavorites() {
-        if (!properties.isEnabled()) {
+        if (isInactive()) {
             return;
         }
         try {
             pollFavorites();
         } catch (Exception ex) {
             log.warn("Ladesaeulen-Favoriten-Poll fehlgeschlagen: {}", ex.getMessage());
+            jobMonitor.reportFailure(ex.getMessage());
         }
+    }
+
+    /** Meldet „nicht aktiv“ an den Job-Monitor, wenn die Anbindung aus oder ohne Key ist. */
+    private boolean isInactive() {
+        if (!properties.isEnabled()) {
+            jobMonitor.reportInactive("Ladesäulen-Anbindung deaktiviert");
+            return true;
+        }
+        String apiKey = properties.getEnbw().getApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            jobMonitor.reportInactive("kein EnBW-API-Key gesetzt");
+            return true;
+        }
+        return false;
     }
 
     /** Ein Umkreis-Abruf; wirft bei Quellenfehler (der Scheduler faengt, refreshNow reicht durch). */
@@ -89,6 +109,7 @@ public class ChargingPollingService {
         ChargingSettings settings = settingsService.getSettings();
         if (!settings.isConfigured()) {
             log.debug("Ladesaeulen: kein Zuhause konfiguriert, kein Umkreis-Poll");
+            jobMonitor.reportInactive("kein Zuhause konfiguriert");
             return;
         }
         BoundingBox box = BoundingBox.around(settings.homeLatitude(), settings.homeLongitude(), settings.radiusKm());
@@ -114,6 +135,7 @@ public class ChargingPollingService {
             }
         }
 
+        boolean rateLimited = false;
         for (ChargingFavorite favorite : favorites) {
             String stationId = favorite.getStationId();
             try {
@@ -126,11 +148,17 @@ public class ChargingPollingService {
             } catch (ChargingRateLimitException ex) {
                 log.warn("Ladesaeulen-Favoriten: Rate-Limit bei {}, Durchlauf abgebrochen", stationId);
                 reportUnavailable(favorite);
+                rateLimited = true;
                 break;
             } catch (Exception ex) {
                 log.warn("Ladesaeulen-Favorit {} nicht lesbar: {}", stationId, ex.getMessage());
                 reportUnavailable(favorite);
             }
+        }
+        if (rateLimited) {
+            jobMonitor.reportFailure("Rate-Limit der Ladesäulen-Quelle");
+        } else if (!favorites.isEmpty() && details.isEmpty()) {
+            jobMonitor.reportFailure("kein Favorit lesbar");
         }
         // Erfolgreich gelesene Details ersetzen den Stand; fehlgeschlagene behalten den alten Snapshot-Eintrag.
         Map<String, ChargingStationDetails> merged = new LinkedHashMap<>();

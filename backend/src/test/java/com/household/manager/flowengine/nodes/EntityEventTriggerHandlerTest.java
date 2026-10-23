@@ -33,6 +33,7 @@ class EntityEventTriggerHandlerTest {
             public void emit(int port, FlowMessage message) { emitted.add(message); }
             public TaskScheduler scheduler() { return null; }
             public void debug(String label, FlowMessage message) { }
+            public void reportFailure(String reason) { }
         };
     }
 

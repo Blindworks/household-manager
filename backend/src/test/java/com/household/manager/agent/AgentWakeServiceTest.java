@@ -1,5 +1,6 @@
 package com.household.manager.agent;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityStateChangedEvent;
 import com.household.manager.exception.TooManyRequestsException;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +46,7 @@ class AgentWakeServiceTest {
     private final AgentSettingsService settings = mock(AgentSettingsService.class);
     private final AgentRunService runService = mock(AgentRunService.class);
     private final AgentTokenBudget tokenBudget = mock(AgentTokenBudget.class);
+    private final SystemJobMonitor jobMonitor = mock(SystemJobMonitor.class);
     private final ManualScheduler debounce = new ManualScheduler();
     private ExecutorService executor = new DirectExecutorService();
     private AgentWakeService service;
@@ -66,7 +68,7 @@ class AgentWakeServiceTest {
 
     private AgentWakeService service() {
         if (service == null) {
-            service = new AgentWakeService(properties, settings, runService, executor, debounce, tokenBudget, CLOCK);
+            service = new AgentWakeService(properties, settings, runService, executor, debounce, tokenBudget, CLOCK, jobMonitor);
         }
         return service;
     }
@@ -385,5 +387,22 @@ class AgentWakeServiceTest {
         synchronized boolean isScheduled() { return !scheduled.isEmpty(); }
         synchronized int scheduleCount() { return scheduleCount; }
         synchronized long lastDelayMs() { return lastDelayMs; }
+    }
+
+    @Test
+    void tick_agentOff_reportsInactive() {
+        when(settings.isActive()).thenReturn(false);
+
+        service().tick();
+
+        verify(jobMonitor).reportInactive(org.mockito.ArgumentMatchers.anyString());
+        verifyNoInteractions(runService);
+    }
+
+    @Test
+    void tick_agentOn_reportsNothing() {
+        service().tick();
+
+        verifyNoInteractions(jobMonitor);
     }
 }

@@ -1,5 +1,8 @@
 package com.household.manager.tractive;
 
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.anyString;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
@@ -29,6 +32,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TractivePollingServiceTest {
 
+    @Mock
+    private SystemJobMonitor jobMonitor;
     @Mock
     private TractiveApiClient apiClient;
     @Mock
@@ -67,7 +72,7 @@ class TractivePollingServiceTest {
     void setUp() {
         properties = new TractiveProperties();
         service = new TractivePollingService(properties, apiClient, authService, mapper,
-                entityStateService, positionRecorder);
+                entityStateService, positionRecorder, jobMonitor);
     }
 
     private void givenAuthenticated() {
@@ -388,5 +393,58 @@ class TractivePollingServiceTest {
         ArgumentCaptor<List<TractivePetSnapshot>> captor = ArgumentCaptor.forClass(List.class);
         verify(positionRecorder).record(captor.capture());
         assertEquals(1, captor.getValue().size());
+    }
+
+    @Test
+    void poll_withoutToken_reportsInactive() {
+        when(authService.getValidToken()).thenReturn(Optional.empty());
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(anyString());
+        verify(jobMonitor, never()).reportFailure(anyString());
+    }
+
+    @Test
+    void poll_disabled_reportsInactive() {
+        properties.setEnabled(false);
+
+        service.poll();
+
+        verify(jobMonitor).reportInactive(anyString());
+    }
+
+    @Test
+    void poll_cloudError_reportsFailure() {
+        givenAuthenticated();
+        when(apiClient.listTrackableObjects("tok", "u-1")).thenThrow(new TractiveException("cloud down"));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure(contains("cloud down"));
+        verify(jobMonitor, never()).reportInactive(anyString());
+    }
+
+    @Test
+    void poll_success_reportsNothing() {
+        givenAuthenticated();
+        givenOnePet();
+        when(mapper.map(any(), any())).thenReturn(List.of(LOCATION_UPDATE));
+
+        service.poll();
+
+        verifyNoInteractions(jobMonitor);
+    }
+
+    @Test
+    void poll_expiredToken_reportsFailure() {
+        when(authService.getValidToken()).thenReturn(Optional.empty());
+        when(authService.status()).thenReturn(new com.household.manager.tractive.dto.TractiveAuthStatusDto(
+                false, "a@b.de", java.time.LocalDateTime.now().minusDays(1)));
+
+        service.poll();
+
+        verify(jobMonitor).reportFailure("Tractive-Anmeldung abgelaufen");
+        verify(jobMonitor, never()).reportInactive(anyString());
     }
 }

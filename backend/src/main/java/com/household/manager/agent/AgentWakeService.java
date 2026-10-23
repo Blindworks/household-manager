@@ -5,6 +5,7 @@ import com.household.manager.exception.TooManyRequestsException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
+import com.household.manager.systemlog.SystemJobMonitor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -62,6 +63,7 @@ public class AgentWakeService {
     private final ScheduledExecutorService debounceScheduler;
     private final AgentTokenBudget tokenBudget;
     private final Clock clock;
+    private final SystemJobMonitor jobMonitor;
 
     /** Schuetzt {@link #running}, {@link #followUp} und {@link #followUpReasons}. */
     private final Object runLock = new Object();
@@ -82,7 +84,8 @@ public class AgentWakeService {
                             @Qualifier("agentExecutor") ExecutorService executor,
                             @Qualifier("agentDebounceScheduler") ScheduledExecutorService debounceScheduler,
                             AgentTokenBudget tokenBudget,
-                            Clock clock) {
+                            Clock clock,
+                            SystemJobMonitor jobMonitor) {
         this.properties = properties;
         this.settings = settings;
         this.runService = runService;
@@ -90,15 +93,20 @@ public class AgentWakeService {
         this.debounceScheduler = debounceScheduler;
         this.tokenBudget = tokenBudget;
         this.clock = clock;
+        this.jobMonitor = jobMonitor;
     }
 
     /** Grundtakt. Wirft nie. */
     @Scheduled(fixedDelayString = "${agent.tick-interval-ms}", initialDelayString = "${agent.initial-delay-ms}")
     public void tick() {
         try {
+            if (!isOperational()) {
+                jobMonitor.reportInactive("Hausverstand ausgeschaltet");
+            }
             submit(new AgentTrigger(AgentTriggerType.SCHEDULED, List.of()));
         } catch (Exception ex) {
             log.warn("Grundtakt des Hausverstands fehlgeschlagen", ex);
+            jobMonitor.reportFailure(ex.getMessage());
         }
     }
 

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261022-0072a-system-log-entry-idx-occurred" author="claude">
+        <createIndex tableName="system_log_entry" indexName="idx_sle_occurred_at"><column name="occurred_at"/></createIndex>
+        <rollback><dropIndex tableName="system_log_entry" indexName="idx_sle_occurred_at"/></rollback>
+    </changeSet>
+
+    <changeSet id="20261022-0072b-system-log-entry-idx-kind" author="claude">
+        <createIndex tableName="system_log_entry" indexName="idx_sle_kind_occurred">
+            <column name="kind"/>
+            <column name="occurred_at"/>
+        </createIndex>
+        <rollback><dropIndex tableName="system_log_entry" indexName="idx_sle_kind_occurred"/></rollback>
+    </changeSet>
+
+    <changeSet id="20261022-0072c-system-log-entry-idx-flow" author="claude">
+        <createIndex tableName="system_log_entry" indexName="idx_sle_flow"><column name="flow_id"/></createIndex>
+        <rollback><dropIndex tableName="system_log_entry" indexName="idx_sle_flow"/></rollback>
+    </changeSet>
+
+    <changeSet id="20261022-0072d-system-log-entry-idx-run" author="claude">
+        <createIndex tableName="system_log_entry" indexName="idx_sle_run"><column name="run_id"/></createIndex>
+        <rollback><dropIndex tableName="system_log_entry" indexName="idx_sle_run"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

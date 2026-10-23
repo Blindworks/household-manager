@@ -22,10 +22,23 @@ public class FlowEngineBootstrap {
     private final FlowEngine engine;
     private final FlowRepository flowRepository;
     private final FlowDefinitionParser parser;
+    private final com.household.manager.systemlog.FlowPendingRunTracker pendingRuns;
+    private final com.household.manager.systemlog.MissedTriggerDetector missedTriggerDetector;
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         registry.setEngine(engine);
+        // Beides vor dem Deploy und jeweils isoliert: das Protokoll darf den Start nie verhindern.
+        try {
+            pendingRuns.abortAllOnStartup();
+        } catch (Exception ex) {
+            log.warn("Wartende Läufe konnten beim Start nicht abgebrochen werden: {}", ex.getMessage());
+        }
+        try {
+            missedTriggerDetector.detectMissed();
+        } catch (Exception ex) {
+            log.warn("Verpasste Termine konnten nicht ermittelt werden: {}", ex.getMessage());
+        }
         for (Flow flow : flowRepository.findByEnabledTrueAndDeployedDefinitionNotNull()) {
             try {
                 registry.deploy(flow.getId(), parser.parse(flow.getDeployedDefinition()));

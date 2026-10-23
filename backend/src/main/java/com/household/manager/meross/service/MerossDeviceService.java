@@ -217,6 +217,12 @@ public class MerossDeviceService {
         }
     }
 
+    /** Sind Meross-Zugangsdaten hinterlegt? Ohne sie ist die Anbindung nicht eingerichtet. */
+    public boolean isConfigured() {
+        return merossProperties.getEmail() != null && !merossProperties.getEmail().isBlank()
+                && merossProperties.getPassword() != null && !merossProperties.getPassword().isBlank();
+    }
+
     private void validateConfiguration() {
         if (merossProperties.getEmail() == null || merossProperties.getEmail().isBlank()) {
             throw new IllegalStateException("Meross ist nicht konfiguriert: 'meross.email' fehlt.");

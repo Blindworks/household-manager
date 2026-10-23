@@ -3,6 +3,7 @@ package com.household.manager.service;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,14 +34,17 @@ public class SmartDeviceStatePollingService {
 
     private final SmartDeviceRepository smartDeviceRepository;
     private final SmartDeviceService smartDeviceService;
+    private final SystemJobMonitor jobMonitor;
     private final boolean enabled;
 
     public SmartDeviceStatePollingService(
             SmartDeviceRepository smartDeviceRepository,
             SmartDeviceService smartDeviceService,
+            SystemJobMonitor jobMonitor,
             @Value("${smart-device.state-polling.enabled:true}") boolean enabled) {
         this.smartDeviceRepository = smartDeviceRepository;
         this.smartDeviceService = smartDeviceService;
+        this.jobMonitor = jobMonitor;
         this.enabled = enabled;
     }
 
@@ -48,9 +52,12 @@ public class SmartDeviceStatePollingService {
             initialDelayString = "${smart-device.state-polling.initial-delay-ms:25000}")
     public void poll() {
         if (!enabled) {
+            jobMonitor.reportInactive("Zustands-Polling deaktiviert");
             return;
         }
-        for (SmartDevice device : smartDeviceRepository.findByDeviceTypeInOrderByDeviceNameAsc(POLLED_TYPES)) {
+        List<SmartDevice> devices = smartDeviceRepository.findByDeviceTypeInOrderByDeviceNameAsc(POLLED_TYPES);
+        int failures = 0;
+        for (SmartDevice device : devices) {
             try {
                 smartDeviceService.refreshDeviceState(device.getId());
             } catch (Exception ex) {
@@ -59,7 +66,12 @@ public class SmartDeviceStatePollingService {
                 // füllt ein dauerhaft ausgestecktes Gerät jede Minute das Log.
                 log.debug("Zustands-Poll für Gerät {} ({}) fehlgeschlagen: {}",
                         device.getId(), device.getDeviceName(), ex.getMessage());
+                failures++;
             }
+        }
+        // Ein einzelnes offline Gerät ist kein Job-Ausfall - erst wenn jede Abfrage des Zyklus scheiterte.
+        if (!devices.isEmpty() && failures == devices.size()) {
+            jobMonitor.reportFailure("alle " + devices.size() + " Abfragen fehlgeschlagen");
         }
     }
 }

@@ -3,6 +3,7 @@ package com.household.manager.tractive;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.TractiveEntityMapper;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.tractive.dto.TractiveGeofenceDto;
 import com.household.manager.tractive.dto.TractiveTrackableDto;
 import com.household.manager.tractive.dto.TractiveTrackableRefDto;
@@ -36,6 +37,7 @@ public class TractivePollingService {
     private final TractiveEntityMapper mapper;
     private final EntityStateService entityStateService;
     private final TractivePositionRecorder positionRecorder;
+    private final SystemJobMonitor jobMonitor;
 
     /** Zuletzt erfolgreich gemeldete Updates; Basis fuer die unavailable-Markierung. */
     private volatile List<EntityStateUpdate> lastUpdates = List.of();
@@ -55,6 +57,7 @@ public class TractivePollingService {
             initialDelayString = "${tractive.initial-delay-ms:20000}")
     public void poll() {
         if (!properties.isEnabled()) {
+            jobMonitor.reportInactive("Tractive-Anbindung deaktiviert");
             return;
         }
         try {
@@ -62,8 +65,24 @@ public class TractivePollingService {
         } catch (TractiveAuthException ex) {
             // Ohne Anmeldung ist das der Dauerzustand — als Warnung pro Minute waere es Laerm.
             log.debug("Tractive-Polling ohne gueltiges Token: {}", ex.getMessage());
+            if (hasStoredToken()) {
+                // Ein abgelaufenes Token ist eine Stoerung (die Entitaeten stehen auf unavailable).
+                jobMonitor.reportFailure("Tractive-Anmeldung abgelaufen");
+            } else {
+                jobMonitor.reportInactive("keine Tractive-Anmeldung");
+            }
         } catch (Exception ex) {
             log.warn("Tractive-Polling fehlgeschlagen: {}", ex.getMessage());
+            jobMonitor.reportFailure(ex.getMessage());
+        }
+    }
+
+    private boolean hasStoredToken() {
+        try {
+            var status = authService.status();
+            return status != null && status.expiresAt() != null;
+        } catch (Exception ex) {
+            return false;
         }
     }
 

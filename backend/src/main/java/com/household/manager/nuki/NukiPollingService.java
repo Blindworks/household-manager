@@ -3,6 +3,7 @@ package com.household.manager.nuki;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.NukiEntityMapper;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,6 +26,7 @@ public class NukiPollingService {
     private final NukiApiClient apiClient;
     private final NukiEntityMapper mapper;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     /** Zuletzt erfolgreich gemeldete Updates; Basis für die unavailable-Markierung. */
     private volatile List<EntityStateUpdate> lastUpdates = List.of();
@@ -33,6 +35,7 @@ public class NukiPollingService {
             initialDelayString = "${nuki.initial-delay-ms:15000}")
     public synchronized void poll() {
         if (!properties.isConfigured()) {
+            jobMonitor.reportInactive("Nuki nicht konfiguriert");
             return;
         }
         try {
@@ -48,6 +51,7 @@ public class NukiPollingService {
             lastUpdates = List.copyOf(updates);
         } catch (Exception ex) {
             log.warn("Nuki polling failed: {}", ex.getMessage());
+            jobMonitor.reportFailure(ex.getMessage());
             markUnavailable();
         }
     }

@@ -5,7 +5,7 @@ import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
 import com.household.manager.flowengine.NodeFieldType;
-import com.household.manager.flowengine.NodeHandler;
+import com.household.manager.flowengine.ConditionNodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.sun.SunTimeExpression;
@@ -39,7 +39,7 @@ import java.util.Optional;
  * des Fensters prueft {@link #validate(NodeConfig)} beim Deploy.
  */
 @Component
-public class TimeConditionNodeHandler implements NodeHandler {
+public class TimeConditionNodeHandler implements ConditionNodeHandler {
 
     static final String FROM = "from";
     static final String TO = "to";

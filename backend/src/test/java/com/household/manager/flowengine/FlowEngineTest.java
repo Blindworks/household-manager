@@ -6,6 +6,8 @@ import com.household.manager.audit.AuditActorContext;
 import com.household.manager.flowengine.model.FlowDefinitionParser;
 import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.flowengine.nodes.DelayNodeHandler;
+import com.household.manager.systemlog.FlowPendingRunTracker;
+import org.mockito.InOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +26,8 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.ArgumentMatchers.anyString;
 
 class FlowEngineTest {
 
@@ -80,6 +84,7 @@ class FlowEngineTest {
     }
 
     private final FlowTriggerRecorder triggerRecorder = mock(FlowTriggerRecorder.class);
+    private final FlowPendingRunTracker pendingRuns = mock(FlowPendingRunTracker.class);
     private FlowEngine engine;
     private FlowRegistry registry;
     private final FlowDefinitionParser parser = new FlowDefinitionParser(new ObjectMapper());
@@ -88,10 +93,11 @@ class FlowEngineTest {
     void setUp() {
         List<NodeHandler> handlers = List.of(
                 new RecordingHandler(), new RouterHandler(), new FailingHandler(), new TestTriggerHandler());
-        registry = new FlowRegistry(handlers);
+        registry = new FlowRegistry(handlers, pendingRuns);
         // Synchroner "Executor" (Runnable::run) macht die Tests deterministisch.
         engine = new FlowEngine(registry, Runnable::run,
-                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder);
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class), pendingRuns);
         registry.setEngine(engine);
     }
 
@@ -207,13 +213,14 @@ class FlowEngineTest {
     void undeployCancelsPendingDelayFutures() {
         List<NodeHandler> handlers = List.of(
                 new RecordingHandler(), new RouterHandler(), new FailingHandler(),
-                new TestTriggerHandler(), new DelayNodeHandler());
-        FlowRegistry reg = new FlowRegistry(handlers);
+                new TestTriggerHandler(), new DelayNodeHandler(pendingRuns));
+        FlowRegistry reg = new FlowRegistry(handlers, pendingRuns);
         org.springframework.scheduling.TaskScheduler delayScheduler =
                 mock(org.springframework.scheduling.TaskScheduler.class);
         ScheduledFuture<?> future = mock(ScheduledFuture.class);
         doReturn(future).when(delayScheduler).schedule(any(Runnable.class), any(Instant.class));
-        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer(), triggerRecorder);
+        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class), pendingRuns);
         reg.setEngine(delayEngine);
 
         reg.deploy(2L, parser.parse("""
@@ -233,9 +240,10 @@ class FlowEngineTest {
     @Test
     void nodeAusfuehrungLaeuftUnterFlowAktorUndWirdDanachGeleert() {
         ContextCapturingHandler capturing = new ContextCapturingHandler();
-        FlowRegistry reg = new FlowRegistry(List.of(new TestTriggerHandler(), capturing));
+        FlowRegistry reg = new FlowRegistry(List.of(new TestTriggerHandler(), capturing), pendingRuns);
         FlowEngine capturingEngine = new FlowEngine(reg, Runnable::run,
-                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder);
+                mock(org.springframework.scheduling.TaskScheduler.class), new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class), pendingRuns);
         reg.setEngine(capturingEngine);
         reg.deploy(7L, parser.parse("""
                 { "nodes": [
@@ -281,5 +289,70 @@ class FlowEngineTest {
 
         assertEquals(List.of("r2:1"), received);
         verify(triggerRecorder, never()).recordTriggered(anyLong());
+    }
+
+    private static final String TRIGGER_TO_RECORDER = """
+            { "nodes": [
+                { "id": "t", "type": "test-trigger", "config": {} },
+                { "id": "r1", "type": "recorder", "config": {} },
+                { "id": "r2", "type": "recorder", "config": {} } ],
+              "wires": [
+                { "from": { "node": "t", "port": 0 }, "to": { "node": "r1" } },
+                { "from": { "node": "r1", "port": 0 }, "to": { "node": "r2" } } ] }
+            """;
+
+    @Test
+    void fortsetzungSchliesstWartendenLaufAb() {
+        deploy(1L, TRIGGER_TO_RECORDER);
+
+        engine.runFrom(1L, "r1", 0, FlowMessage.of(Map.of("v", "1", FlowRunTrace.RUN_ID_KEY, "abc")));
+
+        verify(pendingRuns).complete("abc");
+    }
+
+    @Test
+    void triggerStartMitRunIdSchliesstForSecondsLaufAb() {
+        deploy(1L, TRIGGER_TO_RECORDER);
+
+        engine.runFrom(1L, "t", 0, FlowMessage.of(Map.of("v", "1", FlowRunTrace.RUN_ID_KEY, "xyz")));
+
+        verify(pendingRuns).complete("xyz");
+    }
+
+    @Test
+    void gewoehnlicherTriggerStartSchliesstNichtsAb() {
+        deploy(1L, TRIGGER_TO_RECORDER);
+
+        engine.runFrom(1L, "t", 0, FlowMessage.of(Map.of("v", "1")));
+
+        verify(pendingRuns, never()).complete(anyString());
+    }
+
+    @Test
+    void verketteteDelaysSchliessenAbBevorSieNeuRegistrieren() {
+        List<NodeHandler> handlers = List.of(new TestTriggerHandler(), new DelayNodeHandler(pendingRuns));
+        FlowRegistry reg = new FlowRegistry(handlers, pendingRuns);
+        org.springframework.scheduling.TaskScheduler delayScheduler =
+                mock(org.springframework.scheduling.TaskScheduler.class);
+        doReturn(mock(ScheduledFuture.class)).when(delayScheduler).schedule(any(Runnable.class), any(Instant.class));
+        FlowEngine delayEngine = new FlowEngine(reg, Runnable::run, delayScheduler, new DebugBuffer(), triggerRecorder,
+                mock(FlowRunRecorder.class), pendingRuns);
+        reg.setEngine(delayEngine);
+        reg.deploy(2L, parser.parse("""
+                { "nodes": [
+                    { "id": "t", "type": "test-trigger", "config": {} },
+                    { "id": "d1", "type": "delay", "config": { "seconds": 60 } },
+                    { "id": "d2", "type": "delay", "config": { "seconds": 60 } } ],
+                  "wires": [
+                    { "from": { "node": "t", "port": 0 }, "to": { "node": "d1" } },
+                    { "from": { "node": "d1", "port": 0 }, "to": { "node": "d2" } } ] }
+                """));
+
+        // Fortsetzung nach Ablauf von d1: derselbe Lauf wartet sofort wieder an d2
+        delayEngine.runFrom(2L, "d1", 0, FlowMessage.of(Map.of(FlowRunTrace.RUN_ID_KEY, "abc")));
+
+        InOrder order = inOrder(pendingRuns);
+        order.verify(pendingRuns).complete("abc");
+        order.verify(pendingRuns).register(2L, "d2", "abc");
     }
 }

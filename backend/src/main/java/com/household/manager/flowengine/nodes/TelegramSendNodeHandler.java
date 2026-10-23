@@ -1,5 +1,6 @@
 package com.household.manager.flowengine.nodes;
 
+import com.household.manager.common.DeliveryResult;
 import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
@@ -17,7 +18,7 @@ import java.util.List;
 /**
  * Aktions-Node: Telegram-Nachricht an die erlaubten Chats (oder einen
  * bestimmten Chat). Platzhalter: {entityId}, {newState}, {oldState}.
- * Sendefehler schluckt der NotificationService — der Flow läuft weiter.
+ * Sendefehler schluckt der NotificationService — der Flow läuft weiter, der Lauf wird aber als fehlgeschlagen markiert.
  */
 @Component
 @RequiredArgsConstructor
@@ -54,12 +55,14 @@ public class TelegramSendNodeHandler implements NodeHandler {
     @Override
     public NodeResult handle(FlowMessage message, NodeConfig config, NodeContext ctx) {
         String text = render(config.string("message").orElse(""), message);
-        config.string("chatId")
+        DeliveryResult result = config.string("chatId")
                 .map(String::trim)
                 .filter(chatId -> !chatId.isEmpty())
-                .ifPresentOrElse(
-                        chatId -> notificationService.sendTo(Long.parseLong(chatId), text),
-                        () -> notificationService.sendToAllowedChats(text));
+                .map(chatId -> notificationService.sendTo(Long.parseLong(chatId), text))
+                .orElseGet(() -> notificationService.sendToAllowedChats(text));
+        if (!result.delivered()) {
+            ctx.reportFailure("Telegram nicht zugestellt: " + result.failure());
+        }
         return NodeResult.single(message);
     }
 

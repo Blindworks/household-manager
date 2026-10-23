@@ -37,6 +37,7 @@ class RateLimitNodeHandlerTest {
             public void emit(int port, FlowMessage message) { }
             public org.springframework.scheduling.TaskScheduler scheduler() { return null; }
             public void debug(String label, FlowMessage message) { }
+            public void reportFailure(String reason) { }
         };
     }
 

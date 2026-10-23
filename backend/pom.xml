@@ -84,6 +84,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- AOP fuer das Systemprotokoll (Job-Aspekt) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- CSV Parsing -->
         <dependency>
             <groupId>org.apache.commons</groupId>

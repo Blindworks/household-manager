@@ -33,6 +33,7 @@ public class FlowService {
     private final FlowRegistry registry;
     private final FlowEngine engine;
     private final AuditService auditService;
+    private final FlowRunRecorder runRecorder;
 
     @Transactional(readOnly = true)
     public List<Flow> getAll() {
@@ -63,6 +64,7 @@ public class FlowService {
         Flow flow = require(id);
         if (name != null) {
             flow.setName(name);
+            runRecorder.forgetName(id);
         }
         if (description != null) {
             flow.setDescription(description);
@@ -147,6 +149,7 @@ public class FlowService {
         require(id);
         registry.undeploy(id);
         flowRepository.deleteById(id);
+        runRecorder.forgetName(id);
         auditService.record("flow.delete", "Flow " + id);
     }
 
@@ -164,6 +167,10 @@ public class FlowService {
         if (payload != null) {
             values.putAll(payload);
         }
+        // Reservierte Schluessel nach dem Payload: ein Test-Lauf darf sich weder in einen fremden Lauf
+        // einhaengen (_runId) noch als echter Lauf ausgeben (_injected).
+        values.remove(FlowRunTrace.RUN_ID_KEY);
+        values.put(FlowRunTrace.INJECTED_KEY, true);
         engine.emitAsync(flowId, nodeId, 0, FlowMessage.of(values));
     }
 

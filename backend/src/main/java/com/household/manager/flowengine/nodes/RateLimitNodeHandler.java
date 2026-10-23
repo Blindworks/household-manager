@@ -4,7 +4,7 @@ import com.household.manager.flowengine.FlowMessage;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
 import com.household.manager.flowengine.NodeFieldType;
-import com.household.manager.flowengine.NodeHandler;
+import com.household.manager.flowengine.GateNodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,7 @@ import java.util.List;
  * verworfen (gegen Ansage-Spam bei flatternden Werten). Zustand in-memory.
  */
 @Component
-public class RateLimitNodeHandler implements NodeHandler {
+public class RateLimitNodeHandler implements GateNodeHandler {
 
     static final String STATE_KEY_LAST_PASSED = "lastPassed";
 

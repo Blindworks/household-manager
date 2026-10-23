@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261022-0073-create-system-job-status" author="claude">
+        <comment>Letzter Stand je geplantem Job (Zustand OK/FAILING/INACTIVE).</comment>
+        <createTable tableName="system_job_status">
+            <column name="job_key" type="VARCHAR(200)"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="state" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="last_run_at" type="DATETIME"/>
+            <column name="last_success_at" type="DATETIME"/>
+            <column name="last_failure_at" type="DATETIME"/>
+            <column name="failing_since" type="DATETIME"/>
+            <column name="last_message" type="VARCHAR(2000)"/>
+        </createTable>
+        <rollback><dropTable tableName="system_job_status"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

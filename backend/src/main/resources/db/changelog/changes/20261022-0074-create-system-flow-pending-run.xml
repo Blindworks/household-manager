@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261022-0074a-create-system-flow-pending-run" author="claude">
+        <comment>Wartende Flow-Laeufe (Delay/Timer), ueberleben einen Neustart.</comment>
+        <createTable tableName="system_flow_pending_run">
+            <column name="run_id" type="VARCHAR(36)"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="flow_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="node_id" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="flow_name" type="VARCHAR(200)"/>
+            <column name="created_at" type="DATETIME"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="system_flow_pending_run"/></rollback>
+    </changeSet>
+
+    <changeSet id="20261022-0074b-system-flow-pending-run-idx-flow" author="claude">
+        <createIndex tableName="system_flow_pending_run" indexName="idx_sfpr_flow"><column name="flow_id"/></createIndex>
+        <rollback><dropIndex tableName="system_flow_pending_run" indexName="idx_sfpr_flow"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

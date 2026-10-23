@@ -8,6 +8,7 @@ import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.ShellyReading;
 import com.household.manager.repository.ShellyReadingRepository;
 import com.household.manager.shelly.dto.ShellyStatusDto;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,12 +26,17 @@ public class ShellyPollingService {
     private final ShellyService shellyService;
     private final ShellyReadingRepository shellyReadingRepository;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     @Scheduled(fixedDelayString = "${shelly.polling.interval-ms:60000}")
     public void pollAllDevices() {
         //log.debug("Polling Shelly devices...");
         List<ShellyStatusDto> statuses = shellyService.getAllDevicesStatus();
 
+        // Ein einzelnes unerreichbares Gerät ist kein Job-Ausfall - erst wenn keines des Zyklus antwortet.
+        if (!statuses.isEmpty() && statuses.stream().noneMatch(ShellyStatusDto::reachable)) {
+            jobMonitor.reportFailure("kein Shelly-Gerät erreichbar");
+        }
         for (ShellyStatusDto status : statuses) {
             reportEntityStates(status);
             if (!status.reachable()) {

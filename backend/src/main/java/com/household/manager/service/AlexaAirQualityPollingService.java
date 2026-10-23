@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.alexa.AlexaNotLoggedInException;
 import com.household.manager.alexa.AlexaSidecarClient;
 import com.household.manager.alexa.AlexaSidecarClient.SidecarAirQualityState;
 import com.household.manager.dto.AlexaAirQualityPollingStatusResponse;
@@ -10,6 +11,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.AlexaAirQualityReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.TaskScheduler;
@@ -37,6 +39,7 @@ public class AlexaAirQualityPollingService {
     private final AlexaAirQualityReadingRepository repository;
     private final TaskScheduler taskScheduler;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
 
     private volatile LocalDateTime lastPollTime;
     private volatile String lastError;
@@ -72,9 +75,15 @@ public class AlexaAirQualityPollingService {
             }
             lastError = null;
             log.debug("Saved {} Alexa air quality readings", states.size());
+        } catch (AlexaNotLoggedInException ex) {
+            // Dauerzustand ohne Amazon-Anmeldung, keine Stoerung.
+            lastError = ex.getMessage();
+            log.debug("Alexa-Luftqualitaet: nicht angemeldet");
+            jobMonitor.reportInactive("nicht bei Alexa angemeldet");
         } catch (Exception ex) {
             lastError = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             log.error("Failed to poll Alexa air quality monitors", ex);
+            jobMonitor.reportFailure(lastError);
         }
     }
 

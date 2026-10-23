@@ -1,12 +1,15 @@
 package com.household.manager.flowengine.nodes;
 
 import com.household.manager.flowengine.FlowMessage;
+import com.household.manager.flowengine.FlowRunTrace;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeFieldDescriptor;
 import com.household.manager.flowengine.NodeFieldType;
-import com.household.manager.flowengine.NodeHandler;
+import com.household.manager.flowengine.DeferringNodeHandler;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
+import com.household.manager.systemlog.FlowPendingRunTracker;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -19,12 +22,17 @@ import java.util.concurrent.ScheduledFuture;
  * Reicht die Message nach konfigurierten Sekunden weiter (nicht-blockierend
  * über den TaskScheduler). Offene Delays werden bei Re-Deploy/Undeploy von
  * {@code FlowRegistry} storniert (siehe dort {@code cancelScheduledFutures}) —
- * dafür parkt diese Node ihre {@link ScheduledFuture}s im Node-State.
+ * dafür parkt diese Node ihre {@link ScheduledFuture}s im Node-State. Der wartende Lauf wird zusätzlich
+ * im {@link FlowPendingRunTracker} vermerkt, damit ein nie fortgesetzter Lauf als abgebrochen erscheint;
+ * die Fortsetzung schließt ihn in der Engine ab.
  */
 @Component
-public class DelayNodeHandler implements NodeHandler {
+@RequiredArgsConstructor
+public class DelayNodeHandler implements DeferringNodeHandler {
 
     static final String STATE_KEY_PENDING = "pendingDelays";
+
+    private final FlowPendingRunTracker pendingRuns;
 
     @Override
     public String type() {
@@ -55,12 +63,29 @@ public class DelayNodeHandler implements NodeHandler {
         // aus dem pending-Set zu entfernen (das Future kennt sich selbst erst
         // nach dem Aufruf von schedule()).
         ScheduledFuture<?>[] holder = new ScheduledFuture<?>[1];
-        holder[0] = ctx.scheduler().schedule(() -> {
-            pending.remove(holder[0]);
-            ctx.emit(0, message);
-        }, Instant.now().plusSeconds(seconds));
+        // Vor dem Einplanen registrieren: so liegt die Registrierung sicher vor dem Abschluss durch die Fortsetzung.
+        String runId = runIdOf(message);
+        if (runId != null) {
+            pendingRuns.register(ctx.flowId(), ctx.nodeId(), runId);
+        }
+        try {
+            holder[0] = ctx.scheduler().schedule(() -> {
+                pending.remove(holder[0]);
+                ctx.emit(0, message);
+            }, Instant.now().plusSeconds(seconds));
+        } catch (RuntimeException ex) {
+            if (runId != null) {
+                pendingRuns.complete(runId);
+            }
+            throw ex;
+        }
         pending.add(holder[0]);
         return NodeResult.none();
+    }
+
+    private static String runIdOf(FlowMessage message) {
+        Object runId = message.get(FlowRunTrace.RUN_ID_KEY);
+        return runId != null ? runId.toString() : null;
     }
 
     @Override

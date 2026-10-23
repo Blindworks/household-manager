@@ -8,6 +8,7 @@ import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.EntityState;
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.zigbee.config.ZigbeeMqttProperties;
 import com.household.manager.zigbee.config.ZigbeeWatchdogProperties;
 import com.household.manager.zigbee.model.ZigbeeStreamStatus;
@@ -54,6 +55,7 @@ public class ZigbeeAvailabilityWatchdog {
     private final EntityStateService entityStateService;
     private final ZigbeeConnectionControl connectionControl;
     private final ObjectMapper objectMapper;
+    private final SystemJobMonitor jobMonitor;
 
     private Phase phase = Phase.HEALTHY;
     private long silentAtRecoveryStart;
@@ -68,12 +70,18 @@ public class ZigbeeAvailabilityWatchdog {
         // zuverlaessig einen Ausfall melden, der keiner ist (Dev-Umgebungen, Zweitinstanzen,
         // temporaere Abschaltung).
         if (!properties.isEnabled() || !mqttProperties.isEnabled()) {
+            jobMonitor.reportInactive("Zigbee-Watchdog oder MQTT deaktiviert");
             return;
         }
         try {
             evaluate();
         } catch (Exception ex) {
             log.warn("Zigbee-Watchdog fehlgeschlagen: {}", ex.getMessage(), ex);
+            jobMonitor.reportFailure("Watchdog fehlgeschlagen: " + ex.getMessage());
+        }
+        // Die Ausfallmeldung selbst kommt einmalig als Event; die Tafel zeigt den Dauerzustand.
+        if (phase == Phase.FAILED) {
+            jobMonitor.reportFailure("Zigbee-Anbindung ausgefallen");
         }
     }
 

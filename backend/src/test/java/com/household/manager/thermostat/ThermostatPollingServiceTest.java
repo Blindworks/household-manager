@@ -1,5 +1,6 @@
 package com.household.manager.thermostat;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.Thermostat;
@@ -38,6 +39,8 @@ import static org.mockito.Mockito.when;
 class ThermostatPollingServiceTest {
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private ThermostatRepository repository;
     @Mock
     private TapoHubClient hubClient;
@@ -57,7 +60,7 @@ class ThermostatPollingServiceTest {
         cache = new ThermostatStateCache();
         Clock clock = Clock.fixed(Instant.parse("2026-10-09T16:30:00Z"), ZoneId.of("Europe/Berlin"));
         poller = new ThermostatPollingService(repository, hubClient, cache, new ThermostatEntityMapper(),
-                historyRecorder, entityStateService, clock, new ObjectMapper());
+                historyRecorder, entityStateService, clock, new ObjectMapper(), jobMonitor);
         living = thermostat(1L, "KE-1", "Wohnzimmer", "10.0.0.1");
         bedroom = thermostat(2L, "KE-2", "Schlafzimmer", "10.0.0.1");
         otherHub = thermostat(3L, "KE-3", "Bad", "10.0.0.2");
@@ -177,5 +180,35 @@ class ThermostatPollingServiceTest {
         when(repository.findByActiveTrue()).thenThrow(new RuntimeException("DB weg"));
 
         assertDoesNotThrow(() -> poller.poll());
+    }
+
+    @Test
+    void poll_noHub_reportsInactive() {
+        when(repository.findByActiveTrue()).thenReturn(List.of());
+
+        poller.poll();
+
+        verify(jobMonitor).reportInactive(any());
+    }
+
+    @Test
+    void poll_allHubsFail_reportsFailure() {
+        when(repository.findByActiveTrue()).thenReturn(List.of(living, otherHub));
+        when(hubClient.readThermostats(any())).thenThrow(new TapoException("Hub weg"));
+
+        poller.poll();
+
+        verify(jobMonitor).reportFailure(any());
+    }
+
+    @Test
+    void poll_oneHubFails_doesNotReportFailure() {
+        when(repository.findByActiveTrue()).thenReturn(List.of(living, otherHub));
+        when(hubClient.readThermostats("10.0.0.1")).thenThrow(new TapoException("Hub weg"));
+        when(hubClient.readThermostats("10.0.0.2")).thenReturn(List.of(reading("KE-3", 18)));
+
+        poller.poll();
+
+        verify(jobMonitor, never()).reportFailure(any());
     }
 }

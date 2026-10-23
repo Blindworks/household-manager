@@ -1,5 +1,6 @@
 package com.household.manager.zigbee.service;
 
+import com.household.manager.systemlog.SystemJobMonitor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
@@ -31,6 +32,8 @@ import static org.mockito.Mockito.*;
 class ZigbeeAvailabilityWatchdogTest {
 
     @Mock
+    private SystemJobMonitor jobMonitor;
+    @Mock
     private ZigbeeStreamMonitor monitor;
     @Mock
     private EntityStateService entityStateService;
@@ -44,7 +47,7 @@ class ZigbeeAvailabilityWatchdogTest {
     @BeforeEach
     void setUp() {
         watchdog = new ZigbeeAvailabilityWatchdog(
-                monitor, properties, mqttProperties, entityStateService, connectionControl, new ObjectMapper());
+                monitor, properties, mqttProperties, entityStateService, connectionControl, new ObjectMapper(), jobMonitor);
         when(entityStateService.find(isNull(), eq(EntitySource.ZIGBEE)))
                 .thenReturn(List.of(sensorEntity(), buttonEntity()));
     }
@@ -212,5 +215,34 @@ class ZigbeeAvailabilityWatchdogTest {
         when(monitor.status()).thenThrow(new IllegalStateException("boom"));
 
         watchdog.check();
+    }
+
+    @Test
+    void check_failedState_reportsFailure() {
+        silentFor(16);
+        watchdog.check();
+        silentFor(16 + properties.getRecoverGraceMinutes() + 1);
+
+        watchdog.check();
+
+        verify(jobMonitor).reportFailure(any());
+    }
+
+    @Test
+    void check_healthy_reportsNothing() {
+        healthy();
+
+        watchdog.check();
+
+        verifyNoInteractions(jobMonitor);
+    }
+
+    @Test
+    void check_mqttDisabled_reportsInactive() {
+        mqttProperties.setEnabled(false);
+
+        watchdog.check();
+
+        verify(jobMonitor).reportInactive(any());
     }
 }

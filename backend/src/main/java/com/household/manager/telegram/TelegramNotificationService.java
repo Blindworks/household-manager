@@ -1,5 +1,7 @@
 package com.household.manager.telegram;
 
+import com.household.manager.common.DeliveryResult;
+import com.household.manager.common.FailureReasons;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,27 +16,35 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class TelegramNotificationService {
 
+    private static final String NOT_CONFIGURED = "Telegram nicht konfiguriert";
+
     private final TelegramProperties properties;
     private final TelegramApiClient apiClient;
 
     /** Sendet an alle erlaubten Chats; Fehler einzelner Chats stoppen die anderen nicht. */
-    public void sendToAllowedChats(String text) {
+    public DeliveryResult sendToAllowedChats(String text) {
         if (!properties.isConfigured()) {
             log.debug("Telegram nicht konfiguriert — Nachricht verworfen");
-            return;
+            return DeliveryResult.failed(NOT_CONFIGURED);
         }
-        properties.getAllowedChatIds().forEach(chatId -> sendTo(chatId, text));
+        DeliveryResult result = DeliveryResult.ok();
+        for (Long chatId : properties.getAllowedChatIds()) {
+            result = result.and(sendTo(chatId, text));
+        }
+        return result;
     }
 
-    public void sendTo(long chatId, String text) {
+    public DeliveryResult sendTo(long chatId, String text) {
         if (!properties.isConfigured()) {
             log.debug("Telegram nicht konfiguriert — Nachricht verworfen");
-            return;
+            return DeliveryResult.failed(NOT_CONFIGURED);
         }
         try {
             apiClient.sendMessage(chatId, text);
+            return DeliveryResult.ok();
         } catch (Exception ex) {
             log.warn("Telegram-Nachricht an Chat {} fehlgeschlagen: {}", chatId, ex.getMessage());
+            return DeliveryResult.failed("Telegram an Chat " + chatId + ": " + FailureReasons.of(ex));
         }
     }
 }

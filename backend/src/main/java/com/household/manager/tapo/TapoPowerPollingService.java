@@ -9,6 +9,7 @@ import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.model.entity.DeviceType;
 import com.household.manager.model.entity.SmartDevice;
 import com.household.manager.repository.SmartDeviceRepository;
+import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -41,16 +42,19 @@ public class TapoPowerPollingService {
     private final SmartDeviceRepository smartDeviceRepository;
     private final TapoDeviceService tapoDeviceService;
     private final EntityStateService entityStateService;
+    private final SystemJobMonitor jobMonitor;
     private final boolean enabled;
 
     public TapoPowerPollingService(
             SmartDeviceRepository smartDeviceRepository,
             TapoDeviceService tapoDeviceService,
             EntityStateService entityStateService,
+            SystemJobMonitor jobMonitor,
             @Value("${tapo.power-polling.enabled:true}") boolean enabled) {
         this.smartDeviceRepository = smartDeviceRepository;
         this.tapoDeviceService = tapoDeviceService;
         this.entityStateService = entityStateService;
+        this.jobMonitor = jobMonitor;
         this.enabled = enabled;
     }
 
@@ -58,6 +62,7 @@ public class TapoPowerPollingService {
             initialDelayString = "${tapo.power-polling.initial-delay-ms:30000}")
     public void poll() {
         if (!enabled) {
+            jobMonitor.reportInactive("Tapo-Leistungs-Polling deaktiviert");
             return;
         }
         List<SmartDevice> devices;
@@ -65,12 +70,22 @@ public class TapoPowerPollingService {
             devices = smartDeviceRepository.findByDeviceTypeOrderByDeviceNameAsc(DeviceType.TAPO);
         } catch (Exception ex) {
             log.warn("Tapo-Leistungs-Poll: Geraeteliste nicht lesbar: {}", ex.getMessage());
+            jobMonitor.reportFailure("Geräteliste nicht lesbar: " + ex.getMessage());
             return;
         }
+        int attempts = 0;
+        int failures = 0;
         for (SmartDevice device : devices) {
             if (isPollable(device)) {
-                pollQuietly(device);
+                attempts++;
+                if (!pollQuietly(device)) {
+                    failures++;
+                }
             }
+        }
+        // Ein einzelnes offline Gerät ist kein Job-Ausfall - erst wenn jede Abfrage des Zyklus scheiterte.
+        if (attempts > 0 && failures == attempts) {
+            jobMonitor.reportFailure("alle " + attempts + " Abfragen fehlgeschlagen");
         }
     }
 
@@ -89,20 +104,23 @@ public class TapoPowerPollingService {
                 && isMeteringModel(device.getModel());
     }
 
-    private void pollQuietly(SmartDevice device) {
+    /** @return {@code false}, wenn die Abfrage des Geräts mit einem Fehler endete. */
+    private boolean pollQuietly(SmartDevice device) {
         try {
             JsonNode result = tapoDeviceService.getCurrentPower(
                     device.getExternalDeviceId(), device.getIpAddress(), null);
             JsonNode power = result == null ? null : result.get("current_power");
             if (power == null || !power.isNumber()) {
                 log.debug("Tapo {} lieferte kein current_power: {}", device.getDeviceName(), result);
-                return;
+                return true;
             }
             reportPowerState(device, power.decimalValue());
+            return true;
         } catch (Exception ex) {
             // Wie bei Meross bewusst kein 'unavailable': ein transienter Lesefehler soll
             // keinen Zustandsübergang erzeugen, sonst feuern flankengetriggerte Flows fehl.
             log.debug("Tapo-Leistungs-Poll fuer {} fehlgeschlagen: {}", device.getDeviceName(), ex.getMessage());
+            return false;
         }
     }
 

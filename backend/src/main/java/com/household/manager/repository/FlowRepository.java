@@ -16,6 +16,8 @@ public interface FlowRepository extends JpaRepository<Flow, Long> {
 
     List<Flow> findByEnabledTrueAndDeployedDefinitionNotNull();
 
+    List<Flow> findByEnabledTrue();
+
     /** Bulk-Update ohne Entity-Lifecycle: {@code updated_at} bleibt unberührt. */
     @Transactional
     @Modifying

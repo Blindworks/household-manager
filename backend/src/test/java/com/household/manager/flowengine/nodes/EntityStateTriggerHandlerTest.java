@@ -3,9 +3,11 @@ package com.household.manager.flowengine.nodes;
 import com.household.manager.entitystate.EntityStateChangedEvent;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.flowengine.FlowMessage;
+import com.household.manager.flowengine.FlowRunTrace;
 import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.model.entity.EntityState;
+import com.household.manager.systemlog.FlowPendingRunTracker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,8 @@ class EntityStateTriggerHandlerTest {
     private EntityStateService entityStateService;
     @Mock
     private TaskScheduler taskScheduler;
+    @Mock
+    private FlowPendingRunTracker tracker;
 
     private EntityStateTriggerHandler handler;
     private final ConcurrentMap<String, Object> state = new ConcurrentHashMap<>();
@@ -42,7 +46,7 @@ class EntityStateTriggerHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new EntityStateTriggerHandler(entityStateService);
+        handler = new EntityStateTriggerHandler(entityStateService, tracker);
         ctx = new NodeContext() {
             public long flowId() { return 1L; }
             public String nodeId() { return "t"; }
@@ -50,6 +54,7 @@ class EntityStateTriggerHandlerTest {
             public void emit(int port, FlowMessage message) { emitted.add(message); }
             public TaskScheduler scheduler() { return taskScheduler; }
             public void debug(String label, FlowMessage message) { }
+            public void reportFailure(String reason) { }
         };
     }
 
@@ -245,5 +250,74 @@ class EntityStateTriggerHandlerTest {
 
         assertTrue(emitted.isEmpty(),
                 "Ein Ausfall waehrend der Wartezeit darf beim Ablauf nicht doch noch feuern");
+    }
+
+    @Test
+    void forSeconds_registersPendingRun_andEmitsSameRunId() {
+        NodeConfig cfg = config(Map.of("entityId", "sensor.x", "operator", "<", "value", "5", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        ArgumentCaptor<Runnable> timerTask = ArgumentCaptor.forClass(Runnable.class);
+        doReturn(future).when(taskScheduler).schedule(timerTask.capture(), any(Instant.class));
+
+        handler.onEntityEvent(event("10", "4"), cfg, ctx);
+
+        ArgumentCaptor<String> runId = ArgumentCaptor.forClass(String.class);
+        verify(tracker).register(eq(1L), eq("t"), runId.capture());
+        assertNotNull(runId.getValue());
+        when(entityStateService.getByEntityId("sensor.x"))
+                .thenReturn(Optional.of(EntityState.builder().entityId("sensor.x").state("3").build()));
+        timerTask.getValue().run();
+        assertEquals(1, emitted.size());
+        assertEquals(runId.getValue(), emitted.get(0).get(FlowRunTrace.RUN_ID_KEY));
+        // Abschluss uebernimmt die Engine beim Lauf der emittierten Message
+        verify(tracker, never()).complete(any());
+    }
+
+    @Test
+    void forSeconds_cancelledByStateChange_completesWithoutAbort() {
+        NodeConfig cfg = config(Map.of("entityId", "sensor.x", "operator", "<", "value", "5", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        doReturn(future).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        handler.onEntityEvent(event("10", "4"), cfg, ctx);   // Timer startet
+        handler.onEntityEvent(event("4", "50"), cfg, ctx);   // verlässt Bereich
+
+        ArgumentCaptor<String> runId = ArgumentCaptor.forClass(String.class);
+        verify(tracker).register(eq(1L), eq("t"), runId.capture());
+        verify(tracker).complete(runId.getValue());
+        verify(tracker, never()).abortAll(anyLong(), any());
+    }
+
+    @Test
+    void forSeconds_expiryWithoutMatch_completesRun() {
+        NodeConfig cfg = config(Map.of("entityId", "sensor.x", "operator", "<", "value", "5", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        ArgumentCaptor<Runnable> timerTask = ArgumentCaptor.forClass(Runnable.class);
+        doReturn(future).when(taskScheduler).schedule(timerTask.capture(), any(Instant.class));
+
+        handler.onEntityEvent(event("10", "4"), cfg, ctx);
+        when(entityStateService.getByEntityId("sensor.x"))
+                .thenReturn(Optional.of(EntityState.builder().entityId("sensor.x").state("50").build()));
+        timerTask.getValue().run();
+
+        ArgumentCaptor<String> runId = ArgumentCaptor.forClass(String.class);
+        verify(tracker).register(eq(1L), eq("t"), runId.capture());
+        verify(tracker).complete(runId.getValue());
+        assertTrue(emitted.isEmpty());
+    }
+
+    @Test
+    void forSeconds_restartedTimer_completesPreviousRunAndRegistersNewOne() {
+        NodeConfig cfg = config(Map.of("entityId", "sensor.x", "operator", "<", "value", "5", "forSeconds", 180));
+        ScheduledFuture<?> future = mock(ScheduledFuture.class);
+        doReturn(future).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        handler.onEntityEvent(event("10", "4"), cfg, ctx);
+        handler.onEntityEvent(event("10", "3"), cfg, ctx);
+
+        ArgumentCaptor<String> runIds = ArgumentCaptor.forClass(String.class);
+        verify(tracker, times(2)).register(eq(1L), eq("t"), runIds.capture());
+        assertNotEquals(runIds.getAllValues().get(0), runIds.getAllValues().get(1));
+        verify(tracker).complete(runIds.getAllValues().get(0));
     }
 }

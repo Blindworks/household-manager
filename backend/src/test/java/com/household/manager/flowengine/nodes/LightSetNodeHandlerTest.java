@@ -2,6 +2,7 @@ package com.household.manager.flowengine.nodes;
 
 import com.household.manager.dto.LightStateRequest;
 import com.household.manager.flowengine.FlowMessage;
+import com.household.manager.flowengine.NodeContext;
 import com.household.manager.flowengine.NodeResult;
 import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.service.SmartDeviceService;
@@ -28,6 +29,8 @@ class LightSetNodeHandlerTest {
 
     @Mock
     private SmartDeviceService smartDeviceService;
+    @Mock
+    private NodeContext ctx;
 
     private LightSetNodeHandler handler() {
         return new LightSetNodeHandler(smartDeviceService);
@@ -37,7 +40,7 @@ class LightSetNodeHandlerTest {
     void setsBrightnessOnGivenDevice() {
         NodeConfig cfg = new NodeConfig(Map.of("deviceId", "42", "brightness", "80"));
 
-        NodeResult result = handler().handle(FlowMessage.of(Map.of()), cfg, null);
+        NodeResult result = handler().handle(FlowMessage.of(Map.of()), cfg, ctx);
 
         ArgumentCaptor<LightStateRequest> captor = ArgumentCaptor.forClass(LightStateRequest.class);
         verify(smartDeviceService).setLightState(eq(42L), captor.capture());
@@ -58,7 +61,7 @@ class LightSetNodeHandlerTest {
                 "saturation", "60",
                 "colorTemp", "4000"));
 
-        handler().handle(FlowMessage.of(Map.of()), cfg, null);
+        handler().handle(FlowMessage.of(Map.of()), cfg, ctx);
 
         ArgumentCaptor<LightStateRequest> captor = ArgumentCaptor.forClass(LightStateRequest.class);
         verify(smartDeviceService).setLightState(eq(7L), captor.capture());
@@ -74,10 +77,20 @@ class LightSetNodeHandlerTest {
         NodeConfig cfg = new NodeConfig(Map.of("deviceId", "1", "brightness", "50"));
         doThrow(new TapoException("Geraet antwortet nicht")).when(smartDeviceService).setLightState(eq(1L), any());
 
-        NodeResult result = handler().handle(FlowMessage.of(Map.of("foo", "bar")), cfg, null);
+        NodeResult result = handler().handle(FlowMessage.of(Map.of("foo", "bar")), cfg, ctx);
 
         assertFalse(result.outputs().isEmpty());
         assertEquals("bar", result.outputs().get(0).get(0).get("foo"));
+    }
+
+    @Test
+    void handle_reportsFailure_whenDeviceThrows() {
+        NodeConfig cfg = new NodeConfig(Map.of("deviceId", "1", "brightness", "50"));
+        doThrow(new TapoException("Geraet antwortet nicht")).when(smartDeviceService).setLightState(eq(1L), any());
+
+        handler().handle(FlowMessage.of(Map.of()), cfg, ctx);
+
+        verify(ctx).reportFailure(org.mockito.ArgumentMatchers.contains("Geraet antwortet nicht"));
     }
 
     @Test
@@ -86,7 +99,7 @@ class LightSetNodeHandlerTest {
         doThrow(new IllegalArgumentException("Geraet meldet COLOR nicht")).when(smartDeviceService)
                 .setLightState(eq(1L), any());
 
-        NodeResult result = handler().handle(FlowMessage.of(Map.of()), cfg, null);
+        NodeResult result = handler().handle(FlowMessage.of(Map.of()), cfg, ctx);
 
         assertFalse(result.outputs().isEmpty());
     }
@@ -96,7 +109,7 @@ class LightSetNodeHandlerTest {
         NodeConfig cfg = new NodeConfig(Map.of("deviceId", "1", "brightness", "10"));
         FlowMessage msg = FlowMessage.of(Map.of("entityId", "light.x"));
 
-        NodeResult result = handler().handle(msg, cfg, null);
+        NodeResult result = handler().handle(msg, cfg, ctx);
 
         assertEquals(msg, result.outputs().get(0).get(0));
     }

@@ -49,6 +49,7 @@ class ScheduleTriggerHandlerTest {
             public void emit(int port, FlowMessage message) { emitted.add(message); }
             public TaskScheduler scheduler() { return taskScheduler; }
             public void debug(String label, FlowMessage message) { }
+            public void reportFailure(String reason) { }
         };
     }
 
@@ -95,6 +96,26 @@ class ScheduleTriggerHandlerTest {
         subject.register(new NodeConfig(Map.of("cron", cron)), ctx);
 
         return trigger.getValue().nextExecution(new SimpleTriggerContext(Clock.fixed(now, ZoneId.of("UTC"))));
+    }
+
+    @Test
+    void occurrencesBetween_usesClockZone() {
+        java.time.ZonedDateTime from = java.time.ZonedDateTime.of(2026, 7, 1, 0, 0, 0, 0, BERLIN);
+
+        List<java.time.ZonedDateTime> result = handler.occurrencesBetween(
+                new NodeConfig(Map.of("cron", "0 0 6 * * *")), from, from.plusDays(2), 10);
+
+        assertEquals(2, result.size());
+        assertEquals(Instant.parse("2026-07-01T04:00:00Z"), result.get(0).toInstant());
+        assertEquals(6, result.get(0).getHour());
+    }
+
+    @Test
+    void occurrencesBetween_respectsLimit() {
+        java.time.ZonedDateTime from = java.time.ZonedDateTime.of(2026, 7, 1, 0, 0, 0, 0, BERLIN);
+
+        assertEquals(3, handler.occurrencesBetween(
+                new NodeConfig(Map.of("cron", "0 0 * * * *")), from, from.plusDays(1), 3).size());
     }
 
     @Test
