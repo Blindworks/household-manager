@@ -174,10 +174,11 @@ services:
     volumes:
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
-    # Im LAN erreichbar, damit ein lokales Dev-Backend mitlesen kann (eigene
-    # ZIGBEE_MQTT_CLIENT_ID verwenden, siehe application.properties).
-    ports:
-      - "1883:1883"
+    # Bewusst KEIN Host-Port-Mapping: "1883:1883" liess den Stack-Deploy am
+    # 2026-10-30 scheitern (Container blieb in "Starting", Portainer entfernte
+    # daraufhin den ganzen Stack) — wie schon frueher eine stale Docker-Port-
+    # Allokation. Das Backend erreicht den Broker ueber app_net; ein Dev-Backend
+    # kann damit nicht mehr mitlesen.
     networks:
       - app_net
 
