@@ -3,6 +3,8 @@ package com.household.manager.exception;
 import com.household.manager.alexa.AlexaException;
 import com.household.manager.blink.BlinkException;
 import com.household.manager.charging.ChargingSourceException;
+import com.household.manager.dirigera.DirigeraException;
+import com.household.manager.dirigera.PairingInProgressException;
 import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.exception.MerossAuthException;
 import com.household.manager.meross.exception.MerossException;
@@ -373,6 +375,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleZigbeeDeviceKnownToBridge(
             ZigbeeDeviceKnownToBridgeException ex, WebRequest request) {
         log.warn("Zigbee-Geraet noch in zigbee2mqtt bekannt: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(zigbeeError(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request));
+    }
+
+    @ExceptionHandler(DirigeraException.class)
+    public ResponseEntity<ErrorResponse> handleDirigeraException(
+            DirigeraException ex, WebRequest request) {
+        log.warn("Dirigera-Hub-Fehler: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(zigbeeError(HttpStatus.BAD_GATEWAY, "Bad Gateway", ex.getMessage(), request));
+    }
+
+    @ExceptionHandler(PairingInProgressException.class)
+    public ResponseEntity<ErrorResponse> handlePairingInProgress(
+            PairingInProgressException ex, WebRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(zigbeeError(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request));
     }
