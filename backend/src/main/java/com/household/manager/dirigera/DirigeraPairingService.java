@@ -129,7 +129,7 @@ public class DirigeraPairingService {
                 status = DirigeraPairingStatus.idle();
             }
         }
-        pollingService.markAllUnavailable();
+        pollingService.onUnpaired();
         auditService.record("dirigera.unpair", host);
     }
 

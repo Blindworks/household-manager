@@ -92,6 +92,50 @@ class DirigeraPollingServiceTest {
     }
 
     @Test
+    void nichtGekoppeltMeldetBekannteEntitaetenGenauEinmalUnavailable() {
+        stored.add(row("a", true));
+        when(settings.get()).thenReturn(new DirigeraHubSettings(null, null, null, null));
+
+        service.poll();
+
+        verify(entityStates, times(2)).reportState(any(EntityStateUpdate.class));
+        assertUnavailableReported();
+
+        EntityState unavailable = EntityState.builder().state("unavailable").build();
+        when(entityStates.getByEntityId(anyString())).thenReturn(Optional.of(unavailable));
+        service.poll();
+
+        verify(entityStates, times(2)).reportState(any(EntityStateUpdate.class));
+    }
+
+    @Test
+    void langerNameRaumUndModellWerdenAuf100ZeichenGekuerzt() {
+        String lang = "x".repeat(150);
+        stubDevices(new DirigeraSensorSnapshot("a", lang, lang, lang, new BigDecimal("21.50"),
+                new BigDecimal("40.00"), 90, true, Instant.parse("2026-10-30T08:59:00Z")));
+
+        service.poll();
+
+        assertThat(stored).hasSize(1);
+        assertThat(stored.get(0).getName()).hasSize(100);
+        assertThat(stored.get(0).getRoom()).hasSize(100);
+        assertThat(stored.get(0).getModel()).hasSize(100);
+    }
+
+    @Test
+    void onUnpairedVerwirftFehlerUndMeldetUnavailable() {
+        stored.add(row("a", true));
+        when(http.getDevices(anyString(), anyString(), anyString())).thenThrow(new IllegalStateException("kaputt"));
+        service.poll();
+        assertThat(service.lastStatus().lastError()).isEqualTo("kaputt");
+
+        service.onUnpaired();
+
+        assertThat(service.lastStatus().lastError()).isNull();
+        assertThat(service.lastStatus().lastSuccessAt()).isNull();
+    }
+
+    @Test
     void fixtureLegtVierZeilenAnUndMeldetAchtEntitaeten() throws IOException {
         when(http.getDevices("192.168.1.50", "abc", "tok")).thenReturn(fixture());
 

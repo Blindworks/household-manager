@@ -241,7 +241,7 @@ class DirigeraPairingServiceTest {
         service.unpair();
 
         verify(settings).clearPairing();
-        verify(polling).markAllUnavailable();
+        verify(polling).onUnpaired();
         verify(audit).record("dirigera.unpair", HOST);
     }
 

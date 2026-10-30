@@ -33,6 +33,9 @@ public class DirigeraPollingService {
     public record PollStatus(Instant lastSuccessAt, String lastError) {
     }
 
+    // Spaltenbreite von name/room/model (VARCHAR(100)); ein laengerer IKEA-Name liesse jedes Speichern scheitern
+    private static final int MAX_TEXT_LENGTH = 100;
+
     private final DirigeraSettingsService settingsService;
     private final DirigeraHttpClient httpClient;
     private final DirigeraDeviceParser parser;
@@ -81,6 +84,9 @@ public class DirigeraPollingService {
         try {
             DirigeraHubSettings settings = settingsService.get();
             if (!enabled || !settings.isPaired()) {
+                // Auch hier auf unavailable: ein Poll, der vor dem Entkoppeln las, kann nach
+                // markAllUnavailable noch Werte gemeldet haben (idempotent, meldet nur Wechsel)
+                markAllUnavailable();
                 jobMonitor.reportInactive("nicht gekoppelt");
                 return;
             }
@@ -118,6 +124,16 @@ public class DirigeraPollingService {
                 log.warn("Dirigera-Sensor {} nicht auf unavailable gesetzt: {}", row.getRelationId(), e.getMessage());
             }
         }
+    }
+
+    /** Nach dem Entkoppeln: alte Fehlermeldung/Erfolgszeit verwerfen, Entitaeten auf unavailable. */
+    public void onUnpaired() {
+        status = new PollStatus(null, null);
+        markAllUnavailable();
+    }
+
+    private static String truncate(String value) {
+        return value != null && value.length() > MAX_TEXT_LENGTH ? value.substring(0, MAX_TEXT_LENGTH) : value;
     }
 
     private static String describe(Exception e) {
@@ -163,9 +179,9 @@ public class DirigeraPollingService {
         DirigeraSensor row = repository.findByRelationId(s.relationId())
                 .orElseGet(() -> DirigeraSensor.builder().relationId(s.relationId()).build());
         row.setKnownToHub(true);
-        row.setName(s.name());
-        row.setRoom(s.room());
-        row.setModel(s.model());
+        row.setName(truncate(s.name()));
+        row.setRoom(truncate(s.room()));
+        row.setModel(truncate(s.model()));
         row.setLastTemperature(s.temperature());
         row.setLastHumidity(s.humidity());
         row.setBatteryPercent(s.batteryPercent());

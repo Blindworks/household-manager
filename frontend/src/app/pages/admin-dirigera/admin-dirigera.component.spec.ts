@@ -54,6 +54,16 @@ describe('AdminDirigeraComponent', () => {
     fixture.destroy();
   });
 
+  it('sperrtEntkoppelnWaehrendPressButton', () => {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    initWith([], { state: 'PRESS_BUTTON', expiresAt, error: null }, { ...HUB, paired: true });
+
+    const unpairButton = Array.from(el.querySelectorAll('button'))
+      .find(b => b.textContent?.includes('Entkoppeln')) as HTMLButtonElement;
+    expect(unpairButton.disabled).toBeTrue();
+    fixture.destroy();
+  });
+
   it('pollingEndetBeiPaired', fakeAsync(() => {
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
     initWith([], { state: 'PRESS_BUTTON', expiresAt, error: null });

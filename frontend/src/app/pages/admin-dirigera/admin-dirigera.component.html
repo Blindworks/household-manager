@@ -42,7 +42,7 @@
       <button type="button" (click)="startPairing()"
               [disabled]="busy() || pairing()?.state === 'PRESS_BUTTON'">Koppeln</button>
       <button type="button" class="danger" (click)="unpair()"
-              [disabled]="busy() || !hub()?.paired">Entkoppeln</button>
+              [disabled]="busy() || !hub()?.paired || pairing()?.state === 'PRESS_BUTTON'">Entkoppeln</button>
     </div>
   </section>
 
