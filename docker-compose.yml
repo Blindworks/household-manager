@@ -38,13 +38,13 @@ services:
       SHELLY_1_IP: ${SHELLY_1_IP:-192.168.1.130}
       SHELLY_2_IP: ${SHELLY_2_IP:-192.168.1.131}
 
-      # Zigbee MQTT: Quelle ist der Mosquitto des HA-Zigbee2MQTT-Add-ons,
-      # NICHT der lokale mosquitto-Container (der ist fuer das kuenftige
-      # "HA abloesen"-Szenario reserviert).
-      ZIGBEE_MQTT_HOST: ${ZIGBEE_MQTT_HOST:-192.168.1.150}
+      # Zigbee MQTT: eigener mosquitto-Container, gespeist vom eigenen
+      # zigbee2mqtt-Container (seit der HA-Abschaltung 2026-10-30). Derselbe
+      # Nutzer/dasselbe Passwort gelten fuer Broker, zigbee2mqtt und Backend.
+      ZIGBEE_MQTT_HOST: ${ZIGBEE_MQTT_HOST:-mosquitto}
       ZIGBEE_MQTT_PORT: ${ZIGBEE_MQTT_PORT:-1883}
-      ZIGBEE_MQTT_USER: ${ZIGBEE_MQTT_USER:-addons}
-      ZIGBEE_MQTT_PASSWORD: ${ZIGBEE_MQTT_PASSWORD:-}
+      ZIGBEE_MQTT_USER: ${ZIGBEE_MQTT_USER:-household}
+      ZIGBEE_MQTT_PASSWORD: ${ZIGBEE_MQTT_PASSWORD:?ZIGBEE_MQTT_PASSWORD fehlt in .env}
 
       # Alexa (alexa-remote2 Sidecar)
       ALEXA_SIDECAR_URL: http://alexa-sidecar:3456
@@ -154,27 +154,43 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2
     restart: unless-stopped
+    environment:
+      MQTT_USER: ${ZIGBEE_MQTT_USER:-household}
+      MQTT_PASSWORD: ${ZIGBEE_MQTT_PASSWORD:?ZIGBEE_MQTT_PASSWORD fehlt in .env}
+    # Das Passwort-File entsteht bei jedem Start aus der .env (kein Hash im Repo);
+    # Mosquitto 2 verlangt, dass es dem mosquitto-Nutzer gehoert.
+    command: >-
+      sh -c 'mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
+      && chown mosquitto:mosquitto /mosquitto/data/passwd
+      && chmod 0700 /mosquitto/data/passwd
+      && exec mosquitto -c /mosquitto/config/mosquitto.conf'
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
-    # Kein Host-Port-Mapping: Der Container-Broker ist derzeit ungenutzt (das
-    # Backend spricht den HA-Mosquitto auf 192.168.1.150). Ein 1883:1883-Mapping
-    # kollidierte nach einem harten Neustart mit einer stale Docker-Port-
-    # Allokation ("port is already allocated"). Intern bleibt der Broker im
-    # app_net erreichbar; fuers kuenftige "HA abloesen"-Szenario wieder ergaenzen.
+    # Im LAN erreichbar, damit ein lokales Dev-Backend mitlesen kann (eigene
+    # ZIGBEE_MQTT_CLIENT_ID verwenden, siehe application.properties).
+    ports:
+      - "1883:1883"
     networks:
       - app_net
 
   zigbee2mqtt:
-    image: koenkk/zigbee2mqtt
+    # Gepinnt auf die Version des abgeloesten HA-Add-ons; database.db und
+    # configuration.yaml stammen aus dieser Version.
+    image: koenkk/zigbee2mqtt:2.14.2
     restart: unless-stopped
     volumes:
+      # Enthaelt Netzwerkschluessel, database.db und coordinator_backup.json
+      # (gitignored) — der Ordner IST das Zigbee-Netz, vor Experimenten sichern.
       - ./zigbee2mqtt/data:/app/data
     ports:
       - "8081:8081"
     environment:
       TZ: Europe/Berlin
+      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${ZIGBEE_MQTT_USER:-household}
+      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${ZIGBEE_MQTT_PASSWORD:?ZIGBEE_MQTT_PASSWORD fehlt in .env}
+      ZIGBEE2MQTT_CONFIG_FRONTEND_AUTH_TOKEN: ${ZIGBEE2MQTT_FRONTEND_TOKEN:?ZIGBEE2MQTT_FRONTEND_TOKEN fehlt in .env}
     depends_on:
       - mosquitto
     networks:

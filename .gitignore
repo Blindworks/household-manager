@@ -8,6 +8,10 @@ certs/
 backend/*.CSV
 backend/*.csv
 
+# zigbee2mqtt-Laufzeitdaten: Netzwerkschluessel, Geraete-DB, Coordinator-Backup.
+# Vorlage: zigbee2mqtt/configuration.example.yaml
+zigbee2mqtt/data/
+
 tablet-app/local.properties
 tablet-app/.gradle/
 tablet-app/app/build/

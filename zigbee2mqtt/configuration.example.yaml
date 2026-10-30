@@ -1,0 +1,30 @@
+# Vorlage fuer zigbee2mqtt/data/configuration.yaml (die echte Datei ist gitignored,
+# weil sie den Zigbee-Netzwerkschluessel enthaelt).
+#
+# ACHTUNG: network_key, pan_id, ext_pan_id und channel muessen die des bestehenden Netzes
+# sein (stehen auch in coordinator_backup.json). Mit "GENERATE" bildet zigbee2mqtt ein
+# NEUES Netz, und alle Geraete muessen neu angelernt werden. database.db und
+# coordinator_backup.json gehoeren ebenfalls in zigbee2mqtt/data/.
+version: 5
+homeassistant:
+  enabled: false
+advanced:
+  channel: 11
+  network_key: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  pan_id: 0
+  ext_pan_id: [0, 0, 0, 0, 0, 0, 0, 0]
+  log_level: info
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mosquitto:1883
+  user: household
+  # Passwort kommt aus ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD (docker-compose.yml)
+frontend:
+  enabled: true
+  port: 8081
+serial:
+  port: tcp://192.168.1.121:8888
+  adapter: ezsp
+availability:
+  enabled: false
+devices: {}
