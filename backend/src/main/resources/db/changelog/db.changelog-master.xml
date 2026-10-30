@@ -173,4 +173,10 @@
     <include file="db/changelog/changes/20261022-0073-create-system-job-status.xml"/>
     <include file="db/changelog/changes/20261022-0074-create-system-flow-pending-run.xml"/>
 
+    <!-- IKEA Dirigera (TIMMERFLOTTE) -->
+    <include file="db/changelog/changes/20261030-0075-create-dirigera-sensor.xml"/>
+    <include file="db/changelog/changes/20261030-0076-create-dirigera-sensor-reading.xml"/>
+    <include file="db/changelog/changes/20261030-0076b-create-dirigera-sensor-reading-fk.xml"/>
+    <include file="db/changelog/changes/20261030-0077-create-dirigera-sensor-reading-index.xml"/>
+
 </databaseChangeLog>

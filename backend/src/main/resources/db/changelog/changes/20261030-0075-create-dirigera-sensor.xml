@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261030-0075-create-dirigera-sensor" author="claude">
+        <comment>IKEA-Dirigera-Sensoren (TIMMERFLOTTE), je Hub-Geraet eine Zeile.</comment>
+        <createTable tableName="dirigera_sensor">
+            <column name="id" type="BIGINT" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="relation_id" type="VARCHAR(64)"><constraints nullable="false" unique="true" uniqueConstraintName="uk_dirigera_sensor_relation_id"/></column>
+            <column name="name" type="VARCHAR(100)"/>
+            <column name="room" type="VARCHAR(100)"/>
+            <column name="model" type="VARCHAR(100)"/>
+            <column name="last_temperature" type="DECIMAL(5,2)"/>
+            <column name="last_humidity" type="DECIMAL(5,2)"/>
+            <column name="battery_percent" type="INT"/>
+            <column name="last_seen_at" type="DATETIME"/>
+            <column name="reachable" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="known_to_hub" type="BOOLEAN" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="created_at" type="DATETIME"><constraints nullable="false"/></column>
+            <column name="updated_at" type="DATETIME"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="dirigera_sensor"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
