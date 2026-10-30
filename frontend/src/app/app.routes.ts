@@ -218,6 +218,13 @@ export const routes: Routes = [
     title: 'Bluetooth-Thermometer - Household Manager'
   },
   {
+    path: 'admin/dirigera',
+    loadComponent: () => import('./pages/admin-dirigera/admin-dirigera.component')
+      .then(m => m.AdminDirigeraComponent),
+    canActivate: [adminGuard],
+    title: 'IKEA Dirigera - Household Manager'
+  },
+  {
     path: 'admin/agent',
     loadComponent: () => import('./pages/admin-agent/admin-agent.component')
       .then(m => m.AdminAgentComponent),

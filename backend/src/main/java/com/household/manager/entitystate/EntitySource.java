@@ -45,5 +45,7 @@ public enum EntitySource {
     /** Heizkoerperthermostate (Tapo KE100 am H100-Hub), je Thermostat drei Entitaeten. */
     THERMOSTAT,
     /** Bluetooth-Thermometer (ThermoBeacon/SensorBlue), empfangen ueber das Wandtablet; je Sensor Temperatur + Feuchte. */
-    BLE
+    BLE,
+    /** IKEA Dirigera-Hub (lokale API), je TIMMERFLOTTE-Sensor Temperatur + Feuchte. */
+    DIRIGERA
 }

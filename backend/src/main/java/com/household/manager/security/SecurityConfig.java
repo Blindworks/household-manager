@@ -176,6 +176,8 @@ public class SecurityConfig {
                                 // Bluetooth-Thermometer: die Liste traegt MACs fremder Geraete in Funkreichweite,
                                 // auch LESEN ist ADMIN. Methodenlos, beide Formen, VOR der generischen GET-Regel.
                                 "/v1/ble-sensors", "/v1/ble-sensors/**",
+                                // Dirigera-Hub: Verbindungsdaten und Kopplung, auch LESEN ist ADMIN.
+                                "/v1/dirigera", "/v1/dirigera/**",
                                 "/v1/agent", "/v1/agent/**",
                                 // Systemprotokoll: Fehlertexte und Flow-Details sind Admin-Daten, auch LESEN.
                                 // Methodenlos, VOR der generischen GET-Regel.

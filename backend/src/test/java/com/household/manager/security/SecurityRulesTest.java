@@ -100,6 +100,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         HouseholdUserController.class, SystemController.class, PetSupplyController.class,
         PushController.class, SmartDeviceController.class, ZigbeeController.class,
         ZigbeeManagementController.class, AgentController.class, BleSensorController.class,
+        com.household.manager.dirigera.DirigeraController.class,
         com.household.manager.systemlog.SystemLogController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
@@ -155,6 +156,10 @@ class SecurityRulesTest {
     private BleSensorIngestService bleSensorIngestService;
     @MockitoBean
     private BleSensorAdminService bleSensorAdminService;
+    @MockitoBean
+    private com.household.manager.dirigera.DirigeraAdminService dirigeraAdminService;
+    @MockitoBean
+    private com.household.manager.dirigera.DirigeraPairingService dirigeraPairingService;
     @MockitoBean
     private SystemRebootService systemRebootService;
     @MockitoBean
@@ -404,6 +409,30 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/v1/ble-sensors/1").with(csrf())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void dirigeraHubGetIstFuerKioskVerboten() throws Exception {
+        mockMvc.perform(get("/v1/dirigera/hub")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void dirigeraHubGetIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/dirigera/hub")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void dirigeraPairingPostIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(post("/v1/dirigera/pairing").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void dirigeraSensorsGetIstFuerAdminErlaubt() throws Exception {
+        mockMvc.perform(get("/v1/dirigera/sensors")).andExpect(status().isOk());
     }
 
     @Test

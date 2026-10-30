@@ -1,0 +1,22 @@
+.admin-dirigera {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+
+  &__error { background: #fde8e8; color: #8a1f1f; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+  &__hint-error { background: #fde8e8; color: #8a1f1f; padding: 0.5rem 0.75rem; border-radius: 6px; margin: 0.5rem 0; }
+  &__card { border: 1px solid #e3e3e3; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+  &__host { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+  &__last { margin-left: 0.75rem; color: #555; }
+  &__press { background: #fff4d6; color: #7a5200; padding: 0.5rem 0.75rem; border-radius: 6px; }
+  &__actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+  &__table { width: 100%; border-collapse: collapse;
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
+  }
+  &__badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem;
+    &--active { background: #e3f6e8; color: #1d6b32; }
+    &--unreachable { background: #fff4d6; color: #7a5200; }
+    &--gone { background: #eee; color: #555; }
+  }
+  &__sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}

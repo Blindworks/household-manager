@@ -1,6 +1,7 @@
 package com.household.manager.service;
 
 import com.household.manager.blesensor.BleSensorEntityMapper;
+import com.household.manager.dirigera.DirigeraEntityMapper;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
@@ -12,11 +13,15 @@ import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.AlexaAirQualityReading;
 import com.household.manager.model.entity.BleSensor;
 import com.household.manager.model.entity.BleSensorReading;
+import com.household.manager.model.entity.DirigeraSensor;
+import com.household.manager.model.entity.DirigeraSensorReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
 import com.household.manager.repository.BleSensorReadingRepository;
 import com.household.manager.repository.BleSensorRepository;
+import com.household.manager.repository.DirigeraSensorReadingRepository;
+import com.household.manager.repository.DirigeraSensorRepository;
 import com.household.manager.repository.WeatherReadingRepository;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
@@ -54,6 +59,8 @@ class TemperatureSeriesServiceTest {
     @Mock private EntityStateService entityStateService;
     @Mock private BleSensorRepository bleSensorRepository;
     @Mock private BleSensorReadingRepository bleReadingRepository;
+    @Mock private DirigeraSensorRepository dirigeraSensorRepository;
+    @Mock private DirigeraSensorReadingRepository dirigeraReadingRepository;
 
     @InjectMocks private TemperatureSeriesService service;
 
@@ -444,5 +451,74 @@ class TemperatureSeriesServiceTest {
         when(bleSensorRepository.findById(8L)).thenReturn(Optional.of(inactive));
         assertThatThrownBy(() -> service.getSensorSeries("ble:8", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
         assertThatThrownBy(() -> service.getSensorSeries("ble:x", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    private static final String DIRIGERA_RELATION_ID = "AB-12-cd";
+
+    private DirigeraSensor dirigeraSensor(long id, String name, LocalDateTime lastSeen, boolean reachable) {
+        return DirigeraSensor.builder().id(id).relationId(DIRIGERA_RELATION_ID).name(name)
+                .lastSeenAt(lastSeen).lastTemperature(new BigDecimal("21.5")).lastHumidity(new BigDecimal("50"))
+                .reachable(reachable).knownToHub(true).build();
+    }
+
+    @Test
+    void dirigeraSerieErscheintInGetSeries() {
+        LocalDateTime now = LocalDateTime.now();
+        when(dirigeraSensorRepository.findByKnownToHubTrue())
+                .thenReturn(List.of(dirigeraSensor(4L, "Bad", now, true)));
+        when(dirigeraReadingRepository.findBySensorIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(eq(4L), any(), any()))
+                .thenReturn(List.of(DirigeraSensorReading.builder().sensorId(4L).measuredAt(now)
+                        .temperature(new BigDecimal("21.5")).humidity(new BigDecimal("50")).build()));
+
+        List<TemperatureSensorSeries> series = service.getSeries(SeriesRange.DAY);
+
+        TemperatureSensorSeries dirigera = series.stream().filter(s -> s.getSource().equals("DIRIGERA")).findFirst().orElseThrow();
+        assertThat(dirigera.getSensorId()).isEqualTo("dirigera:4");
+        assertThat(dirigera.getName()).isEqualTo("Bad");
+        assertThat(dirigera.getTemperature()).hasSize(1);
+        assertThat(dirigera.getHumidity()).hasSize(1);
+    }
+
+    @Test
+    void dirigeraCurrentTraegtEntityIdDesMappers() {
+        LocalDateTime now = LocalDateTime.now();
+        when(dirigeraSensorRepository.findByKnownToHubTrue())
+                .thenReturn(List.of(dirigeraSensor(4L, "Bad", now.minusMinutes(2), true)));
+
+        List<CurrentTemperatureReading> current = service.getCurrent();
+
+        CurrentTemperatureReading dirigera = current.stream().filter(c -> c.getSource().equals("DIRIGERA")).findFirst().orElseThrow();
+        assertThat(dirigera.getSensorId()).isEqualTo("dirigera:4");
+        assertThat(dirigera.getEntityId())
+                .isEqualTo(DirigeraEntityMapper.entityId(DIRIGERA_RELATION_ID, DirigeraEntityMapper.Measurement.TEMPERATURE));
+        assertThat(dirigera.getTemperature()).isEqualByComparingTo("21.5");
+        assertThat(dirigera.getMeasuredAt()).isEqualTo(now.minusMinutes(2));
+    }
+
+    @Test
+    void unerreichbarerDirigeraSensorFehltInCurrent() {
+        when(dirigeraSensorRepository.findByKnownToHubTrue())
+                .thenReturn(List.of(dirigeraSensor(4L, "Bad", LocalDateTime.now(), false)));
+
+        assertThat(service.getCurrent()).noneMatch(c -> c.getSource().equals("DIRIGERA"));
+    }
+
+    @Test
+    void dirigeraEinzelserieUnbekannteIdWirft404() {
+        when(dirigeraSensorRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.getSensorSeries("dirigera:9", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+
+        DirigeraSensor gone = dirigeraSensor(8L, "Alt", LocalDateTime.now(), true);
+        gone.setKnownToHub(false);
+        when(dirigeraSensorRepository.findById(8L)).thenReturn(Optional.of(gone));
+        assertThatThrownBy(() -> service.getSensorSeries("dirigera:8", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.getSensorSeries("dirigera:x", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void dirigeraQuellenfehlerKipptGetSeriesNicht() {
+        when(dirigeraSensorRepository.findByKnownToHubTrue()).thenThrow(new IllegalStateException("db weg"));
+
+        assertThat(service.getSeries(SeriesRange.DAY)).noneMatch(s -> s.getSource().equals("DIRIGERA"));
     }
 }
