@@ -162,11 +162,14 @@ services:
     # sein eigenes Volume, relative Bind-Mounts zeigen dann auf ein leeres
     # Host-Verzeichnis (/data/compose/<id>/...) — Mosquitto fand so keine Config.
     # Mosquitto 2 verlangt, dass das Passwort-File dem mosquitto-Nutzer gehoert.
+    # Das rm ist Pflicht: mosquitto_passwd -c weigert sich seit 2.1, eine vorhandene
+    # Datei zu ueberschreiben — ohne es lief nur der allererste Start (leeres Volume).
     command: >-
       sh -c 'printf "%s\n" "listener 1883" "allow_anonymous false"
       "password_file /mosquitto/data/passwd" "persistence true"
       "persistence_location /mosquitto/data/" "log_dest stdout"
       > /mosquitto/data/mosquitto.conf
+      && rm -f /mosquitto/data/passwd
       && mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
       && chown mosquitto:mosquitto /mosquitto/data/passwd
       && chmod 0700 /mosquitto/data/passwd
