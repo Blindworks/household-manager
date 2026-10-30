@@ -157,15 +157,21 @@ services:
     environment:
       MQTT_USER: ${ZIGBEE_MQTT_USER:-household}
       MQTT_PASSWORD: ${ZIGBEE_MQTT_PASSWORD:?ZIGBEE_MQTT_PASSWORD fehlt in .env}
-    # Das Passwort-File entsteht bei jedem Start aus der .env (kein Hash im Repo);
-    # Mosquitto 2 verlangt, dass es dem mosquitto-Nutzer gehoert.
+    # Konfiguration und Passwort-File entstehen bei jedem Start im Container
+    # (kein Hash im Repo). Bewusst KEIN Bind-Mount: Portainer klont das Repo in
+    # sein eigenes Volume, relative Bind-Mounts zeigen dann auf ein leeres
+    # Host-Verzeichnis (/data/compose/<id>/...) — Mosquitto fand so keine Config.
+    # Mosquitto 2 verlangt, dass das Passwort-File dem mosquitto-Nutzer gehoert.
     command: >-
-      sh -c 'mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
+      sh -c 'printf "%s\n" "listener 1883" "allow_anonymous false"
+      "password_file /mosquitto/data/passwd" "persistence true"
+      "persistence_location /mosquitto/data/" "log_dest stdout"
+      > /mosquitto/data/mosquitto.conf
+      && mosquitto_passwd -c -b /mosquitto/data/passwd "$$MQTT_USER" "$$MQTT_PASSWORD"
       && chown mosquitto:mosquitto /mosquitto/data/passwd
       && chmod 0700 /mosquitto/data/passwd
-      && exec mosquitto -c /mosquitto/config/mosquitto.conf'
+      && exec mosquitto -c /mosquitto/data/mosquitto.conf'
     volumes:
-      - ./mosquitto/config:/mosquitto/config
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     # Im LAN erreichbar, damit ein lokales Dev-Backend mitlesen kann (eigene
@@ -183,6 +189,8 @@ services:
     volumes:
       # Enthaelt Netzwerkschluessel, database.db und coordinator_backup.json
       # (gitignored) — der Ordner IST das Zigbee-Netz, vor Experimenten sichern.
+      # Unter Portainer (Git-Stack 13) liegt er auf dem HOST unter
+      # /data/compose/13/zigbee2mqtt/data, nicht im Repo-Klon von Portainer.
       - ./zigbee2mqtt/data:/app/data
     ports:
       - "8081:8081"
