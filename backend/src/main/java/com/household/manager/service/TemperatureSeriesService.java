@@ -2,6 +2,7 @@ package com.household.manager.service;
 
 import com.household.manager.blesensor.BleMacs;
 import com.household.manager.blesensor.BleSensorEntityMapper;
+import com.household.manager.dirigera.DirigeraEntityMapper;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
@@ -13,11 +14,15 @@ import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.AlexaAirQualityReading;
 import com.household.manager.model.entity.BleSensor;
 import com.household.manager.model.entity.BleSensorReading;
+import com.household.manager.model.entity.DirigeraSensor;
+import com.household.manager.model.entity.DirigeraSensorReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.WeatherReading;
 import com.household.manager.repository.AlexaAirQualityReadingRepository;
 import com.household.manager.repository.BleSensorReadingRepository;
 import com.household.manager.repository.BleSensorRepository;
+import com.household.manager.repository.DirigeraSensorReadingRepository;
+import com.household.manager.repository.DirigeraSensorRepository;
 import com.household.manager.repository.WeatherReadingRepository;
 import com.household.manager.repository.ZigbeeDeviceRepository;
 import com.household.manager.repository.ZigbeeMeasurementRepository;
@@ -40,7 +45,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * Aggregiert Temperatur-/Feuchte-Zeitreihen aus Zigbee, Alexa und BLE (DWD-Wetter nur als aktueller Wert und Einzelserie)
+ * Aggregiert Temperatur-/Feuchte-Zeitreihen aus Zigbee, Alexa, BLE und Dirigera (DWD-Wetter nur als aktueller Wert und Einzelserie)
  * in ein einheitliches Serienformat. Jede Quelle ist gekapselt: fällt sie aus,
  * wird sie geloggt und übersprungen, ohne die Gesamtantwort zu gefährden.
  */
@@ -59,6 +64,8 @@ public class TemperatureSeriesService {
     private final AlexaAirQualityReadingRepository alexaRepository;
     private final BleSensorRepository bleSensorRepository;
     private final BleSensorReadingRepository bleReadingRepository;
+    private final DirigeraSensorRepository dirigeraSensorRepository;
+    private final DirigeraSensorReadingRepository dirigeraReadingRepository;
     private final EntityStateService entityStateService;
     private final SeriesDownsampler downsampler;
 
@@ -76,6 +83,7 @@ public class TemperatureSeriesService {
         series.addAll(safe("zigbee", () -> zigbeeSeries(from, to)));
         series.addAll(safe("alexa", () -> alexaSeries(from, to)));
         series.addAll(safe("ble", () -> bleSeries(from, to)));
+        series.addAll(safe("dirigera", () -> dirigeraSeries(from, to)));
         return series;
     }
 
@@ -88,6 +96,7 @@ public class TemperatureSeriesService {
         result.addAll(safe("weather", this::weatherCurrent));
         result.addAll(safe("alexa", () -> alexaCurrent(since)));
         result.addAll(safe("ble", () -> bleCurrent(since)));
+        result.addAll(safe("dirigera", () -> dirigeraCurrent(since)));
         return result;
     }
 
@@ -119,6 +128,9 @@ public class TemperatureSeriesService {
         }
         if (sensorId.startsWith("ble:")) {
             return bleSensorSeries(sensorId.substring("ble:".length()), from, to, range);
+        }
+        if (sensorId.startsWith("dirigera:")) {
+            return dirigeraSensorSeries(sensorId.substring("dirigera:".length()), from, to, range);
         }
         throw new ResourceNotFoundException("Sensor", "sensorId", sensorId);
     }
@@ -434,5 +446,81 @@ public class TemperatureSeriesService {
 
     private String bleDisplayName(BleSensor sensor) {
         return sensor.getName() != null && !sensor.getName().isBlank() ? sensor.getName() : sensor.getMac();
+    }
+
+    private static final String DIRIGERA_SOURCE = "DIRIGERA";
+
+    private List<TemperatureSensorSeries> dirigeraSeries(LocalDateTime from, LocalDateTime to) {
+        List<TemperatureSensorSeries> result = new ArrayList<>();
+        for (DirigeraSensor sensor : knownDirigeraSensorsSorted()) {
+            result.add(dirigeraSeriesFor(sensor, from, to, null));
+        }
+        return result;
+    }
+
+    private TemperatureSensorSeries dirigeraSensorSeries(String rawId, LocalDateTime from, LocalDateTime to, SeriesRange range) {
+        long id;
+        try {
+            id = Long.parseLong(rawId);
+        } catch (NumberFormatException ex) {
+            throw new ResourceNotFoundException("Sensor", "sensorId", "dirigera:" + rawId);
+        }
+        DirigeraSensor sensor = dirigeraSensorRepository.findById(id)
+                .filter(DirigeraSensor::isKnownToHub)
+                .orElseThrow(() -> new ResourceNotFoundException("Sensor", "sensorId", "dirigera:" + id));
+        return dirigeraSeriesFor(sensor, from, to, range);
+    }
+
+    /** range == null: Rohpunkte (Sammelabfrage); sonst gemittelt (Einzelsensor) — wie bei BLE. */
+    private TemperatureSensorSeries dirigeraSeriesFor(DirigeraSensor sensor, LocalDateTime from, LocalDateTime to, SeriesRange range) {
+        List<DirigeraSensorReading> readings = dirigeraReadingRepository
+                .findBySensorIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(sensor.getId(), from, to);
+        List<TimeValue> temperature = readings.stream()
+                .filter(r -> r.getTemperature() != null)
+                .map(r -> point(r.getMeasuredAt(), r.getTemperature()))
+                .toList();
+        List<TimeValue> humidity = readings.stream()
+                .filter(r -> r.getHumidity() != null)
+                .map(r -> point(r.getMeasuredAt(), r.getHumidity()))
+                .toList();
+        return TemperatureSensorSeries.builder()
+                .sensorId("dirigera:" + sensor.getId())
+                .name(temperatureName(EntitySource.DIRIGERA, DirigeraEntityMapper.entityRef(sensor.getRelationId()),
+                        DirigeraEntityMapper.displayName(sensor)))
+                .source(DIRIGERA_SOURCE)
+                .temperature(range == null ? temperature : downsampler.downsample(temperature, range))
+                .humidity(range == null ? humidity : downsampler.downsample(humidity, range))
+                .build();
+    }
+
+    /**
+     * Aktuellwerte aus den Letztwerten der Zeile. Ein am Hub als unerreichbar gemeldeter Sensor
+     * faellt weg: sein Letztwert kann Stunden alt sein und gaelte sonst als aktuelle Raumtemperatur.
+     */
+    private List<CurrentTemperatureReading> dirigeraCurrent(LocalDateTime since) {
+        List<CurrentTemperatureReading> result = new ArrayList<>();
+        for (DirigeraSensor sensor : knownDirigeraSensorsSorted()) {
+            if (!sensor.isReachable() || sensor.getLastTemperature() == null
+                    || sensor.getLastSeenAt() == null || sensor.getLastSeenAt().isBefore(since)) {
+                continue;
+            }
+            result.add(CurrentTemperatureReading.builder()
+                    .sensorId("dirigera:" + sensor.getId())
+                    .entityId(DirigeraEntityMapper.entityId(sensor.getRelationId(), DirigeraEntityMapper.Measurement.TEMPERATURE))
+                    .name(temperatureName(EntitySource.DIRIGERA, DirigeraEntityMapper.entityRef(sensor.getRelationId()),
+                            DirigeraEntityMapper.displayName(sensor)))
+                    .source(DIRIGERA_SOURCE)
+                    .temperature(sensor.getLastTemperature())
+                    .humidity(sensor.getLastHumidity())
+                    .measuredAt(sensor.getLastSeenAt())
+                    .build());
+        }
+        return result;
+    }
+
+    private List<DirigeraSensor> knownDirigeraSensorsSorted() {
+        return dirigeraSensorRepository.findByKnownToHubTrue().stream()
+                .sorted(Comparator.comparing(DirigeraEntityMapper::displayName))
+                .toList();
     }
 }

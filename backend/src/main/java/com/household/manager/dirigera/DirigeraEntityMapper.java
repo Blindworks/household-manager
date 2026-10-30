@@ -90,7 +90,8 @@ public class DirigeraEntityMapper {
                 .build();
     }
 
-    private static String displayName(DirigeraSensor sensor) {
+    /** Anzeigename: Name, sonst Modell, sonst relationId (auch von der Temperaturansicht genutzt). */
+    public static String displayName(DirigeraSensor sensor) {
         if (!isBlank(sensor.getName())) {
             return sensor.getName();
         }
