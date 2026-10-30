@@ -1,0 +1,426 @@
+[
+  {
+    "id": "05f1aba0-b770-479e-994a-f167e187ce32_1",
+    "relationId": "05f1aba0-b770-479e-994a-f167e187ce32",
+    "type": "gateway",
+    "deviceType": "gateway",
+    "createdAt": "2024-03-07T15:49:59.651Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:56:27.509Z",
+    "attributes": {
+      "customName": "Zuhause",
+      "model": "DIRIGERA Hub for smart products",
+      "manufacturer": "IKEA of Sweden",
+      "firmwareVersion": "2.975.3",
+      "hardwareVersion": "P2.5",
+      "serialNumber": "05f1aba0-b770-479e-994a-f167e187ce32",
+      "identifyStarted": "2026-10-30T06:38:26.000Z",
+      "identifyPeriod": 65534,
+      "otaStatus": "upToDate",
+      "otaState": "readyToCheck",
+      "otaProgress": 0,
+      "otaPolicy": "autoDownload",
+      "otaScheduleStart": "00:00",
+      "otaScheduleEnd": "00:00",
+      "permittingJoin": false,
+      "backendConnected": true,
+      "backendConnectionPersistent": true,
+      "backendOnboardingComplete": true,
+      "logLevel": 3,
+      "coredump": false,
+      "sunPosition": "sunUp",
+      "homestate": "home",
+      "isOn": false
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "permittingJoin",
+        "userConsents",
+        "logLevel",
+        "time",
+        "timezone",
+        "countryCode",
+        "coordinates"
+      ]
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "dynamicFeatures": [
+      {
+        "type": "matterControllerEnabled",
+        "enabled": true,
+        "featureVersion": "26.4.0"
+      }
+    ]
+  },
+  {
+    "id": "dcc8d385-781d-4071-adf8-5f403b0cb997_1",
+    "relationId": "dcc8d385-781d-4071-adf8-5f403b0cb997",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:46:37.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:53:36.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentTemperature": 18.790000915527344,
+      "customName": "Temperatur Esszimmer",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "room": {
+      "id": "2edfee6c-1e44-4ad8-b8fc-38e5c6558e7e",
+      "name": "Esszimmer",
+      "color": "ikea_lilac_no_3",
+      "icon": "rooms_cutlery"
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "dcc8d385-781d-4071-adf8-5f403b0cb997_2",
+    "relationId": "dcc8d385-781d-4071-adf8-5f403b0cb997",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:46:37.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:53:36.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentRH": 52,
+      "customName": "Temperatur Esszimmer",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "4a8044b0-974e-4885-b2f6-0967af2201e1_1",
+    "relationId": "4a8044b0-974e-4885-b2f6-0967af2201e1",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:52:07.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:54:13.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentTemperature": 20.260000228881836,
+      "customName": "Temperatur Küche",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "room": {
+      "id": "dfb84b83-4d8a-49b3-aacf-b04fc6f25a35",
+      "name": "Küche",
+      "color": "ikea_blue_no_58",
+      "icon": "rooms_kitchen"
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "4a8044b0-974e-4885-b2f6-0967af2201e1_2",
+    "relationId": "4a8044b0-974e-4885-b2f6-0967af2201e1",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:52:07.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:54:13.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentRH": 49,
+      "customName": "Temperatur Küche",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "f2af71e5-3e92-4b08-95ce-c17793205733_1",
+    "relationId": "f2af71e5-3e92-4b08-95ce-c17793205733",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:54:02.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:56:08.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentTemperature": 19.56999969482422,
+      "customName": "Temperatur Flur",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "room": {
+      "id": "03b22710-0532-41ec-849b-94aba1e2048e",
+      "name": "Eingang",
+      "color": "ikea_yellow_no_31",
+      "icon": "rooms_door"
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "f2af71e5-3e92-4b08-95ce-c17793205733_2",
+    "relationId": "f2af71e5-3e92-4b08-95ce-c17793205733",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:54:02.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:56:08.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentRH": 50,
+      "customName": "Temperatur Flur",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "bffb9dee-1dbc-4670-964f-8a1ef8d11b5c_1",
+    "relationId": "bffb9dee-1dbc-4670-964f-8a1ef8d11b5c",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:56:37.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:53:51.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentTemperature": 20.030000686645508,
+      "customName": "Temperatur Treppenhaus",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "room": {
+      "id": "f08f167a-a8ad-492b-b069-14e6705d383b",
+      "name": "Treppenhaus",
+      "color": "ikea_blue_no_52",
+      "icon": "rooms_book_case"
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  },
+  {
+    "id": "bffb9dee-1dbc-4670-964f-8a1ef8d11b5c_2",
+    "relationId": "bffb9dee-1dbc-4670-964f-8a1ef8d11b5c",
+    "type": "sensor",
+    "deviceType": "environmentSensor",
+    "createdAt": "2026-10-30T06:56:37.000Z",
+    "isReachable": true,
+    "lastSeen": "2026-10-30T08:53:51.000Z",
+    "attributes": {
+      "identifyPeriod": 0,
+      "identifyStarted": "2026-10-30T06:38:25.000Z",
+      "currentRH": 52,
+      "customName": "Temperatur Treppenhaus",
+      "firmwareVersion": "1.0.21",
+      "hardwareVersion": "P2.1",
+      "manufacturer": "IKEA of Sweden",
+      "model": "TIMMERFLOTTE temp/hmd sensor",
+      "productCode": "E2314",
+      "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+      "discriminator": -1,
+      "permittingJoin": false,
+      "qrCode": "",
+      "setupCode": "",
+      "windowOpen": false,
+      "otaPolicy": "autoUpdate",
+      "otaProgress": 0,
+      "otaScheduleEnd": "00:00",
+      "otaScheduleStart": "00:00",
+      "otaState": "readyToCheck",
+      "otaStatus": "upToDate",
+      "batteryPercentage": 100
+    },
+    "capabilities": {
+      "canSend": [],
+      "canReceive": [
+        "customName",
+        "windowOpen"
+      ]
+    },
+    "deviceSet": [],
+    "remoteLinks": [],
+    "isHidden": false
+  }
+]
