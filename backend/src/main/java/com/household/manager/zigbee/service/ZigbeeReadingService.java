@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,8 @@ import java.util.List;
 @Slf4j
 public class ZigbeeReadingService {
 
+    private static final Duration REPEAT_WINDOW = Duration.ofSeconds(10);
+
     private final ZigbeeDeviceRepository deviceRepository;
     private final ZigbeeMeasurementRepository measurementRepository;
 
@@ -35,6 +38,9 @@ public class ZigbeeReadingService {
 
         List<ZigbeeLiveResponse> events = new ArrayList<>();
         for (ZigbeeMeasurementValue value : message.measurements()) {
+            if (isRepeatOfLatest(device, value, now)) {
+                continue;
+            }
             ZigbeeMeasurement measurement = ZigbeeMeasurement.builder()
                     .device(device)
                     .measurementType(value.type())
@@ -55,6 +61,24 @@ public class ZigbeeReadingService {
                     .build());
         }
         return events;
+    }
+
+    /**
+     * Aqara-Wetterfuehler melden Temperatur, Feuchte und Druck als getrennte Funkberichte;
+     * zigbee2mqtt schickt dafuer drei volle Zustandsnachrichten im Millisekundenabstand,
+     * jede mit allen drei Werten. Ohne diesen Filter stand jeder Messwert dreimal mit
+     * demselben Zeitstempel in der Tabelle (und dreimal im Diagramm-Tooltip). Ein gleicher
+     * Wert nach einer echten Pause wird weiterhin gespeichert.
+     */
+    private boolean isRepeatOfLatest(ZigbeeDevice device, ZigbeeMeasurementValue value, LocalDateTime now) {
+        if (device.getId() == null) {
+            return false;
+        }
+        return measurementRepository
+                .findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(device.getId(), value.type())
+                .filter(latest -> latest.getValue().compareTo(value.value()) == 0)
+                .filter(latest -> latest.getMeasuredAt().isAfter(now.minus(REPEAT_WINDOW)))
+                .isPresent();
     }
 
     private ZigbeeDevice upsertDevice(ParsedZigbeeMessage message, LocalDateTime now) {

@@ -121,6 +121,54 @@ class ZigbeeReadingServiceTest {
     }
 
     @Test
+    void gleicherWertKurzNachDemLetztenWirdNichtErneutGespeichert() {
+        // Aqara-Wetterfuehler melden Temperatur, Feuchte und Druck einzeln; zigbee2mqtt
+        // schickt dafuer drei volle Nachrichten im Millisekundenabstand.
+        ZigbeeDevice existing = ZigbeeDevice.builder().id(4L).friendlyName("Wohnzimmer-Klima").build();
+        when(deviceRepository.findByFriendlyName("Wohnzimmer-Klima")).thenReturn(Optional.of(existing));
+        when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(measurementRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(4L, MeasurementType.TEMPERATURE))
+                .thenReturn(Optional.of(stored(existing, "21.500", LocalDateTime.now().minusSeconds(1))));
+
+        List<ZigbeeLiveResponse> events = service.record(climateMessage);
+
+        verify(measurementRepository, never()).save(any(ZigbeeMeasurement.class));
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    void gleicherWertNachLaengererPauseWirdGespeichert() {
+        ZigbeeDevice existing = ZigbeeDevice.builder().id(4L).friendlyName("Wohnzimmer-Klima").build();
+        when(deviceRepository.findByFriendlyName("Wohnzimmer-Klima")).thenReturn(Optional.of(existing));
+        when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(measurementRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(4L, MeasurementType.TEMPERATURE))
+                .thenReturn(Optional.of(stored(existing, "21.5", LocalDateTime.now().minusMinutes(5))));
+
+        service.record(climateMessage);
+
+        verify(measurementRepository).save(any(ZigbeeMeasurement.class));
+    }
+
+    @Test
+    void geaenderterWertKurzNachDemLetztenWirdGespeichert() {
+        ZigbeeDevice existing = ZigbeeDevice.builder().id(4L).friendlyName("Wohnzimmer-Klima").build();
+        when(deviceRepository.findByFriendlyName("Wohnzimmer-Klima")).thenReturn(Optional.of(existing));
+        when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(measurementRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(4L, MeasurementType.TEMPERATURE))
+                .thenReturn(Optional.of(stored(existing, "21.4", LocalDateTime.now().minusSeconds(1))));
+
+        List<ZigbeeLiveResponse> events = service.record(climateMessage);
+
+        verify(measurementRepository).save(any(ZigbeeMeasurement.class));
+        assertThat(events).hasSize(1);
+    }
+
+    private static ZigbeeMeasurement stored(ZigbeeDevice device, String value, LocalDateTime at) {
+        return ZigbeeMeasurement.builder().device(device).measurementType(MeasurementType.TEMPERATURE)
+                .value(new BigDecimal(value)).unit("°C").measuredAt(at).build();
+    }
+
+    @Test
     void returnsLiveEventPerMeasurement() {
         when(deviceRepository.findByFriendlyName(any())).thenReturn(Optional.empty());
         when(deviceRepository.save(any(ZigbeeDevice.class))).thenAnswer(inv -> inv.getArgument(0));
