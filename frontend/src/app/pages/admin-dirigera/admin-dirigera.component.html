@@ -1,0 +1,88 @@
+<div class="admin-dirigera">
+  <h1>IKEA Dirigera</h1>
+
+  @if (errorMessage()) {
+    <div class="admin-dirigera__error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <section class="admin-dirigera__card">
+    <h2>Hub</h2>
+    <div class="admin-dirigera__host">
+      <label for="dirigera-host">IP-Adresse</label>
+      <input id="dirigera-host" type="text" [(ngModel)]="hostInput" name="host" placeholder="192.168.1.x">
+      <button type="button" (click)="saveHost()" [disabled]="busy() || !hostInput.trim()">Speichern</button>
+    </div>
+
+    @if (hub(); as h) {
+      <p>
+        <span class="admin-dirigera__badge admin-dirigera__badge--{{ h.paired ? 'active' : 'gone' }}">
+          {{ h.paired ? 'Gekoppelt' : 'Nicht gekoppelt' }}
+        </span>
+        <span class="admin-dirigera__last">
+          Letzte Abfrage: {{ h.lastSuccessAt ? (h.lastSuccessAt | date:'dd.MM.yyyy HH:mm:ss') : '–' }}
+        </span>
+      </p>
+      @if (h.lastError) {
+        <div class="admin-dirigera__hint-error">{{ h.lastError }}</div>
+      }
+    }
+
+    @if (pairing(); as p) {
+      @if (p.state === 'PRESS_BUTTON') {
+        <p class="admin-dirigera__press">
+          Jetzt den Aktionsknopf an der Unterseite des Hubs drücken
+          <strong>({{ secondsLeft() }} s)</strong>
+        </p>
+      } @else if (p.state === 'FAILED') {
+        <div class="admin-dirigera__hint-error">Kopplung fehlgeschlagen: {{ p.error }}</div>
+      }
+    }
+
+    <div class="admin-dirigera__actions">
+      <button type="button" (click)="startPairing()"
+              [disabled]="busy() || pairing()?.state === 'PRESS_BUTTON'">Koppeln</button>
+      <button type="button" class="danger" (click)="unpair()"
+              [disabled]="busy() || !hub()?.paired">Entkoppeln</button>
+    </div>
+  </section>
+
+  <section class="admin-dirigera__card">
+    <h2>Sensoren</h2>
+    @if (sensors().length === 0) {
+      <p>Noch keine Sensoren bekannt.</p>
+    } @else {
+      <table class="admin-dirigera__table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Raum</th>
+            <th scope="col">Temperatur</th>
+            <th scope="col">Feuchte</th>
+            <th scope="col">Batterie</th>
+            <th scope="col">Zuletzt gesehen</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="admin-dirigera__sr-only">Aktionen</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (sensor of sensors(); track sensor.id) {
+            <tr>
+              <td>{{ sensor.name ?? '–' }}</td>
+              <td>{{ sensor.room ?? '–' }}</td>
+              <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
+              <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>
+              <td>{{ sensor.batteryPercent === null ? '–' : sensor.batteryPercent + ' %' }}</td>
+              <td>{{ sensor.lastSeenAt ? (sensor.lastSeenAt | date:'dd.MM. HH:mm:ss') : '–' }}</td>
+              <td><span class="admin-dirigera__badge admin-dirigera__badge--{{ status(sensor) }}">{{ statusLabel(sensor) }}</span></td>
+              <td>
+                @if (!sensor.knownToHub) {
+                  <button type="button" class="danger" (click)="remove(sensor)" [disabled]="busy()">Löschen</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>
