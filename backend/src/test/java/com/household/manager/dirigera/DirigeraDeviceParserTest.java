@@ -66,6 +66,51 @@ class DirigeraDeviceParserTest {
     }
 
     @Test
+    void kontaktsensorWirdAlsKontaktGelesen() {
+        String json = "[" + contact("c_1", "c", "true") + "]";
+
+        DirigeraSensorSnapshot s = parser.parse(json).sensors().get(0);
+
+        assertThat(s.kind()).isEqualTo(DirigeraSensorKind.CONTACT);
+        assertThat(s.relationId()).isEqualTo("c");
+        assertThat(s.open()).isTrue();
+        assertThat(s.name()).isEqualTo("Badfenster");
+        assertThat(s.room()).isEqualTo("Bad");
+        assertThat(s.batteryPercent()).isEqualTo(80);
+        assertThat(s.reachable()).isTrue();
+        assertThat(s.temperature()).isNull();
+        assertThat(s.humidity()).isNull();
+    }
+
+    @Test
+    void thermometerIstUmgebungssensorOhneOffenWert() {
+        String json = "[" + sensor("a_1", "a", "currentTemperature", "21.5", 90, true, "2026-10-30T08:00:00.000Z", "N", "R") + "]";
+
+        DirigeraSensorSnapshot s = parser.parse(json).sensors().get(0);
+
+        assertThat(s.kind()).isEqualTo(DirigeraSensorKind.ENVIRONMENT);
+        assertThat(s.open()).isNull();
+    }
+
+    @Test
+    void kontaktOhneIsOpenIstNichtGeraten() {
+        String json = "[" + contact("c_1", "c", "null") + "]";
+
+        assertThat(parser.parse(json).sensors().get(0).open()).isNull();
+    }
+
+    @Test
+    void kontaktOhneRelationIdNutztGeraeteId() {
+        String json = "[{\"id\":\"c_1\",\"deviceType\":\"openCloseSensor\",\"isReachable\":true,"
+                + "\"attributes\":{\"isOpen\":false}}]";
+
+        DirigeraSensorSnapshot s = parser.parse(json).sensors().get(0);
+
+        assertThat(s.relationId()).isEqualTo("c_1");
+        assertThat(s.open()).isFalse();
+    }
+
+    @Test
     void unreachableWennEinTeilgeraetUnreachable() {
         String json = "[" + sensor("a_1", "a", "currentTemperature", "21.5", 90, true, "2026-10-30T08:00:00.000Z", "N", "R")
                 + "," + sensor("a_2", "a", "currentRH", "40", 90, false, "2026-10-30T08:00:00.000Z", "N", "R") + "]";
@@ -117,6 +162,15 @@ class DirigeraDeviceParserTest {
                 + "\"attributes\":{\"" + valueField + "\":" + value + ",\"customName\":\"" + customName + "\","
                 + "\"model\":\"TIMMERFLOTTE temp/hmd sensor\",\"batteryPercentage\":" + battery + "},"
                 + "\"room\":{\"name\":\"" + room + "\"}}";
+    }
+
+    /** Form nach der Dirigera-API (Python-Bibliothek {@code dirigera}), nie gegen den echten Hub verifiziert. */
+    private static String contact(String id, String relationId, String isOpen) {
+        return "{\"id\":\"" + id + "\",\"relationId\":\"" + relationId + "\",\"deviceType\":\"openCloseSensor\","
+                + "\"isReachable\":true,\"lastSeen\":\"2026-10-31T08:00:00.000Z\","
+                + "\"attributes\":{\"isOpen\":" + isOpen + ",\"customName\":\"Badfenster\","
+                + "\"model\":\"PARASOLL Door/Window Sensor\",\"batteryPercentage\":80},"
+                + "\"room\":{\"name\":\"Bad\"}}";
     }
 
     private static String fixture() throws IOException {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Ein DDL je Changeset: MariaDB committet DDL implizit -->
+    <changeSet id="20261031-0079-add-dirigera-sensor-last-open" author="claude">
+        <comment>Letzter Offen-Zustand eines Dirigera-Kontakts (NULL = unbekannt oder Thermometer).</comment>
+        <addColumn tableName="dirigera_sensor">
+            <column name="last_open" type="BOOLEAN"/>
+        </addColumn>
+        <rollback><dropColumn tableName="dirigera_sensor" columnName="last_open"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

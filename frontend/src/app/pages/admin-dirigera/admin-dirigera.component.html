@@ -69,8 +69,12 @@
             <tr>
               <td>{{ sensor.name ?? '–' }}</td>
               <td>{{ sensor.room ?? '–' }}</td>
-              <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
-              <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>
+              @if (sensor.kind === 'CONTACT') {
+                <td colspan="2">{{ contactLabel(sensor) }}</td>
+              } @else {
+                <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
+                <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>
+              }
               <td>{{ sensor.batteryPercent === null ? '–' : sensor.batteryPercent + ' %' }}</td>
               <td>{{ sensor.lastSeenAt ? (sensor.lastSeenAt | date:'dd.MM. HH:mm:ss') : '–' }}</td>
               <td><span class="admin-dirigera__badge admin-dirigera__badge--{{ status(sensor) }}">{{ statusLabel(sensor) }}</span></td>

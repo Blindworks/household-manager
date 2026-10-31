@@ -74,4 +74,58 @@ class DirigeraEntityMapperTest {
 
         assertThat(u.friendlyName()).isEqualTo(RELATION_ID + " Temperatur");
     }
+
+    private DirigeraSensor.DirigeraSensorBuilder contact() {
+        return DirigeraSensor.builder().relationId(RELATION_ID).name("Badfenster")
+                .kind(DirigeraSensorKind.CONTACT).lastOpen(true).batteryPercent(80).room("Bad");
+    }
+
+    @Test
+    void kontaktIdIstBinarySensorMitContactSuffix() {
+        assertThat(DirigeraEntityMapper.contactEntityId(RELATION_ID))
+                .isEqualTo("binary_sensor.dirigera_dcc8d385781d4071adf85f403b0cb997_contact");
+    }
+
+    @Test
+    void offenerKontaktIstOnMitDeviceClassDoor() {
+        List<EntityStateUpdate> updates = mapper.updates(contact().build());
+
+        assertThat(updates).hasSize(1);
+        EntityStateUpdate u = updates.get(0);
+        assertThat(u.entityId()).isEqualTo(DirigeraEntityMapper.contactEntityId(RELATION_ID));
+        assertThat(u.state()).isEqualTo("on");
+        assertThat(u.friendlyName()).isEqualTo("Badfenster Kontakt");
+        assertThat(u.attributes()).containsEntry("deviceClass", "door").containsEntry("batteryPercent", 80)
+                .containsEntry("room", "Bad").doesNotContainKey("unit");
+    }
+
+    @Test
+    void geschlossenerKontaktIstOff() {
+        assertThat(mapper.updates(contact().lastOpen(false).build()).get(0).state()).isEqualTo("off");
+    }
+
+    @Test
+    void kontaktOhneZustandMeldetNichts() {
+        assertThat(mapper.updates(contact().lastOpen(null).build())).isEmpty();
+    }
+
+    @Test
+    void kontaktUnavailableNurFuerDieKontaktEntitaet() {
+        List<EntityStateUpdate> updates = mapper.unavailable(contact().build());
+
+        assertThat(updates).singleElement().satisfies(u -> {
+            assertThat(u.entityId()).isEqualTo(DirigeraEntityMapper.contactEntityId(RELATION_ID));
+            assertThat(u.state()).isEqualTo("unavailable");
+            assertThat(u.attributes()).containsEntry("deviceClass", "door").containsEntry("batteryPercent", 80);
+        });
+    }
+
+    @Test
+    void entityIdsJeArt() {
+        assertThat(DirigeraEntityMapper.entityIds(contact().build()))
+                .containsExactly(DirigeraEntityMapper.contactEntityId(RELATION_ID));
+        assertThat(DirigeraEntityMapper.entityIds(sensor().build())).containsExactly(
+                DirigeraEntityMapper.entityId(RELATION_ID, Measurement.TEMPERATURE),
+                DirigeraEntityMapper.entityId(RELATION_ID, Measurement.HUMIDITY));
+    }
 }

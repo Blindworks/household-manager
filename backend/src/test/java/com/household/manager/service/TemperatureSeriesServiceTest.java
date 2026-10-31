@@ -2,6 +2,7 @@ package com.household.manager.service;
 
 import com.household.manager.blesensor.BleSensorEntityMapper;
 import com.household.manager.dirigera.DirigeraEntityMapper;
+import com.household.manager.dirigera.DirigeraSensorKind;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
@@ -513,6 +514,20 @@ class TemperatureSeriesServiceTest {
         when(dirigeraSensorRepository.findById(8L)).thenReturn(Optional.of(gone));
         assertThatThrownBy(() -> service.getSensorSeries("dirigera:8", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
         assertThatThrownBy(() -> service.getSensorSeries("dirigera:x", SeriesRange.DAY)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void dirigeraKontaktErscheintNichtInDerTemperaturansicht() {
+        DirigeraSensor contact = DirigeraSensor.builder().id(5L).relationId("c").name("Badfenster")
+                .kind(DirigeraSensorKind.CONTACT).lastOpen(true).lastSeenAt(LocalDateTime.now())
+                .reachable(true).knownToHub(true).build();
+        when(dirigeraSensorRepository.findByKnownToHubTrue()).thenReturn(List.of(contact));
+        when(dirigeraSensorRepository.findById(5L)).thenReturn(Optional.of(contact));
+
+        assertThat(service.getSeries(SeriesRange.DAY)).noneMatch(s -> s.getSource().equals("DIRIGERA"));
+        assertThat(service.getCurrent()).noneMatch(c -> c.getSource().equals("DIRIGERA"));
+        assertThatThrownBy(() -> service.getSensorSeries("dirigera:5", SeriesRange.DAY))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

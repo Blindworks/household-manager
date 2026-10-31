@@ -3,6 +3,7 @@ package com.household.manager.service;
 import com.household.manager.blesensor.BleMacs;
 import com.household.manager.blesensor.BleSensorEntityMapper;
 import com.household.manager.dirigera.DirigeraEntityMapper;
+import com.household.manager.dirigera.DirigeraSensorKind;
 import com.household.manager.dto.CurrentTemperatureReading;
 import com.household.manager.dto.TemperatureSensorSeries;
 import com.household.manager.dto.TimeValue;
@@ -467,6 +468,7 @@ public class TemperatureSeriesService {
         }
         DirigeraSensor sensor = dirigeraSensorRepository.findById(id)
                 .filter(DirigeraSensor::isKnownToHub)
+                .filter(TemperatureSeriesService::isDirigeraThermometer)
                 .orElseThrow(() -> new ResourceNotFoundException("Sensor", "sensorId", "dirigera:" + id));
         return dirigeraSeriesFor(sensor, from, to, range);
     }
@@ -520,7 +522,13 @@ public class TemperatureSeriesService {
 
     private List<DirigeraSensor> knownDirigeraSensorsSorted() {
         return dirigeraSensorRepository.findByKnownToHubTrue().stream()
+                .filter(TemperatureSeriesService::isDirigeraThermometer)
                 .sorted(Comparator.comparing(DirigeraEntityMapper::displayName))
                 .toList();
+    }
+
+    /** Fenster-/Tuerkontakte am selben Hub haben keine Temperatur und gehoeren nicht in diese Ansicht. */
+    private static boolean isDirigeraThermometer(DirigeraSensor sensor) {
+        return sensor.getKind() == DirigeraSensorKind.ENVIRONMENT;
     }
 }

@@ -793,7 +793,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.modeCheckContacts = loadingCheck();
     this.modeCheckConsumers = loadingCheck();
 
-    this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE').subscribe({
+    this.loadContactEntities().subscribe({
       next: entities => this.modeCheckContacts = buildContactCheck(entities),
       error: () => this.modeCheckContacts = failedCheck()
     });
@@ -1783,8 +1783,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
+  /**
+   * Fenster-/Tuerkontakte aus Zigbee und vom Dirigera-Hub. Gefiltert wird bewusst nach
+   * Quelle: die Nuki-Haustuer traegt ebenfalls deviceClass "door" und bliebe sonst nicht
+   * draussen (siehe Modus-Aktivierungs-Checks).
+   */
+  private loadContactEntities(): Observable<EntityState[]> {
+    return forkJoin([
+      this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE'),
+      this.entityStateService.getEntities('BINARY_SENSOR', 'DIRIGERA')
+    ]).pipe(map(([zigbee, dirigera]) => [...zigbee, ...dirigera]));
+  }
+
   private loadDoorInsights(): Observable<void> {
-    return this.entityStateService.getEntities('BINARY_SENSOR', 'ZIGBEE').pipe(
+    return this.loadContactEntities().pipe(
       catchError(() => of([])),
       map(entities => {
         const now = Date.now();

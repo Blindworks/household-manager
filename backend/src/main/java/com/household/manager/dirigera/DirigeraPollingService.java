@@ -179,6 +179,8 @@ public class DirigeraPollingService {
         DirigeraSensor row = repository.findByRelationId(s.relationId())
                 .orElseGet(() -> DirigeraSensor.builder().relationId(s.relationId()).build());
         row.setKnownToHub(true);
+        row.setKind(s.kind());
+        row.setLastOpen(s.open());
         row.setName(truncate(s.name()));
         row.setRoom(truncate(s.room()));
         row.setModel(truncate(s.model()));
@@ -192,7 +194,10 @@ public class DirigeraPollingService {
         DirigeraSensor current = saved != null ? saved : row;
 
         if (isFresh(current)) {
-            recorder.record(current, current.getLastSeenAt());
+            // Verlauf nur fuer Thermometer; Kontakte haben keine Messwertreihe
+            if (current.getKind() == DirigeraSensorKind.ENVIRONMENT) {
+                recorder.record(current, current.getLastSeenAt());
+            }
             mapper.updates(current).forEach(entityStateService::reportState);
         } else {
             reportUnavailableOnce(current);

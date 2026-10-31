@@ -178,5 +178,7 @@
     <include file="db/changelog/changes/20261030-0076-create-dirigera-sensor-reading.xml"/>
     <include file="db/changelog/changes/20261030-0076b-create-dirigera-sensor-reading-fk.xml"/>
     <include file="db/changelog/changes/20261030-0077-create-dirigera-sensor-reading-index.xml"/>
+    <include file="db/changelog/changes/20261031-0078-add-dirigera-sensor-kind.xml"/>
+    <include file="db/changelog/changes/20261031-0079-add-dirigera-sensor-last-open.xml"/>
 
 </databaseChangeLog>

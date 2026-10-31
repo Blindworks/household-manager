@@ -17,12 +17,14 @@ import java.util.Map;
 /**
  * Liest die Geraeteliste des Hubs. Ein physischer Sensor (TIMMERFLOTTE) erscheint als zwei
  * Teilgeraete mit gleicher {@code relationId}; welches welchen Wert traegt, entscheidet das
- * Feld, nicht das Suffix der Id.
+ * Feld, nicht das Suffix der Id. Fenster-/Tuerkontakte ({@code openCloseSensor}) werden ebenso
+ * gruppiert; fehlt ihnen die {@code relationId}, gilt die Geraete-Id.
  */
 @Component
 public class DirigeraDeviceParser {
 
     private static final String SENSOR_TYPE = "environmentSensor";
+    private static final String CONTACT_TYPE = "openCloseSensor";
     private static final String GATEWAY_TYPE = "gateway";
     private static final int VALUE_SCALE = 2;
 
@@ -36,6 +38,7 @@ public class DirigeraDeviceParser {
         JsonNode root = readRoot(json);
         String gatewayId = null;
         Map<String, List<JsonNode>> sensorParts = new LinkedHashMap<>();
+        Map<String, List<JsonNode>> contactParts = new LinkedHashMap<>();
         for (JsonNode device : root) {
             String type = device.path("deviceType").asText("");
             if (GATEWAY_TYPE.equals(type) && gatewayId == null) {
@@ -45,10 +48,17 @@ public class DirigeraDeviceParser {
                 if (relationId != null) {
                     sensorParts.computeIfAbsent(relationId, k -> new ArrayList<>()).add(device);
                 }
+            } else if (CONTACT_TYPE.equals(type)) {
+                String relationId = textOrNull(device.get("relationId"));
+                String key = relationId != null ? relationId : textOrNull(device.get("id"));
+                if (key != null) {
+                    contactParts.computeIfAbsent(key, k -> new ArrayList<>()).add(device);
+                }
             }
         }
         List<DirigeraSensorSnapshot> sensors = new ArrayList<>();
-        sensorParts.forEach((relationId, parts) -> sensors.add(merge(relationId, parts)));
+        sensorParts.forEach((relationId, parts) -> sensors.add(merge(relationId, DirigeraSensorKind.ENVIRONMENT, parts)));
+        contactParts.forEach((relationId, parts) -> sensors.add(merge(relationId, DirigeraSensorKind.CONTACT, parts)));
         return new DirigeraDevices(gatewayId, sensors);
     }
 
@@ -65,9 +75,10 @@ public class DirigeraDeviceParser {
         return root;
     }
 
-    private DirigeraSensorSnapshot merge(String relationId, List<JsonNode> parts) {
+    private DirigeraSensorSnapshot merge(String relationId, DirigeraSensorKind kind, List<JsonNode> parts) {
         BigDecimal temperature = null;
         BigDecimal humidity = null;
+        Boolean open = null;
         Integer battery = null;
         Instant lastSeen = null;
         String name = null;
@@ -81,6 +92,10 @@ public class DirigeraDeviceParser {
             }
             if (humidity == null) {
                 humidity = decimal(attributes.get("currentRH"));
+            }
+            JsonNode openNode = attributes.get("isOpen");
+            if (open == null && openNode != null && openNode.isBoolean()) {
+                open = openNode.asBoolean();
             }
             JsonNode batteryNode = attributes.get("batteryPercentage");
             if (batteryNode != null && batteryNode.isNumber()) {
@@ -104,8 +119,8 @@ public class DirigeraDeviceParser {
                 reachable = false;
             }
         }
-        return new DirigeraSensorSnapshot(relationId, name != null ? name : model, room, model,
-                temperature, humidity, battery, reachable, lastSeen);
+        return new DirigeraSensorSnapshot(relationId, kind, name != null ? name : model, room, model,
+                temperature, humidity, open, battery, reachable, lastSeen);
     }
 
     private static BigDecimal decimal(JsonNode node) {
