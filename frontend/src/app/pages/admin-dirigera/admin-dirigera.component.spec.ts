@@ -15,10 +15,13 @@ const HUB: DirigeraHub = {
 };
 const IDLE: DirigeraPairingStatus = { state: 'IDLE', expiresAt: null, error: null };
 const SENSOR: DirigeraSensor = {
-  id: 1, name: 'Wohnzimmer', room: 'Wohnzimmer', model: 'TIMMERFLOTTE', temperature: 21.5, humidity: 48,
-  batteryPercent: 90, reachable: true, knownToHub: true, lastSeenAt: '2026-10-30T10:00:00'
+  id: 1, kind: 'ENVIRONMENT', name: 'Wohnzimmer', room: 'Wohnzimmer', model: 'TIMMERFLOTTE', temperature: 21.5,
+  humidity: 48, open: null, batteryPercent: 90, reachable: true, knownToHub: true, lastSeenAt: '2026-10-30T10:00:00'
 };
 const GONE: DirigeraSensor = { ...SENSOR, id: 2, name: 'Alt', knownToHub: false };
+const CONTACT: DirigeraSensor = {
+  ...SENSOR, id: 3, kind: 'CONTACT', name: 'Badfenster', model: 'PARASOLL', temperature: null, humidity: null, open: true
+};
 
 describe('AdminDirigeraComponent', () => {
   let fixture: ComponentFixture<AdminDirigeraComponent>;
@@ -101,6 +104,24 @@ describe('AdminDirigeraComponent', () => {
     expect(rows[0].textContent).not.toContain('Löschen');
     expect(rows[1].textContent).toContain('Löschen');
     expect(rows[1].textContent).toContain('Nicht mehr am Hub');
+  });
+
+  it('kontaktZeigtOffenZuStattTemperatur', () => {
+    initWith([CONTACT, { ...CONTACT, id: 4, name: 'Kuechenfenster', open: false }, { ...CONTACT, id: 5, name: 'Neu', open: null }]);
+
+    const rows = Array.from(el.querySelectorAll('.admin-dirigera__table tbody tr'));
+    expect(rows[0].textContent).toContain('Offen');
+    expect(rows[0].textContent).not.toContain('°C');
+    expect(rows[1].textContent).toContain('Geschlossen');
+    expect(rows[2].textContent).toContain('Zustand unbekannt');
+  });
+
+  it('thermometerZeigtWeiterTemperaturUndFeuchte', () => {
+    initWith([SENSOR]);
+
+    const row = el.querySelector('.admin-dirigera__table tbody tr')!;
+    expect(row.textContent).toContain('21,5 °C');
+    expect(row.textContent).toContain('48 %');
   });
 
   it('pollingEndetBeiDestroy', fakeAsync(() => {

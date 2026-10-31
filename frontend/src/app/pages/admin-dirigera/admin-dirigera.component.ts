@@ -92,6 +92,12 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Kontakte haben statt Temperatur/Feuchte nur offen/zu; null wird nie als "zu" geraten. */
+  contactLabel(sensor: DirigeraSensor): string {
+    if (sensor.open === null) { return 'Zustand unbekannt'; }
+    return sensor.open ? 'Offen' : 'Geschlossen';
+  }
+
   private applyPairing(status: DirigeraPairingStatus): void {
     this.pairing.set(status);
     if (status.state === 'PRESS_BUTTON') {

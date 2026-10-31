@@ -76,6 +76,33 @@ class DirigeraAdminServiceTest {
     }
 
     @Test
+    void loeschenEinesKontaktsEntferntDieKontaktEntitaet() {
+        DirigeraSensor sensor = sensor(false);
+        sensor.setKind(DirigeraSensorKind.CONTACT);
+        when(sensorRepository.findById(1L)).thenReturn(Optional.of(sensor));
+        String contactId = DirigeraEntityMapper.contactEntityId(RELATION_ID);
+
+        service.deleteSensor(1L);
+
+        verify(tileRepository).findByEntityIdIn(List.of(contactId));
+        verify(entityStateService).deleteByEntityId(contactId);
+        verify(sensorRepository).delete(sensor);
+    }
+
+    @Test
+    void sensorViewTraegtArtUndOffenZustand() {
+        DirigeraSensor sensor = sensor(true);
+        sensor.setKind(DirigeraSensorKind.CONTACT);
+        sensor.setLastOpen(true);
+        when(sensorRepository.findAll()).thenReturn(List.of(sensor));
+
+        assertThat(service.sensors()).singleElement().satisfies(view -> {
+            assertThat(view.kind()).isEqualTo(DirigeraSensorKind.CONTACT);
+            assertThat(view.open()).isTrue();
+        });
+    }
+
+    @Test
     void hubViewEnthaeltKeinenToken() {
         List<String> components = Arrays.stream(HubView.class.getRecordComponents())
                 .map(c -> c.getName()).toList();

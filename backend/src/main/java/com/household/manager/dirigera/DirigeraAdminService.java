@@ -3,7 +3,6 @@ package com.household.manager.dirigera;
 import com.household.manager.audit.AuditService;
 import com.household.manager.dirigera.DirigeraDtos.HubView;
 import com.household.manager.dirigera.DirigeraDtos.SensorView;
-import com.household.manager.dirigera.DirigeraEntityMapper.Measurement;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.DirigeraSensor;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -67,9 +65,7 @@ public class DirigeraAdminService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Der Sensor ist am Hub noch bekannt — zuerst dort entfernen.");
         }
-        List<String> entityIds = Arrays.stream(Measurement.values())
-                .map(measurement -> DirigeraEntityMapper.entityId(sensor.getRelationId(), measurement))
-                .toList();
+        List<String> entityIds = DirigeraEntityMapper.entityIds(sensor);
         List<EntityTileVisibility> rules = tileVisibilityRepository.findByEntityIdIn(entityIds);
         tileVisibilityRepository.deleteAll(rules);
         entityIds.forEach(entityStateService::deleteByEntityId);

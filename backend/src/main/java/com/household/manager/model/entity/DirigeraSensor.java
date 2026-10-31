@@ -1,7 +1,10 @@
 package com.household.manager.model.entity;
 
+import com.household.manager.dirigera.DirigeraSensorKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -17,7 +20,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Ein Umgebungssensor am IKEA-Dirigera-Hub (TIMMERFLOTTE). Die Zeile haengt an der Geraete-Id des
+ * Ein Sensor am IKEA-Dirigera-Hub: Thermometer (TIMMERFLOTTE) oder Fenster-/Tuerkontakt, siehe
+ * {@link DirigeraSensorKind}. Die Zeile haengt an der Geraete-Id des
  * Hubs (relationId); verschwindet das Geraet dort, bleibt sie mit knownToHub = false stehen,
  * damit die Historie nicht verloren geht.
  */
@@ -50,6 +54,15 @@ public class DirigeraSensor {
 
     @Column(name = "last_humidity", precision = 5, scale = 2)
     private BigDecimal lastHumidity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private DirigeraSensorKind kind = DirigeraSensorKind.ENVIRONMENT;
+
+    /** Nur bei Kontakten gesetzt; null = Zustand unbekannt. */
+    @Column(name = "last_open")
+    private Boolean lastOpen;
 
     @Column(name = "battery_percent")
     private Integer batteryPercent;

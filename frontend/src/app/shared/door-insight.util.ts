@@ -48,6 +48,12 @@ export function buildDoorInsights(entities: EntityState[], nowMs: number): HubIn
  * dauerhaft auf `on` — er wuerde sonst als ewig offenes Fenster erscheinen.
  */
 const WINDOW_CONTACT_PREFIX = 'binary_sensor.zigbee_fenster_';
+/**
+ * Dirigera-Kontakte zaehlen ohne Namensregel: am Hub gibt es nur Fenster-/Tuerkontakte
+ * (PARASOLL), keinen Reed-Kontakt wie am Gaszaehler, und ihre Entity-ID haengt an der
+ * relationId statt am Namen.
+ */
+const DIRIGERA_CONTACT_PREFIX = 'binary_sensor.dirigera_';
 const CONTACT_SUFFIX = '_contact';
 
 /**
@@ -57,7 +63,8 @@ const CONTACT_SUFFIX = '_contact';
  */
 export function buildWindowInsights(entities: EntityState[], nowMs: number): HubInsight[] {
   return entities
-    .filter(entity => entity.entityId.startsWith(WINDOW_CONTACT_PREFIX)
+    .filter(entity => (entity.entityId.startsWith(WINDOW_CONTACT_PREFIX)
+        || entity.entityId.startsWith(DIRIGERA_CONTACT_PREFIX))
       && entity.entityId.endsWith(CONTACT_SUFFIX)
       && entity.state === 'on')
     .sort((a, b) => a.entityId.localeCompare(b.entityId))

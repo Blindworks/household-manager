@@ -17,13 +17,19 @@ export interface DirigeraPairingStatus {
   error: string | null;
 }
 
+/** ENVIRONMENT = Thermometer (TIMMERFLOTTE), CONTACT = Fenster-/Türkontakt. */
+export type DirigeraSensorKind = 'ENVIRONMENT' | 'CONTACT';
+
 export interface DirigeraSensor {
   id: number;
+  kind: DirigeraSensorKind;
   name: string | null;
   room: string | null;
   model: string | null;
   temperature: number | null;
   humidity: number | null;
+  /** nur bei Kontakten; null = Zustand unbekannt */
+  open: boolean | null;
   batteryPercent: number | null;
   reachable: boolean;
   knownToHub: boolean;

@@ -109,10 +109,43 @@ class DirigeraPollingServiceTest {
     }
 
     @Test
+    void kontaktWirdGespeichertUndAlsOffenGemeldetOhneVerlauf() {
+        stubDevices(contactSnapshot("c", true));
+
+        service.poll();
+
+        assertThat(stored).singleElement().satisfies(row -> {
+            assertThat(row.getKind()).isEqualTo(DirigeraSensorKind.CONTACT);
+            assertThat(row.getLastOpen()).isTrue();
+            assertThat(row.getLastTemperature()).isNull();
+        });
+        verifyNoInteractions(recorder);
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates).reportState(updates.capture());
+        assertThat(updates.getValue().entityId()).isEqualTo(DirigeraEntityMapper.contactEntityId("c"));
+        assertThat(updates.getValue().state()).isEqualTo("on");
+    }
+
+    @Test
+    void verschwundenerKontaktWirdUnavailable() {
+        stored.add(DirigeraSensor.builder().relationId("c").name("Badfenster")
+                .kind(DirigeraSensorKind.CONTACT).lastOpen(false).knownToHub(true).build());
+        stubDevices();
+        when(entityStates.getByEntityId(anyString())).thenReturn(Optional.empty());
+
+        service.poll();
+
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates).reportState(updates.capture());
+        assertThat(updates.getValue().entityId()).isEqualTo(DirigeraEntityMapper.contactEntityId("c"));
+        assertThat(updates.getValue().state()).isEqualTo("unavailable");
+    }
+
+    @Test
     void langerNameRaumUndModellWerdenAuf100ZeichenGekuerzt() {
         String lang = "x".repeat(150);
-        stubDevices(new DirigeraSensorSnapshot("a", lang, lang, lang, new BigDecimal("21.50"),
-                new BigDecimal("40.00"), 90, true, Instant.parse("2026-10-30T08:59:00Z")));
+        stubDevices(new DirigeraSensorSnapshot("a", DirigeraSensorKind.ENVIRONMENT, lang, lang, lang,
+                new BigDecimal("21.50"), new BigDecimal("40.00"), null, 90, true, Instant.parse("2026-10-30T08:59:00Z")));
 
         service.poll();
 
@@ -274,8 +307,13 @@ class DirigeraPollingServiceTest {
     }
 
     private static DirigeraSensorSnapshot snapshot(String relationId, boolean reachable, Instant lastSeen) {
-        return new DirigeraSensorSnapshot(relationId, "Name " + relationId, "Raum", "TIMMERFLOTTE",
-                new BigDecimal("21.50"), new BigDecimal("40.00"), 90, reachable, lastSeen);
+        return new DirigeraSensorSnapshot(relationId, DirigeraSensorKind.ENVIRONMENT, "Name " + relationId, "Raum",
+                "TIMMERFLOTTE", new BigDecimal("21.50"), new BigDecimal("40.00"), null, 90, reachable, lastSeen);
+    }
+
+    private static DirigeraSensorSnapshot contactSnapshot(String relationId, Boolean open) {
+        return new DirigeraSensorSnapshot(relationId, DirigeraSensorKind.CONTACT, "Badfenster", "Bad",
+                "PARASOLL", null, null, open, 80, true, Instant.parse("2026-10-30T08:59:00Z"));
     }
 
     private static DirigeraSensor row(String relationId, boolean knownToHub) {

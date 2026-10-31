@@ -39,6 +39,15 @@ import { PetSupply } from '../../models/pet-supply.model';
 // werden — sonst wirft genau dieser Zweig „Missing locale data for 'de'".
 registerLocaleData(localeDe);
 
+/**
+ * Kontakte kommen aus zwei Abfragen (Zigbee und Dirigera); ein Stub per returnValue
+ * lieferte dieselben Entitaeten doppelt. Antwortet deshalb nach Quelle.
+ */
+function contactsBySource(zigbee: EntityState[], dirigera: EntityState[] = []) {
+  return (_domain?: string, source?: string) =>
+    of(source === 'ZIGBEE' ? zigbee : source === 'DIRIGERA' ? dirigera : []);
+}
+
 describe('DashboardComponent (Schalter)', () => {
   let switchServiceSpy: jasmine.SpyObj<SwitchService>;
 
@@ -714,7 +723,7 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
   });
 
   it('zeigt offene Tueren als erste Meldungen im Hub', fakeAsync(() => {
-    entityStateServiceSpy.getEntities.and.returnValue(of([
+    entityStateServiceSpy.getEntities.and.callFake(contactsBySource([
       doorContact('binary_sensor.zigbee_eingangstuer_contact', 'on'),
       doorContact('binary_sensor.zigbee_terassentuer_contact', 'on')
     ]));
@@ -725,6 +734,20 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
     const texts = insightTexts(fixture);
     expect(texts[0]).toContain('Haustür offen');
     expect(texts[1]).toContain('Terrassentür offen');
+
+    discardPeriodicTasks();
+  }));
+
+  it('zeigt einen offenen Dirigera-Fensterkontakt im Hub', fakeAsync(() => {
+    entityStateServiceSpy.getEntities.and.callFake(contactsBySource([], [{
+      ...doorContact('binary_sensor.dirigera_abc123_contact', 'on'),
+      source: 'DIRIGERA', displayName: 'Badfenster Kontakt'
+    }]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(entityStateServiceSpy.getEntities).toHaveBeenCalledWith('BINARY_SENSOR', 'DIRIGERA');
+    expect(insightTexts(fixture).join(' ')).toContain('Badfenster offen');
 
     discardPeriodicTasks();
   }));
@@ -2140,7 +2163,7 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
   it('baut die Checks aus den API-Antworten (offene Tuer + Grossverbraucher)', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    entityStateServiceSpy.getEntities.and.returnValue(of([
+    entityStateServiceSpy.getEntities.and.callFake(contactsBySource([
       doorContact('binary_sensor.zigbee_kueche_contact', 'on', 'Küche Kontakt')
     ]));
     powerConsumerServiceSpy.getConsumers.and.returnValue(of([consumer('Waschmaschine', 800)]));
@@ -2152,6 +2175,23 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
     expect(fixture.componentInstance.modeCheckContacts.lines).toEqual(['Küche Kontakt ist offen.']);
     expect(fixture.componentInstance.modeCheckConsumers.status).toBe('warning');
     expect(fixture.componentInstance.modeCheckConsumers.lines).toEqual(['Waschmaschine: 800 W']);
+
+    discardPeriodicTasks();
+  }));
+
+  it('zaehlt Dirigera-Kontakte im Fenster-Check mit', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    entityStateServiceSpy.getEntities.and.callFake(contactsBySource(
+      [doorContact('binary_sensor.zigbee_kueche_contact', 'off', 'Küche Kontakt')],
+      [{ ...doorContact('binary_sensor.dirigera_abc123_contact', 'on', 'Badfenster Kontakt'), source: 'DIRIGERA' }]
+    ));
+    powerConsumerServiceSpy.getConsumers.and.returnValue(of([]));
+
+    fixture.componentInstance.toggleMode(fixture.componentInstance.modes[0]);
+    tick();
+
+    expect(fixture.componentInstance.modeCheckContacts.lines).toEqual(['Badfenster Kontakt ist offen.']);
 
     discardPeriodicTasks();
   }));
@@ -2222,7 +2262,7 @@ describe('DashboardComponent (Aktivierungs-Checks)', () => {
   it('rendert den Dialog mit beiden Checks und Warnzeilen', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    entityStateServiceSpy.getEntities.and.returnValue(of([
+    entityStateServiceSpy.getEntities.and.callFake(contactsBySource([
       doorContact('binary_sensor.zigbee_kueche_contact', 'on', 'Küche Kontakt')
     ]));
     powerConsumerServiceSpy.getConsumers.and.returnValue(of([consumer('Waschmaschine', 800)]));

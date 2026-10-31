@@ -125,4 +125,21 @@ describe('buildWindowInsights', () => {
   it('wertet unavailable nicht als offen', () => {
     expect(buildWindowInsights([fenster('badezimmer', { state: 'unavailable' })], NOW_MS)).toEqual([]);
   });
+
+  const dirigera = (overrides: Partial<EntityState> = {}): EntityState =>
+    contact('binary_sensor.dirigera_dcc8d385781d4071_contact', {
+      source: 'DIRIGERA', displayName: 'Badfenster Kontakt', ...overrides
+    });
+
+  it('zeigt jeden offenen Dirigera-Kontakt, unabhaengig vom Namen', () => {
+    const insights = buildWindowInsights([dirigera({ state: 'on' })], NOW_MS);
+
+    expect(insights.length).toBe(1);
+    expect(insights[0].title).toBe('Badfenster offen');
+    expect(insights[0].icon).toBe('window');
+  });
+
+  it('wertet einen geschlossenen oder unavailable Dirigera-Kontakt nicht als offen', () => {
+    expect(buildWindowInsights([dirigera(), dirigera({ state: 'unavailable' })], NOW_MS)).toEqual([]);
+  });
 });
