@@ -1,0 +1,43 @@
+[
+  {
+    "id": 1001,
+    "name": "Pfungstadt, Germany",
+    "status": "OPEN",
+    "address": {"street": "Hahnstr. 1", "city": "Pfungstadt", "zip": "64319", "country": "Germany"},
+    "gps": {"latitude": 50.02, "longitude": 8.0},
+    "stallCount": 15,
+    "powerKilowatt": 250,
+    "otherEVs": false,
+    "elevationMeters": 120,
+    "urlDiscuss": "https://example.invalid/discuss"
+  },
+  {
+    "id": 1002,
+    "name": "Darmstadt, Germany",
+    "status": "CONSTRUCTION",
+    "address": {"street": "Baustelle 2", "city": "Darmstadt", "zip": "64283", "country": "Germany"},
+    "gps": {"latitude": 50.03, "longitude": 8.01},
+    "stallCount": 8,
+    "powerKilowatt": 250,
+    "otherEVs": false
+  },
+  {
+    "id": 1003,
+    "name": "Weiterstadt, Germany",
+    "status": "EXPANDING",
+    "address": {"street": "Ohne Leistung 3", "city": "Weiterstadt", "zip": "64331", "country": "Germany"},
+    "gps": {"latitude": 50.04, "longitude": 8.0},
+    "stallCount": 6,
+    "otherEVs": true
+  },
+  {
+    "id": 1004,
+    "name": "Hamburg - Altona, Germany",
+    "status": "OPEN",
+    "address": {"street": "Elbchaussee 4", "city": "Hamburg", "zip": "22765", "country": "Germany"},
+    "gps": {"latitude": 53.55, "longitude": 10.0},
+    "stallCount": 20,
+    "powerKilowatt": 250,
+    "otherEVs": true
+  }
+]

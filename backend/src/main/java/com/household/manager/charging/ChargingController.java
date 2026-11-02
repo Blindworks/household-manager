@@ -1,6 +1,7 @@
 package com.household.manager.charging;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -34,12 +36,14 @@ public class ChargingController {
     /** Ladepunkte einer beliebigen Station auf Anfrage (60 s gecacht); KIOSK ueber die generische GET-Regel. */
     @GetMapping("/stations/{stationId}/charge-points")
     public ResponseEntity<List<ChargingDtos.ChargePointResponse>> chargePoints(@PathVariable String stationId) {
+        rejectSupercharger(stationId);
         return ResponseEntity.ok(detailsService.chargePoints(stationId));
     }
 
     /** Vorhersage einer Favoritenstation (404 sonst); KIOSK ueber die generische GET-Regel. */
     @GetMapping("/stations/{stationId}/forecast")
     public ResponseEntity<ChargingDtos.ForecastResponse> forecast(@PathVariable String stationId) {
+        rejectSupercharger(stationId);
         return ResponseEntity.ok(queryService.forecast(stationId));
     }
 
@@ -59,6 +63,7 @@ public class ChargingController {
 
     @PutMapping("/favorites/{stationId}")
     public ResponseEntity<ChargingDtos.StationsResponse> addFavorite(@PathVariable String stationId) {
+        rejectSupercharger(stationId);
         favoriteService.add(stationId);
         return ResponseEntity.ok(queryService.stations());
     }
@@ -67,5 +72,12 @@ public class ChargingController {
     public ResponseEntity<ChargingDtos.StationsResponse> removeFavorite(@PathVariable String stationId) {
         favoriteService.remove(stationId);
         return ResponseEntity.ok(queryService.stations());
+    }
+
+    /** Supercharger kennen nur den Standort; EnBW wuerde die Id ohnehin nicht finden. */
+    private static void rejectSupercharger(String stationId) {
+        if (stationId.startsWith(ChargingQueryService.SUPERCHARGER_ID_PREFIX)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Supercharger haben keine Belegungsdaten");
+        }
     }
 }

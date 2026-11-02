@@ -25,7 +25,8 @@ public final class ChargingDtos {
     public record StationResponse(String stationId, String name, String operator, String address,
                                   double lat, double lon, long distanceMeters, Double maxPowerKw,
                                   Double pricePerKwh, int total, int free, boolean favorite,
-                                  List<ChargePointResponse> chargePoints, ForecastSummary forecast) {
+                                  List<ChargePointResponse> chargePoints, ForecastSummary forecast,
+                                  Boolean supercharger, Boolean teslaOnly) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

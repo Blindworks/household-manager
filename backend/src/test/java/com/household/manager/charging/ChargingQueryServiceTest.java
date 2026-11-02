@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import com.household.manager.charging.forecast.ChargingForecast;
 import com.household.manager.charging.forecast.ChargingForecastService;
+import com.household.manager.charging.supercharger.SuperchargerCatalog;
+import com.household.manager.charging.supercharger.SuperchargerSite;
 import org.mockito.Mock;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,6 +24,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +41,8 @@ class ChargingQueryServiceTest {
     private ChargingOccupancyTracker tracker;
     @Mock
     private ChargingForecastService forecastService;
+    @Mock
+    private SuperchargerCatalog superchargerCatalog;
 
     private ChargingSnapshot snapshot;
     private ChargingQueryService service;
@@ -46,7 +51,7 @@ class ChargingQueryServiceTest {
     void setUp() {
         snapshot = new ChargingSnapshot();
         service = new ChargingQueryService(settingsService, favoriteService, tracker, snapshot,
-                forecastService, Clock.fixed(NOW, BERLIN));
+                forecastService, superchargerCatalog, Clock.fixed(NOW, BERLIN));
     }
 
     @Test
@@ -123,6 +128,120 @@ class ChargingQueryServiceTest {
         assertThat(weit.free()).isEqualTo(0);
         assertThat(weit.chargePoints().get(0).minimumDuration()).isTrue();
         assertThat(weit.chargePoints().get(0).occupiedSince()).isEqualTo(LocalDateTime.ofInstant(NOW, BERLIN));
+    }
+
+    private static SuperchargerSite sc(String id, String name, String city, double lat, Integer power,
+                                       boolean otherEvs) {
+        return new SuperchargerSite(id, name, "Hahnstr. 1", city, lat, 8.0, 15, power, otherEvs, "OPEN");
+    }
+
+    @Test
+    void superchargerWerdenNachEntfernungUnterDieNichtFavoritenGemischt() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 0.0));
+        when(favoriteService.list()).thenReturn(List.of(favorite("fav")));
+        snapshot.updateArea(List.of(
+                new ChargingStation("fern", "Fern", null, null, 50.05, 8.0, 150.0, 2, 2),
+                new ChargingStation("nah", "Nah", null, null, 50.01, 8.0, 150.0, 2, 2)), NOW);
+        when(superchargerCatalog.sites()).thenReturn(List.of(
+                sc("7", "Pfungstadt, Germany", "Pfungstadt", 50.03, 250, false)));
+
+        List<ChargingDtos.StationResponse> stations = service.stations().stations();
+
+        assertThat(stations).extracting(ChargingDtos.StationResponse::stationId)
+                .containsExactly("fav", "nah", "sc-7", "fern");
+    }
+
+    @Test
+    void superchargerZeileTraegtDieVereinbartenFelder() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 0.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        when(superchargerCatalog.sites()).thenReturn(List.of(
+                sc("7", "Pfungstadt, Germany", "Pfungstadt", 50.03, 250, false)));
+
+        ChargingDtos.StationResponse row = service.stations().stations().get(0);
+
+        assertThat(row.stationId()).isEqualTo("sc-7");
+        assertThat(row.name()).isEqualTo("Tesla Supercharger Pfungstadt");
+        assertThat(row.operator()).isEqualTo("Tesla");
+        assertThat(row.address()).isEqualTo("Hahnstr. 1, Pfungstadt");
+        assertThat(row.maxPowerKw()).isEqualTo(250.0);
+        assertThat(row.total()).isEqualTo(15);
+        assertThat(row.free()).isZero();
+        assertThat(row.favorite()).isFalse();
+        assertThat(row.chargePoints()).isNull();
+        assertThat(row.pricePerKwh()).isNull();
+        assertThat(row.forecast()).isNull();
+        assertThat(row.supercharger()).isTrue();
+        assertThat(row.teslaOnly()).isTrue();
+        assertThat(row.distanceMeters()).isPositive();
+    }
+
+    @Test
+    void teslaOnlyIstNullWennAndereFahrzeugeLadenDuerfen() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 0.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        when(superchargerCatalog.sites()).thenReturn(List.of(
+                sc("8", "Weiterstadt, Germany", "Weiterstadt", 50.03, 250, true)));
+
+        assertThat(service.stations().stations().get(0).teslaOnly()).isNull();
+    }
+
+    @Test
+    void namenOhneLandSuffixFaelltAufStadtZurueck() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 0.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        when(superchargerCatalog.sites()).thenReturn(List.of(
+                sc("9", "Ohne Land", "Stadt", 50.03, 250, false),
+                sc("10", null, "Nur Stadt", 50.04, 250, false)));
+
+        assertThat(service.stations().stations()).extracting(ChargingDtos.StationResponse::name)
+                .containsExactly("Tesla Supercharger Ohne Land", "Tesla Supercharger Nur Stadt");
+    }
+
+    @Test
+    void superchargerAusserhalbDesUmkreisesUndUnterMindestleistungFallenWeg() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 150.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        when(superchargerCatalog.sites()).thenReturn(List.of(
+                sc("ok", "Ok, Germany", "Ok", 50.03, 250, false),
+                sc("weit", "Weit, Germany", "Weit", 51.0, 250, false),
+                sc("schwach", "Schwach, Germany", "Schwach", 50.03, 120, false),
+                sc("ohneLeistung", "Unbekannt, Germany", "Unbekannt", 50.03, null, false)));
+
+        assertThat(service.stations().stations()).extracting(ChargingDtos.StationResponse::stationId)
+                .containsExactly("sc-ok");
+    }
+
+    @Test
+    void ohneMindestleistungBleibtSuperchargerOhneLeistungErhalten() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 0.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        when(superchargerCatalog.sites()).thenReturn(List.of(
+                sc("ohneLeistung", "Unbekannt, Germany", "Unbekannt", 50.03, null, false)));
+
+        ChargingDtos.StationResponse row = service.stations().stations().get(0);
+
+        assertThat(row.maxPowerKw()).isNull();
+    }
+
+    @Test
+    void ohneZuhauseKeineSupercharger() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(null, null, 10.0, 0.0));
+
+        assertThat(service.stations().stations()).isEmpty();
+        verifyNoInteractions(superchargerCatalog);
+    }
+
+    @Test
+    void normaleStationenTragenKeineSuperchargerFelder() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 0.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        snapshot.updateArea(List.of(new ChargingStation("nah", "Nah", null, null, 50.01, 8.0, 150.0, 2, 2)), NOW);
+
+        ChargingDtos.StationResponse row = service.stations().stations().get(0);
+
+        assertThat(row.supercharger()).isNull();
+        assertThat(row.teslaOnly()).isNull();
     }
 
     private ChargingFavorite favorite(String id) {

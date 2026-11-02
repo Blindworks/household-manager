@@ -4,6 +4,8 @@ import com.household.manager.model.entity.ChargingFavorite;
 import com.household.manager.model.entity.ChargingPointOccupancy;
 import com.household.manager.charging.forecast.ChargingForecast;
 import com.household.manager.charging.forecast.ChargingForecastService;
+import com.household.manager.charging.supercharger.SuperchargerCatalog;
+import com.household.manager.charging.supercharger.SuperchargerSite;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Baut die eine Antwort fuer Tablet und Website: Favoriten zuerst (mit Ladepunkten und
@@ -28,6 +32,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ChargingQueryService {
 
+    /** Praefix der Supercharger-Ids; auch der Controller lehnt damit Favorit/Ladepunkte/Vorhersage ab. */
+    public static final String SUPERCHARGER_ID_PREFIX = "sc-";
     private static final String INSUFFICIENT_DATA = "INSUFFICIENT_DATA";
 
     private final ChargingSettingsService settingsService;
@@ -35,6 +41,7 @@ public class ChargingQueryService {
     private final ChargingOccupancyTracker tracker;
     private final ChargingSnapshot snapshot;
     private final ChargingForecastService forecastService;
+    private final SuperchargerCatalog superchargerCatalog;
     private final Clock clock;
 
     public ChargingDtos.StationsResponse stations() {
@@ -55,9 +62,13 @@ public class ChargingQueryService {
         }
         favoriteRows.sort(Comparator.comparingLong(ChargingDtos.StationResponse::distanceMeters));
 
-        List<ChargingDtos.StationResponse> others = snapshot.areaStations().stream()
-                .filter(s -> !favorites.containsKey(s.stationId()))
-                .map(s -> areaRow(s, homeLat, homeLon))
+        List<ChargingDtos.StationResponse> others = Stream.concat(
+                        snapshot.areaStations().stream()
+                                .filter(s -> !favorites.containsKey(s.stationId()))
+                                .map(s -> areaRow(s, homeLat, homeLon)),
+                        ChargingAreaFilter.filterSites(superchargerCatalog.sites(), homeLat, homeLon,
+                                        settings.radiusKm(), settings.minPowerKw()).stream()
+                                .map(s -> superchargerRow(s, homeLat, homeLon)))
                 .sorted(Comparator.comparingLong(ChargingDtos.StationResponse::distanceMeters))
                 .toList();
 
@@ -70,7 +81,31 @@ public class ChargingQueryService {
     private ChargingDtos.StationResponse areaRow(ChargingStation s, double homeLat, double homeLon) {
         long distance = Math.round(ChargingAreaFilter.distanceMeters(homeLat, homeLon, s.lat(), s.lon()));
         return new ChargingDtos.StationResponse(s.stationId(), s.name(), s.operator(), s.address(), s.lat(), s.lon(),
-                distance, s.maxPowerKw(), null, s.total(), s.free(), false, null, null);
+                distance, s.maxPowerKw(), null, s.total(), s.free(), false, null, null, null, null);
+    }
+
+    /** Supercharger kennen nur den Standort: keine Belegung, kein Preis, keine Ladepunkte, kein Favorit. */
+    private ChargingDtos.StationResponse superchargerRow(SuperchargerSite s, double homeLat, double homeLon) {
+        long distance = Math.round(ChargingAreaFilter.distanceMeters(homeLat, homeLon, s.lat(), s.lon()));
+        return new ChargingDtos.StationResponse(SUPERCHARGER_ID_PREFIX + s.id(), "Tesla Supercharger " + place(s),
+                "Tesla", address(s), s.lat(), s.lon(), distance,
+                s.powerKw() == null ? null : s.powerKw().doubleValue(), null, s.stallCount(), 0, false, null,
+                null, true, s.otherEvs() ? null : Boolean.TRUE);
+    }
+
+    /** Ort aus „Pfungstadt, Germany“ (ohne Laender-Suffix); Rueckfall auf die Stadt der Adresse. */
+    private static String place(SuperchargerSite s) {
+        String name = s.name();
+        if (name != null && !name.isBlank()) {
+            int comma = name.lastIndexOf(", ");
+            return comma > 0 ? name.substring(0, comma) : name;
+        }
+        return s.city();
+    }
+
+    private static String address(SuperchargerSite s) {
+        return Stream.of(s.street(), s.city()).filter(p -> p != null && !p.isBlank())
+                .collect(Collectors.joining(", "));
     }
 
     /** Stammdaten aus dem Umkreis-Stand, wenn vorhanden; sonst die beim Favorisieren gespeicherten. */
@@ -102,7 +137,7 @@ public class ChargingQueryService {
 
         return new ChargingDtos.StationResponse(favorite.getStationId(), name, operator, address, lat, lon,
                 distance, maxPower, minPrice, total, free, true, points,
-                summary(forecastService.latest(favorite.getStationId())));
+                summary(forecastService.latest(favorite.getStationId())), null, null);
     }
 
     /** Vorhersage einer Favoritenstation; Nicht-Favoriten haben keine (404). */

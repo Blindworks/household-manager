@@ -19,6 +19,15 @@ public class ChargingProperties {
     private long favoritePollSeconds = 60;
     private long initialDelayMs = 25000;
     private int httpTimeoutMs = 10000;
+    private Supercharger supercharger = new Supercharger();
+
+    /** Tesla-Supercharger-Standorte von supercharge.info (ohne Belegung). */
+    @Data
+    public static class Supercharger {
+        private boolean enabled = true;
+        private String url = "https://supercharge.info/service/supercharge/allSites";
+        private int timeoutMs = 60000;
+    }
 
     @Data
     public static class Enbw {
