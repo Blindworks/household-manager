@@ -254,4 +254,86 @@ class ChargingOccupancyTrackerTest {
 
         verify(recorder, never()).recordEnded(any(), any(), any(), any());
     }
+
+    @Test
+    void neuesStatusSinceBeiWeiterhinBelegtStartetNeueSitzung() {
+        ChargingPointOccupancy existing = rowSince(Instant.parse("2026-09-19T10:00:00Z"));
+        when(repository.findByStationId("S1")).thenReturn(List.of(existing));
+        current = Instant.parse("2026-09-19T10:41:00Z");
+        Instant newSince = Instant.parse("2026-09-19T10:35:00Z");
+
+        tracker.record(details(ChargePointStatus.OCCUPIED, newSince));
+
+        verify(recorder, never()).recordEnded(any(), any(), any(), any());
+        ArgumentCaptor<ChargingPointOccupancy> captor = ArgumentCaptor.forClass(ChargingPointOccupancy.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue()).isSameAs(existing);
+        assertThat(captor.getValue().getOccupiedSince()).isEqualTo(newSince);
+        assertThat(captor.getValue().getFirstSeenOccupiedAt()).isEqualTo(current);
+    }
+
+    @Test
+    void gleichesStatusSinceBeiWeiterhinBelegtBleibtDieselbeSitzung() {
+        Instant start = Instant.parse("2026-09-19T10:00:00Z");
+        when(repository.findByStationId("S1")).thenReturn(List.of(rowSince(start)));
+        current = Instant.parse("2026-09-19T10:41:00Z");
+
+        tracker.record(details(ChargePointStatus.OCCUPIED, start));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void endeNachLueckeMitStatusSinceSpaeterAlsLueckengrenzeWirdVerworfen() {
+        Instant start = Instant.parse("2026-09-19T10:00:00Z");
+        when(repository.findByStationId("S1")).thenReturn(List.of(rowSince(start)));
+        current = Instant.parse("2026-09-19T10:20:00Z");
+        tracker.record(details(ChargePointStatus.OCCUPIED));
+        current = Instant.parse("2026-09-19T10:41:00Z");
+
+        tracker.record(details(ChargePointStatus.FREE, Instant.parse("2026-09-19T10:35:00Z")));
+
+        verify(recorder, never()).recordEnded(any(), any(), any(), any());
+    }
+
+    @Test
+    void endeNachLueckeMitStatusSinceInnerhalbDerLueckengrenzeWirdAufgezeichnet() {
+        Instant start = Instant.parse("2026-09-19T10:00:00Z");
+        when(repository.findByStationId("S1")).thenReturn(List.of(rowSince(start)));
+        current = Instant.parse("2026-09-19T10:20:00Z");
+        tracker.record(details(ChargePointStatus.OCCUPIED));
+        current = Instant.parse("2026-09-19T10:41:00Z");
+        Instant end = Instant.parse("2026-09-19T10:28:00Z");
+
+        tracker.record(details(ChargePointStatus.FREE, end));
+
+        verify(recorder).recordEnded("S1", "P1", start, end);
+    }
+
+    @Test
+    void endeNachLueckeMitStatusSinceGenauAufDerLueckengrenzeWirdAufgezeichnet() {
+        Instant start = Instant.parse("2026-09-19T10:00:00Z");
+        when(repository.findByStationId("S1")).thenReturn(List.of(rowSince(start)));
+        current = Instant.parse("2026-09-19T10:20:00Z");
+        tracker.record(details(ChargePointStatus.OCCUPIED));
+        current = Instant.parse("2026-09-19T10:41:00Z");
+        Instant end = Instant.parse("2026-09-19T10:30:00Z");
+
+        tracker.record(details(ChargePointStatus.FREE, end));
+
+        verify(recorder).recordEnded("S1", "P1", start, end);
+    }
+
+    @Test
+    void lueckeVonGenauZehnMinutenWirdNochAufgezeichnet() {
+        Instant start = Instant.parse("2026-09-19T09:30:00Z");
+        when(repository.findByStationId("S1")).thenReturn(List.of(rowSince(start)));
+        current = Instant.parse("2026-09-19T10:00:00Z");
+        tracker.record(details(ChargePointStatus.OCCUPIED));
+        current = Instant.parse("2026-09-19T10:10:00Z");
+
+        tracker.record(details(ChargePointStatus.FREE));
+
+        verify(recorder).recordEnded("S1", "P1", start, current);
+    }
 }

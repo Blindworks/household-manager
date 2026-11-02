@@ -60,6 +60,12 @@ public class ChargingOccupancyTracker {
                     } else if (row.getOccupiedSince() == null && point.statusSince() != null) {
                         row.setOccupiedSince(point.statusSince());
                         repository.save(row);
+                    } else if (startsNewSession(row, point)) {
+                        // Zwischen zwei Polls endete eine Belegung und eine neue begann: das Ende der
+                        // alten ist unbekannt - verwerfen statt beide zu einer langen zu verschmelzen
+                        row.setOccupiedSince(point.statusSince());
+                        row.setFirstSeenOccupiedAt(now);
+                        repository.save(row);
                     }
                 }
                 case FREE -> {
@@ -91,15 +97,26 @@ public class ChargingOccupancyTracker {
             return;
         }
         Instant statusSince = point.statusSince();
+        Instant previous = lastRecordedAt.get(stationId);
+        boolean gap = previous != null && Duration.between(previous, now).compareTo(ChargingForecastSettings.MAX_GAP) > 0;
         if (statusSince != null && statusSince.isAfter(start)) {
-            recorder.recordEnded(stationId, point.chargePointId(), start, statusSince);
+            // Nach einer Luecke kann statusSince das Ende einer SPAETEREN Belegung sein (frei -> belegt -> frei
+            // ungesehen); belastbar ist es nur bis zur Lueckengrenze hinter dem letzten Poll
+            if (!gap || !statusSince.isAfter(previous.plus(ChargingForecastSettings.MAX_GAP))) {
+                recorder.recordEnded(stationId, point.chargePointId(), start, statusSince);
+            }
             return;
         }
-        Instant previous = lastRecordedAt.get(stationId);
-        if (previous != null && !Duration.between(previous, now).minus(ChargingForecastSettings.MAX_GAP).isPositive()) {
+        if (previous != null && !gap) {
             recorder.recordEnded(stationId, point.chargePointId(), start, now);
         }
         // sonst: Neustart oder Luecke - das Ende ist unbekannt, verwerfen statt falsch zu schaetzen
+    }
+
+    private static boolean startsNewSession(ChargingPointOccupancy row, ChargePoint point) {
+        return row.getOccupiedSince() != null
+                && point.statusSince() != null
+                && point.statusSince().isAfter(row.getOccupiedSince());
     }
 
     public Map<String, ChargingPointOccupancy> occupancyFor(String stationId) {
