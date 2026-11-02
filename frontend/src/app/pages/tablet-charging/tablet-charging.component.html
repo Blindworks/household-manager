@@ -19,7 +19,50 @@
       <div class="tablet-charging__body">
         <!-- Der Kartencontainer steht IMMER im DOM (ViewChild + ngAfterViewInit), sonst hinge der
              Kartenaufbau an der Reihenfolge von Datenankunft und Change Detection (Lehre aus /pets). -->
-        <div #mapContainer class="tablet-charging__map"></div>
+        <div #mapContainer class="tablet-charging__map" [class.tablet-charging__map--hidden]="detailStationId"></div>
+
+        @if (detailStationId) {
+          <section class="tablet-charging__detail">
+            <header class="tablet-charging__detail-head">
+              <h2 class="tablet-charging__detail-title">{{ detailStation?.name }}</h2>
+              <button type="button" class="tablet-charging__refresh" (click)="closeDetail()">Karte</button>
+            </header>
+            @if (forecastError) {
+              <p class="tablet-charging__error">{{ forecastError }}</p>
+            }
+            @if (forecast; as f) {
+              @if (f.status === 'INSUFFICIENT_DATA') {
+                <p class="tablet-charging__hint">Noch zu wenig Daten ({{ f.observedDays }} Tage) – die Vorhersage startet nach 14 Tagen</p>
+              } @else {
+                <ul class="tablet-charging__detail-points">
+                  @for (point of f.points; track point.chargePointId) {
+                    @if (pointWindow(point); as window) {
+                      <li>{{ pointPower(point) }}: {{ window }}</li>
+                    }
+                  }
+                </ul>
+                <p class="tablet-charging__detail-probs">Frei in 15 / 30 / 60 min: {{ probability(15) }} / {{ probability(30) }} / {{ probability(60) }}</p>
+              }
+              <div class="tablet-charging__heat">
+                <span class="tablet-charging__heat-corner"></span>
+                @for (hour of hours; track hour) {
+                  <span class="tablet-charging__heat-hour">{{ hour % 6 === 0 ? hour : '' }}</span>
+                }
+                @for (row of f.heatmap; track $index; let d = $index) {
+                  <span class="tablet-charging__heat-day">{{ dayLabels[d] }}</span>
+                  @for (value of row; track $index; let h = $index) {
+                    <span class="tablet-charging__heat-cell"
+                          [class.tablet-charging__heat-cell--now]="isNow(d, h)"
+                          [attr.data-level]="level(value)"></span>
+                  }
+                }
+              </div>
+            } @else if (!forecastError) {
+              <p class="tablet-charging__hint">Lade Vorhersage…</p>
+            }
+          </section>
+        }
+
 
         <aside class="tablet-charging__list">
           @if (!data) {
@@ -35,7 +78,7 @@
                 [class.tablet-charging__row--favorite]="station.favorite"
                 [class.tablet-charging__row--selected]="station.stationId === selectedStationId"
                 [attr.data-tone]="tone(station)"
-                (click)="select(station.stationId)">
+                (click)="onRowTap(station)">
                 <header class="tablet-charging__row-head">
                   <span class="tablet-charging__dot" [attr.data-tone]="tone(station)"></span>
                   <span class="tablet-charging__name">
@@ -46,6 +89,11 @@
                     {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
                   </span>
                 </header>
+                @if (station.favorite) {
+                  @if (forecastText(station); as line) {
+                    <p class="tablet-charging__forecast">{{ line }}</p>
+                  }
+                }
                 @if (station.operator || station.pricePerKwh !== undefined) {
                   <p class="tablet-charging__sub">
                     @if (station.operator) { <span class="tablet-charging__operator">{{ station.operator }}</span> }

@@ -7,10 +7,15 @@ import { Subscription } from 'rxjs';
 import * as L from 'leaflet';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { ChargingService } from '../../services/charging.service';
-import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../models/charging.model';
+import {
+  ChargePoint, ChargingForecast, ChargingPointForecast, ChargingStation, ChargingStationsResponse
+} from '../../models/charging.model';
 import {
   formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
 } from '../../shared/charging-status.util';
+import {
+  HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel
+} from '../../shared/charging-forecast.util';
 import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
 
@@ -62,6 +67,13 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   selectedStationId: string | null = null;
   /** Wird minuetlich hochgezaehlt, damit die Dauer-Getter neu ausgewertet werden. */
   now = new Date();
+  /** Station, deren Vorhersage-Detail die Karte verdeckt; nur Favoriten. */
+  detailStationId: string | null = null;
+  forecast: ChargingForecast | null = null;
+  forecastError: string | null = null;
+  readonly dayLabels = HEATMAP_DAY_LABELS;
+  readonly hours = Array.from({ length: 24 }, (_, hour) => hour);
+  private forecastRequest: Subscription | null = null;
 
   ngOnInit(): void {
     this.load(false);
@@ -82,6 +94,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       window.clearInterval(this.tickTimer);
     }
     this.pendingRequest?.unsubscribe();
+    this.forecastRequest?.unsubscribe();
     this.map?.remove();
     this.map = undefined;
   }
@@ -147,6 +160,82 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       marker.openPopup();
       this.bringMapIntoView();
     }
+  }
+
+  /** Antippen einer Listenzeile: Auswahl, bei Favoriten zusaetzlich das Vorhersage-Detail. */
+  onRowTap(station: ChargingStation): void {
+    this.select(station.stationId);
+    if (station.favorite) {
+      this.openDetail(station.stationId);
+    }
+  }
+
+  openDetail(stationId: string): void {
+    if (this.detailStationId !== stationId) {
+      this.forecast = null;
+    }
+    this.detailStationId = stationId;
+    this.forecastError = null;
+    this.loadForecast();
+  }
+
+  closeDetail(): void {
+    this.detailStationId = null;
+    this.forecast = null;
+    this.forecastError = null;
+    this.forecastRequest?.unsubscribe();
+    // Die Karte war verdeckt (display: none) und hat ihre Groesse verloren.
+    setTimeout(() => this.map?.invalidateSize(), 0);
+  }
+
+  private loadForecast(): void {
+    const stationId = this.detailStationId;
+    if (!stationId) {
+      return;
+    }
+    this.forecastRequest?.unsubscribe();
+    this.forecastRequest = this.chargingService.getForecast(stationId).subscribe({
+      next: forecast => {
+        this.forecast = forecast;
+        this.forecastError = null;
+      },
+      // Ein Fehler behaelt die zuletzt gezeigte Vorhersage.
+      error: (err: HttpErrorResponse) => {
+        console.error('Vorhersage konnte nicht geladen werden:', err);
+        this.forecastError = 'Vorhersage konnte nicht geladen werden.';
+      }
+    });
+  }
+
+  get detailStation(): ChargingStation | undefined {
+    return this.stations.find(s => s.stationId === this.detailStationId);
+  }
+
+  forecastText(station: ChargingStation): string | null {
+    return forecastLine(station.forecast);
+  }
+
+  pointWindow(point: ChargingPointForecast): string | null {
+    return freeWindow(point.expectedFreeAt, point.expectedFreeLatest);
+  }
+
+  pointPower(point: ChargingPointForecast): string {
+    const known = this.detailStation?.chargePoints?.find(p => p.chargePointId === point.chargePointId);
+    return known ? this.power(known.maxPowerKw) : point.chargePointId;
+  }
+
+  probability(minutes: number): string {
+    const value = this.forecast?.freeProbabilityPercent?.[String(minutes)];
+    return value === undefined ? '–' : `${value} %`;
+  }
+
+  level(value: number | null): HeatmapLevel {
+    return heatmapLevel(value);
+  }
+
+  /** Zeile der Heatmap fuer heute (Mo..So); Feiertage zaehlen im Backend als So/Ft, hier nur der Wochentag. */
+  isNow(dayIndex: number, hour: number): boolean {
+    return dayIndex === (this.now.getDay() + 6) % 7 && hour === this.now.getHours();
   }
 
   /**
@@ -275,6 +364,9 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     this.now = new Date();
     this.renderMap();
     this.reloadChargePoints();
+    if (this.detailStationId) {
+      this.loadForecast();
+    }
   }
 
   /**

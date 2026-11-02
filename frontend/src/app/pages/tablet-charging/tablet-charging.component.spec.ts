@@ -1,5 +1,5 @@
 import { AppearanceService } from '../../services/appearance.service';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
@@ -7,7 +7,7 @@ import { TabletChargingComponent } from './tablet-charging.component';
 import { ChargingService } from '../../services/charging.service';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
-import { ChargingStationsResponse } from '../../models/charging.model';
+import { ChargingForecast, ChargingStationsResponse } from '../../models/charging.model';
 
 describe('TabletChargingComponent', () => {
   let fixture: ComponentFixture<TabletChargingComponent>;
@@ -39,10 +39,25 @@ describe('TabletChargingComponent', () => {
     ]
   };
 
+  const forecast: ChargingForecast = {
+    stationId: 'fav', status: 'OK', observedDays: 20,
+    freeProbabilityPercent: { '15': 10, '30': 40, '60': 80 },
+    points: [{ chargePointId: 'P1', occupiedSince: '2026-09-19T11:20:00',
+      expectedFreeAt: '2026-09-19T12:30:00', expectedFreeLatest: '2026-09-19T13:10:00' }],
+    heatmap: Array.from({ length: 7 }, (_, d) => Array.from({ length: 24 }, (_, h) => (h === 3 ? null : (d + h) / 30)))
+  };
+  const forecastResponse: ChargingStationsResponse = {
+    ...response,
+    stations: response.stations.map(s => s.favorite
+      ? { ...s, forecast: { status: 'OK' as const, freeProbability30min: 40, expectedFreeAt: '2026-09-19T12:30:00' } }
+      : s)
+  };
+
   beforeEach(async () => {
-    chargingSpy = jasmine.createSpyObj('ChargingService', ['getStations', 'refresh', 'getChargePoints']);
+    chargingSpy = jasmine.createSpyObj('ChargingService', ['getStations', 'refresh', 'getChargePoints', 'getForecast']);
     chargingSpy.getChargePoints.and.returnValue(of([]));
-    chargingSpy.getStations.and.returnValue(of(response));
+    chargingSpy.getStations.and.returnValue(of(forecastResponse));
+    chargingSpy.getForecast.and.returnValue(of(forecast));
     weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weatherSpy.getOverview.and.returnValue(
       of({ current: { temperature: 18, icon: 1 } } as unknown as WeatherOverview));
@@ -267,5 +282,103 @@ describe('TabletChargingComponent', () => {
 
     document.body.appendChild(host);
     frame.remove();
+  });
+
+  describe('Vorhersage', () => {
+    const host = () => fixture.nativeElement as HTMLElement;
+    const rows = () => host().querySelectorAll('.tablet-charging__row');
+
+    it('zeigtPrognosezeileBeiFavoriten', () => {
+      const line = rows()[0].querySelector('.tablet-charging__forecast');
+      expect(line?.textContent).toContain('40 % in 30 min');
+    });
+
+    it('keinePrognosezeileBeiNichtFavoriten', () => {
+      expect(rows()[1].querySelector('.tablet-charging__forecast')).toBeNull();
+    });
+
+    it('listenTippAufFavoritOeffnetDetail', () => {
+      (rows()[0] as HTMLElement).click();
+      fixture.detectChanges();
+      expect(chargingSpy.getForecast).toHaveBeenCalledWith('fav');
+      expect(component.detailStationId).toBe('fav');
+      expect(host().querySelector('.tablet-charging__detail')).not.toBeNull();
+    });
+
+    it('listenTippAufNichtFavoritOeffnetKeinDetail', () => {
+      (rows()[1] as HTMLElement).click();
+      fixture.detectChanges();
+      expect(component.detailStationId).toBeNull();
+      expect(chargingSpy.getForecast).not.toHaveBeenCalled();
+    });
+
+    it('markerTippOeffnetKeinDetail', () => {
+      component.select('fav', { fromMap: true });
+      fixture.detectChanges();
+      expect(component.detailStationId).toBeNull();
+      expect(chargingSpy.getForecast).not.toHaveBeenCalled();
+    });
+
+    it('kartencontainerBleibtImDomBeiOffenemDetail', () => {
+      component.openDetail('fav');
+      fixture.detectChanges();
+      const map = host().querySelector('.tablet-charging__map');
+      expect(map).not.toBeNull();
+      expect(map!.classList).toContain('tablet-charging__map--hidden');
+    });
+
+    it('schliessenZeigtKarteUndRuftInvalidateSize', fakeAsync(() => {
+      component.openDetail('fav');
+      fixture.detectChanges();
+      const spy = spyOn(component.mapForTest()!, 'invalidateSize');
+
+      component.closeDetail();
+      fixture.detectChanges();
+      tick(0);
+
+      expect(component.detailStationId).toBeNull();
+      expect(host().querySelector('.tablet-charging__detail')).toBeNull();
+      expect(host().querySelector('.tablet-charging__map--hidden')).toBeNull();
+      expect(spy).toHaveBeenCalled();
+    }));
+
+    it('zuWenigDatenZeigtHinweis', () => {
+      chargingSpy.getForecast.and.returnValue(of({ ...forecast, status: 'INSUFFICIENT_DATA', observedDays: 5 }));
+      component.openDetail('fav');
+      fixture.detectChanges();
+      expect(host().querySelector('.tablet-charging__detail')?.textContent)
+        .toContain('Noch zu wenig Daten (5 Tage) – die Vorhersage startet nach 14 Tagen');
+      expect(host().querySelectorAll('.tablet-charging__heat-cell').length).toBe(168);
+    });
+
+    it('heatmapHat168Zellen', () => {
+      component.openDetail('fav');
+      fixture.detectChanges();
+      const cells = host().querySelectorAll('.tablet-charging__heat-cell');
+      expect(cells.length).toBe(168);
+      expect(cells[3].getAttribute('data-level')).toBe('none');
+      expect(host().querySelectorAll('.tablet-charging__heat-cell--now').length).toBe(1);
+    });
+
+    it('zeigtFreiZeitUndWahrscheinlichkeiten', () => {
+      component.openDetail('fav');
+      fixture.detectChanges();
+      const text = host().querySelector('.tablet-charging__detail')?.textContent ?? '';
+      expect(text).toContain('frei ca. 12:30, meist bis 13:10');
+      expect(text).toContain('Frei in 15 / 30 / 60 min: 10 % / 40 % / 80 %');
+    });
+
+    it('refreshFehlerBehaeltVorhersage', () => {
+      component.openDetail('fav');
+      fixture.detectChanges();
+      chargingSpy.getForecast.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      component.reload();
+      fixture.detectChanges();
+
+      expect(chargingSpy.getForecast).toHaveBeenCalledTimes(2);
+      expect(component.forecast).toBe(forecast);
+      expect(host().querySelectorAll('.tablet-charging__heat-cell').length).toBe(168);
+    });
   });
 });

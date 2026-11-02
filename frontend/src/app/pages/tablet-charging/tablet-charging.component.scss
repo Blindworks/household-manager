@@ -76,6 +76,73 @@
     background: #1e293b;
   }
 
+  &__map--hidden { display: none; }
+
+  // Liegt im selben Rasterbereich wie die Karte (Spalte 1), solange diese verdeckt ist.
+  &__detail {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 0.6rem;
+    padding: 0.8rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+  }
+
+  &__detail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &__detail-title { margin: 0; font-size: 1.2rem; }
+
+  &__detail-points {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.95rem;
+    color: rgba(var(--on-surface-rgb), 0.85);
+  }
+
+  &__detail-probs { margin: 0; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+
+  &__forecast {
+    margin: 0.15rem 0 0 1.6rem;
+    font-size: 0.9rem;
+    color: rgba(var(--on-surface-rgb), 0.8);
+  }
+
+  // 7 Zeilen x 24 Stunden plus Beschriftungsspalte/-zeile.
+  &__heat {
+    display: grid;
+    grid-template-columns: 3rem repeat(24, minmax(0, 1fr));
+    gap: 2px;
+    align-items: center;
+  }
+
+  &__heat-hour, &__heat-day {
+    font-size: 0.7rem;
+    color: rgba(var(--on-surface-rgb), 0.6);
+  }
+
+  &__heat-cell {
+    height: 1.5rem;
+    border-radius: 3px;
+    background: rgba(var(--tint-rgb), 0.06);
+
+    &[data-level='low'] { background: rgba(var(--error-rgb), 0.55); }
+    &[data-level='mid'] { background: rgba(var(--warning-rgb), 0.55); }
+    &[data-level='high'] { background: rgba(var(--success-rgb), 0.4); }
+    &[data-level='full'] { background: rgba(var(--success-rgb), 0.85); }
+    &--now { outline: 2px solid var(--on-surface); outline-offset: 1px; }
+  }
+
   &__list {
     min-height: 0;
     overflow-y: auto;
