@@ -58,6 +58,21 @@ export function formatPrice(eurPerKwh: number | undefined): string {
   return `${eurPerKwh.toFixed(2).replace('.', ',')} €/kWh`;
 }
 
+/**
+ * Liste neben der Karte: nur Stationen im sichtbaren Ausschnitt, Favoriten bleiben immer
+ * stehen (sonst verschwaenden sie beim Verschieben aus dem Blick). Ohne bekannten Ausschnitt
+ * (Karte noch nicht aufgebaut) bleibt die Liste vollstaendig.
+ */
+export function stationsInView(
+  stations: readonly ChargingStation[],
+  isVisible: ((lat: number, lon: number) => boolean) | null
+): ChargingStation[] {
+  if (!isVisible) {
+    return [...stations];
+  }
+  return stations.filter(s => s.favorite || isVisible(s.lat, s.lon));
+}
+
 /** "0,39 €/kWh · Aldi-App"; ohne Preis leer (eine Notiz allein sagt nichts). */
 export function formatDirectPrice(eurPerKwh: number | undefined, note: string | undefined): string {
   const price = formatPrice(eurPerKwh);

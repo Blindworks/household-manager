@@ -7,6 +7,7 @@ import {
   stationTone,
   superchargerMeta,
   sortStations,
+  stationsInView,
   withChargePoints
 } from './charging-status.util';
 import { MARKER_GEOMETRY, stationIcon, stationPopupText } from './charging-map.util';
@@ -35,6 +36,22 @@ describe('charging-status.util', () => {
 
     it('ist bei Superchargern neutral grau, obwohl nie ein Platz als frei gemeldet wird', () => {
       expect(stationTone(station({ supercharger: true, free: 0, total: 15 }))).toBe('unknown');
+    });
+  });
+
+  describe('stationsInView', () => {
+    const inside = station({ stationId: 'in', lat: 50, lon: 8 });
+    const outside = station({ stationId: 'out', lat: 52, lon: 13 });
+    const favoriteOutside = station({ stationId: 'fav', lat: 52, lon: 13, favorite: true });
+    const nearFrankfurt = (lat: number, lon: number): boolean => Math.abs(lat - 50) < 1 && Math.abs(lon - 8) < 1;
+
+    it('behaelt nur Stationen im Kartenausschnitt, Favoriten immer', () => {
+      expect(stationsInView([inside, outside, favoriteOutside], nearFrankfurt).map(s => s.stationId))
+        .toEqual(['in', 'fav']);
+    });
+
+    it('laesst ohne bekannten Ausschnitt alle Stationen stehen', () => {
+      expect(stationsInView([inside, outside], null).length).toBe(2);
     });
   });
 

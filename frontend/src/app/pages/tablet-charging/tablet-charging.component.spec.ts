@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { TabletChargingComponent } from './tablet-charging.component';
 import { ChargingService } from '../../services/charging.service';
+import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { ChargingForecast, ChargingStationsResponse } from '../../models/charging.model';
@@ -73,6 +74,8 @@ describe('TabletChargingComponent', () => {
       ]
     }).compileComponents();
 
+    // Die Seite ist fuers Wandtablet gebaut; der Website-Modus hat einen eigenen Test.
+    TestBed.inject(ViewModeService).isTabletView.set(true);
     fixture = TestBed.createComponent(TabletChargingComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -386,6 +389,63 @@ describe('TabletChargingComponent', () => {
     erster.next(response);
 
     expect(component.data?.stations.length).toBe(0);
+  });
+
+  describe('Liste folgt dem Kartenausschnitt', () => {
+    let frame: HTMLDivElement;
+
+    beforeEach(() => {
+      frame = document.createElement('div');
+      frame.style.cssText = 'display:flex;flex-direction:column;height:800px;width:1200px';
+      document.body.appendChild(frame);
+      frame.appendChild(fixture.nativeElement as HTMLElement);
+      component.mapForTest()!.invalidateSize();
+    });
+
+    afterEach(() => {
+      document.body.appendChild(fixture.nativeElement as HTMLElement);
+      frame.remove();
+    });
+
+    const listedNames = (): string[] =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.tablet-charging__row .tablet-charging__name'))
+        .map(e => e.textContent?.trim() ?? '');
+
+    it('zeigt ausserhalb des Ausschnitts nur noch die Favoriten', () => {
+      component.mapForTest()!.setView([52.5, 13.4], 13, { animate: false });
+      fixture.detectChanges();
+
+      expect(listedNames()).toEqual(['Lidl Hauptstr.']);
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('.charging-marker').length).toBe(2);
+    });
+
+    it('zeigt eine Station wieder, sobald sie im Ausschnitt liegt', () => {
+      component.mapForTest()!.setView([52.5, 13.4], 13, { animate: false });
+      component.mapForTest()!.setView([50.02, 8.0], 14, { animate: false });
+      fixture.detectChanges();
+
+      expect(listedNames()).toContain('EnBW Rastplatz');
+    });
+  });
+
+  it('haelt die Kartenhoehe auch ohne Tablet-Modus beim Bildschirm statt bei der Liste', () => {
+    const viewMode = TestBed.inject(ViewModeService);
+    viewMode.isTabletView.set(false);
+    const many: ChargingStationsResponse = {
+      ...forecastResponse,
+      stations: Array.from({ length: 60 }, (_, i) => ({
+        stationId: 'S' + i, name: 'Station ' + i, lat: 50 + i / 1000, lon: 8, distanceMeters: i * 100,
+        total: 2, free: 1, favorite: false
+      }))
+    };
+    chargingSpy.getStations.and.returnValue(of(many));
+    component.reload();
+    fixture.detectChanges();
+
+    const mapHeight = (fixture.nativeElement as HTMLElement).querySelector('.tablet-charging__map')!
+      .getBoundingClientRect().height;
+    expect(mapHeight).toBeGreaterThan(200);
+    expect(mapHeight).toBeLessThanOrEqual(window.innerHeight);
   });
 
   it('gibt Karte und Liste die Bildschirmhoehe statt der Inhaltshoehe', () => {

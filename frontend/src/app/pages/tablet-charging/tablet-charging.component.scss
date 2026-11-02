@@ -78,6 +78,18 @@
 
   &__map--hidden { display: none; }
 
+  // Ohne Tablet-Modus (Website-Kopfzeile sichtbar) endet die Hoehenkette nicht an einer festen
+  // Bildschirmhoehe: das Raster wuchs auf Listenhoehe und die Karte mit (real 3370 px). Dann
+  // bekommt der Bereich selbst eine Hoehe, die Liste scrollt in ihrem Rahmen. Bis 600 px gilt
+  // weiter das Handy-Layout weiter unten.
+  @media (min-width: 601px) {
+    &--free &__body {
+      flex: none;
+      height: calc(100dvh - 10rem);
+      min-height: 420px;
+    }
+  }
+
   // Liegt im selben Rasterbereich wie die Karte (Spalte 1), solange diese verdeckt ist.
   &__detail {
     grid-column: 1;

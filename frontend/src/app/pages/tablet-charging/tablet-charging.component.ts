@@ -11,8 +11,10 @@ import {
   ChargePoint, ChargingForecast, ChargingPointForecast, ChargingStation, ChargingStationsResponse
 } from '../../models/charging.model';
 import {
-  formatDirectPrice, formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, superchargerMeta, withChargePoints
+  formatDirectPrice, formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone,
+  stationsInView, superchargerMeta, withChargePoints
 } from '../../shared/charging-status.util';
+import { ViewModeService } from '../../services/view-mode.service';
 import {
   HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel, occupiedSinceText
 } from '../../shared/charging-forecast.util';
@@ -38,6 +40,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   private static readonly TICK_INTERVAL_MS = 60_000;
 
   private readonly chargingService = inject(ChargingService);
+  /** Ohne Tablet-Modus fehlt die feste Bildschirmhoehe der Hoehenkette - die Seite setzt dann selbst eine. */
+  readonly viewMode = inject(ViewModeService);
 
   @ViewChild('mapContainer') private mapContainer?: ElementRef<HTMLDivElement>;
 
@@ -55,6 +59,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   private loadingChargePoints = new Set<string>();
   private homeLayer?: L.LayerGroup;
   private viewInitialized = false;
+  /** Zuletzt sichtbarer Kartenausschnitt; null, solange die Karte noch nicht steht. */
+  private visibleBounds: L.LatLngBounds | null = null;
   private refreshTimer: number | null = null;
   private tickTimer: number | null = null;
   private pendingRequest: Subscription | null = null;
@@ -107,6 +113,21 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       return [];
     }
     return sortStations(this.data.stations.map(s => this.withLoadedPoints(s)));
+  }
+
+  /** Liste rechts: nur was die Karte gerade zeigt, Favoriten immer (die Marker zeigen weiter alle). */
+  get listedStations(): ChargingStation[] {
+    const bounds = this.visibleBounds;
+    return stationsInView(this.stations, bounds ? (lat, lon) => bounds.contains([lat, lon]) : null);
+  }
+
+  /**
+   * Ein Kartencontainer ohne Flaeche (noch nicht ausgelegt) liefert einen punktfoermigen
+   * Ausschnitt - die Liste waere bis auf die Favoriten leer. Dann lieber ungefiltert lassen.
+   */
+  private rememberVisibleBounds(): void {
+    const size = this.map?.getSize();
+    this.visibleBounds = this.map && size && size.x > 0 && size.y > 0 ? this.map.getBounds() : null;
   }
 
   private withLoadedPoints(station: ChargingStation): ChargingStation {
@@ -432,6 +453,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     const home: L.LatLngExpression = [this.data.home.lat, this.data.home.lon];
     if (!this.map) {
       this.map = L.map(container, { zoomControl: false });
+      // Vor dem ersten fitBounds anmelden, damit schon der Startausschnitt die Liste filtert.
+      this.map.on('moveend', () => this.rememberVisibleBounds());
       // OSM-Standardkacheln; die dunkle Tesla-Optik entsteht per CSS-Filter auf der Kachelebene
       // (siehe SCSS). Dunkle Kachel-Anbieter (CARTO) verlangen inzwischen einen API-Key.
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

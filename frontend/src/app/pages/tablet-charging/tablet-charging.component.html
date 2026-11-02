@@ -6,7 +6,7 @@
     </button>
   </div>
 
-  <section class="tablet-charging">
+  <section class="tablet-charging" [class.tablet-charging--free]="!viewMode.isTabletView()">
     @if (refreshError) {
       <p class="tablet-charging__error">{{ refreshError }}</p>
     }
@@ -71,8 +71,10 @@
             <p class="tablet-charging__hint">
               {{ data.lastPolledAt ? 'Keine Ladesäulen im Umkreis.' : 'Noch keine Daten.' }}
             </p>
+          } @else if (listedStations.length === 0) {
+            <p class="tablet-charging__hint">Keine Ladesäulen im Kartenausschnitt.</p>
           } @else {
-            @for (station of stations; track station.stationId) {
+            @for (station of listedStations; track station.stationId) {
               <article
                 class="tablet-charging__row"
                 [class.tablet-charging__row--favorite]="station.favorite"
