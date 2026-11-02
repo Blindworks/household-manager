@@ -81,7 +81,7 @@ public class ChargingQueryService {
     private ChargingDtos.StationResponse areaRow(ChargingStation s, double homeLat, double homeLon) {
         long distance = Math.round(ChargingAreaFilter.distanceMeters(homeLat, homeLon, s.lat(), s.lon()));
         return new ChargingDtos.StationResponse(s.stationId(), s.name(), s.operator(), s.address(), s.lat(), s.lon(),
-                distance, s.maxPowerKw(), null, s.total(), s.free(), false, null, null, null, null);
+                distance, s.maxPowerKw(), null, null, s.total(), s.free(), false, null, null, null, null);
     }
 
     /** Supercharger kennen nur den Standort: keine Belegung, kein Preis, keine Ladepunkte, kein Favorit. */
@@ -89,7 +89,7 @@ public class ChargingQueryService {
         long distance = Math.round(ChargingAreaFilter.distanceMeters(homeLat, homeLon, s.lat(), s.lon()));
         return new ChargingDtos.StationResponse(SUPERCHARGER_ID_PREFIX + s.id(), "Tesla Supercharger " + place(s),
                 "Tesla", address(s), s.lat(), s.lon(), distance,
-                s.powerKw() == null ? null : s.powerKw().doubleValue(), null, s.stallCount(), 0, false, null,
+                s.powerKw() == null ? null : s.powerKw().doubleValue(), null, null, s.stallCount(), 0, false, null,
                 null, true, s.otherEvs() ? null : Boolean.TRUE);
     }
 
@@ -131,12 +131,11 @@ public class ChargingQueryService {
         Double maxPower = details.map(d -> d.chargePoints().stream().map(ChargePoint::maxPowerKw)
                 .filter(Objects::nonNull).max(Double::compare).orElse(null))
                 .orElse(area.map(ChargingStation::maxPowerKw).orElse(null));
-        Double minPrice = details.map(d -> d.chargePoints().stream().map(ChargePoint::pricePerKwh)
-                .filter(Objects::nonNull).min(Double::compare).orElse(null))
-                .orElse(null);
+        Double directPrice = favorite.getDirectPricePerKwh() == null ? null
+                : favorite.getDirectPricePerKwh().doubleValue();
 
         return new ChargingDtos.StationResponse(favorite.getStationId(), name, operator, address, lat, lon,
-                distance, maxPower, minPrice, total, free, true, points,
+                distance, maxPower, directPrice, favorite.getDirectPriceNote(), total, free, true, points,
                 summary(forecastService.latest(favorite.getStationId())), null, null);
     }
 
@@ -169,6 +168,8 @@ public class ChargingQueryService {
     }
 
     /**
+     * Favoriten-Ladepunkte tragen nie einen Preis: der EnBW-Preis ist der Roaming-Tarif und trifft
+     * nicht, was direkt beim Betreiber bezahlt wird (Preis steht nur als Direktpreis an der Station).
      * Beginn bekannt -> occupiedSince, minimumDuration=false. Beginn unbekannt (beim ersten Poll
      * schon belegt) -> firstSeenOccupiedAt als Untergrenze, minimumDuration=true.
      */
@@ -184,7 +185,7 @@ public class ChargingQueryService {
             }
         }
         return new ChargingDtos.ChargePointResponse(point.chargePointId(), point.status(), point.maxPowerKw(),
-                point.connector(), since, minimum, point.pricePerKwh());
+                point.connector(), since, minimum, null);
     }
 
     private LocalDateTime local(Instant instant) {

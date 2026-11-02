@@ -24,9 +24,13 @@ public final class ChargingDtos {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record StationResponse(String stationId, String name, String operator, String address,
                                   double lat, double lon, long distanceMeters, Double maxPowerKw,
-                                  Double pricePerKwh, int total, int free, boolean favorite,
+                                  Double pricePerKwh, String priceNote, int total, int free, boolean favorite,
                                   List<ChargePointResponse> chargePoints, ForecastSummary forecast,
                                   Boolean supercharger, Boolean teslaOnly) {
+    }
+
+    /** Body von PUT /favorites/{id}/price; pricePerKwh null loescht Preis und Notiz. */
+    public record DirectPriceRequest(Double pricePerKwh, String note) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

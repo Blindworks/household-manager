@@ -51,8 +51,6 @@ public class ChargingEntityMapper {
         long free = details.chargePoints().stream().filter(p -> p.status() == ChargePointStatus.FREE).count();
         Double maxPower = details.chargePoints().stream().map(ChargePoint::maxPowerKw)
                 .filter(Objects::nonNull).max(Double::compare).orElse(null);
-        Double minPrice = details.chargePoints().stream().map(ChargePoint::pricePerKwh)
-                .filter(Objects::nonNull).min(Double::compare).orElse(null);
         Instant oldestSince = occupancy.values().stream().map(ChargingPointOccupancy::getOccupiedSince)
                 .filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
 
@@ -61,8 +59,11 @@ public class ChargingEntityMapper {
         if (maxPower != null) {
             attributes.put("maxPowerKw", maxPower);
         }
-        if (minPrice != null) {
-            attributes.put("pricePerKwh", minPrice);
+        if (favorite.getDirectPricePerKwh() != null) {
+            attributes.put("pricePerKwh", favorite.getDirectPricePerKwh().doubleValue());
+            if (favorite.getDirectPriceNote() != null) {
+                attributes.put("priceNote", favorite.getDirectPriceNote());
+            }
         }
         attributes.put("stationName", favorite.getDisplayName());
         if (favorite.getOperator() != null) {

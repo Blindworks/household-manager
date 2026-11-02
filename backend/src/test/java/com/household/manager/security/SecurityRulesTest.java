@@ -1252,6 +1252,18 @@ class SecurityRulesTest {
     }
 
     @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenLadesaeulenDirektpreisNichtSetzen() throws Exception {
+        mockMvc.perform(put("/v1/charging/favorites/DE1/price").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDenLadesaeulenDirektpreisSetzen() throws Exception {
+        mockMvc.perform(put("/v1/charging/favorites/DE1/price").with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
     @WithMockUser(roles = "MEMBER")
     void memberDarfFavoritenSetzenUndEntfernen() throws Exception {
         mockMvc.perform(put("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isNotFound());

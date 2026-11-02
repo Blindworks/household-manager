@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -65,6 +66,15 @@ public class ChargingController {
     public ResponseEntity<ChargingDtos.StationsResponse> addFavorite(@PathVariable String stationId) {
         rejectSupercharger(stationId);
         favoriteService.add(stationId);
+        return ResponseEntity.ok(queryService.stations());
+    }
+
+    /** Direktpreis je Favorit; MEMBER (der KIOSK-Matcher fuer Favoriten deckt nur ein Pfadsegment). */
+    @PutMapping("/favorites/{stationId}/price")
+    public ResponseEntity<ChargingDtos.StationsResponse> setDirectPrice(
+            @PathVariable String stationId, @RequestBody ChargingDtos.DirectPriceRequest request) {
+        rejectSupercharger(stationId);
+        favoriteService.setDirectPrice(stationId, request.pricePerKwh(), request.note());
         return ResponseEntity.ok(queryService.stations());
     }
 

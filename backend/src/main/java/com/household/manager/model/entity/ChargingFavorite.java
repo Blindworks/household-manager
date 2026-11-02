@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 /** Eine favorisierte Ladesaeule (stationId = stabile Id der Quelle). */
@@ -45,4 +46,11 @@ public class ChargingFavorite {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /** Von Hand gepflegter Direktpreis in EUR/kWh; null = keiner (der EnBW-Preis wird nie angezeigt). */
+    @Column(name = "direct_price_per_kwh", precision = 6, scale = 3)
+    private BigDecimal directPricePerKwh;
+
+    @Column(name = "direct_price_note", length = 60)
+    private String directPriceNote;
 }

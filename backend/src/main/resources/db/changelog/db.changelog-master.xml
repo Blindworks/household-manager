@@ -187,4 +187,8 @@
     <include file="db/changelog/changes/20261102-0082-add-charging-observation-unique.xml"/>
     <include file="db/changelog/changes/20261102-0083-create-charging-occupancy-history-index.xml"/>
 
+    <!-- Ladesäulen: Direktpreis je Favorit -->
+    <include file="db/changelog/changes/20261102-0084-add-charging-favorite-direct-price.xml"/>
+    <include file="db/changelog/changes/20261102-0085-add-charging-favorite-price-note.xml"/>
+
 </databaseChangeLog>

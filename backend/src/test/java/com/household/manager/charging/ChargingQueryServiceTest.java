@@ -99,7 +99,7 @@ class ChargingQueryServiceTest {
                 .containsExactly("fav", "nah", "fern");
         ChargingDtos.StationResponse fav = response.stations().get(0);
         assertThat(fav.favorite()).isTrue();
-        assertThat(fav.pricePerKwh()).isEqualTo(0.34);
+        assertThat(fav.pricePerKwh()).isNull();
         assertThat(fav.chargePoints()).hasSize(2);
         ChargingDtos.ChargePointResponse p1 = fav.chargePoints().get(0);
         assertThat(p1.occupiedSince()).isEqualTo(LocalDateTime.ofInstant(since, BERLIN));
@@ -311,5 +311,38 @@ class ChargingQueryServiceTest {
         assertThat(response.heatmap()).hasDimensions(7, 24);
         assertThat(response.heatmap()[3][5]).isNull();
         assertThat(response.points()).isEmpty();
+    }
+
+    @Test
+    void favoritZeigtNurDenDirektpreisUndNieEnbwPreise() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
+        snapshot.updateArea(List.of(new ChargingStation("fav", "Lidl", "Lidl", null, 50.08, 8.0, 150.0, 2, 1)), NOW);
+        ChargingFavorite favorite = ChargingFavorite.builder().stationId("fav").displayName("Lidl")
+                .operator("Lidl").lat(50.08).lon(8.0).createdAt(NOW)
+                .directPricePerKwh(new java.math.BigDecimal("0.390")).directPriceNote("Aldi-App").build();
+        when(favoriteService.list()).thenReturn(List.of(favorite));
+        snapshot.updateFavoriteDetails(Map.of("fav", new ChargingStationDetails("fav", List.of(
+                new ChargePoint("P1", ChargePointStatus.FREE, 150.0, "CCS", null, 0.55)))), NOW);
+
+        ChargingDtos.StationResponse fav = service.stations().stations().get(0);
+
+        assertThat(fav.pricePerKwh()).isEqualTo(0.39);
+        assertThat(fav.priceNote()).isEqualTo("Aldi-App");
+        assertThat(fav.chargePoints()).allSatisfy(p -> assertThat(p.pricePerKwh()).isNull());
+    }
+
+    @Test
+    void favoritOhneDirektpreisHatKeinenPreisAuchNichtVonEnbw() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
+        snapshot.updateArea(List.of(new ChargingStation("fav", "Lidl", "Lidl", null, 50.08, 8.0, 150.0, 2, 1)), NOW);
+        when(favoriteService.list()).thenReturn(List.of(favorite("fav")));
+        snapshot.updateFavoriteDetails(Map.of("fav", new ChargingStationDetails("fav", List.of(
+                new ChargePoint("P1", ChargePointStatus.FREE, 150.0, "CCS", null, 0.55)))), NOW);
+
+        ChargingDtos.StationResponse fav = service.stations().stations().get(0);
+
+        assertThat(fav.pricePerKwh()).isNull();
+        assertThat(fav.priceNote()).isNull();
+        assertThat(fav.chargePoints()).allSatisfy(p -> assertThat(p.pricePerKwh()).isNull());
     }
 }

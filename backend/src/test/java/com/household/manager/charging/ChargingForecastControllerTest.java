@@ -13,8 +13,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,5 +59,26 @@ class ChargingForecastControllerTest {
                 .andExpect(jsonPath("$.heatmap.length()").value(7))
                 .andExpect(jsonPath("$.heatmap[0].length()").value(24))
                 .andExpect(jsonPath("$.heatmap[0][0]").value(0.5));
+    }
+
+    @Test
+    void direktpreisRouteLeitetAnDenServiceWeiterUndLiefertDieStationen() throws Exception {
+        when(queryService.stations()).thenReturn(new ChargingDtos.StationsResponse(true, null, null, null, null,
+                List.of()));
+
+        mockMvc.perform(put("/v1/charging/favorites/S1/price")
+                        .contentType("application/json")
+                        .content("{\"pricePerKwh\":0.39,\"note\":\"Aldi-App\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.configured").value(true));
+
+        verify(favoriteService).setDirectPrice("S1", 0.39, "Aldi-App");
+    }
+
+    @Test
+    void direktpreisRouteLehntSuperchargerAb() throws Exception {
+        mockMvc.perform(put("/v1/charging/favorites/sc-12/price")
+                        .contentType("application/json").content("{\"pricePerKwh\":0.39}"))
+                .andExpect(status().isBadRequest());
     }
 }

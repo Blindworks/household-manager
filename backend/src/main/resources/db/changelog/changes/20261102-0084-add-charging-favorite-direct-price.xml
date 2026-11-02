@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261102-0084-add-charging-favorite-direct-price" author="benedikt">
+        <comment>Von Hand gepflegter Direktpreis (EUR/kWh) je Favorit; ersetzt die Anzeige des EnBW-Roaming-Preises.</comment>
+        <addColumn tableName="charging_favorite">
+            <column name="direct_price_per_kwh" type="DECIMAL(6,3)"/>
+        </addColumn>
+        <rollback><dropColumn tableName="charging_favorite" columnName="direct_price_per_kwh"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

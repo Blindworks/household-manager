@@ -45,7 +45,8 @@ class ChargingEntityMapperTest {
         assertThat(update.state()).isEqualTo("1");
         assertThat(update.attributes()).containsEntry("total", 2)
                 .containsEntry("maxPowerKw", 150.0)
-                .containsEntry("pricePerKwh", 0.34)
+                .doesNotContainKey("pricePerKwh")
+                .doesNotContainKey("priceNote")
                 .containsEntry("stationName", "Lidl Hauptstr.")
                 .containsEntry("operator", "Lidl")
                 .containsEntry("occupiedSince", since.toString())
@@ -122,5 +123,32 @@ class ChargingEntityMapperTest {
 
         assertThat(update.attributes()).containsEntry("freeProbability15min", 100)
                 .doesNotContainKey("expectedFreeAt").doesNotContainKey("minutesUntilFree");
+    }
+
+    @Test
+    void direktpreisUndNotizStehenAlsAttributeUndErsetzenDenEnbwPreis() {
+        ChargingFavorite priced = ChargingFavorite.builder()
+                .stationId("DE*LDL*E123").displayName("Lidl Hauptstr.").operator("Lidl")
+                .lat(50).lon(8).createdAt(Instant.EPOCH)
+                .directPricePerKwh(new java.math.BigDecimal("0.390")).directPriceNote("Aldi-App").build();
+        ChargingStationDetails details = new ChargingStationDetails("DE*LDL*E123", List.of(
+                new ChargePoint("P1", ChargePointStatus.FREE, 150.0, "CCS", null, 0.55)));
+
+        EntityStateUpdate update = mapper.map(priced, details, Map.of(), Optional.empty());
+
+        assertThat(update.attributes()).containsEntry("pricePerKwh", 0.39).containsEntry("priceNote", "Aldi-App");
+    }
+
+    @Test
+    void direktpreisOhneNotizLaesstDenNotizSchluesselWeg() {
+        ChargingFavorite priced = ChargingFavorite.builder()
+                .stationId("DE*LDL*E123").displayName("Lidl Hauptstr.")
+                .lat(50).lon(8).createdAt(Instant.EPOCH)
+                .directPricePerKwh(new java.math.BigDecimal("0.390")).build();
+        ChargingStationDetails details = new ChargingStationDetails("DE*LDL*E123", List.of());
+
+        EntityStateUpdate update = mapper.map(priced, details, Map.of(), Optional.empty());
+
+        assertThat(update.attributes()).containsEntry("pricePerKwh", 0.39).doesNotContainKey("priceNote");
     }
 }

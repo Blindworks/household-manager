@@ -112,4 +112,93 @@ class ChargingFavoriteServiceTest {
         verify(tracker, never()).forgetStation(any());
         verify(forecastService, never()).forget(any());
     }
+
+    // ---- Direktpreis ----
+
+    private ChargingFavorite storedFavorite() {
+        ChargingFavorite favorite = ChargingFavorite.builder().id(1L).stationId("S1").displayName("Aldi")
+                .lat(50).lon(8).createdAt(NOW).build();
+        when(repository.findByStationId("S1")).thenReturn(Optional.of(favorite));
+        return favorite;
+    }
+
+    @Test
+    void direktpreisWirdMitNotizGespeichertUndAuditiert() {
+        ChargingFavorite favorite = storedFavorite();
+
+        service.setDirectPrice("S1", 0.39, "  Aldi-App ");
+
+        assertThat(favorite.getDirectPricePerKwh()).isEqualByComparingTo("0.39");
+        assertThat(favorite.getDirectPriceNote()).isEqualTo("Aldi-App");
+        verify(repository).save(favorite);
+        verify(auditService).record("charging.favorite.price", "S1 -> 0.390");
+    }
+
+    @Test
+    void leereNotizWirdZuNull() {
+        ChargingFavorite favorite = storedFavorite();
+
+        service.setDirectPrice("S1", 0.39, "   ");
+
+        assertThat(favorite.getDirectPriceNote()).isNull();
+        assertThat(favorite.getDirectPricePerKwh()).isEqualByComparingTo("0.39");
+    }
+
+    @Test
+    void preisNullLoeschtPreisUndNotiz() {
+        ChargingFavorite favorite = storedFavorite();
+        favorite.setDirectPricePerKwh(new java.math.BigDecimal("0.390"));
+        favorite.setDirectPriceNote("Aldi-App");
+
+        service.setDirectPrice("S1", null, "ignoriert");
+
+        assertThat(favorite.getDirectPricePerKwh()).isNull();
+        assertThat(favorite.getDirectPriceNote()).isNull();
+        verify(auditService).record("charging.favorite.price", "S1 -> entfernt");
+    }
+
+    @Test
+    void obergrenzeZweiEuroIstErlaubt() {
+        ChargingFavorite favorite = storedFavorite();
+
+        service.setDirectPrice("S1", 2.0, null);
+
+        assertThat(favorite.getDirectPricePerKwh()).isEqualByComparingTo("2.000");
+    }
+
+    @Test
+    void ungueltigePreiseWerdenAbgelehntOhneZuSchreiben() {
+        for (double bad : new double[]{0.0, -0.1, 2.001, 0.3901, Double.NaN, Double.POSITIVE_INFINITY}) {
+            assertThatThrownBy(() -> service.setDirectPrice("S1", bad, null))
+                    .as("Preis %s", bad)
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void zuLangeNotizWirdAbgelehnt() {
+        assertThatThrownBy(() -> service.setDirectPrice("S1", 0.39, "x".repeat(61)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("60");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void notizMitGenau60ZeichenIstErlaubt() {
+        ChargingFavorite favorite = storedFavorite();
+
+        service.setDirectPrice("S1", 0.39, "x".repeat(60));
+
+        assertThat(favorite.getDirectPriceNote()).hasSize(60);
+    }
+
+    @Test
+    void unbekannterFavoritIstNichtGefunden() {
+        when(repository.findByStationId("S9")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.setDirectPrice("S9", 0.39, null))
+                .isInstanceOf(com.household.manager.exception.ResourceNotFoundException.class);
+        verify(repository, never()).save(any());
+    }
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261102-0085-add-charging-favorite-price-note" author="benedikt">
+        <comment>Kurze Notiz zum Direktpreis (z. B. Name der Betreiber-App).</comment>
+        <addColumn tableName="charging_favorite">
+            <column name="direct_price_note" type="VARCHAR(60)"/>
+        </addColumn>
+        <rollback><dropColumn tableName="charging_favorite" columnName="direct_price_note"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
