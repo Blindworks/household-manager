@@ -1,7 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ChargePoint, ChargingForecast, ChargingSettings, ChargingStationsResponse } from '../models/charging.model';
+import {
+  ChargePoint, ChargingForecast, ChargingSearchResponse, ChargingSettings, ChargingStationsResponse
+} from '../models/charging.model';
+import { SearchBox } from '../shared/charging-search.util';
 
 /**
  * REST-Service fuer die Ladesaeulen-Uebersicht. Fehler werden bewusst NICHT auf eine
@@ -24,6 +27,13 @@ export class ChargingService {
 
   getForecast(stationId: string): Observable<ChargingForecast> {
     return this.http.get<ChargingForecast>(`${this.baseUrl}/stations/${encodeURIComponent(stationId)}/forecast`);
+  }
+
+  /** Einmalige Suche im sichtbaren Kartenausschnitt (Backend: max. 30 km Diagonale, 10 s Sperre). */
+  search(box: SearchBox): Observable<ChargingSearchResponse> {
+    return this.http.get<ChargingSearchResponse>(`${this.baseUrl}/search`, {
+      params: { fromLat: box.fromLat, toLat: box.toLat, fromLon: box.fromLon, toLon: box.toLon }
+    });
   }
 
   refresh(): Observable<ChargingStationsResponse> {

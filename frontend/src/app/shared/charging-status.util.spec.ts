@@ -1,5 +1,6 @@
 import {
   formatDirectPrice,
+  formatDistance,
   formatOccupiedDuration,
   formatPower,
   formatPrice,
@@ -269,6 +270,17 @@ describe('charging-status.util', () => {
         station({ stationId: 'favNah', distanceMeters: 3000, favorite: true })
       ]);
       expect(sorted.map(s => s.stationId)).toEqual(['favNah', 'favFern', 'nah', 'fern']);
+    });
+  });
+
+  describe('formatDistance', () => {
+    it('zeigt Meter, Kilometer mit Komma und ab 10 km ganze Kilometer', () => {
+      expect(formatDistance(450)).toBe('450 m');
+      expect(formatDistance(2149)).toBe('2,1 km');
+      expect(formatDistance(9949)).toBe('9,9 km');
+      expect(formatDistance(10400)).toBe('10 km');
+      expect(formatDistance(87300)).toBe('87 km');
+      expect(formatDistance(123456)).toBe('123 km');
     });
   });
 });

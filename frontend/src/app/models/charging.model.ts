@@ -86,3 +86,9 @@ export interface ChargingSettings {
   radiusKm: number;
   minPowerKw: number;
 }
+
+/** Antwort von `GET /v1/charging/search`: Zeitpunkt der Suche und die Stationen im Ausschnitt. */
+export interface ChargingSearchResponse {
+  searchedAt: string;
+  stations: ChargingStation[];
+}

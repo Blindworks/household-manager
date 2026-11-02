@@ -20,6 +20,7 @@ import {
 } from '../../shared/charging-forecast.util';
 import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
+import { SearchBox, SearchButtonState, searchButtonState } from '../../shared/charging-search.util';
 
 useLocalLeafletIcons();
 
@@ -64,6 +65,9 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   private refreshTimer: number | null = null;
   private tickTimer: number | null = null;
   private pendingRequest: Subscription | null = null;
+  private searchRequest: Subscription | null = null;
+  /** Zuletzt sichtbarer Ausschnitt in den Namen des Such-Vertrags; null wie visibleBounds. */
+  private visibleBox: SearchBox | null = null;
 
   data: ChargingStationsResponse | null = null;
   error: string | null = null;
@@ -79,6 +83,16 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   detailStationId: string | null = null;
   forecast: ChargingForecast | null = null;
   forecastError: string | null = null;
+  /**
+   * Ergebnis der letzten "In diesem Bereich suchen"-Suche. Bleibt bis zur naechsten Suche oder
+   * zum Neuladen der Seite stehen; der 60-s-Refresh ersetzt nur `data` und aktualisiert sie nicht.
+   */
+  searchResults: ChargingStation[] = [];
+  searchedAt: string | null = null;
+  searching = false;
+  searchError: string | null = null;
+  /** Ausschnitt der letzten erfolgreichen Suche; null vor der ersten. */
+  private searchedBox: SearchBox | null = null;
   readonly dayLabels = HEATMAP_DAY_LABELS;
   readonly hours = Array.from({ length: 24 }, (_, hour) => hour);
   private forecastRequest: Subscription | null = null;
@@ -102,6 +116,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       window.clearInterval(this.tickTimer);
     }
     this.pendingRequest?.unsubscribe();
+    this.searchRequest?.unsubscribe();
     this.forecastRequest?.unsubscribe();
     this.map?.remove();
     this.map = undefined;
@@ -109,10 +124,65 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
 
   /** Stationen mit nachgeladenen Ladepunkten zusammengefuehrt; eigene Details des Favoriten gewinnen. */
   get stations(): ChargingStation[] {
+    return sortStations(this.baseStations.map(s => this.withLoadedPoints(s)));
+  }
+
+  /**
+   * Umkreis-/Favoriten-Stand plus Suchergebnisse, je stationId einmal; der Stand gewinnt (er traegt
+   * Favoritenstatus und Details, ein Suchergebnis ist nur eine Momentaufnahme). Ohne Stand keine Liste.
+   */
+  private get baseStations(): ChargingStation[] {
     if (!this.data) {
       return [];
     }
-    return sortStations(this.data.stations.map(s => this.withLoadedPoints(s)));
+    const known = new Set(this.data.stations.map(s => s.stationId));
+    return [...this.data.stations, ...this.searchResults.filter(s => !known.has(s.stationId))];
+  }
+
+  /** Zustand des Suchknopfs fuer den gerade sichtbaren Ausschnitt. */
+  get searchState(): SearchButtonState {
+    return searchButtonState(this.visibleBox, this.data?.home ?? null, this.data?.radiusKm ?? null, this.searchedBox);
+  }
+
+  get searchLabel(): string {
+    if (this.searching) {
+      return 'Suche läuft…';
+    }
+    return this.searchState === 'zoom-in' ? 'Näher heranzoomen' : 'In diesem Bereich suchen';
+  }
+
+  /** Zeile ueber der Liste: wann gesucht wurde, bzw. dass der Bereich leer war. */
+  get searchNote(): string | null {
+    if (!this.searchedAt) {
+      return null;
+    }
+    const at = new Date(this.searchedAt);
+    const time = `${at.getHours().toString().padStart(2, '0')}:${at.getMinutes().toString().padStart(2, '0')}`;
+    return `Suche von ${time}`;
+  }
+
+  /** Tippen auf "In diesem Bereich suchen": sucht genau den sichtbaren Ausschnitt (einmalig, nicht nachgefuehrt). */
+  searchHere(): void {
+    const box = this.visibleBox;
+    if (!box || this.searching || this.searchState !== 'search') {
+      return;
+    }
+    this.searching = true;
+    this.searchError = null;
+    this.searchRequest?.unsubscribe();
+    this.searchRequest = this.chargingService.search(box).subscribe({
+      next: response => {
+        this.searching = false;
+        this.searchResults = response.stations;
+        this.searchedAt = response.searchedAt;
+        this.searchedBox = box;
+        this.renderMap();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.searching = false;
+        this.searchError = err.error?.message ?? 'Suche fehlgeschlagen.';
+      }
+    });
   }
 
   /** Liste rechts: nur was die Karte gerade zeigt, Favoriten immer (die Marker zeigen weiter alle). */
@@ -128,6 +198,10 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   private rememberVisibleBounds(): void {
     const size = this.map?.getSize();
     this.visibleBounds = this.map && size && size.x > 0 && size.y > 0 ? this.map.getBounds() : null;
+    const bounds = this.visibleBounds;
+    this.visibleBox = bounds
+      ? { fromLat: bounds.getSouth(), toLat: bounds.getNorth(), fromLon: bounds.getWest(), toLon: bounds.getEast() }
+      : null;
   }
 
   private withLoadedPoints(station: ChargingStation): ChargingStation {
@@ -313,7 +387,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
    * Fehler bleibt still, verwirft aber den alten Stand - das Popup zeigt dann die Kennzahlen.
    */
   private loadChargePoints(stationId: string): void {
-    const station = this.data?.stations.find(s => s.stationId === stationId);
+    const station = this.baseStations.find(s => s.stationId === stationId);
     // Supercharger kennen nur den Standort: das Backend lehnt Ladepunkte fuer sie mit 400 ab.
     if (!station || station.supercharger || station.chargePoints) {
       this.loadedChargePoints.delete(stationId);
@@ -364,7 +438,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   get hasSupercharger(): boolean {
-    return !!this.data?.stations.some(s => s.supercharger);
+    return this.baseStations.some(s => s.supercharger);
   }
 
   superchargerText(station: ChargingStation): string {

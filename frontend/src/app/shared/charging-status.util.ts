@@ -97,7 +97,11 @@ export function parseDirectPrice(input: string): number | undefined {
 }
 
 export function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  const km = meters / 1000;
+  return Math.round(km * 10) / 10 < 10 ? `${km.toFixed(1).replace('.', ',')} km` : `${Math.round(km)} km`;
 }
 
 /** Favoriten zuerst, innerhalb beider Gruppen nach Entfernung. */

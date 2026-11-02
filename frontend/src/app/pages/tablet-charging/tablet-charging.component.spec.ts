@@ -8,7 +8,7 @@ import { ChargingService } from '../../services/charging.service';
 import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
-import { ChargingForecast, ChargingStationsResponse } from '../../models/charging.model';
+import { ChargingForecast, ChargingSearchResponse, ChargingStationsResponse } from '../../models/charging.model';
 
 describe('TabletChargingComponent', () => {
   let fixture: ComponentFixture<TabletChargingComponent>;
@@ -56,7 +56,7 @@ describe('TabletChargingComponent', () => {
 
   beforeEach(async () => {
     chargingSpy = jasmine.createSpyObj('ChargingService',
-      ['getStations', 'refresh', 'getChargePoints', 'getForecast', 'addFavorite', 'removeFavorite']);
+      ['getStations', 'refresh', 'getChargePoints', 'getForecast', 'addFavorite', 'removeFavorite', 'search']);
     chargingSpy.getChargePoints.and.returnValue(of([]));
     chargingSpy.getStations.and.returnValue(of(forecastResponse));
     chargingSpy.getForecast.and.returnValue(of(forecast));
@@ -606,6 +606,178 @@ describe('TabletChargingComponent', () => {
       expect(chargingSpy.getForecast).toHaveBeenCalledTimes(2);
       expect(component.forecast).toBe(forecast);
       expect(host().querySelectorAll('.tablet-charging__heat-cell').length).toBe(168);
+    });
+  });
+
+  describe('Bereichssuche', () => {
+    let frame: HTMLDivElement;
+
+    const host = (): HTMLElement => fixture.nativeElement as HTMLElement;
+    const searchButton = (): HTMLButtonElement | null =>
+      host().querySelector<HTMLButtonElement>('.tablet-charging__search-btn');
+    const listedNames = (): string[] =>
+      Array.from(host().querySelectorAll('.tablet-charging__row .tablet-charging__name'))
+        .map(e => e.textContent?.trim() ?? '');
+    const moveAway = (zoom = 13): void => {
+      component.mapForTest()!.setView([52.5, 13.4], zoom, { animate: false });
+      fixture.detectChanges();
+    };
+    const farStation = {
+      stationId: 'far', name: 'Berliner Säule', operator: 'Ionity', lat: 52.5, lon: 13.4, distanceMeters: 87300,
+      maxPowerKw: 350, total: 4, free: 2, favorite: false
+    };
+    const searchResponse = (stations = [farStation]): ChargingSearchResponse =>
+      ({ searchedAt: '2026-11-02T11:00:00', stations });
+
+    beforeEach(() => {
+      frame = document.createElement('div');
+      frame.style.cssText = 'display:flex;flex-direction:column;height:800px;width:1200px';
+      document.body.appendChild(frame);
+      frame.appendChild(host());
+      component.mapForTest()!.invalidateSize();
+      chargingSpy.search.and.returnValue(of(searchResponse()));
+    });
+
+    afterEach(() => {
+      document.body.appendChild(host());
+      frame.remove();
+    });
+
+    it('zeigt keinen Knopf, solange der Ausschnitt im Suchkreis liegt', () => {
+      expect(searchButton()).toBeNull();
+    });
+
+    it('zeigt den Knopf oben auf der Karte, sobald der Ausschnitt den Suchkreis verlaesst', () => {
+      moveAway();
+
+      expect(searchButton()?.textContent?.trim()).toBe('In diesem Bereich suchen');
+      expect(searchButton()!.disabled).toBeFalse();
+      expect(searchButton()!.closest('.tablet-charging__map-area')).not.toBeNull();
+      expect(host().querySelector('.tablet-charging__list')!.contains(searchButton())).toBeFalse();
+    });
+
+    it('sperrt den Knopf bei zu grossem Ausschnitt mit "Näher heranzoomen"', () => {
+      moveAway(8);
+
+      expect(searchButton()!.textContent?.trim()).toBe('Näher heranzoomen');
+      expect(searchButton()!.disabled).toBeTrue();
+    });
+
+    it('sucht mit dem sichtbaren Ausschnitt', () => {
+      moveAway();
+      const bounds = component.mapForTest()!.getBounds();
+
+      searchButton()!.click();
+
+      expect(chargingSpy.search).toHaveBeenCalledOnceWith({
+        fromLat: bounds.getSouth(), toLat: bounds.getNorth(), fromLon: bounds.getWest(), toLon: bounds.getEast()
+      });
+    });
+
+    it('zeigt waehrend der Suche "Suche läuft…" und sperrt den Knopf', () => {
+      const pending = new Subject<ChargingSearchResponse>();
+      chargingSpy.search.and.returnValue(pending);
+      moveAway();
+
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      expect(searchButton()!.textContent?.trim()).toBe('Suche läuft…');
+      expect(searchButton()!.disabled).toBeTrue();
+    });
+
+    it('zeigt Ergebnisse in der Liste und als Marker, mit dem Zeitpunkt der Suche', () => {
+      moveAway();
+
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      expect(listedNames()).toContain('Berliner Säule');
+      expect(host().querySelectorAll('.charging-marker').length).toBe(3);
+      const row = Array.from(host().querySelectorAll('.tablet-charging__row'))
+        .find(r => r.textContent?.includes('Berliner Säule'));
+      expect(row?.textContent).toContain('87 km');
+      expect(host().querySelector('.tablet-charging__search-note')?.textContent).toContain('Suche von 11:00');
+    });
+
+    it('versteckt den Knopf, nachdem genau dieser Ausschnitt gesucht wurde', () => {
+      moveAway();
+
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      expect(searchButton()).toBeNull();
+    });
+
+    it('behaelt die Suchergebnisse beim 60-s-Refresh', () => {
+      moveAway();
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      component.reload();
+      fixture.detectChanges();
+
+      expect(listedNames()).toContain('Berliner Säule');
+      expect(host().querySelectorAll('.charging-marker').length).toBe(3);
+    });
+
+    it('fuehrt Dubletten ueber die stationId zusammen, der Umkreis-Stand gewinnt', () => {
+      moveAway();
+      chargingSpy.search.and.returnValue(of(searchResponse([
+        { ...farStation, stationId: 'other', name: 'Anderer Name', favorite: false },
+        farStation
+      ])));
+
+      searchButton()!.click();
+      fixture.detectChanges();
+      component.mapForTest()!.setView([50.015, 8.0], 12, { animate: false });
+      fixture.detectChanges();
+
+      expect(listedNames().filter(n => n === 'EnBW Rastplatz').length).toBe(1);
+      expect(listedNames()).not.toContain('Anderer Name');
+      expect(host().querySelectorAll('.charging-marker').length).toBe(3);
+    });
+
+    it('zeigt den Fehlertext der Antwort, z. B. 429', () => {
+      chargingSpy.search.and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 429, error: { message: 'Bitte kurz warten' } })));
+      moveAway();
+
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      expect(host().querySelector('.tablet-charging__search-error')?.textContent).toContain('Bitte kurz warten');
+      expect(searchButton()!.disabled).toBeFalse();
+    });
+
+    it('meldet, wenn der Bereich keine Ladesaeulen hat', () => {
+      chargingSpy.search.and.returnValue(of(searchResponse([])));
+      moveAway();
+
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      expect(host().querySelector('.tablet-charging__search-note')?.textContent)
+        .toContain('Keine Ladesäulen in diesem Bereich.');
+    });
+
+    it('laesst ein Suchergebnis favorisieren; danach steht es nur einmal da', () => {
+      moveAway();
+      searchButton()!.click();
+      fixture.detectChanges();
+      chargingSpy.addFavorite.and.returnValue(of({
+        ...response, stations: [...response.stations, { ...farStation, favorite: true }]
+      }));
+
+      const row = Array.from(host().querySelectorAll<HTMLElement>('.tablet-charging__row'))
+        .find(r => r.textContent?.includes('Berliner Säule'))!;
+      row.querySelector<HTMLButtonElement>('.tablet-charging__star-btn')!.click();
+      fixture.detectChanges();
+
+      expect(chargingSpy.addFavorite).toHaveBeenCalledWith('far');
+      expect(listedNames().filter(n => n === 'Berliner Säule').length).toBe(1);
+      expect(host().querySelectorAll('.charging-marker').length).toBe(3);
+      expect(host().querySelectorAll('.charging-marker--favorite').length).toBe(2);
     });
   });
 });

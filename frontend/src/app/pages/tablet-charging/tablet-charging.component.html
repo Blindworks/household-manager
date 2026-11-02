@@ -19,7 +19,19 @@
       <div class="tablet-charging__body">
         <!-- Der Kartencontainer steht IMMER im DOM (ViewChild + ngAfterViewInit), sonst hinge der
              Kartenaufbau an der Reihenfolge von Datenankunft und Change Detection (Lehre aus /pets). -->
-        <div #mapContainer class="tablet-charging__map" [class.tablet-charging__map--hidden]="detailStationId"></div>
+        <div class="tablet-charging__map-area" [class.tablet-charging__map-area--hidden]="detailStationId">
+          <div #mapContainer class="tablet-charging__map" [class.tablet-charging__map--hidden]="detailStationId"></div>
+          @if (searchState !== 'hidden') {
+            <div class="tablet-charging__search">
+              <button type="button" class="tablet-charging__search-btn"
+                      [disabled]="searching || searchState === 'zoom-in'"
+                      (click)="searchHere()">{{ searchLabel }}</button>
+              @if (searchError) {
+                <span class="tablet-charging__search-error">{{ searchError }}</span>
+              }
+            </div>
+          }
+        </div>
 
         @if (detailStationId) {
           <section class="tablet-charging__detail">
@@ -65,6 +77,11 @@
 
 
         <aside class="tablet-charging__list">
+          @if (searchNote; as note) {
+            <p class="tablet-charging__search-note">
+              {{ note }}@if (searchResults.length === 0) { · Keine Ladesäulen in diesem Bereich.}
+            </p>
+          }
           @if (!data) {
             <p class="tablet-charging__hint">{{ error ?? 'Lade Ladesäulen…' }}</p>
           } @else if (stations.length === 0) {
