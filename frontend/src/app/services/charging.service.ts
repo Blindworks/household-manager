@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ChargePoint, ChargingSettings, ChargingStationsResponse } from '../models/charging.model';
+import { ChargePoint, ChargingForecast, ChargingSettings, ChargingStationsResponse } from '../models/charging.model';
 
 /**
  * REST-Service fuer die Ladesaeulen-Uebersicht. Fehler werden bewusst NICHT auf eine
@@ -20,6 +20,10 @@ export class ChargingService {
   /** Ladepunkte einer beliebigen Station auf Anfrage (Backend cacht 60 s). */
   getChargePoints(stationId: string): Observable<ChargePoint[]> {
     return this.http.get<ChargePoint[]>(`${this.baseUrl}/stations/${encodeURIComponent(stationId)}/charge-points`);
+  }
+
+  getForecast(stationId: string): Observable<ChargingForecast> {
+    return this.http.get<ChargingForecast>(`${this.baseUrl}/stations/${encodeURIComponent(stationId)}/forecast`);
   }
 
   refresh(): Observable<ChargingStationsResponse> {

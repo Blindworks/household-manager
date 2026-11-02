@@ -14,6 +14,34 @@ export interface ChargePoint {
   pricePerKwh?: number;
 }
 
+export type ChargingForecastStatus = 'OK' | 'INSUFFICIENT_DATA';
+
+/** Kurzvorhersage an der Station (nur Favoriten); Zeiten als LocalDateTime-Strings. */
+export interface ChargingForecastSummary {
+  status: ChargingForecastStatus;
+  freeProbability30min?: number;
+  expectedFreeAt?: string;
+  expectedFreeLatest?: string;
+  observedDays?: number;
+}
+
+export interface ChargingPointForecast {
+  chargePointId: string;
+  occupiedSince?: string;
+  expectedFreeAt?: string;
+  expectedFreeLatest?: string;
+}
+
+/** Antwort von GET /stations/{id}/forecast; heatmap[Wochentag Mo..So/Ft][Stunde] = Anteil frei oder null. */
+export interface ChargingForecast {
+  stationId: string;
+  status: ChargingForecastStatus;
+  observedDays: number;
+  freeProbabilityPercent: Record<string, number>;
+  points: ChargingPointForecast[];
+  heatmap: (number | null)[][];
+}
+
 export interface ChargingStation {
   stationId: string;
   name: string;
@@ -30,6 +58,8 @@ export interface ChargingStation {
   favorite: boolean;
   /** Nur bei Favoriten gefuellt. */
   chargePoints?: ChargePoint[];
+  /** Nur bei Favoriten gefuellt. */
+  forecast?: ChargingForecastSummary;
 }
 
 export interface ChargingStationsResponse {
