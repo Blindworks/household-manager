@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261102-0083-create-charging-occupancy-history-index" author="benedikt">
+        <comment>Index fuer die Abfrage der Belegungen einer Station ab einem Zeitpunkt.</comment>
+        <createIndex tableName="charging_occupancy_history" indexName="idx_charging_occupancy_history_station_started">
+            <column name="station_id"/>
+            <column name="started_at"/>
+        </createIndex>
+        <rollback><dropIndex tableName="charging_occupancy_history" indexName="idx_charging_occupancy_history_station_started"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -185,5 +185,6 @@
     <include file="db/changelog/changes/20261102-0080-create-charging-occupancy-history.xml"/>
     <include file="db/changelog/changes/20261102-0081-create-charging-observation.xml"/>
     <include file="db/changelog/changes/20261102-0082-add-charging-observation-unique.xml"/>
+    <include file="db/changelog/changes/20261102-0083-create-charging-occupancy-history-index.xml"/>
 
 </databaseChangeLog>

@@ -16,13 +16,20 @@ class ChargingHistorySchemaTest {
     private static final String OBSERVATION = "20261102-0081-create-charging-observation.xml";
     private static final String UNIQUE = "20261102-0082-add-charging-observation-unique.xml";
 
+    private static final String INDEX = "20261102-0083-create-charging-occupancy-history-index.xml";
+
+    @Test
+    void indexChangesetDefinesStationStartedIndex() throws IOException {
+        assertThat(read(CHANGES.resolve(INDEX))).contains("idx_charging_occupancy_history_station_started");
+    }
+
     private static String read(Path path) throws IOException {
         return Files.readString(path, StandardCharsets.UTF_8);
     }
 
     @Test
     void eachChangesetFileContainsExactlyOneChangeSet() throws IOException {
-        for (String name : new String[]{HISTORY, OBSERVATION, UNIQUE}) {
+        for (String name : new String[]{HISTORY, OBSERVATION, UNIQUE, INDEX}) {
             String xml = read(CHANGES.resolve(name));
             assertThat(xml.split("<changeSet", -1).length - 1).as(name).isEqualTo(1);
         }
@@ -42,5 +49,6 @@ class ChargingHistorySchemaTest {
         assertThat(a).isPositive();
         assertThat(b).isGreaterThan(a);
         assertThat(c).isGreaterThan(b);
+        assertThat(master.indexOf(INDEX)).isGreaterThan(c);
     }
 }
