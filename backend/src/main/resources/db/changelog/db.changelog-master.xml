@@ -181,4 +181,9 @@
     <include file="db/changelog/changes/20261031-0078-add-dirigera-sensor-kind.xml"/>
     <include file="db/changelog/changes/20261031-0079-add-dirigera-sensor-last-open.xml"/>
 
+    <!-- Ladesäulen-Vorhersage -->
+    <include file="db/changelog/changes/20261102-0080-create-charging-occupancy-history.xml"/>
+    <include file="db/changelog/changes/20261102-0081-create-charging-observation.xml"/>
+    <include file="db/changelog/changes/20261102-0082-add-charging-observation-unique.xml"/>
+
 </databaseChangeLog>

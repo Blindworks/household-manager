@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261102-0082-add-charging-observation-unique" author="benedikt">
+        <comment>Eine Zeile je Station und Stunde; der Unique-Schluessel dient zugleich als Suchindex.</comment>
+        <addUniqueConstraint tableName="charging_observation" columnNames="station_id, hour_start"
+                             constraintName="uk_charging_observation_station_hour"/>
+        <rollback><dropUniqueConstraint tableName="charging_observation" constraintName="uk_charging_observation_station_hour"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

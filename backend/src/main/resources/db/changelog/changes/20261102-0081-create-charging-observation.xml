@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261102-0081-create-charging-observation" author="benedikt">
+        <comment>Beobachtungszeit und Ladepunkt-Sekunden je Station und Stunde (Nenner der Vorhersage).</comment>
+        <createTable tableName="charging_observation">
+            <column name="id" type="BIGINT" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="station_id" type="VARCHAR(191)"><constraints nullable="false"/></column>
+            <column name="hour_start" type="DATETIME"><constraints nullable="false"/></column>
+            <column name="observed_seconds" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="free_point_seconds" type="BIGINT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="occupied_point_seconds" type="BIGINT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </createTable>
+        <rollback><dropTable tableName="charging_observation"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
