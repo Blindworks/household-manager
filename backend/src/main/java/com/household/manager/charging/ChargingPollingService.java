@@ -1,5 +1,6 @@
 package com.household.manager.charging;
 
+import com.household.manager.charging.forecast.ChargingHistoryRecorder;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
@@ -40,6 +41,7 @@ public class ChargingPollingService {
     private final EntityStateService entityStateService;
     private final Clock clock;
     private final SystemJobMonitor jobMonitor;
+    private final ChargingHistoryRecorder historyRecorder;
 
     /** Zuletzt erfolgreich gemeldete Updates je Station; Basis fuer unavailable mit erhaltenen Attributen. */
     private final Map<String, EntityStateUpdate> lastReported = new HashMap<>();
@@ -49,7 +51,7 @@ public class ChargingPollingService {
                                   ChargingSettingsService settingsService, ChargingFavoriteService favoriteService,
                                   ChargingOccupancyTracker tracker, ChargingSnapshot snapshot,
                                   ChargingEntityMapper mapper, EntityStateService entityStateService, Clock clock,
-                                  SystemJobMonitor jobMonitor) {
+                                  SystemJobMonitor jobMonitor, ChargingHistoryRecorder historyRecorder) {
         this.properties = properties;
         this.source = source;
         this.settingsService = settingsService;
@@ -60,6 +62,7 @@ public class ChargingPollingService {
         this.entityStateService = entityStateService;
         this.clock = clock;
         this.jobMonitor = jobMonitor;
+        this.historyRecorder = historyRecorder;
     }
 
     @Scheduled(fixedDelayString = "#{${charging.area-poll-seconds:300} * 1000}",
@@ -141,6 +144,7 @@ public class ChargingPollingService {
             try {
                 ChargingStationDetails stationDetails = source.stationDetails(stationId);
                 tracker.record(stationDetails);
+                recordObservation(stationId, stationDetails);
                 details.put(stationId, stationDetails);
                 EntityStateUpdate update = mapper.map(favorite, stationDetails, tracker.occupancyFor(stationId));
                 entityStateService.reportState(update);
@@ -172,6 +176,17 @@ public class ChargingPollingService {
         }
         Instant polledAt = (!details.isEmpty() || favorites.isEmpty()) ? clock.instant() : snapshot.lastPolledAt();
         snapshot.updateFavoriteDetails(merged, polledAt);
+    }
+
+    private void recordObservation(String stationId, ChargingStationDetails stationDetails) {
+        int free = countWithStatus(stationDetails, ChargePointStatus.FREE);
+        int occupied = countWithStatus(stationDetails, ChargePointStatus.OCCUPIED);
+        historyRecorder.recordObservation(stationId, clock.instant(), (int) properties.getFavoritePollSeconds(),
+                free, occupied);
+    }
+
+    private static int countWithStatus(ChargingStationDetails details, ChargePointStatus status) {
+        return (int) details.chargePoints().stream().filter(p -> p.status() == status).count();
     }
 
     /**

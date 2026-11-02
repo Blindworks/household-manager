@@ -4,6 +4,7 @@ import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.ChargingEntityMapper;
+import com.household.manager.charging.forecast.ChargingHistoryRecorder;
 import com.household.manager.model.entity.ChargingFavorite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,8 @@ class ChargingPollingServiceTest {
     private ChargingOccupancyTracker tracker;
     @Mock
     private EntityStateService entityStateService;
+    @Mock
+    private ChargingHistoryRecorder historyRecorder;
 
     private ChargingProperties properties;
     private ChargingSnapshot snapshot;
@@ -62,7 +65,7 @@ class ChargingPollingServiceTest {
         properties = new ChargingProperties();
         snapshot = new ChargingSnapshot();
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
-                snapshot, new ChargingEntityMapper(), entityStateService, Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor);
+                snapshot, new ChargingEntityMapper(), entityStateService, Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder);
         // lenient: nicht jeder Test (z. B. die reinen Favoriten-Tests) fragt settingsService ab.
         org.mockito.Mockito.lenient().when(settingsService.getSettings())
                 .thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
@@ -103,6 +106,32 @@ class ChargingPollingServiceTest {
         assertThat(captor.getValue().entityId()).isEqualTo("sensor.charging_s1_free");
         assertThat(captor.getValue().state()).isEqualTo("1");
         assertThat(snapshot.details("S1")).isPresent();
+    }
+
+    @Test
+    void beobachtungWirdJeErfolgreichemFavoritenGemeldet() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenReturn(new ChargingStationDetails("S1", List.of(
+                new ChargePoint("a", ChargePointStatus.FREE, 150.0, "CCS", null, null),
+                new ChargePoint("b", ChargePointStatus.FREE, 150.0, "CCS", null, null),
+                new ChargePoint("c", ChargePointStatus.OCCUPIED, 150.0, "CCS", null, null),
+                new ChargePoint("d", ChargePointStatus.OUT_OF_SERVICE, 150.0, "CCS", null, null))));
+        when(tracker.occupancyFor("S1")).thenReturn(Map.of());
+
+        service.pollFavorites();
+
+        verify(historyRecorder).recordObservation("S1", NOW, 60, 2, 1);
+    }
+
+    @Test
+    void keineBeobachtungBeiAbruffehler() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenThrow(new ChargingSourceException("weg"));
+
+        service.pollFavorites();
+
+        verify(historyRecorder, never()).recordObservation(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
