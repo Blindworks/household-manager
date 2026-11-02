@@ -32,7 +32,7 @@ export interface ChargingPointForecast {
   expectedFreeLatest?: string;
 }
 
-/** Antwort von GET /stations/{id}/forecast; heatmap[Wochentag Mo..So/Ft][Stunde] = Anteil frei oder null. */
+/** Antwort von GET /stations/{id}/forecast; heatmap[Wochentag Mo..So/Ft][Stunde] = Belegungsanteil (0 = nichts belegt, 1 = voll), null = keine Daten. */
 export interface ChargingForecast {
   stationId: string;
   status: ChargingForecastStatus;

@@ -19,6 +19,14 @@ describe('charging-forecast.util', () => {
       expect(forecastLine(s)).toBe('frei ca. 17:40 · 72 % in 30 min');
     });
 
+    it('zeigt die Spanne, wenn das spaete Quantil vorliegt', () => {
+      const s: ChargingForecastSummary = {
+        status: 'OK', freeProbability30min: 72,
+        expectedFreeAt: '2026-11-02T17:40:00', expectedFreeLatest: '2026-11-02T18:00:00'
+      };
+      expect(forecastLine(s)).toBe('frei ca. 17:40–18:00 · 72 % in 30 min');
+    });
+
     it('zeigt nur die Wahrscheinlichkeit ohne erwartete Freizeit', () => {
       const s: ChargingForecastSummary = { status: 'OK', freeProbability30min: 72 };
       expect(forecastLine(s)).toBe('72 % in 30 min');

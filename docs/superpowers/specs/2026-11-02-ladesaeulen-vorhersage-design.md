@@ -102,7 +102,7 @@ Neues Werkzeug im Paket `telegram/tools` (`AgentScope.TELEGRAM`), dünner Wrappe
 
 ### Tablet (`/tablet/charging`)
 
-- Liste: unter jedem Favoriten eine Zeile „frei ca. 17:40 · 72 % in 30 min“ bzw. „noch zu wenig Daten“.
+- Liste: unter jedem Favoriten eine Zeile „frei ca. 17:40–18:00 · 72 % in 30 min“ (Median bis 80-%-Quantil; ohne Quantil nur „frei ca. 17:40 · …“) bzw. „noch zu wenig Daten“.
 - Antippen eines **Favoriten** zeigt statt der Karte den Detailbereich: Name, Stand, je belegtem Ladepunkt „belegt seit … → frei ca. …, meist bis …“, Wahrscheinlichkeiten 15/30/60 min, Heatmap Wochentag × Uhrzeit mit Markierung „jetzt“. Ein Schließen-Knopf bringt die Karte zurück; Antippen eines Nicht-Favoriten verhält sich wie heute. *Meine Festlegung:* Nur das Antippen **in der Liste** öffnet das Detail; ein Tipp auf einen Marker in der Karte markiert die Station wie heute (gemeinsamer Pfad `select(..., { fromMap: true })`), sonst verschwände die Karte unter dem Finger.
 - Der **Kartencontainer bleibt im DOM** (Lehre aus `/pets`, `ViewChild` + `ngAfterViewInit`); der Detailbereich liegt darüber bzw. die Karte wird nur ausgeblendet. Beim Zurückwechseln muss Leaflet `invalidateSize` bekommen.
 - Farben nur über die lumina-Tokens (hell/dunkel), die Heatmap-Skala wie die bestehenden Ampelfarben. Höhenkette beachten (Detailbereich füllt die Höhe der Karte).

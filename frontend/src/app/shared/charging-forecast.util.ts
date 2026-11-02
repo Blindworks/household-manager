@@ -18,7 +18,9 @@ export function forecastLine(summary: ChargingForecastSummary | undefined): stri
     return `noch zu wenig Daten (${summary.observedDays ?? 0} Tage)`;
   }
   const probability = summary.freeProbability30min !== undefined ? `${summary.freeProbability30min} % in 30 min` : null;
-  const freeAt = summary.expectedFreeAt ? `frei ca. ${clock(summary.expectedFreeAt)}` : null;
+  const freeAt = summary.expectedFreeAt
+    ? `frei ca. ${clock(summary.expectedFreeAt)}${summary.expectedFreeLatest ? `–${clock(summary.expectedFreeLatest)}` : ''}`
+    : null;
   const parts = [freeAt, probability].filter((part): part is string => part !== null);
   return parts.length > 0 ? parts.join(' · ') : null;
 }
@@ -31,7 +33,7 @@ export function freeWindow(at?: string, latest?: string): string | null {
   return latest ? `${base}, meist bis ${clock(latest)}` : base;
 }
 
-/** Stufe der Heatmap-Zelle; value = Anteil freier Zeit 0..1, null = keine Daten (nie mit "wenig frei" vermischt). */
+/** Stufe der Heatmap-Zelle; value = Belegungsanteil (0 = nichts belegt, 1 = voll), null = keine Daten (nie mit 0 vermischt). */
 export function heatmapLevel(value: number | null): HeatmapLevel {
   if (value === null) {
     return 'none';
