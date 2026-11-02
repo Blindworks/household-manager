@@ -1,11 +1,14 @@
 package com.household.manager.charging;
 
+import com.household.manager.charging.forecast.ChargingForecastSettings;
+import com.household.manager.charging.forecast.ChargingHistoryRecorder;
 import com.household.manager.model.entity.ChargingPointOccupancy;
 import com.household.manager.repository.ChargingPointOccupancyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,9 +28,13 @@ public class ChargingOccupancyTracker {
 
     private final ChargingPointOccupancyRepository repository;
     private final Clock clock;
+    private final ChargingHistoryRecorder recorder;
 
     /** Zuletzt gesehener Status je Ladepunkt (nur im Speicher; entscheidet "Beginn bekannt?"). */
     private final Map<String, ChargePointStatus> lastSeen = new HashMap<>();
+
+    /** Letzter record-Aufruf je Station (nur im Speicher; erkennt Luecken, z. B. nach Neustart). */
+    private final Map<String, Instant> lastRecordedAt = new HashMap<>();
 
     public synchronized void record(ChargingStationDetails details) {
         Instant now = clock.instant();
@@ -55,7 +62,13 @@ public class ChargingOccupancyTracker {
                         repository.save(row);
                     }
                 }
-                case FREE, OUT_OF_SERVICE -> {
+                case FREE -> {
+                    if (row != null) {
+                        recordEndedOccupancy(details.stationId(), point, row, now);
+                        repository.delete(row);
+                    }
+                }
+                case OUT_OF_SERVICE -> {
                     if (row != null) {
                         repository.delete(row);
                     }
@@ -68,6 +81,25 @@ public class ChargingOccupancyTracker {
                 lastSeen.put(point.chargePointId(), point.status());
             }
         }
+        lastRecordedAt.put(details.stationId(), now);
+    }
+
+    /** Beendete Belegung fuer die Vorhersage festhalten - nur mit belastbarem Beginn und Ende. */
+    private void recordEndedOccupancy(String stationId, ChargePoint point, ChargingPointOccupancy row, Instant now) {
+        Instant start = row.getOccupiedSince();
+        if (start == null) {
+            return;
+        }
+        Instant statusSince = point.statusSince();
+        if (statusSince != null && statusSince.isAfter(start)) {
+            recorder.recordEnded(stationId, point.chargePointId(), start, statusSince);
+            return;
+        }
+        Instant previous = lastRecordedAt.get(stationId);
+        if (previous != null && !Duration.between(previous, now).minus(ChargingForecastSettings.MAX_GAP).isPositive()) {
+            recorder.recordEnded(stationId, point.chargePointId(), start, now);
+        }
+        // sonst: Neustart oder Luecke - das Ende ist unbekannt, verwerfen statt falsch zu schaetzen
     }
 
     public Map<String, ChargingPointOccupancy> occupancyFor(String stationId) {
