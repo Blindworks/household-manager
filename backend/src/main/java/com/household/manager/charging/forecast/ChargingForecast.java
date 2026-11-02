@@ -12,6 +12,7 @@ import java.util.Map;
  *                               dann mindestens ein Ladepunkt frei ist
  * @param expectedFreeAt         frühester Median über die belegten Punkte, {@code null} sobald einer frei ist
  * @param expectedFreeLatest     frühestes 80-%-Quantil über die belegten Punkte, ebenso
+ * @param heatmap                geteilt mit dem gecachten Muster - nur lesen, nie verändern
  */
 public record ChargingForecast(Status status, long observedDays, Map<Integer, Integer> freeProbabilityPercent,
                                List<PointForecast> points, Instant expectedFreeAt, Instant expectedFreeLatest,

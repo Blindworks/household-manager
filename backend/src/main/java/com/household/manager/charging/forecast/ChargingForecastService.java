@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,7 +52,7 @@ public class ChargingForecastService {
             latest.put(stationId, forecast);
             return Optional.of(forecast);
         } catch (RuntimeException e) {
-            log.warn("Ladesäulen-Vorhersage für Station {} fehlgeschlagen: {}", stationId, e.getMessage(), e);
+            log.warn("Ladesäulen-Vorhersage für Station {} fehlgeschlagen: {}", stationId, e.toString());
             return Optional.empty();
         }
     }
@@ -102,8 +103,8 @@ public class ChargingForecastService {
         Instant expectedFreeAt = anyFree ? null : earliest(points, ChargingForecast.PointForecast::expectedFreeAt);
         Instant expectedFreeLatest = anyFree ? null
                 : earliest(points, ChargingForecast.PointForecast::expectedFreeLatest);
-        return new ChargingForecast(ChargingForecast.Status.OK, observedDays, percent, List.copyOf(points),
-                expectedFreeAt, expectedFreeLatest, pattern.occupancy());
+        return new ChargingForecast(ChargingForecast.Status.OK, observedDays, Collections.unmodifiableMap(percent),
+                List.copyOf(points), expectedFreeAt, expectedFreeLatest, pattern.occupancy());
     }
 
     /** P(bleibt frei bis now+h) = exp(−λ·h) mit der Startrate der aktuellen Wochentag-/Stundenzelle. */
@@ -111,7 +112,9 @@ public class ChargingForecastService {
         int day = HessenHolidays.heatmapDay(localNow.toLocalDate());
         int hour = localNow.getHour();
         double rate = pattern.startsPerFreePointSecond()[day][hour];
-        if (rate == 0 && pattern.occupancy()[day][hour] == null) {
+        Double cellOccupancy = pattern.occupancy()[day][hour];
+        // Unbeobachtete oder voll belegte Stunde: keine freie Zeit, aus der eine Rate lernbar wäre
+        if (rate == 0 && (cellOccupancy == null || cellOccupancy >= 1.0)) {
             rate = pattern.overallStartRate();
         }
         double[] result = new double[HORIZONS_MINUTES.size()];

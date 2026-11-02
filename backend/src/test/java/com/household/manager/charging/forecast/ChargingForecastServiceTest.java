@@ -189,6 +189,18 @@ class ChargingForecastServiceTest {
     }
 
     @Test
+    void vollBelegteStundeNutztGesamtrate() {
+        StationPattern p = pattern(20, List.of(), new double[7][24], 1.0 / 3600);
+        p.occupancy()[0][17] = 1.0;
+        when(patterns.pattern(STATION)).thenReturn(p);
+
+        ChargingForecast forecast = service.update(STATION, details(point("a", ChargePointStatus.FREE)), Map.of())
+                .orElseThrow();
+
+        assertThat(forecast.freeProbabilityPercent()).containsEntry(30, 61);
+    }
+
+    @Test
     void kombinationMindestensEiner() {
         double[][] rates = new double[7][24];
         rates[0][17] = Math.log(2) / 1800;
