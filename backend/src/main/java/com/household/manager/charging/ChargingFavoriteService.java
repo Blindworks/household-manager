@@ -1,6 +1,8 @@
 package com.household.manager.charging;
 
 import com.household.manager.audit.AuditService;
+import com.household.manager.charging.forecast.ChargingForecastService;
+import com.household.manager.charging.forecast.ChargingPatternService;
 import com.household.manager.model.entity.ChargingFavorite;
 import com.household.manager.repository.ChargingFavoriteRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,8 @@ public class ChargingFavoriteService {
     private final ChargingSnapshot snapshot;
     private final AuditService auditService;
     private final Clock clock;
+    private final ChargingForecastService forecastService;
+    private final ChargingPatternService patternService;
 
     public List<ChargingFavorite> list() {
         return repository.findAllByOrderByCreatedAtAscIdAsc();
@@ -57,6 +61,8 @@ public class ChargingFavoriteService {
         repository.findByStationId(stationId).ifPresent(favorite -> {
             repository.delete(favorite);
             tracker.forgetStation(stationId);
+            forecastService.forget(stationId);
+            patternService.evict(stationId);
             auditService.record("charging.favorite.remove", stationId + " (" + favorite.getDisplayName() + ")");
             log.info("Ladesaeule {} aus den Favoriten entfernt", stationId);
         });

@@ -1,6 +1,8 @@
 package com.household.manager.charging;
 
 import com.household.manager.audit.AuditService;
+import com.household.manager.charging.forecast.ChargingForecastService;
+import com.household.manager.charging.forecast.ChargingPatternService;
 import com.household.manager.model.entity.ChargingFavorite;
 import com.household.manager.repository.ChargingFavoriteRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +37,10 @@ class ChargingFavoriteServiceTest {
     private ChargingOccupancyTracker tracker;
     @Mock
     private AuditService auditService;
+    @Mock
+    private ChargingForecastService forecastService;
+    @Mock
+    private ChargingPatternService patternService;
 
     private ChargingSnapshot snapshot;
     private ChargingFavoriteService service;
@@ -43,7 +49,7 @@ class ChargingFavoriteServiceTest {
     void setUp() {
         snapshot = new ChargingSnapshot();
         service = new ChargingFavoriteService(repository, tracker, snapshot, auditService,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC), forecastService, patternService);
     }
 
     @Test
@@ -91,6 +97,8 @@ class ChargingFavoriteServiceTest {
 
         verify(repository).delete(favorite);
         verify(tracker).forgetStation("S1");
+        verify(forecastService).forget("S1");
+        verify(patternService).evict("S1");
         verify(auditService).record(eq("charging.favorite.remove"), any());
     }
 
@@ -102,5 +110,6 @@ class ChargingFavoriteServiceTest {
 
         verify(repository, never()).delete(any());
         verify(tracker, never()).forgetStation(any());
+        verify(forecastService, never()).forget(any());
     }
 }

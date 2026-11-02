@@ -1,5 +1,7 @@
 package com.household.manager.charging;
 
+import com.household.manager.charging.forecast.ChargingForecast;
+import com.household.manager.charging.forecast.ChargingForecastService;
 import com.household.manager.charging.forecast.ChargingHistoryRecorder;
 import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
@@ -7,6 +9,7 @@ import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.ChargingEntityMapper;
 import com.household.manager.model.entity.ChargingFavorite;
+import com.household.manager.model.entity.ChargingPointOccupancy;
 import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Zwei getrennte Poll-Pfade (Umkreis alle 5 min, Favoriten jede Minute), beide werfen nie.
@@ -42,6 +46,7 @@ public class ChargingPollingService {
     private final Clock clock;
     private final SystemJobMonitor jobMonitor;
     private final ChargingHistoryRecorder historyRecorder;
+    private final ChargingForecastService forecastService;
 
     /** Zuletzt erfolgreich gemeldete Updates je Station; Basis fuer unavailable mit erhaltenen Attributen. */
     private final Map<String, EntityStateUpdate> lastReported = new HashMap<>();
@@ -51,7 +56,8 @@ public class ChargingPollingService {
                                   ChargingSettingsService settingsService, ChargingFavoriteService favoriteService,
                                   ChargingOccupancyTracker tracker, ChargingSnapshot snapshot,
                                   ChargingEntityMapper mapper, EntityStateService entityStateService, Clock clock,
-                                  SystemJobMonitor jobMonitor, ChargingHistoryRecorder historyRecorder) {
+                                  SystemJobMonitor jobMonitor, ChargingHistoryRecorder historyRecorder,
+                                  ChargingForecastService forecastService) {
         this.properties = properties;
         this.source = source;
         this.settingsService = settingsService;
@@ -63,6 +69,7 @@ public class ChargingPollingService {
         this.clock = clock;
         this.jobMonitor = jobMonitor;
         this.historyRecorder = historyRecorder;
+        this.forecastService = forecastService;
     }
 
     @Scheduled(fixedDelayString = "#{${charging.area-poll-seconds:300} * 1000}",
@@ -146,7 +153,9 @@ public class ChargingPollingService {
                 tracker.record(stationDetails);
                 recordObservation(stationId, stationDetails);
                 details.put(stationId, stationDetails);
-                EntityStateUpdate update = mapper.map(favorite, stationDetails, tracker.occupancyFor(stationId));
+                Map<String, ChargingPointOccupancy> occupancy = tracker.occupancyFor(stationId);
+                Optional<ChargingForecast> forecast = forecastFor(stationId, stationDetails, occupancy);
+                EntityStateUpdate update = mapper.map(favorite, stationDetails, occupancy, forecast);
                 entityStateService.reportState(update);
                 lastReported.put(stationId, update);
             } catch (ChargingRateLimitException ex) {
@@ -176,6 +185,17 @@ public class ChargingPollingService {
         }
         Instant polledAt = (!details.isEmpty() || favorites.isEmpty()) ? clock.instant() : snapshot.lastPolledAt();
         snapshot.updateFavoriteDetails(merged, polledAt);
+    }
+
+    /** Die Vorhersage ist Beiwerk: ein Fehler darf die Entität nie verhindern. */
+    private Optional<ChargingForecast> forecastFor(String stationId, ChargingStationDetails stationDetails,
+                                                   Map<String, ChargingPointOccupancy> occupancy) {
+        try {
+            return forecastService.update(stationId, stationDetails, occupancy);
+        } catch (RuntimeException ex) {
+            log.warn("Ladesaeulen-Vorhersage fuer {} fehlgeschlagen: {}", stationId, ex.getMessage());
+            return Optional.empty();
+        }
     }
 
     private void recordObservation(String stationId, ChargingStationDetails stationDetails) {

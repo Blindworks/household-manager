@@ -4,6 +4,7 @@ import com.household.manager.systemlog.SystemJobMonitor;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
 import com.household.manager.entitystate.mapper.ChargingEntityMapper;
+import com.household.manager.charging.forecast.ChargingForecastService;
 import com.household.manager.charging.forecast.ChargingHistoryRecorder;
 import com.household.manager.model.entity.ChargingFavorite;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,8 @@ class ChargingPollingServiceTest {
     private EntityStateService entityStateService;
     @Mock
     private ChargingHistoryRecorder historyRecorder;
+    @Mock
+    private ChargingForecastService forecastService;
 
     private ChargingProperties properties;
     private ChargingSnapshot snapshot;
@@ -65,7 +68,8 @@ class ChargingPollingServiceTest {
         properties = new ChargingProperties();
         snapshot = new ChargingSnapshot();
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
-                snapshot, new ChargingEntityMapper(), entityStateService, Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder);
+                snapshot, new ChargingEntityMapper(Clock.fixed(NOW, ZoneOffset.UTC)), entityStateService,
+                Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder, forecastService);
         // lenient: nicht jeder Test (z. B. die reinen Favoriten-Tests) fragt settingsService ab.
         org.mockito.Mockito.lenient().when(settingsService.getSettings())
                 .thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
@@ -280,5 +284,20 @@ class ChargingPollingServiceTest {
         service.scheduledFavorites();
 
         verify(jobMonitor, never()).reportFailure(any());
+    }
+
+    @Test
+    void vorhersageFehlerBrichtEntitaetNicht() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
+        when(tracker.occupancyFor("S1")).thenReturn(Map.of());
+        when(forecastService.update(any(), any(), any())).thenThrow(new RuntimeException("kaputt"));
+
+        service.pollFavorites();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService).reportState(captor.capture());
+        assertThat(captor.getValue().state()).isEqualTo("1");
+        assertThat(captor.getValue().attributes()).doesNotContainKey("forecastStatus");
     }
 }

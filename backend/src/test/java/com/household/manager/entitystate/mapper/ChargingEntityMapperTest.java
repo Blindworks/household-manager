@@ -10,7 +10,11 @@ import com.household.manager.model.entity.ChargingFavorite;
 import com.household.manager.model.entity.ChargingPointOccupancy;
 import org.junit.jupiter.api.Test;
 
+import com.household.manager.charging.forecast.ChargingForecast;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Optional;
 import java.util.List;
 import java.util.Map;
 
@@ -18,7 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChargingEntityMapperTest {
 
-    private final ChargingEntityMapper mapper = new ChargingEntityMapper();
+    private final ChargingEntityMapper mapper = new ChargingEntityMapper(
+            Clock.fixed(Instant.parse("2026-11-02T10:00:00Z"), ZoneId.of("Europe/Berlin")));
     private final ChargingFavorite favorite = ChargingFavorite.builder()
             .stationId("DE*LDL*E123").displayName("Lidl Hauptstr.").operator("Lidl")
             .lat(50).lon(8).createdAt(Instant.EPOCH).build();
@@ -32,7 +37,7 @@ class ChargingEntityMapperTest {
         Map<String, ChargingPointOccupancy> occupancy = Map.of("P1", ChargingPointOccupancy.builder()
                 .chargePointId("P1").stationId("DE*LDL*E123").occupiedSince(since).firstSeenOccupiedAt(since).build());
 
-        EntityStateUpdate update = mapper.map(favorite, details, occupancy);
+        EntityStateUpdate update = mapper.map(favorite, details, occupancy, Optional.empty());
 
         assertThat(update.entityId()).isEqualTo("sensor.charging_de_ldl_e123_free");
         assertThat(update.domain()).isEqualTo(EntityDomain.SENSOR);
@@ -55,7 +60,7 @@ class ChargingEntityMapperTest {
                 .chargePointId("P1").stationId("DE*LDL*E123").occupiedSince(null)
                 .firstSeenOccupiedAt(Instant.EPOCH).build());
 
-        EntityStateUpdate update = mapper.map(favorite, details, occupancy);
+        EntityStateUpdate update = mapper.map(favorite, details, occupancy, Optional.empty());
 
         assertThat(update.state()).isEqualTo("0");
         assertThat(update.attributes()).doesNotContainKey("occupiedSince").doesNotContainKey("maxPowerKw")
@@ -65,5 +70,57 @@ class ChargingEntityMapperTest {
     @Test
     void entityIdIstAusDerStationIdAbleitbar() {
         assertThat(ChargingEntityMapper.entityId("DE*LDL*E123")).isEqualTo("sensor.charging_de_ldl_e123_free");
+    }
+
+    private static final ChargingStationDetails ONE_OCCUPIED = new ChargingStationDetails("DE*LDL*E123", List.of(
+            new ChargePoint("P1", ChargePointStatus.OCCUPIED, 150.0, "CCS", null, null)));
+
+    @Test
+    void okSetztAlleAttribute() {
+        ChargingForecast forecast = new ChargingForecast(ChargingForecast.Status.OK, 20,
+                Map.of(15, 30, 30, 55, 60, 80), List.of(),
+                Instant.parse("2026-11-02T10:25:30Z"), Instant.parse("2026-11-02T10:45:59Z"), null);
+
+        EntityStateUpdate update = mapper.map(favorite, ONE_OCCUPIED, Map.of(), Optional.of(forecast));
+
+        assertThat(update.attributes()).containsEntry("forecastStatus", "ok")
+                .containsEntry("freeProbability15min", 30)
+                .containsEntry("freeProbability30min", 55)
+                .containsEntry("freeProbability60min", 80)
+                .containsEntry("expectedFreeAt", "2026-11-02T11:25:30")
+                .containsEntry("expectedFreeLatest", "2026-11-02T11:45:59")
+                .containsEntry("minutesUntilFree", 25L)
+                .containsEntry("minutesUntilFreeLatest", 45L)
+                .doesNotContainKey("deviceClass");
+    }
+
+    @Test
+    void zuWenigDatenNurStatus() {
+        ChargingForecast forecast = new ChargingForecast(ChargingForecast.Status.INSUFFICIENT_DATA, 3,
+                Map.of(), List.of(), null, null, null);
+
+        EntityStateUpdate update = mapper.map(favorite, ONE_OCCUPIED, Map.of(), Optional.of(forecast));
+
+        assertThat(update.attributes()).containsEntry("forecastStatus", "insufficient_data")
+                .doesNotContainKey("freeProbability30min").doesNotContainKey("expectedFreeAt")
+                .doesNotContainKey("minutesUntilFree");
+    }
+
+    @Test
+    void ohneVorhersageKeinStatus() {
+        EntityStateUpdate update = mapper.map(favorite, ONE_OCCUPIED, Map.of(), Optional.empty());
+
+        assertThat(update.attributes()).doesNotContainKey("forecastStatus");
+    }
+
+    @Test
+    void okOhneRestdauerLaesstZeitSchluesselWeg() {
+        ChargingForecast forecast = new ChargingForecast(ChargingForecast.Status.OK, 20,
+                Map.of(15, 100, 30, 100, 60, 100), List.of(), null, null, null);
+
+        EntityStateUpdate update = mapper.map(favorite, ONE_OCCUPIED, Map.of(), Optional.of(forecast));
+
+        assertThat(update.attributes()).containsEntry("freeProbability15min", 100)
+                .doesNotContainKey("expectedFreeAt").doesNotContainKey("minutesUntilFree");
     }
 }
