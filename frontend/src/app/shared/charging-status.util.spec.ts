@@ -1,7 +1,9 @@
 import {
+  formatDirectPrice,
   formatOccupiedDuration,
   formatPower,
   formatPrice,
+  parseDirectPrice,
   stationTone,
   superchargerMeta,
   sortStations,
@@ -91,6 +93,35 @@ describe('charging-status.util', () => {
     });
   });
 
+  describe('formatDirectPrice', () => {
+    it('haengt die Notiz mit Mittelpunkt an', () => {
+      expect(formatDirectPrice(0.39, 'Aldi-App')).toBe('0,39 €/kWh · Aldi-App');
+    });
+
+    it('zeigt ohne Notiz nur den Preis', () => {
+      expect(formatDirectPrice(0.39, undefined)).toBe('0,39 €/kWh');
+      expect(formatDirectPrice(0.39, '')).toBe('0,39 €/kWh');
+    });
+
+    it('liefert leer ohne Preis, auch wenn eine Notiz da ist', () => {
+      expect(formatDirectPrice(undefined, 'Aldi-App')).toBe('');
+    });
+  });
+
+  describe('parseDirectPrice', () => {
+    it('versteht Komma und Punkt', () => {
+      expect(parseDirectPrice('0,39')).toBe(0.39);
+      expect(parseDirectPrice(' 0.395 ')).toBe(0.395);
+      expect(parseDirectPrice('2')).toBe(2);
+    });
+
+    it('weist Ungueltiges ab', () => {
+      for (const bad of ['', 'abc', '0', '-0,1', '2,001', '0,3901', 'NaN', 'Infinity', '1,2,3']) {
+        expect(parseDirectPrice(bad)).withContext(bad).toBeUndefined();
+      }
+    });
+  });
+
   describe('stationPopupText', () => {
     it('zeigt Name, Betreiber, Adresse und die Kennzahlen inklusive Preis', () => {
       const html = stationPopupText(station({
@@ -101,11 +132,19 @@ describe('charging-status.util', () => {
       expect(html).toContain('EnBW · Hauptstr. 1, 12345 Stadt');
       expect(html).toContain('150 kW');
       expect(html).toContain('0,34 €/kWh');
+      expect(html).toContain('Direktpreis');
+      expect(html).not.toContain('EnBW-Tarif');
       expect(html).toContain('charging-popup__star');
       expect(html).toContain('charging-popup__value--free');
     });
 
-    it('listet die Ladepunkte eines Favoriten mit Dauer und Preis', () => {
+    it('nennt die Notiz zum Direktpreis im Popup', () => {
+      const html = stationPopupText(station({ favorite: true, pricePerKwh: 0.39, priceNote: 'Aldi-App' }));
+      expect(html).toContain('0,39 €/kWh');
+      expect(html).toContain('Aldi-App');
+    });
+
+    it('listet die Ladepunkte eines Favoriten mit Dauer, aber ohne EnBW-Preis', () => {
       const html = stationPopupText(station({
         favorite: true,
         chargePoints: [
@@ -119,7 +158,8 @@ describe('charging-status.util', () => {
       expect(html).toContain('seit 38 min');
       expect(html).toContain('belegt');
       expect(html).toContain('frei');
-      expect((html.match(/0,34 €\/kWh/g) ?? []).length).toBe(2);
+      expect(html).not.toContain('charging-popup__point-price');
+      expect(html).not.toContain('0,34');
     });
 
     it('zeigt bei Superchargern Standortdaten statt frei/gesamt und markiert nur-Tesla', () => {
@@ -184,6 +224,14 @@ describe('charging-status.util', () => {
       expect(merged.maxPowerKw).toBe(300);
       expect(merged.pricePerKwh).toBe(0.59);
       expect(merged.chargePoints?.length).toBe(2);
+    });
+
+    it('uebernimmt bei Favoriten weder Ladepunkt-Preise noch einen EnBW-Mindestpreis', () => {
+      const merged = withChargePoints(station({ favorite: true, pricePerKwh: 0.39 }), [
+        { chargePointId: 'P1', status: 'FREE', maxPowerKw: 300, minimumDuration: false, pricePerKwh: 0.79 }
+      ]);
+      expect(merged.pricePerKwh).toBe(0.39);
+      expect(merged.chargePoints?.[0].pricePerKwh).toBeUndefined();
     });
 
     it('behaelt Leistung und Preis der Liste, wenn die Ladepunkte keine nennen', () => {

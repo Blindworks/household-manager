@@ -239,6 +239,25 @@ describe('TabletChargingComponent', () => {
     expect(rows[0].textContent).toContain('Lidl Hauptstr.');
   });
 
+  it('zeigt bei Favoriten nur den Direktpreis mit Notiz, nie einen EnBW-Preis, und keinen Stift', () => {
+    const priced: ChargingStationsResponse = {
+      ...forecastResponse,
+      stations: forecastResponse.stations.map(s => s.favorite
+        ? { ...s, pricePerKwh: 0.39, priceNote: 'Aldi-App',
+            chargePoints: s.chargePoints!.map(p => ({ ...p, pricePerKwh: 0.59 })) }
+        : s)
+    };
+    chargingSpy.getStations.and.returnValue(of(priced));
+    component.reload();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.tablet-charging__price')?.textContent).toContain('0,39 €/kWh · Aldi-App');
+    expect(host.querySelector('.tablet-charging__point-price')).toBeNull();
+    expect(host.textContent).not.toContain('0,59');
+    expect(host.querySelector('[class*="price-edit"]')).toBeNull();
+  });
+
   it('laedt beim Antippen einer Nicht-Favoritin die Ladepunkte nach und ergaenzt Popup und Liste', () => {
     const host = fixture.nativeElement as HTMLElement;
     chargingSpy.getChargePoints.and.returnValue(of([

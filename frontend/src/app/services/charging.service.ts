@@ -38,6 +38,12 @@ export class ChargingService {
     return this.http.delete<ChargingStationsResponse>(`${this.baseUrl}/favorites/${encodeURIComponent(stationId)}`);
   }
 
+  /** Direktpreis eines Favoriten setzen; {@code null} loescht Preis und Notiz (MEMBER). */
+  setDirectPrice(stationId: string, pricePerKwh: number | null, note: string | null): Observable<ChargingStationsResponse> {
+    return this.http.put<ChargingStationsResponse>(
+      `${this.baseUrl}/favorites/${encodeURIComponent(stationId)}/price`, { pricePerKwh, note });
+  }
+
   getSettings(): Observable<ChargingSettings> {
     return this.http.get<ChargingSettings>(`${this.baseUrl}/settings`);
   }

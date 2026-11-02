@@ -75,6 +75,20 @@
   &__price { margin-left: auto; color: #b45309; font-variant-numeric: tabular-nums; white-space: nowrap; }
   &__point-price { color: #b45309; font-variant-numeric: tabular-nums; }
 
+  &__price-edit {
+    border: none; background: transparent; cursor: pointer; padding: 0 0.2rem; font-size: 1rem; color: #64748b;
+    &--lead { margin-left: auto; }
+    &:hover { color: #334155; }
+  }
+
+  &__price-form {
+    margin: 0.5rem 0 0 1.6rem; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; font-size: 0.85rem;
+    label { display: flex; flex-direction: column; gap: 0.2rem; color: #475569; }
+    input { padding: 0.3rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+  }
+  &__price-actions { display: flex; gap: 0.4rem; }
+  &__price-error { flex-basis: 100%; margin: 0; color: #b91c1c; }
+
   &__star-btn {
     border: none;
     background: transparent;

@@ -111,7 +111,7 @@
                     @if (station.operator) { <span class="tablet-charging__operator">{{ station.operator }}</span> }
                     @if (station.teslaOnly) { <span class="tablet-charging__tesla-only">nur Tesla</span> }
                     @if (station.pricePerKwh !== undefined) {
-                      <span class="tablet-charging__price">{{ price(station.pricePerKwh) }}</span>
+                      <span class="tablet-charging__price">{{ directPrice(station) }}</span>
                     }
                   </p>
                 }
@@ -121,7 +121,7 @@
                       <li class="tablet-charging__point" [attr.data-tone]="pointTone(point)">
                         <span class="tablet-charging__point-power">{{ power(point.maxPowerKw) }}</span>
                         <span class="tablet-charging__point-status">{{ pointLabel(point) }}</span>
-                        @if (point.pricePerKwh !== undefined) {
+                        @if (point.pricePerKwh !== undefined && !station.favorite) {
                           <span class="tablet-charging__point-price">{{ price(point.pricePerKwh) }}</span>
                         }
                         @if (point.status === 'OCCUPIED') {

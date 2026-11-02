@@ -10,7 +10,7 @@ export interface ChargePoint {
   occupiedSince?: string;
   /** true = Beginn unbekannt, occupiedSince ist nur eine Untergrenze ("seit mind."). */
   minimumDuration: boolean;
-  /** EnBW-Tarif in Euro je kWh; nur bei Favoriten und nur wenn die Quelle einen nennt. */
+  /** EnBW-Tarif in Euro je kWh; nur bei Nicht-Favoriten (bei Favoriten gibt das Backend ihn nie aus). */
   pricePerKwh?: number;
 }
 
@@ -51,8 +51,13 @@ export interface ChargingStation {
   lon: number;
   distanceMeters: number;
   maxPowerKw?: number;
-  /** Guenstigster EnBW-Tarif der Ladepunkte in Euro je kWh; nur bei Favoriten. */
+  /**
+   * Bei Favoriten der von Hand gepflegte Direktpreis in Euro je kWh (kein EnBW-Preis, fehlt ohne Eintrag);
+   * bei nachgeladenen Nicht-Favoriten der guenstigste Tarif der Ladepunkte.
+   */
   pricePerKwh?: number;
+  /** Notiz zum Direktpreis (z. B. "Aldi-App"); nur bei Favoriten mit Notiz. */
+  priceNote?: string;
   total: number;
   free: number;
   favorite: boolean;

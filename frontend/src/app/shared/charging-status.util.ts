@@ -58,6 +58,29 @@ export function formatPrice(eurPerKwh: number | undefined): string {
   return `${eurPerKwh.toFixed(2).replace('.', ',')} €/kWh`;
 }
 
+/** "0,39 €/kWh · Aldi-App"; ohne Preis leer (eine Notiz allein sagt nichts). */
+export function formatDirectPrice(eurPerKwh: number | undefined, note: string | undefined): string {
+  const price = formatPrice(eurPerKwh);
+  return price && note ? `${price} · ${note}` : price;
+}
+
+/** Hoechstgrenzen des Direktpreises; verbindlich ist das Backend, hier nur Bedienhilfe. */
+export const DIRECT_PRICE_MAX = 2;
+export const DIRECT_PRICE_NOTE_MAX = 60;
+
+/**
+ * Liest "0,39" oder "0.39" als Zahl; {@code undefined} bei allem Ungueltigen (leer, <= 0, > 2,
+ * mehr als drei Nachkommastellen, kein Zahlenformat).
+ */
+export function parseDirectPrice(input: string): number | undefined {
+  const text = input.trim().replace(',', '.');
+  if (!/^\d+(\.\d{1,3})?$/.test(text)) {
+    return undefined;
+  }
+  const value = Number(text);
+  return value > 0 && value <= DIRECT_PRICE_MAX ? value : undefined;
+}
+
 export function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
 }
@@ -81,6 +104,16 @@ export function sortStations(stations: readonly ChargingStation[]): ChargingStat
  */
 export function withChargePoints(station: ChargingStation, points: ChargePoint[]): ChargingStation {
   const powers = points.map(p => p.maxPowerKw).filter((p): p is number => p !== undefined && p !== null);
+  // Favoriten zeigen nie einen EnBW-Preis: der Stationspreis bleibt der Direktpreis, Ladepunkt-Preise entfallen.
+  if (station.favorite) {
+    return {
+      ...station,
+      chargePoints: points.map(({ pricePerKwh: _enbwPrice, ...point }) => point),
+      total: points.length,
+      free: points.filter(p => p.status === 'FREE').length,
+      maxPowerKw: powers.length > 0 ? Math.max(...powers) : station.maxPowerKw
+    };
+  }
   const prices = points.map(p => p.pricePerKwh).filter((p): p is number => p !== undefined && p !== null);
   return {
     ...station,

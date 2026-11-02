@@ -21,9 +21,10 @@ describe('ChargingComponent', () => {
       { stationId: 'other', name: 'EnBW Rastplatz', lat: 50.02, lon: 8.0, distanceMeters: 2200,
         maxPowerKw: 300, total: 8, free: 6, favorite: false },
       { stationId: 'fav', name: 'Lidl Hauptstr.', lat: 50.01, lon: 8.0, distanceMeters: 1100,
-        maxPowerKw: 150, total: 2, free: 1, favorite: true,
+        maxPowerKw: 150, total: 2, free: 1, favorite: true, pricePerKwh: 0.39, priceNote: 'Aldi-App',
         chargePoints: [
-          { chargePointId: 'P1', status: 'OCCUPIED', occupiedSince: '2026-09-19T11:20:00', minimumDuration: false },
+          { chargePointId: 'P1', status: 'OCCUPIED', occupiedSince: '2026-09-19T11:20:00', minimumDuration: false,
+            pricePerKwh: 0.55 },
           { chargePointId: 'P2', status: 'FREE', minimumDuration: false }
         ] }
     ]
@@ -31,7 +32,7 @@ describe('ChargingComponent', () => {
 
   beforeEach(async () => {
     chargingSpy = jasmine.createSpyObj('ChargingService',
-      ['getStations', 'refresh', 'addFavorite', 'removeFavorite', 'getChargePoints']);
+      ['getStations', 'refresh', 'addFavorite', 'removeFavorite', 'getChargePoints', 'setDirectPrice']);
     chargingSpy.getChargePoints.and.returnValue(of([]));
     chargingSpy.getStations.and.returnValue(of(response));
 
@@ -127,6 +128,119 @@ describe('ChargingComponent', () => {
 
     expect(chargingSpy.addFavorite).toHaveBeenCalledOnceWith('other');
     expect(chargingSpy.getChargePoints).not.toHaveBeenCalled();
+  });
+
+  describe('Direktpreis', () => {
+    const host = () => fixture.nativeElement as HTMLElement;
+    const favRow = () => host().querySelectorAll('.charging-page__row')[0] as HTMLElement;
+    const clickIn = (selector: string) => (favRow().querySelector(selector) as HTMLButtonElement).click();
+    const typeIn = (selector: string, value: string) => {
+      const input = favRow().querySelector(selector) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    };
+
+    it('zeigt Direktpreis mit Notiz statt des EnBW-Preises und keinen Ladepunkt-Preis bei Favoriten', () => {
+      expect(favRow().querySelector('.charging-page__price')?.textContent).toContain('0,39 €/kWh · Aldi-App');
+      expect(favRow().querySelector('.charging-page__point-price')).toBeNull();
+      expect(favRow().textContent).not.toContain('0,55');
+    });
+
+    it('nicht angetippte Nicht-Favoriten haben keinen Stift', () => {
+      const otherRow = host().querySelectorAll('.charging-page__row')[1];
+      expect(otherRow.querySelector('.charging-page__price-edit')).toBeNull();
+    });
+
+    it('der Stift oeffnet den Editor mit den vorhandenen Werten, ohne die Zeile auszuwaehlen', () => {
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+
+      expect((favRow().querySelector('.charging-page__price-input') as HTMLInputElement).value).toBe('0,39');
+      expect((favRow().querySelector('.charging-page__note-input') as HTMLInputElement).value).toBe('Aldi-App');
+      expect(chargingSpy.getChargePoints).not.toHaveBeenCalled();
+    });
+
+    it('Speichern sendet die Zahl auch bei Komma-Eingabe und uebernimmt die Antwort', () => {
+      const updated: ChargingStationsResponse = {
+        ...response,
+        stations: response.stations.map(s => s.stationId === 'fav' ? { ...s, pricePerKwh: 0.41, priceNote: 'EnBW' } : s)
+      };
+      chargingSpy.setDirectPrice.and.returnValue(of(updated));
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+      typeIn('.charging-page__price-input', '0,41');
+      typeIn('.charging-page__note-input', ' EnBW ');
+
+      clickIn('.charging-page__price-save');
+      fixture.detectChanges();
+
+      expect(chargingSpy.setDirectPrice).toHaveBeenCalledOnceWith('fav', 0.41, 'EnBW');
+      expect(favRow().querySelector('.charging-page__price-form')).toBeNull();
+      expect(favRow().querySelector('.charging-page__price')?.textContent).toContain('0,41 €/kWh · EnBW');
+    });
+
+    it('Entfernen sendet null fuer Preis und Notiz', () => {
+      chargingSpy.setDirectPrice.and.returnValue(of(response));
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+
+      clickIn('.charging-page__price-remove');
+
+      expect(chargingSpy.setDirectPrice).toHaveBeenCalledOnceWith('fav', null, null);
+    });
+
+    it('ohne Preis gibt es keinen Entfernen-Knopf und der Stift steht trotzdem da', () => {
+      const without: ChargingStationsResponse = {
+        ...response,
+        stations: response.stations.map(s => s.stationId === 'fav'
+          ? { ...s, pricePerKwh: undefined, priceNote: undefined } : s)
+      };
+      component.data = without;
+      fixture.detectChanges();
+
+      expect(favRow().querySelector('.charging-page__price')).toBeNull();
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+      expect(favRow().querySelector('.charging-page__price-remove')).toBeNull();
+    });
+
+    it('ungueltige Eingabe zeigt inline einen Fehler und ruft nichts auf', () => {
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+      typeIn('.charging-page__price-input', 'abc');
+
+      clickIn('.charging-page__price-save');
+      fixture.detectChanges();
+
+      expect(chargingSpy.setDirectPrice).not.toHaveBeenCalled();
+      expect(favRow().querySelector('.charging-page__price-error')?.textContent).toContain('Preis');
+    });
+
+    it('zeigt die Server-Meldung inline, wenn Speichern scheitert', () => {
+      chargingSpy.setDirectPrice.and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 400, error: { message: 'Die Notiz darf hoechstens 60 Zeichen lang sein.' }
+      })));
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+
+      clickIn('.charging-page__price-save');
+      fixture.detectChanges();
+
+      expect(favRow().querySelector('.charging-page__price-error')?.textContent).toContain('hoechstens 60');
+      expect(favRow().querySelector('.charging-page__price-form')).not.toBeNull();
+    });
+
+    it('Abbrechen schliesst den Editor ohne Aufruf', () => {
+      clickIn('.charging-page__price-edit');
+      fixture.detectChanges();
+
+      clickIn('.charging-page__price-cancel');
+      fixture.detectChanges();
+
+      expect(favRow().querySelector('.charging-page__price-form')).toBeNull();
+      expect(chargingSpy.setDirectPrice).not.toHaveBeenCalled();
+    });
   });
 
   describe('Supercharger', () => {

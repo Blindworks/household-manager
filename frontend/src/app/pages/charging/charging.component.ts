@@ -9,7 +9,8 @@ import * as L from 'leaflet';
 import { ChargingService } from '../../services/charging.service';
 import { ChargePoint, ChargingStation, ChargingStationsResponse } from '../../models/charging.model';
 import {
-  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, superchargerMeta, withChargePoints
+  DIRECT_PRICE_NOTE_MAX, formatDirectPrice, formatDistance, formatOccupiedDuration, formatPower, formatPrice,
+  parseDirectPrice, sortStations, stationTone, superchargerMeta, withChargePoints
 } from '../../shared/charging-status.util';
 import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
@@ -51,6 +52,14 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
   refreshing = false;
   busyStationId: string | null = null;
   now = new Date();
+
+  readonly noteMax = DIRECT_PRICE_NOTE_MAX;
+  /** Station, deren Direktpreis-Editor offen ist; der Editor haelt nur die Id, nie eine Kopie der Station. */
+  editingPriceFor: string | null = null;
+  priceDraft = '';
+  noteDraft = '';
+  priceError: string | null = null;
+  priceBusy = false;
 
   ngOnInit(): void {
     this.load(false);
@@ -166,6 +175,51 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  startEditPrice(station: ChargingStation): void {
+    this.editingPriceFor = station.stationId;
+    this.priceDraft = station.pricePerKwh === undefined ? '' : String(station.pricePerKwh).replace('.', ',');
+    this.noteDraft = station.priceNote ?? '';
+    this.priceError = null;
+  }
+
+  cancelEditPrice(): void {
+    this.editingPriceFor = null;
+    this.priceError = null;
+  }
+
+  savePrice(): void {
+    const price = parseDirectPrice(this.priceDraft);
+    if (price === undefined) {
+      this.priceError = `Bitte einen Preis über 0 und höchstens 2 €/kWh mit höchstens drei Nachkommastellen eingeben.`;
+      return;
+    }
+    this.sendPrice(price, this.noteDraft.trim() || null);
+  }
+
+  removePrice(): void {
+    this.sendPrice(null, null);
+  }
+
+  private sendPrice(price: number | null, note: string | null): void {
+    const stationId = this.editingPriceFor;
+    if (!stationId) {
+      return;
+    }
+    this.priceBusy = true;
+    this.priceError = null;
+    this.chargingService.setDirectPrice(stationId, price, note).subscribe({
+      next: response => {
+        this.priceBusy = false;
+        this.editingPriceFor = null;
+        this.apply(response);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.priceBusy = false;
+        this.priceError = err.error?.message ?? 'Direktpreis konnte nicht gespeichert werden.';
+      }
+    });
+  }
+
   get hasSupercharger(): boolean {
     return !!this.data?.stations.some(s => s.supercharger);
   }
@@ -188,6 +242,11 @@ export class ChargingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   price(eurPerKwh: number | undefined): string {
     return formatPrice(eurPerKwh);
+  }
+
+  /** Favoriten: Direktpreis mit Notiz; Nicht-Favoriten: nur der (nachgeladene) Tarif. */
+  directPrice(station: ChargingStation): string {
+    return formatDirectPrice(station.pricePerKwh, station.priceNote);
   }
 
   duration(point: ChargePoint): string {

@@ -11,7 +11,7 @@ import {
   ChargePoint, ChargingForecast, ChargingPointForecast, ChargingStation, ChargingStationsResponse
 } from '../../models/charging.model';
 import {
-  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, superchargerMeta, withChargePoints
+  formatDirectPrice, formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, superchargerMeta, withChargePoints
 } from '../../shared/charging-status.util';
 import {
   HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel, occupiedSinceText
@@ -368,6 +368,11 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
 
   price(eurPerKwh: number | undefined): string {
     return formatPrice(eurPerKwh);
+  }
+
+  /** Favoriten: Direktpreis mit Notiz; Nicht-Favoriten: nur der (nachgeladene) Tarif. */
+  directPrice(station: ChargingStation): string {
+    return formatDirectPrice(station.pricePerKwh, station.priceNote);
   }
 
   duration(point: ChargePoint): string {

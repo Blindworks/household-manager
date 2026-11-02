@@ -55,16 +55,49 @@
                   </button>
                 }
               </div>
-              @if (station.operator || station.address || station.pricePerKwh !== undefined || station.teslaOnly) {
+              @if (station.operator || station.address || station.pricePerKwh !== undefined || station.teslaOnly
+                   || station.favorite) {
                 <p class="charging-page__address">
                   @if (station.operator) { <span class="charging-page__operator">{{ station.operator }}</span> }
                   @if (station.operator && station.address) { · }
                   {{ station.address }}
                   @if (station.teslaOnly) { <span class="charging-page__tesla-only">nur Tesla</span> }
                   @if (station.pricePerKwh !== undefined) {
-                    <span class="charging-page__price">{{ price(station.pricePerKwh) }}</span>
+                    <span class="charging-page__price">{{ directPrice(station) }}</span>
+                  }
+                  @if (station.favorite) {
+                    <button type="button" class="charging-page__price-edit"
+                            [class.charging-page__price-edit--lead]="station.pricePerKwh === undefined"
+                            aria-label="Direktpreis bearbeiten" title="Direktpreis bearbeiten"
+                            (click)="startEditPrice(station); $event.stopPropagation()">✎</button>
                   }
                 </p>
+              }
+              @if (editingPriceFor === station.stationId) {
+                <form class="charging-page__price-form" (click)="$event.stopPropagation()"
+                      (submit)="savePrice(); $event.preventDefault()">
+                  <label>Direktpreis (€/kWh)
+                    <input type="text" inputmode="decimal" class="charging-page__price-input"
+                           [value]="priceDraft" (input)="priceDraft = $any($event.target).value"
+                           placeholder="0,39">
+                  </label>
+                  <label>Notiz
+                    <input type="text" class="charging-page__note-input" [attr.maxlength]="noteMax"
+                           [value]="noteDraft" (input)="noteDraft = $any($event.target).value"
+                           placeholder="z. B. Aldi-App">
+                  </label>
+                  <div class="charging-page__price-actions">
+                    <button type="button" class="charging-page__price-save" [disabled]="priceBusy"
+                            (click)="savePrice()">Speichern</button>
+                    @if (station.pricePerKwh !== undefined) {
+                      <button type="button" class="charging-page__price-remove" [disabled]="priceBusy"
+                              (click)="removePrice()">Entfernen</button>
+                    }
+                    <button type="button" class="charging-page__price-cancel" [disabled]="priceBusy"
+                            (click)="cancelEditPrice()">Abbrechen</button>
+                  </div>
+                  @if (priceError) { <p class="charging-page__price-error">{{ priceError }}</p> }
+                </form>
               }
               @if (station.chargePoints; as points) {
                 <ul class="charging-page__points">
@@ -72,7 +105,7 @@
                     <li class="charging-page__point" [attr.data-status]="point.status">
                       <span>{{ power(point.maxPowerKw) }}</span>
                       <span>{{ pointLabel(point) }}</span>
-                      @if (point.pricePerKwh !== undefined) { <span class="charging-page__point-price">{{ price(point.pricePerKwh) }}</span> }
+                      @if (point.pricePerKwh !== undefined && !station.favorite) { <span class="charging-page__point-price">{{ price(point.pricePerKwh) }}</span> }
                       @if (point.status === 'OCCUPIED') { <span class="charging-page__since">{{ duration(point) }}</span> }
                     </li>
                   }

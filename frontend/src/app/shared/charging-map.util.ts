@@ -1,6 +1,8 @@
 import * as L from 'leaflet';
 import { ChargePoint, ChargingStation } from '../models/charging.model';
-import { formatOccupiedDuration, formatPower, formatPrice, stationTone, superchargerMeta } from './charging-status.util';
+import {
+  formatOccupiedDuration, formatPower, formatPrice, stationTone, superchargerMeta
+} from './charging-status.util';
 
 /**
  * Marker-Icon einer Ladesaeule: farbiger Kreis mit der Zahl freier Ladepunkte, Stern bei
@@ -56,8 +58,10 @@ export function stationPopupText(station: ChargingStation, now: Date = new Date(
       + `</span><span class="charging-popup__label">Leistung</span></div>`
   ];
   if (station.pricePerKwh !== undefined && station.pricePerKwh !== null) {
+    const label = station.favorite
+      ? `Direktpreis${station.priceNote ? ` · ${station.priceNote}` : ''}` : 'EnBW-Tarif';
     facts.push(`<div class="charging-popup__fact"><span class="charging-popup__value">`
-      + `${escapeHtml(formatPrice(station.pricePerKwh))}</span><span class="charging-popup__label">EnBW-Tarif</span></div>`);
+      + `${escapeHtml(formatPrice(station.pricePerKwh))}</span><span class="charging-popup__label">${escapeHtml(label)}</span></div>`);
   }
   const subtitle = [station.operator, station.address].filter(s => !!s).map(s => escapeHtml(s!)).join(' · ');
   return `<div class="charging-popup">`
@@ -65,7 +69,7 @@ export function stationPopupText(station: ChargingStation, now: Date = new Date(
     + `${escapeHtml(station.name)}</div>`
     + (subtitle ? `<div class="charging-popup__subtitle">${subtitle}</div>` : '')
     + `<div class="charging-popup__facts">${facts.join('')}</div>`
-    + chargePointsHtml(station.chargePoints, now)
+    + chargePointsHtml(station.chargePoints, now, !station.favorite)
     + `</div>`;
 }
 
@@ -85,7 +89,8 @@ function superchargerPopupText(station: ChargingStation): string {
  * gerechnet; die Seiten tauschen die Marker mit jedem Refresh aus, sie altert also hoechstens
  * eine Minute.
  */
-function chargePointsHtml(points: ChargePoint[] | undefined, now: Date): string {
+/** Favoriten zeigen keine EnBW-Ladepunkt-Preise (nur den Direktpreis an der Station). */
+function chargePointsHtml(points: ChargePoint[] | undefined, now: Date, showPrices: boolean): string {
   if (!points || points.length === 0) {
     return '';
   }
@@ -94,7 +99,7 @@ function chargePointsHtml(points: ChargePoint[] | undefined, now: Date): string 
     const label = pointLabel(point);
     const since = point.status === 'OCCUPIED'
       ? formatOccupiedDuration(point.occupiedSince, point.minimumDuration, now) : '';
-    const price = point.pricePerKwh !== undefined && point.pricePerKwh !== null ? formatPrice(point.pricePerKwh) : '';
+    const price = showPrices && point.pricePerKwh !== undefined && point.pricePerKwh !== null ? formatPrice(point.pricePerKwh) : '';
     return `<li class="charging-popup__point charging-popup__point--${status}">`
       + `<span class="charging-popup__point-power">${escapeHtml(formatPower(point.maxPowerKw))}</span>`
       + `<span class="charging-popup__point-status">${label}</span>`
