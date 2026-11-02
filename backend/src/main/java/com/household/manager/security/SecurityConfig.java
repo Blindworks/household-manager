@@ -270,6 +270,10 @@ public class SecurityConfig {
                         // Solltemperatur und Modus je Thermostat: das Wandtablet ist der Nutzen.
                         .requestMatchers(HttpMethod.PUT, "/v1/thermostats/*/target", "/v1/thermostats/*/mode")
                         .hasRole("KIOSK")
+                        // Ladesaeulen-Favoriten per Stern am Wandtablet (Nutzerentscheidung 2026-11-02):
+                        // jeder vor dem Tablet darf sie aendern, die Historie bleibt beim Entfernen erhalten.
+                        .requestMatchers(HttpMethod.PUT, "/v1/charging/favorites/*").hasRole("KIOSK")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/charging/favorites/*").hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
                         // Alles Uebrige (Geraete schalten, Kalender/Zaehler pflegen, Ansagen ...)

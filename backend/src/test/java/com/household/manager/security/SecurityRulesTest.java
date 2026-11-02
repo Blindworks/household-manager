@@ -1246,8 +1246,9 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
-    void kioskDarfKeineFavoritenSetzen() throws Exception {
-        mockMvc.perform(put("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isForbidden());
+    void kioskDarfFavoritenSetzenUndEntfernen() throws Exception {
+        mockMvc.perform(put("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/charging/favorites/DE1").with(csrf())).andExpect(status().isNotFound());
     }
 
     @Test

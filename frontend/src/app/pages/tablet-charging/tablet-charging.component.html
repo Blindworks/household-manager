@@ -81,10 +81,16 @@
                 (click)="onRowTap(station)">
                 <header class="tablet-charging__row-head">
                   <span class="tablet-charging__dot" [attr.data-tone]="tone(station)"></span>
-                  <span class="tablet-charging__name">
-                    @if (station.favorite) { <span class="tablet-charging__star">★</span> }
-                    {{ station.name }}
-                  </span>
+                  <button
+                    type="button"
+                    class="tablet-charging__star-btn"
+                    [attr.aria-pressed]="station.favorite"
+                    [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
+                    [disabled]="favoriteBusyId === station.stationId"
+                    (click)="toggleFavorite(station); $event.stopPropagation()">
+                    {{ station.favorite ? '★' : '☆' }}
+                  </button>
+                  <span class="tablet-charging__name">{{ station.name }}</span>
                   <span class="tablet-charging__meta">
                     {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
                   </span>

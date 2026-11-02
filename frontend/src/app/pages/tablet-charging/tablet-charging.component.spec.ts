@@ -54,7 +54,8 @@ describe('TabletChargingComponent', () => {
   };
 
   beforeEach(async () => {
-    chargingSpy = jasmine.createSpyObj('ChargingService', ['getStations', 'refresh', 'getChargePoints', 'getForecast']);
+    chargingSpy = jasmine.createSpyObj('ChargingService',
+      ['getStations', 'refresh', 'getChargePoints', 'getForecast', 'addFavorite', 'removeFavorite']);
     chargingSpy.getChargePoints.and.returnValue(of([]));
     chargingSpy.getStations.and.returnValue(of(forecastResponse));
     chargingSpy.getForecast.and.returnValue(of(forecast));
@@ -92,6 +93,60 @@ describe('TabletChargingComponent', () => {
     expect(points.length).toBe(2);
     expect(points[0].textContent).toContain('seit');
     expect(points[1].textContent).toContain('seit mind.');
+  });
+
+  describe('Favoriten-Stern', () => {
+    const starOf = (index: number): HTMLButtonElement =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.tablet-charging__star-btn')[index];
+
+    it('zeigt je Zeile einen Stern, gefuellt nur beim Favoriten', () => {
+      expect(starOf(0).textContent?.trim()).toBe('★');
+      expect(starOf(0).getAttribute('aria-pressed')).toBe('true');
+      expect(starOf(1).textContent?.trim()).toBe('☆');
+      expect(starOf(1).getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('macht eine Station per Klick zum Favoriten, ohne die Zeile auszuwaehlen', () => {
+      const updated: ChargingStationsResponse = {
+        ...response, stations: response.stations.map(s => ({ ...s, favorite: true }))
+      };
+      chargingSpy.addFavorite.and.returnValue(of(updated));
+
+      starOf(1).click();
+      fixture.detectChanges();
+
+      expect(chargingSpy.addFavorite).toHaveBeenCalledWith('other');
+      expect(component.selectedStationId).toBeNull();
+      expect(component.detailStationId).toBeNull();
+      expect(starOf(1).textContent?.trim()).toBe('★');
+    });
+
+    it('entfernt einen Favoriten per Klick und schliesst sein offenes Detail', () => {
+      component.openDetail('fav');
+      const updated: ChargingStationsResponse = {
+        ...response, stations: response.stations.map(s => ({ ...s, favorite: false, chargePoints: undefined }))
+      };
+      chargingSpy.removeFavorite.and.returnValue(of(updated));
+
+      starOf(0).click();
+      fixture.detectChanges();
+
+      expect(chargingSpy.removeFavorite).toHaveBeenCalledWith('fav');
+      expect(component.detailStationId).toBeNull();
+    });
+
+    it('meldet einen Fehler und laesst den Stern unveraendert', () => {
+      chargingSpy.addFavorite.and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 403, error: { message: 'Verboten' } })));
+
+      starOf(1).click();
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.tablet-charging__error')?.textContent)
+        .toContain('Verboten');
+      expect(starOf(1).textContent?.trim()).toBe('☆');
+      expect(starOf(1).disabled).toBeFalse();
+    });
   });
 
   it('haelt den Kartencontainer immer im DOM und zeichnet Marker je Station', () => {

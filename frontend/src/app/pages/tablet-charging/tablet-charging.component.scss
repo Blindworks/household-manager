@@ -191,7 +191,17 @@
     text-overflow: ellipsis;
   }
 
-  &__star { color: var(--warning); margin-right: 0.2rem; }
+  &__star-btn {
+    border: none;
+    background: transparent;
+    color: var(--warning);
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0 0.15rem;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.5; cursor: default; }
+  }
 
   &__meta {
     font-size: 0.9rem;

@@ -63,6 +63,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   error: string | null = null;
   refreshing = false;
   refreshError: string | null = null;
+  /** Station, deren Stern gerade gespeichert wird (sperrt den Knopf gegen Doppeltippen). */
+  favoriteBusyId: string | null = null;
   /** Hebt die zuletzt angetippte Station in der Liste hervor. */
   selectedStationId: string | null = null;
   /** Wird minuetlich hochgezaehlt, damit die Dauer-Getter neu ausgewertet werden. */
@@ -138,6 +140,32 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
       error: (err: HttpErrorResponse) => {
         this.refreshing = false;
         this.refreshError = err.error?.message ?? 'Aktualisierung fehlgeschlagen.';
+      }
+    });
+  }
+
+  /**
+   * Stern in der Listenzeile: setzt oder entfernt den Favoriten. Die Antwort traegt die ganze
+   * Liste, sie ersetzt den Stand wie ein Refresh. Ein entfernter Favorit mit offenem Detail
+   * schliesst es - fuer Nicht-Favoriten gibt es keine Vorhersage.
+   */
+  toggleFavorite(station: ChargingStation): void {
+    this.favoriteBusyId = station.stationId;
+    this.refreshError = null;
+    const call = station.favorite
+      ? this.chargingService.removeFavorite(station.stationId)
+      : this.chargingService.addFavorite(station.stationId);
+    call.subscribe({
+      next: response => {
+        this.favoriteBusyId = null;
+        if (station.favorite && this.detailStationId === station.stationId) {
+          this.closeDetail();
+        }
+        this.apply(response);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.favoriteBusyId = null;
+        this.refreshError = err.error?.message ?? 'Favorit konnte nicht geändert werden.';
       }
     });
   }
