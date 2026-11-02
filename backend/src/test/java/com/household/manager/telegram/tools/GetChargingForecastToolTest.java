@@ -92,6 +92,25 @@ class GetChargingForecastToolTest {
     }
 
     @Test
+    void leereStationBittetUmAngabeUndListetFavoriten() throws Exception {
+        JsonNode result = run(Map.of("station", "   "));
+
+        assertEquals("Bitte eine Ladesaeule angeben.", result.get("error").asText());
+        assertEquals(2, result.get("favorites").size());
+    }
+
+    @Test
+    void fehlendeStationBittetUmAngabe() throws Exception {
+        java.util.Map<String, Object> input = new java.util.HashMap<>();
+        input.put("station", null);
+
+        JsonNode result = run(input);
+
+        assertEquals("Bitte eine Ladesaeule angeben.", result.get("error").asText());
+        assertEquals(2, result.get("favorites").size());
+    }
+
+    @Test
     void zuWenigDatenWirdGemeldet() throws Exception {
         when(forecasts.latest("2")).thenReturn(Optional.of(new ChargingForecast(
                 ChargingForecast.Status.INSUFFICIENT_DATA, 3, Map.of(), List.of(), null, null, new Double[7][24])));

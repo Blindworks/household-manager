@@ -70,15 +70,18 @@ public class GetChargingForecastTool implements AgentTool {
     @Override
     public String execute(Map<String, Object> input) throws Exception {
         List<ChargingFavorite> favorites = favoriteService.list();
-        String query = String.valueOf(input.getOrDefault("station", "")).trim().toLowerCase(Locale.ROOT);
+        Object rawStation = input.get("station");
+        String query = rawStation == null ? "" : String.valueOf(rawStation).trim().toLowerCase(Locale.ROOT);
+        if (query.isEmpty()) {
+            return stationError(favorites, "Bitte eine Ladesaeule angeben.");
+        }
         List<ChargingFavorite> matches = favorites.stream()
                 .filter(f -> f.getDisplayName() != null
                         && f.getDisplayName().toLowerCase(Locale.ROOT).contains(query))
                 .toList();
-        if (query.isEmpty() || matches.size() != 1) {
-            String problem = matches.isEmpty() ? "Keine Ladesaeule gefunden." : "Mehrere Ladesaeulen passen.";
-            return json.writeValueAsString(Map.of("error", problem,
-                    "favorites", favorites.stream().map(ChargingFavorite::getDisplayName).toList()));
+        if (matches.size() != 1) {
+            return stationError(favorites,
+                    matches.isEmpty() ? "Keine Ladesaeule gefunden." : "Mehrere Ladesaeulen passen.");
         }
 
         Optional<LocalTime> at = Optional.empty();
@@ -91,6 +94,11 @@ public class GetChargingForecastTool implements AgentTool {
             }
         }
         return json.writeValueAsString(describe(matches.get(0), at));
+    }
+
+    private String stationError(List<ChargingFavorite> favorites, String problem) throws Exception {
+        return json.writeValueAsString(Map.of("error", problem,
+                "favorites", favorites.stream().map(ChargingFavorite::getDisplayName).toList()));
     }
 
     private Map<String, Object> describe(ChargingFavorite favorite, Optional<LocalTime> at) {
