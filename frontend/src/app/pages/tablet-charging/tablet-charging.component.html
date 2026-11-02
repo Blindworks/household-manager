@@ -81,18 +81,24 @@
                 (click)="onRowTap(station)">
                 <header class="tablet-charging__row-head">
                   <span class="tablet-charging__dot" [attr.data-tone]="tone(station)"></span>
-                  <button
-                    type="button"
-                    class="tablet-charging__star-btn"
-                    [attr.aria-pressed]="station.favorite"
-                    [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
-                    [disabled]="favoriteBusyId === station.stationId"
-                    (click)="toggleFavorite(station); $event.stopPropagation()">
-                    {{ station.favorite ? '★' : '☆' }}
-                  </button>
+                  @if (!station.supercharger) {
+                    <button
+                      type="button"
+                      class="tablet-charging__star-btn"
+                      [attr.aria-pressed]="station.favorite"
+                      [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
+                      [disabled]="favoriteBusyId === station.stationId"
+                      (click)="toggleFavorite(station); $event.stopPropagation()">
+                      {{ station.favorite ? '★' : '☆' }}
+                    </button>
+                  }
                   <span class="tablet-charging__name">{{ station.name }}</span>
                   <span class="tablet-charging__meta">
-                    {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
+                    @if (station.supercharger) {
+                      {{ superchargerText(station) }} · {{ distance(station.distanceMeters) }}
+                    } @else {
+                      {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
+                    }
                   </span>
                 </header>
                 @if (station.favorite) {
@@ -100,9 +106,10 @@
                     <p class="tablet-charging__forecast">{{ line }}</p>
                   }
                 }
-                @if (station.operator || station.pricePerKwh !== undefined) {
+                @if (station.operator || station.pricePerKwh !== undefined || station.teslaOnly) {
                   <p class="tablet-charging__sub">
                     @if (station.operator) { <span class="tablet-charging__operator">{{ station.operator }}</span> }
+                    @if (station.teslaOnly) { <span class="tablet-charging__tesla-only">nur Tesla</span> }
                     @if (station.pricePerKwh !== undefined) {
                       <span class="tablet-charging__price">{{ price(station.pricePerKwh) }}</span>
                     }
@@ -125,6 +132,9 @@
                   </ul>
                 }
               </article>
+            }
+            @if (hasSupercharger) {
+              <p class="tablet-charging__source">Supercharger-Daten: supercharge.info</p>
             }
           }
         </aside>

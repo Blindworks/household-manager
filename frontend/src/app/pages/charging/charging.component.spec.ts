@@ -129,6 +129,56 @@ describe('ChargingComponent', () => {
     expect(chargingSpy.getChargePoints).not.toHaveBeenCalled();
   });
 
+  describe('Supercharger', () => {
+    const withSupercharger: ChargingStationsResponse = {
+      ...response,
+      stations: [
+        ...response.stations,
+        { stationId: 'sc-7', name: 'Tesla Supercharger Pfungstadt', operator: 'Tesla',
+          address: 'Hahnstr. 1, Pfungstadt', lat: 50.03, lon: 8.0, distanceMeters: 3300, maxPowerKw: 250,
+          total: 15, free: 0, favorite: false, supercharger: true, teslaOnly: true }
+      ]
+    };
+
+    const scRow = (): HTMLElement => Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.charging-page__row'))
+      .find(r => r.textContent?.includes('Tesla Supercharger Pfungstadt'))!;
+
+    beforeEach(() => {
+      component.data = withSupercharger;
+      fixture.detectChanges();
+    });
+
+    it('zeigt Standortdaten mit "Belegung unbekannt" statt frei/gesamt und kennzeichnet nur Tesla', () => {
+      const text = scRow().textContent ?? '';
+      expect(text).toContain('15 Plätze · bis 250 kW · Belegung unbekannt');
+      expect(text).toContain('nur Tesla');
+      expect(text).not.toContain('frei');
+    });
+
+    it('hat keinen Stern-Knopf', () => {
+      expect(scRow().querySelector('.charging-page__star-btn')).toBeNull();
+    });
+
+    it('laedt beim Antippen keine Ladepunkte', () => {
+      chargingSpy.getChargePoints.calls.reset();
+
+      scRow().click();
+      fixture.detectChanges();
+
+      expect(chargingSpy.getChargePoints).not.toHaveBeenCalled();
+    });
+
+    it('nennt unter der Liste die Datenquelle, aber nur mit mindestens einem Supercharger', () => {
+      const note = () => (fixture.nativeElement as HTMLElement).querySelector('.charging-page__source');
+      expect(note()?.textContent).toContain('Supercharger-Daten: supercharge.info');
+
+      component.data = response;
+      fixture.detectChanges();
+      expect(note()).toBeNull();
+    });
+  });
+
   it('haelt den Kartencontainer im DOM und zeichnet Marker', () => {
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('.leaflet-container')).not.toBeNull();

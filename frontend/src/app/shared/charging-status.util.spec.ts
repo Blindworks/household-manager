@@ -3,6 +3,7 @@ import {
   formatPower,
   formatPrice,
   stationTone,
+  superchargerMeta,
   sortStations,
   withChargePoints
 } from './charging-status.util';
@@ -28,6 +29,22 @@ describe('charging-status.util', () => {
 
     it('ist grau ohne Ladepunkte (ausser Betrieb oder unbekannt)', () => {
       expect(stationTone(station({ free: 0, total: 0 }))).toBe('unknown');
+    });
+
+    it('ist bei Superchargern neutral grau, obwohl nie ein Platz als frei gemeldet wird', () => {
+      expect(stationTone(station({ supercharger: true, free: 0, total: 15 }))).toBe('unknown');
+    });
+  });
+
+  describe('superchargerMeta', () => {
+    it('nennt Plaetze, Leistung und dass die Belegung unbekannt ist', () => {
+      expect(superchargerMeta(station({ supercharger: true, total: 15, maxPowerKw: 250 })))
+        .toBe('15 Plätze · bis 250 kW · Belegung unbekannt');
+    });
+
+    it('laesst die Leistung ohne Angabe weg', () => {
+      expect(superchargerMeta(station({ supercharger: true, total: 15 })))
+        .toBe('15 Plätze · Belegung unbekannt');
     });
   });
 
@@ -105,6 +122,22 @@ describe('charging-status.util', () => {
       expect((html.match(/0,34 €\/kWh/g) ?? []).length).toBe(2);
     });
 
+    it('zeigt bei Superchargern Standortdaten statt frei/gesamt und markiert nur-Tesla', () => {
+      const html = stationPopupText(station({
+        name: 'Tesla Supercharger Pfungstadt', operator: 'Tesla', address: 'Hahnstr. 1, Pfungstadt',
+        supercharger: true, teslaOnly: true, total: 15, free: 0, maxPowerKw: 250
+      }));
+      expect(html).toContain('Tesla Supercharger Pfungstadt');
+      expect(html).toContain('15 Plätze · bis 250 kW · Belegung unbekannt');
+      expect(html).toContain('nur Tesla');
+      expect(html).not.toContain('frei');
+    });
+
+    it('laesst "nur Tesla" bei offenen Superchargern weg', () => {
+      const html = stationPopupText(station({ supercharger: true, total: 6 }));
+      expect(html).not.toContain('nur Tesla');
+    });
+
     it('zeigt ohne Ladepunkte keine Liste', () => {
       expect(stationPopupText(station({}))).not.toContain('charging-popup__points');
     });
@@ -129,6 +162,14 @@ describe('charging-status.util', () => {
       const dot = stationIcon(station({})).options;
       expect(dot.iconAnchor).toEqual(MARKER_GEOMETRY.dot.anchor);
       expect(dot.iconAnchor).toEqual([15, 15]);
+    });
+  });
+
+  describe('stationIcon fuer Supercharger', () => {
+    it('zeigt statt einer Freizahl einen Strich im neutralen Ton', () => {
+      const icon = stationIcon(station({ supercharger: true, total: 15, free: 0 }), 'pin').options;
+      expect(icon.className).toContain('charging-marker--unknown');
+      expect(icon.html as string).toContain('–');
     });
   });
 

@@ -6,11 +6,22 @@ import { ChargePoint, ChargingStation } from '../models/charging.model';
  */
 export type StationTone = 'free' | 'busy' | 'unknown';
 
-export function stationTone(station: Pick<ChargingStation, 'free' | 'total'>): StationTone {
-  if (station.total <= 0) {
+export function stationTone(station: Pick<ChargingStation, 'free' | 'total' | 'supercharger'>): StationTone {
+  // Supercharger melden nie eine Belegung: "0 frei" waere Rot, aber nichts ist bekannt.
+  if (station.supercharger || station.total <= 0) {
     return 'unknown';
   }
   return station.free > 0 ? 'free' : 'busy';
+}
+
+/** "15 Plätze · bis 250 kW · Belegung unbekannt" - alles, was ein Supercharger-Standort hergibt. */
+export function superchargerMeta(station: Pick<ChargingStation, 'total' | 'maxPowerKw'>): string {
+  const parts = [`${station.total} Plätze`];
+  if (station.maxPowerKw !== undefined && station.maxPowerKw !== null) {
+    parts.push(`bis ${Math.round(station.maxPowerKw)} kW`);
+  }
+  parts.push('Belegung unbekannt');
+  return parts.join(' · ');
 }
 
 /**

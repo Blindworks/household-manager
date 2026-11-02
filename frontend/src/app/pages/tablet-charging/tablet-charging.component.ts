@@ -11,7 +11,7 @@ import {
   ChargePoint, ChargingForecast, ChargingPointForecast, ChargingStation, ChargingStationsResponse
 } from '../../models/charging.model';
 import {
-  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
+  formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, superchargerMeta, withChargePoints
 } from '../../shared/charging-status.util';
 import {
   HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel, occupiedSinceText
@@ -293,7 +293,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
    */
   private loadChargePoints(stationId: string): void {
     const station = this.data?.stations.find(s => s.stationId === stationId);
-    if (!station || station.chargePoints) {
+    // Supercharger kennen nur den Standort: das Backend lehnt Ladepunkte fuer sie mit 400 ab.
+    if (!station || station.supercharger || station.chargePoints) {
       this.loadedChargePoints.delete(stationId);
       return;
     }
@@ -339,6 +340,14 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
         element.classList.toggle('charging-marker--selected', stationId === this.selectedStationId);
       }
     }
+  }
+
+  get hasSupercharger(): boolean {
+    return !!this.data?.stations.some(s => s.supercharger);
+  }
+
+  superchargerText(station: ChargingStation): string {
+    return superchargerMeta(station);
   }
 
   tone(station: ChargingStation): string {

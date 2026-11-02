@@ -37,23 +37,30 @@
                 <span class="charging-page__dot" [attr.data-tone]="tone(station)"></span>
                 <span class="charging-page__name">{{ station.name }}</span>
                 <span class="charging-page__meta">
-                  {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
+                  @if (station.supercharger) {
+                    {{ superchargerText(station) }} · {{ distance(station.distanceMeters) }}
+                  } @else {
+                    {{ station.free }}/{{ station.total }} frei · {{ power(station.maxPowerKw) }} · {{ distance(station.distanceMeters) }}
+                  }
                 </span>
-                <button
-                  type="button"
-                  class="charging-page__star-btn"
-                  [attr.aria-pressed]="station.favorite"
-                  [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
-                  [disabled]="busyStationId === station.stationId"
-                  (click)="toggleFavorite(station); $event.stopPropagation()">
-                  {{ station.favorite ? '★' : '☆' }}
-                </button>
+                @if (!station.supercharger) {
+                  <button
+                    type="button"
+                    class="charging-page__star-btn"
+                    [attr.aria-pressed]="station.favorite"
+                    [attr.aria-label]="station.favorite ? 'Favorit entfernen' : 'Als Favorit merken'"
+                    [disabled]="busyStationId === station.stationId"
+                    (click)="toggleFavorite(station); $event.stopPropagation()">
+                    {{ station.favorite ? '★' : '☆' }}
+                  </button>
+                }
               </div>
-              @if (station.operator || station.address || station.pricePerKwh !== undefined) {
+              @if (station.operator || station.address || station.pricePerKwh !== undefined || station.teslaOnly) {
                 <p class="charging-page__address">
                   @if (station.operator) { <span class="charging-page__operator">{{ station.operator }}</span> }
                   @if (station.operator && station.address) { · }
                   {{ station.address }}
+                  @if (station.teslaOnly) { <span class="charging-page__tesla-only">nur Tesla</span> }
                   @if (station.pricePerKwh !== undefined) {
                     <span class="charging-page__price">{{ price(station.pricePerKwh) }}</span>
                   }
@@ -72,6 +79,9 @@
                 </ul>
               }
             </article>
+          }
+          @if (hasSupercharger) {
+            <p class="charging-page__source">Supercharger-Daten: supercharge.info</p>
           }
         }
       </div>

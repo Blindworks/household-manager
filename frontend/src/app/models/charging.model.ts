@@ -60,6 +60,10 @@ export interface ChargingStation {
   chargePoints?: ChargePoint[];
   /** Nur bei Favoriten gefuellt. */
   forecast?: ChargingForecastSummary;
+  /** Nur bei Tesla-Superchargern (supercharge.info): Standort ohne Belegung, Id mit Praefix `sc-`. */
+  supercharger?: boolean;
+  /** Nur bei Superchargern gesetzt, wenn fremde Fahrzeuge dort nicht laden duerfen. */
+  teslaOnly?: boolean;
 }
 
 export interface ChargingStationsResponse {

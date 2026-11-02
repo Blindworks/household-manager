@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import { ChargePoint, ChargingStation } from '../models/charging.model';
-import { formatOccupiedDuration, formatPower, formatPrice, stationTone } from './charging-status.util';
+import { formatOccupiedDuration, formatPower, formatPrice, stationTone, superchargerMeta } from './charging-status.util';
 
 /**
  * Marker-Icon einer Ladesaeule: farbiger Kreis mit der Zahl freier Ladepunkte, Stern bei
@@ -26,7 +26,7 @@ export const MARKER_GEOMETRY: Record<MarkerShape, { size: [number, number]; anch
  */
 export function stationIcon(station: ChargingStation, shape: MarkerShape = 'dot'): L.DivIcon {
   const tone = stationTone(station);
-  const label = station.total > 0 ? String(station.free) : '–';
+  const label = station.total > 0 && !station.supercharger ? String(station.free) : '–';
   const geometry = MARKER_GEOMETRY[shape];
   return L.divIcon({
     className: `charging-marker charging-marker--${shape} charging-marker--${tone}`
@@ -45,6 +45,9 @@ export function stationIcon(station: ChargingStation, shape: MarkerShape = 'dot'
  * werden escaped - Betreiber- und Adresstexte kommen von einem Fremdsystem.
  */
 export function stationPopupText(station: ChargingStation, now: Date = new Date()): string {
+  if (station.supercharger) {
+    return superchargerPopupText(station);
+  }
   const tone = stationTone(station);
   const facts = [
     `<div class="charging-popup__fact"><span class="charging-popup__value charging-popup__value--${tone}">`
@@ -63,6 +66,16 @@ export function stationPopupText(station: ChargingStation, now: Date = new Date(
     + (subtitle ? `<div class="charging-popup__subtitle">${subtitle}</div>` : '')
     + `<div class="charging-popup__facts">${facts.join('')}</div>`
     + chargePointsHtml(station.chargePoints, now)
+    + `</div>`;
+}
+
+/** Supercharger: Name, Adresse und eine Zeile Standortdaten - keine Freizahl, die gibt es nicht. */
+function superchargerPopupText(station: ChargingStation): string {
+  const meta = superchargerMeta(station) + (station.teslaOnly ? ' · nur Tesla' : '');
+  return `<div class="charging-popup">`
+    + `<div class="charging-popup__title">${escapeHtml(station.name)}</div>`
+    + (station.address ? `<div class="charging-popup__subtitle">${escapeHtml(station.address)}</div>` : '')
+    + `<div class="charging-popup__subtitle">${escapeHtml(meta)}</div>`
     + `</div>`;
 }
 
