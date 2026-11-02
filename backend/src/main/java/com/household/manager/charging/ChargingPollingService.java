@@ -50,6 +50,12 @@ public class ChargingPollingService {
 
     /** Zuletzt erfolgreich gemeldete Updates je Station; Basis fuer unavailable mit erhaltenen Attributen. */
     private final Map<String, EntityStateUpdate> lastReported = new HashMap<>();
+
+    /**
+     * Letzte Beobachtung je Station (nur im Speicher). Die Gutschrift ist der tatsaechliche Abstand,
+     * hoechstens das Poll-Intervall - sonst blaehte ein manueller Refresh die Beobachtungszeit auf.
+     */
+    private final Map<String, Instant> lastObservedAt = new HashMap<>();
     private volatile Instant lastForcedRefreshAt;
 
     public ChargingPollingService(ChargingProperties properties, ChargingStationSource source,
@@ -201,8 +207,16 @@ public class ChargingPollingService {
     private void recordObservation(String stationId, ChargingStationDetails stationDetails) {
         int free = countWithStatus(stationDetails, ChargePointStatus.FREE);
         int occupied = countWithStatus(stationDetails, ChargePointStatus.OCCUPIED);
-        historyRecorder.recordObservation(stationId, clock.instant(), (int) properties.getFavoritePollSeconds(),
-                free, occupied);
+        Instant now = clock.instant();
+        long pollSeconds = properties.getFavoritePollSeconds();
+        Instant previous = lastObservedAt.put(stationId, now);
+        long observedSeconds = previous == null
+                ? pollSeconds
+                : Math.min(Math.max(0, Duration.between(previous, now).getSeconds()), pollSeconds);
+        if (observedSeconds <= 0) {
+            return;
+        }
+        historyRecorder.recordObservation(stationId, now, (int) observedSeconds, free, occupied);
     }
 
     private static int countWithStatus(ChargingStationDetails details, ChargePointStatus status) {

@@ -128,6 +128,56 @@ class ChargingPollingServiceTest {
     }
 
     @Test
+    void beobachtungsgutschriftFolgtDemTatsaechlichenAbstand() {
+        Instant[] current = {NOW};
+        Clock movable = new Clock() {
+            @Override
+            public java.time.ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(java.time.ZoneId zone) {
+                return this;
+            }
+
+            @Override
+            public Instant instant() {
+                return current[0];
+            }
+        };
+        service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
+                snapshot, new ChargingEntityMapper(movable), entityStateService, movable, jobMonitor,
+                historyRecorder, forecastService);
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
+        when(tracker.occupancyFor("S1")).thenReturn(Map.of());
+
+        service.pollFavorites();
+        current[0] = NOW.plusSeconds(15);
+        service.pollFavorites();
+        current[0] = NOW.plusSeconds(15 + 300);
+        service.pollFavorites();
+
+        verify(historyRecorder).recordObservation("S1", NOW, 60, 1, 0);
+        verify(historyRecorder).recordObservation("S1", NOW.plusSeconds(15), 15, 1, 0);
+        verify(historyRecorder).recordObservation("S1", NOW.plusSeconds(315), 60, 1, 0);
+    }
+
+    @Test
+    void zweiterPollImSelbenAugenblickSchreibtKeineBeobachtung() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
+        when(tracker.occupancyFor("S1")).thenReturn(Map.of());
+
+        service.pollFavorites();
+        service.pollFavorites();
+
+        verify(historyRecorder, times(1)).recordObservation(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
     void keineBeobachtungBeiAbruffehler() {
         when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
         when(source.stationDetails("S1")).thenThrow(new ChargingSourceException("weg"));
