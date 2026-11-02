@@ -351,6 +351,17 @@ describe('TabletChargingComponent', () => {
       expect(host().querySelectorAll('.tablet-charging__heat-cell').length).toBe(168);
     });
 
+    it('faerbtBelegungsanteilNiedrigGruenUndHochRot', () => {
+      const heatmap = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0.1 as number | null));
+      heatmap[0][1] = 0.9;
+      chargingSpy.getForecast.and.returnValue(of({ ...forecast, heatmap }));
+      component.openDetail('fav');
+      fixture.detectChanges();
+      const cells = host().querySelectorAll('.tablet-charging__heat-cell');
+      expect(cells[0].getAttribute('data-level')).toBe('low');
+      expect(cells[1].getAttribute('data-level')).toBe('full');
+    });
+
     it('heatmapHat168Zellen', () => {
       component.openDetail('fav');
       fixture.detectChanges();
