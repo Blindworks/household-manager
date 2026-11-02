@@ -5,7 +5,12 @@ import com.household.manager.model.entity.ChargingPointOccupancy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.household.manager.charging.forecast.ChargingForecast;
+import com.household.manager.charging.forecast.ChargingForecastService;
 import org.mockito.Mock;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.Optional;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
@@ -16,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +36,8 @@ class ChargingQueryServiceTest {
     private ChargingFavoriteService favoriteService;
     @Mock
     private ChargingOccupancyTracker tracker;
+    @Mock
+    private ChargingForecastService forecastService;
 
     private ChargingSnapshot snapshot;
     private ChargingQueryService service;
@@ -38,7 +46,7 @@ class ChargingQueryServiceTest {
     void setUp() {
         snapshot = new ChargingSnapshot();
         service = new ChargingQueryService(settingsService, favoriteService, tracker, snapshot,
-                Clock.fixed(NOW, BERLIN));
+                forecastService, Clock.fixed(NOW, BERLIN));
     }
 
     @Test
@@ -115,5 +123,74 @@ class ChargingQueryServiceTest {
         assertThat(weit.free()).isEqualTo(0);
         assertThat(weit.chargePoints().get(0).minimumDuration()).isTrue();
         assertThat(weit.chargePoints().get(0).occupiedSince()).isEqualTo(LocalDateTime.ofInstant(NOW, BERLIN));
+    }
+
+    private ChargingFavorite favorite(String id) {
+        return ChargingFavorite.builder().stationId(id).displayName("Lidl").operator("Lidl")
+                .lat(50.08).lon(8.0).createdAt(NOW).build();
+    }
+
+    @Test
+    void favoritBekommtZusammenfassung() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
+        when(favoriteService.list()).thenReturn(List.of(favorite("fav")));
+        Instant at = Instant.parse("2026-09-19T10:20:00Z");
+        Instant latest = Instant.parse("2026-09-19T10:50:00Z");
+        when(forecastService.latest("fav")).thenReturn(Optional.of(new ChargingForecast(
+                ChargingForecast.Status.OK, 20, Map.of(15, 40, 30, 62, 60, 80), List.of(), at, latest,
+                new Double[7][24])));
+
+        ChargingDtos.ForecastSummary summary = service.stations().stations().get(0).forecast();
+
+        assertThat(summary.status()).isEqualTo("OK");
+        assertThat(summary.freeProbability30min()).isEqualTo(62);
+        assertThat(summary.expectedFreeAt()).isEqualTo(LocalDateTime.ofInstant(at, BERLIN));
+        assertThat(summary.expectedFreeLatest()).isEqualTo(LocalDateTime.ofInstant(latest, BERLIN));
+        assertThat(summary.observedDays()).isEqualTo(20L);
+    }
+
+    @Test
+    void favoritOhneStandBekommtZuWenigDatenZusammenfassung() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
+        when(favoriteService.list()).thenReturn(List.of(favorite("fav")));
+        when(forecastService.latest("fav")).thenReturn(Optional.empty());
+
+        ChargingDtos.ForecastSummary summary = service.stations().stations().get(0).forecast();
+
+        assertThat(summary.status()).isEqualTo("INSUFFICIENT_DATA");
+        assertThat(summary.observedDays()).isZero();
+        assertThat(summary.freeProbability30min()).isNull();
+    }
+
+    @Test
+    void nichtFavoritOhneZusammenfassung() {
+        when(settingsService.getSettings()).thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
+        when(favoriteService.list()).thenReturn(List.of());
+        snapshot.updateArea(List.of(new ChargingStation("x", "X", null, null, 50.01, 8.0, 150.0, 2, 2)), NOW);
+
+        assertThat(service.stations().stations().get(0).forecast()).isNull();
+    }
+
+    @Test
+    void forecastFuerUnbekanntenFavoriten404() {
+        when(favoriteService.list()).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.forecast("nope"))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void forecastOhneStandZuWenigDaten() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("fav")));
+        when(forecastService.latest("fav")).thenReturn(Optional.empty());
+
+        ChargingDtos.ForecastResponse response = service.forecast("fav");
+
+        assertThat(response.status()).isEqualTo("INSUFFICIENT_DATA");
+        assertThat(response.observedDays()).isZero();
+        assertThat(response.heatmap()).hasDimensions(7, 24);
+        assertThat(response.heatmap()[3][5]).isNull();
+        assertThat(response.points()).isEmpty();
     }
 }

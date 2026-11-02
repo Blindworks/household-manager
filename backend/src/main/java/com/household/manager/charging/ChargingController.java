@@ -37,6 +37,12 @@ public class ChargingController {
         return ResponseEntity.ok(detailsService.chargePoints(stationId));
     }
 
+    /** Vorhersage einer Favoritenstation (404 sonst); KIOSK ueber die generische GET-Regel. */
+    @GetMapping("/stations/{stationId}/forecast")
+    public ResponseEntity<ChargingDtos.ForecastResponse> forecast(@PathVariable String stationId) {
+        return ResponseEntity.ok(queryService.forecast(stationId));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ChargingDtos.StationsResponse> refresh() {
         pollingService.refreshNow();

@@ -2,8 +2,12 @@ package com.household.manager.charging;
 
 import com.household.manager.model.entity.ChargingFavorite;
 import com.household.manager.model.entity.ChargingPointOccupancy;
+import com.household.manager.charging.forecast.ChargingForecast;
+import com.household.manager.charging.forecast.ChargingForecastService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -24,10 +28,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ChargingQueryService {
 
+    private static final String INSUFFICIENT_DATA = "INSUFFICIENT_DATA";
+
     private final ChargingSettingsService settingsService;
     private final ChargingFavoriteService favoriteService;
     private final ChargingOccupancyTracker tracker;
     private final ChargingSnapshot snapshot;
+    private final ChargingForecastService forecastService;
     private final Clock clock;
 
     public ChargingDtos.StationsResponse stations() {
@@ -63,7 +70,7 @@ public class ChargingQueryService {
     private ChargingDtos.StationResponse areaRow(ChargingStation s, double homeLat, double homeLon) {
         long distance = Math.round(ChargingAreaFilter.distanceMeters(homeLat, homeLon, s.lat(), s.lon()));
         return new ChargingDtos.StationResponse(s.stationId(), s.name(), s.operator(), s.address(), s.lat(), s.lon(),
-                distance, s.maxPowerKw(), null, s.total(), s.free(), false, null);
+                distance, s.maxPowerKw(), null, s.total(), s.free(), false, null, null);
     }
 
     /** Stammdaten aus dem Umkreis-Stand, wenn vorhanden; sonst die beim Favorisieren gespeicherten. */
@@ -94,7 +101,36 @@ public class ChargingQueryService {
                 .orElse(null);
 
         return new ChargingDtos.StationResponse(favorite.getStationId(), name, operator, address, lat, lon,
-                distance, maxPower, minPrice, total, free, true, points);
+                distance, maxPower, minPrice, total, free, true, points,
+                summary(forecastService.latest(favorite.getStationId())));
+    }
+
+    /** Vorhersage einer Favoritenstation; Nicht-Favoriten haben keine (404). */
+    public ChargingDtos.ForecastResponse forecast(String stationId) {
+        boolean favorite = favoriteService.list().stream().anyMatch(f -> stationId.equals(f.getStationId()));
+        if (!favorite) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Keine Favoritenstation: " + stationId);
+        }
+        return forecastService.latest(stationId).map(f -> toResponse(stationId, f))
+                .orElseGet(() -> new ChargingDtos.ForecastResponse(stationId, INSUFFICIENT_DATA, 0, Map.of(),
+                        List.of(), new Double[7][24]));
+    }
+
+    private ChargingDtos.ForecastResponse toResponse(String stationId, ChargingForecast f) {
+        List<ChargingDtos.PointForecastResponse> points = f.points().stream()
+                .map(p -> new ChargingDtos.PointForecastResponse(p.chargePointId(), local(p.occupiedSince()),
+                        local(p.expectedFreeAt()), local(p.expectedFreeLatest())))
+                .toList();
+        return new ChargingDtos.ForecastResponse(stationId, f.status().name(), f.observedDays(),
+                f.freeProbabilityPercent(), points, f.heatmap());
+    }
+
+    private ChargingDtos.ForecastSummary summary(Optional<ChargingForecast> forecast) {
+        return forecast
+                .map(f -> new ChargingDtos.ForecastSummary(f.status().name(),
+                        f.freeProbabilityPercent().get(30), local(f.expectedFreeAt()),
+                        local(f.expectedFreeLatest()), f.observedDays()))
+                .orElseGet(() -> new ChargingDtos.ForecastSummary(INSUFFICIENT_DATA, null, null, null, 0L));
     }
 
     /**
