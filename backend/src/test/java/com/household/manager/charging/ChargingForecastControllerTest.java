@@ -36,6 +36,8 @@ class ChargingForecastControllerTest {
     @MockitoBean
     private ChargingStationDetailsService detailsService;
     @MockitoBean
+    private ChargingAreaSearchService searchService;
+    @MockitoBean
     private AppUserRepository appUserRepository;
     @MockitoBean
     private ServiceTokenService serviceTokenService;
@@ -79,6 +81,27 @@ class ChargingForecastControllerTest {
     void direktpreisRouteLehntSuperchargerAb() throws Exception {
         mockMvc.perform(put("/v1/charging/favorites/sc-12/price")
                         .contentType("application/json").content("{\"pricePerKwh\":0.39}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void sucheRouteReichtDenAusschnittAnDenServiceUndLiefertDieErgebnisse() throws Exception {
+        when(searchService.search(new BoundingBox(49.99, 50.01, 7.99, 8.01)))
+                .thenReturn(new ChargingDtos.SearchResponse(LocalDateTime.of(2026, 11, 2, 11, 0), List.of(
+                        new ChargingDtos.StationResponse("S1", "Name", "Op", null, 50.0, 8.0, 120L, 150.0, null,
+                                null, 4, 2, false, null, null, null, null))));
+
+        mockMvc.perform(get("/v1/charging/search")
+                        .param("fromLat", "49.99").param("toLat", "50.01")
+                        .param("fromLon", "7.99").param("toLon", "8.01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.searchedAt").value("2026-11-02T11:00:00"))
+                .andExpect(jsonPath("$.stations[0].stationId").value("S1"));
+    }
+
+    @Test
+    void sucheRouteOhneAusschnittIstEinFehler() throws Exception {
+        mockMvc.perform(get("/v1/charging/search").param("fromLat", "49.99"))
                 .andExpect(status().isBadRequest());
     }
 }

@@ -12,9 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,13 +41,17 @@ class ChargingFavoriteServiceTest {
     private ChargingPatternService patternService;
 
     private ChargingSnapshot snapshot;
+    private ChargingSearchResultsTest.MutableClock clock;
+    private ChargingSearchResults searchResults;
     private ChargingFavoriteService service;
 
     @BeforeEach
     void setUp() {
         snapshot = new ChargingSnapshot();
+        clock = new ChargingSearchResultsTest.MutableClock(NOW);
+        searchResults = new ChargingSearchResults(clock);
         service = new ChargingFavoriteService(repository, tracker, snapshot, auditService,
-                Clock.fixed(NOW, ZoneOffset.UTC), forecastService, patternService);
+                clock, forecastService, patternService, searchResults);
     }
 
     @Test
@@ -74,6 +76,42 @@ class ChargingFavoriteServiceTest {
         assertThatThrownBy(() -> service.add("fremd"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("nicht in der aktuellen Umkreisliste");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void eineStationAusDerLetztenBereichssucheLaesstSichFavorisieren() {
+        searchResults.remember(List.of(new ChargingStation("F1", "Fern", "Aral", "Weg 2", 51.0, 9.0, 150.0, 2, 1)));
+        when(repository.existsByStationId("F1")).thenReturn(false);
+
+        service.add("F1");
+
+        ArgumentCaptor<ChargingFavorite> captor = ArgumentCaptor.forClass(ChargingFavorite.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getStationId()).isEqualTo("F1");
+        assertThat(captor.getValue().getDisplayName()).isEqualTo("Fern");
+        assertThat(captor.getValue().getLat()).isEqualTo(51.0);
+    }
+
+    @Test
+    void derUmkreisStandGewinntGegenDieBereichssuche() {
+        snapshot.updateArea(List.of(new ChargingStation("S1", "Umkreis", null, null, 50.0, 8.0, 150.0, 2, 1)), NOW);
+        searchResults.remember(List.of(new ChargingStation("S1", "Suche", null, null, 51.0, 9.0, 150.0, 2, 1)));
+        when(repository.existsByStationId("S1")).thenReturn(false);
+
+        service.add("S1");
+
+        ArgumentCaptor<ChargingFavorite> captor = ArgumentCaptor.forClass(ChargingFavorite.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getDisplayName()).isEqualTo("Umkreis");
+    }
+
+    @Test
+    void nachDreissigMinutenLaesstSichEineSuchstationNichtMehrFavorisieren() {
+        searchResults.remember(List.of(new ChargingStation("F1", "Fern", null, null, 51.0, 9.0, 150.0, 2, 1)));
+        clock.advance(java.time.Duration.ofMinutes(31));
+
+        assertThatThrownBy(() -> service.add("F1")).isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).save(any());
     }
 

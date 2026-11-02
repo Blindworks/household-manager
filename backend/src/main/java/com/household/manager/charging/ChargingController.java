@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,6 +29,7 @@ public class ChargingController {
     private final ChargingPollingService pollingService;
     private final ChargingFavoriteService favoriteService;
     private final ChargingStationDetailsService detailsService;
+    private final ChargingAreaSearchService searchService;
 
     @GetMapping("/stations")
     public ResponseEntity<ChargingDtos.StationsResponse> stations() {
@@ -46,6 +48,15 @@ public class ChargingController {
     public ResponseEntity<ChargingDtos.ForecastResponse> forecast(@PathVariable String stationId) {
         rejectSupercharger(stationId);
         return ResponseEntity.ok(queryService.forecast(stationId));
+    }
+
+    /** Einmalige Suche im sichtbaren Kartenausschnitt (Tablet); KIOSK ueber die generische GET-Regel. */
+    @GetMapping("/search")
+    public ResponseEntity<ChargingDtos.SearchResponse> search(@RequestParam double fromLat,
+                                                              @RequestParam double toLat,
+                                                              @RequestParam double fromLon,
+                                                              @RequestParam double toLon) {
+        return ResponseEntity.ok(searchService.search(new BoundingBox(fromLat, toLat, fromLon, toLon)));
     }
 
     @PostMapping("/refresh")

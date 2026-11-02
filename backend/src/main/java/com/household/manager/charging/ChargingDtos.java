@@ -29,6 +29,10 @@ public final class ChargingDtos {
                                   Boolean supercharger, Boolean teslaOnly) {
     }
 
+    /** Antwort von GET /search: Zeitpunkt der Suche und die Stationen im Ausschnitt, nach Entfernung. */
+    public record SearchResponse(LocalDateTime searchedAt, List<StationResponse> stations) {
+    }
+
     /** Body von PUT /favorites/{id}/price; pricePerKwh null loescht Preis und Notiz. */
     public record DirectPriceRequest(Double pricePerKwh, String note) {
     }

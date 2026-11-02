@@ -35,15 +35,16 @@ public class ChargingFavoriteService {
     private final Clock clock;
     private final ChargingForecastService forecastService;
     private final ChargingPatternService patternService;
+    private final ChargingSearchResults searchResults;
 
     public List<ChargingFavorite> list() {
         return repository.findAllByOrderByCreatedAtAscIdAsc();
     }
 
-    /** Nur eine Station aus dem aktuellen Umkreis-Stand ist favorisierbar (400 sonst). */
+    /** Favorisierbar: Umkreis-Stand oder letzte Bereichssuche (400 sonst). */
     @Transactional
     public void add(String stationId) {
-        ChargingStation station = snapshot.station(stationId).orElseThrow(() ->
+        ChargingStation station = snapshot.station(stationId).or(() -> searchResults.find(stationId)).orElseThrow(() ->
                 new IllegalArgumentException("Die Station " + stationId
                         + " ist nicht in der aktuellen Umkreisliste und kann nicht favorisiert werden."));
         if (repository.existsByStationId(stationId)) {

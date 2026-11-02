@@ -1,6 +1,7 @@
 package com.household.manager.charging.supercharger;
 
 import com.household.manager.charging.ChargingController;
+import com.household.manager.charging.ChargingAreaSearchService;
 import com.household.manager.charging.ChargingFavoriteService;
 import com.household.manager.charging.ChargingPollingService;
 import com.household.manager.charging.ChargingQueryService;
@@ -34,6 +35,8 @@ class SuperchargerControllerTest {
     private ChargingFavoriteService favoriteService;
     @MockitoBean
     private ChargingStationDetailsService detailsService;
+    @MockitoBean
+    private ChargingAreaSearchService searchService;
     @MockitoBean
     private AppUserRepository appUserRepository;
     @MockitoBean

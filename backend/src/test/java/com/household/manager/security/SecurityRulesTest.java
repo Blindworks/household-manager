@@ -1240,6 +1240,12 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
+    void kioskDarfDieLadesaeulenBereichssucheLesen() throws Exception {
+        mockMvc.perform(get("/v1/charging/search")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
     void kioskDarfDenLadesaeulenAbrufErzwingen() throws Exception {
         mockMvc.perform(post("/v1/charging/refresh").with(csrf())).andExpect(status().isNotFound());
     }
