@@ -46,14 +46,12 @@ describe('charging-forecast.util', () => {
   describe('heatmapLevel', () => {
     it('ordnet Grenzen zu (untere Grenze gehoert zur hoeheren Stufe)', () => {
       expect(heatmapLevel(null)).toBe('none');
-      expect(heatmapLevel(0)).toBe('none');
-      expect(heatmapLevel(0.19)).toBe('none');
-      expect(heatmapLevel(0.2)).toBe('low');
-      expect(heatmapLevel(0.39)).toBe('low');
-      expect(heatmapLevel(0.4)).toBe('mid');
-      expect(heatmapLevel(0.6)).toBe('high');
-      expect(heatmapLevel(0.79)).toBe('high');
-      expect(heatmapLevel(0.8)).toBe('full');
+      expect(heatmapLevel(0)).toBe('low');
+      expect(heatmapLevel(0.1)).toBe('low');
+      expect(heatmapLevel(0.25)).toBe('mid');
+      expect(heatmapLevel(0.5)).toBe('high');
+      expect(heatmapLevel(0.74)).toBe('high');
+      expect(heatmapLevel(0.75)).toBe('full');
       expect(heatmapLevel(1)).toBe('full');
     });
   });

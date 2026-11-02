@@ -31,21 +31,18 @@ export function freeWindow(at?: string, latest?: string): string | null {
   return latest ? `${base}, meist bis ${clock(latest)}` : base;
 }
 
-/** Stufe der Heatmap-Zelle; value = Anteil freier Zeit 0..1, null = keine Daten. */
+/** Stufe der Heatmap-Zelle; value = Anteil freier Zeit 0..1, null = keine Daten (nie mit "wenig frei" vermischt). */
 export function heatmapLevel(value: number | null): HeatmapLevel {
   if (value === null) {
     return 'none';
   }
-  if (value < 0.2) {
-    return 'none';
-  }
-  if (value < 0.4) {
+  if (value < 0.25) {
     return 'low';
   }
-  if (value < 0.6) {
+  if (value < 0.5) {
     return 'mid';
   }
-  if (value < 0.8) {
+  if (value < 0.75) {
     return 'high';
   }
   return 'full';
