@@ -750,6 +750,19 @@ describe('TabletChargingComponent', () => {
       expect(searchButton()!.disabled).toBeFalse();
     });
 
+    it('raeumt eine alte Fehlermeldung beim Verschieben der Karte weg', () => {
+      chargingSpy.search.and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 429, error: { message: 'Bitte kurz warten' } })));
+      moveAway();
+      searchButton()!.click();
+      fixture.detectChanges();
+
+      component.mapForTest()!.panBy([200, 0], { animate: false });
+      fixture.detectChanges();
+
+      expect(host().querySelector('.tablet-charging__search-error')).toBeNull();
+    });
+
     it('meldet, wenn der Bereich keine Ladesaeulen hat', () => {
       chargingSpy.search.and.returnValue(of(searchResponse([])));
       moveAway();

@@ -202,6 +202,8 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     this.visibleBox = bounds
       ? { fromLat: bounds.getSouth(), toLat: bounds.getNorth(), fromLon: bounds.getWest(), toLon: bounds.getEast() }
       : null;
+    // Eine alte Meldung ("Bitte kurz warten") gehoert zum vorigen Ausschnitt, nicht zum neuen.
+    this.searchError = null;
   }
 
   private withLoadedPoints(station: ChargingStation): ChargingStation {

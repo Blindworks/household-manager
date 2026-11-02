@@ -104,9 +104,13 @@
   }
 
   &__search-btn {
-    border: 1px solid var(--card-border);
-    background: var(--surface-solid);
-    color: var(--on-surface);
+    // Akzentfarbe statt Kartenflaeche: dunkelgrau auf der dunkel gefilterten Karte war kaum
+    // zu sehen. --surface-solid als Schrift ist im Dunklen fast schwarz, im Hellen weiss -
+    // passt in beiden Designs zum jeweiligen --primary.
+    border: none;
+    background: var(--primary);
+    color: var(--surface-solid);
+    font-weight: 600;
     padding: 0.55rem 1.2rem;
     border-radius: 999px;
     cursor: pointer;
