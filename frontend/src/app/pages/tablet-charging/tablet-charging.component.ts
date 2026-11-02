@@ -14,7 +14,7 @@ import {
   formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone, withChargePoints
 } from '../../shared/charging-status.util';
 import {
-  HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel
+  HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel, occupiedSinceText
 } from '../../shared/charging-forecast.util';
 import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
@@ -164,6 +164,10 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
 
   /** Antippen einer Listenzeile: Auswahl, bei Favoriten zusaetzlich das Vorhersage-Detail. */
   onRowTap(station: ChargingStation): void {
+    if (!station.favorite && this.detailStationId) {
+      // Erst die Karte zurueckholen, sonst schwenkte select() auf eine verdeckte Karte.
+      this.closeDetail();
+    }
     this.select(station.stationId);
     if (station.favorite) {
       this.openDetail(station.stationId);
@@ -217,6 +221,11 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
 
   pointWindow(point: ChargingPointForecast): string | null {
     return freeWindow(point.expectedFreeAt, point.expectedFreeLatest);
+  }
+
+  /** Detailzeile je Punkt; ohne Schaetzung wenigstens den Beginn zeigen statt den Punkt wegzulassen. */
+  pointText(point: ChargingPointForecast): string | null {
+    return this.pointWindow(point) ?? occupiedSinceText(point.occupiedSince);
   }
 
   pointPower(point: ChargingPointForecast): string {

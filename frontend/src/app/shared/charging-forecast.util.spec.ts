@@ -1,5 +1,5 @@
 import { ChargingForecastSummary } from '../models/charging.model';
-import { HEATMAP_DAY_LABELS, forecastLine, freeWindow, heatmapLevel } from './charging-forecast.util';
+import { HEATMAP_DAY_LABELS, forecastLine, freeWindow, heatmapLevel, occupiedSinceText } from './charging-forecast.util';
 
 describe('charging-forecast.util', () => {
   describe('forecastLine', () => {
@@ -48,6 +48,16 @@ describe('charging-forecast.util', () => {
 
     it('laesst ohne spaetes Quantil den Zusatz weg', () => {
       expect(freeWindow('2026-11-02T17:40:00')).toBe('frei ca. 17:40');
+    });
+  });
+
+  describe('occupiedSinceText', () => {
+    it('nennt den Beginn als Uhrzeit', () => {
+      expect(occupiedSinceText('2026-11-02T16:05:00')).toBe('belegt seit 16:05');
+    });
+
+    it('liefert null ohne Beginn', () => {
+      expect(occupiedSinceText(undefined)).toBeNull();
     });
   });
 

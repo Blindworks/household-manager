@@ -312,6 +312,33 @@ describe('TabletChargingComponent', () => {
       expect(chargingSpy.getForecast).not.toHaveBeenCalled();
     });
 
+    it('listenTippAufNichtFavoritSchliesstOffenesDetail', () => {
+      (rows()[0] as HTMLElement).click();
+      fixture.detectChanges();
+      expect(component.detailStationId).toBe('fav');
+
+      (rows()[1] as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(component.detailStationId).toBeNull();
+      expect(component.selectedStationId).toBe('other');
+      expect(host().querySelector('.tablet-charging__detail')).toBeNull();
+      expect(host().querySelector('.tablet-charging__map--hidden')).toBeNull();
+    });
+
+    it('zeigtBelegtenPunktOhneSchaetzungMitBeginn', () => {
+      chargingSpy.getForecast.and.returnValue(of({ ...forecast, points: [
+        ...forecast.points,
+        { chargePointId: 'P2', occupiedSince: '2026-09-19T11:50:00' }
+      ] }));
+      component.openDetail('fav');
+      fixture.detectChanges();
+      const items = Array.from(host().querySelectorAll('.tablet-charging__detail-points li'))
+        .map(li => li.textContent?.trim());
+      expect(items.length).toBe(2);
+      expect(items[1]).toContain('belegt seit 11:50');
+    });
+
     it('markerTippOeffnetKeinDetail', () => {
       component.select('fav', { fromMap: true });
       fixture.detectChanges();

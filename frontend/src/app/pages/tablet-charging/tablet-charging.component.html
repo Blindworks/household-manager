@@ -36,8 +36,8 @@
               } @else {
                 <ul class="tablet-charging__detail-points">
                   @for (point of f.points; track point.chargePointId) {
-                    @if (pointWindow(point); as window) {
-                      <li>{{ pointPower(point) }}: {{ window }}</li>
+                    @if (pointText(point); as text) {
+                      <li>{{ pointPower(point) }}: {{ text }}</li>
                     }
                   }
                 </ul>

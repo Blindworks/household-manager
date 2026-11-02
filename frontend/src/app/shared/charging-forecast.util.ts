@@ -33,6 +33,10 @@ export function freeWindow(at?: string, latest?: string): string | null {
   return latest ? `${base}, meist bis ${clock(latest)}` : base;
 }
 
+export function occupiedSinceText(occupiedSince?: string): string | null {
+  return occupiedSince ? `belegt seit ${clock(occupiedSince)}` : null;
+}
+
 /** Stufe der Heatmap-Zelle; value = Belegungsanteil (0 = nichts belegt, 1 = voll), null = keine Daten (nie mit 0 vermischt). */
 export function heatmapLevel(value: number | null): HeatmapLevel {
   if (value === null) {
