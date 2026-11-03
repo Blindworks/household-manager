@@ -4,15 +4,18 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { DirigeraService } from '../../services/dirigera.service';
-import { DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../../models/dirigera.model';
+import { DirigeraButton, DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../../models/dirigera.model';
 
 const POLL_MS = 2000;
 const COUNTDOWN_MS = 1000;
 
 type SensorStatus = 'active' | 'unreachable' | 'gone';
 
+const POSITION_LABELS: Record<string, string> = { top: 'oben', bottom: 'unten' };
+const ACTION_LABELS: Record<string, string> = { single: 'Einfach', double: 'Doppelt', hold: 'Lang' };
+
 /**
- * Admin-Seite „IKEA Dirigera“: Hub-IP, Kopplung per Aktionsknopf, Sensorliste.
+ * Admin-Seite „IKEA Dirigera“: Hub-IP, Kopplung per Aktionsknopf, Sensorliste, Taster.
  * Die Restzeit der Kopplung rechnet gegen die Uhr dieses Browsers (expiresAt kommt vom Server).
  */
 @Component({
@@ -29,6 +32,7 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   readonly hub = signal<DirigeraHub | null>(null);
   readonly pairing = signal<DirigeraPairingStatus | null>(null);
   readonly sensors = signal<DirigeraSensor[]>([]);
+  readonly buttons = signal<DirigeraButton[]>([]);
   readonly secondsLeft = signal(0);
   readonly busy = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -40,7 +44,7 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadHub(true);
-    this.loadSensors();
+    this.loadDevices();
     // Eine laufende Kopplung (Seite neu geladen) wird wieder aufgenommen.
     this.api.getPairing().subscribe({
       next: status => this.applyPairing(status),
@@ -98,6 +102,21 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     return sensor.open ? 'Offen' : 'Geschlossen';
   }
 
+  /** Tastendrücke zeigen sich erst nach dem Neuladen (die Liste aktualisiert sich nicht selbst). */
+  reloadButtons(): void {
+    this.loadButtons();
+  }
+
+  positionLabel(button: DirigeraButton): string {
+    if (!button.position) { return '–'; }
+    return POSITION_LABELS[button.position] ?? button.position;
+  }
+
+  actionLabel(button: DirigeraButton): string {
+    if (!button.lastAction) { return 'Noch nie gedrückt'; }
+    return ACTION_LABELS[button.lastAction] ?? button.lastAction;
+  }
+
   private applyPairing(status: DirigeraPairingStatus): void {
     this.pairing.set(status);
     if (status.state === 'PRESS_BUTTON') {
@@ -109,7 +128,7 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     this.stopPolling();
     if (wasPolling) {
       this.loadHub(false);
-      this.loadSensors();
+      this.loadDevices();
     }
   }
 
@@ -150,6 +169,18 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
         this.hub.set(hub);
         if (initial || !this.hostInput) { this.hostInput = hub.host ?? ''; }
       },
+      error: err => this.errorMessage.set(this.messageOf(err))
+    });
+  }
+
+  private loadDevices(): void {
+    this.loadSensors();
+    this.loadButtons();
+  }
+
+  private loadButtons(): void {
+    this.api.getButtons().subscribe({
+      next: list => this.buttons.set(list),
       error: err => this.errorMessage.set(this.messageOf(err))
     });
   }

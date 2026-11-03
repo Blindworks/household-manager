@@ -22,6 +22,14 @@
           Letzte Abfrage: {{ h.lastSuccessAt ? (h.lastSuccessAt | date:'dd.MM.yyyy HH:mm:ss') : '–' }}
         </span>
       </p>
+      @if (h.paired) {
+        <p class="admin-dirigera__stream">
+          Ereignisstrom (Taster, Kontakte):
+          <span class="admin-dirigera__badge admin-dirigera__badge--{{ h.eventStreamConnected ? 'active' : 'unreachable' }}">
+            {{ h.eventStreamConnected ? 'Verbunden' : 'Getrennt' }}
+          </span>
+        </p>
+      }
       @if (h.lastError) {
         <div class="admin-dirigera__hint-error">{{ h.lastError }}</div>
       }
@@ -83,6 +91,46 @@
                   <button type="button" class="danger" (click)="remove(sensor)" [disabled]="busy()">Löschen</button>
                 }
               </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <section class="admin-dirigera__card">
+    <div class="admin-dirigera__heading">
+      <h2>Taster</h2>
+      <button type="button" class="ghost" (click)="reloadButtons()">Neu laden</button>
+    </div>
+    @if (buttons().length === 0) {
+      <p>Noch keine Taster bekannt. Nach einem Backend-Neustart erscheinen sie mit der ersten Hub-Abfrage (bis zu einer Minute).</p>
+    } @else {
+      <table class="admin-dirigera__table admin-dirigera__buttons">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Taste</th>
+            <th scope="col">Raum</th>
+            <th scope="col">Batterie</th>
+            <th scope="col">Letzter Druck</th>
+            <th scope="col">Entität für Flows</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (button of buttons(); track button.deviceId) {
+            <tr>
+              <td>{{ button.name ?? '–' }}</td>
+              <td>{{ positionLabel(button) }}</td>
+              <td>{{ button.room ?? '–' }}</td>
+              <td>{{ button.batteryPercent === null ? '–' : button.batteryPercent + ' %' }}</td>
+              <td>
+                {{ actionLabel(button) }}
+                @if (button.lastPressedAt) {
+                  <span class="admin-dirigera__last">{{ button.lastPressedAt | date:'dd.MM. HH:mm:ss' }}</span>
+                }
+              </td>
+              <td><code>{{ button.entityId }}</code></td>
             </tr>
           }
         </tbody>

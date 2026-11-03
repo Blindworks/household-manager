@@ -12,7 +12,17 @@ public final class DirigeraDtos {
     private DirigeraDtos() {
     }
 
-    public record HubView(String host, boolean paired, String hubId, Instant lastSuccessAt, String lastError) {
+    /** {@code eventStreamConnected}: steht der WebSocket fuer Tastendruecke und Kontakte gerade. */
+    public record HubView(String host, boolean paired, String hubId, Instant lastSuccessAt, String lastError,
+                          boolean eventStreamConnected) {
+    }
+
+    /**
+     * Eine Taste eines Dirigera-Tasters. {@code lastAction}/{@code lastPressedAt} kommen aus der
+     * Ereignis-Entitaet und sind null, solange die Taste seit dem Anlegen nie gedrueckt wurde.
+     */
+    public record ButtonView(String deviceId, String entityId, String name, String position, String room,
+                             String model, Integer batteryPercent, String lastAction, LocalDateTime lastPressedAt) {
     }
 
     public record HostRequest(String host) {

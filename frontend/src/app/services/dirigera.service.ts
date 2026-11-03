@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../models/dirigera.model';
+import { DirigeraButton, DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../models/dirigera.model';
 
 /** REST-Service fuer die Admin-Pflege der IKEA-Dirigera-Anbindung. */
 @Injectable({ providedIn: 'root' })
@@ -31,6 +31,10 @@ export class DirigeraService {
 
   getSensors(): Observable<DirigeraSensor[]> {
     return this.http.get<DirigeraSensor[]>(`${this.baseUrl}/sensors`);
+  }
+
+  getButtons(): Observable<DirigeraButton[]> {
+    return this.http.get<DirigeraButton[]>(`${this.baseUrl}/buttons`);
   }
 
   deleteSensor(id: number): Observable<void> {

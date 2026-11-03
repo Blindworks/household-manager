@@ -1,10 +1,12 @@
 package com.household.manager.dirigera;
 
 import com.household.manager.audit.AuditService;
+import com.household.manager.dirigera.DirigeraDtos.ButtonView;
 import com.household.manager.dirigera.DirigeraDtos.HubView;
 import com.household.manager.dirigera.DirigeraEntityMapper.Measurement;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.model.entity.DirigeraSensor;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.EntityTileVisibility;
 import com.household.manager.repository.DirigeraSensorRepository;
 import com.household.manager.repository.EntityTileVisibilityRepository;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +36,10 @@ class DirigeraAdminServiceTest {
     private EntityTileVisibilityRepository tileRepository;
     private EntityStateService entityStateService;
     private AuditService auditService;
+    private DirigeraButtonRegistry buttons;
+    private DirigeraEventStreamService eventStream;
+    private DirigeraSettingsService settingsService;
+    private DirigeraPollingService pollingService;
     private DirigeraAdminService service;
 
     @BeforeEach
@@ -41,9 +48,58 @@ class DirigeraAdminServiceTest {
         tileRepository = mock(EntityTileVisibilityRepository.class);
         entityStateService = mock(EntityStateService.class);
         auditService = mock(AuditService.class);
-        service = new DirigeraAdminService(mock(DirigeraSettingsService.class), mock(DirigeraPairingService.class),
-                mock(DirigeraPollingService.class), sensorRepository, tileRepository, entityStateService,
+        buttons = new DirigeraButtonRegistry();
+        eventStream = mock(DirigeraEventStreamService.class);
+        settingsService = mock(DirigeraSettingsService.class);
+        pollingService = mock(DirigeraPollingService.class);
+        service = new DirigeraAdminService(settingsService, mock(DirigeraPairingService.class),
+                pollingService, eventStream, buttons, sensorRepository, tileRepository, entityStateService,
                 auditService);
+    }
+
+    @Test
+    void tasterListeZeigtJeTasteNameStellungUndLetztenDruck() {
+        buttons.replaceAll(List.of(
+                new DirigeraButton("b_2", "Button Treppenhaus", null, "BILRESA dual button", "bottom", 100),
+                new DirigeraButton("b_1", "Button Treppenhaus", "Treppenhaus", "BILRESA dual button", "top", 100)));
+        when(entityStateService.getByEntityId(DirigeraEntityMapper.buttonEntityId("b_1"))).thenReturn(Optional.of(
+                EntityState.builder().state("double").lastChanged(LocalDateTime.of(2026, 11, 3, 18, 52, 55)).build()));
+        when(entityStateService.getByEntityId(DirigeraEntityMapper.buttonEntityId("b_2"))).thenReturn(Optional.empty());
+
+        List<ButtonView> views = service.buttons();
+
+        // oben vor unten, auch wenn der Hub sie andersherum listet
+        assertThat(views).extracting(ButtonView::deviceId).containsExactly("b_1", "b_2");
+        ButtonView top = views.get(0);
+        assertThat(top.entityId()).isEqualTo("event.dirigera_b_1_action");
+        assertThat(top.position()).isEqualTo("top");
+        assertThat(top.room()).isEqualTo("Treppenhaus");
+        assertThat(top.batteryPercent()).isEqualTo(100);
+        assertThat(top.lastAction()).isEqualTo("double");
+        assertThat(top.lastPressedAt()).isEqualTo(LocalDateTime.of(2026, 11, 3, 18, 52, 55));
+        // noch nie gedrueckt: keine Aktion, kein Zeitpunkt
+        assertThat(views.get(1).lastAction()).isNull();
+        assertThat(views.get(1).lastPressedAt()).isNull();
+    }
+
+    @Test
+    void tasterSortierenNachNamenDannStellung() {
+        buttons.replaceAll(List.of(
+                new DirigeraButton("z_1", "Zimmer", null, null, "top", null),
+                new DirigeraButton("a_2", "Abstellraum", null, null, "bottom", null),
+                new DirigeraButton("a_1", "Abstellraum", null, null, "top", null)));
+        when(entityStateService.getByEntityId(any())).thenReturn(Optional.empty());
+
+        assertThat(service.buttons()).extracting(ButtonView::deviceId).containsExactly("a_1", "a_2", "z_1");
+    }
+
+    @Test
+    void hubZeigtObDerEreignisstromVerbundenIst() {
+        when(settingsService.get()).thenReturn(new DirigeraHubSettings("192.168.1.159", "t", "c", "h"));
+        when(pollingService.lastStatus()).thenReturn(new DirigeraPollingService.PollStatus(null, null));
+        when(eventStream.isConnected()).thenReturn(true);
+
+        assertThat(service.hub().eventStreamConnected()).isTrue();
     }
 
     @Test

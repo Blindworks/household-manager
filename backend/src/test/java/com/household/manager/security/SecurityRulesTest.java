@@ -436,6 +436,18 @@ class SecurityRulesTest {
     }
 
     @Test
+    @WithMockUser(roles = "KIOSK")
+    void dirigeraButtonsGetIstFuerKioskVerboten() throws Exception {
+        mockMvc.perform(get("/v1/dirigera/buttons")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void dirigeraButtonsGetIstFuerAdminErlaubt() throws Exception {
+        mockMvc.perform(get("/v1/dirigera/buttons")).andExpect(status().isOk());
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void systemLog_entries_admin_ok() throws Exception {
         mockMvc.perform(get("/v1/admin/system-log/entries")).andExpect(status().isOk());

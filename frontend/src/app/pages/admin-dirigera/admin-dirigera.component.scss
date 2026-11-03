@@ -10,6 +10,9 @@
   &__last { margin-left: 0.75rem; color: #555; }
   &__press { background: #fff4d6; color: #7a5200; padding: 0.5rem 0.75rem; border-radius: 6px; }
   &__actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+  &__heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+  &__stream { margin: 0.25rem 0 0; }
+  &__buttons code { font-size: 0.8rem; word-break: break-all; }
   &__table { width: 100%; border-collapse: collapse;
     th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
   }

@@ -1,5 +1,6 @@
 package com.household.manager.dirigera;
 
+import com.household.manager.dirigera.DirigeraDtos.ButtonView;
 import com.household.manager.dirigera.DirigeraDtos.HostRequest;
 import com.household.manager.dirigera.DirigeraDtos.HubView;
 import com.household.manager.dirigera.DirigeraDtos.SensorView;
@@ -55,6 +56,11 @@ public class DirigeraController {
     @GetMapping("/sensors")
     public List<SensorView> sensors() {
         return adminService.sensors();
+    }
+
+    @GetMapping("/buttons")
+    public List<ButtonView> buttons() {
+        return adminService.buttons();
     }
 
     @DeleteMapping("/sensors/{id}")

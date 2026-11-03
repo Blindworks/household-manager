@@ -26,4 +26,8 @@ public class DirigeraButtonRegistry {
     public Optional<DirigeraButton> find(String deviceId) {
         return Optional.ofNullable(buttons.get(deviceId));
     }
+
+    public List<DirigeraButton> all() {
+        return List.copyOf(buttons.values());
+    }
 }

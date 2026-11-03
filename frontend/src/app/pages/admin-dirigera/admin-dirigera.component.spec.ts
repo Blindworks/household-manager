@@ -4,14 +4,23 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import { AdminDirigeraComponent } from './admin-dirigera.component';
-import { DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../../models/dirigera.model';
+import { DirigeraButton, DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../../models/dirigera.model';
 
 registerLocaleData(localeDe);
 
 const BASE = '/api/v1/dirigera';
 
 const HUB: DirigeraHub = {
-  host: '192.168.1.50', paired: false, hubId: null, lastSuccessAt: null, lastError: null
+  host: '192.168.1.50', paired: false, hubId: null, lastSuccessAt: null, lastError: null, eventStreamConnected: false
+};
+const TOP: DirigeraButton = {
+  deviceId: 'b_1', entityId: 'event.dirigera_b_1_action', name: 'Button Treppenhaus', position: 'top',
+  room: 'Treppenhaus', model: 'BILRESA dual button', batteryPercent: 100, lastAction: 'double',
+  lastPressedAt: '2026-11-03T18:52:55'
+};
+const BOTTOM: DirigeraButton = {
+  ...TOP, deviceId: 'b_2', entityId: 'event.dirigera_b_2_action', position: 'bottom', room: null,
+  lastAction: null, lastPressedAt: null
 };
 const IDLE: DirigeraPairingStatus = { state: 'IDLE', expiresAt: null, error: null };
 const SENSOR: DirigeraSensor = {
@@ -40,10 +49,12 @@ describe('AdminDirigeraComponent', () => {
 
   afterEach(() => httpMock.verify());
 
-  function initWith(sensors: DirigeraSensor[], pairing: DirigeraPairingStatus = IDLE, hub: DirigeraHub = HUB): void {
+  function initWith(sensors: DirigeraSensor[], pairing: DirigeraPairingStatus = IDLE, hub: DirigeraHub = HUB,
+                    buttons: DirigeraButton[] = []): void {
     fixture.detectChanges();
     httpMock.expectOne(`${BASE}/hub`).flush(hub);
     httpMock.expectOne(`${BASE}/sensors`).flush(sensors);
+    httpMock.expectOne(`${BASE}/buttons`).flush(buttons);
     httpMock.expectOne(`${BASE}/pairing`).flush(pairing);
     fixture.detectChanges();
   }
@@ -75,6 +86,7 @@ describe('AdminDirigeraComponent', () => {
     httpMock.expectOne(`${BASE}/pairing`).flush({ state: 'PAIRED', expiresAt: null, error: null });
     httpMock.expectOne(`${BASE}/hub`).flush({ ...HUB, paired: true });
     httpMock.expectOne(`${BASE}/sensors`).flush([SENSOR]);
+    httpMock.expectOne(`${BASE}/buttons`).flush([]);
 
     tick(2000);
     httpMock.expectNone(`${BASE}/pairing`);
@@ -90,6 +102,7 @@ describe('AdminDirigeraComponent', () => {
     httpMock.expectOne(`${BASE}/pairing`).flush({ state: 'FAILED', expiresAt: null, error: 'Zeit abgelaufen' });
     httpMock.expectOne(`${BASE}/hub`).flush(HUB);
     httpMock.expectOne(`${BASE}/sensors`).flush([]);
+    httpMock.expectOne(`${BASE}/buttons`).flush([]);
     fixture.detectChanges();
 
     expect(el.textContent).toContain('Zeit abgelaufen');
@@ -122,6 +135,60 @@ describe('AdminDirigeraComponent', () => {
     const row = el.querySelector('.admin-dirigera__table tbody tr')!;
     expect(row.textContent).toContain('21,5 °C');
     expect(row.textContent).toContain('48 %');
+  });
+
+  it('tasterZeigtJeTasteStellungLetztenDruckUndEntitaet', () => {
+    initWith([], IDLE, HUB, [TOP, BOTTOM]);
+
+    const rows = Array.from(el.querySelectorAll('.admin-dirigera__buttons tbody tr'));
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('Button Treppenhaus');
+    expect(rows[0].textContent).toContain('oben');
+    expect(rows[0].textContent).toContain('Doppelt');
+    expect(rows[0].textContent).toContain('03.11. 18:52:55');
+    expect(rows[0].textContent).toContain('event.dirigera_b_1_action');
+    expect(rows[1].textContent).toContain('unten');
+    expect(rows[1].textContent).toContain('Noch nie gedrückt');
+  });
+
+  it('ohneTasterKommtEinHinweis', () => {
+    initWith([]);
+
+    expect(el.textContent).toContain('Noch keine Taster bekannt');
+    expect(el.querySelector('.admin-dirigera__buttons')).toBeNull();
+  });
+
+  it('neuLadenHoltDieTasterErneut', () => {
+    initWith([], IDLE, HUB, [BOTTOM]);
+    const reload = Array.from(el.querySelectorAll('button'))
+      .find(b => b.textContent?.includes('Neu laden')) as HTMLButtonElement;
+
+    reload.click();
+    httpMock.expectOne(`${BASE}/buttons`).flush([{ ...BOTTOM, lastAction: 'hold', lastPressedAt: '2026-11-03T19:00:00' }]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-dirigera__buttons tbody tr')!.textContent).toContain('Lang');
+  });
+
+  it('unbekanntesMusterWirdRohAngezeigt', () => {
+    initWith([], IDLE, HUB, [{ ...TOP, lastAction: 'tripplePress' }]);
+
+    expect(el.querySelector('.admin-dirigera__buttons tbody tr')!.textContent).toContain('tripplePress');
+  });
+
+  it('gekoppelterHubZeigtDenEreignisstrom', () => {
+    initWith([], IDLE, { ...HUB, paired: true, eventStreamConnected: true });
+    expect(el.querySelector('.admin-dirigera__stream')!.textContent).toContain('Verbunden');
+  });
+
+  it('getrennterEreignisstromWirdAngezeigt', () => {
+    initWith([], IDLE, { ...HUB, paired: true, eventStreamConnected: false });
+    expect(el.querySelector('.admin-dirigera__stream')!.textContent).toContain('Getrennt');
+  });
+
+  it('ungekoppelterHubZeigtKeinenEreignisstrom', () => {
+    initWith([]);
+    expect(el.querySelector('.admin-dirigera__stream')).toBeNull();
   });
 
   it('pollingEndetBeiDestroy', fakeAsync(() => {
