@@ -166,7 +166,10 @@ public class AuditEntryDescriber {
         return switch (action) {
             case "switch.device" -> idArrowState(detail, id -> deviceName(id, names));
             case "helper.set" -> idArrowState(detail, names::entity);
-            case "switch.toggle", "entity.toggle" -> names.entity(detail);
+            // Seit 2026-10-24 mit Zielzustand („id -> on“), ältere Einträge tragen nur die Entity-Id
+            case "switch.toggle", "entity.toggle" -> ID_ARROW_STATE.matcher(detail).matches()
+                    ? idArrowState(detail, names::entity)
+                    : names.entity(detail);
             case "device.on", "device.off" -> NUMERIC.matcher(detail).matches() ? deviceName(detail, names) : detail;
             case "device.light.set", "device.tapo.address.set" -> DEVICE_ID_PARAM.matcher(detail)
                     .replaceAll(match -> Matcher.quoteReplacement(deviceName(match.group(1), names)));

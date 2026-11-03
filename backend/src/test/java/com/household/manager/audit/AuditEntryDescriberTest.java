@@ -93,6 +93,19 @@ class AuditEntryDescriberTest {
     }
 
     @Test
+    void toggle_showsTargetState_andOldEntriesWithoutStateStayReadable() {
+        EntityState helper = new EntityState();
+        helper.setEntityId("input_boolean.manual_toni_allein");
+        helper.setFriendlyName("Toni allein");
+        when(entityStateRepository.findByEntityId("input_boolean.manual_toni_allein")).thenReturn(Optional.of(helper));
+
+        assertThat(describeOne(entry(AuditActorType.USER, "admin", "entity.toggle",
+                "input_boolean.manual_toni_allein -> on")).detailLabel()).isEqualTo("Toni allein → an");
+        assertThat(describeOne(entry(AuditActorType.USER, "admin", "switch.toggle",
+                "input_boolean.manual_toni_allein")).detailLabel()).isEqualTo("Toni allein");
+    }
+
+    @Test
     void flowDeploy_showsFlowName() {
         DescribedEntry result = describeOne(entry(AuditActorType.USER, "admin", "flow.deploy", "Flow 13"));
 

@@ -103,6 +103,7 @@ class SwitchCommandServiceTest {
 
         verify(smartDeviceService).turnOff(42L);
         verify(smartDeviceService, never()).turnOn(anyLong());
+        verify(auditService).record("switch.toggle", "switch.kasa_abc -> off");
     }
 
     @Test
@@ -129,6 +130,7 @@ class SwitchCommandServiceTest {
         service.toggle("switch.kasa_abc");
 
         verify(smartDeviceService).turnOn(42L);
+        verify(auditService).record("switch.toggle", "switch.kasa_abc -> on");
     }
 
     @Test

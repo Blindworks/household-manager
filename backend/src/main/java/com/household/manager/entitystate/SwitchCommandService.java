@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class SwitchCommandService {
 
     private static final String STATE_ON = "on";
+    private static final String STATE_OFF = "off";
 
     private final EntityStateService entityStateService;
     private final ManualEntityService manualEntityService;
@@ -54,7 +55,9 @@ public class SwitchCommandService {
         }
 
         EntityUsage usage = entityUsageService.recordToggle(entityId);
-        auditService.record("switch.toggle", entityId);
+        // Zielzustand nach derselben Regel wie toggleDevice/ManualEntityService.toggle: alles außer "on" schaltet ein
+        String target = STATE_ON.equals(entity.getState()) ? STATE_OFF : STATE_ON;
+        auditService.record("switch.toggle", entityId + " -> " + target);
         return switchResponseMapper.toResponse(reload(entityId), usage);
     }
 

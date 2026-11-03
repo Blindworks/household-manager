@@ -111,6 +111,7 @@ class ManualEntityServiceTest {
         service.toggle(id);
 
         assertThat(capturedUpdate().state()).isEqualTo("off");
+        verify(auditService).record("entity.toggle", id + " -> off");
     }
 
     @Test

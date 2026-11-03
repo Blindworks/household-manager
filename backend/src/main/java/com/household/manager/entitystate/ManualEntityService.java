@@ -87,8 +87,10 @@ public class ManualEntityService {
         if (entity.getDomain() != EntityDomain.INPUT_BOOLEAN) {
             throw new IllegalArgumentException("Toggle is only supported for input_boolean entities");
         }
-        report(entity, STATE_ON.equals(entity.getState()) ? STATE_OFF : STATE_ON);
-        auditService.record("entity.toggle", entityId);
+        String target = STATE_ON.equals(entity.getState()) ? STATE_OFF : STATE_ON;
+        report(entity, target);
+        // Zielzustand mitschreiben — ein bloßes „umgeschaltet“ sagt im Audit-Log nicht, wohin
+        auditService.record("entity.toggle", entityId + " -> " + target);
         return reload(entityId);
     }
 
