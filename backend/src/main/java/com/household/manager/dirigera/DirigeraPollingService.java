@@ -18,13 +18,17 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Fragt den Dirigera-Hub minuetlich ab und spiegelt die Sensoren in DB, Verlauf und Entity-State-Layer.
  * Ein Hubfehler macht alle Sensor-Entitaeten unavailable (einmalig, mit erhaltenen Attributen);
- * die Scheduled-Methode wirft nie.
+ * die Scheduled-Methode wirft nie. Fenster-/Tuerkontakte kommen zusaetzlich sofort ueber den
+ * Ereignisstrom ({@link #applyContactChange}); der Poll ist dafuer nur noch der Abgleich.
  */
 @Service
 @Slf4j
@@ -42,6 +46,7 @@ public class DirigeraPollingService {
     private final DirigeraSensorRepository repository;
     private final DirigeraEntityMapper mapper;
     private final DirigeraReadingRecorder recorder;
+    private final DirigeraButtonRegistry buttons;
     private final EntityStateService entityStateService;
     private final SystemJobMonitor jobMonitor;
     private final Clock clock;
@@ -50,6 +55,12 @@ public class DirigeraPollingService {
 
     // Nur im Speicher, fuer die Admin-Seite
     private volatile PollStatus status = new PollStatus(null, null);
+    /**
+     * Zeitpunkt des letzten Kontakt-Ereignisses je Sensor. Ein Poll, dessen Abruf vor diesem
+     * Zeitpunkt begann, traegt einen aelteren Stand und darf {@code lastOpen} nicht ueberschreiben —
+     * sonst flackerte der Kontakt auf → zu → auf und Flows feuerten doppelt.
+     */
+    private final Map<String, Instant> contactEventAt = new ConcurrentHashMap<>();
 
     public DirigeraPollingService(DirigeraSettingsService settingsService,
                                   DirigeraHttpClient httpClient,
@@ -57,6 +68,7 @@ public class DirigeraPollingService {
                                   DirigeraSensorRepository repository,
                                   DirigeraEntityMapper mapper,
                                   DirigeraReadingRecorder recorder,
+                                  DirigeraButtonRegistry buttons,
                                   EntityStateService entityStateService,
                                   SystemJobMonitor jobMonitor,
                                   Clock clock,
@@ -68,6 +80,7 @@ public class DirigeraPollingService {
         this.repository = repository;
         this.mapper = mapper;
         this.recorder = recorder;
+        this.buttons = buttons;
         this.entityStateService = entityStateService;
         this.jobMonitor = jobMonitor;
         this.clock = clock;
@@ -91,6 +104,7 @@ public class DirigeraPollingService {
                 return;
             }
             DirigeraDevices devices;
+            Instant fetchStartedAt = Instant.now(clock);
             try {
                 devices = parser.parse(httpClient.getDevices(
                         settings.host(), settings.certSha256(), settings.accessToken()));
@@ -108,7 +122,8 @@ public class DirigeraPollingService {
                 fail("Anderes Gerät unter der Hub-Adresse");
                 return;
             }
-            apply(devices);
+            apply(devices, fetchStartedAt);
+            buttons.replaceAll(devices.buttons());
             status = new PollStatus(Instant.now(clock), null);
         } catch (Exception e) {
             fail(describe(e));
@@ -151,12 +166,43 @@ public class DirigeraPollingService {
         }
     }
 
-    private void apply(DirigeraDevices devices) {
+    /**
+     * Zustandswechsel eines Kontakts aus dem Ereignisstrom: sofort in Zeile und Entitaet. Ein dem
+     * Poll noch unbekannter Sensor wird ignoriert (der naechste Poll legt ihn an). Wirft nie.
+     */
+    public synchronized void applyContactChange(DirigeraContactChange change) {
+        try {
+            Optional<DirigeraSensor> found = repository.findByRelationId(change.key())
+                    .filter(row -> row.getKind() == DirigeraSensorKind.CONTACT);
+            if (found.isEmpty()) {
+                log.debug("Dirigera-Kontakt {} noch unbekannt, wartet auf den Poll", change.key());
+                return;
+            }
+            DirigeraSensor row = found.get();
+            contactEventAt.put(change.key(), Instant.now(clock));
+            row.setLastOpen(change.open());
+            if (change.lastSeen() != null) {
+                row.setLastSeenAt(LocalDateTime.ofInstant(change.lastSeen(), clock.getZone()));
+            }
+            if (change.reachable() != null) {
+                row.setReachable(change.reachable());
+            }
+            DirigeraSensor saved = repository.save(row);
+            DirigeraSensor current = saved != null ? saved : row;
+            if (current.isKnownToHub() && isFresh(current)) {
+                mapper.updates(current).forEach(entityStateService::reportState);
+            }
+        } catch (Exception e) {
+            log.warn("Dirigera-Kontakt {} nicht aus dem Ereignis uebernommen: {}", change.key(), e.getMessage());
+        }
+    }
+
+    private synchronized void apply(DirigeraDevices devices, Instant fetchStartedAt) {
         Set<String> seen = new HashSet<>();
         for (DirigeraSensorSnapshot snapshot : devices.sensors()) {
             seen.add(snapshot.relationId());
             try {
-                applySnapshot(snapshot);
+                applySnapshot(snapshot, fetchStartedAt);
             } catch (Exception e) {
                 log.warn("Dirigera-Sensor {} nicht verarbeitet: {}", snapshot.relationId(), e.getMessage());
             }
@@ -175,12 +221,15 @@ public class DirigeraPollingService {
         }
     }
 
-    private void applySnapshot(DirigeraSensorSnapshot s) {
+    private void applySnapshot(DirigeraSensorSnapshot s, Instant fetchStartedAt) {
         DirigeraSensor row = repository.findByRelationId(s.relationId())
                 .orElseGet(() -> DirigeraSensor.builder().relationId(s.relationId()).build());
         row.setKnownToHub(true);
         row.setKind(s.kind());
-        row.setLastOpen(s.open());
+        Instant eventAt = contactEventAt.get(s.relationId());
+        if (eventAt == null || eventAt.isBefore(fetchStartedAt)) {
+            row.setLastOpen(s.open());
+        }
         row.setName(truncate(s.name()));
         row.setRoom(truncate(s.room()));
         row.setModel(truncate(s.model()));

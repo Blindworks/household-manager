@@ -19,6 +19,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
@@ -27,6 +28,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -129,6 +131,19 @@ public class DirigeraHttpClient {
         HttpResponse<String> response = send(certSha256, request);
         checkStatus(response);
         return response.body();
+    }
+
+    /**
+     * Oeffnet den Ereignisstrom des Hubs ({@code wss://<host>:8443/v1}) ueber denselben gepinnten
+     * Client wie die REST-Aufrufe: bei falschem Zertifikat scheitert schon der Handshake, das Token
+     * geht nie raus. Ein Fehler beim Aufbau kommt als exceptionell abgeschlossenes Future.
+     */
+    public CompletableFuture<WebSocket> openEventStream(String host, String certSha256, String token,
+                                                        WebSocket.Listener listener) {
+        return pinnedClient(certSha256).newWebSocketBuilder()
+                .connectTimeout(CONNECT_TIMEOUT)
+                .header("Authorization", "Bearer " + token)
+                .buildAsync(URI.create("wss://" + host + ":" + port + "/v1"), listener);
     }
 
     private HttpResponse<String> send(String certSha256, HttpRequest.Builder request) {

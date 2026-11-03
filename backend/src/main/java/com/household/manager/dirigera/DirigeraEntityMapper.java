@@ -29,6 +29,14 @@ public class DirigeraEntityMapper {
     private static final String CONTACT_SUFFIX = "contact";
     private static final String CONTACT_LABEL = "Kontakt";
     private static final String CONTACT_DEVICE_CLASS = "door";
+    private static final String BUTTON_SUFFIX = "action";
+    private static final String BUTTON_DEVICE_CLASS = "button";
+    /** Klickmuster des Hubs auf das Vokabular der Zigbee-Taster, damit Flows gleich aussehen. */
+    private static final Map<String, String> CLICK_ACTIONS = Map.of(
+            "singlePress", "single",
+            "doublePress", "double",
+            "longPress", "hold");
+    private static final Map<String, String> POSITION_LABELS = Map.of("top", "oben", "bottom", "unten");
 
     public enum Measurement {
         TEMPERATURE("temperature", "°C", "Temperatur"),
@@ -67,6 +75,59 @@ public class DirigeraEntityMapper {
 
     public static String contactEntityId(String relationId) {
         return EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.DIRIGERA, entityRef(relationId), CONTACT_SUFFIX);
+    }
+
+    /**
+     * Id der Ereignis-Entitaet einer Taste. Haengt an der Geraete-Id der Taste ({@code …_1}), nicht
+     * am Namen: Umbenennen in der IKEA-App ist gefahrlos, Neu-Anlernen erzeugt eine neue Entitaet.
+     */
+    public static String buttonEntityId(String deviceId) {
+        return EntityIds.build(EntityDomain.EVENT, EntitySource.DIRIGERA, entityRef(deviceId), BUTTON_SUFFIX);
+    }
+
+    /**
+     * Ereignis eines Tastendrucks (ueber {@code EntityStateService.reportEvent}). State ist die Aktion
+     * {@code single}/{@code double}/{@code hold}; ein unbekanntes Klickmuster geht roh durch, statt
+     * verworfen zu werden. {@code button} ist null, solange der Poll die Taste noch nicht kennt.
+     */
+    public EntityStateUpdate buttonEvent(DirigeraRemotePress press, DirigeraButton button) {
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        attrs.put("deviceClass", BUTTON_DEVICE_CLASS);
+        attrs.put("clickPattern", press.clickPattern());
+        String name = press.deviceId() + " Taster";
+        if (button != null) {
+            putIfPresent(attrs, "button", button.position());
+            putIfPresent(attrs, "room", button.room());
+            putIfPresent(attrs, "model", button.model());
+            if (button.batteryPercent() != null) {
+                attrs.put("batteryPercent", button.batteryPercent());
+            }
+            name = buttonName(button);
+        }
+        if (press.time() != null) {
+            attrs.put("pressedAt", press.time().toString());
+        }
+        return EntityStateUpdate.builder()
+                .entityId(buttonEntityId(press.deviceId()))
+                .domain(EntityDomain.EVENT)
+                .source(EntitySource.DIRIGERA)
+                .sourceRef(entityRef(press.deviceId()))
+                .friendlyName(name)
+                .state(CLICK_ACTIONS.getOrDefault(press.clickPattern(), press.clickPattern()))
+                .attributes(attrs)
+                .build();
+    }
+
+    private static String buttonName(DirigeraButton button) {
+        String base = !isBlank(button.name()) ? button.name() : button.deviceId();
+        String position = button.position() == null ? null : POSITION_LABELS.getOrDefault(button.position(), button.position());
+        return isBlank(position) ? base : base + " " + position;
+    }
+
+    private static void putIfPresent(Map<String, Object> attrs, String key, String value) {
+        if (!isBlank(value)) {
+            attrs.put(key, value);
+        }
     }
 
     /** Alle Entity-Ids, die zu dieser Zeile gehoeren (je nach Art). */

@@ -118,7 +118,7 @@ class DirigeraPairingServiceTest {
         when(http.requestToken(eq(HOST), eq(FP), eq("code-1"), anyString()))
                 .thenReturn(Optional.empty(), Optional.empty(), Optional.of("tok"));
         when(http.getDevices(HOST, FP, "tok")).thenReturn("[devices]");
-        when(parser.parse("[devices]")).thenReturn(new DirigeraDevices(GATEWAY_ID, List.of()));
+        when(parser.parse("[devices]")).thenReturn(new DirigeraDevices(GATEWAY_ID, List.of(), List.of()));
         service.start();
         Runnable tick = capturedTick();
 
@@ -154,7 +154,7 @@ class DirigeraPairingServiceTest {
     void ohneGatewayIdFailed() {
         when(http.requestToken(eq(HOST), eq(FP), eq("code-1"), anyString())).thenReturn(Optional.of("tok"));
         when(http.getDevices(HOST, FP, "tok")).thenReturn("[]");
-        when(parser.parse("[]")).thenReturn(new DirigeraDevices(null, List.of()));
+        when(parser.parse("[]")).thenReturn(new DirigeraDevices(null, List.of(), List.of()));
         service.start();
 
         capturedTick().run();
@@ -211,7 +211,7 @@ class DirigeraPairingServiceTest {
                 .thenThrow(new DirigeraException("Hub nicht erreichbar"))
                 .thenReturn(Optional.of("tok"));
         when(http.getDevices(HOST, FP, "tok")).thenReturn("[devices]");
-        when(parser.parse("[devices]")).thenReturn(new DirigeraDevices(GATEWAY_ID, List.of()));
+        when(parser.parse("[devices]")).thenReturn(new DirigeraDevices(GATEWAY_ID, List.of(), List.of()));
         service.start();
         Runnable tick = capturedTick();
 
@@ -227,7 +227,7 @@ class DirigeraPairingServiceTest {
         when(settings.get()).thenReturn(new DirigeraHubSettings(HOST, "alt", "old-fp", "anderer-hub_1"));
         when(http.requestToken(eq(HOST), eq(FP), eq("code-1"), anyString())).thenReturn(Optional.of("tok"));
         when(http.getDevices(HOST, FP, "tok")).thenReturn("[devices]");
-        when(parser.parse("[devices]")).thenReturn(new DirigeraDevices(GATEWAY_ID, List.of()));
+        when(parser.parse("[devices]")).thenReturn(new DirigeraDevices(GATEWAY_ID, List.of(), List.of()));
 
         service.start();
         capturedTick().run();

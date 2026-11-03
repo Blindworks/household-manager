@@ -1,0 +1,110 @@
+[
+ {
+  "id": "4ab740b2-efb5-4301-8bf5-63c702722938_1",
+  "relationId": "4ab740b2-efb5-4301-8bf5-63c702722938",
+  "type": "controller",
+  "deviceType": "genericSwitch",
+  "createdAt": "2026-11-03T16:11:02.000Z",
+  "isReachable": true,
+  "lastSeen": "2026-11-03T16:44:37.000Z",
+  "attributes": {
+   "identifyPeriod": 0,
+   "identifyStarted": "2026-10-30T06:38:25.000Z",
+   "relativePosition": [
+    "top"
+   ],
+   "switchLabel": "button 1",
+   "customName": "Button Treppenhaus",
+   "firmwareVersion": "1.8.5",
+   "hardwareVersion": "P2.0",
+   "manufacturer": "IKEA of Sweden",
+   "model": "BILRESA dual button",
+   "productCode": "E2489",
+   "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+   "discriminator": -1,
+   "permittingJoin": false,
+   "qrCode": "",
+   "setupCode": "",
+   "windowOpen": false,
+   "otaPolicy": "autoUpdate",
+   "otaProgress": 0,
+   "otaScheduleEnd": "00:00",
+   "otaScheduleStart": "00:00",
+   "otaState": "updateFailed",
+   "otaStatus": "updateAvailable",
+   "batteryPercentage": 100,
+   "controlMode": "notConfigured"
+  },
+  "capabilities": {
+   "canSend": [],
+   "canReceive": [
+    "customName",
+    "windowOpen",
+    "controlModeLight",
+    "controlModeSpeaker",
+    "controlModeBlind",
+    "controlModeShortcutController"
+   ]
+  },
+  "room": {
+   "id": "f08f167a-a8ad-492b-b069-14e6705d383b",
+   "name": "Treppenhaus",
+   "color": "ikea_blue_no_52",
+   "icon": "rooms_book_case"
+  },
+  "deviceSet": [],
+  "remoteLinks": [],
+  "isHidden": false
+ },
+ {
+  "id": "4ab740b2-efb5-4301-8bf5-63c702722938_2",
+  "relationId": "4ab740b2-efb5-4301-8bf5-63c702722938",
+  "type": "controller",
+  "deviceType": "genericSwitch",
+  "createdAt": "2026-11-03T16:11:02.000Z",
+  "isReachable": true,
+  "lastSeen": "2026-11-03T16:44:37.000Z",
+  "attributes": {
+   "identifyPeriod": 0,
+   "identifyStarted": "2026-10-30T06:38:25.000Z",
+   "relativePosition": [
+    "bottom"
+   ],
+   "switchLabel": "button 2",
+   "customName": "Button Treppenhaus",
+   "firmwareVersion": "1.8.5",
+   "hardwareVersion": "P2.0",
+   "manufacturer": "IKEA of Sweden",
+   "model": "BILRESA dual button",
+   "productCode": "E2489",
+   "serialNumber": "UNKNOWN_SERIAL_NUMBER",
+   "discriminator": -1,
+   "permittingJoin": false,
+   "qrCode": "",
+   "setupCode": "",
+   "windowOpen": false,
+   "otaPolicy": "autoUpdate",
+   "otaProgress": 0,
+   "otaScheduleEnd": "00:00",
+   "otaScheduleStart": "00:00",
+   "otaState": "updateFailed",
+   "otaStatus": "updateAvailable",
+   "batteryPercentage": 100,
+   "controlMode": "notConfigured"
+  },
+  "capabilities": {
+   "canSend": [],
+   "canReceive": [
+    "customName",
+    "windowOpen",
+    "controlModeLight",
+    "controlModeSpeaker",
+    "controlModeBlind",
+    "controlModeShortcutController"
+   ]
+  },
+  "deviceSet": [],
+  "remoteLinks": [],
+  "isHidden": false
+ }
+]

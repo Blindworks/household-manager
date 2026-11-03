@@ -53,6 +53,7 @@ class DirigeraPollingServiceTest {
     private EntityStateService entityStates;
     private SystemJobMonitor jobMonitor;
     private DirigeraPollingService service;
+    private DirigeraButtonRegistry buttons;
     private final List<DirigeraSensor> stored = new ArrayList<>();
 
     @BeforeEach
@@ -64,8 +65,9 @@ class DirigeraPollingServiceTest {
         recorder = mock(DirigeraReadingRecorder.class);
         entityStates = mock(EntityStateService.class);
         jobMonitor = mock(SystemJobMonitor.class);
+        buttons = new DirigeraButtonRegistry();
         service = new DirigeraPollingService(settings, http, parser, repository, new DirigeraEntityMapper(),
-                recorder, entityStates, jobMonitor, clock, true, 60);
+                recorder, buttons, entityStates, jobMonitor, clock, true, 60);
 
         when(settings.get()).thenReturn(PAIRED);
         when(repository.findByRelationId(anyString())).thenAnswer(inv -> stored.stream()
@@ -124,6 +126,95 @@ class DirigeraPollingServiceTest {
         verify(entityStates).reportState(updates.capture());
         assertThat(updates.getValue().entityId()).isEqualTo(DirigeraEntityMapper.contactEntityId("c"));
         assertThat(updates.getValue().state()).isEqualTo("on");
+    }
+
+    @Test
+    void pollFuelltDieTasterListe() {
+        when(http.getDevices(anyString(), anyString(), anyString())).thenReturn("x");
+        DirigeraButton top = new DirigeraButton("b_1", "Button", "Flur", "BILRESA", "top", 100);
+        doReturn(new DirigeraDevices(HUB_ID, List.of(), List.of(top))).when(parser).parse("x");
+
+        service.poll();
+
+        assertThat(buttons.find("b_1")).contains(top);
+    }
+
+    @Test
+    void kontaktEreignisMeldetSofort() {
+        stored.add(contactRow("c", false));
+
+        service.applyContactChange(new DirigeraContactChange("c", true, Instant.parse("2026-10-30T08:59:30Z"), true));
+
+        assertThat(stored.get(0).getLastOpen()).isTrue();
+        assertThat(stored.get(0).getLastSeenAt()).isEqualTo(LocalDateTime.of(2026, 10, 30, 9, 59, 30));
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates).reportState(updates.capture());
+        assertThat(updates.getValue().entityId()).isEqualTo(DirigeraEntityMapper.contactEntityId("c"));
+        assertThat(updates.getValue().state()).isEqualTo("on");
+    }
+
+    @Test
+    void ereignisFuerUnbekanntenSensorWirdIgnoriert() {
+        stored.add(row("t", true));
+
+        service.applyContactChange(new DirigeraContactChange("t", true, null, null));
+        service.applyContactChange(new DirigeraContactChange("neu", true, null, null));
+
+        verify(repository, never()).save(any(DirigeraSensor.class));
+        verifyNoInteractions(entityStates);
+    }
+
+    @Test
+    void ereignisFuerStillenSensorWirdGespeichertAberNichtGemeldet() {
+        DirigeraSensor row = contactRow("c", false);
+        row.setLastSeenAt(LocalDateTime.of(2026, 10, 30, 6, 0));
+        stored.add(row);
+
+        service.applyContactChange(new DirigeraContactChange("c", true, null, null));
+
+        assertThat(row.getLastOpen()).isTrue();
+        verifyNoInteractions(entityStates);
+    }
+
+    @Test
+    void ereignisFehlerWirftNicht() {
+        when(repository.findByRelationId("c")).thenThrow(new IllegalStateException("db"));
+
+        assertThatCode(() -> service.applyContactChange(new DirigeraContactChange("c", true, null, null)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void pollMitAltemStandUeberschreibtFrischesEreignisNicht() {
+        stored.add(contactRow("c", false));
+        // Waehrend der Abruf laeuft, kommt "offen" ueber den Ereignisstrom; die Geraeteliste traegt noch "zu"
+        when(http.getDevices(anyString(), anyString(), anyString())).thenAnswer(inv -> {
+            service.applyContactChange(new DirigeraContactChange("c", true, null, null));
+            return "x";
+        });
+        doReturn(new DirigeraDevices(HUB_ID, List.of(contactSnapshot("c", false)), List.of())).when(parser).parse("x");
+
+        service.poll();
+
+        assertThat(stored.get(0).getLastOpen()).isTrue();
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates, times(2)).reportState(updates.capture());
+        assertThat(updates.getAllValues()).extracting(EntityStateUpdate::state).containsOnly("on");
+    }
+
+    @Test
+    void spaetererPollUebernimmtDenStandWiederVomHub() {
+        MutableInstantClock moving = new MutableInstantClock(Instant.parse("2026-10-30T09:00:00Z"));
+        service = new DirigeraPollingService(settings, http, parser, repository, new DirigeraEntityMapper(),
+                recorder, buttons, entityStates, jobMonitor, moving, true, 60);
+        stored.add(contactRow("c", false));
+        service.applyContactChange(new DirigeraContactChange("c", true, null, null));
+        moving.now = moving.now.plusSeconds(60);
+        stubDevices(contactSnapshot("c", false));
+
+        service.poll();
+
+        assertThat(stored.get(0).getLastOpen()).isFalse();
     }
 
     @Test
@@ -288,7 +379,7 @@ class DirigeraPollingServiceTest {
     @Test
     void pollWirftNie() {
         when(http.getDevices(anyString(), anyString(), anyString())).thenReturn("x");
-        doReturn(new DirigeraDevices(HUB_ID, List.of())).when(parser).parse("x");
+        doReturn(new DirigeraDevices(HUB_ID, List.of(), List.of())).when(parser).parse("x");
         when(repository.findByKnownToHubTrue()).thenThrow(new IllegalStateException("db weg"));
 
         assertThatCode(service::poll).doesNotThrowAnyException();
@@ -297,7 +388,7 @@ class DirigeraPollingServiceTest {
 
     private void stubDevices(DirigeraSensorSnapshot... snapshots) {
         when(http.getDevices(anyString(), anyString(), anyString())).thenReturn("x");
-        doReturn(new DirigeraDevices(HUB_ID, List.of(snapshots))).when(parser).parse("x");
+        doReturn(new DirigeraDevices(HUB_ID, List.of(snapshots), List.of())).when(parser).parse("x");
     }
 
     private void assertUnavailableReported() {
@@ -314,6 +405,35 @@ class DirigeraPollingServiceTest {
     private static DirigeraSensorSnapshot contactSnapshot(String relationId, Boolean open) {
         return new DirigeraSensorSnapshot(relationId, DirigeraSensorKind.CONTACT, "Badfenster", "Bad",
                 "PARASOLL", null, null, open, 80, true, Instant.parse("2026-10-30T08:59:00Z"));
+    }
+
+    private static DirigeraSensor contactRow(String relationId, boolean open) {
+        return DirigeraSensor.builder().relationId(relationId).name("Badfenster").kind(DirigeraSensorKind.CONTACT)
+                .lastOpen(open).knownToHub(true).reachable(true)
+                .lastSeenAt(LocalDateTime.of(2026, 10, 30, 9, 59)).build();
+    }
+
+    private static final class MutableInstantClock extends Clock {
+        private Instant now;
+
+        MutableInstantClock(Instant now) {
+            this.now = now;
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneId.of("Europe/Berlin");
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
     }
 
     private static DirigeraSensor row(String relationId, boolean knownToHub) {
