@@ -165,9 +165,9 @@ class DirigeraPollingServiceTest {
     }
 
     @Test
-    void ereignisFuerStillenSensorWirdGespeichertAberNichtGemeldet() {
+    void ereignisFuerUnerreichbarenSensorWirdGespeichertAberNichtGemeldet() {
         DirigeraSensor row = contactRow("c", false);
-        row.setLastSeenAt(LocalDateTime.of(2026, 10, 30, 6, 0));
+        row.setReachable(false);
         stored.add(row);
 
         service.applyContactChange(new DirigeraContactChange("c", true, null, null));
@@ -392,6 +392,55 @@ class DirigeraPollingServiceTest {
     }
 
     private void assertUnavailableReported() {
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates, org.mockito.Mockito.atLeastOnce()).reportState(updates.capture());
+        assertThat(updates.getAllValues()).extracting(EntityStateUpdate::state).containsOnly("unavailable");
+    }
+
+    @Test
+    void ruhenderKontaktBleibtVerfuegbarAuchWennLastSeenStundenAltIst() {
+        // MYGGBETT aktualisiert lastSeen nur bei einem Auf/Zu (real 2026-11-04: 12:08, um 17:15 unveraendert)
+        stubDevices(new DirigeraSensorSnapshot("c", DirigeraSensorKind.CONTACT, "Badfenster", "Bad",
+                "MYGGBETT", null, null, false, 100, true, Instant.parse("2026-10-30T03:00:00Z")));
+
+        service.poll();
+
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates).reportState(updates.capture());
+        assertThat(updates.getValue().state()).isEqualTo("off");
+    }
+
+    @Test
+    void nichtErreichbarerKontaktWirdWeiterhinUnavailable() {
+        stubDevices(new DirigeraSensorSnapshot("c", DirigeraSensorKind.CONTACT, "Badfenster", "Bad",
+                "MYGGBETT", null, null, false, 100, false, Instant.parse("2026-10-30T08:59:00Z")));
+
+        service.poll();
+
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates).reportState(updates.capture());
+        assertThat(updates.getValue().state()).isEqualTo("unavailable");
+    }
+
+    @Test
+    void ereignisOhneLastSeenWirdBeiAltemLastSeenTrotzdemGemeldet() {
+        stored.add(DirigeraSensor.builder().relationId("c").name("Badfenster").kind(DirigeraSensorKind.CONTACT)
+                .lastOpen(false).knownToHub(true).reachable(true)
+                .lastSeenAt(LocalDateTime.of(2026, 10, 30, 4, 0)).build());
+
+        service.applyContactChange(new DirigeraContactChange("c", true, null, null));
+
+        ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStates).reportState(updates.capture());
+        assertThat(updates.getValue().state()).isEqualTo("on");
+    }
+
+    @Test
+    void stillesThermometerWirdWeiterhinUnavailable() {
+        stubDevices(snapshot("a", true, Instant.parse("2026-10-30T03:00:00Z")));
+
+        service.poll();
+
         ArgumentCaptor<EntityStateUpdate> updates = ArgumentCaptor.forClass(EntityStateUpdate.class);
         verify(entityStates, org.mockito.Mockito.atLeastOnce()).reportState(updates.capture());
         assertThat(updates.getAllValues()).extracting(EntityStateUpdate::state).containsOnly("unavailable");

@@ -253,8 +253,20 @@ public class DirigeraPollingService {
         }
     }
 
+    /**
+     * Thermometer melden laufend, bei ihnen ist ein altes {@code lastSeen} ein Ausfall. Kontakte
+     * (MYGGBETT) aktualisieren {@code lastSeen} am Hub nur bei einem Auf/Zu — ein ruhendes Fenster
+     * waere sonst nach {@code stale-after-minutes} {@code unavailable} (real 2026-11-04). Fuer sie
+     * zaehlt deshalb allein die Erreichbarkeit, die der Hub selbst meldet.
+     */
     private boolean isFresh(DirigeraSensor row) {
-        if (!row.isReachable() || row.getLastSeenAt() == null) {
+        if (!row.isReachable()) {
+            return false;
+        }
+        if (row.getKind() == DirigeraSensorKind.CONTACT) {
+            return true;
+        }
+        if (row.getLastSeenAt() == null) {
             return false;
         }
         LocalDateTime threshold = LocalDateTime.now(clock).minusMinutes(staleAfterMinutes);
