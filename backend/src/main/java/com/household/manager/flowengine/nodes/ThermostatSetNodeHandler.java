@@ -16,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * erzeugt neue Kontexte. Er überlebt keinen Backend-Neustart; ein „restore" ohne gemerkten Wert
  * schaltet auf MANUAL, was beim Aus-Zustand den Standard-Sollwert des Services setzt.
  *
+ * <p>Nach einem „restore" bleibt der Wert noch {@link #KEEP_AFTER_RESTORE} gemerkt. Das Thermostat
+ * meldet einen neuen Sollwert erst verzögert an den Hub; wird das Fenster kurz nach dem Schließen
+ * wieder geöffnet, steht im Cache noch das Aus-Ziel, und ohne diese Frist gäbe es beim nächsten
+ * Schließen nichts mehr zurückzustellen (real am 2026-11-04: Bad fiel von 21 auf 17 Grad).
+ *
  * <p>Gerätefehler werden <b>nicht</b> geschluckt (anders als {@code light-set}): ein nicht
  * abgeschaltetes Thermostat soll im Flow-Debug sichtbar sein. Parallele Zweige desselben
  * Triggers laufen trotzdem weiter.
@@ -46,11 +54,17 @@ public class ThermostatSetNodeHandler implements NodeHandler {
     static final String RESTORE = "restore";
     static final String TARGET = "target";
     private static final List<String> ACTIONS = List.of(OFF, RESTORE, TARGET);
+    static final Duration KEEP_AFTER_RESTORE = Duration.ofMinutes(15);
 
     private final ThermostatService thermostatService;
     private final ThermostatStateCache cache;
+    private final Clock clock;
 
-    private final Map<Long, Double> rememberedTargets = new ConcurrentHashMap<>();
+    /** {@code restoredAt} null: noch nicht zurückgestellt (Fenster offen). */
+    private record Remembered(double target, Instant restoredAt) {
+    }
+
+    private final Map<Long, Remembered> rememberedTargets = new ConcurrentHashMap<>();
 
     @Override
     public String type() {
@@ -101,15 +115,21 @@ public class ThermostatSetNodeHandler implements NodeHandler {
 
     /**
      * Merkt sich nur ein Ziel über dem Aus-Wert: ein zweites „off" bei schon ausgeschaltetem
-     * Thermostat darf den echten Sollwert nicht mit 5 Grad überschreiben. Gemerkt wird erst nach
-     * erfolgreichem Schalten.
+     * Thermostat darf den echten Sollwert nicht mit 5 Grad überschreiben. Ist kein brauchbarer
+     * Wert lesbar, bleibt ein noch offener oder kürzlich zurückgestellter Wert gemerkt. Gemerkt
+     * wird erst nach erfolgreichem Schalten.
      */
     private void switchOff(long id) {
         Optional<Double> before = currentReading(id)
                 .map(ThermostatReading::targetTemp)
                 .filter(target -> target > ThermostatTargetValidator.MIN_TARGET);
         thermostatService.setMode(id, ThermostatMode.OFF);
-        before.ifPresent(target -> rememberedTargets.put(id, target));
+        if (before.isPresent()) {
+            rememberedTargets.put(id, new Remembered(before.get(), null));
+        } else {
+            rememberedTargets.computeIfPresent(id,
+                    (key, remembered) -> isUsable(remembered) ? new Remembered(remembered.target(), null) : null);
+        }
     }
 
     /**
@@ -118,10 +138,15 @@ public class ThermostatSetNodeHandler implements NodeHandler {
      * gemerkte Wert trotzdem geschrieben — das ist idempotent.
      */
     private void restore(long id) {
-        Double remembered = rememberedTargets.remove(id);
+        Remembered remembered = rememberedTargets.get(id);
+        if (remembered != null && !isUsable(remembered)) {
+            rememberedTargets.remove(id);
+            remembered = null;
+        }
         Optional<ThermostatReading> current = currentReading(id).filter(reading -> reading.targetTemp() != null);
         if (current.isPresent() && current.get().mode() != ThermostatMode.OFF) {
             log.info("Thermostat {} wurde zwischenzeitlich eingeschaltet, restore laesst es unveraendert", id);
+            rememberedTargets.remove(id);
             return;
         }
         if (remembered == null) {
@@ -129,7 +154,14 @@ public class ThermostatSetNodeHandler implements NodeHandler {
             thermostatService.setMode(id, ThermostatMode.MANUAL);
             return;
         }
-        thermostatService.setTarget(id, remembered);
+        thermostatService.setTarget(id, remembered.target());
+        rememberedTargets.put(id, new Remembered(remembered.target(), Instant.now(clock)));
+    }
+
+    /** Offen gemerkt ist immer brauchbar, zurückgestellt nur innerhalb der Frist. */
+    private boolean isUsable(Remembered remembered) {
+        return remembered.restoredAt() == null
+                || !Instant.now(clock).isAfter(remembered.restoredAt().plus(KEEP_AFTER_RESTORE));
     }
 
     private Optional<ThermostatReading> currentReading(long id) {

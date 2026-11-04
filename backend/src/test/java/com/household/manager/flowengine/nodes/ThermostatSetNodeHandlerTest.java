@@ -15,7 +15,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,10 +47,38 @@ class ThermostatSetNodeHandlerTest {
     private ThermostatStateCache cache;
 
     private ThermostatSetNodeHandler handler;
+    private final MutableClock clock = new MutableClock(Instant.parse("2026-11-04T06:43:00Z"));
 
     @BeforeEach
     void setUp() {
-        handler = new ThermostatSetNodeHandler(thermostatService, cache);
+        handler = new ThermostatSetNodeHandler(thermostatService, cache, clock);
+    }
+
+    private static final class MutableClock extends Clock {
+        private Instant now;
+
+        MutableClock(Instant now) {
+            this.now = now;
+        }
+
+        void advance(Duration duration) {
+            now = now.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneId.of("Europe/Berlin");
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
     }
 
     private static NodeConfig config(Object... keyValues) {
@@ -89,16 +121,80 @@ class ThermostatSetNodeHandlerTest {
     }
 
     @Test
-    void restoreForgetsTheTargetAfterUse() {
+    void restoreForgetsTheTargetOnceTheGracePeriodIsOver() {
         cached(21.0, ThermostatMode.MANUAL);
         run("off");
         cached(5.0, ThermostatMode.OFF);
         run("restore");
+        clock.advance(ThermostatSetNodeHandler.KEEP_AFTER_RESTORE.plusSeconds(1));
 
         run("restore");
 
-        // Zweites Schliessen ohne erneutes Oeffnen: kein gemerkter Wert mehr, also der Rueckfall.
+        // Zweites Schliessen lange nach dem ersten: kein gemerkter Wert mehr, also der Rueckfall.
         verify(thermostatService).setMode(BAD, ThermostatMode.MANUAL);
+    }
+
+    @Test
+    void reopeningRightAfterRestoreKeepsTheTargetAlthoughTheCacheStillShowsOff() {
+        // Ablauf vom 2026-11-04: auf, zu, 6 s spaeter wieder auf, zu. Der Cache zeigt nach dem
+        // Zurueckstellen noch das Aus-Ziel, weil das Thermostat den neuen Wert verzoegert meldet.
+        cached(21.0, ThermostatMode.MANUAL);
+        run("off");
+        cached(5.0, ThermostatMode.OFF);
+        run("restore");
+        clock.advance(Duration.ofSeconds(6));
+        run("off");
+        clock.advance(Duration.ofMinutes(7));
+
+        run("restore");
+
+        verify(thermostatService, org.mockito.Mockito.times(2)).setTarget(BAD, 21.0);
+        verify(thermostatService, never()).setMode(BAD, ThermostatMode.MANUAL);
+    }
+
+    @Test
+    void reopenedWindowKeepsTheTargetEvenIfClosingTakesLongerThanTheGracePeriod() {
+        cached(21.0, ThermostatMode.MANUAL);
+        run("off");
+        cached(5.0, ThermostatMode.OFF);
+        run("restore");
+        clock.advance(Duration.ofMinutes(1));
+        run("off");
+        // Das Fenster bleibt lange offen: die Frist gilt nur zwischen Zurueckstellen und Oeffnen
+        clock.advance(Duration.ofHours(1));
+
+        run("restore");
+
+        verify(thermostatService, org.mockito.Mockito.times(2)).setTarget(BAD, 21.0);
+    }
+
+    @Test
+    void reopeningLongAfterRestoreWithStaleCacheFallsBackToManual() {
+        cached(21.0, ThermostatMode.MANUAL);
+        run("off");
+        cached(5.0, ThermostatMode.OFF);
+        run("restore");
+        clock.advance(ThermostatSetNodeHandler.KEEP_AFTER_RESTORE.plusSeconds(1));
+        run("off");
+
+        run("restore");
+
+        verify(thermostatService).setMode(BAD, ThermostatMode.MANUAL);
+    }
+
+    @Test
+    void aFreshTargetAtReopeningWinsOverTheRememberedOne() {
+        cached(21.0, ThermostatMode.MANUAL);
+        run("off");
+        cached(5.0, ThermostatMode.OFF);
+        run("restore");
+        cached(22.5, ThermostatMode.MANUAL);
+        run("off");
+        cached(5.0, ThermostatMode.OFF);
+
+        run("restore");
+
+        verify(thermostatService).setTarget(BAD, 22.5);
     }
 
     @Test
