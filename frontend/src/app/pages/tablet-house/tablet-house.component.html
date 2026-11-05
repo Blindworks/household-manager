@@ -19,18 +19,54 @@
         #sceneHost
         class="tablet-house__scene"
         (pointerdown)="onScenePointerDown($event)"
-        (click)="onSceneClick($event)"></div>
+        (pointerup)="onScenePointerUp($event)"
+        (pointercancel)="onScenePointerCancel()"></div>
 
       <!-- Bubbles werden je Frame per style.transform verschoben, nicht per Bindung. -->
       <div class="tablet-house__bubbles">
-        @for (room of visibleRooms(); track room.id) {
+        @for (room of roomBubbles(); track room.areaId) {
           <button
-            #roomBubble
+            #bubble
             type="button"
             class="house-bubble house-bubble--room"
-            [attr.data-room]="room.id"
-            (click)="focusRoom(room.id)">
-            {{ room.label }}
+            [class.house-bubble--stale]="room.temperature.stale"
+            [attr.data-room]="room.areaId"
+            (click)="focusRoom(room.areaId)">
+            <span class="house-bubble__label">{{ room.label }}</span>
+            <span class="house-bubble__values">
+              <span class="house-bubble__value">{{ room.temperature.text }}</span>
+              @if (room.humidity && room.humidity.text !== '–') {
+                <span class="house-bubble__value house-bubble__value--minor">{{ room.humidity.text }}</span>
+              }
+              @for (flag of flagsOf(room); track flag.flag) {
+                <span
+                  class="material-symbols-outlined house-bubble__flag house-bubble__flag--{{ flag.flag }}"
+                  [attr.aria-label]="flag.label"
+                  [attr.title]="flag.label">{{ flag.icon }}</span>
+              }
+            </span>
+          </button>
+        }
+
+        @for (placed of deviceBubbles(); track placed.bubble.deviceId) {
+          <button
+            #bubble
+            type="button"
+            class="house-bubble house-bubble--device"
+            [class.house-bubble--stale]="placed.stale"
+            [class.house-bubble--highlight]="placed.bubble.highlight"
+            [attr.data-device]="placed.bubble.deviceId"
+            [attr.data-area]="placed.bubble.areaId"
+            (click)="openDevice(placed.bubble)">
+            <span class="material-symbols-outlined house-bubble__icon">{{ placed.bubble.icon }}</span>
+            <span class="house-bubble__text">
+              <span class="house-bubble__label">{{ placed.bubble.label }}</span>
+              <span class="house-bubble__lines">
+                @for (line of placed.bubble.lines; track $index) {
+                  <span class="house-bubble__value" [class.house-bubble__value--stale]="line.stale">{{ line.text }}</span>
+                }
+              </span>
+            </span>
           </button>
         }
       </div>
@@ -40,6 +76,10 @@
           <span class="material-symbols-outlined">arrow_back</span>
           Überblick
         </button>
+      }
+
+      @if (loadError()) {
+        <p class="tablet-house__error" role="alert">Werte konnten nicht geladen werden.</p>
       }
 
       @if (sceneUnavailable()) {

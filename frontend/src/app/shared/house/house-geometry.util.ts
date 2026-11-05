@@ -1,4 +1,4 @@
-import { FLOORS, FloorId, HOUSE_BOUNDS, HOUSE_ROOMS, HouseRoom, PlanRect, STOREY_HEIGHT_M, UNITS_PER_METER, roomById } from './house-plan';
+import { FLOORS, FloorId, HOUSE_BOUNDS, HOUSE_ROOMS, HouseRoom, OUTDOOR_AREAS, PlanRect, STOREY_HEIGHT_M, UNITS_PER_METER, roomById } from './house-plan';
 
 /**
  * Weltkoordinaten der 3D-Hausansicht in Metern: y zeigt nach oben, die
@@ -16,6 +16,9 @@ export type FloorOpacity = 'solid' | 'glass' | 'hidden';
 
 /** Höhe der Raum-Anker (Bubbles, Kameraziel) über dem Etagenboden. */
 const ANCHOR_HEIGHT_M = 1.2;
+/** Höhe der Geräte-Anker über dem Boden und ihr Abstand zur Wand. */
+const DEVICE_ANCHOR_HEIGHT_M = 1.0;
+const DEVICE_WALL_MARGIN_M = 0.4;
 
 const CENTER_X = (HOUSE_BOUNDS.x1 + HOUSE_BOUNDS.x2) / 2;
 const CENTER_Y = (HOUSE_BOUNDS.y1 + HOUSE_BOUNDS.y2) / 2;
@@ -128,4 +131,63 @@ export function cameraForRoom(roomId: string): CameraView {
     position: { x: target.x, y: target.y + distance * 0.8, z: target.z + distance * 0.6 },
     target
   };
+}
+
+/** Größtes Rechteck, Etagenboden und Ausschnitte eines Raums oder Außenbereichs (Außen: Bodenhöhe). */
+function areaFootprint(areaId: string): { rect: PlanRect; base: number; roomId: string | null } {
+  const room = roomById(areaId);
+  if (room && room.rects.length > 0) {
+    return { rect: largestRect(room), base: floorBase(room.floor), roomId: room.id };
+  }
+  const outdoor = OUTDOOR_AREAS.find(area => area.id === areaId);
+  if (outdoor) {
+    return { rect: outdoor.rect, base: 0, roomId: null };
+  }
+  throw new Error(`Unbekannter Bereich: ${areaId}`);
+}
+
+/** Zellmitten eines möglichst quadratischen Rasters mit `cells` Zellen über einer Fläche. */
+function gridPoints(width: number, depth: number, cells: number): { u: number; v: number }[] {
+  const cols = Math.min(cells, Math.max(1, Math.round(Math.sqrt(cells * width / Math.max(depth, 1e-6)))));
+  const rows = Math.ceil(cells / cols);
+  const points: { u: number; v: number }[] = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      points.push({ u: (col + 0.5) / cols, v: (row + 0.5) / rows });
+    }
+  }
+  return points;
+}
+
+/**
+ * Anker für `count` Geräte-Bubbles eines Raums oder Außenbereichs: gleichmäßig im
+ * Raster über das größte Rechteck verteilt, 0,4 m von der Wand, 1,0 m über dem Boden.
+ * Rasterpunkte in einem Ausschnitt (Gäste-WC im Flur) werden übersprungen und das
+ * Raster so lange verfeinert, bis genug freie Punkte übrig sind.
+ */
+export function deviceAnchors(areaId: string, count: number): Vec3[] {
+  if (count <= 0) {
+    return [];
+  }
+  const { rect, base, roomId } = areaFootprint(areaId);
+  const margin = DEVICE_WALL_MARGIN_M * UNITS_PER_METER;
+  const left = Math.min(rect.x1, rect.x2);
+  const top = Math.min(rect.y1, rect.y2);
+  const width = Math.abs(rect.x2 - rect.x1);
+  const depth = Math.abs(rect.y2 - rect.y1);
+  // Schmale Streifen (Vor dem Haus) behalten mindestens die Mittellinie.
+  const marginX = Math.min(margin, width / 2);
+  const marginY = Math.min(margin, depth / 2);
+  const innerWidth = width - 2 * marginX;
+  const innerDepth = depth - 2 * marginY;
+
+  let free: { x: number; y: number }[] = [];
+  for (let cells = count; free.length < count && cells <= count * 4; cells++) {
+    free = gridPoints(innerWidth, innerDepth, cells)
+      .map(({ u, v }) => ({ x: left + marginX + u * innerWidth, y: top + marginY + v * innerDepth }))
+      .filter(point => !roomId || !insideCutout(roomId, point.x, point.y));
+  }
+  return free.slice(0, count).map(point => ({
+    x: toWorldX(point.x), y: base + DEVICE_ANCHOR_HEIGHT_M, z: toWorldZ(point.y)
+  }));
 }

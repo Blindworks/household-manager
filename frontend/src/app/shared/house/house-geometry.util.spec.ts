@@ -1,6 +1,6 @@
-import { HOUSE_ROOMS } from './house-plan';
+import { HOUSE_ROOMS, OUTDOOR_AREAS } from './house-plan';
 import {
-  Vec3, cameraForOverview, cameraForRoom, floorOpacity, insideCutout, roomAnchor, roomBoxes,
+  Vec3, cameraForOverview, cameraForRoom, deviceAnchors, floorOpacity, insideCutout, roomAnchor, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from './house-geometry.util';
 
@@ -89,5 +89,47 @@ describe('house-geometry.util', () => {
     expect(insideCutout('flur', 250, 400)).toBeTrue();
     expect(insideCutout('flur', 350, 300)).toBeFalse();
     expect(insideCutout('wohnzimmer', 250, 400)).toBeFalse();
+  });
+  describe('deviceAnchors', () => {
+    const inRect = (p: Vec3, rect: { x1: number; y1: number; x2: number; y2: number }) =>
+      toPlanX(p.x) >= rect.x1 && toPlanX(p.x) <= rect.x2 && toPlanY(p.z) >= rect.y1 && toPlanY(p.z) <= rect.y2;
+
+    it('deviceAnchors liegen innerhalb des Raums und sind paarweise ≥ 0,5 m entfernt', () => {
+      const anchors = deviceAnchors('buero', 9);
+      const rect = HOUSE_ROOMS.find(r => r.id === 'buero')!.rects[0];
+      // 0,4 m Wandabstand = 16 Skizzen-Einheiten
+      const inner = { x1: rect.x1 + 16, y1: rect.y1 + 16, x2: rect.x2 - 16, y2: rect.y2 - 16 };
+
+      expect(anchors.length).toBe(9);
+      anchors.forEach(a => {
+        expect(inRect(a, inner)).withContext(JSON.stringify(a)).toBeTrue();
+        expect(a.y).toBeCloseTo(2.6 + 1.0);
+      });
+      for (let i = 0; i < anchors.length; i++) {
+        for (let j = i + 1; j < anchors.length; j++) {
+          expect(distance(anchors[i], anchors[j])).toBeGreaterThanOrEqual(0.5);
+        }
+      }
+    });
+
+    it('meidet Ausschnitte (Gäste-WC im Flur)', () => {
+      deviceAnchors('flur', 4).forEach(a =>
+        expect(insideCutout('flur', toPlanX(a.x), toPlanY(a.z))).withContext(JSON.stringify(a)).toBeFalse());
+    });
+
+    it('funktioniert für Außenbereiche auf Bodenhöhe', () => {
+      const front = OUTDOOR_AREAS.find(a => a.id === 'front')!.rect;
+      const anchors = deviceAnchors('front', 5);
+      expect(anchors.length).toBe(5);
+      anchors.forEach(a => {
+        expect(inRect(a, front)).toBeTrue();
+        expect(a.y).toBeCloseTo(1.0);
+      });
+      expect(deviceAnchors('garden', 2).length).toBe(2);
+    });
+
+    it('liefert bei 0 Geräten nichts', () => {
+      expect(deviceAnchors('buero', 0)).toEqual([]);
+    });
   });
 });

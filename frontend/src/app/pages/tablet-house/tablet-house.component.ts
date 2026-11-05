@@ -1,20 +1,43 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, OnDestroy, QueryList,
+  AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, NgZone, OnDestroy, QueryList,
   ViewChild, ViewChildren, computed, inject, signal
 } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
+import { Subscription, catchError, interval, map, of, startWith, switchMap } from 'rxjs';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
+import { EntityState } from '../../models/entity-state.model';
+import { EntityStateService } from '../../services/entity-state.service';
+import { ViewModeService } from '../../services/view-mode.service';
 import { FLOORS, FloorId, HOUSE_ROOMS, HouseRoom } from '../../shared/house/house-plan';
-import { CameraView, cameraForOverview, cameraForRoom, roomAnchor } from '../../shared/house/house-geometry.util';
+import {
+  CameraView, Vec3, cameraForOverview, cameraForRoom, deviceAnchors, roomAnchor
+} from '../../shared/house/house-geometry.util';
+import {
+  BubbleFlag, DeviceBubble, RoomBubble, buildDeviceBubbles, buildOutdoorBubbles, buildRoomBubble
+} from '../../shared/house/house-bubbles.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
-/** Weiter als so viele Pixel zwischen Druck und Klick ist ein Ziehen (Drehen), kein Tipp. */
+/** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
 const TAP_TOLERANCE_PX = 8;
+const REFRESH_INTERVAL_MS = 30_000;
+
+const FLAG_ICONS: Record<BubbleFlag, { icon: string; label: string }> = {
+  window_open: { icon: 'sensor_window', label: 'Fenster offen' },
+  heating: { icon: 'mode_heat', label: 'Heizung läuft' },
+  appliance_running: { icon: 'local_laundry_service', label: 'Gerät läuft' },
+  appliance_finished: { icon: 'check_circle', label: 'Gerät fertig' },
+  motion: { icon: 'directions_walk', label: 'Bewegung' }
+};
+
+/** Geräte-Bubble samt Anker in der Szene (je Bereich im Raster verteilt). */
+interface PlacedDeviceBubble { bubble: DeviceBubble; anchor: Vec3; stale: boolean }
 
 /**
  * 3D-Hausansicht fuer das Wandtablet („digitaler Zwilling“): das Haus als
- * Neon-Drahtmodell mit Etagenwahl, je Raum eine Bubble; ein Tipp auf Raum oder
- * Bubble fliegt hinein.
+ * Neon-Drahtmodell mit Etagenwahl. Im Ueberblick je Raum eine Bubble mit
+ * Temperatur und Hinweisen (im EG zusaetzlich die Aussenbereiche), in der
+ * Raumansicht die Geraete des Raums. Geraete-Bubbles fuehren auf die Fachseite.
  *
  * Die Bubbles folgen der Kamera je gezeichnetem Frame. Das laeuft bewusst an
  * Angular vorbei (direkte DOM-Transforms, Renderer ausserhalb der Zone, OnPush),
@@ -30,21 +53,63 @@ const TAP_TOLERANCE_PX = 8;
 })
 export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly zone = inject(NgZone);
+  private readonly router = inject(Router);
+  private readonly entityService = inject(EntityStateService);
+  private readonly viewMode = inject(ViewModeService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly createRenderer = inject(HOUSE_RENDERER_FACTORY);
 
   @ViewChild('sceneHost', { static: true }) private sceneHost!: ElementRef<HTMLElement>;
-  @ViewChildren('roomBubble') private roomBubbleRefs!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChildren('bubble') private bubbleRefs!: QueryList<ElementRef<HTMLElement>>;
 
   private renderer: HouseSceneRenderer | null = null;
   private pointerStart: { x: number; y: number } | null = null;
   private bubbleChanges: Subscription | null = null;
+  private loaded = false;
 
   readonly floors = FLOORS;
   readonly selectedFloor = signal<FloorId>('ground');
   readonly focusedRoom = signal<string | null>(null);
   readonly sceneUnavailable = signal(false);
+  readonly loadError = signal(false);
+  private readonly entities = signal<ReadonlyMap<string, EntityState>>(new Map());
+  private readonly fetchedAt = signal(Date.now());
+
   readonly visibleRooms = computed<HouseRoom[]>(() =>
     HOUSE_ROOMS.filter(room => room.floor === this.selectedFloor()));
+
+  /** Ueberblick: genau eine Bubble je Raum der Etage; in der Raumansicht keine. */
+  readonly roomBubbles = computed<RoomBubble[]>(() => {
+    if (this.focusedRoom()) {
+      return [];
+    }
+    const entities = this.entities();
+    const now = this.fetchedAt();
+    return this.visibleRooms().map(room => buildRoomBubble(room.id, entities, now));
+  });
+
+  /** Raumansicht: Geraete des Raums; Ueberblick des EG: die Aussenbereiche. */
+  readonly deviceBubbles = computed<PlacedDeviceBubble[]>(() => {
+    const entities = this.entities();
+    const now = this.fetchedAt();
+    const tabletMode = this.viewMode.isTabletView();
+    const focused = this.focusedRoom();
+    const bubbles = focused
+      ? buildDeviceBubbles(focused, entities, now, tabletMode)
+      : this.selectedFloor() === 'ground' ? buildOutdoorBubbles(entities, now, tabletMode) : [];
+    return placeByArea(bubbles);
+  });
+
+  constructor() {
+    interval(REFRESH_INTERVAL_MS).pipe(
+      startWith(0),
+      switchMap(() => this.entityService.getEntities().pipe(
+        map(list => new Map(list.map(entity => [entity.entityId, entity] as const))),
+        catchError(() => of(null))
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => this.applyFetch(result));
+  }
 
   ngAfterViewInit(): void {
     try {
@@ -60,8 +125,9 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       renderer.setFloor(this.selectedFloor());
       renderer.flyTo(cameraForOverview(this.selectedFloor()), 0);
     });
-    // Nach einem Etagenwechsel stehen neue Bubble-Elemente im DOM - sofort einordnen.
-    this.bubbleChanges = this.roomBubbleRefs.changes.subscribe(() => this.outside(renderer => renderer.requestRender()));
+    // Neue Bubble-Elemente (Etagenwechsel, Raumansicht) sofort einordnen.
+    this.bubbleChanges = this.bubbleRefs.changes.subscribe(() => this.outside(renderer => renderer.requestRender()));
+    this.outside(renderer => renderer.requestRender());
   }
 
   ngOnDestroy(): void {
@@ -87,11 +153,23 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     this.fly(cameraForOverview(this.selectedFloor()));
   }
 
+  openDevice(bubble: DeviceBubble): void {
+    void this.router.navigateByUrl(bubble.target);
+  }
+
+  flagsOf(bubble: RoomBubble): { flag: BubbleFlag; icon: string; label: string }[] {
+    return bubble.flags.map(flag => ({ flag, ...FLAG_ICONS[flag] }));
+  }
+
   onScenePointerDown(event: PointerEvent): void {
     this.pointerStart = { x: event.clientX, y: event.clientY };
   }
 
-  onSceneClick(event: MouseEvent): void {
+  onScenePointerCancel(): void {
+    this.pointerStart = null;
+  }
+
+  onScenePointerUp(event: PointerEvent): void {
     const start = this.pointerStart;
     this.pointerStart = null;
     if (!this.renderer || !start
@@ -101,7 +179,22 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     const roomId = this.renderer.pickRoom(event.clientX, event.clientY);
     if (roomId) {
       this.focusRoom(roomId);
+    } else if (this.focusedRoom()) {
+      this.backToOverview();
     }
+  }
+
+  private applyFetch(result: Map<string, EntityState> | null): void {
+    if (result) {
+      this.loaded = true;
+      this.loadError.set(false);
+      this.fetchedAt.set(Date.now());
+      this.entities.set(result);
+    } else if (!this.loaded) {
+      // Nur der Erstabruf meldet einen Fehler; spaeter bleiben die letzten Werte stehen.
+      this.loadError.set(true);
+    }
+    this.outside(renderer => renderer.requestRender());
   }
 
   private fly(view: CameraView): void {
@@ -118,16 +211,44 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
 
   private positionBubbles(): void {
     const renderer = this.renderer;
-    if (!renderer || !this.roomBubbleRefs) {
+    if (!renderer || !this.bubbleRefs) {
       return;
     }
-    const elements = this.roomBubbleRefs.map(ref => ref.nativeElement);
-    const rooms = elements.map(element => element.dataset['room'] ?? '');
-    const points = renderer.project(rooms.map(roomId => roomAnchor(roomId)));
-    elements.forEach((element, i) => {
+    const deviceAnchorsById = new Map(this.deviceBubbles().map(placed => [placed.bubble.deviceId, placed.anchor]));
+    const placed = this.bubbleRefs
+      .map(ref => ref.nativeElement)
+      .map(element => ({ element, anchor: this.anchorOf(element, deviceAnchorsById) }))
+      .filter((entry): entry is { element: HTMLElement; anchor: Vec3 } => entry.anchor !== null);
+    const points = renderer.project(placed.map(entry => entry.anchor));
+    placed.forEach(({ element }, i) => {
       const point = points[i];
       element.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
       element.style.visibility = point.visible ? 'visible' : 'hidden';
     });
   }
+
+  private anchorOf(element: HTMLElement, deviceAnchorsById: Map<string, Vec3>): Vec3 | null {
+    const roomId = element.dataset['room'];
+    if (roomId) {
+      return roomAnchor(roomId);
+    }
+    return deviceAnchorsById.get(element.dataset['device'] ?? '') ?? null;
+  }
+}
+
+/** Verteilt die Bubbles je Bereich auf dessen Raster-Anker. */
+function placeByArea(bubbles: DeviceBubble[]): PlacedDeviceBubble[] {
+  const byArea = new Map<string, DeviceBubble[]>();
+  bubbles.forEach(bubble => byArea.set(bubble.areaId, [...(byArea.get(bubble.areaId) ?? []), bubble]));
+  const anchors = new Map([...byArea].map(([areaId, list]) => [areaId, deviceAnchors(areaId, list.length)]));
+  const indexInArea = new Map<string, number>();
+  return bubbles.map(bubble => {
+    const index = indexInArea.get(bubble.areaId) ?? 0;
+    indexInArea.set(bubble.areaId, index + 1);
+    return {
+      bubble,
+      anchor: anchors.get(bubble.areaId)![index],
+      stale: bubble.lines.length > 0 && bubble.lines.every(line => line.stale)
+    };
+  });
 }
