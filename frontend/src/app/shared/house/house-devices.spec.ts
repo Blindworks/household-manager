@@ -55,6 +55,6 @@ describe('HOUSE_DEVICES', () => {
   it('Haustür ist ein Gerät aus Schloss und Türkontakt', () => {
     const door = HOUSE_DEVICES.find(d => d.id === 'front-door')!;
     expect(door.kind).toBe('door');
-    expect(entityIdsOf(door).sort()).toEqual(['binary_sensor.zigbee_eingangstuer_contact', 'lock.nuki_18241688572']);
+    expect(entityIdsOf(door).sort()).toEqual(['binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact', 'lock.nuki_18241688572']);
   });
 });

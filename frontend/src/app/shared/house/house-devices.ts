@@ -85,7 +85,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   plug('wohnzimmer', 'Stern', 'tapo', '80225ff5f331563993ff0df4adbedae5243f7caa'),
   { kind: 'switch', id: 'wohnzimmer-meross-couch', area: 'wohnzimmer', label: 'Couch-Lichterkette',
     entityId: 'switch.meross_24041984068833510d06c4e7ae039150' },
-  contact('wohnzimmer', 'Terrassentür', 'binary_sensor.zigbee_terassentuer_contact'),
+  contact('wohnzimmer', 'Terrassentür', 'binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact'),
 
   // Esszimmer
   roomClimate('esszimmer', 'sensor.dirigera_dcc8d385781d4071adf85f403b0cb997'),
@@ -134,8 +134,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   // Bad
   roomClimate('bad', 'sensor.zigbee_temperatur_aqara_badezimmer'),
   thermostat('bad', 1),
-  contact('bad', 'Fenster', 'binary_sensor.zigbee_fenster_badezimmer_contact'),
-  contact('bad', 'Fenster (IKEA)', 'binary_sensor.dirigera_07ddd369cdff4593a0f5c995dfcea5f2_1_contact'),
+  contact('bad', 'Fenster', 'binary_sensor.dirigera_07ddd369cdff4593a0f5c995dfcea5f2_1_contact'),
 
   // Treppenhaus
   roomClimate('treppenhaus', 'sensor.dirigera_bffb9dee1dbc4670964f8a1ef8d11b5c'),
@@ -166,7 +165,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   { kind: 'waste', id: 'front-waste', area: 'front', label: 'Müllabfuhr', entityId: 'sensor.waste_calendar_next_collection' },
   { kind: 'pet', id: 'front-pet-toni', area: 'front', label: 'Toni', homeEntityId: 'binary_sensor.tractive_pqbzjech_home' },
   { kind: 'door', id: 'front-door', area: 'front', label: 'Haustür',
-    lockEntityId: 'lock.nuki_18241688572', contactEntityId: 'binary_sensor.zigbee_eingangstuer_contact' }
+    lockEntityId: 'lock.nuki_18241688572', contactEntityId: 'binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact' }
 ];
 
 /** Geraete eines Raums oder Aussenbereichs (`area` = Raum-Id oder Aussen-Id). */

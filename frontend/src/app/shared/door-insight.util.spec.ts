@@ -27,7 +27,7 @@ describe('buildDoorInsights', () => {
   it('liefert keine Karten, wenn beide Tueren zu sind', () => {
     const entities = [
       contact(HAUSTUER),
-      contact('binary_sensor.zigbee_terassentuer_contact')
+      contact('binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact')
     ];
 
     expect(buildDoorInsights(entities, NOW_MS)).toEqual([]);
@@ -36,7 +36,7 @@ describe('buildDoorInsights', () => {
   it('baut je offener Tuer eine Karte mit Uhrzeit', () => {
     const entities = [
       contact(HAUSTUER, { state: 'on' }),
-      contact('binary_sensor.zigbee_terassentuer_contact', { state: 'on', lastChanged: '2026-08-14T08:05:00' })
+      contact('binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact', { state: 'on', lastChanged: '2026-08-14T08:05:00' })
     ];
 
     const insights = buildDoorInsights(entities, NOW_MS);

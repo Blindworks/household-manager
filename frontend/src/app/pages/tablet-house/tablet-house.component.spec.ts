@@ -238,7 +238,7 @@ describe('TabletHouseComponent', () => {
     const wohnzimmerData = (): EntityState[] => [
       entity(`${ALEXA}_temperature`, '19.5'),
       entity(`${ALEXA}_humidity`, '45'),
-      entity('binary_sensor.zigbee_terassentuer_contact', 'on')
+      entity('binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact', 'on')
     ];
 
     it('lädt beim Start einmal und dann alle 30 s', fakeAsync(() => {

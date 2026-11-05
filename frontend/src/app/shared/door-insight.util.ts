@@ -3,14 +3,13 @@ import { HubInsight } from './hub-insight.model';
 import { sinceText } from './insight-time.util';
 
 /**
- * Ueberwachte Tuerkontakte: Entity-ID → Name der Tuer im Hub. Die Haustuer ist seit
- * 2026-11-05 ein IKEA-Kontakt am Dirigera-Hub (Entity-ID haengt an der Geraete-Id, nicht
- * am Namen); die Terrassentuer ist noch Zigbee, ihre ID entsteht aus dem
- * zigbee2mqtt-Namen "Terassentuer" (mit dem Tippfehler des realen Geraets).
+ * Ueberwachte Tuerkontakte: Entity-ID → Name der Tuer im Hub. Haus- und Terrassentuer
+ * sind seit 2026-11-05 IKEA-Kontakte am Dirigera-Hub; ihre Entity-ID haengt an der
+ * Geraete-Id, nicht am Namen (Neu-Anlernen am Hub ergibt eine neue ID).
  */
 const DOOR_CONTACTS: ReadonlyArray<{ entityId: string; label: string }> = [
   { entityId: 'binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact', label: 'Haustür' },
-  { entityId: 'binary_sensor.zigbee_terassentuer_contact', label: 'Terrassentür' }
+  { entityId: 'binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact', label: 'Terrassentür' }
 ];
 
 /**

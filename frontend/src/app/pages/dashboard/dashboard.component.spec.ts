@@ -723,11 +723,12 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
   });
 
   it('zeigt offene Tueren als erste Meldungen im Hub', fakeAsync(() => {
-    entityStateServiceSpy.getEntities.and.callFake(contactsBySource([
-      doorContact('binary_sensor.zigbee_terassentuer_contact', 'on')
-    ], [{
+    entityStateServiceSpy.getEntities.and.callFake(contactsBySource([], [{
       ...doorContact('binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact', 'on'),
       source: 'DIRIGERA', displayName: 'Haustüre Kontakt'
+    }, {
+      ...doorContact('binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact', 'on'),
+      source: 'DIRIGERA', displayName: 'Terrassentür Kontakt'
     }]));
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
@@ -737,6 +738,7 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
     expect(texts[0]).toContain('Haustür offen');
     expect(texts[1]).toContain('Terrassentür offen');
     expect(texts.join(' ')).not.toContain('Haustüre offen');
+    expect(texts.filter(text => text.includes('Terrassentür offen')).length).toBe(1);
 
     discardPeriodicTasks();
   }));
@@ -758,7 +760,7 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
   it('zeigt bei geschlossenen Tueren keine Tuer-Meldung', fakeAsync(() => {
     entityStateServiceSpy.getEntities.and.returnValue(of([
       doorContact('binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact', 'off'),
-      doorContact('binary_sensor.zigbee_terassentuer_contact', 'off')
+      doorContact('binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact', 'off')
     ]));
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();

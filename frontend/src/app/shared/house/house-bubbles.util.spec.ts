@@ -78,7 +78,7 @@ describe('house-bubbles.util', () => {
     });
 
     it('setzt Flags nur bei Abweichung', () => {
-      expect(buildRoomBubble('bad', mapOf(entity('binary_sensor.zigbee_fenster_badezimmer_contact', 'on')), NOW).flags)
+      expect(buildRoomBubble('bad', mapOf(entity('binary_sensor.dirigera_07ddd369cdff4593a0f5c995dfcea5f2_1_contact', 'on')), NOW).flags)
         .toContain('window_open');
       expect(buildRoomBubble('wohnzimmer', mapOf(entity('binary_sensor.thermostat_8_heating', 'on')), NOW).flags)
         .toContain('heating');
@@ -94,7 +94,7 @@ describe('house-bubbles.util', () => {
     });
 
     it('setzt bei Kontakt unavailable kein window_open', () => {
-      expect(buildRoomBubble('bad', mapOf(entity('binary_sensor.zigbee_fenster_badezimmer_contact', 'unavailable')), NOW).flags)
+      expect(buildRoomBubble('bad', mapOf(entity('binary_sensor.dirigera_07ddd369cdff4593a0f5c995dfcea5f2_1_contact', 'unavailable')), NOW).flags)
         .toEqual([]);
     });
   });
@@ -209,7 +209,7 @@ describe('house-bubbles.util', () => {
     it('Haustür fasst Schloss und Türkontakt zusammen', () => {
       const door = (contact: string) => buildOutdoorBubbles(mapOf(
         entity('lock.nuki_18241688572', 'locked'),
-        entity('binary_sensor.zigbee_eingangstuer_contact', contact)), NOW, false)
+        entity('binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact', contact)), NOW, false)
         .find(b => b.deviceId === 'front-door')!;
 
       expect(door('off').label).toBe('Haustür');
