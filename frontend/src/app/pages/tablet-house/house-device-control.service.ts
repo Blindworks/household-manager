@@ -15,6 +15,8 @@ export interface HistoryPoint { at: string; value: number | null }
 export interface HistorySeries { name: string; points: HistoryPoint[]; dashed?: boolean }
 export type SwitchOutcome = 'switched' | 'already' | 'unavailable';
 export type HistoryRange = 'DAY' | 'WEEK';
+/** 'lamp-off' = Lampe ist laut frischem Zustand nicht `on`; es wurde nichts geschrieben. */
+export type BrightnessOutcome = 'set' | 'lamp-off';
 export interface LightInfo { dimmable: boolean; brightness: number | null }
 
 /**
@@ -75,13 +77,21 @@ export class HouseDeviceControlService {
     return this.thermostats.setTarget(thermostatId, clampTarget(target)).pipe(map(() => undefined));
   }
 
-  setBrightness(entityId: string, brightness: number): Observable<void> {
-    return this.findDevice(entityId).pipe(
-      switchMap(device => device
-        ? this.smartDevices.setLightState(device.id, { brightness })
-        : throwError(() => new Error(`Kein Gerät für ${entityId} gefunden.`))),
-      tap(() => this.deviceList = null),
-      map(() => undefined)
+  /**
+   * Liest den Schaltzustand frisch und schreibt die Helligkeit nur, wenn die Lampe
+   * genau `on` ist: `set_device_info`/`transition_light_state` schalten eine
+   * ausgeschaltete Lampe sonst ein.
+   */
+  setBrightness(entityId: string, brightness: number): Observable<BrightnessOutcome> {
+    return this.switches.getSwitches(undefined, 'all').pipe(
+      switchMap(list => list.find(s => s.entityId === entityId)?.state !== 'on'
+        ? of<BrightnessOutcome>('lamp-off')
+        : this.findDevice(entityId).pipe(
+            switchMap(device => device
+              ? this.smartDevices.setLightState(device.id, { brightness })
+              : throwError(() => new Error(`Kein Gerät für ${entityId} gefunden.`))),
+            tap(() => this.deviceList = null),
+            map((): BrightnessOutcome => 'set')))
     );
   }
 

@@ -253,6 +253,33 @@ describe('HouseDeviceControlService', () => {
   });
 
   describe('Licht', () => {
+    beforeEach(() => switches.getSwitches.and.returnValue(of([switchEntity('switch.flur', 'on')])));
+
+    it('setBrightness liest den Schaltzustand frisch', async () => {
+      devices.getAllDevices.and.returnValue(of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40)]));
+      devices.setLightState.and.returnValue(of(device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 80)));
+
+      expect(await firstValueFrom(service.setBrightness('switch.flur', 80))).toBe('set');
+      expect(switches.getSwitches).toHaveBeenCalledWith(undefined, 'all');
+    });
+
+    for (const state of ['off', 'unavailable']) {
+      it(`setBrightness bei frischem Zustand ${state} ⇒ lamp-off, kein setLightState`, async () => {
+        switches.getSwitches.and.returnValue(of([switchEntity('switch.flur', state)]));
+        devices.getAllDevices.and.returnValue(of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40)]));
+
+        expect(await firstValueFrom(service.setBrightness('switch.flur', 80))).toBe('lamp-off');
+        expect(devices.setLightState).not.toHaveBeenCalled();
+      });
+    }
+
+    it('setBrightness: Schalter fehlt in der Liste ⇒ lamp-off', async () => {
+      switches.getSwitches.and.returnValue(of([]));
+
+      expect(await firstValueFrom(service.setBrightness('switch.flur', 80))).toBe('lamp-off');
+      expect(devices.setLightState).not.toHaveBeenCalled();
+    });
+
     it('setBrightness ⇒ setLightState(device.id, { brightness }) über entityId-Treffer', async () => {
       devices.getAllDevices.and.returnValue(of([device(1, 'switch.a', ['SWITCH']), device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40)]));
       devices.setLightState.and.returnValue(of(device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 80)));

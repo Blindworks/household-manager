@@ -1,8 +1,8 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { HouseDeviceDetailComponent } from './house-device-detail.component';
+import { HouseDeviceDetailComponent, TARGET_GRACE_MS } from './house-device-detail.component';
 import {
-  HistoryRange, HistorySeries, HouseDeviceControlService, SwitchOutcome
+  BrightnessOutcome, HistoryRange, HistorySeries, HouseDeviceControlService, SwitchOutcome
 } from '../house-device-control.service';
 import { DeviceDetail, HistorySource } from '../../../shared/house/device-detail.util';
 
@@ -14,6 +14,8 @@ class FakeControl {
   switchResponse: Observable<SwitchOutcome> = of('switched');
   targetCalls: { id: number; target: number }[] = [];
   brightnessCalls: { entityId: string; brightness: number }[] = [];
+  targetResponse: Observable<void> = of(undefined);
+  brightnessResponse: Observable<BrightnessOutcome> = of('set');
 
   loadHistory(source: HistorySource, range: HistoryRange) {
     this.historyCalls.push({ source, range });
@@ -25,11 +27,11 @@ class FakeControl {
   }
   setTarget(id: number, target: number) {
     this.targetCalls.push({ id, target });
-    return of(undefined);
+    return this.targetResponse;
   }
   setBrightness(entityId: string, brightness: number) {
     this.brightnessCalls.push({ entityId, brightness });
-    return of(undefined);
+    return this.brightnessResponse;
   }
 }
 
@@ -41,11 +43,11 @@ const climate: DeviceDetail = {
   control: null
 };
 
-function thermostat(target: number | null): DeviceDetail {
+function thermostat(target: number | null, thermostatId = 8): DeviceDetail {
   return {
-    deviceId: 'bad-heizung', title: 'Bad', icon: 'heat', headline: { text: '19,0°', stale: false }, lines: [],
-    history: { type: 'thermostat', thermostatId: 8 },
-    control: { type: 'target', thermostatId: 8, target, min: 5, max: 30, step: 0.5 }
+    deviceId: `heizung-${thermostatId}`, title: 'Bad', icon: 'heat', headline: { text: '19,0°', stale: false },
+    lines: [], history: { type: 'thermostat', thermostatId },
+    control: { type: 'target', thermostatId, target, min: 5, max: 30, step: 0.5 }
   };
 }
 
@@ -163,13 +165,14 @@ describe('HouseDeviceDetailComponent', () => {
     expect(control.targetCalls.length).toBe(0);
     tick(600);
     expect(control.targetCalls).toEqual([{ id: 8, target: 22.5 }]);
+    flush(1000);
   }));
 
   it('Sollwert: Anzeige folgt sofort dem lokalen Wert', fakeAsync(() => {
     create(thermostat(20));
     click('.device-detail__step--down');
     expect(q('.device-detail__target')?.textContent).toContain('19,5');
-    tick(600);
+    flush(1000);
   }));
 
   it('Sollwert: Grenze 30 wird nicht überschritten', fakeAsync(() => {
@@ -178,6 +181,7 @@ describe('HouseDeviceDetailComponent', () => {
     click('.device-detail__step--up');
     tick(600);
     expect(control.targetCalls).toEqual([{ id: 8, target: 30 }]);
+    flush(1000);
   }));
 
   it('Sollwert unbekannt ⇒ −/+ gesperrt', () => {
@@ -197,6 +201,64 @@ describe('HouseDeviceDetailComponent', () => {
     setDetail(thermostat(20.5));
     setDetail(thermostat(21));
     expect(q('.device-detail__target')?.textContent).toContain('21,0');
+    flush(1000);
+  }));
+
+  it('Gerätewechsel in der Sammelpause sendet den Sollwert an das ALTE Thermostat', fakeAsync(() => {
+    create(thermostat(20, 1));
+    click('.device-detail__step--up');
+    tick(200);
+    setDetail(thermostat(18, 8));
+    flush(1000);
+    expect(control.targetCalls).toEqual([{ id: 1, target: 20.5 }]);
+    expect(q('.device-detail__target')?.textContent).toContain('18,0');
+  }));
+
+  it('Wechsel auf ein Nicht-Thermostat sendet den offenen Sollwert trotzdem an das alte', fakeAsync(() => {
+    create(thermostat(20, 1));
+    click('.device-detail__step--up');
+    setDetail(climate);
+    flush(1000);
+    expect(control.targetCalls).toEqual([{ id: 1, target: 20.5 }]);
+  }));
+
+  it('Schließen innerhalb der Sammelpause sendet den letzten Sollwert', fakeAsync(() => {
+    create(thermostat(20, 1));
+    click('.device-detail__step--up');
+    fixture.destroy();
+    flush(1000);
+    expect(control.targetCalls).toEqual([{ id: 1, target: 20.5 }]);
+  }));
+
+  it('Gerät meldet anderen Wert ⇒ nach der Karenz zeigt die Anzeige den Serverwert', fakeAsync(() => {
+    create(thermostat(20));
+    click('.device-detail__step--up');
+    tick(600);
+    setDetail(thermostat(20));
+    expect(q('.device-detail__target')?.textContent).toContain('20,5');
+    tick(TARGET_GRACE_MS);
+    fixture.detectChanges();
+    expect(q('.device-detail__target')?.textContent).toContain('20,0');
+  }));
+
+  it('Gerät meldet nach dem Schreiben einen dritten Wert ⇒ sofort Serverwert', fakeAsync(() => {
+    create(thermostat(20));
+    click('.device-detail__step--up');
+    tick(600);
+    setDetail(thermostat(19));
+    expect(q('.device-detail__target')?.textContent).toContain('19,0');
+    flush(1000);
+  }));
+
+  it('setTarget scheitert ⇒ lokaler Wert verworfen, Fehler angezeigt', fakeAsync(() => {
+    control.targetResponse = throwError(() => new Error('502'));
+    create(thermostat(20));
+    click('.device-detail__step--up');
+    tick(600);
+    fixture.detectChanges();
+    expect(q('.device-detail__target')?.textContent).toContain('20,0');
+    expect(q('.device-detail__error')?.textContent).toContain('Gerät nicht erreichbar');
+    flush(1000);
   }));
 
   it('Schalter aus bei confirmOff ⇒ Bestätigungsdialog, erst Ausschalten ruft setSwitch(false)', () => {
@@ -250,6 +312,28 @@ describe('HouseDeviceDetailComponent', () => {
     expect(control.brightnessCalls.length).toBe(0);
     slider.dispatchEvent(new Event('change'));
     expect(control.brightnessCalls).toEqual([{ entityId: 'switch.flur', brightness: 70 }]);
+  });
+
+  it('Helligkeit scheitert ⇒ Regler springt auf den gebundenen Wert zurück, Meldung', () => {
+    control.brightnessResponse = throwError(() => new Error('502'));
+    create(switchDetail(true, false, true), 40);
+    const slider = q('.device-detail__brightness') as HTMLInputElement;
+    slider.value = '70';
+    slider.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(slider.value).toBe('40');
+    expect(q('.device-detail__error')?.textContent).toContain('Gerät nicht erreichbar');
+  });
+
+  it('Helligkeit bei frisch ausgeschalteter Lampe ⇒ Meldung Lampe ist aus, Regler zurück', () => {
+    control.brightnessResponse = of('lamp-off');
+    create(switchDetail(true, false, true), 40);
+    const slider = q('.device-detail__brightness') as HTMLInputElement;
+    slider.value = '70';
+    slider.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(slider.value).toBe('40');
+    expect(q('.device-detail__error')?.textContent).toContain('Lampe ist aus');
   });
 
   it('Fehler beim Schalten ⇒ Meldung Gerät nicht erreichbar', () => {

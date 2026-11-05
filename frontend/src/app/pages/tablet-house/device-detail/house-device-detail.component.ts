@@ -20,7 +20,15 @@ type SwitchControl = Extract<DetailControl, { type: 'switch' }>;
 
 /** Sammelpause fuer −/+: erst nach so langer Ruhe geht EIN Sollwert raus. */
 export const TARGET_DEBOUNCE_MS = 600;
+/**
+ * So lange zeigt das Feld nach einem erfolgreichen Schreiben weiter den lokalen
+ * Sollwert, obwohl das Thermostat noch den alten meldet (der Hub meldet verzoegert).
+ * Danach gilt wieder der Serverwert - die Anzeige klebt nie dauerhaft an einem Wert,
+ * den das Geraet nicht hat.
+ */
+export const TARGET_GRACE_MS = 60_000;
 export const UNREACHABLE = 'Gerät nicht erreichbar';
+export const LAMP_OFF = 'Lampe ist aus';
 
 const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
 
@@ -59,7 +67,11 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
   historyState: HistoryState = 'none';
   chartOptions: EChartsCoreOption | null = null;
 
-  /** Lokal gewaehlter Sollwert; gilt, bis `detail` ihn meldet oder das Geraet wechselt. */
+  /**
+   * Lokal gewaehlter Sollwert (nur Anzeige). Gilt waehrend der Eingabe, danach bis
+   * `detail` ihn meldet, sich vom Wert vor dem Schreiben wegbewegt oder
+   * {@link TARGET_GRACE_MS} vergangen sind.
+   */
   localTarget: number | null = null;
   switchPending = false;
   confirmingOff = false;
@@ -68,6 +80,11 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
   private historyKey: string | null = null;
   private historySub?: Subscription;
   private targetTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Thermostat-Id wird beim Tippen gemerkt, nie beim Senden gelesen: `detail` kann inzwischen ein anderes Geraet sein. */
+  private pendingTarget: { thermostatId: number; value: number } | null = null;
+  /** Serverwert zum Zeitpunkt des Schreibens; undefined = kein abgeschlossenes Schreiben offen. */
+  private targetBeforeWrite: number | null | undefined = undefined;
+  private graceTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes['detail']) {
@@ -76,9 +93,11 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
     const previous = changes['detail'].previousValue as DeviceDetail | undefined;
     if (previous?.deviceId !== this.detail.deviceId) {
       this.resetForNewDevice();
-    } else if (this.targetTimer === null && this.localTarget !== null
-      && this.targetControl?.target === this.localTarget) {
-      this.localTarget = null;
+    } else if (this.targetTimer === null && this.targetBeforeWrite !== undefined) {
+      const reported = this.targetControl?.target ?? null;
+      if (reported === this.localTarget || reported !== this.targetBeforeWrite) {
+        this.dropLocalTarget();
+      }
     }
     const key = this.detail.history ? `${this.detail.deviceId}|${JSON.stringify(this.detail.history)}` : null;
     if (key !== this.historyKey) {
@@ -89,7 +108,9 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.historySub?.unsubscribe();
+    // Bewusst: wer das Feld innerhalb der Sammelpause schliesst, bekommt seinen letzten Sollwert trotzdem gesendet.
     this.flushTarget();
+    this.clearGrace();
   }
 
   get targetControl(): TargetControl | null {
@@ -123,6 +144,9 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
     }
     const next = Math.round((base + direction * control.step) / control.step) * control.step;
     this.localTarget = Math.min(control.max, Math.max(control.min, next));
+    this.pendingTarget = { thermostatId: control.thermostatId, value: this.localTarget };
+    this.targetBeforeWrite = undefined;
+    this.clearGrace();
     this.error = null;
     if (this.targetTimer !== null) {
       clearTimeout(this.targetTimer);
@@ -157,13 +181,24 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
 
   onBrightnessChange(event: Event): void {
     const control = this.switchControl;
-    const value = Number((event.target as HTMLInputElement).value);
+    const slider = event.target as HTMLInputElement;
+    const value = Number(slider.value);
     if (!control || !Number.isFinite(value)) {
       return;
     }
     this.error = null;
+    // Angular setzt den DOM-Wert nicht zurueck, solange sich `brightness` nicht aendert - deshalb von Hand.
+    const snapBack = (message: string) => {
+      slider.value = String(this.brightness ?? 100);
+      this.fail(message);
+    };
     this.control.setBrightness(control.entityId, value).subscribe({
-      error: () => this.fail()
+      next: outcome => {
+        if (outcome === 'lamp-off') {
+          snapBack(LAMP_OFF);
+        }
+      },
+      error: () => snapBack(UNREACHABLE)
     });
   }
 
@@ -188,27 +223,59 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
   }
 
   private flushTarget(): void {
-    if (this.targetTimer === null) {
+    if (this.targetTimer !== null) {
+      clearTimeout(this.targetTimer);
+      this.targetTimer = null;
+    }
+    const pending = this.pendingTarget;
+    if (!pending) {
       return;
     }
-    clearTimeout(this.targetTimer);
-    this.targetTimer = null;
-    const control = this.targetControl;
-    const target = this.localTarget;
-    if (!control || target === null) {
-      return;
+    this.pendingTarget = null;
+    const sameDevice = () => this.targetControl?.thermostatId === pending.thermostatId;
+    if (sameDevice()) {
+      this.targetBeforeWrite = this.targetControl?.target ?? null;
     }
-    this.control.setTarget(control.thermostatId, target).subscribe({
+    this.control.setTarget(pending.thermostatId, pending.value).subscribe({
+      next: () => {
+        if (sameDevice() && this.localTarget === pending.value) {
+          this.startGrace();
+        }
+      },
       error: () => {
-        this.localTarget = null;
-        this.fail();
+        if (sameDevice()) {
+          this.dropLocalTarget();
+          this.fail();
+        }
       }
     });
   }
 
+  private startGrace(): void {
+    this.clearGrace();
+    this.graceTimer = setTimeout(() => {
+      this.graceTimer = null;
+      this.dropLocalTarget();
+      this.cdr.markForCheck();
+    }, TARGET_GRACE_MS);
+  }
+
+  private clearGrace(): void {
+    if (this.graceTimer !== null) {
+      clearTimeout(this.graceTimer);
+      this.graceTimer = null;
+    }
+  }
+
+  private dropLocalTarget(): void {
+    this.localTarget = null;
+    this.targetBeforeWrite = undefined;
+    this.clearGrace();
+  }
+
   private resetForNewDevice(): void {
     this.flushTarget();
-    this.localTarget = null;
+    this.dropLocalTarget();
     this.confirmingOff = false;
     this.switchPending = false;
     this.error = null;
@@ -238,8 +305,8 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
     });
   }
 
-  private fail(): void {
-    this.error = UNREACHABLE;
+  private fail(message = UNREACHABLE): void {
+    this.error = message;
     this.cdr.markForCheck();
   }
 
