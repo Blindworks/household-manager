@@ -627,6 +627,35 @@ class SecurityRulesTest {
     }
 
     @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfLichtSetzen() throws Exception {
+        when(smartDeviceService.setLightState(eq(1L), any())).thenReturn(
+                SmartDeviceResponse.builder().id(1L).deviceType("TAPO").build());
+        mockMvc.perform(put("/devices/1/light").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"brightness\": 40}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfAdresseNichtSetzen() throws Exception {
+        mockMvc.perform(put("/devices/1/address").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ip\": \"192.168.1.5\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfGeraetNichtAendern() throws Exception {
+        mockMvc.perform(put("/devices/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "MEMBER")
     void memberDarfKasaGeraetManuellHinzufuegen() throws Exception {
         when(smartDeviceService.addKasaDeviceByIp("192.168.1.116")).thenReturn(
@@ -659,19 +688,6 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ip\": \"192.168.1.114\"}"))
                 .andExpect(status().isOk());
-    }
-
-    /**
-     * /devices/{id}/light faellt wie /devices/kasa und /devices/{id}/address auf die
-     * generische anyRequest -> MEMBER-Regel (kein eigener Matcher in SecurityConfig).
-     */
-    @Test
-    @WithMockUser(roles = "KIOSK")
-    void kioskDarfLichtNichtSetzen() throws Exception {
-        mockMvc.perform(put("/devices/7/light").with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"brightness\": 70}"))
-                .andExpect(status().isForbidden());
     }
 
     @Test

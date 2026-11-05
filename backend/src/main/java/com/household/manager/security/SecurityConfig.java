@@ -272,6 +272,10 @@ public class SecurityConfig {
                         // Solltemperatur und Modus je Thermostat: das Wandtablet ist der Nutzen.
                         .requestMatchers(HttpMethod.PUT, "/v1/thermostats/*/target", "/v1/thermostats/*/mode")
                         .hasRole("KIOSK")
+                        // Dimmen/Farbe am Wandtablet (Nutzerentscheidung 2026-11-05, Digitaler Zwilling):
+                        // jeder vor dem Tablet darf dimmen wie schalten. Nur /light; /address und das
+                        // Aendern eines Geraets bleiben MEMBER.
+                        .requestMatchers(HttpMethod.PUT, "/devices/*/light").hasRole("KIOSK")
                         // Ladesaeulen-Favoriten per Stern am Wandtablet (Nutzerentscheidung 2026-11-02):
                         // jeder vor dem Tablet darf sie aendern, die Historie bleibt beim Entfernen erhalten.
                         .requestMatchers(HttpMethod.PUT, "/v1/charging/favorites/*").hasRole("KIOSK")
