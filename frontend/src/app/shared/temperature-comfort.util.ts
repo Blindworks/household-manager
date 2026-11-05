@@ -55,7 +55,7 @@ export interface ClimateView {
 export const OUTDOOR_SENSOR_ENTITY_IDS: readonly string[] = ['sensor.zigbee_temperatur_aqara_garten_temperature'];
 
 /** Messung gilt als veraltet, wenn älter als diese Schwelle. */
-const STALE_THRESHOLD_MS = 60 * 60 * 1000;
+export const STALE_THRESHOLD_MS = 60 * 60 * 1000;
 
 /** Bildet eine Innentemperatur auf ein Komfortband ab. */
 export function comfortRating(celsius: number): ComfortRating {
