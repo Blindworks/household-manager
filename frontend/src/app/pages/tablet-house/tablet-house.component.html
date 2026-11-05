@@ -29,14 +29,16 @@
             #bubble
             type="button"
             class="house-bubble house-bubble--room"
-            [class.house-bubble--stale]="room.temperature.stale"
             [attr.data-room]="room.areaId"
             (click)="focusRoom(room.areaId)">
             <span class="house-bubble__label">{{ room.label }}</span>
             <span class="house-bubble__values">
-              <span class="house-bubble__value">{{ room.temperature.text }}</span>
+              <!-- Nur der Wert wird abgedunkelt: ein Raum ohne Fuehler darf frische Hinweise nicht verstecken. -->
+              <span class="house-bubble__value" [class.house-bubble__value--stale]="room.temperature.stale">{{ room.temperature.text }}</span>
               @if (room.humidity && room.humidity.text !== '–') {
-                <span class="house-bubble__value house-bubble__value--minor">{{ room.humidity.text }}</span>
+                <span
+                  class="house-bubble__value house-bubble__value--minor"
+                  [class.house-bubble__value--stale]="room.humidity.stale">{{ room.humidity.text }}</span>
               }
               @for (flag of flagsOf(room); track flag.flag) {
                 <span

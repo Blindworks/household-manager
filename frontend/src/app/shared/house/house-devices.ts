@@ -3,7 +3,8 @@
  * (Stand 2026-11-05, vom Nutzer bestaetigt). Einzige Definition der Zuordnung.
  *
  * Bewusst nicht enthalten: Geraete ohne Raum (Router, Wasserpumpe, Ladestation, Klimageraet,
- * Lichterkette, Staubsauger-Ladegeraet, Fire Tablet, Balkontuer).
+ * Lichterkette, Staubsauger-Ladegeraet, Fire Tablet, Balkontuer). Aussen zeigt v1 genau vier
+ * Bubbles (Muelltonne, Toni, Haustuer, Garten): Haustuer-Kamera und Feinstaub entfallen.
  */
 export type HouseDevice =
   | { kind: 'climate'; id: string; area: string; label: string; temperature?: string; humidity?: string; iaq?: string; roomSensor: boolean }
@@ -13,7 +14,8 @@ export type HouseDevice =
   | { kind: 'button'; id: string; area: string; label: string; entityIds: string[] }
   | { kind: 'switch'; id: string; area: string; label: string; entityId: string; powerEntityId?: string }
   | { kind: 'appliance'; id: string; area: string; label: string; switchEntityId: string; powerEntityId: string; runningEntityId: string; finishedEntityId: string }
-  | { kind: 'lock'; id: string; area: string; label: string; entityId: string }
+  /** Haustuer: Schloss und Tuerkontakt als ein Geraet. */
+  | { kind: 'door'; id: string; area: string; label: string; lockEntityId: string; contactEntityId: string }
   | { kind: 'camera'; id: string; area: string; label: string; armedEntityId: string }
   | { kind: 'waste'; id: string; area: 'front'; label: string; entityId: string }
   | { kind: 'pet'; id: string; area: string; label: string; homeEntityId: string };
@@ -156,17 +158,15 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   appliance('waschkeller', 'Waschmaschine', '2112156531504590863548e1e9817420', 'waschmaschine'),
   contact('waschkeller', 'Gaszähler', 'binary_sensor.zigbee_sensor_gas_contact'),
 
-  // Garten
-  roomClimate('garden', 'sensor.zigbee_temperatur_aqara_garten'),
-  { kind: 'climate', id: 'garden-fine-dust', area: 'garden', label: 'Feinstaub', roomSensor: false,
-    iaq: 'sensor.airrohr_airrohr_pm25' },
+  // Garten: nur die Aussentemperatur
+  { kind: 'climate', id: 'garden-climate', area: 'garden', label: 'Garten', roomSensor: false,
+    temperature: 'sensor.zigbee_temperatur_aqara_garten_temperature' },
 
   // Vor dem Haus
   { kind: 'waste', id: 'front-waste', area: 'front', label: 'Müllabfuhr', entityId: 'sensor.waste_calendar_next_collection' },
   { kind: 'pet', id: 'front-pet-toni', area: 'front', label: 'Toni', homeEntityId: 'binary_sensor.tractive_pqbzjech_home' },
-  contact('front', 'Haustür', 'binary_sensor.zigbee_eingangstuer_contact'),
-  { kind: 'lock', id: 'front-lock', area: 'front', label: 'Türschloss', entityId: 'lock.nuki_18241688572' },
-  { kind: 'camera', id: 'front-camera', area: 'front', label: 'Kamera Haustür', armedEntityId: 'binary_sensor.blink_214942_armed' }
+  { kind: 'door', id: 'front-door', area: 'front', label: 'Haustür',
+    lockEntityId: 'lock.nuki_18241688572', contactEntityId: 'binary_sensor.zigbee_eingangstuer_contact' }
 ];
 
 /** Geraete eines Raums oder Aussenbereichs (`area` = Raum-Id oder Aussen-Id). */

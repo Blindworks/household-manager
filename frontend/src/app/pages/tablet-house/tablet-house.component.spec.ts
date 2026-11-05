@@ -279,7 +279,21 @@ describe('TabletHouseComponent', () => {
       entityService.getEntities.and.returnValue(of([entity(`${ALEXA}_temperature`, '19.5', 120)]));
       create();
 
-      expect(bubble('Wohnzimmer').classList).toContain('house-bubble--stale');
+      expect(bubble('Wohnzimmer').querySelector('.house-bubble__value')!.classList)
+        .toContain('house-bubble__value--stale');
+    });
+
+    it('fehlende Temperatur dunkelt nur den Wert ab, nicht die Hinweise', () => {
+      entityService.getEntities.and.returnValue(of([entity('input_boolean.manual_waschmaschine_laeuft', 'on')]));
+      create();
+      click(el().querySelector('[data-floor="basement"]') as HTMLElement);
+
+      const waschkeller = bubble('Waschkeller');
+      expect(waschkeller.classList).not.toContain('house-bubble--stale');
+      expect(waschkeller.querySelector('.house-bubble__value')!.classList).toContain('house-bubble__value--stale');
+      const flag = waschkeller.querySelector('.house-bubble__flag--appliance_running')!;
+      expect(flag).not.toBeNull();
+      expect(flag.closest('.house-bubble__value--stale, .house-bubble--stale')).toBeNull();
     });
 
     it('frische Werte sind nicht abgedunkelt', () => {
@@ -287,6 +301,7 @@ describe('TabletHouseComponent', () => {
       create();
 
       expect(bubble('Wohnzimmer').classList).not.toContain('house-bubble--stale');
+      expect(bubble('Wohnzimmer').querySelector('.house-bubble__value--stale')).toBeNull();
     });
 
     it('Raumansicht zeigt die Geräte-Bubbles des Raums, Überblick nicht', () => {
@@ -325,9 +340,10 @@ describe('TabletHouseComponent', () => {
 
       expect(device('front-waste')).not.toBeNull();
       expect(device('front-pet-toni')).not.toBeNull();
-      expect(el().querySelector('.house-bubble--device[data-device^="front-contact"]')).not.toBeNull();
+      expect(device('front-door')).not.toBeNull();
       expect(device('garden-climate')).not.toBeNull();
       expect(roomBubbles().length).toBe(6);
+      expect(deviceBubbles().length).toBe(4);
 
       click(device('front-waste')!);
       expect(navigate).toHaveBeenCalledWith('/waste-collection');

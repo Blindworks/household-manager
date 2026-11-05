@@ -149,9 +149,40 @@ describe('house-bubbles.util', () => {
       expect(waste.highlight).toBeFalse();
     });
 
-    it('enthält Geräte von Garten und Vor dem Haus', () => {
-      const areas = new Set(buildOutdoorBubbles(new Map(), NOW, false).map(b => b.areaId));
-      expect(areas).toEqual(new Set(['front', 'garden']));
+    it('enthält genau Mülltonne, Toni, Haustür und Garten', () => {
+      const bubbles = buildOutdoorBubbles(new Map(), NOW, false);
+      expect(new Set(bubbles.map(b => b.deviceId)))
+        .toEqual(new Set(['front-waste', 'front-pet-toni', 'front-door', 'garden-climate']));
+      expect(new Set(bubbles.map(b => b.areaId))).toEqual(new Set(['front', 'garden']));
+    });
+
+    it('Haustür fasst Schloss und Türkontakt zusammen', () => {
+      const door = (contact: string) => buildOutdoorBubbles(mapOf(
+        entity('lock.nuki_18241688572', 'locked'),
+        entity('binary_sensor.zigbee_eingangstuer_contact', contact)), NOW, false)
+        .find(b => b.deviceId === 'front-door')!;
+
+      expect(door('off').label).toBe('Haustür');
+      expect(door('off').lines.map(l => l.text)).toEqual(['verriegelt']);
+      expect(door('off').highlight).toBeFalse();
+      expect(door('on').lines.map(l => l.text)).toEqual(['verriegelt', 'Tür offen']);
+      expect(door('on').highlight).toBeTrue();
+      expect(door('on').target).toBe('/entities');
+      expect(buildOutdoorBubbles(new Map(), NOW, true).find(b => b.deviceId === 'front-door')!.target).toBe('/');
+    });
+
+    it('Haustür ohne Schlosswert zeigt „–“', () => {
+      const door = buildOutdoorBubbles(new Map(), NOW, false).find(b => b.deviceId === 'front-door')!;
+      expect(door.lines).toEqual([{ text: '–', stale: true }]);
+    });
+
+    it('Garten zeigt nur die Außentemperatur', () => {
+      const garden = buildOutdoorBubbles(mapOf(
+        entity('sensor.zigbee_temperatur_aqara_garten_temperature', '7.25'),
+        entity('sensor.zigbee_temperatur_aqara_garten_humidity', '80')), NOW, false)
+        .find(b => b.deviceId === 'garden-climate')!;
+      expect(garden.label).toBe('Garten');
+      expect(garden.lines.map(l => l.text)).toEqual(['7,3°']);
     });
   });
 
@@ -163,14 +194,14 @@ describe('house-bubbles.util', () => {
       expect(bubbleTarget('waste', false)).toBe('/waste-collection');
       expect(bubbleTarget('camera', false)).toBe('/cameras');
       expect(bubbleTarget('pet', false)).toBe('/pets');
-      for (const kind of ['contact', 'motion', 'button', 'lock'] as const) {
+      for (const kind of ['contact', 'motion', 'button', 'door'] as const) {
         expect(bubbleTarget(kind, false)).toBe('/entities');
       }
     });
 
     it('Ziele Tablet führen nie auf Seiten ohne Shell', () => {
       const allowed = ['/', ...TABLET_VIEWS.map(v => v.route)];
-      const kinds = ['climate', 'thermostat', 'contact', 'motion', 'button', 'switch', 'appliance', 'lock',
+      const kinds = ['climate', 'thermostat', 'contact', 'motion', 'button', 'switch', 'appliance', 'door',
         'camera', 'waste', 'pet'] as const;
       for (const kind of kinds) {
         expect(allowed).withContext(kind).toContain(bubbleTarget(kind, true));
@@ -178,7 +209,7 @@ describe('house-bubbles.util', () => {
       expect(bubbleTarget('climate', true)).toBe('/tablet/temperatures');
       expect(bubbleTarget('camera', true)).toBe('/tablet/cameras');
       expect(bubbleTarget('pet', true)).toBe('/tablet/toni');
-      for (const kind of ['waste', 'switch', 'contact', 'motion', 'button', 'lock'] as const) {
+      for (const kind of ['waste', 'switch', 'contact', 'motion', 'button', 'door'] as const) {
         expect(bubbleTarget(kind, true)).toBe('/');
       }
     });

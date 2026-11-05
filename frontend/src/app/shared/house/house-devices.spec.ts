@@ -45,4 +45,16 @@ describe('HOUSE_DEVICES', () => {
     expect(all).not.toContain('binary_sensor.dirigera_f3992ae92ca54fb6b276c2c4d5f832c9_1_contact');
     expect(all).not.toContain('switch.tapo_80223493d58341bf26cdbbf42d330231243f3a4d');
   });
+
+  it('Haustür-Kamera und Feinstaub sind in v1 nicht Teil der 3D-Ansicht', () => {
+    const all = HOUSE_DEVICES.flatMap(entityIdsOf);
+    expect(all).not.toContain('binary_sensor.blink_214942_armed');
+    expect(all).not.toContain('sensor.airrohr_airrohr_pm25');
+  });
+
+  it('Haustür ist ein Gerät aus Schloss und Türkontakt', () => {
+    const door = HOUSE_DEVICES.find(d => d.id === 'front-door')!;
+    expect(door.kind).toBe('door');
+    expect(entityIdsOf(door).sort()).toEqual(['binary_sensor.zigbee_eingangstuer_contact', 'lock.nuki_18241688572']);
+  });
 });

@@ -160,13 +160,13 @@ export function bubbleTarget(kind: HouseDevice['kind'], tabletMode: boolean): st
     case 'contact':
     case 'motion':
     case 'button':
-    case 'lock': return '/entities';
+    case 'door': return '/entities';
   }
 }
 
 const ICONS: Record<HouseDevice['kind'], string> = {
   climate: 'thermostat', thermostat: 'mode_heat', contact: 'sensor_window', motion: 'directions_walk',
-  button: 'radio_button_checked', switch: 'power', appliance: 'local_laundry_service', lock: 'lock',
+  button: 'radio_button_checked', switch: 'power', appliance: 'local_laundry_service', door: 'door_front',
   camera: 'videocam', waste: 'delete', pet: 'pets'
 };
 
@@ -288,9 +288,14 @@ function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabl
       icon = device.label.includes('Spül') ? 'dishwasher' : 'local_laundry_service';
       break;
     }
-    case 'lock': {
-      const entity = entities.get(device.entityId);
-      lines.push(!isReadable(entity) ? MISSING : fresh(lockText(entity.state)));
+    case 'door': {
+      const lock = entities.get(device.lockEntityId);
+      lines.push(!isReadable(lock) ? MISSING : fresh(lockText(lock.state)));
+      const open = isOn(entities, device.contactEntityId);
+      if (open) {
+        lines.push(fresh('Tür offen'));
+      }
+      highlight = open;
       break;
     }
     case 'camera': {
@@ -321,7 +326,7 @@ export function buildDeviceBubbles(areaId: string, entities: EntityMap, nowMs: n
   return devicesInArea(areaId).map(device => bubbleFor(device, entities, nowMs, tabletMode));
 }
 
-/** Alle Geraete der Bereiche 'front' und 'garden'. */
+/** Alle Geraete der Bereiche 'front' und 'garden' (v1: Muelltonne, Toni, Haustuer, Garten). */
 export function buildOutdoorBubbles(entities: EntityMap, nowMs: number, tabletMode: boolean): DeviceBubble[] {
   return HOUSE_DEVICES
     .filter(device => device.area === 'front' || device.area === 'garden')
