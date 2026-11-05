@@ -73,6 +73,16 @@
         }
       </div>
 
+      <!-- Ueber der Szene, nicht in ihr: Tipps aufs Feld erreichen die Szenen-Gesten nie. -->
+      @if (detail(); as openDetail) {
+        <div class="tablet-house__detail">
+          <app-house-device-detail
+            [detail]="openDetail"
+            [brightness]="detailBrightness()"
+            (closed)="closeDetail()" />
+        </div>
+      }
+
       @if (focusedRoom()) {
         <button type="button" class="tablet-house__back" (click)="backToOverview()">
           <span class="material-symbols-outlined">arrow_back</span>

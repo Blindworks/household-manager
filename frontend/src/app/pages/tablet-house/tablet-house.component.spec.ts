@@ -1,7 +1,7 @@
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { TabletHouseComponent } from './tablet-house.component';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer, ScreenPoint } from './house-scene-renderer';
 import { WeatherService } from '../../services/weather.service';
@@ -10,7 +10,8 @@ import { EntityStateService } from '../../services/entity-state.service';
 import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { EntityState } from '../../models/entity-state.model';
-import { Vec3, cameraForOverview, cameraForRoom } from '../../shared/house/house-geometry.util';
+import { Vec3, cameraForDevice, cameraForOverview, cameraForRoom } from '../../shared/house/house-geometry.util';
+import { HouseDeviceControlService, LightInfo, SwitchOutcome } from './house-device-control.service';
 
 const MIN = 60_000;
 const ALEXA = 'sensor.alexa_gaj2300425330047';
@@ -56,6 +57,7 @@ describe('TabletHouseComponent', () => {
   let entityService: jasmine.SpyObj<EntityStateService>;
   let tabletView: WritableSignal<boolean>;
   let lightTheme$: BehaviorSubject<boolean>;
+  let control: jasmine.SpyObj<HouseDeviceControlService>;
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const roomBubbles = (): HTMLElement[] => Array.from(el().querySelectorAll<HTMLElement>('.house-bubble--room'));
@@ -86,6 +88,12 @@ describe('TabletHouseComponent', () => {
     entityService.getEntities.and.returnValue(of([]));
     tabletView = signal(false);
     lightTheme$ = new BehaviorSubject(false);
+    control = jasmine.createSpyObj<HouseDeviceControlService>('HouseDeviceControlService',
+      ['loadHistory', 'setSwitch', 'setTarget', 'setBrightness', 'lightDevice', 'thermostatRoom']);
+    control.loadHistory.and.returnValue(of(null));
+    control.lightDevice.and.returnValue(of(null));
+    control.thermostatRoom.and.returnValue(of(null));
+    control.setSwitch.and.returnValue(of<SwitchOutcome>('switched'));
     const weather = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weather.getOverview.and.returnValue(
       of({ current: { temperature: 18, icon: 1 } } as unknown as WeatherOverview));
@@ -106,7 +114,12 @@ describe('TabletHouseComponent', () => {
           }
         }
       ]
-    }).compileComponents();
+    })
+      // Die Seite stellt den Steuer-Dienst selbst bereit; im Test ersetzt ihn ein Spy (auch fuer das Kind).
+      .overrideComponent(TabletHouseComponent, {
+        set: { providers: [{ provide: HouseDeviceControlService, useValue: control }] }
+      })
+      .compileComponents();
   });
 
   afterEach(() => fixture?.destroy());
@@ -345,21 +358,22 @@ describe('TabletHouseComponent', () => {
       expect(device('wohnzimmer-thermostat-8')).toBeNull();
     });
 
-    it('Tipp auf eine Geräte-Bubble navigiert zum Ziel', () => {
+    it('Tipp auf eine Kamera-Bubble navigiert weiterhin zum Ziel', () => {
       create();
       const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.returnValue(Promise.resolve(true));
       click(bubble('Wohnzimmer'));
 
-      click(device('wohnzimmer-thermostat-8')!);
-      expect(navigate).toHaveBeenCalledWith('/tablet/heating');
+      click(device('wohnzimmer-camera')!);
+      expect(navigate).toHaveBeenCalledWith('/cameras');
 
       tabletView.set(true);
       fixture.detectChanges();
-      click(device('wohnzimmer-tapo-802366e0')!);
-      expect(navigate).toHaveBeenCalledWith('/');
+      click(device('wohnzimmer-camera')!);
+      expect(navigate).toHaveBeenCalledWith('/tablet/cameras');
+      expect(el().querySelector('app-house-device-detail')).toBeNull();
     });
 
-    it('Außen-Bubbles (Mülltonne, Toni, Haustür, Garten) sind im Überblick des EG sichtbar und navigieren direkt', () => {
+    it('Außen-Bubbles (Mülltonne, Toni, Haustür, Garten) sind im Überblick des EG sichtbar, die Mülltonne navigiert direkt', () => {
       create();
       const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.returnValue(Promise.resolve(true));
       fake.flyTo.calls.reset();
@@ -391,6 +405,194 @@ describe('TabletHouseComponent', () => {
     it('fordert nach einem Abruf ein Neuzeichnen an', () => {
       create();
       expect(fake.requestRender).toHaveBeenCalled();
+    });
+  });
+
+  describe('Geräte-Detail', () => {
+    const THERMO_TARGET = 'sensor.thermostat_8_target';
+    const STEHLAMPE = 'switch.tapo_802366e0c88d0dba80336f9f7363f8c4216c350a';
+    const panel = (): HTMLElement | null => el().querySelector('.tablet-house__detail app-house-device-detail');
+    const panelText = (): string => panel()?.textContent ?? '';
+    const closeButton = (): HTMLElement => el().querySelector('.device-detail__close') as HTMLElement;
+    const back = (): HTMLElement => el().querySelector('.tablet-house__back') as HTMLElement;
+    const anchorOf = (id: string): Vec3 => (fixture.componentInstance as unknown as {
+      deviceBubbles: () => { bubble: { deviceId: string }; anchor: Vec3 }[];
+    }).deviceBubbles().find(p => p.bubble.deviceId === id)!.anchor;
+    const data = (temperature: string): EntityState[] => [
+      entity('sensor.thermostat_8_temperature', temperature),
+      entity(THERMO_TARGET, '21'),
+      entity(STEHLAMPE, 'on')
+    ];
+    let navigate: jasmine.Spy;
+
+    beforeEach(() => {
+      entityService.getEntities.and.returnValue(of(data('20.5')));
+      create();
+      navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.returnValue(Promise.resolve(true));
+      click(bubble('Wohnzimmer'));
+      fake.flyTo.calls.reset();
+    });
+
+    it('Tipp auf Geräte-Bubble (opensDetail) ⇒ flyTo(cameraForDevice(anker)), Feld sichtbar, kein navigateByUrl', () => {
+      const anchor = anchorOf('wohnzimmer-thermostat-8');
+
+      click(device('wohnzimmer-thermostat-8')!);
+
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForDevice(anchor));
+      expect(panel()).not.toBeNull();
+      expect(panelText()).toContain('20,5°');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('Tipp auf door/waste/pet-Bubble ⇒ weiterhin navigateByUrl(target)', () => {
+      click(back());
+
+      for (const id of ['front-door', 'front-waste', 'front-pet-toni']) {
+        navigate.calls.reset();
+        click(device(id)!);
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(panel()).toBeNull();
+      }
+    });
+
+    it('Tipp auf Garten-Bubble im Überblick ⇒ Feld offen', () => {
+      click(back());
+      fake.flyTo.calls.reset();
+      const anchor = anchorOf('garden-climate');
+
+      click(device('garden-climate')!);
+
+      expect(panel()).not.toBeNull();
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForDevice(anchor));
+      expect(navigate).not.toHaveBeenCalled();
+
+      click(closeButton());
+      expect(panel()).toBeNull();
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForOverview('ground'));
+    });
+
+    it('✕ oder Tipp ins Leere bei offenem Feld ⇒ Feld zu, flyTo(cameraForRoom(raum)), Raumansicht bleibt', () => {
+      click(device('wohnzimmer-thermostat-8')!);
+      fake.flyTo.calls.reset();
+
+      click(closeButton());
+
+      expect(panel()).toBeNull();
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForRoom('wohnzimmer'));
+      expect(back()).not.toBeNull();
+
+      click(device('wohnzimmer-thermostat-8')!);
+      fake.flyTo.calls.reset();
+      fake.pickRoom.and.returnValue(null);
+
+      tap(100, 100);
+
+      expect(panel()).toBeNull();
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForRoom('wohnzimmer'));
+      expect(fake.flyTo).not.toHaveBeenCalledWith(cameraForOverview('ground'));
+      expect(back()).not.toBeNull();
+      expect(device('wohnzimmer-thermostat-8')).not.toBeNull();
+    });
+
+    it('Ziehen bei offenem Feld schließt nichts', () => {
+      click(device('wohnzimmer-thermostat-8')!);
+
+      tap(100, 140);
+
+      expect(panel()).not.toBeNull();
+    });
+
+    it('Refresh bei offenem Feld ⇒ detail-Input neu gesetzt, keine Schaltaktion, Feld bleibt offen', fakeAsync(() => {
+      // Neu aufbauen, damit der 30-s-Takt in der Fake-Zone laeuft.
+      fixture.destroy();
+      create();
+      click(bubble('Wohnzimmer'));
+      click(device('wohnzimmer-thermostat-8')!);
+      expect(panelText()).toContain('20,5°');
+
+      entityService.getEntities.and.returnValue(of(data('22')));
+      tick(30000);
+      fixture.detectChanges();
+
+      expect(panel()).not.toBeNull();
+      expect(panelText()).toContain('22,0°');
+      expect(control.setSwitch).not.toHaveBeenCalled();
+      expect(control.setTarget).not.toHaveBeenCalled();
+      expect(control.setBrightness).not.toHaveBeenCalled();
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
+
+    it('Feld geschlossen, während ein Schaltaufruf läuft ⇒ Antwort danach öffnet nichts, wirft nicht', () => {
+      const pending = new Subject<SwitchOutcome>();
+      control.setSwitch.and.returnValue(pending);
+      click(device('wohnzimmer-tapo-802366e0')!);
+      click(el().querySelector('.device-detail__switch') as HTMLElement);
+      expect(control.setSwitch).toHaveBeenCalledWith(STEHLAMPE, false);
+
+      click(closeButton());
+      expect(() => {
+        pending.next('switched');
+        pending.complete();
+        fixture.detectChanges();
+      }).not.toThrow();
+
+      expect(panel()).toBeNull();
+    });
+
+    it('späte Antwort von lightDevice nach dem Schließen öffnet nichts', () => {
+      const light = new Subject<LightInfo | null>();
+      control.lightDevice.and.returnValue(light);
+      click(device('wohnzimmer-tapo-802366e0')!);
+      click(closeButton());
+
+      light.next({ dimmable: true, brightness: 40 });
+      fixture.detectChanges();
+
+      expect(panel()).toBeNull();
+      expect(light.observed).toBeFalse();
+    });
+
+    it('dimmbare Lampe: Regler aus lightDevice, Wert als brightness', () => {
+      control.lightDevice.and.returnValue(of({ dimmable: true, brightness: 40 }));
+
+      click(device('wohnzimmer-tapo-802366e0')!);
+
+      expect(control.lightDevice).toHaveBeenCalledOnceWith(STEHLAMPE);
+      const slider = el().querySelector<HTMLInputElement>('.device-detail__brightness');
+      expect(slider).not.toBeNull();
+      expect(slider!.value).toBe('40');
+    });
+
+    it('Steckdose ohne Helligkeit zeigt keinen Regler', () => {
+      click(device('wohnzimmer-tapo-802366e0')!);
+
+      expect(el().querySelector('.device-detail__switch')).not.toBeNull();
+      expect(el().querySelector('.device-detail__brightness')).toBeNull();
+    });
+
+    it('Thermostat zeigt den Raumwert als zusätzliche Zeile, ohne Raumfühler keine', () => {
+      control.thermostatRoom.and.returnValue(of({ text: '19,8°', stale: false }));
+      click(device('wohnzimmer-thermostat-8')!);
+      expect(control.thermostatRoom).toHaveBeenCalledOnceWith(8);
+      expect(panelText()).toContain('Raum 19,8°');
+
+      click(closeButton());
+      control.thermostatRoom.and.returnValue(of(null));
+      click(device('wohnzimmer-thermostat-8')!);
+      expect(panel()).not.toBeNull();
+      expect(panelText()).not.toContain('Raum');
+    });
+
+    it('Etagenwechsel oder Zurück schließt das Feld', () => {
+      click(device('wohnzimmer-thermostat-8')!);
+      click(back());
+      expect(panel()).toBeNull();
+
+      click(device('garden-climate')!);
+      expect(panel()).not.toBeNull();
+      click(el().querySelector('[data-floor="upper"]') as HTMLElement);
+      expect(panel()).toBeNull();
     });
   });
 

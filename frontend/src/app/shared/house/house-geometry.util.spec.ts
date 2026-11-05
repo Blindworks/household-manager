@@ -1,6 +1,6 @@
 import { HOUSE_ROOMS, OUTDOOR_AREAS } from './house-plan';
 import {
-  Vec3, areOutdoorAreasVisible, cameraForOverview, cameraForRoom, deviceAnchors, insideCutout, isFloorVisible, roomAnchor, roomBoxes,
+  Vec3, areOutdoorAreasVisible, cameraForDevice, cameraForOverview, cameraForRoom, deviceAnchors, insideCutout, isFloorVisible, roomAnchor, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from './house-geometry.util';
 
@@ -72,6 +72,19 @@ describe('house-geometry.util', () => {
       const d = distance(view.position, view.target);
       expect(d).toBeGreaterThanOrEqual(4);
       expect(d).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it('cameraForDevice zielt auf den Anker, Abstand 3–5 m, Kamera über dem Anker', () => {
+    for (const anchor of [{ x: 0, y: 1, z: 0 }, { x: -4.2, y: 3.6, z: 2.5 }, { x: 3, y: -1.6, z: -5 }]) {
+      const view = cameraForDevice(anchor);
+      expect(view.target).toEqual(anchor);
+      const d = distance(view.position, view.target);
+      expect(d).toBeGreaterThanOrEqual(3);
+      expect(d).toBeLessThanOrEqual(5);
+      expect(view.position.y).toBeGreaterThan(anchor.y);
+      // Straßenseite
+      expect(view.position.z).toBeGreaterThan(anchor.z);
     }
   });
 
