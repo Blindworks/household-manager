@@ -26,9 +26,9 @@ export interface DeviceBubble {
   highlight: boolean;
 }
 
-type EntityMap = ReadonlyMap<string, EntityState>;
+export type EntityMap = ReadonlyMap<string, EntityState>;
 
-const MISSING: BubbleValue = { text: '–', stale: true };
+export const MISSING: BubbleValue = { text: '–', stale: true };
 const UNREADABLE_STATES = new Set(['unavailable', 'unknown', '']);
 const WEEKDAYS = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,11 +40,11 @@ export function parseLocalTimestamp(value: string): number {
   return new Date(value).getTime();
 }
 
-function isReadable(entity: EntityState | undefined): entity is EntityState {
+export function isReadable(entity: EntityState | undefined): entity is EntityState {
   return !!entity && !UNREADABLE_STATES.has(entity.state);
 }
 
-function isOn(entities: EntityMap, entityId: string | undefined): boolean {
+export function isOn(entities: EntityMap, entityId: string | undefined): boolean {
   return !!entityId && entities.get(entityId)?.state === 'on';
 }
 
@@ -62,7 +62,7 @@ function ageMs(entity: EntityState, nowMs: number): number {
   return Number.isFinite(updated) ? nowMs - updated : Number.POSITIVE_INFINITY;
 }
 
-function isStale(entity: EntityState, nowMs: number): boolean {
+export function isStale(entity: EntityState, nowMs: number): boolean {
   return ageMs(entity, nowMs) > STALE_THRESHOLD_MS;
 }
 
@@ -80,10 +80,10 @@ function measured(entities: EntityMap, entityId: string | undefined, nowMs: numb
   return { text: formatted + suffix, stale: isStale(entity, nowMs) };
 }
 
-const temperature = (e: EntityMap, id: string | undefined, now: number) => measured(e, id, now, 1, '°');
-const humidity = (e: EntityMap, id: string | undefined, now: number) => measured(e, id, now, 0, ' %');
+export const temperature = (e: EntityMap, id: string | undefined, now: number) => measured(e, id, now, 1, '°');
+export const humidity = (e: EntityMap, id: string | undefined, now: number) => measured(e, id, now, 0, ' %');
 
-function fresh(text: string): BubbleValue {
+export function fresh(text: string): BubbleValue {
   return { text, stale: false };
 }
 
@@ -172,13 +172,18 @@ export function bubbleTarget(kind: HouseDevice['kind'], tabletMode: boolean): st
   }
 }
 
-const ICONS: Record<HouseDevice['kind'], string> = {
+export const ICONS: Record<HouseDevice['kind'], string> = {
   climate: 'thermostat', thermostat: 'mode_heat', contact: 'sensor_window', motion: 'directions_walk',
   button: 'radio_button_checked', switch: 'power', appliance: 'local_laundry_service', door: 'door_front',
   camera: 'videocam', waste: 'delete', pet: 'pets'
 };
 
-function onOff(entities: EntityMap, entityId: string): BubbleValue {
+/** Icon eines Geraets; die Spuelmaschine hat ein eigenes. */
+export function deviceIcon(device: HouseDevice): string {
+  return device.kind === 'appliance' && device.label.includes('Spül') ? 'dishwasher' : ICONS[device.kind];
+}
+
+export function onOff(entities: EntityMap, entityId: string): BubbleValue {
   const entity = entities.get(entityId);
   if (!isReadable(entity)) {
     return MISSING;
@@ -234,7 +239,7 @@ function lockText(state: string): string {
 }
 
 /** Zigbee- und Dirigera-Taster melden dasselbe Vokabular (siehe Dirigera-Taster); Unbekanntes geht roh durch. */
-function buttonActionText(state: string): string {
+export function buttonActionText(state: string): string {
   switch (state) {
     case 'single': return 'einfach';
     case 'double': return 'doppelt';
@@ -243,14 +248,14 @@ function buttonActionText(state: string): string {
   }
 }
 
-function lastButtonAction(entities: EntityMap, entityIds: string[]): BubbleValue {
+export function lastButtonAction(entities: EntityMap, entityIds: string[]): BubbleValue {
   const readable = entityIds.map(id => entities.get(id)).filter(isReadable)
     .sort((a, b) => parseLocalTimestamp(b.lastUpdated) - parseLocalTimestamp(a.lastUpdated));
   return readable.length > 0 ? fresh(buttonActionText(readable[0].state)) : MISSING;
 }
 
 /** Watt-Zeile nur bei frischer Messung; eine alte Leistung waere eine erfundene Live-Angabe. */
-function livePower(entities: EntityMap, entityId: string, nowMs: number): BubbleValue | null {
+export function livePower(entities: EntityMap, entityId: string, nowMs: number): BubbleValue | null {
   const entity = entities.get(entityId);
   if (!isReadable(entity) || ageMs(entity, nowMs) >= POWER_FRESH_MS) {
     return null;
@@ -262,7 +267,7 @@ function livePower(entities: EntityMap, entityId: string, nowMs: number): Bubble
 function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabletMode: boolean): DeviceBubble {
   let lines: BubbleValue[] = [];
   let highlight = false;
-  let icon = ICONS[device.kind];
+  const icon = deviceIcon(device);
 
   switch (device.kind) {
     case 'climate':
@@ -317,7 +322,6 @@ function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabl
       const finished = isOn(entities, device.finishedEntityId);
       lines.push(fresh(running ? 'läuft' : finished ? 'fertig' : 'aus'));
       highlight = running || finished;
-      icon = device.label.includes('Spül') ? 'dishwasher' : 'local_laundry_service';
       break;
     }
     case 'door': {
