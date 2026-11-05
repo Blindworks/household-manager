@@ -3,12 +3,13 @@ import { HubInsight } from './hub-insight.model';
 import { sinceText } from './insight-time.util';
 
 /**
- * Ueberwachte Tuerkontakte: Entity-ID des Zigbee-Kontakts → Name der Tuer im Hub.
- * Die Entity-IDs entstehen aus den zigbee2mqtt-Friendly-Names ("Eingangstuer",
- * "Terassentuer" — letzterer traegt den Tippfehler des realen Geraets).
+ * Ueberwachte Tuerkontakte: Entity-ID → Name der Tuer im Hub. Die Haustuer ist seit
+ * 2026-11-05 ein IKEA-Kontakt am Dirigera-Hub (Entity-ID haengt an der Geraete-Id, nicht
+ * am Namen); die Terrassentuer ist noch Zigbee, ihre ID entsteht aus dem
+ * zigbee2mqtt-Namen "Terassentuer" (mit dem Tippfehler des realen Geraets).
  */
 const DOOR_CONTACTS: ReadonlyArray<{ entityId: string; label: string }> = [
-  { entityId: 'binary_sensor.zigbee_eingangstuer_contact', label: 'Haustür' },
+  { entityId: 'binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact', label: 'Haustür' },
   { entityId: 'binary_sensor.zigbee_terassentuer_contact', label: 'Terrassentür' }
 ];
 
@@ -51,7 +52,8 @@ const WINDOW_CONTACT_PREFIX = 'binary_sensor.zigbee_fenster_';
 /**
  * Dirigera-Kontakte zaehlen ohne Namensregel: am Hub gibt es nur Fenster-/Tuerkontakte
  * (PARASOLL), keinen Reed-Kontakt wie am Gaszaehler, und ihre Entity-ID haengt an der
- * relationId statt am Namen.
+ * relationId statt am Namen. Ausgenommen sind die oben gelisteten Tueren: sie haben ihre
+ * eigene Tuer-Karte und stuenden sonst zusaetzlich als "Fenster" im Hub.
  */
 const DIRIGERA_CONTACT_PREFIX = 'binary_sensor.dirigera_';
 const CONTACT_SUFFIX = '_contact';
@@ -66,6 +68,7 @@ export function buildWindowInsights(entities: EntityState[], nowMs: number): Hub
     .filter(entity => (entity.entityId.startsWith(WINDOW_CONTACT_PREFIX)
         || entity.entityId.startsWith(DIRIGERA_CONTACT_PREFIX))
       && entity.entityId.endsWith(CONTACT_SUFFIX)
+      && !DOOR_CONTACTS.some(door => door.entityId === entity.entityId)
       && entity.state === 'on')
     .sort((a, b) => a.entityId.localeCompare(b.entityId))
     .map(entity => ({

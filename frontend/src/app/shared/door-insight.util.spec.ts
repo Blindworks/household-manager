@@ -17,6 +17,8 @@ function contact(entityId: string, overrides: Partial<EntityState> = {}): Entity
   };
 }
 
+const HAUSTUER = 'binary_sensor.dirigera_8902573d04ff4a2bafa66e0261015acb_1_contact';
+
 /** Bezugszeitpunkt am selben Tag wie die Test-Zeitstempel. */
 const NOW_MS = new Date('2026-08-14T19:00:00').getTime();
 
@@ -24,7 +26,7 @@ describe('buildDoorInsights', () => {
 
   it('liefert keine Karten, wenn beide Tueren zu sind', () => {
     const entities = [
-      contact('binary_sensor.zigbee_eingangstuer_contact'),
+      contact(HAUSTUER),
       contact('binary_sensor.zigbee_terassentuer_contact')
     ];
 
@@ -33,7 +35,7 @@ describe('buildDoorInsights', () => {
 
   it('baut je offener Tuer eine Karte mit Uhrzeit', () => {
     const entities = [
-      contact('binary_sensor.zigbee_eingangstuer_contact', { state: 'on' }),
+      contact(HAUSTUER, { state: 'on' }),
       contact('binary_sensor.zigbee_terassentuer_contact', { state: 'on', lastChanged: '2026-08-14T08:05:00' })
     ];
 
@@ -50,7 +52,7 @@ describe('buildDoorInsights', () => {
 
   it('nennt das Datum, wenn die Tuer seit einem frueheren Tag offen steht', () => {
     const entities = [
-      contact('binary_sensor.zigbee_eingangstuer_contact', { state: 'on', lastChanged: '2026-08-13T22:10:00' })
+      contact(HAUSTUER, { state: 'on', lastChanged: '2026-08-13T22:10:00' })
     ];
 
     expect(buildDoorInsights(entities, NOW_MS)[0].text).toBe('Offen seit 13.08., 22:10 Uhr.');
@@ -58,7 +60,7 @@ describe('buildDoorInsights', () => {
 
   it('wertet unavailable nicht als offen', () => {
     const entities = [
-      contact('binary_sensor.zigbee_eingangstuer_contact', { state: 'unavailable' })
+      contact(HAUSTUER, { state: 'unavailable' })
     ];
 
     expect(buildDoorInsights(entities, NOW_MS)).toEqual([]);
@@ -74,7 +76,7 @@ describe('buildDoorInsights', () => {
 
   it('faellt bei unlesbarem Zeitstempel auf einen neutralen Text zurueck', () => {
     const entities = [
-      contact('binary_sensor.zigbee_eingangstuer_contact', { state: 'on', lastChanged: 'kaputt' })
+      contact(HAUSTUER, { state: 'on', lastChanged: 'kaputt' })
     ];
 
     expect(buildDoorInsights(entities, NOW_MS)[0].text).toBe('Die Tür ist gerade offen.');
@@ -115,7 +117,7 @@ describe('buildWindowInsights', () => {
   it('ignoriert andere Kontakte wie den Gaszaehler und die Tueren', () => {
     const entities = [
       contact('binary_sensor.zigbee_sensor_gas_contact', { state: 'on' }),
-      contact('binary_sensor.zigbee_eingangstuer_contact', { state: 'on' }),
+      contact(HAUSTUER, { state: 'on' }),
       contact('binary_sensor.zigbee_fenster_flur_battery_low', { state: 'on' })
     ];
 
@@ -137,6 +139,13 @@ describe('buildWindowInsights', () => {
     expect(insights.length).toBe(1);
     expect(insights[0].title).toBe('Badfenster offen');
     expect(insights[0].icon).toBe('window');
+  });
+
+  it('zeigt die Dirigera-Haustuer nicht zusaetzlich als Fenster', () => {
+    const haustuer = contact(HAUSTUER, { source: 'DIRIGERA', displayName: 'Haustüre Kontakt', state: 'on' });
+
+    expect(buildWindowInsights([haustuer], NOW_MS)).toEqual([]);
+    expect(buildDoorInsights([haustuer], NOW_MS).map(i => i.title)).toEqual(['Haustür offen']);
   });
 
   it('wertet einen geschlossenen oder unavailable Dirigera-Kontakt nicht als offen', () => {
