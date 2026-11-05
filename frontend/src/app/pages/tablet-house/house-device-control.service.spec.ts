@@ -175,7 +175,7 @@ describe('HouseDeviceControlService', () => {
     it('temperature: nicht in /current, aber in getSeries ⇒ dort gefunden', async () => {
       temperatures.getCurrent.and.returnValue(of([reading('dirigera:3', 'sensor.anderer_temperature')]));
       temperatures.getSeries.and.returnValue(of([
-        { ...series('zigbee:wohnzimmer'), entityId: 'sensor.zigbee_wohnzimmer_temperature' } as TemperatureSensorSeries
+        { ...series('zigbee:wohnzimmer'), entityId: 'sensor.zigbee_wohnzimmer_temperature' }
       ]));
       temperatures.getSensorSeries.and.returnValue(of(series('zigbee:wohnzimmer')));
 
@@ -195,6 +195,20 @@ describe('HouseDeviceControlService', () => {
 
       expect(result).toBeNull();
       expect(temperatures.getSensorSeries).not.toHaveBeenCalled();
+    });
+
+    it('temperature: kein Treffer wird nicht gemerkt — ein zurückgekehrter Fühler bekommt seinen Verlauf', async () => {
+      const source = { type: 'temperature', entityId: 'sensor.bad_temperature' } as const;
+      temperatures.getCurrent.and.returnValues(of([]), of([reading('dirigera:3', 'sensor.bad_temperature')]));
+      temperatures.getSeries.and.returnValue(of([]));
+      temperatures.getSensorSeries.and.returnValue(of(series('dirigera:3')));
+
+      expect(await firstValueFrom(service.loadHistory(source, 'DAY'))).toBeNull();
+      const second = await firstValueFrom(service.loadHistory(source, 'DAY'));
+
+      expect(temperatures.getCurrent).toHaveBeenCalledTimes(2);
+      expect(temperatures.getSensorSeries).toHaveBeenCalledOnceWith('dirigera:3', 'DAY');
+      expect(second).not.toBeNull();
     });
 
     it('temperature: sensorId wird je Instanz gecacht', async () => {

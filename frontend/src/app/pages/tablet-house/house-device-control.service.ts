@@ -7,7 +7,6 @@ import { PowerConsumerService } from '../../services/power-consumer.service';
 import { SwitchService } from '../../services/switch.service';
 import { SmartDeviceService } from '../../services/smart-device.service';
 import { SmartDevice } from '../../models/smart-device.model';
-import { TemperatureSensorSeries } from '../../models/temperature.model';
 import { HistorySource } from '../../shared/house/device-detail.util';
 import { BubbleValue, MISSING } from '../../shared/house/house-bubbles.util';
 import { clampTarget, roomReading } from '../../shared/thermostat-view.util';
@@ -17,9 +16,6 @@ export interface HistorySeries { name: string; points: HistoryPoint[]; dashed?: 
 export type SwitchOutcome = 'switched' | 'already' | 'unavailable';
 export type HistoryRange = 'DAY' | 'WEEK';
 export interface LightInfo { dimmable: boolean; brightness: number | null }
-
-/** Die Serienliste traegt die Entity-ID (noch) nicht im Vertrag; nur nutzen, wenn sie mitkommt. */
-type SeriesWithEntity = TemperatureSensorSeries & { entityId?: string };
 
 /**
  * Lesen und Schalten fuer das Geraete-Detail der Hausansicht. Wird von der
@@ -34,7 +30,7 @@ export class HouseDeviceControlService {
   private readonly switches = inject(SwitchService);
   private readonly smartDevices = inject(SmartDeviceService);
 
-  private readonly sensorIds = new Map<string, string | null>();
+  private readonly sensorIds = new Map<string, string>();
   private deviceList: SmartDevice[] | null = null;
 
   /** null = kein Verlauf verfuegbar. */
@@ -116,10 +112,15 @@ export class HouseDeviceControlService {
         ]))));
   }
 
-  /** Zuerst `/current`, sonst einmal die Serienliste; das Ergebnis (auch „keins“) wird gemerkt. */
+  /**
+   * Zuerst `/current`, sonst die Serienliste (sie enthaelt auch gerade unerreichbare Fuehler).
+   * Gemerkt wird nur ein Treffer: ein Fuehler, der nach einem Ausfall zurueckkommt, soll seinen
+   * Verlauf ohne Neuladen der Seite bekommen.
+   */
   private resolveSensorId(entityId: string): Observable<string | null> {
-    if (this.sensorIds.has(entityId)) {
-      return of(this.sensorIds.get(entityId) ?? null);
+    const cached = this.sensorIds.get(entityId);
+    if (cached !== undefined) {
+      return of(cached);
     }
     return this.temperatures.getCurrent().pipe(
       switchMap(readings => {
@@ -128,9 +129,13 @@ export class HouseDeviceControlService {
           return of(hit.sensorId);
         }
         return this.temperatures.getSeries('DAY').pipe(
-          map(series => (series as SeriesWithEntity[]).find(s => s.entityId === entityId)?.sensorId ?? null));
+          map(series => series.find(s => s.entityId === entityId)?.sensorId ?? null));
       }),
-      tap(sensorId => this.sensorIds.set(entityId, sensorId))
+      tap(sensorId => {
+        if (sensorId !== null) {
+          this.sensorIds.set(entityId, sensorId);
+        }
+      })
     );
   }
 

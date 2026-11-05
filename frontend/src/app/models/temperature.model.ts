@@ -13,6 +13,8 @@ export type TemperatureSource = 'ZIGBEE' | 'WEATHER' | 'ALEXA' | 'BLE' | 'DIRIGE
 /** Zeitreihe eines Temperatursensors inkl. optionaler Luftfeuchtigkeit. */
 export interface TemperatureSensorSeries {
   sensorId: string;
+  /** Entity-ID der Temperatur-Entity, dieselbe wie in `CurrentTemperatureReading.entityId`. */
+  entityId?: string | null;
   name: string;
   source: TemperatureSource;
   temperature: TimeValue[];
