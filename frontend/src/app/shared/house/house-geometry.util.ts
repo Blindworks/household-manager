@@ -12,7 +12,6 @@ export interface RoomBox { roomId: string; floor: FloorId; center: Vec3; size: V
 
 export interface CameraView { position: Vec3; target: Vec3 }
 
-export type FloorOpacity = 'solid' | 'glass' | 'hidden';
 
 /** Höhe der Raum-Anker (Bubbles, Kameraziel) über dem Etagenboden. */
 const ANCHOR_HEIGHT_M = 1.2;
@@ -101,9 +100,18 @@ export function roomAnchor(roomId: string): Vec3 {
   return { x: center.x, y: floorBase(room.floor) + ANCHOR_HEIGHT_M, z: center.z };
 }
 
-/** Etagen über der gewählten erscheinen nur als Glas-Umriss, die gewählte und alle darunter voll. */
-export function floorOpacity(floor: FloorId, selected: FloorId): FloorOpacity {
-  return floorLevel(floor) > floorLevel(selected) ? 'glass' : 'solid';
+/**
+ * Nur die gewählte Etage ist sichtbar. Die erste Fassung zeigte die Etagen
+ * darunter voll und darüber als Glas — mit Kanten dreier Etagen übereinander
+ * war das zu unübersichtlich (Nutzerentscheidung 2026-11-05, Variante A).
+ */
+export function isFloorVisible(floor: FloorId, selected: FloorId): boolean {
+  return floor === selected;
+}
+
+/** Garten, Terrasse und Vorplatz liegen auf Erdgeschoss-Höhe und gehören nur zu dessen Ansicht. */
+export function areOutdoorAreasVisible(selected: FloorId): boolean {
+  return selected === 'ground';
 }
 
 /** Blick von der Straßenseite schräg von oben auf die Mitte der gewählten Etage. */

@@ -20,7 +20,7 @@ Das ist ausdrücklich die Auswahl des Nutzers: „die 3D-Ansicht und die Infos i
 - **Überblick:** je Raum **eine** Bubble mit den wichtigsten Werten.
 - **Tipp auf einen Raum** (auf die Fläche, nicht auf die Bubble): Die Kamera fliegt **animiert** heran, der Raum füllt die Ansicht, und es erscheinen **mehr Bubbles** — je Gerät/Sensor im Raum eine.
 - **Tipp auf eine Bubble:** **Sprung zur bestehenden Seite** (kein Overlay-Fenster über dem 3D-Haus).
-- **Etagen: Variante C** — das ganze Haus ist sichtbar; die gewählte Etage voll, die Etagen **darüber** nur als durchsichtiger Glas-Umriss; eine Etagenwahl wechselt die Etage.
+- **Etagen: Variante A** (geändert 2026-11-05) — sichtbar ist immer nur die gewählte Etage, eine Etagenwahl (Keller/EG/OG) wechselt sie; Außenflächen nur im EG. Ursprünglich Variante C (ganzes Haus, Etagen darüber als Glas-Umriss) — nach dem Bau zu unübersichtlich.
 - Zurück aus der Raumansicht in den Überblick muss offensichtlich sein (z. B. Zurück-Knopf und Tipp ins Leere).
 
 ### Inhalt der Bubbles (mein Vorschlag, vom Nutzer bestätigt)
@@ -141,7 +141,7 @@ Sprung auf **bestehende** Seiten. Im Tablet-Modus (`ViewModeService.isTabletView
 
 ## Dem Builder überlassen
 
-- Genaue Neon-Optik (Farben, Glow, Glas-Umriss), Kameraperspektive und Animationsdauer.
+- Genaue Neon-Optik (Farben, Glow), Kameraperspektive und Animationsdauer.
 - Wie die Etagenwahl aussieht und welche Etage beim Öffnen gewählt ist (Vorschlag: EG).
 - Bubble-Gestaltung und Positionierung im Raum, Kollisionsvermeidung.
 - Ob die Raum-Fläche, die Raum-Bubble oder beides den Raum-Zoom auslöst (Bubble ⇒ Seite ist gesetzt; für die Raum-Bubble im Überblick muss eine eindeutige Regel her).

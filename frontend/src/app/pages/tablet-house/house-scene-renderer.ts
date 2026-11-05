@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FLOORS, FloorId, OUTDOOR_AREAS } from '../../shared/house/house-plan';
 import {
-  CameraView, Vec3, cameraForOverview, floorBase, floorOpacity, insideCutout, roomBoxes,
+  CameraView, Vec3, areOutdoorAreasVisible, cameraForOverview, floorBase, insideCutout, isFloorVisible, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from '../../shared/house/house-geometry.util';
 
@@ -21,7 +21,6 @@ const BACKGROUND = 0x05070f;
 const NEON = 0x5b8cff;
 const OUTDOOR = 0x3fbf7f;
 const FILL_OPACITY = 0.08;
-const GLASS_OPACITY = 0.15;
 const DEFAULT_FLY_MS = 700;
 const MIN_DISTANCE_M = 3;
 const MAX_DISTANCE_M = 30;
@@ -31,7 +30,6 @@ const PLATE_LIFT_M = 0.01;
 interface FloorLayer {
   group: THREE.Group;
   plates: THREE.Mesh[];
-  edges: THREE.LineSegments[];
 }
 
 const easeInOut = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -44,15 +42,13 @@ export class HouseSceneRenderer {
   private readonly raycaster = new THREE.Raycaster();
   private readonly resizeObserver: ResizeObserver;
   private readonly layers = new Map<FloorId, FloorLayer>();
+  private readonly outdoorGroup = new THREE.Group();
   private readonly renderedCallbacks: (() => void)[] = [];
 
   private readonly fillMaterial = new THREE.MeshBasicMaterial({
     color: NEON, transparent: true, opacity: FILL_OPACITY, depthWrite: false, side: THREE.DoubleSide
   });
   private readonly solidEdgeMaterial = new THREE.LineBasicMaterial({ color: NEON });
-  private readonly glassEdgeMaterial = new THREE.LineBasicMaterial({
-    color: NEON, transparent: true, opacity: GLASS_OPACITY, depthWrite: false
-  });
   private readonly outdoorMaterial = new THREE.LineDashedMaterial({ color: OUTDOOR, dashSize: 0.3, gapSize: 0.2 });
 
   private selectedFloor: FloorId = 'ground';
@@ -206,7 +202,7 @@ export class HouseSceneRenderer {
         object.geometry.dispose();
       }
     });
-    [this.fillMaterial, this.solidEdgeMaterial, this.glassEdgeMaterial, this.outdoorMaterial]
+    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial]
       .forEach(material => material.dispose());
     // dispose() gibt den WebGL-Kontext nicht frei; ohne forceContextLoss stapeln sich bei
     // jedem Seitenwechsel Kontexte, bis der Browser die aeltesten verwirft.
@@ -258,7 +254,7 @@ export class HouseSceneRenderer {
   private buildFloors(): void {
     for (const floor of FLOORS) {
       const group = new THREE.Group();
-      this.layers.set(floor.id, { group, plates: [], edges: [] });
+      this.layers.set(floor.id, { group, plates: [] });
       this.scene.add(group);
     }
     for (const box of roomBoxes()) {
@@ -275,7 +271,6 @@ export class HouseSceneRenderer {
       const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeometry), this.solidEdgeMaterial);
       boxGeometry.dispose();
       edges.position.set(box.center.x, box.center.y, box.center.z);
-      layer.edges.push(edges);
       layer.group.add(edges);
     }
   }
@@ -287,20 +282,16 @@ export class HouseSceneRenderer {
         .map(([x, y]) => new THREE.Vector3(toWorldX(x), PLATE_LIFT_M, toWorldZ(y)));
       const outline = new THREE.Line(new THREE.BufferGeometry().setFromPoints(corners), this.outdoorMaterial);
       outline.computeLineDistances();
-      this.scene.add(outline);
+      this.outdoorGroup.add(outline);
     }
+    this.scene.add(this.outdoorGroup);
   }
 
   private applyFloorVisibility(): void {
     for (const floor of FLOORS) {
-      const layer = this.layers.get(floor.id)!;
-      const opacity = floorOpacity(floor.id, this.selectedFloor);
-      layer.group.visible = opacity !== 'hidden';
-      layer.plates.forEach(plate => (plate.visible = opacity === 'solid'));
-      layer.edges.forEach(edges => {
-        edges.material = opacity === 'solid' ? this.solidEdgeMaterial : this.glassEdgeMaterial;
-      });
+      this.layers.get(floor.id)!.group.visible = isFloorVisible(floor.id, this.selectedFloor);
     }
+    this.outdoorGroup.visible = areOutdoorAreasVisible(this.selectedFloor);
   }
 
 }

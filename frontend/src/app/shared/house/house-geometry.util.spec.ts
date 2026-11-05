@@ -1,6 +1,6 @@
 import { HOUSE_ROOMS, OUTDOOR_AREAS } from './house-plan';
 import {
-  Vec3, cameraForOverview, cameraForRoom, deviceAnchors, floorOpacity, insideCutout, roomAnchor, roomBoxes,
+  Vec3, areOutdoorAreasVisible, cameraForOverview, cameraForRoom, deviceAnchors, insideCutout, isFloorVisible, roomAnchor, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from './house-geometry.util';
 
@@ -47,14 +47,20 @@ describe('house-geometry.util', () => {
     expect(roomAnchor('paincave').y).toBeCloseTo(-1.4);
   });
 
-  it('floorOpacity: über der gewählten Etage Glas, gewählte und darunter solide', () => {
-    expect(floorOpacity('upper', 'ground')).toBe('glass');
-    expect(floorOpacity('ground', 'ground')).toBe('solid');
-    expect(floorOpacity('basement', 'ground')).toBe('solid');
+  it('isFloorVisible: nur die gewählte Etage ist sichtbar, alle anderen ausgeblendet', () => {
+    expect(isFloorVisible('ground', 'ground')).toBeTrue();
+    expect(isFloorVisible('upper', 'ground')).toBeFalse();
+    expect(isFloorVisible('basement', 'ground')).toBeFalse();
 
-    expect(floorOpacity('ground', 'basement')).toBe('glass');
-    expect(floorOpacity('upper', 'basement')).toBe('glass');
-    expect(floorOpacity('basement', 'basement')).toBe('solid');
+    expect(isFloorVisible('basement', 'basement')).toBeTrue();
+    expect(isFloorVisible('ground', 'basement')).toBeFalse();
+    expect(isFloorVisible('upper', 'basement')).toBeFalse();
+  });
+
+  it('areOutdoorAreasVisible: Garten und Vorplatz nur im Erdgeschoss', () => {
+    expect(areOutdoorAreasVisible('ground')).toBeTrue();
+    expect(areOutdoorAreasVisible('upper')).toBeFalse();
+    expect(areOutdoorAreasVisible('basement')).toBeFalse();
   });
 
   it('cameraForRoom zielt auf den Raum', () => {
