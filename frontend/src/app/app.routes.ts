@@ -116,6 +116,12 @@ export const routes: Routes = [
     title: 'Heizung Tablet - Household Manager'
   },
   {
+    path: 'tablet/house',
+    loadComponent: () => import('./pages/tablet-house/tablet-house.component').then(m => m.TabletHouseComponent),
+    canActivate: [authGuard],
+    title: 'Haus Tablet - Household Manager'
+  },
+  {
     path: 'utility-prices',
     loadComponent: () => import('./pages/utility-prices/utility-prices.component').then(m => m.UtilityPricesComponent),
     canActivate: [adminGuard],

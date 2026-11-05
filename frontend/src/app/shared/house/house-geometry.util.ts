@@ -37,6 +37,23 @@ export function toWorldZ(planY: number): number {
   return (planY - CENTER_Y) / UNITS_PER_METER;
 }
 
+/** Umkehrung von toWorldX (z. B. für einen Raycast-Treffer). */
+export function toPlanX(worldX: number): number {
+  return worldX * UNITS_PER_METER + CENTER_X;
+}
+
+/** Umkehrung von toWorldZ. */
+export function toPlanY(worldZ: number): number {
+  return worldZ * UNITS_PER_METER + CENTER_Y;
+}
+
+/** Liegt ein Skizzenpunkt in einem der Ausschnitte des Raums (z. B. Gäste-WC im Flur)? */
+export function insideCutout(roomId: string, planX: number, planY: number): boolean {
+  return (roomById(roomId)?.cutouts ?? []).some(rect =>
+    planX >= Math.min(rect.x1, rect.x2) && planX <= Math.max(rect.x1, rect.x2)
+    && planY >= Math.min(rect.y1, rect.y2) && planY <= Math.max(rect.y1, rect.y2));
+}
+
 function rectArea(rect: PlanRect): number {
   return Math.abs(rect.x2 - rect.x1) * Math.abs(rect.y2 - rect.y1);
 }

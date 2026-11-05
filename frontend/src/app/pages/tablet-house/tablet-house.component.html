@@ -1,0 +1,50 @@
+<app-tablet-shell heading="Haus">
+  <div shellActions class="tablet-house__floors" role="group" aria-label="Etage">
+    @for (floor of floors; track floor.id) {
+      <button
+        type="button"
+        class="tablet-house__floor"
+        [class.tablet-house__floor--active]="floor.id === selectedFloor()"
+        [attr.data-floor]="floor.id"
+        [attr.aria-pressed]="floor.id === selectedFloor()"
+        (click)="selectFloor(floor.id)">
+        {{ floor.label }}
+      </button>
+    }
+  </div>
+
+  <section class="tablet-house">
+    <div class="tablet-house__stage">
+      <div
+        #sceneHost
+        class="tablet-house__scene"
+        (pointerdown)="onScenePointerDown($event)"
+        (click)="onSceneClick($event)"></div>
+
+      <!-- Bubbles werden je Frame per style.transform verschoben, nicht per Bindung. -->
+      <div class="tablet-house__bubbles">
+        @for (room of visibleRooms(); track room.id) {
+          <button
+            #roomBubble
+            type="button"
+            class="house-bubble house-bubble--room"
+            [attr.data-room]="room.id"
+            (click)="focusRoom(room.id)">
+            {{ room.label }}
+          </button>
+        }
+      </div>
+
+      @if (focusedRoom()) {
+        <button type="button" class="tablet-house__back" (click)="backToOverview()">
+          <span class="material-symbols-outlined">arrow_back</span>
+          Überblick
+        </button>
+      }
+
+      @if (sceneUnavailable()) {
+        <p class="tablet-house__notice">3D-Ansicht auf diesem Gerät nicht verfügbar.</p>
+      }
+    </div>
+  </section>
+</app-tablet-shell>

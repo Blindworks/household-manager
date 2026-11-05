@@ -1,0 +1,130 @@
+// 3D-Hausansicht. Kopfzeile und Ansichtsleiste liefert app-tablet-shell.
+//
+// Nur dunkles Design: die Buehne nutzt eigene Neon-Tokens statt der
+// lumina-Farben, .lumina--light aendert hier nichts.
+//
+// Die Hoehe kommt ueber eine durchgehende Flex-Kette von .app-layout (100vh)
+// ueber Shell und Seite bis in die Buehne; der Renderer liest die Groesse des
+// Szenen-Hosts per ResizeObserver. Fehlt flex: 1 oder min-height: 0 an EINER
+// Stelle, faellt die Buehne auf Inhaltshoehe zurueck (praktisch null).
+:host {
+  --house-neon: #5b8cff;
+  --house-accent: #8fd3ff;
+  --house-bg: #05070f;
+  --house-neon-rgb: 91, 140, 255;
+
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tablet-house {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+  &__floors {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem;
+    border-radius: 12px;
+    background: var(--house-bg);
+    border: 1px solid rgba(var(--house-neon-rgb), 0.35);
+  }
+
+  &__floor {
+    border: none;
+    background: transparent;
+    min-height: 2.75rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 9px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(var(--house-neon-rgb), 0.7);
+    touch-action: manipulation;
+
+    &--active {
+      background: rgba(var(--house-neon-rgb), 0.2);
+      color: var(--house-accent);
+      box-shadow: 0 0 12px rgba(var(--house-neon-rgb), 0.35);
+    }
+  }
+
+  &__stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--house-bg);
+    border: 1px solid rgba(var(--house-neon-rgb), 0.2);
+  }
+
+  &__scene {
+    position: absolute;
+    inset: 0;
+    // Die OrbitControls brauchen die Gesten selbst, sonst scrollt/zoomt der Browser.
+    touch-action: none;
+  }
+
+  // Die Ebene laesst Gesten zur Szene durch, nur die Bubbles selbst sind antippbar.
+  &__bubbles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__back {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--house-neon-rgb), 0.5);
+    background: rgba(5, 7, 15, 0.85);
+    color: var(--house-accent);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  &__notice {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    margin: 0;
+    color: var(--house-accent);
+  }
+}
+
+.house-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  // Bis zum ersten gezeichneten Frame unsichtbar - sonst stuenden alle oben links.
+  visibility: hidden;
+  pointer-events: auto;
+  white-space: nowrap;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--house-neon-rgb), 0.6);
+  background: rgba(5, 7, 15, 0.8);
+  color: var(--house-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  will-change: transform;
+}

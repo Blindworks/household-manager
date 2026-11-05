@@ -1,5 +1,8 @@
 import { HOUSE_ROOMS } from './house-plan';
-import { cameraForOverview, cameraForRoom, floorOpacity, roomAnchor, roomBoxes, Vec3 } from './house-geometry.util';
+import {
+  Vec3, cameraForOverview, cameraForRoom, floorOpacity, insideCutout, roomAnchor, roomBoxes,
+  toPlanX, toPlanY, toWorldX, toWorldZ
+} from './house-geometry.util';
 
 describe('house-geometry.util', () => {
   const boxOf = (roomId: string) => roomBoxes().find(box => box.roomId === roomId)!;
@@ -75,5 +78,16 @@ describe('house-geometry.util', () => {
     const d = distance(ground.position, ground.target);
     expect(d).toBeGreaterThanOrEqual(3);
     expect(d).toBeLessThanOrEqual(30);
+  });
+
+  it('toPlanX/toPlanY kehren toWorldX/toWorldZ um', () => {
+    expect(toPlanX(toWorldX(315))).toBeCloseTo(315);
+    expect(toPlanY(toWorldZ(170))).toBeCloseTo(170);
+  });
+
+  it('insideCutout erkennt das Gäste-WC im Flur', () => {
+    expect(insideCutout('flur', 250, 400)).toBeTrue();
+    expect(insideCutout('flur', 350, 300)).toBeFalse();
+    expect(insideCutout('wohnzimmer', 250, 400)).toBeFalse();
   });
 });

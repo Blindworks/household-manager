@@ -2016,8 +2016,8 @@ describe('DashboardComponent (Kachel-Layout)', () => {
     const links: HTMLAnchorElement[] =
       Array.from(fixture.nativeElement.querySelectorAll('.lumina__viewbar-btn'));
     expect(links.length).toBe(fixture.componentInstance.tabletViews.length);
-    expect(links[0].getAttribute('href')).toBe('/tablet/temperatures');
-    expect(links[0].textContent).toContain('Temperaturen');
+    expect(links[0].getAttribute('href')).toBe('/tablet/house');
+    expect(links[0].textContent).toContain('Haus');
 
     discardPeriodicTasks();
   }));
