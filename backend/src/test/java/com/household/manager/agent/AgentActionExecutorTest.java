@@ -47,13 +47,13 @@ class AgentActionExecutorTest {
     }
 
     @Test void heatingSetsTargetAndMode() {
-        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 18.5, 17.0, ThermostatMode.MANUAL, false, false, null)));
+        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 18.5, 17.0, ThermostatMode.MANUAL, false, false, null, null)));
         ActionOutcome out = executor().execute(new AgentAction(ActionClass.HEATING, "3", Map.of("targetTemp", 21.0), "kalt", false));
         verify(thermostatService).setTarget(3L, 21.0);
         assertFalse(out.alreadySatisfied());
     }
     @Test void heatingAlreadyAtTargetDoesNothing() {
-        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 20.0, 21.0, ThermostatMode.MANUAL, false, false, null)));
+        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 20.0, 21.0, ThermostatMode.MANUAL, false, false, null, null)));
         ActionOutcome out = executor().execute(new AgentAction(ActionClass.HEATING, "3", Map.of("targetTemp", 21.0), "kalt", false));
         verify(thermostatService, never()).setTarget(anyLong(), anyDouble());
         assertTrue(out.alreadySatisfied());
@@ -124,7 +124,7 @@ class AgentActionExecutorTest {
         verifyNoInteractions(manualEntityService);
     }
     @Test void heatingWithoutTargetOrModeIsRejected() {
-        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 20.0, 21.0, ThermostatMode.MANUAL, false, false, null)));
+        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 20.0, 21.0, ThermostatMode.MANUAL, false, false, null, null)));
         assertThrows(IllegalArgumentException.class, () -> executor().execute(new AgentAction(ActionClass.HEATING, "3", Map.of(), "r", false)));
         verify(thermostatService, never()).setTarget(anyLong(), anyDouble());
     }

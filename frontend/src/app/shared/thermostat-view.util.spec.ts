@@ -1,9 +1,11 @@
 import { Thermostat } from '../models/thermostat.model';
+import { CurrentTemperatureReading } from '../models/temperature.model';
 import {
   arcFraction,
   clampTarget,
   formatTemp,
   gridColumns,
+  roomReading,
   stepTarget,
   thermostatCaption,
   thermostatTone
@@ -11,7 +13,7 @@ import {
 
 const base: Thermostat = {
   id: 1, name: 'Test', online: true, currentTemp: 20, targetTemp: 21,
-  mode: 'MANUAL', heating: false, batteryLow: false, lastUpdated: null
+  mode: 'MANUAL', heating: false, batteryLow: false, lastUpdated: null, roomSensorId: null
 };
 
 describe('thermostat-view.util', () => {
@@ -110,6 +112,33 @@ describe('thermostat-view.util', () => {
       expect(gridColumns(1)).toBe(2);
       expect(gridColumns(4)).toBe(2);
       expect(gridColumns(5)).toBe(3);
+    });
+  });
+
+  describe('roomReading', () => {
+    const now = Date.parse('2026-11-05T12:00:00');
+    const reading = (measuredAt: string): CurrentTemperatureReading => ({
+      sensorId: 'dirigera:3', entityId: 'sensor.x', name: 'Temperatur Wohnzimmer',
+      source: 'DIRIGERA', temperature: 20.34, measuredAt
+    });
+
+    it('ist ohne Zuordnung null', () => {
+      expect(roomReading(base, [reading('2026-11-05T11:58:00')], now)).toBeNull();
+    });
+
+    it('liefert Kurzname und Wert des zugeordneten Fuehlers', () => {
+      expect(roomReading({ ...base, roomSensorId: 'dirigera:3' }, [reading('2026-11-05T11:58:00')], now))
+        .toEqual({ sensorName: 'Wohnzimmer', valueText: '20,3', stale: false });
+    });
+
+    it('markiert einen alten Messwert als veraltet', () => {
+      expect(roomReading({ ...base, roomSensorId: 'dirigera:3' }, [reading('2026-11-05T09:00:00')], now)?.stale)
+        .toBeTrue();
+    });
+
+    it('zeigt einen nicht gelisteten Fuehler als Strich', () => {
+      expect(roomReading({ ...base, roomSensorId: 'ble:9' }, [reading('2026-11-05T11:58:00')], now))
+        .toEqual({ sensorName: 'Raumfühler', valueText: '–', stale: true });
     });
   });
 });

@@ -3,10 +3,20 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ThermostatService } from '../../services/thermostat.service';
 import { Thermostat } from '../../models/thermostat.model';
+import { TemperatureService } from '../../services/temperature.service';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
+
+/** Auswahl eines Raumfuehlers; die DWD-Vorhersage ist keiner. */
+export interface RoomSensorOption {
+  sensorId: string;
+  label: string;
+}
+
+const WEATHER_SENSOR_ID = 'weather:outdoor';
 
 /**
  * Admin-Seite „Heizung": Hub-IP eintragen und pruefen, gefundene Thermostate
- * umbenennen. Die Hub-IP selbst liefert das Backend nicht zurueck, das Feld
+ * umbenennen und ihnen den Temperaturfuehler ihres Raums zuordnen. Die Hub-IP selbst liefert das Backend nicht zurueck, das Feld
  * startet deshalb leer.
  */
 @Component({
@@ -18,11 +28,14 @@ import { Thermostat } from '../../models/thermostat.model';
 })
 export class AdminHeatingComponent implements OnInit {
   private readonly api = inject(ThermostatService);
+  private readonly temperatureService = inject(TemperatureService);
 
   readonly thermostats = signal<Thermostat[]>([]);
   readonly searching = signal(false);
   readonly renamingId = signal<number | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly sensorOptions = signal<RoomSensorOption[]>([]);
+  readonly assigningId = signal<number | null>(null);
 
   ip = '';
   /** Bearbeiteter Name je Thermostat-Id. */
@@ -32,6 +45,45 @@ export class AdminHeatingComponent implements OnInit {
     this.api.list().subscribe({
       next: list => this.show(list),
       error: error => this.errorMessage.set(this.messageFrom(error))
+    });
+    this.temperatureService.getCurrent().subscribe({
+      next: readings => this.sensorOptions.set(toSensorOptions(readings)),
+      error: () => this.errorMessage.set('Temperaturfühler konnten nicht geladen werden.')
+    });
+  }
+
+  /**
+   * Optionen fuer ein Thermostat: ein zugeordneter, gerade nicht gelisteter Fuehler bleibt
+   * waehlbar und als solcher erkennbar - sonst zeigte die Auswahl still „Kein Raumfühler".
+   */
+  optionsFor(thermostat: Thermostat): RoomSensorOption[] {
+    const options = this.sensorOptions();
+    const assigned = thermostat.roomSensorId;
+    if (assigned && !options.some(option => option.sensorId === assigned)) {
+      return [...options, { sensorId: assigned, label: `${assigned} (nicht gefunden)` }];
+    }
+    return options;
+  }
+
+  assignRoomSensor(thermostat: Thermostat, select: HTMLSelectElement): void {
+    const normalized = select.value === '' ? null : select.value;
+    if (normalized === thermostat.roomSensorId || this.assigningId() !== null) {
+      return;
+    }
+    this.errorMessage.set(null);
+    this.assigningId.set(thermostat.id);
+    this.api.setRoomSensor(thermostat.id, normalized).subscribe({
+      next: updated => {
+        this.thermostats.update(list => list.map(t => (t.id === updated.id ? updated : t)));
+        this.assigningId.set(null);
+      },
+      error: error => {
+        this.errorMessage.set(this.messageFrom(error));
+        // Auswahl zurueck auf den gespeicherten Stand - die Bindungen aendern sich nicht,
+        // Angular setzte das Feld deshalb nicht selbst zurueck.
+        select.value = thermostat.roomSensorId ?? '';
+        this.assigningId.set(null);
+      }
     });
   }
 
@@ -96,4 +148,11 @@ export class AdminHeatingComponent implements OnInit {
   private messageFrom(error: HttpErrorResponse): string {
     return error.error?.message ?? 'Fehler bei der Netzwerk-Kommunikation.';
   }
+}
+
+function toSensorOptions(readings: CurrentTemperatureReading[]): RoomSensorOption[] {
+  return readings
+    .filter(reading => reading.sensorId !== WEATHER_SENSOR_ID)
+    .map(reading => ({ sensorId: reading.sensorId, label: reading.name }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'de'));
 }

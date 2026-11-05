@@ -167,8 +167,8 @@ class HouseSnapshotBuilderTest {
     void thermostatsShowValuesAndOffline() {
         when(thermostatService.list()).thenReturn(List.of(
                 new ThermostatDto(3L, "Wohnzimmer", true, 18.5, 17.0,
-                        ThermostatMode.MANUAL, false, false, LocalDateTime.of(2026, 10, 12, 14, 2)),
-                new ThermostatDto(4L, "Bad", false, null, null, ThermostatMode.MANUAL, false, false, null)));
+                        ThermostatMode.MANUAL, false, false, LocalDateTime.of(2026, 10, 12, 14, 2), null),
+                new ThermostatDto(4L, "Bad", false, null, null, ThermostatMode.MANUAL, false, false, null, null)));
 
         String s = builder().build();
 

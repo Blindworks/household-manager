@@ -43,10 +43,21 @@
     </div>
 
     <div class="tile__controls">
-      <div class="tile__setpoint">
-        <span class="tile__setpoint-label">Soll</span>
-        <span class="tile__target">{{ targetText }}</span>
-        <span class="tile__setpoint-unit">°C</span>
+      <div class="tile__readings">
+        <div class="tile__setpoint">
+          <span class="tile__setpoint-label">Soll</span>
+          <span class="tile__target">{{ targetText }}</span>
+          <span class="tile__setpoint-unit">°C</span>
+        </div>
+        @if (roomReading; as room) {
+          <div class="tile__room" [class.tile__room--stale]="room.stale"
+               [attr.title]="room.sensorName + (room.stale ? ' (veraltet)' : '')"
+               [attr.aria-label]="'Raumtemperatur ' + room.sensorName + ' ' + room.valueText + ' Grad' + (room.stale ? ', veraltet' : '')">
+            <span class="tile__setpoint-label">Raum</span>
+            <span class="tile__room-value">{{ room.valueText }}</span>
+            <span class="tile__setpoint-unit">°C</span>
+          </div>
+        }
       </div>
 
       <div class="tile__steps">

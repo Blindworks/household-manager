@@ -34,6 +34,7 @@
             [thermostat]="thermostat"
             [busy]="busyIds.has(thermostat.id)"
             [errorMessage]="tileErrors.get(thermostat.id) ?? null"
+            [roomReading]="roomReadings.get(thermostat.id) ?? null"
             (targetChange)="setTarget(thermostat, $event)"
             (modeChange)="setMode(thermostat, $event)">
             @if (sparklines.get(thermostat.id); as options) {

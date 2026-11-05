@@ -4,10 +4,12 @@ import { of, throwError } from 'rxjs';
 import { AdminHeatingComponent } from './admin-heating.component';
 import { ThermostatService } from '../../services/thermostat.service';
 import { Thermostat } from '../../models/thermostat.model';
+import { TemperatureService } from '../../services/temperature.service';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
 
 const WOHNZIMMER: Thermostat = {
   id: 1, name: 'Wohnzimmer', online: true, currentTemp: 20, targetTemp: 21,
-  mode: 'MANUAL', heating: false, batteryLow: false, lastUpdated: null
+  mode: 'MANUAL', heating: false, batteryLow: false, lastUpdated: null, roomSensorId: null
 };
 const KUECHE: Thermostat = { ...WOHNZIMMER, id: 2, name: 'Küche' };
 
@@ -15,13 +17,22 @@ describe('AdminHeatingComponent', () => {
   let fixture: ComponentFixture<AdminHeatingComponent>;
   let api: jasmine.SpyObj<ThermostatService>;
   let el: HTMLElement;
+  let temperatures: jasmine.SpyObj<TemperatureService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<ThermostatService>('ThermostatService', ['list', 'setHub', 'rename']);
+    api = jasmine.createSpyObj<ThermostatService>('ThermostatService', ['list', 'setHub', 'rename', 'setRoomSensor']);
     api.list.and.returnValue(of([]));
+    temperatures = jasmine.createSpyObj<TemperatureService>('TemperatureService', ['getCurrent']);
+    temperatures.getCurrent.and.returnValue(of([
+      { sensorId: 'weather:outdoor', name: 'Außen' },
+      { sensorId: 'dirigera:3', name: 'Temperatur Wohnzimmer' }
+    ] as CurrentTemperatureReading[]));
     await TestBed.configureTestingModule({
       imports: [AdminHeatingComponent],
-      providers: [{ provide: ThermostatService, useValue: api }]
+      providers: [
+        { provide: ThermostatService, useValue: api },
+        { provide: TemperatureService, useValue: temperatures }
+      ]
     }).compileComponents();
     fixture = TestBed.createComponent(AdminHeatingComponent);
     el = fixture.nativeElement as HTMLElement;
@@ -101,5 +112,46 @@ describe('AdminHeatingComponent', () => {
     fixture.detectChanges();
     expect(api.list).toHaveBeenCalledTimes(1);
     expect(el.querySelectorAll('[data-test="thermostat"]').length).toBe(2);
+  });
+
+  describe('Raumfuehler', () => {
+    function show(list: Thermostat[]): HTMLSelectElement {
+      fixture.componentInstance['show'](list);
+      fixture.detectChanges();
+      return el.querySelector('[data-test="room-sensor"]') as HTMLSelectElement;
+    }
+
+    it('bietet die Fuehler ohne Wettervorhersage an', () => {
+      const select = show([WOHNZIMMER]);
+      const values = Array.from(select.options).map(o => o.value);
+      expect(values).toEqual(['', 'dirigera:3']);
+    });
+
+    it('speichert die Auswahl und uebernimmt die Antwort', () => {
+      api.setRoomSensor.and.returnValue(of({ ...WOHNZIMMER, roomSensorId: 'dirigera:3' }));
+      const select = show([WOHNZIMMER]);
+      select.value = 'dirigera:3';
+      select.dispatchEvent(new Event('change'));
+      expect(api.setRoomSensor).toHaveBeenCalledOnceWith(1, 'dirigera:3');
+      expect(fixture.componentInstance.thermostats()[0].roomSensorId).toBe('dirigera:3');
+    });
+
+    it('setzt die Auswahl bei einem Fehler zurueck', () => {
+      api.setRoomSensor.and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 400, error: { message: 'Unbekannter Temperaturfuehler: dirigera:3' }
+      })));
+      const select = show([WOHNZIMMER]);
+      select.value = 'dirigera:3';
+      select.dispatchEvent(new Event('change'));
+      expect(select.value).toBe('');
+      expect(fixture.componentInstance.errorMessage()).toContain('Unbekannter');
+    });
+
+    it('laesst einen verschwundenen, zugeordneten Fuehler waehlbar', () => {
+      const select = show([{ ...WOHNZIMMER, roomSensorId: 'ble:9' }]);
+      fixture.detectChanges();
+      expect(select.value).toBe('ble:9');
+      expect(select.selectedOptions[0].textContent).toContain('nicht gefunden');
+    });
   });
 });

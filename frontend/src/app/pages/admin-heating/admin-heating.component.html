@@ -21,6 +21,10 @@
 
   <section>
     <h2>Thermostate</h2>
+    <p class="admin-heating__hint">
+      Der Fühler im Thermostat sitzt am Heizkörper. Steht im selben Raum ein Temperaturfühler,
+      zeigt die Heizungsansicht seinen Wert zusätzlich als „Raum“ an.
+    </p>
     @if (thermostats().length === 0) {
       <p class="admin-heating__hint">Noch keine Thermostate gefunden.</p>
     } @else {
@@ -37,6 +41,22 @@
             <button type="button" data-test="rename" [disabled]="!canRename(thermostat)" (click)="rename(thermostat)">
               Umbenennen
             </button>
+            <label class="admin-heating__room">
+              <span>Raumfühler</span>
+              <select
+                data-test="room-sensor"
+                [attr.aria-label]="'Raumfühler von ' + thermostat.name"
+                [disabled]="assigningId() !== null"
+                #roomSelect
+                (change)="assignRoomSensor(thermostat, roomSelect)">
+                <option value="" [selected]="!thermostat.roomSensorId">Kein Raumfühler</option>
+                @for (option of optionsFor(thermostat); track option.sensorId) {
+                  <option [value]="option.sensorId" [selected]="option.sensorId === thermostat.roomSensorId">
+                    {{ option.label }}
+                  </option>
+                }
+              </select>
+            </label>
           </li>
         }
       </ul>

@@ -60,6 +60,13 @@ export class ThermostatService {
       : this.http.put<Thermostat[]>(`${this.baseUrl}/hub`, { ip });
   }
 
+  /** `sensorId` null entfernt die Zuordnung. */
+  setRoomSensor(id: number, sensorId: string | null): Observable<Thermostat> {
+    return this.useMock
+      ? this.mock.setRoomSensor(id, sensorId)
+      : this.http.put<Thermostat>(`${this.baseUrl}/${id}/room-sensor`, { sensorId });
+  }
+
   rename(id: number, name: string): Observable<Thermostat> {
     return this.useMock
       ? this.mock.rename(id, name)

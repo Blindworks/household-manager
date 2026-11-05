@@ -9,8 +9,10 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { ThermostatTileComponent } from '../../components/thermostat-tile/thermostat-tile.component';
 import { ThermostatService } from '../../services/thermostat.service';
+import { TemperatureService } from '../../services/temperature.service';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { Thermostat, ThermostatMode, ThermostatRange } from '../../models/thermostat.model';
-import { formatTemp, gridColumns } from '../../shared/thermostat-view.util';
+import { RoomReading, formatTemp, gridColumns, roomReading } from '../../shared/thermostat-view.util';
 import { buildSparklineOptions } from './heating-chart.util';
 
 echarts.use([LineChart, GridComponent, MarkAreaComponent, CanvasRenderer]);
@@ -41,6 +43,9 @@ export class TabletHeatingComponent implements OnInit, OnDestroy {
   private static readonly REFRESH_INTERVAL_MS = 60_000;
 
   private readonly thermostatService = inject(ThermostatService);
+  private readonly temperatureService = inject(TemperatureService);
+  /** Letzte bekannte Raumtemperaturen; ein fehlgeschlagener Abruf laesst sie stehen. */
+  private temperatures: CurrentTemperatureReading[] = [];
   private refreshTimer: number | null = null;
   /** Laufende Verlaufsabrufe, damit ein Zeitraumwechsel sie ablaesen kann. */
   private pendingHistory = new Subscription();
@@ -65,6 +70,8 @@ export class TabletHeatingComponent implements OnInit, OnDestroy {
    * neu (notMerge) - Flackern auf der Wandanzeige.
    */
   readonly sparklines = new Map<number, Record<string, unknown> | null>();
+  /** Raumfuehler je Thermostat als Feld, damit die Kachel nicht bei jeder Change-Detection ein neues Objekt bekommt. */
+  readonly roomReadings = new Map<number, RoomReading | null>();
   readonly busyIds = new Set<number>();
   readonly tileErrors = new Map<number, string>();
 
@@ -181,6 +188,29 @@ export class TabletHeatingComponent implements OnInit, OnDestroy {
   private mergeThermostats(updated: Thermostat[]): void {
     const byId = new Map(updated.map(thermostat => [thermostat.id, thermostat]));
     this.thermostats = this.thermostats.map(thermostat => byId.get(thermostat.id) ?? thermostat);
+    this.updateRoomReadings();
+  }
+
+  private updateRoomReadings(): void {
+    const now = Date.now();
+    this.roomReadings.clear();
+    for (const thermostat of this.thermostats) {
+      this.roomReadings.set(thermostat.id, roomReading(thermostat, this.temperatures, now));
+    }
+  }
+
+  /** Nur wenn ein Thermostat einen Raumfuehler hat - sonst kostet die Ansicht keinen Abruf mehr. */
+  private loadRoomTemperatures(): void {
+    if (!this.thermostats.some(thermostat => thermostat.roomSensorId)) {
+      return;
+    }
+    this.temperatureService.getCurrent().subscribe({
+      next: readings => {
+        this.temperatures = readings;
+        this.updateRoomReadings();
+      },
+      error: error => console.error('Raumtemperaturen konnten nicht geladen werden:', error)
+    });
   }
 
   private loadThermostats(silent: boolean): void {
@@ -192,6 +222,8 @@ export class TabletHeatingComponent implements OnInit, OnDestroy {
         this.thermostats = list;
         this.loaded = true;
         this.loadError = null;
+        this.updateRoomReadings();
+        this.loadRoomTemperatures();
         this.loadHistories(true);
       },
       error: (error: HttpErrorResponse) => {

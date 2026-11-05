@@ -191,4 +191,7 @@
     <include file="db/changelog/changes/20261102-0084-add-charging-favorite-direct-price.xml"/>
     <include file="db/changelog/changes/20261102-0085-add-charging-favorite-price-note.xml"/>
 
+    <!-- Heizung: Raum-Temperaturfuehler je Thermostat -->
+    <include file="db/changelog/changes/20261105-0086-add-thermostat-room-sensor.xml"/>
+
 </databaseChangeLog>

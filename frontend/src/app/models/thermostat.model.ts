@@ -13,6 +13,11 @@ export interface Thermostat {
   batteryLow: boolean;
   /** Lokale Haushaltszeit, null wenn nie gemeldet. */
   lastUpdated: string | null;
+  /**
+   * Zugeordneter Raumfuehler als sensorId aus `/v1/temperatures/current`
+   * (z. B. "dirigera:3"), null = kein Fuehler im Raum.
+   */
+  roomSensorId: string | null;
 }
 
 export interface ThermostatHistoryPoint {

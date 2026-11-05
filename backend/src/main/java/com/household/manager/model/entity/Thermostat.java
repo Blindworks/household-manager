@@ -43,6 +43,14 @@ public class Thermostat {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    /**
+     * Optional zugeordneter Raumfuehler, als sensorId der Temperatur-API ("dirigera:3", "ble:5", ...).
+     * Der Fuehler des Thermostats sitzt am Heizkoerper und misst dort zu warm - der Raumwert steht
+     * deshalb daneben. {@code null} = kein Fuehler im Raum.
+     */
+    @Column(name = "room_sensor_id", length = 80)
+    private String roomSensorId;
+
     @Builder.Default
     @Column(name = "active", nullable = false)
     private boolean active = true;

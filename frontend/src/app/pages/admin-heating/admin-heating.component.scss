@@ -46,6 +46,15 @@
     border-bottom: 1px solid var(--color-light-gray);
   }
 
+  &__room {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 4px);
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--color-gray);
+  }
+
   &__status {
     color: var(--color-gray);
     font-size: 0.85rem;

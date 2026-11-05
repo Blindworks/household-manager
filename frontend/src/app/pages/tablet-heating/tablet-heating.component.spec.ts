@@ -11,6 +11,8 @@ import { WeatherService } from '../../services/weather.service';
 import { AppearanceService } from '../../services/appearance.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { Thermostat, ThermostatHistoryResponse } from '../../models/thermostat.model';
+import { TemperatureService } from '../../services/temperature.service';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
 
 describe('TabletHeatingComponent', () => {
   let fixture: ComponentFixture<TabletHeatingComponent>;
@@ -18,6 +20,8 @@ describe('TabletHeatingComponent', () => {
   let service: jasmine.SpyObj<ThermostatService>;
   let mock: ThermostatMock;
   let list: Thermostat[];
+  let temperatures: jasmine.SpyObj<TemperatureService>;
+  let currentReadings: CurrentTemperatureReading[];
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const tiles = () => fixture.debugElement.queryAll(By.directive(ThermostatTileComponent));
@@ -26,9 +30,13 @@ describe('TabletHeatingComponent', () => {
     fixture.detectChanges();
   };
 
-  async function create(): Promise<void> {
+  async function create(prepare?: () => void): Promise<void> {
     mock = new ThermostatMock();
     mock.list().subscribe(initial => (list = initial));
+    currentReadings = [];
+    temperatures = jasmine.createSpyObj('TemperatureService', ['getCurrent']);
+    temperatures.getCurrent.and.callFake(() => of(currentReadings));
+    prepare?.();
 
     service = jasmine.createSpyObj('ThermostatService', ['list', 'setTarget', 'setMode', 'bulk', 'history']);
     service.list.and.callFake(() => of(list));
@@ -47,6 +55,7 @@ describe('TabletHeatingComponent', () => {
         provideRouter([]),
         { provide: ThermostatService, useValue: service },
         { provide: WeatherService, useValue: weather },
+        { provide: TemperatureService, useValue: temperatures },
         { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]
     }).compileComponents();
@@ -59,7 +68,7 @@ describe('TabletHeatingComponent', () => {
   afterEach(() => fixture?.destroy());
 
   describe('mit Mock-Daten', () => {
-    beforeEach(create);
+    beforeEach(() => create());
 
     it('rendert fuenf Kacheln', () => {
       expect(tiles().length).toBe(5);
@@ -155,7 +164,7 @@ describe('TabletHeatingComponent', () => {
   });
 
   describe('Hoehenkette', () => {
-    beforeEach(create);
+    beforeEach(() => create());
 
     it('gibt den Verlaufsdiagrammen die Bildschirmhoehe statt der Inhaltshoehe', () => {
       // Eigener Container statt des Elternknotens - siehe tablet-network-Spec.
@@ -184,6 +193,49 @@ describe('TabletHeatingComponent', () => {
 
       document.body.appendChild(host);
       frame.remove();
+    });
+  });
+
+  describe('Raumfuehler', () => {
+    const reading = (sensorId: string, temperature: number, measuredAt = new Date().toISOString()) =>
+      ({ sensorId, entityId: 'sensor.x', name: 'Temperatur Wohnzimmer', source: 'DIRIGERA',
+         temperature, measuredAt } as CurrentTemperatureReading);
+    const roomTexts = () => Array.from(el().querySelectorAll('.tile__room-value')).map(n => n.textContent?.trim());
+
+    it('fragt ohne zugeordneten Fuehler keine Temperaturen ab und zeigt keinen Raumwert', async () => {
+      await create();
+      expect(temperatures.getCurrent).not.toHaveBeenCalled();
+      expect(roomTexts()).toEqual([]);
+    });
+
+    it('zeigt den Raumwert nur in der Kachel mit Zuordnung', async () => {
+      await create(() => {
+        list[0] = { ...list[0], roomSensorId: 'dirigera:3' };
+        currentReadings = [reading('dirigera:3', 20.34)];
+      });
+      fixture.detectChanges();
+      expect(roomTexts()).toEqual(['20,3']);
+      expect(tiles()[1].componentInstance.roomReading).toBeNull();
+    });
+
+    it('zeigt einen verschwundenen Fuehler als Strich statt gar nicht', async () => {
+      await create(() => {
+        list[0] = { ...list[0], roomSensorId: 'ble:9' };
+        currentReadings = [reading('dirigera:3', 20)];
+      });
+      fixture.detectChanges();
+      expect(roomTexts()).toEqual(['–']);
+    });
+
+    it('behaelt bei einem fehlgeschlagenen Refresh den letzten Raumwert', async () => {
+      await create(() => {
+        list[0] = { ...list[0], roomSensorId: 'dirigera:3' };
+        currentReadings = [reading('dirigera:3', 21.5)];
+      });
+      temperatures.getCurrent.and.returnValue(throwError(() => new Error('weg')));
+      component.reload();
+      fixture.detectChanges();
+      expect(roomTexts()).toEqual(['21,5']);
     });
   });
 });

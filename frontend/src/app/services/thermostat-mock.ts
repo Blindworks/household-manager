@@ -102,6 +102,17 @@ export class ThermostatMock {
     return this.list();
   }
 
+  setRoomSensor(id: number, sensorId: string | null): Observable<Thermostat> {
+    const thermostat = this.thermostats.find(t => t.id === id);
+    if (!thermostat) {
+      return throwError(() => new HttpErrorResponse({
+        status: 404, error: { message: 'Thermostat nicht gefunden.' }
+      }));
+    }
+    thermostat.roomSensorId = sensorId;
+    return of({ ...thermostat });
+  }
+
   rename(id: number, name: string): Observable<Thermostat> {
     const thermostat = this.thermostats.find(t => t.id === id);
     if (!thermostat) {
@@ -150,6 +161,7 @@ function mock(id: number, name: string, overrides: Partial<Thermostat>): Thermos
     heating: false,
     batteryLow: false,
     lastUpdated: '2026-10-09T18:00:00',
+    roomSensorId: null,
     ...overrides
   };
 }

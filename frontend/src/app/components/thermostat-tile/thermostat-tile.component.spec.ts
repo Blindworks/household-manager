@@ -9,7 +9,7 @@ describe('ThermostatTileComponent', () => {
 
   const base: Thermostat = {
     id: 1, name: 'Wohnzimmer', online: true, currentTemp: 20.5, targetTemp: 21,
-    mode: 'MANUAL', heating: false, batteryLow: false, lastUpdated: '2026-10-09T18:00:00'
+    mode: 'MANUAL', heating: false, batteryLow: false, lastUpdated: '2026-10-09T18:00:00', roomSensorId: null
   };
 
   function setThermostat(overrides: Partial<Thermostat> = {}): void {

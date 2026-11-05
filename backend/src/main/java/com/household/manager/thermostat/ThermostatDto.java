@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 
 /**
  * API-Darstellung eines Thermostats. {@code null} bei Temperaturen und {@code lastUpdated}
- * heisst "unbekannt" und wird bewusst mitgeliefert (Vertrag mit dem Frontend).
+ * heisst "unbekannt" und wird bewusst mitgeliefert (Vertrag mit dem Frontend). {@code roomSensorId}
+ * ist der zugeordnete Raumfuehler; seinen Wert holt das Frontend aus {@code /v1/temperatures/current}.
  */
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public record ThermostatDto(
@@ -21,17 +22,18 @@ public record ThermostatDto(
         ThermostatMode mode,
         boolean heating,
         boolean batteryLow,
-        LocalDateTime lastUpdated) {
+        LocalDateTime lastUpdated,
+        String roomSensorId) {
 
     /** Ohne Cache-Eintrag (noch nie gelesen): offline, keine Werte, nie ein geratener Zustand. */
     static ThermostatDto from(Thermostat thermostat, ThermostatStateCache.Entry entry) {
         if (entry == null) {
             return new ThermostatDto(thermostat.getId(), thermostat.getName(), false, null, null,
-                    ThermostatMode.MANUAL, false, false, null);
+                    ThermostatMode.MANUAL, false, false, null, thermostat.getRoomSensorId());
         }
         ThermostatReading reading = entry.reading();
         return new ThermostatDto(thermostat.getId(), thermostat.getName(), reading.online(),
                 reading.currentTemp(), reading.targetTemp(), reading.mode(), reading.heating(),
-                reading.batteryLow(), entry.lastUpdated());
+                reading.batteryLow(), entry.lastUpdated(), thermostat.getRoomSensorId());
     }
 }

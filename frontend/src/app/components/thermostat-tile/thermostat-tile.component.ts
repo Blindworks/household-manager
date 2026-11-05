@@ -12,6 +12,7 @@ import {
 import { Subject, Subscription, debounceTime } from 'rxjs';
 import { Thermostat, ThermostatMode } from '../../models/thermostat.model';
 import {
+  RoomReading,
   ThermostatTone,
   arcFraction,
   formatTemp,
@@ -56,6 +57,8 @@ export class ThermostatTileComponent implements OnInit, OnChanges, OnDestroy {
   @Input() busy = false;
   /** Inline-Meldung zu einem fehlgeschlagenen Schreibzugriff. */
   @Input() errorMessage: string | null = null;
+  /** Wert des Raumfuehlers, falls dem Thermostat einer zugeordnet ist. */
+  @Input() roomReading: RoomReading | null = null;
 
   @Output() readonly targetChange = new EventEmitter<number>();
   @Output() readonly modeChange = new EventEmitter<ThermostatMode>();

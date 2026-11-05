@@ -1,4 +1,6 @@
 import { Thermostat } from '../models/thermostat.model';
+import { CurrentTemperatureReading } from '../models/temperature.model';
+import { isReadingStale, shortenSensorName } from './temperature-comfort.util';
 
 /** Einzige Definition der Sollwert-Grenzen und des Rasters der Ansicht (spiegelt die Backend-Validierung). */
 export const THERMOSTAT_MIN_TARGET = 5;
@@ -85,4 +87,37 @@ export function formatTemp(value: number | null): string {
 /** Spalten des Kachelrasters: bis vier Thermostate zwei, darueber drei. */
 export function gridColumns(count: number): number {
   return count <= 4 ? 2 : 3;
+}
+
+/** Anzeige des Raumfuehlers neben dem Fuehler am Heizkoerper. */
+export interface RoomReading {
+  /** Kurzname des Fuehlers (Tooltip/Barrierefreiheit). */
+  sensorName: string;
+  valueText: string;
+  stale: boolean;
+}
+
+/**
+ * Raumwert eines Thermostats aus den aktuellen Temperaturen. Ohne Zuordnung
+ * null (die Kachel zeigt dann nichts). Ist der zugeordnete Fuehler gerade
+ * nicht gelistet (Hub weg, Fuehler entfernt), steht "–" da statt nichts -
+ * sonst saehe ein toter Fuehler aus wie ein Raum ohne Fuehler.
+ */
+export function roomReading(
+  thermostat: Thermostat,
+  readings: readonly CurrentTemperatureReading[],
+  nowMs: number
+): RoomReading | null {
+  if (!thermostat.roomSensorId) {
+    return null;
+  }
+  const reading = readings.find(r => r.sensorId === thermostat.roomSensorId);
+  if (!reading) {
+    return { sensorName: 'Raumfühler', valueText: formatTemp(null), stale: true };
+  }
+  return {
+    sensorName: shortenSensorName(reading.name),
+    valueText: formatTemp(reading.temperature),
+    stale: isReadingStale(reading, nowMs)
+  };
 }

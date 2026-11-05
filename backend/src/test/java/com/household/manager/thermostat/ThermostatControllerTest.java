@@ -22,6 +22,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import com.household.manager.dto.CurrentTemperatureReading;
+import com.household.manager.service.TemperatureSeriesService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -55,6 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {ThermostatController.class, ThermostatHubAdminController.class})
 @AutoConfigureMockMvc(addFilters = false)
 @Import({ThermostatService.class, ThermostatHubService.class, ThermostatStateCache.class,
+        ThermostatRoomSensorService.class,
         ThermostatControllerTest.FixedClock.class})
 class ThermostatControllerTest {
 
@@ -79,6 +84,8 @@ class ThermostatControllerTest {
     private AuditService auditService;
     @MockitoBean
     private ThermostatHistoryService historyService;
+    @MockitoBean
+    private TemperatureSeriesService temperatureSeriesService;
     @MockitoBean
     private AppUserRepository appUserRepository;
     @MockitoBean
@@ -257,5 +264,28 @@ class ThermostatControllerTest {
         mockMvc.perform(put("/v1/thermostats/99").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"X\"}"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT room-sensor: ordnet zu, liefert roomSensorId, unbekannter Fuehler ist 400")
+    void setsRoomSensor() throws Exception {
+        when(repository.save(any(Thermostat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(CurrentTemperatureReading.builder()
+                .sensorId("dirigera:3").name("Temperatur Wohnzimmer").temperature(new BigDecimal("20.3"))
+                .measuredAt(LocalDateTime.of(2026, 10, 9, 18, 0)).build()));
+
+        mockMvc.perform(put("/v1/thermostats/1/room-sensor").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sensorId\": \"dirigera:3\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roomSensorId").value("dirigera:3"));
+        mockMvc.perform(get("/v1/thermostats"))
+                .andExpect(jsonPath("$[0].roomSensorId").value("dirigera:3"));
+        mockMvc.perform(put("/v1/thermostats/1/room-sensor").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sensorId\": \"ble:99\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/v1/thermostats/1/room-sensor").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sensorId\": null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roomSensorId").doesNotExist());
     }
 }

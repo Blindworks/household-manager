@@ -39,7 +39,7 @@ class AgentActionDescriberTest {
 
     private ThermostatDto thermostat(long id, String name) {
         return new ThermostatDto(id, name, true, null, null, com.household.manager.tapo.hub.ThermostatMode.MANUAL,
-                false, false, null);
+                false, false, null, null);
     }
 
     @Test

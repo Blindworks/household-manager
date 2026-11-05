@@ -1341,6 +1341,9 @@ class SecurityRulesTest {
         mockMvc.perform(put("/v1/thermostats/1").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/thermostats/1/room-sensor").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"sensorId\": \"ble:1\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -1352,6 +1355,9 @@ class SecurityRulesTest {
         mockMvc.perform(put("/v1/thermostats/1").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/thermostats/1/room-sensor").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"sensorId\": \"ble:1\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -1362,6 +1368,9 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
         mockMvc.perform(put("/v1/thermostats/1").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"X\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/thermostats/1/room-sensor").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"sensorId\": \"ble:1\"}"))
                 .andExpect(status().isNotFound());
     }
 

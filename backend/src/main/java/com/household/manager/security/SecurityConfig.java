@@ -227,12 +227,14 @@ public class SecurityConfig {
                         // ueber die generische GET-Regel KIOSK (das Wandtablet muss es wissen),
                         // Umstellen nur im Admin-Menue - ohne diese Zeile waere es MEMBER.
                         .requestMatchers(HttpMethod.PUT, "/v1/appearance").hasRole("ADMIN")
-                        // Hub-Pflege der Heizung (Hub-IP setzen, Thermostat umbenennen) ist ADMIN.
+                        // Hub-Pflege der Heizung (Hub-IP setzen, Thermostat umbenennen, Raumfuehler
+                        // zuordnen) ist ADMIN.
                         // Methodenspezifisch und VOR der KIOSK-Whitelist weiter unten: lesen und
                         // bedienen (target/mode/bulk) soll das Wandtablet weiter koennen. "/hub"
                         // steht ausdruecklich vor "/*": ein literales Segment darf nie als {id}
                         // einer weniger strengen Regel durchrutschen.
-                        .requestMatchers(HttpMethod.PUT, "/v1/thermostats/hub", "/v1/thermostats/*")
+                        .requestMatchers(HttpMethod.PUT, "/v1/thermostats/hub", "/v1/thermostats/*",
+                                "/v1/thermostats/*/room-sensor")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")

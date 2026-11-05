@@ -224,11 +224,33 @@
     gap: 0.55rem;
   }
 
-  &__setpoint {
+  // Soll und Raumwert in einer Zeile; bei schmaler Kachel bricht der Raumwert um.
+  &__readings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 1.25rem;
+    row-gap: 0.35rem;
+  }
+
+  &__setpoint,
+  &__room {
     display: flex;
     align-items: baseline;
     gap: 0.3rem;
     line-height: 1;
+  }
+
+  // Raumfuehler kleiner als der Sollwert: er ist Information, keine Bedienung.
+  &__room-value {
+    font-size: 1.5rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--on-surface);
+  }
+
+  &__room--stale {
+    opacity: 0.5;
   }
 
   &__setpoint-label {
@@ -475,7 +497,7 @@
       display: contents;
     }
 
-    &__setpoint {
+    &__readings {
       grid-area: setpoint;
       align-self: end;
     }
