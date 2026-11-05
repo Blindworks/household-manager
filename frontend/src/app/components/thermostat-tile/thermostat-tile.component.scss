@@ -249,6 +249,11 @@
     color: var(--on-surface);
   }
 
+  // Rechtsbuendig in der Zeile, auch nach einem Umbruch.
+  &__room {
+    margin-left: auto;
+  }
+
   &__room--stale {
     opacity: 0.5;
   }
