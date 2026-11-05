@@ -13,7 +13,9 @@ import { clampTarget, roomReading } from '../../shared/thermostat-view.util';
 
 export interface HistoryPoint { at: string; value: number | null }
 export interface HistorySeries { name: string; points: HistoryPoint[]; dashed?: boolean }
-export type SwitchOutcome = 'switched' | 'already' | 'unavailable';
+export type SwitchOutcome = 'switched' | 'already' | 'unavailable' | 'needs-confirm';
+/** Lauf-Helfer einer Maschine; `confirmed` = der Nutzer hat das Ausschalten im Dialog bestaetigt. */
+export interface SwitchGuard { runningEntityId: string; confirmed: boolean }
 export type HistoryRange = 'DAY' | 'WEEK';
 /** 'lamp-off' = Lampe ist laut frischem Zustand nicht `on`; es wurde nichts geschrieben. */
 export type BrightnessOutcome = 'set' | 'lamp-off';
@@ -56,8 +58,14 @@ export class HouseDeviceControlService {
    * Liest den Zustand frisch und toggelt nur, wenn er der Absicht widerspricht
    * und eindeutig `on`/`off` ist: der Toggle-Endpunkt schaltet alles ausser
    * `on` EIN, ein Ausschalten auf einem toten Geraet wuerde also einschalten.
+   *
+   * `guard` (nur beim Ausschalten einer Maschine): der Lauf-Helfer kommt aus
+   * demselben frischen Abruf (manuelle INPUT_BOOLEAN stehen in `view=all`). Hat
+   * das Feld nicht gefragt, weil sein bis zu 30 s alter Stand „läuft nicht“ sagte,
+   * der Helfer aber jetzt `on` ist, wird nicht geschaltet: `needs-confirm` laesst
+   * das Feld den Bestaetigungsdialog nachholen.
    */
-  setSwitch(entityId: string, on: boolean): Observable<SwitchOutcome> {
+  setSwitch(entityId: string, on: boolean, guard?: SwitchGuard): Observable<SwitchOutcome> {
     return this.switches.getSwitches(undefined, 'all').pipe(
       switchMap(list => {
         const state = list.find(s => s.entityId === entityId)?.state;
@@ -66,6 +74,10 @@ export class HouseDeviceControlService {
         }
         if ((state === 'on') === on) {
           return of<SwitchOutcome>('already');
+        }
+        if (!on && guard && !guard.confirmed
+          && list.find(s => s.entityId === guard.runningEntityId)?.state === 'on') {
+          return of<SwitchOutcome>('needs-confirm');
         }
         return this.switches.toggle(entityId).pipe(map((): SwitchOutcome => 'switched'));
       })

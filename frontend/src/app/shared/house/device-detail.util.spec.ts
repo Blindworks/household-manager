@@ -87,6 +87,12 @@ describe('buildDeviceDetail', () => {
     expect(guarded.control).toEqual(jasmine.objectContaining({ confirmOff: true }));
   });
 
+  it('Appliance: Schalter trägt den Lauf-Helfer für die frische Prüfung beim Ausschalten', () => {
+    const d = find('appliance', a => a.id === 'waschkeller-appliance-waschmaschine');
+    const detail = buildDeviceDetail(d, mapOf(entity(d.switchEntityId, 'on')), NOW);
+    expect(detail.control).toEqual(jasmine.objectContaining({ runningEntityId: d.runningEntityId }));
+  });
+
   it('Kontakt, Bewegung, Taster: Zustand, seit HH:mm, kein Verlauf, kein Control', () => {
     const c = find('contact', x => x.entityId.includes('badezimmer'));
     const contact = buildDeviceDetail(c, mapOf(entity(c.entityId, 'on', 60)), NOW);

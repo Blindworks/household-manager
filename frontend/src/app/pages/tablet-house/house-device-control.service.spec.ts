@@ -146,6 +146,52 @@ describe('HouseDeviceControlService', () => {
       await expectAsync(firstValueFrom(service.setSwitch('switch.a', true))).toBeRejected();
       expect(switches.toggle).not.toHaveBeenCalled();
     });
+
+    describe('Lauf-Helfer einer Maschine', () => {
+      const RUNNING = 'input_boolean.manual_waschmaschine_laeuft';
+
+      it('Aus ohne Rückfrage, Helfer laut frischem Abruf an ⇒ needs-confirm, kein toggle', async () => {
+        switches.getSwitches.and.returnValue(of([switchEntity('switch.a', 'on'), switchEntity(RUNNING, 'on')]));
+
+        const outcome = await firstValueFrom(
+          service.setSwitch('switch.a', false, { runningEntityId: RUNNING, confirmed: false }));
+
+        expect(outcome).toBe('needs-confirm');
+        expect(switches.toggle).not.toHaveBeenCalled();
+      });
+
+      it('Aus nach Rückfrage, Helfer an ⇒ toggle', async () => {
+        switches.getSwitches.and.returnValue(of([switchEntity('switch.a', 'on'), switchEntity(RUNNING, 'on')]));
+        switches.toggle.and.returnValue(of(switchEntity('switch.a', 'off')));
+
+        const outcome = await firstValueFrom(
+          service.setSwitch('switch.a', false, { runningEntityId: RUNNING, confirmed: true }));
+
+        expect(outcome).toBe('switched');
+        expect(switches.toggle).toHaveBeenCalledOnceWith('switch.a');
+      });
+
+      it('Aus ohne Rückfrage, Helfer aus oder fehlend ⇒ toggle', async () => {
+        switches.toggle.and.returnValue(of(switchEntity('switch.a', 'off')));
+        switches.getSwitches.and.returnValues(
+          of([switchEntity('switch.a', 'on'), switchEntity(RUNNING, 'off')]),
+          of([switchEntity('switch.a', 'on')]));
+
+        expect(await firstValueFrom(
+          service.setSwitch('switch.a', false, { runningEntityId: RUNNING, confirmed: false }))).toBe('switched');
+        expect(await firstValueFrom(
+          service.setSwitch('switch.a', false, { runningEntityId: RUNNING, confirmed: false }))).toBe('switched');
+        expect(switches.toggle).toHaveBeenCalledTimes(2);
+      });
+
+      it('schon aus ⇒ already, auch wenn der Helfer an ist', async () => {
+        switches.getSwitches.and.returnValue(of([switchEntity('switch.a', 'off'), switchEntity(RUNNING, 'on')]));
+
+        expect(await firstValueFrom(
+          service.setSwitch('switch.a', false, { runningEntityId: RUNNING, confirmed: false }))).toBe('already');
+        expect(switches.toggle).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('setTarget', () => {

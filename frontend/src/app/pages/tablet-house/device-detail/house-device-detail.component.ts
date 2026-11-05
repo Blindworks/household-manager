@@ -38,7 +38,8 @@ const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
  * `detail` wird von der Seite bei jedem Refresh neu gesetzt. Der Verlauf wird
  * nur neu geladen, wenn sich Geraet oder Verlaufsquelle aendern; eine offene
  * −/+-Eingabe ueberlebt den Refresh. Der Schalter zeigt immer den Zustand aus
- * `detail` - der neue Stand kommt mit dem naechsten Refresh der Seite.
+ * `detail`; nach einer Aktion meldet das Feld `changed`, und die Seite laedt sofort
+ * und noch zweimal kurz danach nach (Geraete melden verzoegert).
  */
 @Component({
   selector: 'app-house-device-detail',
@@ -57,6 +58,12 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
   /** Aktuelle Helligkeit (0–100) einer dimmbaren Lampe; die Seite fuellt sie ueber `lightDevice`. */
   @Input() brightness: number | null = null;
   @Output() readonly closed = new EventEmitter<void>();
+  /**
+   * Eine Aktion hat den Geraetezustand geaendert oder gezeigt, dass `detail` veraltet ist
+   * (`already`, `lamp-off`): die Seite laedt sofort nach, statt bis zum 30-s-Takt den
+   * alten Stand zu zeigen. Loest selbst nie eine Aktion aus.
+   */
+  @Output() readonly changed = new EventEmitter<void>();
 
   readonly ranges: { range: HistoryRange; label: string }[] = [
     { range: 'DAY', label: '24 h' },
@@ -163,7 +170,7 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
       this.confirmingOff = true;
       return;
     }
-    this.sendSwitch(control.entityId, !control.on);
+    this.sendSwitch(control, !control.on, false);
   }
 
   confirmOff(): void {
@@ -171,7 +178,7 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
     this.confirmingOff = false;
     if (control) {
       // Der Dienst liest den Zustand frisch und schaltet nur, wenn er noch `on` ist.
-      this.sendSwitch(control.entityId, false);
+      this.sendSwitch(control, false, true);
     }
   }
 
@@ -197,6 +204,8 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
         if (outcome === 'lamp-off') {
           snapBack(LAMP_OFF);
         }
+        // Auch `lamp-off`: dann war der angezeigte Zustand „an“ veraltet.
+        this.changed.emit();
       },
       error: () => snapBack(UNREACHABLE)
     });
@@ -206,13 +215,26 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
     this.closed.emit();
   }
 
-  private sendSwitch(entityId: string, on: boolean): void {
+  /** `confirmed` = der Nutzer hat das Ausschalten im Dialog bestaetigt. */
+  private sendSwitch(control: SwitchControl, on: boolean, confirmed: boolean): void {
     this.switchPending = true;
     this.error = null;
-    this.control.setSwitch(entityId, on).subscribe({
+    const guard = !on && control.runningEntityId ? { runningEntityId: control.runningEntityId, confirmed } : null;
+    const request = guard
+      ? this.control.setSwitch(control.entityId, on, guard)
+      : this.control.setSwitch(control.entityId, on);
+    request.subscribe({
       next: outcome => {
         this.switchPending = false;
         this.error = outcome === 'unavailable' ? UNREACHABLE : null;
+        if (outcome === 'needs-confirm') {
+          // Die Maschine laeuft laut frischem Stand: nichts geschaltet, Rueckfrage nachholen.
+          this.confirmingOff = true;
+        }
+        if (outcome !== 'unavailable') {
+          // switched/already/needs-confirm: der angezeigte Stand ist ueberholt.
+          this.changed.emit();
+        }
         this.cdr.markForCheck();
       },
       error: () => {

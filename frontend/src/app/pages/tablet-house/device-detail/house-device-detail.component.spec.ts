@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { HouseDeviceDetailComponent, TARGET_GRACE_MS } from './house-device-detail.component';
 import {
-  BrightnessOutcome, HistoryRange, HistorySeries, HouseDeviceControlService, SwitchOutcome
+  BrightnessOutcome, HistoryRange, HistorySeries, HouseDeviceControlService, SwitchGuard, SwitchOutcome
 } from '../house-device-control.service';
 import { DeviceDetail, HistorySource } from '../../../shared/house/device-detail.util';
 
@@ -11,6 +11,7 @@ class FakeControl {
   historyResponse: (range: HistoryRange) => Observable<HistorySeries[] | null> =
     () => of([{ name: 'Ist', points: [{ at: '2026-11-05T10:00:00', value: 21 }] }]);
   switchCalls: { entityId: string; on: boolean }[] = [];
+  switchGuards: (SwitchGuard | undefined)[] = [];
   switchResponse: Observable<SwitchOutcome> = of('switched');
   targetCalls: { id: number; target: number }[] = [];
   brightnessCalls: { entityId: string; brightness: number }[] = [];
@@ -21,8 +22,9 @@ class FakeControl {
     this.historyCalls.push({ source, range });
     return this.historyResponse(range);
   }
-  setSwitch(entityId: string, on: boolean) {
+  setSwitch(entityId: string, on: boolean, guard?: SwitchGuard) {
     this.switchCalls.push({ entityId, on });
+    this.switchGuards.push(guard);
     return this.switchResponse;
   }
   setTarget(id: number, target: number) {
@@ -56,6 +58,17 @@ function switchDetail(on: boolean | null, confirmOff = false, dimmable = false):
     deviceId: 'flur', title: 'Flur', icon: 'lightbulb', headline: { text: on ? 'an' : 'aus', stale: false },
     lines: [], history: null,
     control: { type: 'switch', entityId: 'switch.flur', on, confirmOff, dimmable }
+  };
+}
+
+function applianceDetail(on: boolean, running: boolean): DeviceDetail {
+  return {
+    deviceId: 'waschmaschine', title: 'Waschmaschine', icon: 'local_laundry_service',
+    headline: { text: running ? 'läuft' : 'aus', stale: false }, lines: [], history: null,
+    control: {
+      type: 'switch', entityId: 'switch.wasch', on, confirmOff: running, dimmable: false,
+      runningEntityId: 'input_boolean.manual_waschmaschine_laeuft'
+    }
   };
 }
 
@@ -356,6 +369,73 @@ describe('HouseDeviceDetailComponent', () => {
   it('on:null ⇒ Schalter disabled', () => {
     create(switchDetail(null));
     expect((q('.device-detail__switch') as HTMLButtonElement).disabled).toBeTrue();
+  });
+
+  describe('changed nach einer Aktion', () => {
+    let changes: number;
+    const listen = () => {
+      changes = 0;
+      fixture.componentInstance.changed.subscribe(() => changes++);
+    };
+
+    it('switched und already melden changed, unavailable und Fehler nicht', () => {
+      create(switchDetail(false));
+      listen();
+      control.switchResponse = of('switched');
+      click('.device-detail__switch');
+      expect(changes).toBe(1);
+      control.switchResponse = of('already');
+      click('.device-detail__switch');
+      expect(changes).toBe(2);
+      control.switchResponse = of('unavailable');
+      click('.device-detail__switch');
+      control.switchResponse = throwError(() => new Error('502'));
+      click('.device-detail__switch');
+      expect(changes).toBe(2);
+    });
+
+    it('Helligkeit gesetzt meldet changed, Fehler nicht', () => {
+      create(switchDetail(true, false, true), 40);
+      listen();
+      const slider = q('.device-detail__brightness') as HTMLInputElement;
+      slider.value = '70';
+      slider.dispatchEvent(new Event('change'));
+      expect(changes).toBe(1);
+      control.brightnessResponse = throwError(() => new Error('502'));
+      slider.dispatchEvent(new Event('change'));
+      expect(changes).toBe(1);
+    });
+  });
+
+  describe('Maschine: Lauf-Helfer frisch geprüft', () => {
+    it('Aus ohne Dialog gibt den Helfer mit confirmed false mit', () => {
+      create(applianceDetail(true, false));
+      click('.device-detail__switch');
+      expect(control.switchCalls).toEqual([{ entityId: 'switch.wasch', on: false }]);
+      expect(control.switchGuards).toEqual([
+        { runningEntityId: 'input_boolean.manual_waschmaschine_laeuft', confirmed: false }
+      ]);
+    });
+
+    it('needs-confirm ⇒ Bestätigungsdialog statt Schalten; Ausschalten dort mit confirmed true', () => {
+      control.switchResponse = of('needs-confirm');
+      create(applianceDetail(true, false));
+      click('.device-detail__switch');
+      expect(q('.device-detail__confirm')).not.toBeNull();
+      expect(q('.device-detail__error')).toBeNull();
+
+      control.switchResponse = of('switched');
+      click('.device-detail__confirm-off');
+      expect(control.switchGuards[1]).toEqual(
+        { runningEntityId: 'input_boolean.manual_waschmaschine_laeuft', confirmed: true });
+      expect(q('.device-detail__confirm')).toBeNull();
+    });
+
+    it('Einschalten gibt keinen Helfer mit', () => {
+      create(applianceDetail(false, false));
+      click('.device-detail__switch');
+      expect(control.switchGuards).toEqual([undefined]);
+    });
   });
 
   it('✕ emittiert closed', () => {

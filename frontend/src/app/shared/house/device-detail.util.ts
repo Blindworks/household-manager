@@ -10,7 +10,11 @@ export type HistorySource =
 
 export type DetailControl =
   | { type: 'target'; thermostatId: number; target: number | null; min: 5; max: 30; step: 0.5 }
-  | { type: 'switch'; entityId: string; on: boolean | null; confirmOff: boolean; dimmable: boolean };
+  | {
+      type: 'switch'; entityId: string; on: boolean | null; confirmOff: boolean; dimmable: boolean;
+      /** Nur bei Maschinen: Lauf-Helfer, den der Dienst beim Ausschalten frisch prueft. */
+      runningEntityId?: string;
+    };
 
 export interface DeviceDetail {
   deviceId: string;
@@ -119,7 +123,9 @@ function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number):
         history: { type: 'power', entityId: device.powerEntityId },
         control: {
           type: 'switch', entityId: device.switchEntityId, on: switchState(entities, device.switchEntityId),
-          confirmOff: running || switchEntity?.confirmRequired === true, dimmable: false
+          confirmOff: running || switchEntity?.confirmRequired === true, dimmable: false,
+          // confirmOff stammt aus dem bis zu 30 s alten Stand; beim Ausschalten prueft der Dienst den Helfer frisch.
+          runningEntityId: device.runningEntityId
         }
       };
     }

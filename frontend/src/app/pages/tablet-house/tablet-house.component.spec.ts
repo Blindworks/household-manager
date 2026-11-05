@@ -11,7 +11,7 @@ import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { EntityState } from '../../models/entity-state.model';
 import { Vec3, cameraForDevice, cameraForOverview, cameraForRoom } from '../../shared/house/house-geometry.util';
-import { HouseDeviceControlService, LightInfo, SwitchOutcome } from './house-device-control.service';
+import { BrightnessOutcome, HouseDeviceControlService, LightInfo, SwitchOutcome } from './house-device-control.service';
 
 const MIN = 60_000;
 const ALEXA = 'sensor.alexa_gaj2300425330047';
@@ -522,6 +522,107 @@ describe('TabletHouseComponent', () => {
       fixture.destroy();
       discardPeriodicTasks();
     }));
+
+    describe('Nachladen nach einer Aktion', () => {
+      const switchButton = (): HTMLElement => el().querySelector('.device-detail__switch') as HTMLElement;
+      const openStehlampe = (): void => {
+        // Neu aufbauen, damit Takt und Nachlade-Timer in der Fake-Zone laufen.
+        fixture.destroy();
+        create();
+        click(bubble('Wohnzimmer'));
+        click(device('wohnzimmer-tapo-802366e0')!);
+        entityService.getEntities.calls.reset();
+      };
+      const finish = (): void => {
+        fixture.destroy();
+        discardPeriodicTasks();
+      };
+
+      it('nach switched sofort und nach 1,5 s und 5 s erneut, ohne weitere Aktion', fakeAsync(() => {
+        openStehlampe();
+
+        click(switchButton());
+        expect(entityService.getEntities).toHaveBeenCalledTimes(1);
+        tick(1500);
+        expect(entityService.getEntities).toHaveBeenCalledTimes(2);
+        tick(3500);
+        expect(entityService.getEntities).toHaveBeenCalledTimes(3);
+        tick(20000);
+        expect(entityService.getEntities).toHaveBeenCalledTimes(3);
+
+        expect(control.setSwitch).toHaveBeenCalledTimes(1);
+        expect(control.setTarget).not.toHaveBeenCalled();
+        expect(control.setBrightness).not.toHaveBeenCalled();
+        finish();
+      }));
+
+      it('neuer Stand landet sofort im Feld', fakeAsync(() => {
+        openStehlampe();
+        expect(panelText()).toContain('An');
+        entityService.getEntities.and.returnValue(of([entity(STEHLAMPE, 'off')]));
+
+        click(switchButton());
+
+        expect(panelText()).toContain('Aus');
+        finish();
+      }));
+
+      it('already lädt ebenfalls nach', fakeAsync(() => {
+        control.setSwitch.and.returnValue(of<SwitchOutcome>('already'));
+        openStehlampe();
+
+        click(switchButton());
+
+        expect(entityService.getEntities).toHaveBeenCalledTimes(1);
+        tick(5000);
+        expect(entityService.getEntities).toHaveBeenCalledTimes(3);
+        finish();
+      }));
+
+      it('unavailable lädt nicht nach', fakeAsync(() => {
+        control.setSwitch.and.returnValue(of<SwitchOutcome>('unavailable'));
+        openStehlampe();
+
+        click(switchButton());
+        tick(5000);
+
+        expect(entityService.getEntities).not.toHaveBeenCalled();
+        finish();
+      }));
+
+      it('nach gesetzter Helligkeit: Entitäten und Helligkeit neu', fakeAsync(() => {
+        control.lightDevice.and.returnValue(of({ dimmable: true, brightness: 40 }));
+        control.setBrightness.and.returnValue(of<BrightnessOutcome>('set'));
+        openStehlampe();
+        control.lightDevice.and.returnValue(of({ dimmable: true, brightness: 70 }));
+
+        const slider = el().querySelector('.device-detail__brightness') as HTMLInputElement;
+        slider.value = '70';
+        slider.dispatchEvent(new Event('change'));
+        fixture.detectChanges();
+
+        expect(entityService.getEntities).toHaveBeenCalledTimes(1);
+        expect(control.lightDevice).toHaveBeenCalledTimes(2);
+        expect(fixture.componentInstance.detailBrightness()).toBe(70);
+        tick(5000);
+        expect(control.setSwitch).not.toHaveBeenCalled();
+        expect(control.setBrightness).toHaveBeenCalledTimes(1);
+        finish();
+      }));
+
+      it('Fehler beim Nachladen behält den letzten Stand still', fakeAsync(() => {
+        openStehlampe();
+        entityService.getEntities.and.returnValue(throwError(() => new Error('weg')));
+
+        click(switchButton());
+        tick(5000);
+        fixture.detectChanges();
+
+        expect(panelText()).toContain('An');
+        expect(el().querySelector('.tablet-house__error')).toBeNull();
+        finish();
+      }));
+    });
 
     it('Feld geschlossen, während ein Schaltaufruf läuft ⇒ Antwort danach öffnet nichts, wirft nicht', () => {
       const pending = new Subject<SwitchOutcome>();

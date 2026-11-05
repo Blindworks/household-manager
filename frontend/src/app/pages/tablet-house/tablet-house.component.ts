@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Subscription, catchError, interval, map, of, startWith, switchMap } from 'rxjs';
+import { Subject, Subscription, catchError, interval, map, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { HouseDeviceDetailComponent } from './device-detail/house-device-detail.component';
 import { HouseDeviceControlService, LightInfo } from './house-device-control.service';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
@@ -25,6 +25,11 @@ import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-render
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
 const TAP_TOLERANCE_PX = 8;
 const REFRESH_INTERVAL_MS = 30_000;
+/**
+ * Nachladen nach einer Aktion im Detail-Feld (Muster `scheduleSwitchFollowUp` im Dashboard):
+ * sofort und noch zweimal kurz danach, weil Geraete ihren neuen Zustand verzoegert melden.
+ */
+const FOLLOW_UP_AFTER_ACTION_MS = [1500, 5000] as const;
 
 const FLAG_ICONS: Record<BubbleFlag, { icon: string; label: string }> = {
   window_open: { icon: 'sensor_window', label: 'Fenster offen' },
@@ -77,6 +82,9 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private loaded = false;
   /** Laufende Ergaenzungsabrufe (Helligkeit, Raumwert) des offenen Felds; beim Schliessen abbestellt. */
   private detailExtras: Subscription | null = null;
+  /** Ausserplanmaessige Abrufe (nach einer Aktion); laufen durch dieselbe Kette wie der 30-s-Takt. */
+  private readonly refreshRequests = new Subject<void>();
+  private followUps: Subscription | null = null;
 
   readonly floors = FLOORS;
   readonly selectedFloor = signal<FloorId>('ground');
@@ -144,8 +152,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    interval(REFRESH_INTERVAL_MS).pipe(
-      startWith(0),
+    merge(interval(REFRESH_INTERVAL_MS).pipe(startWith(0)), this.refreshRequests).pipe(
       switchMap(() => this.entityService.getEntities().pipe(
         map(list => new Map(list.map(entity => [entity.entityId, entity] as const))),
         catchError(() => of(null))
@@ -174,6 +181,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.followUps?.unsubscribe();
     this.detailExtras?.unsubscribe();
     this.bubbleChanges?.unsubscribe();
     this.renderer?.dispose();
@@ -218,6 +226,19 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     this.dropDetail();
     const room = this.focusedRoom();
     this.fly(room ? cameraForRoom(room) : cameraForOverview(this.selectedFloor()));
+  }
+
+  /**
+   * Das Feld hat geschaltet oder gemerkt, dass sein Stand veraltet ist: Entitaeten sofort
+   * und nach {@link FOLLOW_UP_AFTER_ACTION_MS} erneut laden, bei einer Lampe auch die
+   * Helligkeit. Nur Lesen - ein Fehler behaelt still den letzten Stand (`applyFetch`).
+   */
+  refreshAfterAction(): void {
+    this.refreshRequests.next();
+    this.followUps?.unsubscribe();
+    this.followUps = merge(...FOLLOW_UP_AFTER_ACTION_MS.map(delayMs => timer(delayMs)))
+      .subscribe(() => this.refreshRequests.next());
+    this.reloadLight();
   }
 
   flagsOf(bubble: RoomBubble): { flag: BubbleFlag; icon: string; label: string }[] {
@@ -279,6 +300,21 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
         .subscribe(room => this.openRoomValue.set(room)));
     }
     this.detailExtras = extras;
+  }
+
+  /** Laedt Dimmbarkeit und Helligkeit des offenen Schalters neu; bei einem Fehler bleibt der letzte Wert. */
+  private reloadLight(): void {
+    const id = this.openDeviceId();
+    const device = id ? HOUSE_DEVICES.find(entry => entry.id === id) : undefined;
+    if (device?.kind !== 'switch') {
+      return;
+    }
+    this.detailExtras?.add(this.deviceControl.lightDevice(device.entityId).pipe(catchError(() => of(undefined)))
+      .subscribe(light => {
+        if (light !== undefined) {
+          this.openLight.set(light);
+        }
+      }));
   }
 
   /** Schliesst das Feld ohne Kamerafahrt (der Aufrufer fliegt selbst) und bestellt spaete Antworten ab. */

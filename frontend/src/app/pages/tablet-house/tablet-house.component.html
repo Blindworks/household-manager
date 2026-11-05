@@ -79,7 +79,8 @@
           <app-house-device-detail
             [detail]="openDetail"
             [brightness]="detailBrightness()"
-            (closed)="closeDetail()" />
+            (closed)="closeDetail()"
+            (changed)="refreshAfterAction()" />
         </div>
       }
 
