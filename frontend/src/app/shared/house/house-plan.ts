@@ -20,7 +20,7 @@ export const HOUSE_ROOMS: readonly HouseRoom[] = [
   // Erdgeschoss
   { id: 'esszimmer', label: 'Esszimmer', floor: 'ground', rects: [rect(20, 90, 210, 220)] },
   { id: 'kueche', label: 'Küche', floor: 'ground', rects: [rect(20, 220, 210, 350)] },
-  { id: 'laufband', label: 'Laufband', floor: 'ground', rects: [rect(20, 350, 210, 440)] },
+  { id: 'laufband', label: 'Laufband-Raum', floor: 'ground', rects: [rect(20, 350, 210, 440)] },
   { id: 'wohnzimmer', label: 'Wohnzimmer', floor: 'ground', rects: [rect(210, 90, 420, 250)] },
   { id: 'flur', label: 'Flur', floor: 'ground', rects: [rect(210, 250, 420, 440)], cutouts: [rect(210, 370, 290, 440)] },
   { id: 'gaeste_wc', label: 'Gäste-WC', floor: 'ground', rects: [rect(210, 370, 290, 440)] },
@@ -32,14 +32,14 @@ export const HOUSE_ROOMS: readonly HouseRoom[] = [
   // Keller
   { id: 'vorratskeller', label: 'Vorratskeller', floor: 'basement', rects: [rect(20, 90, 210, 220)] },
   { id: 'waschkeller', label: 'Waschkeller', floor: 'basement', rects: [rect(20, 220, 210, 440)] },
-  { id: 'paincave', label: 'Paincave', floor: 'basement', rects: [rect(210, 90, 420, 250)] },
+  { id: 'paincave', label: 'Pain Cave', floor: 'basement', rects: [rect(210, 90, 420, 250)] },
   { id: 'kellereingang', label: 'Kellereingang', floor: 'basement', rects: [rect(210, 250, 420, 440)] },
 ];
 
 export const OUTDOOR_AREAS: readonly OutdoorArea[] = [
   { id: 'garden', label: 'Garten', rect: rect(10, 10, 430, 85) },
   { id: 'terrace', label: 'Terrasse', rect: rect(230, 56, 410, 88) },
-  { id: 'front', label: 'Vorgarten', rect: rect(20, 445, 420, 480) },
+  { id: 'front', label: 'Vor dem Haus', rect: rect(20, 445, 420, 480) },
 ];
 
 export const HOUSE_BOUNDS: PlanRect = { x1: 20, y1: 90, x2: 420, y2: 440 };

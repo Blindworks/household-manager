@@ -1,4 +1,4 @@
-import { HOUSE_BOUNDS, HOUSE_ROOMS, PlanRect, roomById } from './house-plan';
+import { HOUSE_BOUNDS, HOUSE_ROOMS, OUTDOOR_AREAS, PlanRect, roomById } from './house-plan';
 
 function intersect(a: PlanRect, b: PlanRect): PlanRect | null {
   const r = {
@@ -54,6 +54,12 @@ describe('house-plan', () => {
       'laufband', 'paincave', 'schlafzimmer', 'treppenhaus', 'vorratskeller',
       'waschkeller', 'wohnzimmer',
     ]);
+  });
+
+  it('trägt die abgestimmten Anzeigenamen', () => {
+    expect(roomById('laufband')!.label).toBe('Laufband-Raum');
+    expect(roomById('paincave')!.label).toBe('Pain Cave');
+    expect(OUTDOOR_AREAS.find(a => a.id === 'front')!.label).toBe('Vor dem Haus');
   });
 
   it('Schlafzimmer überspannt die ganze Rückseite', () => {
