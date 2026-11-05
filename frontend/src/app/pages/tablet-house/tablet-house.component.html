@@ -1,4 +1,4 @@
-<app-tablet-shell heading="Haus">
+<app-tablet-shell heading="Haus" [forceDark]="true">
   <div shellActions class="tablet-house__floors" role="group" aria-label="Etage">
     @for (floor of floors; track floor.id) {
       <button

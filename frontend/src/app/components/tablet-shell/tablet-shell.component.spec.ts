@@ -20,6 +20,13 @@ import { TABLET_VIEWS } from '../../shared/tablet-views';
 })
 class HostComponent {}
 
+@Component({
+  standalone: true,
+  imports: [TabletShellComponent],
+  template: `<app-tablet-shell heading="Haus" [forceDark]="true"><p>Inhalt</p></app-tablet-shell>`
+})
+class DarkHostComponent {}
+
 describe('TabletShellComponent', () => {
   let weatherSpy: jasmine.SpyObj<WeatherService>;
   let lightTheme$: BehaviorSubject<boolean>;
@@ -49,6 +56,16 @@ describe('TabletShellComponent', () => {
     lightTheme$.next(true);
     fixture.detectChanges();
     expect(root.classList).toContain('lumina--light');
+
+    fixture.destroy();
+  });
+
+  it('bleibt mit forceDark dunkel, auch bei hellem Design', () => {
+    lightTheme$.next(true);
+    const fixture = TestBed.createComponent(DarkHostComponent);
+    fixture.detectChanges();
+    const root = (fixture.nativeElement as HTMLElement).querySelector('.lumina')!;
+    expect(root.classList).not.toContain('lumina--light');
 
     fixture.destroy();
   });

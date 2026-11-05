@@ -27,6 +27,8 @@ import { TABLET_VIEWS } from '../../shared/tablet-views';
 export class TabletShellComponent implements OnInit, OnDestroy {
   /** Ueberschrift der Seite, rechts neben der Uhr-/Wetterzeile. */
   @Input() heading = '';
+  /** Seite bleibt dunkel, egal was im Dashboard eingestellt ist (3D-Hausansicht mit Neon-Farben). */
+  @Input() forceDark = false;
 
   private readonly weatherService = inject(WeatherService);
   /** Dieselbe globale Hell/Dunkel-Einstellung wie im Dashboard. */

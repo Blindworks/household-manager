@@ -32,6 +32,8 @@ const MISSING: BubbleValue = { text: '–', stale: true };
 const UNREADABLE_STATES = new Set(['unavailable', 'unknown', '']);
 const WEEKDAYS = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'];
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Wie die Schalterzeilen (CLAUDE.md „Switch Power Display“): aelter ist keine Live-Leistung mehr. */
+const POWER_FRESH_MS = 5 * 60 * 1000;
 
 /** LocalDateTime ohne Zone (lokale Haushaltszeit) als Epoch-Millisekunden. */
 export function parseLocalTimestamp(value: string): number {
@@ -54,11 +56,17 @@ function formatNumber(raw: string, fractionDigits: number): string | null {
   return value.toFixed(fractionDigits).replace('.', ',');
 }
 
-function isStale(entity: EntityState, nowMs: number): boolean {
-  return nowMs - parseLocalTimestamp(entity.lastUpdated) > STALE_THRESHOLD_MS;
+/** Alter in ms; ein nicht lesbarer Zeitstempel gilt als unendlich alt, nie als frisch. */
+function ageMs(entity: EntityState, nowMs: number): number {
+  const updated = parseLocalTimestamp(entity.lastUpdated);
+  return Number.isFinite(updated) ? nowMs - updated : Number.POSITIVE_INFINITY;
 }
 
-/** Messwert mit Einheit; zeitliche Veraltung nur, wenn `ageSensitive` (Klima, Thermostat). */
+function isStale(entity: EntityState, nowMs: number): boolean {
+  return ageMs(entity, nowMs) > STALE_THRESHOLD_MS;
+}
+
+/** Messwert mit Einheit, abgedunkelt ab `STALE_THRESHOLD_MS` (60 min). */
 function measured(entities: EntityMap, entityId: string | undefined, nowMs: number,
                   fractionDigits: number, suffix: string): BubbleValue {
   const entity = entityId ? entities.get(entityId) : undefined;
@@ -193,7 +201,11 @@ function wasteLines(entities: EntityMap, entityId: string, nowMs: number): { lin
   const days = Math.round((collection.getTime() - localDayStart(nowMs)) / DAY_MS);
   const lines: BubbleValue[] = [];
   let highlight = false;
-  if (days <= 0) {
+  if (days < 0) {
+    // Der Abfallpoller laeuft nur alle 24 h: am Tag nach der Abfuhr steht noch das alte Datum.
+    return { lines: [MISSING], highlight: false };
+  }
+  if (days === 0) {
     lines.push(fresh('Heute Abfuhr'));
     highlight = true;
   } else if (days === 1) {
@@ -221,10 +233,30 @@ function lockText(state: string): string {
   }
 }
 
+/** Zigbee- und Dirigera-Taster melden dasselbe Vokabular (siehe Dirigera-Taster); Unbekanntes geht roh durch. */
+function buttonActionText(state: string): string {
+  switch (state) {
+    case 'single': return 'einfach';
+    case 'double': return 'doppelt';
+    case 'hold': return 'lang';
+    default: return state;
+  }
+}
+
 function lastButtonAction(entities: EntityMap, entityIds: string[]): BubbleValue {
   const readable = entityIds.map(id => entities.get(id)).filter(isReadable)
     .sort((a, b) => parseLocalTimestamp(b.lastUpdated) - parseLocalTimestamp(a.lastUpdated));
-  return readable.length > 0 ? fresh(readable[0].state) : MISSING;
+  return readable.length > 0 ? fresh(buttonActionText(readable[0].state)) : MISSING;
+}
+
+/** Watt-Zeile nur bei frischer Messung; eine alte Leistung waere eine erfundene Live-Angabe. */
+function livePower(entities: EntityMap, entityId: string, nowMs: number): BubbleValue | null {
+  const entity = entities.get(entityId);
+  if (!isReadable(entity) || ageMs(entity, nowMs) >= POWER_FRESH_MS) {
+    return null;
+  }
+  const formatted = formatNumber(entity.state, 0);
+  return formatted === null ? null : fresh(formatted + ' W');
 }
 
 function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabletMode: boolean): DeviceBubble {
@@ -273,9 +305,9 @@ function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabl
       const state = onOff(entities, device.entityId);
       lines.push(state);
       if (device.powerEntityId && isOn(entities, device.entityId)) {
-        const power = measured(entities, device.powerEntityId, nowMs, 0, ' W');
-        if (power.text !== '–') {
-          lines.push({ text: power.text, stale: false });
+        const power = livePower(entities, device.powerEntityId, nowMs);
+        if (power) {
+          lines.push(power);
         }
       }
       break;

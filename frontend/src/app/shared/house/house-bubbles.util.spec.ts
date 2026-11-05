@@ -67,6 +67,12 @@ describe('house-bubbles.util', () => {
       expect(bubble.humidity).toEqual({ text: '–', stale: true });
     });
 
+    it('gilt bei nicht lesbarem Zeitstempel als veraltet', () => {
+      const broken = { ...entity(`${ALEXA}_temperature`, '19.5'), lastUpdated: 'kaputt' };
+      const bubble = buildRoomBubble('wohnzimmer', mapOf(broken), NOW);
+      expect(bubble.temperature).toEqual({ text: '19,5°', stale: true });
+    });
+
     it('wirft bei fehlender Entität nicht', () => {
       expect(buildRoomBubble('wohnzimmer', new Map(), NOW).temperature.text).toBe('–');
     });
@@ -115,6 +121,34 @@ describe('house-bubbles.util', () => {
       expect(bubbles.find(b => b.label === 'PC')!.lines.map(l => l.text)).toEqual(['aus']);
     });
 
+    it('zeigt Watt nur bei an und frischem Messwert (< 5 min)', () => {
+      const pcLines = (powerAgeMin: number, switchState = 'on') =>
+        buildDeviceBubbles('buero', mapOf(entity(PC_SWITCH, switchState), entity(PC_POWER, '221', powerAgeMin)), NOW, false)
+          .find(b => b.label === 'PC')!.lines;
+      expect(pcLines(1)).toEqual([{ text: 'an', stale: false }, { text: '221 W', stale: false }]);
+      expect(pcLines(6).map(l => l.text)).toEqual(['an']);
+      expect(pcLines(1, 'off').map(l => l.text)).toEqual(['aus']);
+    });
+
+    it('zeigt ohne Watt-Zeile, wenn der Leistungszeitstempel nicht lesbar ist', () => {
+      const power = { ...entity(PC_POWER, '221'), lastUpdated: 'kaputt' };
+      const pc = buildDeviceBubbles('buero', mapOf(entity(PC_SWITCH, 'on'), power), NOW, false)
+        .find(b => b.label === 'PC')!;
+      expect(pc.lines.map(l => l.text)).toEqual(['an']);
+    });
+
+    it('übersetzt die letzte Taster-Aktion, Unbekanntes geht roh durch', () => {
+      const action = (state: string) => buildDeviceBubbles('buero',
+        mapOf(entity('event.zigbee_button_buero_action', state)), NOW, false)
+        .find(b => b.deviceId === 'buero-buttons')!.lines;
+      expect(action('single')[0].text).toBe('einfach');
+      expect(action('double')[0].text).toBe('doppelt');
+      expect(action('hold')[0].text).toBe('lang');
+      expect(action('triple')[0].text).toBe('triple');
+      expect(action('unavailable')).toEqual([{ text: '–', stale: true }]);
+      expect(action('unknown')).toEqual([{ text: '–', stale: true }]);
+    });
+
     it('hebt die laufende Waschmaschine hervor', () => {
       const bubbles = buildDeviceBubbles('waschkeller',
         mapOf(entity('input_boolean.manual_waschmaschine_laeuft', 'on')), NOW, false);
@@ -139,6 +173,22 @@ describe('house-bubbles.util', () => {
       expect(waste.lines[0].text).toBe('Morgen Abfuhr');
       expect(waste.lines[1].text).toBe('Biotonne');
       expect(waste.highlight).toBeTrue();
+    });
+
+    it('Mülltonne: heute ist hervorgehoben', () => {
+      const waste = buildOutdoorBubbles(mapOf(
+        entity('sensor.waste_calendar_next_collection', '2026-11-05')), NOW, false)
+        .find(b => b.icon === 'delete')!;
+      expect(waste.lines[0]).toEqual({ text: 'Heute Abfuhr', stale: false });
+      expect(waste.highlight).toBeTrue();
+    });
+
+    it('Mülltonne: ein vergangenes Datum ist kein „Heute Abfuhr“, sondern veraltet', () => {
+      const waste = buildOutdoorBubbles(mapOf(
+        entity('sensor.waste_calendar_next_collection', '2026-11-04', 1, { label: 'Biotonne' })), NOW, false)
+        .find(b => b.icon === 'delete')!;
+      expect(waste.lines).toEqual([{ text: '–', stale: true }]);
+      expect(waste.highlight).toBeFalse();
     });
 
     it('Mülltonne: später zeigt Wochentag und Datum ohne Hervorhebung', () => {

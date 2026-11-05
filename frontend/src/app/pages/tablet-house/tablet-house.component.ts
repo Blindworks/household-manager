@@ -73,7 +73,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   readonly sceneUnavailable = signal(false);
   readonly loadError = signal(false);
   private readonly entities = signal<ReadonlyMap<string, EntityState>>(new Map());
-  private readonly fetchedAt = signal(Date.now());
+  /** Bezugszeit fuer die Veraltung; laeuft bei jedem Refresh-Takt weiter, auch wenn der Abruf scheitert. */
+  private readonly now = signal(Date.now());
 
   readonly visibleRooms = computed<HouseRoom[]>(() =>
     HOUSE_ROOMS.filter(room => room.floor === this.selectedFloor()));
@@ -84,14 +85,14 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       return [];
     }
     const entities = this.entities();
-    const now = this.fetchedAt();
+    const now = this.now();
     return this.visibleRooms().map(room => buildRoomBubble(room.id, entities, now));
   });
 
   /** Raumansicht: Geraete des Raums; Ueberblick des EG: die Aussenbereiche. */
   readonly deviceBubbles = computed<PlacedDeviceBubble[]>(() => {
     const entities = this.entities();
-    const now = this.fetchedAt();
+    const now = this.now();
     const tabletMode = this.viewMode.isTabletView();
     const focused = this.focusedRoom();
     const bubbles = focused
@@ -185,10 +186,11 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   }
 
   private applyFetch(result: Map<string, EntityState> | null): void {
+    // Auch ohne neue Daten weiterzaehlen: sonst saehen die letzten Werte waehrend eines Ausfalls ewig frisch aus.
+    this.now.set(Date.now());
     if (result) {
       this.loaded = true;
       this.loadError.set(false);
-      this.fetchedAt.set(Date.now());
       this.entities.set(result);
     } else if (!this.loaded) {
       // Nur der Erstabruf meldet einen Fehler; spaeter bleiben die letzten Werte stehen.

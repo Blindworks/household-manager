@@ -208,6 +208,9 @@ export class HouseSceneRenderer {
     });
     [this.fillMaterial, this.solidEdgeMaterial, this.glassEdgeMaterial, this.outdoorMaterial]
       .forEach(material => material.dispose());
+    // dispose() gibt den WebGL-Kontext nicht frei; ohne forceContextLoss stapeln sich bei
+    // jedem Seitenwechsel Kontexte, bis der Browser die aeltesten verwirft.
+    this.renderer.forceContextLoss();
     this.renderer.dispose();
     this.renderer.domElement.remove();
     this.renderedCallbacks.length = 0;

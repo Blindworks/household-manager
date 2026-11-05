@@ -1,7 +1,7 @@
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { TabletHouseComponent } from './tablet-house.component';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer, ScreenPoint } from './house-scene-renderer';
 import { WeatherService } from '../../services/weather.service';
@@ -55,6 +55,7 @@ describe('TabletHouseComponent', () => {
   let fake: FakeRenderer;
   let entityService: jasmine.SpyObj<EntityStateService>;
   let tabletView: WritableSignal<boolean>;
+  let lightTheme$: BehaviorSubject<boolean>;
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const roomBubbles = (): HTMLElement[] => Array.from(el().querySelectorAll<HTMLElement>('.house-bubble--room'));
@@ -84,6 +85,7 @@ describe('TabletHouseComponent', () => {
     entityService = jasmine.createSpyObj('EntityStateService', ['getEntities']);
     entityService.getEntities.and.returnValue(of([]));
     tabletView = signal(false);
+    lightTheme$ = new BehaviorSubject(false);
     const weather = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weather.getOverview.and.returnValue(
       of({ current: { temperature: 18, icon: 1 } } as unknown as WeatherOverview));
@@ -93,7 +95,7 @@ describe('TabletHouseComponent', () => {
       providers: [
         provideRouter([]),
         { provide: WeatherService, useValue: weather },
-        { provide: AppearanceService, useValue: { isLight$: of(false) } },
+        { provide: AppearanceService, useValue: { isLight$: lightTheme$ } },
         { provide: EntityStateService, useValue: entityService },
         { provide: ViewModeService, useValue: { isTabletView: tabletView } },
         {
@@ -116,6 +118,12 @@ describe('TabletHouseComponent', () => {
       const shell = el().querySelector('app-tablet-shell');
       expect(shell).not.toBeNull();
       expect(shell!.querySelector('.lumina__heading')?.textContent?.trim()).toBe('Haus');
+    });
+
+    it('bleibt auch bei hellem Dashboard-Design dunkel', () => {
+      lightTheme$.next(true);
+      fixture.detectChanges();
+      expect(el().querySelector('.lumina')!.classList).not.toContain('lumina--light');
     });
 
     it('erzeugt den Renderer im Szenen-Host und gibt ihn beim Zerstören frei', () => {
@@ -260,6 +268,24 @@ describe('TabletHouseComponent', () => {
       fixture.detectChanges();
       expect(el().querySelector('.tablet-house__error')).toBeNull();
       expect(bubble('Wohnzimmer').textContent).toContain('19,5°');
+
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
+
+    it('lässt Werte bei andauerndem Refresh-Fehler veralten', fakeAsync(() => {
+      entityService.getEntities.and.returnValue(of([entity(`${ALEXA}_temperature`, '19.5', 50)]));
+      create();
+      const value = (): DOMTokenList => bubble('Wohnzimmer').querySelector('.house-bubble__value')!.classList;
+      expect(value()).not.toContain('house-bubble__value--stale');
+
+      // Backend weg: die Werte bleiben stehen, altern aber weiter (Anti-Ziel „veraltet sieht frisch aus“).
+      entityService.getEntities.and.returnValue(throwError(() => new Error('weg')));
+      tick(11 * MIN);
+      fixture.detectChanges();
+
+      expect(bubble('Wohnzimmer').textContent).toContain('19,5°');
+      expect(value()).toContain('house-bubble__value--stale');
 
       fixture.destroy();
       discardPeriodicTasks();
