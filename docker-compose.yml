@@ -15,7 +15,12 @@ services:
       DB_NAME: household_manager
       DB_USERNAME: household_manager
       DB_PASSWORD: ${DB_PASSWORD}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://192.168.1.100:4200,https://192.168.1.100:4443}
+      # PUBLIC_ORIGIN = oeffentliche Adresse ueber den Cloudflare-Tunnel
+      # (z. B. https://home.blindworks.org). Ohne sie lehnt Spring jeden POST
+      # aus dem Internet als ungueltige CORS-Anfrage ab: das Backend sieht hinter
+      # nginx http/Port 80, der Browser schickt https als Origin. Leere Eintraege
+      # filtert CorsConfig heraus.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://192.168.1.100:4200,https://192.168.1.100:4443},${PUBLIC_ORIGIN:-}
 
       # Benutzerverwaltung & API-Sicherheit
       REMEMBER_ME_KEY: ${REMEMBER_ME_KEY:-}
@@ -94,6 +99,26 @@ services:
       - ./certs:/etc/nginx/certs
     depends_on:
       - backend
+    networks:
+      - app_net
+
+  cloudflared:
+    # Zugang aus dem Internet ueber einen Cloudflare Tunnel (ersetzt das
+    # cloudflared-Add-on des abgeschalteten Home Assistant). Der Tunnel baut die
+    # Verbindung von innen auf — keine Portfreigabe im Router. Im Cloudflare-
+    # Dashboard zeigt der oeffentliche Hostname auf http://frontend:80; NUR der
+    # nginx des Frontends ist damit erreichbar, Sidecars/zigbee2mqtt bleiben intern.
+    # Davor gehoert zwingend eine Cloudflare-Access-Regel (siehe CLAUDE.md).
+    # Ohne Token beendet sich cloudflared und Docker startet ihn mit Backoff neu —
+    # laut, aber harmlos; bewusst kein ":?", ein fehlender Wert soll nicht den
+    # ganzen Stack-Deploy kippen (Lehre vom 2026-10-30).
+    image: cloudflare/cloudflared:2026.10.7
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - frontend
     networks:
       - app_net
 
