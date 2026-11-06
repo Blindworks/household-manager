@@ -1,12 +1,23 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
-import { map, switchMap, tap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { TemperatureService } from '../../services/temperature.service';
 import { ThermostatService } from '../../services/thermostat.service';
 import { PowerConsumerService } from '../../services/power-consumer.service';
 import { SwitchService } from '../../services/switch.service';
 import { SmartDeviceService } from '../../services/smart-device.service';
-import { SmartDevice } from '../../models/smart-device.model';
+import { NukiService } from '../../services/nuki.service';
+import { BlinkService } from '../../services/blink.service';
+import { TractiveService } from '../../services/tractive.service';
+import { PetSupplyService } from '../../services/pet-supply.service';
+import { WasteCollectionService } from '../../services/waste-collection.service';
+import { LightStateRequest, SmartDevice } from '../../models/smart-device.model';
+import { Thermostat, ThermostatMode } from '../../models/thermostat.model';
+import { CurrentTemperatureReading } from '../../models/temperature.model';
+import { HouseDevice } from '../../shared/house/house-devices';
+import { DetailExtras, LightExtras, LockExtras, PetExtras, cameraIdOf, smartlockIdOf, trackerIdOf } from '../../shared/house/detail-extras.util';
+import { LightColorRequest, colorTempRange } from '../../shared/house/light-color.util';
+import { thermostatIdOf } from '../../shared/house/device-detail.util';
 import { HistorySource } from '../../shared/house/device-detail.util';
 import { BubbleValue, MISSING } from '../../shared/house/house-bubbles.util';
 import { clampTarget, roomReading } from '../../shared/thermostat-view.util';
@@ -19,7 +30,10 @@ export interface SwitchGuard { runningEntityId: string; confirmed: boolean }
 export type HistoryRange = 'DAY' | 'WEEK';
 /** 'lamp-off' = Lampe ist laut frischem Zustand nicht `on`; es wurde nichts geschrieben. */
 export type BrightnessOutcome = 'set' | 'lamp-off';
-export interface LightInfo { dimmable: boolean; brightness: number | null }
+/** Ergebnis einer Schalt-Aktion nach frischem Lesen. */
+export type ActionOutcome = 'done' | 'already' | 'unavailable';
+/** Vorlaeufiger Alias bis die Seite auf `LightExtras` umgestellt ist (Task 5). */
+export type LightInfo = LightExtras;
 
 /**
  * Lesen und Schalten fuer das Geraete-Detail der Hausansicht. Wird von der
@@ -33,6 +47,11 @@ export class HouseDeviceControlService {
   private readonly power = inject(PowerConsumerService);
   private readonly switches = inject(SwitchService);
   private readonly smartDevices = inject(SmartDeviceService);
+  private readonly nuki = inject(NukiService);
+  private readonly blink = inject(BlinkService);
+  private readonly tractive = inject(TractiveService);
+  private readonly petSupplies = inject(PetSupplyService);
+  private readonly waste = inject(WasteCollectionService);
 
   private readonly sensorIds = new Map<string, string>();
   private deviceList: SmartDevice[] | null = null;
@@ -95,23 +114,162 @@ export class HouseDeviceControlService {
    * ausgeschaltete Lampe sonst ein.
    */
   setBrightness(entityId: string, brightness: number): Observable<BrightnessOutcome> {
+    return this.writeLight(entityId, { brightness });
+  }
+
+  /** Wie `setBrightness`: frisch lesen, nur bei `on` schreiben (sonst schaltet das Geraet ein). */
+  setLightColor(entityId: string, request: LightColorRequest): Observable<BrightnessOutcome> {
+    return this.writeLight(entityId, request);
+  }
+
+  private writeLight(entityId: string, state: LightStateRequest): Observable<BrightnessOutcome> {
     return this.switches.getSwitches(undefined, 'all').pipe(
       switchMap(list => list.find(s => s.entityId === entityId)?.state !== 'on'
         ? of<BrightnessOutcome>('lamp-off')
         : this.findDevice(entityId).pipe(
             switchMap(device => device
-              ? this.smartDevices.setLightState(device.id, { brightness })
+              ? this.smartDevices.setLightState(device.id, state)
               : throwError(() => new Error(`Kein Gerät für ${entityId} gefunden.`))),
             tap(() => this.deviceList = null),
             map((): BrightnessOutcome => 'set')))
     );
   }
 
+  /** Liest den Schlosszustand frisch; es gibt bewusst nur Verriegeln. */
+  lockDoor(smartlockId: number): Observable<ActionOutcome> {
+    return this.nuki.getLocks().pipe(switchMap(locks => {
+      const lock = locks.find(l => l.smartlockId === smartlockId);
+      if (!lock) {
+        return of<ActionOutcome>('unavailable');
+      }
+      if (lock.state === 'locked') {
+        return of<ActionOutcome>('already');
+      }
+      return this.nuki.sendAction(smartlockId, 'LOCK').pipe(map((): ActionOutcome => 'done'));
+    }));
+  }
+
+  setCameraArmed(cameraId: string, armed: boolean): Observable<ActionOutcome> {
+    return this.blink.getCameras().pipe(switchMap(cameras => {
+      const camera = cameras.find(c => c.cameraId === cameraId);
+      if (!camera) {
+        return of<ActionOutcome>('unavailable');
+      }
+      if (camera.armed === armed) {
+        return of<ActionOutcome>('already');
+      }
+      return this.blink.setCameraArmed(cameraId, armed).pipe(map((): ActionOutcome => 'done'));
+    }));
+  }
+
+  takeSnapshot(cameraId: string): Observable<void> {
+    return this.blink.takeSnapshot(cameraId).pipe(map(() => undefined));
+  }
+
+  thumbnailUrl(cameraId: string, cacheKey: number): string {
+    return this.blink.thumbnailUrl(cameraId, cacheKey);
+  }
+
+  setThermostatMode(thermostatId: number, mode: ThermostatMode): Observable<ActionOutcome> {
+    return this.thermostats.list().pipe(switchMap(list => {
+      const thermostat = list.find(t => t.id === thermostatId);
+      if (!thermostat) {
+        return of<ActionOutcome>('unavailable');
+      }
+      if (thermostat.mode === mode) {
+        return of<ActionOutcome>('already');
+      }
+      return this.thermostats.setMode(thermostatId, mode).pipe(map((): ActionOutcome => 'done'));
+    }));
+  }
+
   /** null = kein Smart-Device zu dieser Entity-ID. */
-  lightDevice(entityId: string): Observable<LightInfo | null> {
+  lightDevice(entityId: string): Observable<LightExtras | null> {
     return this.findDevice(entityId).pipe(map(device => device
-      ? { dimmable: device.capabilities.includes('BRIGHTNESS'), brightness: device.brightness ?? null }
+      ? {
+          dimmable: device.capabilities.includes('BRIGHTNESS'),
+          brightness: device.brightness ?? null,
+          supportsColor: device.capabilities.includes('COLOR'),
+          supportsColorTemp: device.capabilities.includes('COLOR_TEMP'),
+          hue: device.hue ?? null,
+          saturation: device.saturation ?? null,
+          colorTemp: device.colorTemp ?? null,
+          colorTempRange: colorTempRange(device.metadata)
+        }
       : null));
+  }
+
+  /**
+   * Zusatzdaten fuer das Detail-Feld. Jede Quelle faengt ihren Fehler selbst: eine
+   * gescheiterte Quelle fehlt im Ergebnis, das Observable selbst scheitert nie.
+   */
+  loadExtras(device: HouseDevice): Observable<Partial<DetailExtras>> {
+    switch (device.kind) {
+      case 'switch':
+        return this.part(this.lightDevice(device.entityId), light => ({ light }));
+      case 'thermostat': {
+        const thermostatId = thermostatIdOf(device.target);
+        return thermostatId === null ? of({}) : this.thermostatExtras(thermostatId);
+      }
+      case 'door': {
+        const smartlockId = smartlockIdOf(device.lockEntityId);
+        return smartlockId === null ? of({}) : this.part(this.lockExtras(smartlockId), lock => ({ lock }));
+      }
+      case 'camera': {
+        const cameraId = cameraIdOf(device.armedEntityId);
+        return cameraId === null ? of({}) : this.part(
+          this.blink.getCameras().pipe(map(list => list.find(c => c.cameraId === cameraId) ?? null)),
+          camera => ({ camera }));
+      }
+      case 'waste':
+        return this.part(this.waste.getUpcoming(), waste => ({ waste }));
+      case 'pet':
+        return forkJoin([
+          this.part(this.petExtras(trackerIdOf(device.homeEntityId)), pet => ({ pet })),
+          this.part(this.petSupplies.getSupplies(), supplies => ({ supplies }))
+        ]).pipe(map(([pet, supplies]) => ({ ...pet, ...supplies })));
+      default:
+        return of({});
+    }
+  }
+
+  /** Eine Quelle als Teil-Ergebnis; Fehler ⇒ leeres Teil-Ergebnis. */
+  private part<T>(request: Observable<T>, toPart: (value: T) => Partial<DetailExtras>): Observable<Partial<DetailExtras>> {
+    return request.pipe(map(toPart), catchError(() => of<Partial<DetailExtras>>({})));
+  }
+
+  private lockExtras(smartlockId: number): Observable<LockExtras | null> {
+    return this.nuki.getLocks().pipe(map(locks => {
+      const lock = locks.find(l => l.smartlockId === smartlockId);
+      return lock ? { smartlockId, batteryCharge: lock.batteryCharge, batteryCritical: lock.batteryCritical } : null;
+    }));
+  }
+
+  private petExtras(trackerId: string | null): Observable<PetExtras> {
+    return this.tractive.getPets().pipe(switchMap(pets => {
+      const pet = trackerId === null ? null
+        : pets.find(p => p.trackerId.toLowerCase() === trackerId.toLowerCase()) ?? null;
+      if (!pet) {
+        return of<PetExtras>({ pet: null, lastWalk: null });
+      }
+      return this.tractive.getWalks(pet.trackerId, 7).pipe(map(walks => ({
+        pet,
+        lastWalk: walks.reduce<typeof walks[number] | null>((latest, walk) =>
+          latest === null || walk.end > latest.end ? walk : latest, null)
+      })));
+    }));
+  }
+
+  /** Raumwert und Modus aus EINEM `thermostats.list()`. */
+  private thermostatExtras(thermostatId: number): Observable<Partial<DetailExtras>> {
+    return this.thermostats.list().pipe(
+      switchMap(list => {
+        const thermostatMode = list.find(t => t.id === thermostatId)?.mode ?? null;
+        return this.roomValue(list, thermostatId).pipe(
+          map((roomValue): Partial<DetailExtras> => ({ roomValue, thermostatMode })),
+          catchError(() => of<Partial<DetailExtras>>({ thermostatMode })));
+      }),
+      catchError(() => of<Partial<DetailExtras>>({})));
   }
 
   /**
@@ -128,9 +286,16 @@ export class HouseDeviceControlService {
 
   /** Raumwert eines Thermostats; null ohne zugeordneten Raumfuehler oder unbekanntes Thermostat. */
   thermostatRoom(thermostatId: number): Observable<BubbleValue | null> {
-    return forkJoin([this.thermostats.list(), this.temperatures.getCurrent()]).pipe(map(([list, readings]) => {
-      const thermostat = list.find(t => t.id === thermostatId);
-      const room = thermostat ? roomReading(thermostat, readings, Date.now()) : null;
+    return this.thermostats.list().pipe(switchMap(list => this.roomValue(list, thermostatId)));
+  }
+
+  private roomValue(list: Thermostat[], thermostatId: number): Observable<BubbleValue | null> {
+    const thermostat = list.find(t => t.id === thermostatId);
+    if (!thermostat?.roomSensorId) {
+      return of(null);
+    }
+    return this.temperatures.getCurrent().pipe(map((readings: CurrentTemperatureReading[]) => {
+      const room = roomReading(thermostat, readings, Date.now());
       if (!room) {
         return null;
       }

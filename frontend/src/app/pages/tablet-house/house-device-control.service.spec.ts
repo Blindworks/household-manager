@@ -9,6 +9,16 @@ import { SmartDeviceService } from '../../services/smart-device.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { SmartDevice } from '../../models/smart-device.model';
 import { Thermostat } from '../../models/thermostat.model';
+import { NukiService } from '../../services/nuki.service';
+import { BlinkService } from '../../services/blink.service';
+import { TractiveService } from '../../services/tractive.service';
+import { PetSupplyService } from '../../services/pet-supply.service';
+import { WasteCollectionService } from '../../services/waste-collection.service';
+import { NukiLock } from '../../models/nuki.model';
+import { BlinkCamera } from '../../models/blink.model';
+import { TractivePet, TractiveWalk } from '../../models/tractive.model';
+import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
+import { thermostatIdOf } from '../../shared/house/device-detail.util';
 import { CurrentTemperatureReading, TemperatureSensorSeries } from '../../models/temperature.model';
 
 function switchEntity(entityId: string, state: string): SwitchEntity {
@@ -53,14 +63,26 @@ describe('HouseDeviceControlService', () => {
   let power: jasmine.SpyObj<PowerConsumerService>;
   let switches: jasmine.SpyObj<SwitchService>;
   let devices: jasmine.SpyObj<SmartDeviceService>;
+  let nuki: jasmine.SpyObj<NukiService>;
+  let blink: jasmine.SpyObj<BlinkService>;
+  let tractive: jasmine.SpyObj<TractiveService>;
+  let supplies: jasmine.SpyObj<PetSupplyService>;
+  let waste: jasmine.SpyObj<WasteCollectionService>;
 
   beforeEach(() => {
     temperatures = jasmine.createSpyObj<TemperatureService>('TemperatureService',
       ['getCurrent', 'getSeries', 'getSensorSeries']);
-    thermostats = jasmine.createSpyObj<ThermostatService>('ThermostatService', ['list', 'history', 'setTarget']);
+    thermostats = jasmine.createSpyObj<ThermostatService>('ThermostatService', ['list', 'history', 'setTarget', 'setMode']);
     power = jasmine.createSpyObj<PowerConsumerService>('PowerConsumerService', ['getHistory']);
     switches = jasmine.createSpyObj<SwitchService>('SwitchService', ['getSwitches', 'toggle']);
     devices = jasmine.createSpyObj<SmartDeviceService>('SmartDeviceService', ['getAllDevices', 'setLightState']);
+
+    nuki = jasmine.createSpyObj<NukiService>('NukiService', ['getLocks', 'sendAction']);
+    blink = jasmine.createSpyObj<BlinkService>('BlinkService',
+      ['getCameras', 'setCameraArmed', 'takeSnapshot', 'thumbnailUrl']);
+    tractive = jasmine.createSpyObj<TractiveService>('TractiveService', ['getPets', 'getWalks']);
+    supplies = jasmine.createSpyObj<PetSupplyService>('PetSupplyService', ['getSupplies']);
+    waste = jasmine.createSpyObj<WasteCollectionService>('WasteCollectionService', ['getUpcoming']);
 
     TestBed.configureTestingModule({
       providers: [
@@ -69,7 +91,12 @@ describe('HouseDeviceControlService', () => {
         { provide: ThermostatService, useValue: thermostats },
         { provide: PowerConsumerService, useValue: power },
         { provide: SwitchService, useValue: switches },
-        { provide: SmartDeviceService, useValue: devices }
+        { provide: SmartDeviceService, useValue: devices },
+        { provide: NukiService, useValue: nuki },
+        { provide: BlinkService, useValue: blink },
+        { provide: TractiveService, useValue: tractive },
+        { provide: PetSupplyService, useValue: supplies },
+        { provide: WasteCollectionService, useValue: waste }
       ]
     });
     service = TestBed.inject(HouseDeviceControlService);
@@ -345,13 +372,13 @@ describe('HouseDeviceControlService', () => {
     it('lightDevice: BRIGHTNESS in capabilities ⇒ dimmable true mit brightness', async () => {
       devices.getAllDevices.and.returnValue(of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40)]));
 
-      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual({ dimmable: true, brightness: 40 });
+      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual(jasmine.objectContaining({ dimmable: true, brightness: 40 }));
     });
 
     it('lightDevice: ohne BRIGHTNESS ⇒ dimmable false; unbekannt ⇒ null', async () => {
       devices.getAllDevices.and.returnValue(of([device(1, 'switch.a', ['SWITCH'])]));
 
-      expect(await firstValueFrom(service.lightDevice('switch.a'))).toEqual({ dimmable: false, brightness: null });
+      expect(await firstValueFrom(service.lightDevice('switch.a'))).toEqual(jasmine.objectContaining({ dimmable: false, brightness: null }));
       expect(await firstValueFrom(service.lightDevice('switch.x'))).toBeNull();
       expect(devices.getAllDevices).toHaveBeenCalledTimes(1);
     });
@@ -365,7 +392,7 @@ describe('HouseDeviceControlService', () => {
       expect(await firstValueFrom(service.lampBrightness())).toEqual(new Map([['switch.flur', 40]]));
       expect(await firstValueFrom(service.lampBrightness())).toEqual(new Map([['switch.flur', 90]]));
       // Der frische Stand dient auch dem Detail-Feld.
-      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual({ dimmable: true, brightness: 90 });
+      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual(jasmine.objectContaining({ dimmable: true, brightness: 90 }));
       expect(devices.getAllDevices).toHaveBeenCalledTimes(2);
     });
 
@@ -379,7 +406,7 @@ describe('HouseDeviceControlService', () => {
       const light = await firstValueFrom(service.lightDevice('switch.flur'));
 
       expect(devices.getAllDevices).toHaveBeenCalledTimes(2);
-      expect(light).toEqual({ dimmable: true, brightness: 80 });
+      expect(light).toEqual(jasmine.objectContaining({ dimmable: true, brightness: 80 }));
     });
   });
 
@@ -419,6 +446,157 @@ describe('HouseDeviceControlService', () => {
       temperatures.getCurrent.and.returnValue(of([]));
 
       expect(await firstValueFrom(service.thermostatRoom(99))).toBeNull();
+    });
+  });
+
+  describe('Farbe', () => {
+    it('setLightColor bei ausgeschalteter Lampe ⇒ lamp-off, kein setLightState', async () => {
+      switches.getSwitches.and.returnValue(of([switchEntity('switch.flur', 'off')]));
+      devices.getAllDevices.and.returnValue(of([device(7, 'switch.flur', ['SWITCH', 'COLOR'])]));
+
+      expect(await firstValueFrom(service.setLightColor('switch.flur', { hue: 225, saturation: 100 }))).toBe('lamp-off');
+      expect(devices.setLightState).not.toHaveBeenCalled();
+    });
+
+    it('setLightColor bei on ⇒ setLightState(deviceId, Farbe)', async () => {
+      switches.getSwitches.and.returnValue(of([switchEntity('switch.flur', 'on')]));
+      devices.getAllDevices.and.returnValue(of([device(7, 'switch.flur', ['SWITCH', 'COLOR'])]));
+      devices.setLightState.and.returnValue(of(device(7, 'switch.flur', ['SWITCH', 'COLOR'])));
+
+      expect(await firstValueFrom(service.setLightColor('switch.flur', { hue: 225, saturation: 100 }))).toBe('set');
+      expect(devices.setLightState).toHaveBeenCalledOnceWith(7, { hue: 225, saturation: 100 });
+    });
+
+    it('lightDevice mappt COLOR, COLOR_TEMP, Farbwerte und Metadata-Spanne', async () => {
+      const lamp = {
+        ...device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS', 'COLOR', 'COLOR_TEMP'], 40),
+        hue: 120, saturation: 90, colorTemp: 0,
+        metadata: { colorTempRangeMin: 2000, colorTempRangeMax: 9000 }
+      } as unknown as SmartDevice;
+      devices.getAllDevices.and.returnValue(of([lamp]));
+
+      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual({
+        dimmable: true, brightness: 40, supportsColor: true, supportsColorTemp: true,
+        hue: 120, saturation: 90, colorTemp: 0, colorTempRange: { min: 2000, max: 9000 }
+      });
+    });
+  });
+
+  describe('Tuer, Kamera, Modus', () => {
+    const lock = (state: string): NukiLock => ({
+      smartlockId: 5, name: 'Haustür', state, doorState: null, batteryCharge: 80, batteryCritical: false
+    });
+    const camera = (armed: boolean): BlinkCamera => ({
+      cameraId: '511671', name: 'Tür', type: 'mini', armed, battery: null, syncName: 's', syncArmed: true
+    });
+
+    it('lockDoor: bereits verriegelt ⇒ already, kein sendAction', async () => {
+      nuki.getLocks.and.returnValue(of([lock('locked')]));
+      expect(await firstValueFrom(service.lockDoor(5))).toBe('already');
+      expect(nuki.sendAction).not.toHaveBeenCalled();
+    });
+
+    it('lockDoor: entriegelt ⇒ sendAction(id, LOCK)', async () => {
+      nuki.getLocks.and.returnValue(of([lock('unlocked')]));
+      nuki.sendAction.and.returnValue(of(undefined));
+      expect(await firstValueFrom(service.lockDoor(5))).toBe('done');
+      expect(nuki.sendAction).toHaveBeenCalledOnceWith(5, 'LOCK');
+    });
+
+    it('lockDoor: Schloss fehlt ⇒ unavailable', async () => {
+      nuki.getLocks.and.returnValue(of([]));
+      expect(await firstValueFrom(service.lockDoor(5))).toBe('unavailable');
+      expect(nuki.sendAction).not.toHaveBeenCalled();
+    });
+
+    it('setCameraArmed: Zustand schon gleich ⇒ already, kein Schalten', async () => {
+      blink.getCameras.and.returnValue(of([camera(false)]));
+      expect(await firstValueFrom(service.setCameraArmed('511671', false))).toBe('already');
+      expect(blink.setCameraArmed).not.toHaveBeenCalled();
+    });
+
+    it('setCameraArmed: abweichend ⇒ schaltet ⇒ done', async () => {
+      blink.getCameras.and.returnValue(of([camera(true)]));
+      blink.setCameraArmed.and.returnValue(of(undefined));
+      expect(await firstValueFrom(service.setCameraArmed('511671', false))).toBe('done');
+      expect(blink.setCameraArmed).toHaveBeenCalledOnceWith('511671', false);
+    });
+
+    it('setCameraArmed: Kamera fehlt ⇒ unavailable', async () => {
+      blink.getCameras.and.returnValue(of([]));
+      expect(await firstValueFrom(service.setCameraArmed('511671', false))).toBe('unavailable');
+      expect(blink.setCameraArmed).not.toHaveBeenCalled();
+    });
+
+    it('setThermostatMode: Modus schon gesetzt ⇒ already', async () => {
+      thermostats.list.and.returnValue(of([{ ...thermostat(8, null), mode: 'OFF' }]));
+      expect(await firstValueFrom(service.setThermostatMode(8, 'OFF'))).toBe('already');
+      expect(thermostats.setMode).not.toHaveBeenCalled();
+    });
+
+    it('setThermostatMode: abweichend ⇒ setMode ⇒ done; fehlend ⇒ unavailable', async () => {
+      thermostats.list.and.returnValue(of([thermostat(8, null)]));
+      thermostats.setMode.and.returnValue(of(thermostat(8, null)));
+      expect(await firstValueFrom(service.setThermostatMode(8, 'OFF'))).toBe('done');
+      expect(thermostats.setMode).toHaveBeenCalledOnceWith(8, 'OFF');
+      expect(await firstValueFrom(service.setThermostatMode(99, 'OFF'))).toBe('unavailable');
+    });
+
+    it('takeSnapshot wirft den Blob weg; thumbnailUrl reicht durch', async () => {
+      blink.takeSnapshot.and.returnValue(of(new Blob()));
+      blink.thumbnailUrl.and.returnValue('/x?t=3');
+      expect(await firstValueFrom(service.takeSnapshot('511671'))).toBeUndefined();
+      expect(service.thumbnailUrl('511671', 3)).toBe('/x?t=3');
+      expect(blink.thumbnailUrl).toHaveBeenCalledWith('511671', 3);
+    });
+  });
+
+  describe('loadExtras', () => {
+    const byKind = <K extends HouseDevice['kind']>(kind: K): Extract<HouseDevice, { kind: K }> =>
+      HOUSE_DEVICES.find(d => d.kind === kind) as Extract<HouseDevice, { kind: K }>;
+    const walk = (end: string): TractiveWalk => ({ start: end, end, durationMinutes: 30, distanceMeters: 1000 });
+    const pet = (trackerId: string): TractivePet => ({ trackerId, name: 'Toni', zone: 'Zuhause', batteryPercent: 80 });
+
+    it('Toni: Tier (tracker-id ohne Gross-/Kleinschreibung) und spaetester Spaziergang', async () => {
+      const toni = byKind('pet');
+      const tracker = toni.homeEntityId.replace('binary_sensor.tractive_', '').replace('_home', '').toUpperCase();
+      tractive.getPets.and.returnValue(of([pet('OTHER'), pet(tracker)]));
+      tractive.getWalks.and.returnValue(of([walk('2026-11-06T09:00:00'), walk('2026-11-05T10:00:00')]));
+      supplies.getSupplies.and.returnValue(of([]));
+
+      const extras = await firstValueFrom(service.loadExtras(toni));
+
+      expect(extras.pet?.pet?.batteryPercent).toBe(80);
+      expect(extras.pet?.lastWalk?.end).toBe('2026-11-06T09:00:00');
+      expect(tractive.getWalks).toHaveBeenCalledWith(tracker, 7);
+    });
+
+    it('Toni: getPets scheitert ⇒ supplies vorhanden, kein Schluessel pet', async () => {
+      tractive.getPets.and.returnValue(throwError(() => new Error('x')));
+      supplies.getSupplies.and.returnValue(of([]));
+
+      const extras = await firstValueFrom(service.loadExtras(byKind('pet')));
+
+      expect(extras.supplies).toEqual([]);
+      expect('pet' in extras).toBeFalse();
+    });
+
+    it('Thermostat: ein einziger thermostats.list, liefert Raumwert und Modus', async () => {
+      const device = HOUSE_DEVICES.find(d => d.kind === 'thermostat' && thermostatIdOf(d.target) !== null) as
+        Extract<HouseDevice, { kind: 'thermostat' }>;
+      const id = thermostatIdOf(device.target)!;
+      thermostats.list.and.returnValue(of([{ ...thermostat(id, 'dirigera:3'), mode: 'FROST_PROTECTION' }]));
+      temperatures.getCurrent.and.returnValue(of([reading('dirigera:3', 'sensor.bad_temperature', 19.8)]));
+
+      const extras = await firstValueFrom(service.loadExtras(device));
+
+      expect(thermostats.list).toHaveBeenCalledTimes(1);
+      expect(extras.thermostatMode).toBe('FROST_PROTECTION');
+      expect(extras.roomValue).toEqual({ text: '19,8°', stale: false });
+    });
+
+    it('andere Arten ⇒ leer', async () => {
+      expect(await firstValueFrom(service.loadExtras(byKind('contact')))).toEqual({});
     });
   });
 });

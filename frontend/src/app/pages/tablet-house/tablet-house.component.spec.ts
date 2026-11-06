@@ -13,6 +13,13 @@ import { EntityState } from '../../models/entity-state.model';
 import { Vec3, cameraForDevice, cameraForOverview, cameraForRoom } from '../../shared/house/house-geometry.util';
 import { BrightnessOutcome, HouseDeviceControlService, LightInfo, SwitchOutcome } from './house-device-control.service';
 
+function lightInfo(brightness: number): LightInfo {
+  return {
+    dimmable: true, brightness, supportsColor: false, supportsColorTemp: false,
+    hue: null, saturation: null, colorTemp: null, colorTempRange: { min: 2500, max: 6500 }
+  };
+}
+
 const MIN = 60_000;
 const ALEXA = 'sensor.alexa_gaj2300425330047';
 
@@ -597,10 +604,10 @@ describe('TabletHouseComponent', () => {
       }));
 
       it('nach gesetzter Helligkeit: Entitäten und Helligkeit neu', fakeAsync(() => {
-        control.lightDevice.and.returnValue(of({ dimmable: true, brightness: 40 }));
+        control.lightDevice.and.returnValue(of(lightInfo(40)));
         control.setBrightness.and.returnValue(of<BrightnessOutcome>('set'));
         openStehlampe();
-        control.lightDevice.and.returnValue(of({ dimmable: true, brightness: 70 }));
+        control.lightDevice.and.returnValue(of(lightInfo(70)));
 
         const slider = el().querySelector('.device-detail__brightness') as HTMLInputElement;
         slider.value = '70';
@@ -653,7 +660,7 @@ describe('TabletHouseComponent', () => {
       click(device('wohnzimmer-tapo-802366e0')!);
       click(closeButton());
 
-      light.next({ dimmable: true, brightness: 40 });
+      light.next(lightInfo(40));
       fixture.detectChanges();
 
       expect(panel()).toBeNull();
@@ -661,7 +668,7 @@ describe('TabletHouseComponent', () => {
     });
 
     it('dimmbare Lampe: Regler aus lightDevice, Wert als brightness', () => {
-      control.lightDevice.and.returnValue(of({ dimmable: true, brightness: 40 }));
+      control.lightDevice.and.returnValue(of(lightInfo(40)));
 
       click(device('wohnzimmer-tapo-802366e0')!);
 
