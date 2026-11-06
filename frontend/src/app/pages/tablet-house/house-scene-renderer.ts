@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FLOORS, FloorId, OUTDOOR_AREAS } from '../../shared/house/house-plan';
 import {
-  CameraView, Vec3, areOutdoorAreasVisible, cameraForOverview, floorBase, insideCutout, isFloorVisible, roomBoxes,
+  CameraView, Vec3, cameraForOverview, floorBase, insideCutout, isFloorVisible, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from '../../shared/house/house-geometry.util';
 import { HouseEffect, HouseEffectKind } from '../../shared/house/house-effects.util';
@@ -57,7 +57,6 @@ export class HouseSceneRenderer {
   private readonly raycaster = new THREE.Raycaster();
   private readonly resizeObserver: ResizeObserver;
   private readonly layers = new Map<FloorId, FloorLayer>();
-  private readonly outdoorGroup = new THREE.Group();
   private readonly renderedCallbacks: (() => void)[] = [];
 
   private readonly fillMaterial = new THREE.MeshBasicMaterial({
@@ -364,12 +363,12 @@ export class HouseSceneRenderer {
     for (const area of OUTDOOR_AREAS) {
       const { x1, y1, x2, y2 } = area.rect;
       const corners = [[x1, y1], [x2, y1], [x2, y2], [x1, y2], [x1, y1]]
-        .map(([x, y]) => new THREE.Vector3(toWorldX(x), PLATE_LIFT_M, toWorldZ(y)));
+        .map(([x, y]) => new THREE.Vector3(toWorldX(x), floorBase(area.floor) + PLATE_LIFT_M, toWorldZ(y)));
       const outline = new THREE.Line(new THREE.BufferGeometry().setFromPoints(corners), this.outdoorMaterial);
       outline.computeLineDistances();
-      this.outdoorGroup.add(outline);
+      // Der Umriss gehoert zur Layer-Gruppe seiner Etage und folgt deren Sichtbarkeit.
+      this.layers.get(area.floor)!.group.add(outline);
     }
-    this.scene.add(this.outdoorGroup);
   }
 
   private hasAnimatedEffects(): boolean {
@@ -514,7 +513,6 @@ export class HouseSceneRenderer {
     for (const floor of FLOORS) {
       this.layers.get(floor.id)!.group.visible = isFloorVisible(floor.id, this.selectedFloor);
     }
-    this.outdoorGroup.visible = areOutdoorAreasVisible(this.selectedFloor);
   }
 
 }

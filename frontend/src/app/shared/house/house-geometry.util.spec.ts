@@ -1,6 +1,6 @@
-import { HOUSE_ROOMS, OUTDOOR_AREAS } from './house-plan';
+import { HOUSE_ROOMS, OUTDOOR_AREAS, outdoorAreasOn } from './house-plan';
 import {
-  Vec3, areOutdoorAreasVisible, cameraForDevice, cameraForOverview, cameraForRoom, deviceAnchors, insideCutout, isFloorVisible, roomAnchor, roomBoxes,
+  Vec3, areaFloorBase, cameraForDevice, cameraForOverview, cameraForRoom, deviceAnchors, insideCutout, isFloorVisible, roomAnchor, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from './house-geometry.util';
 
@@ -24,17 +24,17 @@ describe('house-geometry.util', () => {
     expect(roomBoxes().length).toBe(rectCount);
   });
 
-  it('Wohnzimmer ist 5,25 x 4 m', () => {
+  it('Wohnzimmer ist 5,25 x 4,5 m', () => {
     const box = boxOf('wohnzimmer');
     expect(box.size.x).toBeCloseTo(5.25);
-    expect(box.size.z).toBeCloseTo(4);
+    expect(box.size.z).toBeCloseTo(4.5);
   });
 
   it('Hausmitte liegt bei x=z=0', () => {
-    // Wohnzimmer 210..420 / 90..250 => Mitte (315, 170) => (2.375, -2.375)
+    // Wohnzimmer 210..420 / 90..270 => Mitte (315, 180) => (2.375, -2.125)
     const box = boxOf('wohnzimmer');
     expect(box.center.x).toBeCloseTo(2.375);
-    expect(box.center.z).toBeCloseTo(-2.375);
+    expect(box.center.z).toBeCloseTo(-2.125);
   });
 
   it('Straßenseite liegt bei +z', () => {
@@ -57,10 +57,18 @@ describe('house-geometry.util', () => {
     expect(isFloorVisible('upper', 'basement')).toBeFalse();
   });
 
-  it('areOutdoorAreasVisible: Garten und Vorplatz nur im Erdgeschoss', () => {
-    expect(areOutdoorAreasVisible('ground')).toBeTrue();
-    expect(areOutdoorAreasVisible('upper')).toBeFalse();
-    expect(areOutdoorAreasVisible('basement')).toBeFalse();
+  it('outdoorAreasOn: Garten und Vorplatz nur im Erdgeschoss, Balkon im Obergeschoss', () => {
+    expect(outdoorAreasOn('ground').length).toBe(3);
+    expect(outdoorAreasOn('upper').map(a => a.id)).toEqual(['balcony']);
+    expect(outdoorAreasOn('basement')).toEqual([]);
+  });
+
+  it('areaFloorBase: Etagenboden von Räumen und Außenbereichen, unbekannt ist 0', () => {
+    expect(areaFloorBase('bad')).toBeCloseTo(2.6);
+    expect(areaFloorBase('balcony')).toBeCloseTo(2.6);
+    expect(areaFloorBase('garden')).toBeCloseTo(0);
+    expect(areaFloorBase('waschkeller')).toBeCloseTo(-2.6);
+    expect(areaFloorBase('xyz')).toBe(0);
   });
 
   it('cameraForRoom zielt auf den Raum', () => {
@@ -145,6 +153,10 @@ describe('house-geometry.util', () => {
         expect(a.y).toBeCloseTo(1.0);
       });
       expect(deviceAnchors('garden', 2).length).toBe(2);
+    });
+
+    it('legt Balkon-Anker auf die Höhe des Obergeschosses', () => {
+      deviceAnchors('balcony', 2).forEach(a => expect(a.y).toBeCloseTo(2.6 + 1.0));
     });
 
     it('liefert bei 0 Geräten nichts', () => {

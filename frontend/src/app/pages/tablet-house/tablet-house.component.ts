@@ -11,7 +11,7 @@ import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell
 import { EntityState } from '../../models/entity-state.model';
 import { EntityStateService } from '../../services/entity-state.service';
 import { ViewModeService } from '../../services/view-mode.service';
-import { FLOORS, FloorId, HOUSE_ROOMS, HouseRoom, OUTDOOR_AREAS } from '../../shared/house/house-plan';
+import { FLOORS, FloorId, HOUSE_ROOMS, HouseRoom, outdoorAreasOn } from '../../shared/house/house-plan';
 import {
   CameraView, Vec3, cameraForDevice, cameraForOverview, cameraForRoom, roomAnchor
 } from '../../shared/house/house-geometry.util';
@@ -151,7 +151,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     const floor = this.selectedFloor();
     const areas = [
       ...this.visibleRooms().map(room => room.id),
-      ...(floor === 'ground' ? OUTDOOR_AREAS.map(area => area.id) : [])
+      ...outdoorAreasOn(floor).map(area => area.id)
     ];
     return buildHouseEffects(areas, this.entities(), this.brightness());
   });

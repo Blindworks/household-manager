@@ -1,4 +1,4 @@
-import { FLOORS, FloorId, HOUSE_BOUNDS, HOUSE_ROOMS, HouseRoom, OUTDOOR_AREAS, PlanRect, STOREY_HEIGHT_M, UNITS_PER_METER, roomById } from './house-plan';
+import { FLOORS, areaFloor, FloorId, HOUSE_BOUNDS, HOUSE_ROOMS, HouseRoom, OUTDOOR_AREAS, PlanRect, STOREY_HEIGHT_M, UNITS_PER_METER, roomById } from './house-plan';
 
 /**
  * Weltkoordinaten der 3D-Hausansicht in Metern: y zeigt nach oben, die
@@ -109,9 +109,10 @@ export function isFloorVisible(floor: FloorId, selected: FloorId): boolean {
   return floor === selected;
 }
 
-/** Garten, Terrasse und Vorplatz liegen auf Erdgeschoss-Höhe und gehören nur zu dessen Ansicht. */
-export function areOutdoorAreasVisible(selected: FloorId): boolean {
-  return selected === 'ground';
+/** Höhe des Etagenbodens eines Raums oder Außenbereichs in Metern; unbekannt ergibt 0. */
+export function areaFloorBase(areaId: string): number {
+  const floor = areaFloor(areaId);
+  return floor === null ? 0 : floorBase(floor);
 }
 
 /** Blick von der Straßenseite schräg von oben auf die Mitte der gewählten Etage. */
@@ -162,7 +163,7 @@ export function cameraForDevice(anchor: Vec3): CameraView {
   };
 }
 
-/** Größtes Rechteck, Etagenboden und Ausschnitte eines Raums oder Außenbereichs (Außen: Bodenhöhe). */
+/** Größtes Rechteck, Etagenboden und Ausschnitte eines Raums oder Außenbereichs (Außen: Boden der eigenen Etage). */
 function areaFootprint(areaId: string): { rect: PlanRect; base: number; roomId: string | null } {
   const room = roomById(areaId);
   if (room && room.rects.length > 0) {
@@ -170,7 +171,7 @@ function areaFootprint(areaId: string): { rect: PlanRect; base: number; roomId: 
   }
   const outdoor = OUTDOOR_AREAS.find(area => area.id === areaId);
   if (outdoor) {
-    return { rect: outdoor.rect, base: 0, roomId: null };
+    return { rect: outdoor.rect, base: floorBase(outdoor.floor), roomId: null };
   }
   throw new Error(`Unbekannter Bereich: ${areaId}`);
 }
