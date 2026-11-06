@@ -11,9 +11,10 @@ import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { EntityState } from '../../models/entity-state.model';
 import { Vec3, cameraForDevice, cameraForOverview, cameraForRoom } from '../../shared/house/house-geometry.util';
-import { BrightnessOutcome, HouseDeviceControlService, LightInfo, SwitchOutcome } from './house-device-control.service';
+import { BrightnessOutcome, HouseDeviceControlService, SwitchOutcome } from './house-device-control.service';
+import { DetailExtras, LightExtras } from '../../shared/house/detail-extras.util';
 
-function lightInfo(brightness: number): LightInfo {
+function lightInfo(brightness: number): LightExtras {
   return {
     dimmable: true, brightness, supportsColor: false, supportsColorTemp: false,
     hue: null, saturation: null, colorTemp: null, colorTempRange: { min: 2500, max: 6500 }
@@ -98,11 +99,10 @@ describe('TabletHouseComponent', () => {
     tabletView = signal(false);
     lightTheme$ = new BehaviorSubject(false);
     control = jasmine.createSpyObj<HouseDeviceControlService>('HouseDeviceControlService',
-      ['loadHistory', 'setSwitch', 'setTarget', 'setBrightness', 'lightDevice', 'thermostatRoom', 'lampBrightness']);
+      ['loadHistory', 'setSwitch', 'setTarget', 'setBrightness', 'loadExtras', 'lampBrightness']);
     control.loadHistory.and.returnValue(of(null));
     control.lampBrightness.and.returnValue(of(new Map<string, number>()));
-    control.lightDevice.and.returnValue(of(null));
-    control.thermostatRoom.and.returnValue(of(null));
+    control.loadExtras.and.returnValue(of({}));
     control.setSwitch.and.returnValue(of<SwitchOutcome>('switched'));
     const weather = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weather.getOverview.and.returnValue(
@@ -368,24 +368,22 @@ describe('TabletHouseComponent', () => {
       expect(device('wohnzimmer-thermostat-8')).toBeNull();
     });
 
-    // Task 5: opensDetail ist jetzt fuer alle Arten wahr; diese Navigation entfaellt mit der Seitenumstellung.
-    xit('Tipp auf eine Kamera-Bubble navigiert weiterhin zum Ziel', () => {
+    it('Tipp auf eine Kamera-Bubble öffnet das Feld statt zu navigieren, auch im Tablet-Modus', () => {
       create();
       const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.returnValue(Promise.resolve(true));
       click(bubble('Wohnzimmer'));
 
       click(device('wohnzimmer-camera')!);
-      expect(navigate).toHaveBeenCalledWith('/cameras');
+      expect(el().querySelector('app-house-device-detail')).not.toBeNull();
 
       tabletView.set(true);
       fixture.detectChanges();
       click(device('wohnzimmer-camera')!);
-      expect(navigate).toHaveBeenCalledWith('/tablet/cameras');
-      expect(el().querySelector('app-house-device-detail')).toBeNull();
+      expect(el().querySelector('app-house-device-detail')).not.toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
     });
 
-    // Task 5: siehe oben.
-    xit('Außen-Bubbles (Mülltonne, Toni, Haustür, Garten) sind im Überblick des EG sichtbar, die Mülltonne navigiert direkt', () => {
+    it('Außen-Bubbles (Mülltonne, Toni, Haustür, Garten) sind im Überblick des EG sichtbar, die Mülltonne öffnet das Feld', () => {
       create();
       const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.returnValue(Promise.resolve(true));
       fake.flyTo.calls.reset();
@@ -398,8 +396,8 @@ describe('TabletHouseComponent', () => {
       expect(deviceBubbles().length).toBe(4);
 
       click(device('front-waste')!);
-      expect(navigate).toHaveBeenCalledWith('/waste-collection');
-      expect(fake.flyTo).not.toHaveBeenCalled();
+      expect(el().querySelector('app-house-device-detail')).not.toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
 
       click(el().querySelector('[data-floor="upper"]') as HTMLElement);
       expect(device('front-waste')).toBeNull();
@@ -456,16 +454,37 @@ describe('TabletHouseComponent', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    // Task 5: siehe oben.
-    xit('Tipp auf door/waste/pet-Bubble ⇒ weiterhin navigateByUrl(target)', () => {
+    it('Tipp auf die Haustür-Bubble im EG-Überblick öffnet das Feld und navigiert nicht', () => {
+      click(back());
+      const anchor = anchorOf('front-door');
+
+      click(device('front-door')!);
+
+      expect(panel()).not.toBeNull();
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForDevice(anchor));
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('Tipp auf Toni- und Mülltonnen-Bubble öffnet jeweils das Feld, ohne Router', () => {
       click(back());
 
-      for (const id of ['front-door', 'front-waste', 'front-pet-toni']) {
-        navigate.calls.reset();
+      for (const id of ['front-pet-toni', 'front-waste']) {
         click(device(id)!);
-        expect(navigate).toHaveBeenCalledTimes(1);
-        expect(panel()).toBeNull();
+        expect(panel()).not.toBeNull();
+        click(closeButton());
       }
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('Bubble ohne bekanntes Gerät (Rückfall) navigiert zum Ziel und öffnet kein Feld', () => {
+      fixture.componentInstance.openDevice({
+        deviceId: 'gibt-es-nicht', areaId: 'wohnzimmer', label: 'X', icon: 'x', lines: [], target: '/cameras'
+      } as unknown as Parameters<TabletHouseComponent['openDevice']>[0]);
+      fixture.detectChanges();
+
+      expect(navigate).toHaveBeenCalledWith('/cameras');
+      expect(panel()).toBeNull();
+      expect(control.loadExtras).not.toHaveBeenCalled();
     });
 
     it('Tipp auf Garten-Bubble im Überblick ⇒ Feld offen', () => {
@@ -604,10 +623,10 @@ describe('TabletHouseComponent', () => {
       }));
 
       it('nach gesetzter Helligkeit: Entitäten und Helligkeit neu', fakeAsync(() => {
-        control.lightDevice.and.returnValue(of(lightInfo(40)));
+        control.loadExtras.and.returnValue(of({ light: lightInfo(40) }));
         control.setBrightness.and.returnValue(of<BrightnessOutcome>('set'));
         openStehlampe();
-        control.lightDevice.and.returnValue(of(lightInfo(70)));
+        control.loadExtras.and.returnValue(of({ light: lightInfo(70) }));
 
         const slider = el().querySelector('.device-detail__brightness') as HTMLInputElement;
         slider.value = '70';
@@ -615,7 +634,7 @@ describe('TabletHouseComponent', () => {
         fixture.detectChanges();
 
         expect(entityService.getEntities).toHaveBeenCalledTimes(1);
-        expect(control.lightDevice).toHaveBeenCalledTimes(2);
+        expect(control.loadExtras).toHaveBeenCalledTimes(2);
         expect(fixture.componentInstance.detailBrightness()).toBe(70);
         tick(5000);
         expect(control.setSwitch).not.toHaveBeenCalled();
@@ -654,25 +673,25 @@ describe('TabletHouseComponent', () => {
       expect(panel()).toBeNull();
     });
 
-    it('späte Antwort von lightDevice nach dem Schließen öffnet nichts', () => {
-      const light = new Subject<LightInfo | null>();
-      control.lightDevice.and.returnValue(light);
+    it('späte Antwort der Zusatzdaten nach dem Schließen öffnet nichts', () => {
+      const light = new Subject<Partial<DetailExtras>>();
+      control.loadExtras.and.returnValue(light);
       click(device('wohnzimmer-tapo-802366e0')!);
       click(closeButton());
 
-      light.next(lightInfo(40));
+      light.next({ light: lightInfo(40) });
       fixture.detectChanges();
 
       expect(panel()).toBeNull();
       expect(light.observed).toBeFalse();
     });
 
-    it('dimmbare Lampe: Regler aus lightDevice, Wert als brightness', () => {
-      control.lightDevice.and.returnValue(of(lightInfo(40)));
+    it('dimmbare Lampe: Regler aus den Zusatzdaten, Wert als brightness', () => {
+      control.loadExtras.and.returnValue(of({ light: lightInfo(40) }));
 
       click(device('wohnzimmer-tapo-802366e0')!);
 
-      expect(control.lightDevice).toHaveBeenCalledOnceWith(STEHLAMPE);
+      expect(control.loadExtras).toHaveBeenCalledOnceWith(jasmine.objectContaining({ id: 'wohnzimmer-tapo-802366e0' }));
       const slider = el().querySelector<HTMLInputElement>('.device-detail__brightness');
       expect(slider).not.toBeNull();
       expect(slider!.value).toBe('40');
@@ -686,16 +705,68 @@ describe('TabletHouseComponent', () => {
     });
 
     it('Thermostat zeigt den Raumwert als zusätzliche Zeile, ohne Raumfühler keine', () => {
-      control.thermostatRoom.and.returnValue(of({ text: '19,8°', stale: false }));
+      control.loadExtras.and.returnValue(of({ roomValue: { text: '19,8°', stale: false } }));
       click(device('wohnzimmer-thermostat-8')!);
-      expect(control.thermostatRoom).toHaveBeenCalledOnceWith(8);
+      expect(control.loadExtras).toHaveBeenCalledOnceWith(jasmine.objectContaining({ id: 'wohnzimmer-thermostat-8' }));
       expect(panelText()).toContain('Raum 19,8°');
 
       click(closeButton());
-      control.thermostatRoom.and.returnValue(of(null));
+      control.loadExtras.and.returnValue(of({ roomValue: null }));
       click(device('wohnzimmer-thermostat-8')!);
       expect(panel()).not.toBeNull();
       expect(panelText()).not.toContain('Raum');
+    });
+
+    describe('Zusatzdaten', () => {
+      it('späte Zusatzdaten von Gerät A landen nicht im Feld von Gerät B', () => {
+        const extrasA = new Subject<Partial<DetailExtras>>();
+        control.loadExtras.and.callFake(entry => entry.id === 'wohnzimmer-thermostat-8' ? extrasA : of({}));
+        click(device('wohnzimmer-thermostat-8')!);
+        click(device('wohnzimmer-tapo-802366e0')!);
+
+        extrasA.next({ roomValue: { text: '19,8°', stale: false } });
+        fixture.detectChanges();
+
+        expect(panel()).not.toBeNull();
+        expect(panelText()).not.toContain('Raum');
+      });
+
+      it('lädt die Zusatzdaten im Takt nur bei offenem Feld', fakeAsync(() => {
+        // Neu aufbauen, damit der 30-s-Takt in der Fake-Zone laeuft.
+        fixture.destroy();
+        create();
+        click(bubble('Wohnzimmer'));
+        tick(30000);
+        expect(control.loadExtras).not.toHaveBeenCalled();
+
+        click(device('wohnzimmer-thermostat-8')!);
+        expect(control.loadExtras).toHaveBeenCalledTimes(1);
+        tick(30000);
+        expect(control.loadExtras).toHaveBeenCalledTimes(2);
+
+        click(closeButton());
+        tick(30000);
+        expect(control.loadExtras).toHaveBeenCalledTimes(2);
+        fixture.destroy();
+        discardPeriodicTasks();
+      }));
+
+      it('ein leeres Teil-Ergebnis (alle Quellen gescheitert) behält den zuvor geladenen Raumwert', fakeAsync(() => {
+        fixture.destroy();
+        create();
+        click(bubble('Wohnzimmer'));
+        control.loadExtras.and.returnValues(of({ roomValue: { text: '19,8°', stale: false } }), of({}));
+        click(device('wohnzimmer-thermostat-8')!);
+        expect(panelText()).toContain('Raum 19,8°');
+
+        tick(30000);
+        fixture.detectChanges();
+
+        expect(control.loadExtras).toHaveBeenCalledTimes(2);
+        expect(panelText()).toContain('Raum 19,8°');
+        fixture.destroy();
+        discardPeriodicTasks();
+      }));
     });
 
     it('Etagenwechsel oder Zurück schließt das Feld', () => {

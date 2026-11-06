@@ -410,42 +410,47 @@ describe('HouseDeviceControlService', () => {
     });
   });
 
-  describe('thermostatRoom', () => {
+  describe('Raumwert eines Thermostats (über loadExtras)', () => {
+    const thermostatDevice = HOUSE_DEVICES.find(d => d.kind === 'thermostat' && thermostatIdOf(d.target) !== null) as
+      Extract<HouseDevice, { kind: 'thermostat' }>;
+    const id = thermostatIdOf(thermostatDevice.target)!;
+    const roomOf = async () => (await firstValueFrom(service.loadExtras(thermostatDevice))).roomValue;
+
     it('Raumfühler zugeordnet ⇒ Wert mit Grad, frisch', async () => {
-      thermostats.list.and.returnValue(of([thermostat(8, 'dirigera:3')]));
+      thermostats.list.and.returnValue(of([thermostat(id, 'dirigera:3')]));
       temperatures.getCurrent.and.returnValue(of([reading('dirigera:3', 'sensor.bad_temperature', 19.8)]));
 
-      expect(await firstValueFrom(service.thermostatRoom(8))).toEqual({ text: '19,8°', stale: false });
+      expect(await roomOf()).toEqual({ text: '19,8°', stale: false });
     });
 
     it('ohne Raumfühler ⇒ null', async () => {
-      thermostats.list.and.returnValue(of([thermostat(8, null)]));
+      thermostats.list.and.returnValue(of([thermostat(id, null)]));
       temperatures.getCurrent.and.returnValue(of([]));
 
-      expect(await firstValueFrom(service.thermostatRoom(8))).toBeNull();
+      expect(await roomOf()).toBeNull();
     });
 
     it('Fühler zugeordnet, aber nicht gelistet ⇒ MISSING statt null', async () => {
-      thermostats.list.and.returnValue(of([thermostat(8, 'dirigera:3')]));
+      thermostats.list.and.returnValue(of([thermostat(id, 'dirigera:3')]));
       temperatures.getCurrent.and.returnValue(of([]));
 
-      expect(await firstValueFrom(service.thermostatRoom(8))).toEqual({ text: '–', stale: true });
+      expect(await roomOf()).toEqual({ text: '–', stale: true });
     });
 
     it('veralteter Fühler ⇒ stale', async () => {
-      thermostats.list.and.returnValue(of([thermostat(8, 'dirigera:3')]));
+      thermostats.list.and.returnValue(of([thermostat(id, 'dirigera:3')]));
       temperatures.getCurrent.and.returnValue(of([
         reading('dirigera:3', 'sensor.bad_temperature', 19.8, new Date(Date.now() - 3 * 3600_000).toISOString())
       ]));
 
-      expect(await firstValueFrom(service.thermostatRoom(8))).toEqual({ text: '19,8°', stale: true });
+      expect(await roomOf()).toEqual({ text: '19,8°', stale: true });
     });
 
     it('unbekanntes Thermostat ⇒ null', async () => {
-      thermostats.list.and.returnValue(of([thermostat(8, 'dirigera:3')]));
+      thermostats.list.and.returnValue(of([thermostat(id + 1000, 'dirigera:3')]));
       temperatures.getCurrent.and.returnValue(of([]));
 
-      expect(await firstValueFrom(service.thermostatRoom(99))).toBeNull();
+      expect(await roomOf()).toBeNull();
     });
   });
 

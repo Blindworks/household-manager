@@ -31,8 +31,6 @@ export type HistoryRange = 'DAY' | 'WEEK';
 export type BrightnessOutcome = 'set' | 'lamp-off';
 /** Ergebnis einer Schalt-Aktion nach frischem Lesen. */
 export type ActionOutcome = 'done' | 'already' | 'unavailable';
-/** Vorlaeufiger Alias bis die Seite auf `LightExtras` umgestellt ist (Task 5). */
-export type LightInfo = LightExtras;
 
 /**
  * Lesen und Schalten fuer das Geraete-Detail der Hausansicht. Wird von der
@@ -287,10 +285,6 @@ export class HouseDeviceControlService {
   }
 
   /** Raumwert eines Thermostats; null ohne zugeordneten Raumfuehler oder unbekanntes Thermostat. */
-  thermostatRoom(thermostatId: number): Observable<BubbleValue | null> {
-    return this.thermostats.list().pipe(switchMap(list => this.roomValue(list, thermostatId)));
-  }
-
   private roomValue(list: Thermostat[], thermostatId: number): Observable<BubbleValue | null> {
     const thermostat = list.find(t => t.id === thermostatId);
     if (!thermostat?.roomSensorId) {

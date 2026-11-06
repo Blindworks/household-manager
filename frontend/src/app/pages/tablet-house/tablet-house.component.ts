@@ -4,9 +4,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Subject, Subscription, catchError, interval, map, merge, of, startWith, switchMap, timer } from 'rxjs';
+import { EMPTY, Subject, Subscription, catchError, interval, map, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { HouseDeviceDetailComponent } from './device-detail/house-device-detail.component';
-import { HouseDeviceControlService, LightInfo } from './house-device-control.service';
+import { HouseDeviceControlService } from './house-device-control.service';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { EntityState } from '../../models/entity-state.model';
 import { EntityStateService } from '../../services/entity-state.service';
@@ -16,10 +16,11 @@ import {
   CameraView, Vec3, cameraForDevice, cameraForOverview, cameraForRoom, roomAnchor
 } from '../../shared/house/house-geometry.util';
 import {
-  BubbleFlag, BubbleValue, DeviceBubble, RoomBubble, buildDeviceBubbles, buildOutdoorBubbles, buildRoomBubble
+  BubbleFlag, DeviceBubble, RoomBubble, buildDeviceBubbles, buildOutdoorBubbles, buildRoomBubble
 } from '../../shared/house/house-bubbles.util';
 import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
-import { DeviceDetail, buildDeviceDetail, opensDetail, thermostatIdOf } from '../../shared/house/device-detail.util';
+import { DeviceDetail, buildDeviceDetail, opensDetail } from '../../shared/house/device-detail.util';
+import { DetailExtras } from '../../shared/house/detail-extras.util';
 import { HouseEffect, buildHouseEffects, deviceAnchor } from '../../shared/house/house-effects.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
@@ -48,8 +49,8 @@ interface PlacedDeviceBubble { bubble: DeviceBubble; anchor: Vec3; stale: boolea
  * Neon-Drahtmodell mit Etagenwahl. Im Ueberblick je Raum eine Bubble mit
  * Temperatur und Hinweisen (im EG zusaetzlich die Aussenbereiche), in der
  * Raumansicht die Geraete des Raums. Ein Tipp auf eine Geraete-Bubble faehrt die
- * Kamera ans Geraet und oeffnet das Detail-Feld; nur Haustuer, Kamera, Muelltonne
- * und Toni fuehren weiter auf ihre Fachseite.
+ * Kamera ans Geraet und oeffnet das Detail-Feld (auch Haustuer, Kamera, Muelltonne
+ * und Toni); dessen Zusatzdaten laedt die Seite beim Oeffnen und im Takt.
  *
  * Die Bubbles folgen der Kamera je gezeichnetem Frame. Das laeuft bewusst an
  * Angular vorbei (direkte DOM-Transforms, Renderer ausserhalb der Zone, OnPush),
@@ -81,10 +82,10 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private pointerStart: { x: number; y: number } | null = null;
   private bubbleChanges: Subscription | null = null;
   private loaded = false;
-  /** Laufende Ergaenzungsabrufe (Helligkeit, Raumwert) des offenen Felds; beim Schliessen abbestellt. */
-  private detailExtras: Subscription | null = null;
   /** Ausserplanmaessige Abrufe (nach einer Aktion); laufen durch dieselbe Kette wie der 30-s-Takt. */
   private readonly refreshRequests = new Subject<void>();
+  /** Oeffnen und Schliessen des Felds: startet bzw. bestellt den Zusatzdaten-Abruf ab. */
+  private readonly extrasRequests = new Subject<void>();
   private followUps: Subscription | null = null;
 
   readonly floors = FLOORS;
@@ -104,30 +105,18 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
    * ohne es neu zu erzeugen (Regel aus `petSupplyDialogSupply`).
    */
   private readonly openDeviceId = signal<string | null>(null);
-  /** Einmal beim Oeffnen geholt: Dimmbarkeit und Helligkeit der Lampe. */
-  private readonly openLight = signal<LightInfo | null>(null);
-  /** Einmal beim Oeffnen geholt: Wert des zugeordneten Raumfuehlers eines Thermostats. */
-  private readonly openRoomValue = signal<BubbleValue | null>(null);
+  /**
+   * Zusatzdaten des offenen Felds (Lampe, Raumwert, Schloss, Kamera, Toni, Muell), beim Oeffnen
+   * und im Takt geholt. Eine gescheiterte Quelle fehlt im Teil-Ergebnis und behaelt so ihren letzten Wert.
+   */
+  readonly openExtras = signal<DetailExtras>({});
 
   readonly detail = computed<DeviceDetail | null>(() => {
-    const id = this.openDeviceId();
-    const device = id ? HOUSE_DEVICES.find(entry => entry.id === id) : undefined;
-    if (!device) {
-      return null;
-    }
-    const detail = buildDeviceDetail(device, this.entities(), this.now());
-    const light = this.openLight();
-    const room = this.openRoomValue();
-    return {
-      ...detail,
-      lines: room ? [...detail.lines, { ...room, text: `Raum ${room.text}` }] : detail.lines,
-      control: detail.control?.type === 'switch'
-        ? { ...detail.control, dimmable: light?.dimmable === true }
-        : detail.control
-    };
+    const device = deviceById(this.openDeviceId());
+    return device ? buildDeviceDetail(device, this.entities(), this.now(), this.openExtras()) : null;
   });
 
-  readonly detailBrightness = computed(() => this.openLight()?.brightness ?? null);
+  readonly detailBrightness = computed(() => this.openExtras().light?.brightness ?? null);
 
   readonly visibleRooms = computed<HouseRoom[]>(() =>
     HOUSE_ROOMS.filter(room => room.floor === this.selectedFloor()));
@@ -185,6 +174,20 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
         this.brightness.set(result);
       }
     });
+    // Zusatzdaten nur bei offenem Feld; switchMap bestellt den alten Abruf ab (Schliessen, Geraetewechsel).
+    merge(ticks, this.extrasRequests).pipe(
+      switchMap(() => {
+        const id = this.openDeviceId();
+        const device = deviceById(id);
+        return device ? this.deviceControl.loadExtras(device).pipe(map(partial => ({ id, partial }))) : EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(({ id, partial }) => {
+      // Zusaetzlich zur Abbestellung: eine Antwort fuer ein frueher offenes Geraet landet nie im aktuellen.
+      if (id === this.openDeviceId()) {
+        this.openExtras.update(previous => ({ ...previous, ...partial }));
+      }
+    });
     effect(() => {
       const effects = this.effects();
       this.outside(renderer => renderer.setEffects(effects));
@@ -213,7 +216,6 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.followUps?.unsubscribe();
-    this.detailExtras?.unsubscribe();
     this.bubbleChanges?.unsubscribe();
     this.renderer?.dispose();
     this.renderer = null;
@@ -250,7 +252,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     }
     this.dropDetail();
     this.openDeviceId.set(device.id);
-    this.loadDetailExtras(device);
+    this.extrasRequests.next();
     this.fly(cameraForDevice(anchor));
   }
 
@@ -262,16 +264,15 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Das Feld hat geschaltet oder gemerkt, dass sein Stand veraltet ist: Entitaeten sofort
-   * und nach {@link FOLLOW_UP_AFTER_ACTION_MS} erneut laden, bei einer Lampe auch die
-   * Helligkeit. Nur Lesen - ein Fehler behaelt still den letzten Stand (`applyFetch`).
+   * Das Feld hat geschaltet oder gemerkt, dass sein Stand veraltet ist: Entitaeten und
+   * Zusatzdaten sofort und nach {@link FOLLOW_UP_AFTER_ACTION_MS} erneut laden. Nur Lesen -
+   * ein Fehler behaelt still den letzten Stand.
    */
   refreshAfterAction(): void {
     this.refreshRequests.next();
     this.followUps?.unsubscribe();
     this.followUps = merge(...FOLLOW_UP_AFTER_ACTION_MS.map(delayMs => timer(delayMs)))
       .subscribe(() => this.refreshRequests.next());
-    this.reloadLight();
   }
 
   flagsOf(bubble: RoomBubble): { flag: BubbleFlag; icon: string; label: string }[] {
@@ -320,43 +321,11 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     this.outside(renderer => renderer.requestRender());
   }
 
-  /** Ergaenzt das Feld einmal beim Oeffnen; ein Fehler laesst die Ergaenzung einfach weg. */
-  private loadDetailExtras(device: HouseDevice): void {
-    const extras = new Subscription();
-    if (device.kind === 'switch') {
-      extras.add(this.deviceControl.lightDevice(device.entityId).pipe(catchError(() => of(null)))
-        .subscribe(light => this.openLight.set(light)));
-    }
-    const thermostatId = device.kind === 'thermostat' ? thermostatIdOf(device.target) : null;
-    if (thermostatId !== null) {
-      extras.add(this.deviceControl.thermostatRoom(thermostatId).pipe(catchError(() => of(null)))
-        .subscribe(room => this.openRoomValue.set(room)));
-    }
-    this.detailExtras = extras;
-  }
-
-  /** Laedt Dimmbarkeit und Helligkeit des offenen Schalters neu; bei einem Fehler bleibt der letzte Wert. */
-  private reloadLight(): void {
-    const id = this.openDeviceId();
-    const device = id ? HOUSE_DEVICES.find(entry => entry.id === id) : undefined;
-    if (device?.kind !== 'switch') {
-      return;
-    }
-    this.detailExtras?.add(this.deviceControl.lightDevice(device.entityId).pipe(catchError(() => of(undefined)))
-      .subscribe(light => {
-        if (light !== undefined) {
-          this.openLight.set(light);
-        }
-      }));
-  }
-
   /** Schliesst das Feld ohne Kamerafahrt (der Aufrufer fliegt selbst) und bestellt spaete Antworten ab. */
   private dropDetail(): void {
-    this.detailExtras?.unsubscribe();
-    this.detailExtras = null;
     this.openDeviceId.set(null);
-    this.openLight.set(null);
-    this.openRoomValue.set(null);
+    this.openExtras.set({});
+    this.extrasRequests.next();
   }
 
   private fly(view: CameraView): void {
@@ -396,6 +365,10 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     }
     return deviceAnchorsById.get(element.dataset['device'] ?? '') ?? null;
   }
+}
+
+function deviceById(id: string | null): HouseDevice | undefined {
+  return id ? HOUSE_DEVICES.find(entry => entry.id === id) : undefined;
 }
 
 /**
