@@ -94,7 +94,7 @@ describe('buildDeviceDetail', () => {
   });
 
   it('Kontakt, Bewegung, Taster: Zustand, seit HH:mm, kein Verlauf, kein Control', () => {
-    const c = find('contact', x => x.entityId.includes('badezimmer'));
+    const c = find('contact', x => x.area === 'bad');
     const contact = buildDeviceDetail(c, mapOf(entity(c.entityId, 'on', 60)), NOW);
     expect(contact.headline.text).toBe('offen');
     expect(contact.lines).toEqual([{ text: 'seit 09:00', stale: false }]);
