@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261106-0087-create-house-device-position" author="benedikt">
+        <comment>Digitaler Zwilling: Grundriss-Position (Plan-Einheiten 0-500) je Geraet; device_id ist die Frontend-Id aus house-devices.ts.</comment>
+        <createTable tableName="house_device_position">
+            <column name="device_id" type="VARCHAR(100)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="plan_x" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="plan_y" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback><dropTable tableName="house_device_position"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -915,6 +915,44 @@ class SecurityRulesTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfGeraeteplaetzeLesen() throws Exception {
+        mockMvc.perform(get("/v1/house/device-positions")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfGeraeteplatzNichtSetzen() throws Exception {
+        mockMvc.perform(put("/v1/house/device-positions/wohnzimmer-climate").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"x\": 1, \"y\": 2}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfGeraeteplatzNichtLoeschen() throws Exception {
+        mockMvc.perform(delete("/v1/house/device-positions/wohnzimmer-climate").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfGeraeteplatzSetzen() throws Exception {
+        // Kein Controller im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(put("/v1/house/device-positions/wohnzimmer-climate").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"x\": 1, \"y\": 2}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfGeraeteplatzNichtSetzen() throws Exception {
+        mockMvc.perform(put("/v1/house/device-positions/wohnzimmer-climate").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"x\": 1, \"y\": 2}"))
+                .andExpect(status().isForbidden());
+    }
+
     /** Die generische GET-Regel fuer Preise bleibt: das Wandtablet liest weiter Preise. */
     @Test
     @WithMockUser(roles = "KIOSK")

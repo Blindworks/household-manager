@@ -194,4 +194,7 @@
     <!-- Heizung: Raum-Temperaturfuehler je Thermostat -->
     <include file="db/changelog/changes/20261105-0086-add-thermostat-room-sensor.xml"/>
 
+    <!-- Digitaler Zwilling: Geraeteplaetze im Grundriss -->
+    <include file="db/changelog/changes/20261106-0087-create-house-device-position.xml"/>
+
 </databaseChangeLog>
