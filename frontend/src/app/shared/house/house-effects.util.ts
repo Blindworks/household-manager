@@ -1,4 +1,4 @@
-import { EntityMap, isOn } from './house-bubbles.util';
+import { EntityMap, isOn, isWindowContact } from './house-bubbles.util';
 import { HOUSE_DEVICES, HouseDevice, devicesInArea } from './house-devices';
 import { DEVICE_ANCHOR_HEIGHT_M, Vec3, deviceAnchors } from './house-geometry.util';
 
@@ -69,8 +69,7 @@ function effectOf(device: HouseDevice, entities: EntityMap, brightness: Readonly
     case 'thermostat':
       return isOn(entities, device.heating) ? { kind: 'heating', intensity: 1 } : null;
     case 'contact':
-      // Der Gaszaehler-Reedkontakt ist kein Fenster (Regel aus den Raum-Hinweisen).
-      return !device.entityId.includes('sensor_gas') && isOn(entities, device.entityId)
+      return isWindowContact(device) && isOn(entities, device.entityId)
         ? { kind: 'open', intensity: 1 } : null;
     case 'door':
       return isOn(entities, device.contactEntityId) ? { kind: 'open', intensity: 1 } : null;

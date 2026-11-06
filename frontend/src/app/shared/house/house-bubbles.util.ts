@@ -112,13 +112,20 @@ export function buildRoomBubble(areaId: string, entities: EntityMap, nowMs: numb
   return { areaId, label, temperature: temperatureValue, humidity: humidityValue, flags: collectFlags(devices, entities) };
 }
 
+/**
+ * Ist dieser Kontakt ein Fenster/eine Tuer? Der Gaszaehler-Reedkontakt ist keins.
+ * Einzige Regel fuer Raum-Hinweise und Szenen-Effekte.
+ */
+export function isWindowContact(device: Extract<HouseDevice, { kind: 'contact' }>): boolean {
+  return !device.entityId.includes('sensor_gas');
+}
+
 function collectFlags(devices: HouseDevice[], entities: EntityMap): BubbleFlag[] {
   const flags = new Set<BubbleFlag>();
   for (const device of devices) {
     switch (device.kind) {
       case 'contact':
-        // Der Gaszaehler-Reedkontakt ist kein Fenster.
-        if (!device.entityId.includes('sensor_gas') && isOn(entities, device.entityId)) {
+        if (isWindowContact(device) && isOn(entities, device.entityId)) {
           flags.add('window_open');
         }
         break;

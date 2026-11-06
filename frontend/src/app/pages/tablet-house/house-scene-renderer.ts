@@ -239,7 +239,8 @@ export class HouseSceneRenderer {
    */
   playEffects(durationMs = EFFECT_PLAY_MS): void {
     this.stopPlayback();
-    if (this.disposed || durationMs <= 0) {
+    // Ohne Ring, Bogen oder Heizung bewegt sich nichts: dann gar nicht erst dauernd zeichnen.
+    if (this.disposed || durationMs <= 0 || !this.hasAnimatedEffects()) {
       return;
     }
     const start = performance.now();
@@ -369,6 +370,12 @@ export class HouseSceneRenderer {
       this.outdoorGroup.add(outline);
     }
     this.scene.add(this.outdoorGroup);
+  }
+
+  private hasAnimatedEffects(): boolean {
+    return this.motionRings.length > 0 || this.runningArcs.length > 0
+      || this.effectGroup.children.some(child => child instanceof THREE.Sprite
+        && child.material === this.spriteMaterials.get('heating'));
   }
 
   private stopPlayback(): void {
