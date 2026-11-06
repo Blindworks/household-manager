@@ -1,6 +1,10 @@
+import { BlinkCamera } from '../../models/blink.model';
 import { EntityState } from '../../models/entity-state.model';
+import { ThermostatMode } from '../../models/thermostat.model';
+import { DetailExtras, LightExtras, NO_WASTE_TEXT, cameraIdOf, lockBatteryLine, motionLine, petLines,
+  smartlockIdOf, wasteLines } from './detail-extras.util';
 import { BubbleValue, EntityMap, MISSING, buttonActionText, deviceIcon, fresh, humidity, isOn, isReadable,
-  livePower, onOff, parseLocalTimestamp, temperature } from './house-bubbles.util';
+  livePower, lockText, onOff, parseLocalTimestamp, temperature } from './house-bubbles.util';
 import { HouseDevice } from './house-devices';
 
 export type HistorySource =
@@ -9,12 +13,20 @@ export type HistorySource =
   | { type: 'power'; entityId: string };
 
 export type DetailControl =
-  | { type: 'target'; thermostatId: number; target: number | null; min: 5; max: 30; step: 0.5 }
+  | {
+      type: 'target'; thermostatId: number; target: number | null; min: 5; max: 30; step: 0.5;
+      mode: ThermostatMode | null;
+    }
   | {
       type: 'switch'; entityId: string; on: boolean | null; confirmOff: boolean; dimmable: boolean;
+      /** Nur gesetzt, wenn die Lampe Farbe oder Farbtemperatur kann. */
+      color: LightExtras | null;
       /** Nur bei Maschinen: Lauf-Helfer, den der Dienst beim Ausschalten frisch prueft. */
       runningEntityId?: string;
-    };
+    }
+  | { type: 'lock'; smartlockId: number; locked: boolean | null }
+  /** camera: undefined = noch nicht geladen, null = nicht erreichbar. */
+  | { type: 'camera'; cameraId: string; camera: BlinkCamera | null | undefined };
 
 export interface DeviceDetail {
   deviceId: string;
@@ -26,11 +38,11 @@ export interface DeviceDetail {
   control: DetailControl | null;
 }
 
-const DETAIL_KINDS: ReadonlySet<HouseDevice['kind']> =
-  new Set(['climate', 'thermostat', 'switch', 'appliance', 'contact', 'motion', 'button']);
+type DetailBody = Pick<DeviceDetail, 'headline' | 'lines' | 'history' | 'control'>;
 
-export function opensDetail(kind: HouseDevice['kind']): boolean {
-  return DETAIL_KINDS.has(kind);
+/** Jedes Geraet mit Anker oeffnet das Feld; bubbleTarget bleibt nur Rueckfall ohne Anker. */
+export function opensDetail(_kind: HouseDevice['kind']): boolean {
+  return true;
 }
 
 /** 'sensor.thermostat_8_target' → 8 */
@@ -74,8 +86,51 @@ function powerLines(entities: EntityMap, switchEntityId: string, powerEntityId: 
   return power ? [power] : [];
 }
 
-function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number):
-  Pick<DeviceDetail, 'headline' | 'lines' | 'history' | 'control'> {
+function colorExtras(light: LightExtras | null | undefined): LightExtras | null {
+  return light && (light.supportsColor || light.supportsColorTemp) ? light : null;
+}
+
+function doorBody(device: Extract<HouseDevice, { kind: 'door' }>, entities: EntityMap, extras: DetailExtras)
+  : DetailBody {
+  const lock = entities.get(device.lockEntityId);
+  const contact = entities.get(device.contactEntityId);
+  const smartlockId = extras.lock?.smartlockId ?? smartlockIdOf(device.lockEntityId);
+  const battery = lockBatteryLine(extras.lock);
+  return {
+    headline: !isReadable(lock) ? MISSING : fresh(lockText(lock.state)),
+    lines: [
+      ...(isReadable(contact) ? [fresh(contact.state === 'on' ? 'offen' : 'zu'), ...sinceLine(contact)] : []),
+      ...(battery ? [battery] : [])
+    ],
+    history: null,
+    control: extras.lock === null || smartlockId === null ? null : {
+      type: 'lock', smartlockId, locked: !isReadable(lock) ? null : lock.state === 'locked'
+    }
+  };
+}
+
+function cameraBody(device: Extract<HouseDevice, { kind: 'camera' }>, nowMs: number, extras: DetailExtras)
+  : DetailBody {
+  const cameraId = cameraIdOf(device.armedEntityId);
+  const camera = extras.camera;
+  const motion = camera ? motionLine(camera.lastMotionAt, new Date(nowMs)) : null;
+  return {
+    headline: camera ? fresh(camera.armed ? 'aktiv' : 'deaktiviert') : MISSING,
+    lines: motion ? [motion] : [],
+    history: null,
+    control: cameraId === null ? null : { type: 'camera', cameraId, camera }
+  };
+}
+
+function wasteBody(extras: DetailExtras, nowMs: number): DetailBody {
+  if (extras.waste === undefined) {
+    return { headline: MISSING, lines: [], history: null, control: null };
+  }
+  const [first, ...rest] = wasteLines(extras.waste, new Date(nowMs));
+  return { headline: first ?? fresh(NO_WASTE_TEXT), lines: rest, history: null, control: null };
+}
+
+function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number, extras: DetailExtras): DetailBody {
   switch (device.kind) {
     case 'climate': {
       const lines = device.humidity ? [humidity(entities, device.humidity, nowMs)] : [];
@@ -90,15 +145,18 @@ function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number):
       const thermostatId = thermostatIdOf(device.target);
       const target = temperature(entities, device.target, nowMs);
       const heating = entities.get(device.heating);
+      const room = extras.roomValue;
       return {
         headline: temperature(entities, device.temperature, nowMs),
         lines: [
           target.text === '–' ? target : { ...target, text: `Soll ${target.text.replace(',0°', '°')}` },
-          !isReadable(heating) ? MISSING : fresh(heating.state === 'on' ? 'heizt' : 'heizt nicht')
+          !isReadable(heating) ? MISSING : fresh(heating.state === 'on' ? 'heizt' : 'heizt nicht'),
+          ...(room ? [{ ...room, text: `Raum ${room.text}` }] : [])
         ],
         history: thermostatId === null ? null : { type: 'thermostat', thermostatId },
         control: thermostatId === null ? null : {
-          type: 'target', thermostatId, target: targetValue(entities, device.target), min: 5, max: 30, step: 0.5
+          type: 'target', thermostatId, target: targetValue(entities, device.target), min: 5, max: 30, step: 0.5,
+          mode: extras.thermostatMode ?? null
         }
       };
     }
@@ -109,7 +167,8 @@ function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number):
         history: device.powerEntityId ? { type: 'power', entityId: device.powerEntityId } : null,
         control: {
           type: 'switch', entityId: device.entityId, on: switchState(entities, device.entityId),
-          confirmOff: entities.get(device.entityId)?.confirmRequired === true, dimmable: false
+          confirmOff: entities.get(device.entityId)?.confirmRequired === true,
+          dimmable: extras.light?.dimmable === true, color: colorExtras(extras.light)
         }
       };
     case 'appliance': {
@@ -123,7 +182,7 @@ function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number):
         history: { type: 'power', entityId: device.powerEntityId },
         control: {
           type: 'switch', entityId: device.switchEntityId, on: switchState(entities, device.switchEntityId),
-          confirmOff: running || switchEntity?.confirmRequired === true, dimmable: false,
+          confirmOff: running || switchEntity?.confirmRequired === true, dimmable: false, color: null,
           // confirmOff stammt aus dem bis zu 30 s alten Stand; beim Ausschalten prueft der Dienst den Helfer frisch.
           runningEntityId: device.runningEntityId
         }
@@ -151,11 +210,28 @@ function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number):
         lines: sinceLine(latest), history: null, control: null
       };
     }
+    case 'door':
+      return doorBody(device, entities, extras);
+    case 'camera':
+      return cameraBody(device, nowMs, extras);
+    case 'waste':
+      return wasteBody(extras, nowMs);
+    case 'pet': {
+      const home = entities.get(device.homeEntityId);
+      return {
+        headline: !isReadable(home) ? MISSING : fresh(home.state === 'on' ? 'zu Hause' : 'unterwegs'),
+        lines: petLines(extras.pet, extras.supplies), history: null, control: null
+      };
+    }
     default:
       return { headline: MISSING, lines: [], history: null, control: null };
   }
 }
 
-export function buildDeviceDetail(device: HouseDevice, entities: EntityMap, nowMs: number): DeviceDetail {
-  return { deviceId: device.id, title: device.label, icon: deviceIcon(device), ...detailBody(device, entities, nowMs) };
+export function buildDeviceDetail(device: HouseDevice, entities: EntityMap, nowMs: number,
+                                  extras: DetailExtras = {}): DeviceDetail {
+  return {
+    deviceId: device.id, title: device.label, icon: deviceIcon(device),
+    ...detailBody(device, entities, nowMs, extras)
+  };
 }

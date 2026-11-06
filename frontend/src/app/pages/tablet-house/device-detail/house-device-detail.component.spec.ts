@@ -49,7 +49,7 @@ function thermostat(target: number | null, thermostatId = 8): DeviceDetail {
   return {
     deviceId: `heizung-${thermostatId}`, title: 'Bad', icon: 'heat', headline: { text: '19,0°', stale: false },
     lines: [], history: { type: 'thermostat', thermostatId },
-    control: { type: 'target', thermostatId, target, min: 5, max: 30, step: 0.5 }
+    control: { type: 'target', thermostatId, target, min: 5, max: 30, step: 0.5, mode: null }
   };
 }
 
@@ -57,7 +57,7 @@ function switchDetail(on: boolean | null, confirmOff = false, dimmable = false):
   return {
     deviceId: 'flur', title: 'Flur', icon: 'lightbulb', headline: { text: on ? 'an' : 'aus', stale: false },
     lines: [], history: null,
-    control: { type: 'switch', entityId: 'switch.flur', on, confirmOff, dimmable }
+    control: { type: 'switch', entityId: 'switch.flur', on, confirmOff, dimmable, color: null }
   };
 }
 
@@ -66,7 +66,7 @@ function applianceDetail(on: boolean, running: boolean): DeviceDetail {
     deviceId: 'waschmaschine', title: 'Waschmaschine', icon: 'local_laundry_service',
     headline: { text: running ? 'läuft' : 'aus', stale: false }, lines: [], history: null,
     control: {
-      type: 'switch', entityId: 'switch.wasch', on, confirmOff: running, dimmable: false,
+      type: 'switch', entityId: 'switch.wasch', on, confirmOff: running, dimmable: false, color: null,
       runningEntityId: 'input_boolean.manual_waschmaschine_laeuft'
     }
   };

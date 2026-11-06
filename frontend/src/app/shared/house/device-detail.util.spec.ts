@@ -46,7 +46,7 @@ describe('buildDeviceDetail', () => {
     const detail = buildDeviceDetail(d, entities, NOW);
     expect(detail.headline.text).toBe('20,1°');
     expect(detail.lines.map(l => l.text)).toEqual(['Soll 20°', 'heizt']);
-    expect(detail.control).toEqual({ type: 'target', thermostatId: 8, target: 20, min: 5, max: 30, step: 0.5 });
+    expect(detail.control).toEqual({ type: 'target', thermostatId: 8, target: 20, min: 5, max: 30, step: 0.5, mode: null });
     expect(detail.history).toEqual({ type: 'thermostat', thermostatId: 8 });
     const off = buildDeviceDetail(d,
       mapOf(entity(d.temperature, '20.1'), entity(d.target, '20.0'), entity(d.heating, 'off')), NOW);
@@ -58,7 +58,7 @@ describe('buildDeviceDetail', () => {
     const detail = buildDeviceDetail(d, mapOf(entity(d.entityId, 'on'), entity(d.powerEntityId!, '221')), NOW);
     expect(detail.headline.text).toBe('an');
     expect(detail.lines.map(l => l.text)).toEqual(['221 W']);
-    expect(detail.control).toEqual({ type: 'switch', entityId: d.entityId, on: true, confirmOff: false, dimmable: false });
+    expect(detail.control).toEqual({ type: 'switch', entityId: d.entityId, on: true, confirmOff: false, dimmable: false, color: null });
     expect(detail.history).toEqual({ type: 'power', entityId: d.powerEntityId! });
   });
 
@@ -129,13 +129,103 @@ describe('buildDeviceDetail', () => {
 });
 
 describe('opensDetail', () => {
-  it('false für door, camera, waste, pet; true für die Feld-Geräte', () => {
-    for (const k of ['door', 'camera', 'waste', 'pet'] as const) {
-      expect(opensDetail(k)).toBeFalse();
+  it('ist für jede Art in HOUSE_DEVICES wahr', () => {
+    for (const d of HOUSE_DEVICES) {
+      expect(opensDetail(d.kind)).withContext(d.id).toBeTrue();
     }
-    for (const k of ['climate', 'thermostat', 'switch', 'appliance', 'contact', 'motion', 'button'] as const) {
-      expect(opensDetail(k)).toBeTrue();
-    }
+  });
+});
+
+describe('buildDeviceDetail mit Zusatzdaten', () => {
+  const doorDevice = () => find('door', d => d.id === 'front-door');
+  const lockExtras = { smartlockId: 18241688572, batteryCharge: 64, batteryCritical: false };
+
+  it('Tür: Kopf Schlosstext, Zeilen zu und Akku, Bedienelement lock, kein Verlauf', () => {
+    const d = doorDevice();
+    const detail = buildDeviceDetail(d, mapOf(entity(d.lockEntityId, 'unlocked'), entity(d.contactEntityId, 'off')),
+      NOW, { lock: lockExtras });
+    expect(detail.headline.text).toBe('entriegelt');
+    const texts = detail.lines.map(l => l.text);
+    expect(texts).toContain('zu');
+    expect(texts).toContain('Akku 64 %');
+    expect(detail.control).toEqual({ type: 'lock', smartlockId: 18241688572, locked: false });
+    expect(detail.history).toBeNull();
+  });
+
+  it('Tür: locked ⇒ true, unavailable ⇒ null, ohne smartlockId kein Bedienelement', () => {
+    const d = doorDevice();
+    const locked = buildDeviceDetail(d, mapOf(entity(d.lockEntityId, 'locked')), NOW, { lock: lockExtras });
+    expect(locked.control).toEqual(jasmine.objectContaining({ locked: true }));
+    const dead = buildDeviceDetail(d, mapOf(entity(d.lockEntityId, 'unavailable')), NOW, { lock: lockExtras });
+    expect(dead.control).toEqual(jasmine.objectContaining({ locked: null }));
+    const noLock = buildDeviceDetail(d, mapOf(entity(d.lockEntityId, 'locked')), NOW, { lock: null });
+    expect(noLock.control).toBeNull();
+  });
+
+  it('Kamera: Kopf aktiv/deaktiviert/–, control.camera undefined, null oder Wert', () => {
+    const d = find('camera', c => c.id === 'wohnzimmer-camera');
+    const cameraId = 'binary_sensor.blink_511671_armed';
+    expect(cameraId).toBe(d.armedEntityId);
+    const none = buildDeviceDetail(d, new Map(), NOW);
+    expect(none.headline.text).toBe('–');
+    expect(none.control).toEqual({ type: 'camera', cameraId: '511671', camera: undefined });
+    const gone = buildDeviceDetail(d, new Map(), NOW, { camera: null });
+    expect(gone.headline.text).toBe('–');
+    expect((gone.control as { camera: unknown }).camera).toBeNull();
+    const cam = { id: '511671', name: 'K', armed: true, lastMotionAt: new Date(NOW).toISOString() } as never;
+    const on = buildDeviceDetail(d, new Map(), NOW, { camera: cam });
+    expect(on.headline.text).toBe('aktiv');
+    expect(on.lines.length).toBe(1);
+    const off = buildDeviceDetail(d, new Map(), NOW, { camera: { ...(cam as object), armed: false } as never });
+    expect(off.headline.text).toBe('deaktiviert');
+  });
+
+  it('Mülltonne: ohne Termine Kopf Keine Abfuhr, ohne extras –, mit Terminen Kopf + Zeilen', () => {
+    const d = find('waste', w => w.id === 'front-waste');
+    expect(buildDeviceDetail(d, new Map(), NOW, { waste: [] }).headline.text)
+      .toBe('Keine Abfuhr in den nächsten Tagen');
+    expect(buildDeviceDetail(d, new Map(), NOW).headline.text).toBe('–');
+    const events = [
+      { date: '2026-11-06', label: 'Restmüll' }, { date: '2026-11-07', label: 'Papier' }
+    ] as never;
+    const detail = buildDeviceDetail(d, new Map(), NOW, { waste: events });
+    expect(detail.headline.text).toBe('Restmüll · morgen');
+    expect(detail.lines.map(l => l.text)).toEqual(['Papier · Sa 07.11.']);
+    expect(detail.control).toBeNull();
+  });
+
+  it('Toni: Kopf zu Hause / unterwegs / –', () => {
+    const d = find('pet', p => p.id === 'front-pet-toni');
+    expect(buildDeviceDetail(d, mapOf(entity(d.homeEntityId, 'on')), NOW).headline.text).toBe('zu Hause');
+    expect(buildDeviceDetail(d, mapOf(entity(d.homeEntityId, 'off')), NOW).headline.text).toBe('unterwegs');
+    expect(buildDeviceDetail(d, new Map(), NOW).headline.text).toBe('–');
+    expect(buildDeviceDetail(d, new Map(), NOW).lines.length).toBeGreaterThan(0);
+  });
+
+  it('Thermostat: Raumzeile zuletzt, mode aus extras', () => {
+    const d = find('thermostat', t => thermostatIdOf(t.target) !== null);
+    const detail = buildDeviceDetail(d, new Map(), NOW,
+      { roomValue: { text: '19,8°', stale: false }, thermostatMode: 'MANUAL' });
+    expect(detail.lines[detail.lines.length - 1]).toEqual({ text: 'Raum 19,8°', stale: false });
+    expect(detail.control).toEqual(jasmine.objectContaining({ type: 'target', mode: 'MANUAL' }));
+    const bare = buildDeviceDetail(d, new Map(), NOW);
+    expect(bare.control).toEqual(jasmine.objectContaining({ mode: null }));
+  });
+
+  it('Schalter: color nur bei Farbfähigkeit, dimmable aus extras', () => {
+    const d = find('switch', s => !!s.powerEntityId);
+    const base = {
+      dimmable: true, brightness: 50, supportsColor: true, supportsColorTemp: false,
+      hue: 10, saturation: 20, colorTemp: null, colorTempRange: { min: 2500, max: 6500 }
+    };
+    const colored = buildDeviceDetail(d, new Map(), NOW, { light: base });
+    const control = colored.control as { dimmable: boolean; color: unknown };
+    expect(control.dimmable).toBeTrue();
+    expect(control.color).toEqual(base);
+    const plain = buildDeviceDetail(d, new Map(), NOW,
+      { light: { ...base, supportsColor: false, supportsColorTemp: false } });
+    expect((plain.control as { color: unknown }).color).toBeNull();
+    expect((buildDeviceDetail(d, new Map(), NOW).control as { dimmable: boolean }).dimmable).toBeFalse();
   });
 });
 

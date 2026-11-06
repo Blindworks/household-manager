@@ -235,7 +235,7 @@ function wasteLines(entities: EntityMap, entityId: string, nowMs: number): { lin
   return { lines, highlight };
 }
 
-function lockText(state: string): string {
+export function lockText(state: string): string {
   switch (state) {
     case 'locked': return 'verriegelt';
     case 'unlocked': return 'entriegelt';
