@@ -1,0 +1,50 @@
+// Eigene Styles: lumina-Klassen erreichen Kind-Komponenten nicht. Farben nur ueber die
+// --house-*-Tokens der Seite (erben als CSS-Variablen).
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  gap: 0.6rem;
+}
+
+$neon-rgb: var(--house-neon-rgb, 91, 140, 255);
+$accent: var(--house-accent, #8fd3ff);
+$text: var(--house-text, #e8eefc);
+
+.thermostat-mode {
+  &__buttons {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  &__button {
+    flex: 1;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba($neon-rgb, 0.5);
+    background: rgba($neon-rgb, 0.12);
+    color: $text;
+    font-size: 1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    &--active {
+      border-color: $accent;
+      background: rgba($neon-rgb, 0.35);
+      color: $accent;
+      font-weight: 600;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ff8f8f;
+  }
+}

@@ -1,0 +1,12 @@
+<div class="thermostat-mode__buttons" role="group" aria-label="Betriebsart">
+  @for (option of options; track option.mode) {
+    <button type="button" class="thermostat-mode__button"
+            [class.thermostat-mode__button--active]="shownMode === option.mode"
+            [attr.aria-pressed]="shownMode === option.mode"
+            [disabled]="pending"
+            (click)="select(option.mode)">{{ option.label }}</button>
+  }
+</div>
+@if (error) {
+  <p class="thermostat-mode__error" role="alert">{{ error }}</p>
+}

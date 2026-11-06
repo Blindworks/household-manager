@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 import { DetailControl, DeviceDetail } from '../../../shared/house/device-detail.util';
 import { LAMP_OFF, TARGET_GRACE_MS, UNREACHABLE } from './detail-texts';
 import { LightColorControlComponent } from './light-color-control.component';
+import { ThermostatModeControlComponent } from './thermostat-mode-control.component';
 import { HistoryRange, HistorySeries, HouseDeviceControlService } from '../house-device-control.service';
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
@@ -38,7 +39,7 @@ const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
 @Component({
   selector: 'app-house-device-detail',
   standalone: true,
-  imports: [NgxEchartsDirective, LightColorControlComponent],
+  imports: [NgxEchartsDirective, LightColorControlComponent, ThermostatModeControlComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './house-device-detail.component.html',
   styleUrl: './house-device-detail.component.scss',

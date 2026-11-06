@@ -25,6 +25,8 @@
       <span class="device-detail__target">Soll {{ formatTarget(shownTarget) }}</span>
       <button type="button" class="device-detail__step device-detail__step--up" aria-label="Sollwert erhöhen"
               [disabled]="shownTarget === null || shownTarget >= target.max" (click)="stepTarget(1)">+</button>
+      <app-thermostat-mode-control class="device-detail__mode" [thermostatId]="target.thermostatId"
+                                   [mode]="target.mode" (changed)="changed.emit()"></app-thermostat-mode-control>
     </div>
   }
 
