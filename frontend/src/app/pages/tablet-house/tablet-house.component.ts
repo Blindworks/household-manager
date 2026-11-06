@@ -22,7 +22,10 @@ import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
 import { DeviceDetail, buildDeviceDetail, opensDetail } from '../../shared/house/device-detail.util';
 import { DetailExtras } from '../../shared/house/detail-extras.util';
 import { HouseEffect, buildHouseEffects } from '../../shared/house/house-effects.util';
-import { DevicePositions, deviceBubbleAnchor } from '../../shared/house/house-placement.util';
+import {
+  DevicePositions, deviceAnchor, deviceBubbleAnchor, samePositions, toPositionMap
+} from '../../shared/house/house-placement.util';
+import { HouseDevicePositionService } from '../../services/house-device-position.service';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -75,6 +78,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly createRenderer = inject(HOUSE_RENDERER_FACTORY);
   private readonly deviceControl = inject(HouseDeviceControlService);
+  private readonly positionService = inject(HouseDevicePositionService);
 
   @ViewChild('sceneHost', { static: true }) private sceneHost!: ElementRef<HTMLElement>;
   @ViewChildren('bubble') private bubbleRefs!: QueryList<ElementRef<HTMLElement>>;
@@ -99,6 +103,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly now = signal(Date.now());
   /** Helligkeit dimmbarer Lampen je Schalter-Entity (Prozent), im selben Takt wie die Entitaeten. */
   private readonly brightness = signal<ReadonlyMap<string, number>>(new Map());
+  /** Gespeicherte Geraeteplaetze; ohne Stand (nie geladen) gilt das Raster. */
+  private readonly positions = signal<DevicePositions>(new Map());
 
   /**
    * Gehalten wird nur die Id des offenen Geraets, nie das Feld-Modell: das Feld
@@ -141,7 +147,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     const bubbles = focused
       ? buildDeviceBubbles(focused, entities, now, tabletMode)
       : this.selectedFloor() === 'ground' ? buildOutdoorBubbles(entities, now, tabletMode) : [];
-    return placeByArea(bubbles);
+    return placeByArea(bubbles, this.positions());
   });
 
   /**
@@ -154,8 +160,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       ...this.visibleRooms().map(room => room.id),
       ...outdoorAreasOn(floor).map(area => area.id)
     ];
-    return buildHouseEffects(areas, this.entities(), this.brightness(), NO_POSITIONS);
-  });
+    return buildHouseEffects(areas, this.entities(), this.brightness(), this.positions());
+  }, { equal: sameEffects });
 
   constructor() {
     const ticks = merge(interval(REFRESH_INTERVAL_MS).pipe(startWith(0)), this.refreshRequests);
@@ -173,6 +179,15 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     ).subscribe(result => {
       if (result) {
         this.brightness.set(result);
+      }
+    });
+    // Gespeicherte Plaetze: ein Fehler behaelt still den letzten Stand (ohne Stand gilt das Raster).
+    ticks.pipe(
+      switchMap(() => this.positionService.list().pipe(map(toPositionMap), catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
+      if (result && !samePositions(result, this.positions())) {
+        this.positions.set(result);
       }
     });
     // Zusatzdaten nur bei offenem Feld; switchMap bestellt den alten Abruf ab (Schliessen, Geraetewechsel).
@@ -248,8 +263,9 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
 
   openDevice(bubble: DeviceBubble): void {
     const device = HOUSE_DEVICES.find(entry => entry.id === bubble.deviceId);
-    const anchor = this.deviceBubbles().find(placed => placed.bubble.deviceId === bubble.deviceId)?.anchor;
-    if (!device || !anchor || !opensDetail(device.kind)) {
+    const anchor = device ? deviceAnchor(device.id, this.positions()) : null;
+    if (!device || !anchor || !this.deviceBubbles().some(placed => placed.bubble.deviceId === device.id)
+      || !opensDetail(device.kind)) {
       void this.router.navigateByUrl(bubble.target);
       return;
     }
@@ -370,8 +386,10 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   }
 }
 
-/** Bis Task 4 die gespeicherten Plaetze anbindet: alle Geraete auf dem Raster. */
-const NO_POSITIONS: DevicePositions = new Map();
+/** Gleiche Effekte (nach Inhalt): ein Takt mit unveraendertem Stand baut die Szene nicht neu auf. */
+function sameEffects(a: HouseEffect[], b: HouseEffect[]): boolean {
+  return a.length === b.length && a.every((effect, i) => JSON.stringify(effect) === JSON.stringify(b[i]));
+}
 
 function deviceById(id: string | null): HouseDevice | undefined {
   return id ? HOUSE_DEVICES.find(entry => entry.id === id) : undefined;
@@ -381,9 +399,9 @@ function deviceById(id: string | null): HouseDevice | undefined {
  * Setzt jede Bubble auf den Platz ihres Geraets (`deviceBubbleAnchor`) -
  * dieselbe Stelle, an der die Szene den Zustandseffekt des Geraets zeichnet.
  */
-function placeByArea(bubbles: DeviceBubble[]): PlacedDeviceBubble[] {
+function placeByArea(bubbles: DeviceBubble[], positions: DevicePositions): PlacedDeviceBubble[] {
   return bubbles.flatMap(bubble => {
-    const anchor = deviceBubbleAnchor(bubble.deviceId, NO_POSITIONS);
+    const anchor = deviceBubbleAnchor(bubble.deviceId, positions);
     return anchor
       ? [{ bubble, anchor, stale: bubble.lines.length > 0 && bubble.lines.every(line => line.stale) }]
       : [];

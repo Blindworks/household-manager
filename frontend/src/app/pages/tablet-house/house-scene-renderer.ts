@@ -387,23 +387,25 @@ export class HouseSceneRenderer {
   private addEffect(effect: HouseEffect): void {
     const floor = effect.floorY + EFFECT_LIFT_M;
     const at = (height: number) => new THREE.Vector3(effect.anchor.x, floor + height, effect.anchor.z);
+    // Der haengende Teil sitzt auf der Hoehe des Geraets, Schein und Ringe auf dem Boden.
+    const hung = new THREE.Vector3(effect.anchor.x, effect.anchor.y, effect.anchor.z);
     const strength = effect.intensity;
     switch (effect.kind) {
       case 'light':
-        this.addBulb(effect.kind, at(0.35), 0.09);
-        this.addSprite(effect.kind, at(0.35), 0.6 + 0.9 * strength);
+        this.addBulb(effect.kind, hung, 0.09);
+        this.addSprite(effect.kind, hung, 0.6 + 0.9 * strength);
         this.addFloorGlow(effect.kind, at(0), 1.5 + 2.5 * strength);
         break;
       case 'powered':
-        this.addBulb(effect.kind, at(0.3), 0.05);
-        this.addSprite(effect.kind, at(0.3), 0.45);
+        this.addBulb(effect.kind, hung, 0.05);
+        this.addSprite(effect.kind, hung, 0.45);
         break;
       case 'heating':
-        this.addSprite(effect.kind, at(0.4), 1.3);
+        this.addSprite(effect.kind, hung, 1.3);
         this.addFloorGlow(effect.kind, at(0), 1.6);
         break;
       case 'open':
-        this.addSprite(effect.kind, at(0.6), 1.4);
+        this.addSprite(effect.kind, hung, 1.4);
         this.addFloorGlow(effect.kind, at(0), 1.8);
         break;
       case 'motion':

@@ -10,7 +10,12 @@ import { EntityStateService } from '../../services/entity-state.service';
 import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { EntityState } from '../../models/entity-state.model';
-import { Vec3, cameraForDevice, cameraForOverview, cameraForRoom } from '../../shared/house/house-geometry.util';
+import {
+  Vec3, areaFloorBase, cameraForDevice, cameraForOverview, cameraForRoom, toWorldX, toWorldZ
+} from '../../shared/house/house-geometry.util';
+import { BUBBLE_HEIGHT_M, deviceAnchor, deviceBubbleAnchor } from '../../shared/house/house-placement.util';
+import { HouseDevicePositionService } from '../../services/house-device-position.service';
+import { HouseEffect } from '../../shared/house/house-effects.util';
 import { BrightnessOutcome, HouseDeviceControlService, SwitchOutcome } from './house-device-control.service';
 import { DetailExtras, LightExtras } from '../../shared/house/detail-extras.util';
 
@@ -68,6 +73,7 @@ describe('TabletHouseComponent', () => {
   let tabletView: WritableSignal<boolean>;
   let lightTheme$: BehaviorSubject<boolean>;
   let control: jasmine.SpyObj<HouseDeviceControlService>;
+  let positionService: jasmine.SpyObj<HouseDevicePositionService>;
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const roomBubbles = (): HTMLElement[] => Array.from(el().querySelectorAll<HTMLElement>('.house-bubble--room'));
@@ -104,6 +110,8 @@ describe('TabletHouseComponent', () => {
     control.lampBrightness.and.returnValue(of(new Map<string, number>()));
     control.loadExtras.and.returnValue(of({}));
     control.setSwitch.and.returnValue(of<SwitchOutcome>('switched'));
+    positionService = jasmine.createSpyObj<HouseDevicePositionService>('HouseDevicePositionService', ['list']);
+    positionService.list.and.returnValue(of([]));
     const weather = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weather.getOverview.and.returnValue(
       of({ current: { temperature: 18, icon: 1 } } as unknown as WeatherOverview));
@@ -115,6 +123,7 @@ describe('TabletHouseComponent', () => {
         { provide: WeatherService, useValue: weather },
         { provide: AppearanceService, useValue: { isLight$: lightTheme$ } },
         { provide: EntityStateService, useValue: entityService },
+        { provide: HouseDevicePositionService, useValue: positionService },
         { provide: ViewModeService, useValue: { isTabletView: tabletView } },
         {
           provide: HOUSE_RENDERER_FACTORY,
@@ -490,7 +499,8 @@ describe('TabletHouseComponent', () => {
     it('Tipp auf Garten-Bubble im Überblick ⇒ Feld offen', () => {
       click(back());
       fake.flyTo.calls.reset();
-      const anchor = anchorOf('garden-climate');
+      // Die Kamera faehrt auf Geraetehoehe (nicht auf die Bubble-Hoehe).
+      const anchor = deviceAnchor('garden-climate', new Map())!;
 
       click(device('garden-climate')!);
 
@@ -826,6 +836,80 @@ describe('TabletHouseComponent', () => {
       fixture.destroy();
       discardPeriodicTasks();
     }));
+  });
+
+  describe('Gespeicherte Geräteplätze', () => {
+    const FLUR_LIGHT_ID = 'flur-tapo-80232e39';
+    const FLUR_LIGHT = 'switch.tapo_80232e39ed1bbdd537ab39cac50eede2216b55c7';
+    const SAVED = [{ deviceId: FLUR_LIGHT_ID, x: 400, y: 300 }];
+    const lastEffects = (): HouseEffect[] => fake.setEffects.calls.mostRecent().args[0];
+    const placed = (id: string): Vec3 => (fixture.componentInstance as unknown as {
+      deviceBubbles: () => { bubble: { deviceId: string }; anchor: Vec3 }[];
+    }).deviceBubbles().find(p => p.bubble.deviceId === id)!.anchor;
+
+    it('nutztGespeichertenPlatzFuerBubbleUndEffekt', () => {
+      positionService.list.and.returnValue(of(SAVED));
+      entityService.getEntities.and.returnValue(of([entity(FLUR_LIGHT, 'on')]));
+      create();
+      click(bubble('Flur'));
+
+      const anchor = placed(FLUR_LIGHT_ID);
+      expect(anchor.x).toBe(toWorldX(400));
+      expect(anchor.z).toBe(toWorldZ(300));
+      expect(anchor.y).toBeCloseTo(areaFloorBase('flur') + BUBBLE_HEIGHT_M, 6);
+      const light = lastEffects().find(e => e.deviceId === FLUR_LIGHT_ID)!;
+      expect(light.anchor.x).toBe(toWorldX(400));
+    });
+
+    it('positionsFehlerOhneStandNutztRaster', () => {
+      positionService.list.and.returnValue(throwError(() => new Error('weg')));
+      create();
+      click(bubble('Flur'));
+
+      expect(placed(FLUR_LIGHT_ID)).toEqual(deviceBubbleAnchor(FLUR_LIGHT_ID, new Map())!);
+      expect(el().querySelector('.tablet-house__error')).toBeNull();
+    });
+
+    it('positionsFehlerBehaeltLetztenStand', fakeAsync(() => {
+      positionService.list.and.returnValue(of(SAVED));
+      create();
+      click(bubble('Flur'));
+      expect(placed(FLUR_LIGHT_ID).x).toBe(toWorldX(400));
+
+      positionService.list.and.returnValue(throwError(() => new Error('weg')));
+      tick(30000);
+      fixture.detectChanges();
+
+      expect(placed(FLUR_LIGHT_ID).x).toBe(toWorldX(400));
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
+
+    it('unveraenderterStandLoestKeinSetEffectsAus', fakeAsync(() => {
+      positionService.list.and.callFake(() => of([...SAVED]));
+      entityService.getEntities.and.callFake(() => of([entity(FLUR_LIGHT, 'on')]));
+      create();
+      fake.setEffects.calls.reset();
+
+      tick(30000);
+      fixture.detectChanges();
+
+      expect(fake.setEffects).not.toHaveBeenCalled();
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
+
+    it('geraeteDetailFaehrtZumGespeichertenPlatz', () => {
+      positionService.list.and.returnValue(of(SAVED));
+      create();
+      click(bubble('Flur'));
+      fake.flyTo.calls.reset();
+
+      click(device(FLUR_LIGHT_ID)!);
+
+      const expected = deviceAnchor(FLUR_LIGHT_ID, new Map([[FLUR_LIGHT_ID, { x: 400, y: 300 }]]))!;
+      expect(fake.flyTo).toHaveBeenCalledWith(cameraForDevice(expected));
+    });
   });
 
   describe('Höhenkette', () => {
