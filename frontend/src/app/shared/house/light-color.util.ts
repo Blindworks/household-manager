@@ -23,7 +23,7 @@ export const COLOR_SWATCHES: readonly ColorSwatch[] = [
   hueSwatch('orange', 'Orange', 30),
   hueSwatch('yellow', 'Gelb', 55),
   hueSwatch('green', 'Grün', 120),
-  hueSwatch('cyan', 'Cyan', 180),
+  hueSwatch('cyan', 'Türkis', 175),
   hueSwatch('blue', 'Blau', 225),
   hueSwatch('purple', 'Lila', 280),
 ];

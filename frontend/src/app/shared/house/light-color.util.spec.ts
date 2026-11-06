@@ -9,6 +9,19 @@ describe('light-color.util', () => {
     expect(COLOR_SWATCHES.find(s => s.id === 'blue')!.request).toEqual({ hue: 225, saturation: 100 });
   });
 
+  it('legt Beschriftung und Anfrage aller Felder fest', () => {
+    expect(COLOR_SWATCHES.map(s => [s.label, s.request])).toEqual([
+      ['Warmweiß', { colorTemp: 2700 }],
+      ['Rot', { hue: 0, saturation: 100 }],
+      ['Orange', { hue: 30, saturation: 100 }],
+      ['Gelb', { hue: 55, saturation: 100 }],
+      ['Grün', { hue: 120, saturation: 100 }],
+      ['Türkis', { hue: 175, saturation: 100 }],
+      ['Blau', { hue: 225, saturation: 100 }],
+      ['Lila', { hue: 280, saturation: 100 }],
+    ]);
+  });
+
   describe('colorTempRange', () => {
     it('liest den gemeldeten Bereich', () => {
       expect(colorTempRange({ colorTempRangeMin: 2700, colorTempRangeMax: 6000 })).toEqual({ min: 2700, max: 6000 });
