@@ -10,6 +10,8 @@ import { CanvasRenderer } from 'echarts/renderers';
 import type { EChartsCoreOption } from 'echarts/core';
 import { Subscription } from 'rxjs';
 import { DetailControl, DeviceDetail } from '../../../shared/house/device-detail.util';
+import { LAMP_OFF, TARGET_GRACE_MS, UNREACHABLE } from './detail-texts';
+import { LightColorControlComponent } from './light-color-control.component';
 import { HistoryRange, HistorySeries, HouseDeviceControlService } from '../house-device-control.service';
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
@@ -20,15 +22,7 @@ type SwitchControl = Extract<DetailControl, { type: 'switch' }>;
 
 /** Sammelpause fuer −/+: erst nach so langer Ruhe geht EIN Sollwert raus. */
 export const TARGET_DEBOUNCE_MS = 600;
-/**
- * So lange zeigt das Feld nach einem erfolgreichen Schreiben weiter den lokalen
- * Sollwert, obwohl das Thermostat noch den alten meldet (der Hub meldet verzoegert).
- * Danach gilt wieder der Serverwert - die Anzeige klebt nie dauerhaft an einem Wert,
- * den das Geraet nicht hat.
- */
-export const TARGET_GRACE_MS = 60_000;
-export const UNREACHABLE = 'Gerät nicht erreichbar';
-export const LAMP_OFF = 'Lampe ist aus';
+export { TARGET_GRACE_MS, UNREACHABLE, LAMP_OFF };
 
 const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
 
@@ -44,7 +38,7 @@ const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
 @Component({
   selector: 'app-house-device-detail',
   standalone: true,
-  imports: [NgxEchartsDirective],
+  imports: [NgxEchartsDirective, LightColorControlComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './house-device-detail.component.html',
   styleUrl: './house-device-detail.component.scss',

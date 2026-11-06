@@ -51,6 +51,10 @@
                  (change)="onBrightnessChange($event)">
         </label>
       }
+      @if (sw.color; as color) {
+        <app-light-color-control class="device-detail__color" [entityId]="sw.entityId" [color]="color"
+                                 [lampOn]="sw.on" (changed)="changed.emit()"></app-light-color-control>
+      }
     </div>
   }
 

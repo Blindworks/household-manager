@@ -1,0 +1,96 @@
+// Eigene Styles: lumina-Klassen erreichen Kind-Komponenten nicht. Farben nur ueber die
+// --house-*-Tokens der Seite (erben als CSS-Variablen); einzige harte Farben sind die
+// Farbfelder selbst (inline) und der Warm-kalt-Verlauf der Regler-Spur.
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  gap: 0.6rem;
+}
+
+$neon-rgb: var(--house-neon-rgb, 91, 140, 255);
+$accent: var(--house-accent, #8fd3ff);
+$text: var(--house-text, #e8eefc);
+
+.light-color {
+  &__swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  &__swatch {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid rgba($neon-rgb, 0.5);
+    cursor: pointer;
+    touch-action: manipulation;
+
+    &--active {
+      border-color: $text;
+      box-shadow: 0 0 0 2px rgba($neon-rgb, 0.9), 0 0 12px rgba($neon-rgb, 0.6);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+
+  &__temp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $accent;
+  }
+
+  &__slider {
+    flex: 1;
+    min-height: 2.75rem;
+    appearance: none;
+    background: transparent;
+    accent-color: $accent;
+
+    &::-webkit-slider-runnable-track {
+      height: 0.6rem;
+      border-radius: 0.3rem;
+      background: linear-gradient(to right, #ff9d3c, #fff3e0, #a8c8ff);
+    }
+
+    &::-moz-range-track {
+      height: 0.6rem;
+      border-radius: 0.3rem;
+      background: linear-gradient(to right, #ff9d3c, #fff3e0, #a8c8ff);
+    }
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 1.6rem;
+      height: 1.6rem;
+      margin-top: -0.5rem;
+      border-radius: 50%;
+      border: 2px solid $text;
+      background: $accent;
+    }
+
+    &::-moz-range-thumb {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      border: 2px solid $text;
+      background: $accent;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--house-danger, #ff8f8f);
+  }
+}

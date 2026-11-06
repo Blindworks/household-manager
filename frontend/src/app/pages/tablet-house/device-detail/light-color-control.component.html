@@ -1,0 +1,26 @@
+@if (swatches.length > 0) {
+  <div class="light-color__swatches" role="group" aria-label="Farbe">
+    @for (swatch of swatches; track swatch.id) {
+      <button type="button" class="light-color__swatch"
+              [class.light-color__swatch--active]="active === swatch.id"
+              [attr.aria-label]="swatch.label" [attr.title]="swatch.label"
+              [attr.aria-pressed]="active === swatch.id"
+              [style.background]="swatch.css"
+              [disabled]="locked"
+              (click)="pick(swatch)"></button>
+    }
+  </div>
+}
+@if (color.supportsColorTemp) {
+  <label class="light-color__temp">
+    <span class="material-symbols-outlined" aria-hidden="true">thermostat</span>
+    <input type="range" class="light-color__slider" aria-label="Farbtemperatur"
+           [min]="sliderMin" [max]="sliderMax" [step]="stepK"
+           [value]="sliderPosition"
+           [disabled]="locked"
+           (change)="onSlider($event)">
+  </label>
+}
+@if (error) {
+  <p class="light-color__error" role="alert">{{ error }}</p>
+}
