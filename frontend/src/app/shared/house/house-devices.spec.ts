@@ -8,6 +8,12 @@ function entityIdsOf(device: HouseDevice): string[] {
 }
 
 describe('HOUSE_DEVICES', () => {
+  it('hat Ids im Format, das das Backend akzeptiert', () => {
+    for (const device of HOUSE_DEVICES) {
+      expect(device.id).withContext(device.id).toMatch(/^[a-z0-9_-]{1,100}$/);
+    }
+  });
+
   it('jede area ist ein Raum aus HOUSE_ROOMS oder eine Außenfläche', () => {
     const areas = new Set<string>([...HOUSE_ROOMS.map(r => r.id), ...OUTDOOR_AREAS.map(a => a.id)]);
     for (const device of HOUSE_DEVICES) {

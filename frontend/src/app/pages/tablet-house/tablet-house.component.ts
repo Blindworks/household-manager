@@ -188,6 +188,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     ).subscribe(result => {
       if (result && !samePositions(result, this.positions())) {
         this.positions.set(result);
+        this.outside(renderer => renderer.requestRender());
       }
     });
     // Zusatzdaten nur bei offenem Feld; switchMap bestellt den alten Abruf ab (Schliessen, Geraetewechsel).

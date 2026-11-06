@@ -36,8 +36,10 @@ function roundPoint(point: PlanPoint): PlanPoint {
   return { x: Math.round(point.x * 10) / 10, y: Math.round(point.y * 10) / 10 };
 }
 
+const PLAN_VIEW_WIDTH = 440;
+
 export interface PlanShape { id: string; label: string; rects: PlanRect[]; outdoor: boolean; nameX: number; nameY: number }
-export interface PlacedDot { device: HouseDevice; label: string; color: string; point: PlanPoint; transform: string }
+export interface PlacedDot { device: HouseDevice; label: string; color: string; point: PlanPoint; transform: string; labelLeft: boolean }
 export interface UnplacedEntry { device: HouseDevice; label: string; invalid: boolean }
 export interface UnplacedGroup { area: string; entries: UnplacedEntry[] }
 
@@ -131,7 +133,8 @@ export class AdminHouseDevicesComponent implements OnInit {
       if (point) {
         result.push({
           device, label: labels.get(device.id) ?? device.label, color: deviceDotColor(device), point,
-          transform: `translate(${point.x} ${point.y})`
+          transform: `translate(${point.x} ${point.y})`,
+          labelLeft: point.x + 14 + (labels.get(device.id) ?? device.label).length * 5.5 > PLAN_VIEW_WIDTH
         });
       }
     }

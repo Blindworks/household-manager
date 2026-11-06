@@ -33,6 +33,18 @@
     color: #92400e;
   }
 
+  // Feste Zeile: Hinweis und Fehler duerfen den Plan beim Ziehen nicht verschieben.
+  &__messages {
+    min-height: 3.5rem;
+    margin-bottom: var(--spacing-sm);
+    overflow: hidden;
+
+    .admin-house-devices__error,
+    .admin-house-devices__notice {
+      margin-bottom: 0;
+    }
+  }
+
   &__tabs {
     display: flex;
     flex-wrap: wrap;
@@ -41,8 +53,9 @@
   }
 
   // Aktiver Reiter in der Primaerfarbe, die uebrigen bleiben .ghost.
-  &__tab--active,
-  &__tab--active:hover:not(:disabled) {
+  // Erhoehte Spezifitaet, sonst gewinnen die globalen .ghost-Regeln des Admin-Scopes.
+  .admin-house-devices__tabs button.admin-house-devices__tab.admin-house-devices__tab--active,
+  .admin-house-devices__tabs button.admin-house-devices__tab.admin-house-devices__tab--active:hover:not(:disabled) {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
     color: var(--color-white);
@@ -125,6 +138,10 @@
     fill: #1f2937;
     font: 10px var(--font-family, system-ui, sans-serif);
     pointer-events: none;
+
+    &--left {
+      text-anchor: end;
+    }
   }
 
   &__legend {

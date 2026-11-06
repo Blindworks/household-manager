@@ -861,6 +861,19 @@ describe('TabletHouseComponent', () => {
       expect(light.anchor.x).toBe(toWorldX(400));
     });
 
+    it('neuePositionenLoesenEinRendernAus', fakeAsync(() => {
+      create();
+      positionService.list.and.returnValue(of(SAVED));
+      fake.requestRender.calls.reset();
+
+      tick(30000);
+      fixture.detectChanges();
+
+      expect(fake.requestRender).toHaveBeenCalled();
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
+
     it('positionsFehlerOhneStandNutztRaster', () => {
       positionService.list.and.returnValue(throwError(() => new Error('weg')));
       create();

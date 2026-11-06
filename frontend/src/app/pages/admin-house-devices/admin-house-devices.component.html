@@ -28,16 +28,19 @@
             class="ghost admin-house-devices__tab"
             [class.admin-house-devices__tab--active]="tab.id === floor()"
             [attr.aria-selected]="tab.id === floor()"
+            [attr.aria-pressed]="tab.id === floor()"
             (click)="selectFloor(tab.id)">{{ tab.label }}</button>
         }
       </div>
 
-      @if (errorMessage()) {
-        <div class="admin-house-devices__error" role="alert">{{ errorMessage() }}</div>
-      }
-      @if (hint()) {
-        <div class="admin-house-devices__notice" role="status">{{ hint() }}</div>
-      }
+      <div class="admin-house-devices__messages">
+        @if (errorMessage()) {
+          <div class="admin-house-devices__error" role="alert">{{ errorMessage() }}</div>
+        }
+        @if (hint()) {
+          <div class="admin-house-devices__notice" role="status">{{ hint() }}</div>
+        }
+      </div>
 
       <div class="admin-house-devices__layout">
         <div class="admin-house-devices__plan-wrap">
@@ -67,10 +70,10 @@
                 [attr.data-device-id]="dot.device.id"
                 [attr.transform]="dot.transform"
                 (pointerdown)="onDotPointerDown(dot.device, $event)">
-                <circle class="admin-house-devices__dot-hit" r="14" />
+                <circle class="admin-house-devices__dot-hit" r="18" />
                 <circle class="admin-house-devices__dot-ring" r="13" />
                 <circle class="admin-house-devices__dot-mark" r="8" [attr.fill]="dot.color" />
-                <text class="admin-house-devices__dot-label" x="12" y="4">{{ dot.label }}</text>
+                <text class="admin-house-devices__dot-label" [class.admin-house-devices__dot-label--left]="dot.labelLeft" [attr.x]="dot.labelLeft ? -12 : 12" y="4">{{ dot.label }}</text>
               </g>
             }
           </svg>
