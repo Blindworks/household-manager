@@ -114,6 +114,18 @@ export class HouseDeviceControlService {
       : null));
   }
 
+  /**
+   * Helligkeit (Prozent) je Schalter-Entity, nur fuer dimmbare Geraete mit bekanntem Wert -
+   * fuer den Lichtschein der Szene. Laedt immer frisch und aktualisiert dabei den Cache.
+   */
+  lampBrightness(): Observable<Map<string, number>> {
+    return this.smartDevices.getAllDevices().pipe(
+      tap(list => this.deviceList = list),
+      map(list => new Map(list
+        .filter(d => d.entityId && d.capabilities.includes('BRIGHTNESS') && d.brightness != null)
+        .map(d => [d.entityId!, d.brightness!] as const))));
+  }
+
   /** Raumwert eines Thermostats; null ohne zugeordneten Raumfuehler oder unbekanntes Thermostat. */
   thermostatRoom(thermostatId: number): Observable<BubbleValue | null> {
     return forkJoin([this.thermostats.list(), this.temperatures.getCurrent()]).pipe(map(([list, readings]) => {

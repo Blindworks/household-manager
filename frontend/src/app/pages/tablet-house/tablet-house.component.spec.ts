@@ -38,6 +38,8 @@ class FakeRenderer {
   readonly project = jasmine.createSpy('project').and.callFake(
     (points: Vec3[]): ScreenPoint[] => points.map((_, i) => ({ x: 10 * i, y: 20, visible: true })));
   readonly requestRender = jasmine.createSpy('requestRender');
+  readonly setEffects = jasmine.createSpy('setEffects');
+  readonly playEffects = jasmine.createSpy('playEffects');
   readonly dispose = jasmine.createSpy('dispose');
   readonly renderedCallbacks: (() => void)[] = [];
   readonly onRendered = jasmine.createSpy('onRendered').and.callFake((cb: () => void) => {
@@ -89,8 +91,9 @@ describe('TabletHouseComponent', () => {
     tabletView = signal(false);
     lightTheme$ = new BehaviorSubject(false);
     control = jasmine.createSpyObj<HouseDeviceControlService>('HouseDeviceControlService',
-      ['loadHistory', 'setSwitch', 'setTarget', 'setBrightness', 'lightDevice', 'thermostatRoom']);
+      ['loadHistory', 'setSwitch', 'setTarget', 'setBrightness', 'lightDevice', 'thermostatRoom', 'lampBrightness']);
     control.loadHistory.and.returnValue(of(null));
+    control.lampBrightness.and.returnValue(of(new Map<string, number>()));
     control.lightDevice.and.returnValue(of(null));
     control.thermostatRoom.and.returnValue(of(null));
     control.setSwitch.and.returnValue(of<SwitchOutcome>('switched'));
@@ -695,6 +698,53 @@ describe('TabletHouseComponent', () => {
       click(el().querySelector('[data-floor="upper"]') as HTMLElement);
       expect(panel()).toBeNull();
     });
+  });
+
+  describe('Lebendiges Haus (Zustandseffekte)', () => {
+    const STEHLAMPE = 'switch.tapo_802366e0c88d0dba80336f9f7363f8c4216c350a';
+    const SCHLAFZIMMER_LICHT = 'switch.tapo_80238e15a36182550737e4ce654d2f2420b98b5c';
+    const lastEffects = (): { deviceId: string; kind: string; intensity: number }[] =>
+      fake.setEffects.calls.mostRecent().args[0];
+
+    it('gibt die Effekte der gezeigten Etage an den Renderer, Helligkeit aus der Geräteliste', () => {
+      entityService.getEntities.and.returnValue(of([entity(STEHLAMPE, 'on'), entity(SCHLAFZIMMER_LICHT, 'on')]));
+      control.lampBrightness.and.returnValue(of(new Map([[STEHLAMPE, 50]])));
+      create();
+
+      expect(lastEffects()).toEqual([jasmine.objectContaining({ kind: 'light', intensity: 0.5 })]);
+
+      click(el().querySelector('[data-floor="upper"]') as HTMLElement);
+
+      expect(lastEffects()).toEqual([jasmine.objectContaining({ kind: 'light', intensity: 1 })]);
+    });
+
+    it('nur das Betreten eines Raums spielt die Animation ab, Etagenwahl und Zurück nicht', () => {
+      create();
+      click(el().querySelector('[data-floor="upper"]') as HTMLElement);
+      click(el().querySelector('[data-floor="ground"]') as HTMLElement);
+      expect(fake.playEffects).not.toHaveBeenCalled();
+
+      click(bubble('Wohnzimmer'));
+      expect(fake.playEffects).toHaveBeenCalledTimes(1);
+
+      click(el().querySelector('.tablet-house__back') as HTMLElement);
+      expect(fake.playEffects).toHaveBeenCalledTimes(1);
+    });
+
+    it('Refresh aktualisiert die Effekte ohne Animation; Helligkeits-Fehler behält den letzten Wert', fakeAsync(() => {
+      entityService.getEntities.and.returnValues(of([entity(STEHLAMPE, 'off')]), of([entity(STEHLAMPE, 'on')]));
+      control.lampBrightness.and.returnValues(of(new Map([[STEHLAMPE, 30]])), throwError(() => new Error('weg')));
+      create();
+      expect(lastEffects()).toEqual([]);
+
+      tick(30000);
+      fixture.detectChanges();
+
+      expect(lastEffects()).toEqual([jasmine.objectContaining({ kind: 'light', intensity: 0.3 })]);
+      expect(fake.playEffects).not.toHaveBeenCalled();
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
   });
 
   describe('Höhenkette', () => {

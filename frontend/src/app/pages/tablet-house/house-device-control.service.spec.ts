@@ -356,6 +356,19 @@ describe('HouseDeviceControlService', () => {
       expect(devices.getAllDevices).toHaveBeenCalledTimes(1);
     });
 
+    it('lampBrightness: Helligkeit je Entity nur dimmbarer Lampen, immer frisch geladen', async () => {
+      devices.getAllDevices.and.returnValues(
+        of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40), device(1, 'switch.a', ['SWITCH'], 70),
+          device(2, 'switch.b', ['SWITCH', 'BRIGHTNESS'])]),
+        of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 90)]));
+
+      expect(await firstValueFrom(service.lampBrightness())).toEqual(new Map([['switch.flur', 40]]));
+      expect(await firstValueFrom(service.lampBrightness())).toEqual(new Map([['switch.flur', 90]]));
+      // Der frische Stand dient auch dem Detail-Feld.
+      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual({ dimmable: true, brightness: 90 });
+      expect(devices.getAllDevices).toHaveBeenCalledTimes(2);
+    });
+
     it('nach setBrightness wird die Geräteliste neu geladen', async () => {
       devices.getAllDevices.and.returnValues(
         of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40)]),

@@ -6,6 +6,7 @@ import {
   CameraView, Vec3, areOutdoorAreasVisible, cameraForOverview, floorBase, insideCutout, isFloorVisible, roomBoxes,
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from '../../shared/house/house-geometry.util';
+import { HouseEffect, HouseEffectKind } from '../../shared/house/house-effects.util';
 
 /**
  * Three.js-Szene der 3D-Hausansicht. Einzige Datei, die `three` importiert -
@@ -13,7 +14,8 @@ import {
  *
  * Gezeichnet wird nur bei Bedarf (Steuerung, Kamerafahrt, Etagenwechsel,
  * Groessenaenderung, requestRender) - kein Dauer-Loop, damit das Wandtablet
- * im Ruhezustand nichts rechnet.
+ * im Ruhezustand nichts rechnet. Einzige Ausnahme ist `playEffects`: die
+ * Zustandseffekte laufen beim Betreten eines Raums wenige Sekunden animiert.
  */
 export interface ScreenPoint { x: number; y: number; visible: boolean }
 
@@ -26,6 +28,19 @@ const MIN_DISTANCE_M = 3;
 const MAX_DISTANCE_M = 30;
 /** Knapp ueber dem Boden, damit die Bodenplatte nicht mit den Kanten flimmert. */
 const PLATE_LIFT_M = 0.01;
+/** Effekte liegen knapp ueber der Bodenplatte. */
+const EFFECT_LIFT_M = 0.03;
+/** Dauer der kurzen Animation beim Betreten eines Raums; danach steht alles wieder still. */
+export const EFFECT_PLAY_MS = 3000;
+
+const EFFECT_COLORS: Record<HouseEffectKind, number> = {
+  light: 0xffc46b,
+  powered: 0x7fb4ff,
+  heating: 0xff7a2f,
+  open: 0xff3b5c,
+  motion: 0x7dffb0,
+  running: 0x3fe0ff
+};
 
 interface FloorLayer {
   group: THREE.Group;
@@ -51,6 +66,21 @@ export class HouseSceneRenderer {
   private readonly solidEdgeMaterial = new THREE.LineBasicMaterial({ color: NEON });
   private readonly outdoorMaterial = new THREE.LineDashedMaterial({ color: OUTDOOR, dashSize: 0.3, gapSize: 0.2 });
 
+  /** Zustandseffekte; bei jedem `setEffects` neu befuellt, Materialien und Geometrien geteilt. */
+  private readonly effectGroup = new THREE.Group();
+  private readonly glowTextures = new Map<HouseEffectKind, THREE.Texture>();
+  private readonly spriteMaterials = new Map<HouseEffectKind, THREE.SpriteMaterial>();
+  private readonly floorGlowMaterials = new Map<HouseEffectKind, THREE.MeshBasicMaterial>();
+  private readonly solidMaterials = new Map<HouseEffectKind, THREE.MeshBasicMaterial>();
+  private readonly floorGlowGeometry = new THREE.PlaneGeometry(1, 1);
+  private readonly bulbGeometry = new THREE.SphereGeometry(1, 16, 12);
+  private readonly ringGeometry = new THREE.RingGeometry(0.3, 0.38, 40);
+  private readonly arcGeometry = new THREE.TorusGeometry(0.4, 0.035, 8, 40, Math.PI * 1.4);
+  /** Animierte Teile der aktuellen Effekte. */
+  private motionRings: THREE.Mesh[] = [];
+  private runningArcs: THREE.Mesh[] = [];
+  private playback: { handle: number | null } | null = null;
+
   private selectedFloor: FloorId = 'ground';
   private frameHandle: number | null = null;
   private flight: { handle: number | null; finish: () => void } | null = null;
@@ -74,6 +104,7 @@ export class HouseSceneRenderer {
 
     this.buildFloors();
     this.buildOutdoorAreas();
+    this.scene.add(this.effectGroup);
     this.applyView(cameraForOverview(this.selectedFloor));
     this.applyFloorVisibility();
 
@@ -184,12 +215,60 @@ export class HouseSceneRenderer {
     });
   }
 
+  /**
+   * Ersetzt die Zustandseffekte. Laeuft gerade die kurze Animation, laeuft sie mit
+   * den neuen Effekten weiter und endet wie geplant; sonst stehen sie still.
+   */
+  setEffects(effects: readonly HouseEffect[]): void {
+    if (this.disposed) {
+      return;
+    }
+    this.effectGroup.clear();
+    this.motionRings = [];
+    this.runningArcs = [];
+    effects.forEach(effect => this.addEffect(effect));
+    if (!this.playback) {
+      this.applyStaticPose();
+    }
+    this.requestRender();
+  }
+
+  /**
+   * Spielt die Effekte kurz animiert ab (Pulsieren, Ringe, drehender Bogen) und kehrt
+   * danach in die statische Pose zurueck - nur waehrend dieser Zeit wird dauernd gezeichnet.
+   */
+  playEffects(durationMs = EFFECT_PLAY_MS): void {
+    this.stopPlayback();
+    if (this.disposed || durationMs <= 0) {
+      return;
+    }
+    const start = performance.now();
+    const playback = { handle: null as number | null };
+    const step = (now: number) => {
+      if (this.playback !== playback) {
+        return;
+      }
+      const elapsed = now - start;
+      if (elapsed >= durationMs) {
+        this.playback = null;
+        this.applyStaticPose();
+      } else {
+        this.applyAnimatedPose(elapsed / 1000);
+        playback.handle = requestAnimationFrame(step);
+      }
+      this.requestRender();
+    };
+    this.playback = playback;
+    playback.handle = requestAnimationFrame(step);
+  }
+
   dispose(): void {
     if (this.disposed) {
       return;
     }
     this.disposed = true;
     this.cancelFlight();
+    this.stopPlayback();
     if (this.frameHandle !== null) {
       cancelAnimationFrame(this.frameHandle);
       this.frameHandle = null;
@@ -202,8 +281,13 @@ export class HouseSceneRenderer {
         object.geometry.dispose();
       }
     });
-    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial]
+    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial,
+      ...this.spriteMaterials.values(), ...this.floorGlowMaterials.values(), ...this.solidMaterials.values()]
       .forEach(material => material.dispose());
+    // Geteilte Effekt-Geometrien haengen nicht dauerhaft in der Szene, der traverse oben erreicht sie nicht sicher.
+    [this.floorGlowGeometry, this.bulbGeometry, this.ringGeometry, this.arcGeometry]
+      .forEach(geometry => geometry.dispose());
+    this.glowTextures.forEach(texture => texture.dispose());
     // dispose() gibt den WebGL-Kontext nicht frei; ohne forceContextLoss stapeln sich bei
     // jedem Seitenwechsel Kontexte, bis der Browser die aeltesten verwirft.
     this.renderer.forceContextLoss();
@@ -285,6 +369,138 @@ export class HouseSceneRenderer {
       this.outdoorGroup.add(outline);
     }
     this.scene.add(this.outdoorGroup);
+  }
+
+  private stopPlayback(): void {
+    if (this.playback?.handle != null) {
+      cancelAnimationFrame(this.playback.handle);
+    }
+    this.playback = null;
+  }
+
+  private addEffect(effect: HouseEffect): void {
+    const floor = effect.floorY + EFFECT_LIFT_M;
+    const at = (height: number) => new THREE.Vector3(effect.anchor.x, floor + height, effect.anchor.z);
+    const strength = effect.intensity;
+    switch (effect.kind) {
+      case 'light':
+        this.addBulb(effect.kind, at(0.35), 0.09);
+        this.addSprite(effect.kind, at(0.35), 0.6 + 0.9 * strength);
+        this.addFloorGlow(effect.kind, at(0), 1.5 + 2.5 * strength);
+        break;
+      case 'powered':
+        this.addBulb(effect.kind, at(0.3), 0.05);
+        this.addSprite(effect.kind, at(0.3), 0.45);
+        break;
+      case 'heating':
+        this.addSprite(effect.kind, at(0.4), 1.3);
+        this.addFloorGlow(effect.kind, at(0), 1.6);
+        break;
+      case 'open':
+        this.addSprite(effect.kind, at(0.6), 1.4);
+        this.addFloorGlow(effect.kind, at(0), 1.8);
+        break;
+      case 'motion':
+        this.motionRings.push(this.addFlat(this.ringGeometry, effect.kind, at(0)));
+        break;
+      case 'running':
+        this.runningArcs.push(this.addFlat(this.arcGeometry, effect.kind, at(0.02)));
+        this.addSprite(effect.kind, at(0.2), 0.6);
+        break;
+    }
+  }
+
+  private addBulb(kind: HouseEffectKind, position: THREE.Vector3, radius: number): void {
+    const bulb = new THREE.Mesh(this.bulbGeometry, this.solidMaterial(kind));
+    bulb.position.copy(position);
+    bulb.scale.setScalar(radius);
+    this.effectGroup.add(bulb);
+  }
+
+  private addSprite(kind: HouseEffectKind, position: THREE.Vector3, size: number): void {
+    let material = this.spriteMaterials.get(kind);
+    if (!material) {
+      material = new THREE.SpriteMaterial({
+        map: this.glowTexture(kind), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true
+      });
+      this.spriteMaterials.set(kind, material);
+    }
+    const sprite = new THREE.Sprite(material);
+    sprite.position.copy(position);
+    sprite.scale.set(size, size, 1);
+    this.effectGroup.add(sprite);
+  }
+
+  private addFloorGlow(kind: HouseEffectKind, position: THREE.Vector3, size: number): void {
+    let material = this.floorGlowMaterials.get(kind);
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({
+        map: this.glowTexture(kind), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+        opacity: 0.7, side: THREE.DoubleSide
+      });
+      this.floorGlowMaterials.set(kind, material);
+    }
+    const glow = new THREE.Mesh(this.floorGlowGeometry, material);
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.copy(position);
+    glow.scale.set(size, size, 1);
+    this.effectGroup.add(glow);
+  }
+
+  private addFlat(geometry: THREE.BufferGeometry, kind: HouseEffectKind, position: THREE.Vector3): THREE.Mesh {
+    const mesh = new THREE.Mesh(geometry, this.solidMaterial(kind));
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.copy(position);
+    this.effectGroup.add(mesh);
+    return mesh;
+  }
+
+  private solidMaterial(kind: HouseEffectKind): THREE.MeshBasicMaterial {
+    let material = this.solidMaterials.get(kind);
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({ color: EFFECT_COLORS[kind], transparent: true, side: THREE.DoubleSide });
+      this.solidMaterials.set(kind, material);
+    }
+    return material;
+  }
+
+  /** Radialer Verlauf als Leuchtschein; je Farbe einmal erzeugt. */
+  private glowTexture(kind: HouseEffectKind): THREE.Texture {
+    let texture = this.glowTextures.get(kind);
+    if (!texture) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 128;
+      const context = canvas.getContext('2d')!;
+      const color = new THREE.Color(EFFECT_COLORS[kind]);
+      const rgb = `${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)}`;
+      const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0, `rgba(${rgb},1)`);
+      gradient.addColorStop(0.35, `rgba(${rgb},0.45)`);
+      gradient.addColorStop(1, `rgba(${rgb},0)`);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 128, 128);
+      texture = new THREE.CanvasTexture(canvas);
+      this.glowTextures.set(kind, texture);
+    }
+    return texture;
+  }
+
+  /** Ruhezustand: Heizung glueht gleichmaessig, Ringe in fester Groesse, Boegen stehen. */
+  private applyStaticPose(): void {
+    this.spriteMaterials.get('heating')?.setValues({ opacity: 0.85 });
+    this.solidMaterials.get('motion')?.setValues({ opacity: 1 });
+    this.motionRings.forEach(ring => ring.scale.setScalar(1.6));
+    this.runningArcs.forEach(arc => { arc.rotation.z = 0; });
+  }
+
+  private applyAnimatedPose(seconds: number): void {
+    const pulse = 0.5 + 0.5 * Math.sin(seconds * 4);
+    this.spriteMaterials.get('heating')?.setValues({ opacity: 0.5 + 0.5 * pulse });
+    // Ring breitet sich vom Melder aus und verblasst, alle 0,8 s ein neuer.
+    const wave = (seconds / 0.8) % 1;
+    this.solidMaterials.get('motion')?.setValues({ opacity: 1 - wave });
+    this.motionRings.forEach(ring => ring.scale.setScalar(1 + wave * 5));
+    this.runningArcs.forEach(arc => { arc.rotation.z = seconds * 2.5; });
   }
 
   private applyFloorVisibility(): void {

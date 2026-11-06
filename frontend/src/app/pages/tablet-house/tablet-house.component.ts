@@ -1,6 +1,6 @@
 import {
   AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, NgZone, OnDestroy, QueryList,
-  ViewChild, ViewChildren, computed, inject, signal
+  ViewChild, ViewChildren, computed, effect, inject, signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -11,15 +11,16 @@ import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell
 import { EntityState } from '../../models/entity-state.model';
 import { EntityStateService } from '../../services/entity-state.service';
 import { ViewModeService } from '../../services/view-mode.service';
-import { FLOORS, FloorId, HOUSE_ROOMS, HouseRoom } from '../../shared/house/house-plan';
+import { FLOORS, FloorId, HOUSE_ROOMS, HouseRoom, OUTDOOR_AREAS } from '../../shared/house/house-plan';
 import {
-  CameraView, Vec3, cameraForDevice, cameraForOverview, cameraForRoom, deviceAnchors, roomAnchor
+  CameraView, Vec3, cameraForDevice, cameraForOverview, cameraForRoom, roomAnchor
 } from '../../shared/house/house-geometry.util';
 import {
   BubbleFlag, BubbleValue, DeviceBubble, RoomBubble, buildDeviceBubbles, buildOutdoorBubbles, buildRoomBubble
 } from '../../shared/house/house-bubbles.util';
 import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
 import { DeviceDetail, buildDeviceDetail, opensDetail, thermostatIdOf } from '../../shared/house/device-detail.util';
+import { HouseEffect, buildHouseEffects, deviceAnchor } from '../../shared/house/house-effects.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -94,6 +95,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly entities = signal<ReadonlyMap<string, EntityState>>(new Map());
   /** Bezugszeit fuer die Veraltung; laeuft bei jedem Refresh-Takt weiter, auch wenn der Abruf scheitert. */
   private readonly now = signal(Date.now());
+  /** Helligkeit dimmbarer Lampen je Schalter-Entity (Prozent), im selben Takt wie die Entitaeten. */
+  private readonly brightness = signal<ReadonlyMap<string, number>>(new Map());
 
   /**
    * Gehalten wird nur die Id des offenen Geraets, nie das Feld-Modell: das Feld
@@ -151,14 +154,41 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     return placeByArea(bubbles);
   });
 
+  /**
+   * Zustandseffekte der gezeigten Etage (im EG auch die Aussenbereiche), in Ueberblick
+   * und Raumansicht gleich; Regeln in `buildHouseEffects`.
+   */
+  readonly effects = computed<HouseEffect[]>(() => {
+    const floor = this.selectedFloor();
+    const areas = [
+      ...this.visibleRooms().map(room => room.id),
+      ...(floor === 'ground' ? OUTDOOR_AREAS.map(area => area.id) : [])
+    ];
+    return buildHouseEffects(areas, this.entities(), this.brightness());
+  });
+
   constructor() {
-    merge(interval(REFRESH_INTERVAL_MS).pipe(startWith(0)), this.refreshRequests).pipe(
+    const ticks = merge(interval(REFRESH_INTERVAL_MS).pipe(startWith(0)), this.refreshRequests);
+    ticks.pipe(
       switchMap(() => this.entityService.getEntities().pipe(
         map(list => new Map(list.map(entity => [entity.entityId, entity] as const))),
         catchError(() => of(null))
       )),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(result => this.applyFetch(result));
+    // Helligkeit fuer den Lichtschein; ein Fehler behaelt still den letzten Stand.
+    ticks.pipe(
+      switchMap(() => this.deviceControl.lampBrightness().pipe(catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
+      if (result) {
+        this.brightness.set(result);
+      }
+    });
+    effect(() => {
+      const effects = this.effects();
+      this.outside(renderer => renderer.setEffects(effects));
+    });
   }
 
   ngAfterViewInit(): void {
@@ -173,6 +203,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     this.outside(renderer => {
       renderer.onRendered(() => this.positionBubbles());
       renderer.setFloor(this.selectedFloor());
+      renderer.setEffects(this.effects());
       renderer.flyTo(cameraForOverview(this.selectedFloor()), 0);
     });
     // Neue Bubble-Elemente (Etagenwechsel, Raumansicht) sofort einordnen.
@@ -200,6 +231,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     this.dropDetail();
     this.focusedRoom.set(roomId);
     this.fly(cameraForRoom(roomId));
+    // Nur beim Betreten eines Raums laufen die Effekte kurz animiert; sonst steht alles still.
+    this.outside(renderer => renderer.playEffects());
   }
 
   backToOverview(): void {
@@ -365,19 +398,15 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   }
 }
 
-/** Verteilt die Bubbles je Bereich auf dessen Raster-Anker. */
+/**
+ * Setzt jede Bubble auf den Platz ihres Geraets (`deviceAnchor`, Raster je Bereich) -
+ * dieselbe Stelle, an der die Szene den Zustandseffekt des Geraets zeichnet.
+ */
 function placeByArea(bubbles: DeviceBubble[]): PlacedDeviceBubble[] {
-  const byArea = new Map<string, DeviceBubble[]>();
-  bubbles.forEach(bubble => byArea.set(bubble.areaId, [...(byArea.get(bubble.areaId) ?? []), bubble]));
-  const anchors = new Map([...byArea].map(([areaId, list]) => [areaId, deviceAnchors(areaId, list.length)]));
-  const indexInArea = new Map<string, number>();
-  return bubbles.map(bubble => {
-    const index = indexInArea.get(bubble.areaId) ?? 0;
-    indexInArea.set(bubble.areaId, index + 1);
-    return {
-      bubble,
-      anchor: anchors.get(bubble.areaId)![index],
-      stale: bubble.lines.length > 0 && bubble.lines.every(line => line.stale)
-    };
+  return bubbles.flatMap(bubble => {
+    const anchor = deviceAnchor(bubble.deviceId);
+    return anchor
+      ? [{ bubble, anchor, stale: bubble.lines.length > 0 && bubble.lines.every(line => line.stale) }]
+      : [];
   });
 }
