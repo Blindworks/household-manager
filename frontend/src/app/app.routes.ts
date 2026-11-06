@@ -257,6 +257,13 @@ export const routes: Routes = [
     title: 'Modus-Schnellzugriff - Household Manager'
   },
   {
+    path: 'admin/house-devices',
+    loadComponent: () => import('./pages/admin-house-devices/admin-house-devices.component')
+      .then(m => m.AdminHouseDevicesComponent),
+    canActivate: [adminGuard],
+    title: 'Geräteplätze - Household Manager'
+  },
+  {
     path: 'admin',
     loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
     canActivate: [adminGuard],

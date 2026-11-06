@@ -85,6 +85,7 @@ export class HeaderComponent {
         { path: '/admin/ble-sensors', label: 'Bluetooth-Thermometer', minRole: 'ADMIN' },
         { path: '/admin/dirigera', label: 'IKEA Dirigera', minRole: 'ADMIN' },
         { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', minRole: 'ADMIN' },
+        { path: '/admin/house-devices', label: 'Geräteplätze', minRole: 'ADMIN' },
         { path: '/admin/agent', label: 'Hausverstand', minRole: 'ADMIN' }
       ]
     },

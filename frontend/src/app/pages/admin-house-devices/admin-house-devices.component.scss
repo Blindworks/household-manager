@@ -1,0 +1,198 @@
+/*
+ * Button-Optik kommt aus dem Admin-Scope in styles.scss (.ghost/.danger); hier stehen nur
+ * Layout und die Plan-Darstellung. Die Punktfarben je Art stehen in der Komponente.
+ */
+.admin-house-devices {
+  padding: var(--spacing-lg);
+
+  &__hint {
+    max-width: 70ch;
+    margin-bottom: var(--spacing-md);
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  &__error {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+
+  &__notice {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(245, 158, 11, 0.12);
+    color: #92400e;
+  }
+
+  &__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs, 6px);
+    margin-bottom: var(--spacing-md);
+  }
+
+  // Aktiver Reiter in der Primaerfarbe, die uebrigen bleiben .ghost.
+  &__tab--active,
+  &__tab--active:hover:not(:disabled) {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  &__layout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+  }
+
+  &__plan-wrap {
+    flex: 1 1 420px;
+    max-width: 720px;
+  }
+
+  &__plan {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid #d1d5db;
+    border-radius: var(--radius-sm, 6px);
+    background: #f8fafc;
+    // Ziehen soll nicht scrollen oder zoomen.
+    touch-action: none;
+    user-select: none;
+  }
+
+  &__area {
+    fill: rgba(13, 110, 189, 0.06);
+    stroke: #4fa3e3;
+    stroke-width: 2;
+
+    &--outdoor {
+      fill: rgba(34, 197, 94, 0.08);
+      stroke: #86c99a;
+      stroke-dasharray: 6 4;
+    }
+  }
+
+  &__name {
+    fill: var(--color-gray);
+    font: 600 11px var(--font-family, system-ui, sans-serif);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  &__dot {
+    cursor: grab;
+
+    &--dragging {
+      cursor: grabbing;
+    }
+  }
+
+  // Unsichtbarer Trefferkreis, groesser als der sichtbare Punkt (Finger).
+  &__dot-hit {
+    fill: transparent;
+  }
+
+  &__dot-ring {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 2;
+  }
+
+  &__dot--selected &__dot-ring,
+  &__dot--dragging &__dot-ring {
+    stroke: #111827;
+    stroke-dasharray: 3 3;
+  }
+
+  &__dot-mark {
+    stroke: #1f2937;
+    stroke-width: 1.5;
+  }
+
+  &__dot-label {
+    fill: #1f2937;
+    font: 10px var(--font-family, system-ui, sans-serif);
+    pointer-events: none;
+  }
+
+  &__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    color: var(--color-gray);
+    font-size: 0.8rem;
+
+    i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 4px;
+      border: 1px solid #1f2937;
+      border-radius: 50%;
+      vertical-align: middle;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+  }
+
+  &__side {
+    flex: 0 1 260px;
+    padding: var(--spacing-md);
+    border: 1px solid #d1d5db;
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  &__side-title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1rem;
+  }
+
+  &__group {
+    margin: var(--spacing-sm) 0 4px;
+    color: var(--color-gray);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__item {
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    border: 1px dashed var(--color-primary-light, #4fa3e3);
+    border-radius: var(--radius-sm, 6px);
+    background: var(--color-light-gray);
+    font-size: 0.9rem;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+
+    &--selected {
+      border-style: solid;
+      border-color: var(--color-primary);
+      background: rgba(13, 110, 189, 0.12);
+    }
+  }
+
+  &__invalid {
+    display: block;
+    color: var(--color-error);
+    font-size: 0.75rem;
+  }
+}

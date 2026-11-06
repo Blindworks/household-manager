@@ -1,0 +1,118 @@
+<div class="admin-house-devices">
+  <h1>Geräteplätze</h1>
+
+  <p class="admin-house-devices__hint">
+    Draufsicht je Etage für die 3D-Hausansicht des Wandtablets. Platzierte Geräte sind Punkte,
+    die du an ihren echten Platz ziehst. Rechts stehen die Geräte ohne Platz: auf den Plan ziehen
+    oder antippen und danach in den Plan tippen. Bis dahin stehen sie im Raster in der Raummitte.
+    Ein Gerät lässt sich nur in seinem eigenen Raum ablegen. Einen Punkt antippen, um seinen Platz
+    zurückzusetzen.
+  </p>
+
+  @switch (loadState()) {
+    @case ('loading') {
+      <p class="admin-house-devices__hint">Lade Geräteplätze …</p>
+    }
+    @case ('failed') {
+      <div class="admin-house-devices__error" role="alert">
+        <span>Geräteplätze konnten nicht geladen werden.</span>
+        <button type="button" (click)="load()">Neu laden</button>
+      </div>
+    }
+    @case ('ok') {
+      <div class="admin-house-devices__tabs" role="tablist">
+        @for (tab of tabs; track tab.id) {
+          <button
+            type="button"
+            role="tab"
+            class="ghost admin-house-devices__tab"
+            [class.admin-house-devices__tab--active]="tab.id === floor()"
+            [attr.aria-selected]="tab.id === floor()"
+            (click)="selectFloor(tab.id)">{{ tab.label }}</button>
+        }
+      </div>
+
+      @if (errorMessage()) {
+        <div class="admin-house-devices__error" role="alert">{{ errorMessage() }}</div>
+      }
+      @if (hint()) {
+        <div class="admin-house-devices__notice" role="status">{{ hint() }}</div>
+      }
+
+      <div class="admin-house-devices__layout">
+        <div class="admin-house-devices__plan-wrap">
+          <svg
+            #plan
+            class="admin-house-devices__plan"
+            viewBox="0 0 440 490"
+            (pointerdown)="onPlanPointerDown($event)">
+            @for (shape of shapes(); track shape.id) {
+              @for (rect of shape.rects; track $index) {
+                <rect
+                  class="admin-house-devices__area"
+                  [class.admin-house-devices__area--outdoor]="shape.outdoor"
+                  [attr.x]="rect.x1"
+                  [attr.y]="rect.y1"
+                  [attr.width]="rect.x2 - rect.x1"
+                  [attr.height]="rect.y2 - rect.y1" />
+              }
+              <text class="admin-house-devices__name" [attr.x]="shape.nameX" [attr.y]="shape.nameY">{{ shape.label }}</text>
+            }
+
+            @for (dot of dots(); track dot.device.id) {
+              <g
+                class="admin-house-devices__dot"
+                [class.admin-house-devices__dot--selected]="dot.device.id === selectedDotId()"
+                [class.admin-house-devices__dot--dragging]="isDragging(dot.device.id)"
+                [attr.data-device-id]="dot.device.id"
+                [attr.transform]="dot.transform"
+                (pointerdown)="onDotPointerDown(dot.device, $event)">
+                <circle class="admin-house-devices__dot-hit" r="14" />
+                <circle class="admin-house-devices__dot-ring" r="13" />
+                <circle class="admin-house-devices__dot-mark" r="8" [attr.fill]="dot.color" />
+                <text class="admin-house-devices__dot-label" x="12" y="4">{{ dot.label }}</text>
+              </g>
+            }
+          </svg>
+
+          <div class="admin-house-devices__legend">
+            <span><i style="background:#ffd36b"></i>Lampe</span>
+            <span><i style="background:#ff9a4d"></i>Thermostat</span>
+            <span><i style="background:#6be0a0"></i>Fühler</span>
+            <span><i style="background:#ff6b6b"></i>Kontakt/Tür</span>
+            <span><i style="background:#8fb4ff"></i>Schalter/Maschine</span>
+            <span><i style="background:#c9a6ff"></i>Sonstiges</span>
+          </div>
+
+          @if (selectedDotLabel(); as label) {
+            <div class="admin-house-devices__actions">
+              <span>{{ label }}</span>
+              <button type="button" class="danger" (click)="resetSelected()">Platz zurücksetzen</button>
+            </div>
+          }
+        </div>
+
+        <aside class="admin-house-devices__side">
+          <h2 class="admin-house-devices__side-title">Noch ohne Platz ({{ floorLabel() }})</h2>
+          @for (group of unplacedGroups(); track group.area) {
+            <h3 class="admin-house-devices__group">{{ group.area }}</h3>
+            @for (entry of group.entries; track entry.device.id) {
+              <div
+                class="admin-house-devices__item"
+                [class.admin-house-devices__item--selected]="entry.device.id === selectedListId()"
+                [attr.data-device-id]="entry.device.id"
+                (pointerdown)="onListPointerDown(entry.device, $event)">
+                {{ entry.label }}
+                @if (entry.invalid) {
+                  <small class="admin-house-devices__invalid">Platz liegt außerhalb des Raums</small>
+                }
+              </div>
+            }
+          } @empty {
+            <p class="admin-house-devices__hint">Alle Geräte dieser Etage haben einen Platz.</p>
+          }
+        </aside>
+      </div>
+    }
+  }
+</div>
