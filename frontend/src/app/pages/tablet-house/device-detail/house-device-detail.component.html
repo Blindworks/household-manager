@@ -1,0 +1,93 @@
+<section class="device-detail" role="dialog" [attr.aria-label]="detail.title">
+  <header class="device-detail__head">
+    <span class="material-symbols-outlined device-detail__icon" aria-hidden="true">{{ detail.icon }}</span>
+    <h2 class="device-detail__title">{{ detail.title }}</h2>
+    <button type="button" class="device-detail__close" aria-label="Schließen" (click)="close()">
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+  </header>
+
+  <p class="device-detail__headline" [class.device-detail__value--stale]="detail.headline.stale">
+    {{ detail.headline.text }}
+  </p>
+  @if (detail.lines.length > 0) {
+    <ul class="device-detail__lines">
+      @for (line of detail.lines; track $index) {
+        <li class="device-detail__line" [class.device-detail__value--stale]="line.stale">{{ line.text }}</li>
+      }
+    </ul>
+  }
+
+  @if (targetControl; as target) {
+    <div class="device-detail__control device-detail__control--target">
+      <button type="button" class="device-detail__step device-detail__step--down" aria-label="Sollwert senken"
+              [disabled]="shownTarget === null || shownTarget <= target.min" (click)="stepTarget(-1)">−</button>
+      <span class="device-detail__target">Soll {{ formatTarget(shownTarget) }}</span>
+      <button type="button" class="device-detail__step device-detail__step--up" aria-label="Sollwert erhöhen"
+              [disabled]="shownTarget === null || shownTarget >= target.max" (click)="stepTarget(1)">+</button>
+    </div>
+  }
+
+  @if (switchControl; as sw) {
+    <div class="device-detail__control device-detail__control--switch">
+      <button type="button" class="device-detail__switch" role="switch"
+              [class.device-detail__switch--on]="sw.on === true"
+              [class.device-detail__switch--pending]="switchPending"
+              [attr.aria-checked]="sw.on === true"
+              [disabled]="sw.on === null || switchPending"
+              (click)="onSwitch()">
+        <span class="device-detail__switch-knob" aria-hidden="true"></span>
+        <span class="device-detail__switch-label">
+          {{ sw.on === null ? 'unbekannt' : sw.on ? 'An' : 'Aus' }}
+        </span>
+      </button>
+      @if (sw.dimmable) {
+        <label class="device-detail__brightness-label">
+          <span class="material-symbols-outlined" aria-hidden="true">brightness_6</span>
+          <input type="range" class="device-detail__brightness" min="1" max="100" step="1"
+                 aria-label="Helligkeit"
+                 [value]="brightness ?? 100"
+                 [disabled]="sw.on !== true"
+                 (change)="onBrightnessChange($event)">
+        </label>
+      }
+    </div>
+  }
+
+  @if (error) {
+    <p class="device-detail__error" role="alert">{{ error }}</p>
+  }
+
+  @if (detail.history) {
+    <div class="device-detail__history">
+      <div class="device-detail__ranges">
+        @for (option of ranges; track option.range) {
+          <button type="button" class="device-detail__range" [attr.data-range]="option.range"
+                  [class.device-detail__range--active]="option.range === range"
+                  (click)="selectRange(option.range)">{{ option.label }}</button>
+        }
+      </div>
+      @switch (historyState) {
+        @case ('ready') {
+          <div class="device-detail__chart" echarts [options]="chartOptions" [autoResize]="true"></div>
+        }
+        @case ('empty') {
+          <p class="device-detail__hint">Kein Verlauf verfügbar</p>
+        }
+        @default {
+          <p class="device-detail__hint">Lade Verlauf …</p>
+        }
+      }
+    </div>
+  }
+
+  @if (confirmingOff) {
+    <div class="device-detail__confirm" role="alertdialog" aria-label="Ausschalten bestätigen">
+      <p class="device-detail__confirm-text">{{ detail.title }} wirklich ausschalten?</p>
+      <div class="device-detail__confirm-actions">
+        <button type="button" class="device-detail__confirm-cancel" (click)="cancelOff()">Abbrechen</button>
+        <button type="button" class="device-detail__confirm-off" (click)="confirmOff()">Ausschalten</button>
+      </div>
+    </div>
+  }
+</section>

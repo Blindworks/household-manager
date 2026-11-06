@@ -104,6 +104,12 @@ public class SmartDeviceResponse {
     private boolean confirmRequired;
 
     /**
+     * Id der gespiegelten Switch-Entitaet, aus {@code SmartDeviceEntityMapper.entityId} (einzige
+     * Definition). {@code null}, wenn sie sich nicht bilden laesst.
+     */
+    private String entityId;
+
+    /**
      * Timestamp when this record was created
      */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

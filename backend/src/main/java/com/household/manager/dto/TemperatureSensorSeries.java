@@ -11,6 +11,11 @@ import java.util.List;
 public class TemperatureSensorSeries {
     /** Stabile, quellenpräfixierte ID, z. B. "zigbee:12". */
     private final String sensorId;
+    /**
+     * Entity-ID der Temperatur-Entity, dieselbe wie in {@link CurrentTemperatureReading#getEntityId()}.
+     * Erlaubt die Zuordnung Entity-ID → sensorId auch fuer Fuehler, die {@code /current} gerade weglaesst.
+     */
+    private final String entityId;
     /** Anzeigename des Sensors. */
     private final String name;
     /** Quelle: ZIGBEE | WEATHER | ALEXA. */

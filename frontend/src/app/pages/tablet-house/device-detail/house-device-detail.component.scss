@@ -1,0 +1,239 @@
+// Geraete-Detail der Hausansicht. Eigene Styles: die lumina-Klassen erreichen
+// Kind-Komponenten nicht. Die --house-*-Tokens setzt die Seite an ihrem Host,
+// CSS-Variablen erben hierher; die Fallbacks greifen nur ausserhalb der Seite.
+:host {
+  display: block;
+  color: var(--house-text, #e8eefc);
+}
+
+$neon-rgb: var(--house-neon-rgb, 91, 140, 255);
+$accent: var(--house-accent, #8fd3ff);
+$bg: var(--house-bg, #05070f);
+
+@mixin control-button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba($neon-rgb, 0.5);
+  background: rgba($neon-rgb, 0.12);
+  color: $accent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.device-detail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  border-radius: 16px;
+  border: 1px solid rgba($neon-rgb, 0.45);
+  background: rgba(5, 7, 15, 0.92);
+  box-shadow: 0 0 24px rgba($neon-rgb, 0.25);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &__icon {
+    color: $accent;
+  }
+
+  &__title {
+    flex: 1;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  &__close {
+    @include control-button;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  &__headline {
+    margin: 0;
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: $accent;
+    text-shadow: 0 0 14px rgba($neon-rgb, 0.45);
+  }
+
+  &__lines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__line {
+    font-size: 0.95rem;
+  }
+
+  &__value--stale {
+    opacity: 0.45;
+  }
+
+  &__control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__step {
+    @include control-button;
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  &__target {
+    min-width: 7rem;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  &__switch {
+    @include control-button;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 1rem 0.4rem 0.5rem;
+
+    &--on {
+      background: rgba($neon-rgb, 0.3);
+      box-shadow: 0 0 12px rgba($neon-rgb, 0.45);
+    }
+
+    &--pending {
+      opacity: 0.6;
+    }
+  }
+
+  &__switch-knob {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: rgba(232, 238, 252, 0.35);
+  }
+
+  &__switch--on &__switch-knob {
+    background: $accent;
+  }
+
+  &__brightness-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 10rem;
+    color: $accent;
+  }
+
+  &__brightness {
+    flex: 1;
+    min-height: 2.75rem;
+    accent-color: #8fd3ff;
+
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ff8f8f;
+  }
+
+  &__history {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-height: 12rem;
+  }
+
+  &__ranges {
+    display: inline-flex;
+    gap: 0.4rem;
+  }
+
+  &__range {
+    @include control-button;
+    padding: 0 0.9rem;
+    font-size: 0.9rem;
+
+    &--active {
+      background: rgba($neon-rgb, 0.3);
+    }
+  }
+
+  &__chart {
+    flex: 1;
+    min-height: 11rem;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+
+  &__confirm {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+    background: rgba(5, 7, 15, 0.96);
+  }
+
+  &__confirm-text {
+    margin: 0;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  &__confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  &__confirm-cancel {
+    @include control-button;
+    padding: 0 1.2rem;
+  }
+
+  &__confirm-off {
+    @include control-button;
+    padding: 0 1.2rem;
+    border-color: rgba(255, 110, 110, 0.7);
+    background: rgba(255, 110, 110, 0.2);
+    color: #ffb0b0;
+  }
+}

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -92,6 +93,18 @@ class SmartDeviceConfirmRequiredTest {
 
         assertFalse(devices.get(0).isConfirmRequired(),
                 "Ein Fehler beim Nachschlagen darf nur den Schutz deaktivieren, nicht die Antwort brechen");
+    }
+
+    @Test
+    @DisplayName("Geraet traegt die entityId aus dem Mapper, der einzigen Definition dieser Id")
+    void carriesEntityIdFromMapper() {
+        SmartDevice device = device();
+        when(repository.findAllByOrderByDeviceTypeAscDeviceNameAsc()).thenReturn(List.of(device));
+        when(entityStateService.getByEntityId(anyString())).thenReturn(Optional.empty());
+
+        List<SmartDeviceResponse> devices = service.getAllDevices();
+
+        assertEquals(new SmartDeviceEntityMapper().entityId(device), devices.get(0).getEntityId());
     }
 
     private SmartDevice device() {

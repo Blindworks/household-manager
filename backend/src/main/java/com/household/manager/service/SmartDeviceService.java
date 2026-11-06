@@ -1081,6 +1081,7 @@ public class SmartDeviceService {
 
     private SmartDeviceResponse toResponse(SmartDevice entity) {
         Map<String, Object> metadata = deserializeMetadata(entity.getMetadata());
+        String entityId = entityIdFor(entity);
         return SmartDeviceResponse.builder()
                 .id(entity.getId())
                 .deviceType(entity.getDeviceType().name())
@@ -1091,7 +1092,8 @@ public class SmartDeviceService {
                 .isOnline(entity.isOnline())
                 .isPoweredOn(entity.isPoweredOn())
                 .capabilities(parseCapabilities(entity.getCapabilities()))
-                .confirmRequired(confirmRequiredFor(entity))
+                .entityId(entityId)
+                .confirmRequired(confirmRequiredFor(entityId))
                 .metadata(metadata)
                 .brightness(asInteger(metadata.get("lightBrightness")))
                 .hue(asInteger(metadata.get("lightHue")))
@@ -1119,16 +1121,27 @@ public class SmartDeviceService {
      * ausschliesslich von {@link SmartDeviceEntityMapper#entityId} - der einzigen Definition
      * dieser Id. Ohne gespiegelte Entitaet gilt "kein Schutz".
      */
-    private boolean confirmRequiredFor(SmartDevice device) {
+    private boolean confirmRequiredFor(String entityId) {
+        if (entityId == null) {
+            return false;
+        }
         try {
-            String entityId = smartDeviceEntityMapper.entityId(device);
             return entityStateService.getByEntityId(entityId)
                     .map(EntityState::isConfirmRequired)
                     .orElse(false);
         } catch (Exception ex) {
-            log.warn("Bestaetigungs-Flag fuer {} nicht ermittelbar: {}",
-                    device.getExternalDeviceId(), ex.getMessage());
+            log.warn("Bestaetigungs-Flag fuer {} nicht ermittelbar: {}", entityId, ex.getMessage());
             return false;
+        }
+    }
+
+    /** Einmal je Geraet gebildet; wirft nie, bei Fehler {@code null}. */
+    private String entityIdFor(SmartDevice device) {
+        try {
+            return smartDeviceEntityMapper.entityId(device);
+        } catch (Exception ex) {
+            log.warn("entityId fuer {} nicht ermittelbar: {}", device.getExternalDeviceId(), ex.getMessage());
+            return null;
         }
     }
 

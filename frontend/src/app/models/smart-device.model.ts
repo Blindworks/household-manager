@@ -31,6 +31,8 @@ export interface SmartDevice {
    * Backend-Begriff bei den Dashboard-Schaltern.
    */
   confirmRequired: boolean;
+  /** Id der gespiegelten Switch-Entität; optional, das Backend lässt sie weg, wenn sie sich nicht bilden lässt. */
+  entityId?: string;
   createdAt: string;
   updatedAt: string;
 }

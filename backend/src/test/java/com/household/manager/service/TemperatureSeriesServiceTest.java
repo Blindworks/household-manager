@@ -37,7 +37,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -535,5 +537,47 @@ class TemperatureSeriesServiceTest {
         when(dirigeraSensorRepository.findByKnownToHubTrue()).thenThrow(new IllegalStateException("db weg"));
 
         assertThat(service.getSeries(SeriesRange.DAY)).noneMatch(s -> s.getSource().equals("DIRIGERA"));
+    }
+
+    @Test
+    void serienlisteTraegtDieselbeEntityIdWieCurrentJeSensor() {
+        LocalDateTime now = LocalDateTime.now();
+        ZigbeeDevice wohnzimmer = device(1L, "Wohnzimmer");
+        when(zigbeeRepository.findDistinctDevicesByMeasurementTypeInRange(eq(MeasurementType.TEMPERATURE), any(), any()))
+                .thenReturn(List.of(wohnzimmer));
+        lenient().when(zigbeeRepository.findByDeviceIdAndMeasurementTypeAndMeasuredAtBetweenOrderByMeasuredAtAsc(
+                eq(1L), any(), any(), any())).thenReturn(List.of(measurement(MeasurementType.TEMPERATURE, "21.5", now)));
+        when(zigbeeRepository.findTopByDeviceIdAndMeasurementTypeOrderByMeasuredAtDesc(eq(1L), any()))
+                .thenReturn(Optional.of(measurement(MeasurementType.TEMPERATURE, "21.5", now)));
+        AlexaAirQualityReading alexa = AlexaAirQualityReading.builder()
+                .applianceId("APP-A").deviceName("Sensor Bad").readingTime(now)
+                .temperature(new BigDecimal("22.50")).build();
+        when(alexaRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any())).thenReturn(List.of(alexa));
+        when(alexaRepository.findDistinctApplianceIdsSince(any())).thenReturn(List.of("APP-A"));
+        when(alexaRepository.findTopByApplianceIdOrderByReadingTimeDesc("APP-A")).thenReturn(Optional.of(alexa));
+        when(weatherRepository.findTopByTemperatureIsNotNullOrderByReadingTimeDesc()).thenReturn(Optional.empty());
+        when(bleSensorRepository.findByActiveTrue()).thenReturn(List.of(bleSensor(7L, "Küche", now)));
+        when(dirigeraSensorRepository.findByKnownToHubTrue()).thenReturn(List.of(dirigeraSensor(4L, "Bad", now, true)));
+
+        Map<String, String> fromSeries = service.getSeries(SeriesRange.DAY).stream()
+                .collect(HashMap::new, (map, s) -> map.put(s.getSensorId(), s.getEntityId()), Map::putAll);
+        Map<String, String> fromCurrent = service.getCurrent().stream()
+                .collect(HashMap::new, (map, c) -> map.put(c.getSensorId(), c.getEntityId()), Map::putAll);
+
+        assertThat(fromSeries).containsOnlyKeys("zigbee:1", "alexa:APP-A", "ble:7", "dirigera:4");
+        assertThat(fromSeries).isEqualTo(fromCurrent);
+        assertThat(fromSeries).doesNotContainValue(null);
+    }
+
+    @Test
+    void einzelserienTragenDieEntityId() {
+        lenient().when(downsampler.downsample(anyList(), any())).thenAnswer(inv -> inv.getArgument(0));
+        when(zigbeeDeviceRepository.findById(1L)).thenReturn(Optional.of(device(1L, "Wohnzimmer")));
+        when(weatherRepository.findByReadingTimeBetweenOrderByReadingTimeAsc(any(), any())).thenReturn(List.of());
+
+        assertThat(service.getSensorSeries("zigbee:1", SeriesRange.DAY).getEntityId())
+                .isEqualTo("sensor.zigbee_wohnzimmer_temperature");
+        assertThat(service.getSensorSeries("weather:outdoor", SeriesRange.DAY).getEntityId())
+                .isEqualTo(EntityIds.build(EntityDomain.SENSOR, EntitySource.WEATHER, "dwd", "temperature"));
     }
 }

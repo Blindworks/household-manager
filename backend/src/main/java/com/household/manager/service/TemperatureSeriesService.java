@@ -158,6 +158,7 @@ public class TemperatureSeriesService {
 
         return TemperatureSensorSeries.builder()
                 .sensorId("zigbee:" + deviceId)
+                .entityId(temperatureEntityId(EntitySource.ZIGBEE, device.getFriendlyName()))
                 .name(temperatureName(EntitySource.ZIGBEE, device.getFriendlyName(), device.getFriendlyName()))
                 .source("ZIGBEE")
                 .temperature(downsampler.downsample(temperature, range))
@@ -181,6 +182,7 @@ public class TemperatureSeriesService {
 
         return TemperatureSensorSeries.builder()
                 .sensorId("weather:outdoor")
+                .entityId(temperatureEntityId(EntitySource.WEATHER, "dwd"))
                 .name(temperatureName(EntitySource.WEATHER, "dwd", "Außen"))
                 .source("WEATHER")
                 .temperature(downsampler.downsample(temperature, range))
@@ -208,6 +210,7 @@ public class TemperatureSeriesService {
 
         return TemperatureSensorSeries.builder()
                 .sensorId("alexa:" + applianceId)
+                .entityId(temperatureEntityId(EntitySource.ALEXA, applianceId))
                 .name(temperatureName(EntitySource.ALEXA, applianceId, name))
                 .source("ALEXA")
                 .temperature(downsampler.downsample(temperature, range))
@@ -324,6 +327,7 @@ public class TemperatureSeriesService {
 
             result.add(TemperatureSensorSeries.builder()
                     .sensorId("zigbee:" + device.getId())
+                    .entityId(temperatureEntityId(EntitySource.ZIGBEE, device.getFriendlyName()))
                     .name(temperatureName(EntitySource.ZIGBEE, device.getFriendlyName(), device.getFriendlyName()))
                     .source("ZIGBEE")
                     .temperature(temperature)
@@ -358,6 +362,7 @@ public class TemperatureSeriesService {
 
             result.add(TemperatureSensorSeries.builder()
                     .sensorId("alexa:" + applianceId)
+                    .entityId(temperatureEntityId(EntitySource.ALEXA, applianceId))
                     .name(temperatureName(EntitySource.ALEXA, applianceId, name != null ? name : applianceId))
                     .source("ALEXA")
                     .temperature(temperature)
@@ -412,6 +417,7 @@ public class TemperatureSeriesService {
                 .toList();
         return TemperatureSensorSeries.builder()
                 .sensorId("ble:" + sensor.getId())
+                .entityId(BleSensorEntityMapper.entityId(sensor.getMac(), BleSensorEntityMapper.Measurement.TEMPERATURE))
                 .name(temperatureName(EntitySource.BLE, BleMacs.entityRef(sensor.getMac()), bleDisplayName(sensor)))
                 .source(BLE_SOURCE)
                 .temperature(range == null ? temperature : downsampler.downsample(temperature, range))
@@ -487,6 +493,7 @@ public class TemperatureSeriesService {
                 .toList();
         return TemperatureSensorSeries.builder()
                 .sensorId("dirigera:" + sensor.getId())
+                .entityId(DirigeraEntityMapper.entityId(sensor.getRelationId(), DirigeraEntityMapper.Measurement.TEMPERATURE))
                 .name(temperatureName(EntitySource.DIRIGERA, DirigeraEntityMapper.entityRef(sensor.getRelationId()),
                         DirigeraEntityMapper.displayName(sensor)))
                 .source(DIRIGERA_SOURCE)

@@ -141,6 +141,27 @@ export function cameraForRoom(roomId: string): CameraView {
   };
 }
 
+/** Abstand der Kamera zum Gerät; liegt innerhalb der Zoom-Grenzen des Renderers (3–30 m). */
+const DEVICE_VIEW_DISTANCE_M = 3.5;
+/** Leicht seitlich, von oben und von der Straßenseite (+z); auf Länge 1 normiert. */
+const DEVICE_VIEW_DIRECTION = (() => {
+  const raw = { x: 0.3, y: 0.75, z: 0.6 };
+  const length = Math.hypot(raw.x, raw.y, raw.z);
+  return { x: raw.x / length, y: raw.y / length, z: raw.z / length };
+})();
+
+/** Nah an ein Gerät heran: Ziel ist sein Anker, die Kamera steht schräg darüber auf der Straßenseite. */
+export function cameraForDevice(anchor: Vec3): CameraView {
+  return {
+    position: {
+      x: anchor.x + DEVICE_VIEW_DIRECTION.x * DEVICE_VIEW_DISTANCE_M,
+      y: anchor.y + DEVICE_VIEW_DIRECTION.y * DEVICE_VIEW_DISTANCE_M,
+      z: anchor.z + DEVICE_VIEW_DIRECTION.z * DEVICE_VIEW_DISTANCE_M
+    },
+    target: { ...anchor }
+  };
+}
+
 /** Größtes Rechteck, Etagenboden und Ausschnitte eines Raums oder Außenbereichs (Außen: Bodenhöhe). */
 function areaFootprint(areaId: string): { rect: PlanRect; base: number; roomId: string | null } {
   const room = roomById(areaId);
