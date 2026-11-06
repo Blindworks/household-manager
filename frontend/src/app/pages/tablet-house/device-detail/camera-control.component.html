@@ -1,0 +1,46 @@
+@if (control.camera === undefined) {
+  <p class="camera__hint">Lade Kamera …</p>
+} @else if (control.camera === null) {
+  <p class="camera__error">{{ cameraUnreachable }}</p>
+} @else {
+  @if (imageFailed) {
+    <div class="camera__placeholder" aria-hidden="true">
+      <span class="material-symbols-outlined">videocam_off</span>
+    </div>
+  } @else {
+    <img class="camera__image" alt="Standbild der Kamera" [src]="imageUrl" (error)="imageFailed = true">
+  }
+
+  <div class="camera__row">
+    <button type="button" class="camera__switch" role="switch"
+            [class.camera__switch--on]="control.camera.armed"
+            [attr.aria-checked]="control.camera.armed"
+            [disabled]="armPending" (click)="onSwitch()">
+      <span class="camera__knob" aria-hidden="true"></span>
+      <span class="camera__label">Bewegungserkennung</span>
+      @if (armPending) {
+        <span class="camera__spinner" aria-hidden="true"></span>
+      }
+    </button>
+    <button type="button" class="camera__button" [disabled]="snapshotPending" (click)="snapshot()">
+      Schnappschuss
+      @if (snapshotPending) {
+        <span class="camera__spinner" aria-hidden="true"></span>
+      }
+    </button>
+  </div>
+
+  @if (error) {
+    <p class="camera__error" role="alert">{{ error }}</p>
+  }
+
+  @if (confirmingOff) {
+    <div class="camera__confirm" role="alertdialog" aria-label="Deaktivieren bestätigen">
+      <p class="camera__confirm-text">Bewegungserkennung der Kamera deaktivieren?</p>
+      <div class="camera__confirm-actions">
+        <button type="button" class="camera__confirm-cancel" (click)="cancelOff()">Abbrechen</button>
+        <button type="button" class="camera__confirm-off" (click)="confirmOff()">Deaktivieren</button>
+      </div>
+    </div>
+  }
+}

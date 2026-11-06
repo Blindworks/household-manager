@@ -14,6 +14,7 @@ import { LAMP_OFF, TARGET_GRACE_MS, UNREACHABLE } from './detail-texts';
 import { LightColorControlComponent } from './light-color-control.component';
 import { ThermostatModeControlComponent } from './thermostat-mode-control.component';
 import { DoorLockControlComponent } from './door-lock-control.component';
+import { CameraControlComponent } from './camera-control.component';
 import { HistoryRange, HistorySeries, HouseDeviceControlService } from '../house-device-control.service';
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
@@ -22,6 +23,7 @@ type HistoryState = 'none' | 'loading' | 'ready' | 'empty';
 type TargetControl = Extract<DetailControl, { type: 'target' }>;
 type SwitchControl = Extract<DetailControl, { type: 'switch' }>;
 type LockControl = Extract<DetailControl, { type: 'lock' }>;
+type CameraControlData = Extract<DetailControl, { type: 'camera' }>;
 
 /** Sammelpause fuer −/+: erst nach so langer Ruhe geht EIN Sollwert raus. */
 export const TARGET_DEBOUNCE_MS = 600;
@@ -41,7 +43,8 @@ const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
 @Component({
   selector: 'app-house-device-detail',
   standalone: true,
-  imports: [NgxEchartsDirective, LightColorControlComponent, ThermostatModeControlComponent, DoorLockControlComponent],
+  imports: [NgxEchartsDirective, LightColorControlComponent, ThermostatModeControlComponent, DoorLockControlComponent,
+    CameraControlComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './house-device-detail.component.html',
   styleUrl: './house-device-detail.component.scss',
@@ -127,6 +130,10 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
 
   get lockControl(): LockControl | null {
     return this.detail.control?.type === 'lock' ? this.detail.control : null;
+  }
+
+  get cameraControl(): CameraControlData | null {
+    return this.detail.control?.type === 'camera' ? this.detail.control : null;
   }
 
   get shownTarget(): number | null {

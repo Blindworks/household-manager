@@ -66,6 +66,12 @@
     </div>
   }
 
+  @if (cameraControl; as cam) {
+    <div class="device-detail__control device-detail__control--camera">
+      <app-camera-control [control]="cam" (changed)="changed.emit()"></app-camera-control>
+    </div>
+  }
+
   @if (error) {
     <p class="device-detail__error" role="alert">{{ error }}</p>
   }

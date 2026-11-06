@@ -1,0 +1,146 @@
+// Eigene Styles: lumina-Klassen erreichen Kind-Komponenten nicht. Farben nur ueber die
+// --house-*-Tokens der Seite (erben als CSS-Variablen).
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  gap: 0.6rem;
+}
+
+$neon-rgb: var(--house-neon-rgb, 91, 140, 255);
+$accent: var(--house-accent, #8fd3ff);
+
+@mixin touch-button {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid $accent;
+  background: rgba($neon-rgb, 0.3);
+  color: $accent;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.camera {
+  &__image,
+  &__placeholder {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0.6rem;
+    background: rgba($neon-rgb, 0.12);
+  }
+
+  &__image {
+    object-fit: cover;
+  }
+
+  &__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $accent;
+    opacity: 0.7;
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  &__switch {
+    @include touch-button;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &__knob {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    border: 2px solid $accent;
+    background: transparent;
+  }
+
+  &__switch--on &__knob {
+    background: $accent;
+  }
+
+  &__button {
+    @include touch-button;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__spinner {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    border: 2px solid rgba($neon-rgb, 0.4);
+    border-top-color: $accent;
+    animation: camera-spin 0.8s linear infinite;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ff8f8f;
+  }
+
+  // Wie der Dialog des Feldes: deckt das (positionierte) Feld ab.
+  &__confirm {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+    background: rgba(5, 7, 15, 0.96);
+  }
+
+  &__confirm-text {
+    margin: 0;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  &__confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  &__confirm-cancel {
+    @include touch-button;
+  }
+
+  &__confirm-off {
+    @include touch-button;
+    border-color: rgba(255, 110, 110, 0.7);
+    background: rgba(255, 110, 110, 0.2);
+    color: #ffb0b0;
+  }
+}
+
+@keyframes camera-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
