@@ -21,7 +21,8 @@ import {
 import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
 import { DeviceDetail, buildDeviceDetail, opensDetail } from '../../shared/house/device-detail.util';
 import { DetailExtras } from '../../shared/house/detail-extras.util';
-import { HouseEffect, buildHouseEffects, deviceAnchor } from '../../shared/house/house-effects.util';
+import { HouseEffect, buildHouseEffects } from '../../shared/house/house-effects.util';
+import { DevicePositions, deviceBubbleAnchor } from '../../shared/house/house-placement.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -153,7 +154,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       ...this.visibleRooms().map(room => room.id),
       ...outdoorAreasOn(floor).map(area => area.id)
     ];
-    return buildHouseEffects(areas, this.entities(), this.brightness());
+    return buildHouseEffects(areas, this.entities(), this.brightness(), NO_POSITIONS);
   });
 
   constructor() {
@@ -369,17 +370,20 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   }
 }
 
+/** Bis Task 4 die gespeicherten Plaetze anbindet: alle Geraete auf dem Raster. */
+const NO_POSITIONS: DevicePositions = new Map();
+
 function deviceById(id: string | null): HouseDevice | undefined {
   return id ? HOUSE_DEVICES.find(entry => entry.id === id) : undefined;
 }
 
 /**
- * Setzt jede Bubble auf den Platz ihres Geraets (`deviceAnchor`, Raster je Bereich) -
+ * Setzt jede Bubble auf den Platz ihres Geraets (`deviceBubbleAnchor`) -
  * dieselbe Stelle, an der die Szene den Zustandseffekt des Geraets zeichnet.
  */
 function placeByArea(bubbles: DeviceBubble[]): PlacedDeviceBubble[] {
   return bubbles.flatMap(bubble => {
-    const anchor = deviceAnchor(bubble.deviceId);
+    const anchor = deviceBubbleAnchor(bubble.deviceId, NO_POSITIONS);
     return anchor
       ? [{ bubble, anchor, stale: bubble.lines.length > 0 && bubble.lines.every(line => line.stale) }]
       : [];

@@ -1,6 +1,7 @@
 import { EntityMap, isOn, isWindowContact } from './house-bubbles.util';
-import { HOUSE_DEVICES, HouseDevice, devicesInArea } from './house-devices';
-import { DEVICE_ANCHOR_HEIGHT_M, Vec3, deviceAnchors } from './house-geometry.util';
+import { HouseDevice, devicesInArea } from './house-devices';
+import { Vec3, areaFloorBase } from './house-geometry.util';
+import { DevicePositions, deviceAnchor } from './house-placement.util';
 
 /**
  * Zustandseffekte der 3D-Hausansicht („lebendiges Haus“): was an einem Geraet in der
@@ -18,7 +19,7 @@ export interface HouseEffect {
   kind: HouseEffectKind;
   /** 0..1, nur bei `light` aus der Helligkeit; sonst 1. */
   intensity: number;
-  /** Platz der Bubble des Geraets in der Raumansicht. */
+  /** Platz des Geraets (Rasterplatz oder gespeicherter Punkt, Hoehe nach Art). */
   anchor: Vec3;
   /** Bodenhoehe unter dem Anker (Lichtschein, Ringe). */
   floorY: number;
@@ -27,29 +28,16 @@ export interface HouseEffect {
 /** Auch eine fast ganz gedimmte Lampe bleibt in der Szene erkennbar. */
 export const MIN_LIGHT_INTENSITY = 0.15;
 
-/**
- * Platz eines Geraets in der Szene: sein Rasterplatz im Bereich, in der Reihenfolge von
- * `devicesInArea` - genau der Platz, an dem die Raumansicht seine Bubble zeichnet.
- */
-export function deviceAnchor(deviceId: string): Vec3 | null {
-  const device = HOUSE_DEVICES.find(entry => entry.id === deviceId);
-  if (!device) {
-    return null;
-  }
-  const devices = devicesInArea(device.area);
-  return deviceAnchors(device.area, devices.length)[devices.indexOf(device)] ?? null;
-}
-
 /** Effekte aller Geraete der angefragten Bereiche; `brightness` je Schalter-Entity in Prozent. */
 export function buildHouseEffects(areaIds: readonly string[], entities: EntityMap,
-                                  brightness: ReadonlyMap<string, number>): HouseEffect[] {
+                                  brightness: ReadonlyMap<string, number>, positions: DevicePositions): HouseEffect[] {
   const effects: HouseEffect[] = [];
   for (const areaId of areaIds) {
     for (const device of devicesInArea(areaId)) {
       const effect = effectOf(device, entities, brightness);
-      const anchor = effect ? deviceAnchor(device.id) : null;
+      const anchor = effect ? deviceAnchor(device.id, positions) : null;
       if (effect && anchor) {
-        effects.push({ deviceId: device.id, ...effect, anchor, floorY: anchor.y - DEVICE_ANCHOR_HEIGHT_M });
+        effects.push({ deviceId: device.id, ...effect, anchor, floorY: areaFloorBase(device.area) });
       }
     }
   }
