@@ -14,7 +14,8 @@ export interface LightExtras {
   colorTempRange: ColorTempRange;
 }
 export interface LockExtras { smartlockId: number; batteryCharge: number | null; batteryCritical: boolean }
-export interface PetExtras { pet: TractivePet | null; lastWalk: TractiveWalk | null }
+/** lastWalk: undefined = unbekannt/Laden fehlgeschlagen, null = geladen, kein Spaziergang in 7 Tagen. */
+export interface PetExtras { pet: TractivePet | null; lastWalk?: TractiveWalk | null }
 
 /** Ein fehlender Schluessel heisst: noch nie erfolgreich geladen. */
 export interface DetailExtras {
@@ -93,6 +94,9 @@ function batteryLine(pet: TractivePet | null | undefined): BubbleValue {
 
 function walkLine(extras: PetExtras | undefined): BubbleValue {
   if (!extras?.pet) {
+    return { ...MISSING, text: 'Spaziergang –' };
+  }
+  if (extras.lastWalk === undefined) {
     return { ...MISSING, text: 'Spaziergang –' };
   }
   const walk = extras.lastWalk;

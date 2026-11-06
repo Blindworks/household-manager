@@ -43,6 +43,13 @@ describe('detail-extras.util', () => {
       expect(lines.map(l => l.text)).toEqual(['Akku 80 % · lädt', 'kein Spaziergang in 7 Tagen']);
     });
 
+    it('lastWalk undefined (Laden fehlgeschlagen) ⇒ Spaziergang – und stale', () => {
+      const lines = petLines({ pet: pet({ batteryPercent: 80 }) }, undefined);
+      expect(lines[0].text).toBe('Akku 80 %');
+      expect(lines[1].text).toBe('Spaziergang –');
+      expect(lines[1].stale).toBeTrue();
+    });
+
     it('zeigt ohne Daten Strich', () => {
       const lines = petLines(undefined, undefined);
       expect(lines.map(l => l.text)).toEqual(['Akku –', 'Spaziergang –']);

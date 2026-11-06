@@ -17,8 +17,7 @@ import { CurrentTemperatureReading } from '../../models/temperature.model';
 import { HouseDevice } from '../../shared/house/house-devices';
 import { DetailExtras, LightExtras, LockExtras, PetExtras, cameraIdOf, smartlockIdOf, trackerIdOf } from '../../shared/house/detail-extras.util';
 import { LightColorRequest, colorTempRange } from '../../shared/house/light-color.util';
-import { thermostatIdOf } from '../../shared/house/device-detail.util';
-import { HistorySource } from '../../shared/house/device-detail.util';
+import { HistorySource, thermostatIdOf } from '../../shared/house/device-detail.util';
 import { BubbleValue, MISSING } from '../../shared/house/house-bubbles.util';
 import { clampTarget, roomReading } from '../../shared/thermostat-view.util';
 
@@ -252,11 +251,14 @@ export class HouseDeviceControlService {
       if (!pet) {
         return of<PetExtras>({ pet: null, lastWalk: null });
       }
-      return this.tractive.getWalks(pet.trackerId, 7).pipe(map(walks => ({
-        pet,
-        lastWalk: walks.reduce<typeof walks[number] | null>((latest, walk) =>
-          latest === null || walk.end > latest.end ? walk : latest, null)
-      })));
+      // Spaziergang = spaetestes `end` per ISO-String-Vergleich; ein Fehler hier behaelt das Tier.
+      return this.tractive.getWalks(pet.trackerId, 7).pipe(
+        map((walks): PetExtras => ({
+          pet,
+          lastWalk: walks.reduce<typeof walks[number] | null>((latest, walk) =>
+            latest === null || walk.end > latest.end ? walk : latest, null)
+        })),
+        catchError(() => of<PetExtras>({ pet })));
     }));
   }
 

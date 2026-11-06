@@ -581,6 +581,34 @@ describe('HouseDeviceControlService', () => {
       expect('pet' in extras).toBeFalse();
     });
 
+    it('Toni: getWalks scheitert ⇒ Tier bleibt, kein lastWalk', async () => {
+      const toni = byKind('pet');
+      const tracker = toni.homeEntityId.replace('binary_sensor.tractive_', '').replace('_home', '');
+      tractive.getPets.and.returnValue(of([pet(tracker)]));
+      tractive.getWalks.and.returnValue(throwError(() => new Error('x')));
+      supplies.getSupplies.and.returnValue(of([]));
+
+      const extras = await firstValueFrom(service.loadExtras(toni));
+
+      expect(extras.pet?.pet?.batteryPercent).toBe(80);
+      expect(extras.pet?.lastWalk).toBeUndefined();
+    });
+
+    it('Schloss fehlt in der Liste ⇒ lock null', async () => {
+      nuki.getLocks.and.returnValue(of([]));
+      expect((await firstValueFrom(service.loadExtras(byKind('door')))).lock).toBeNull();
+    });
+
+    it('Kamera fehlt in der Liste ⇒ camera null', async () => {
+      blink.getCameras.and.returnValue(of([]));
+      expect((await firstValueFrom(service.loadExtras(byKind('camera')))).camera).toBeNull();
+    });
+
+    it('getUpcoming scheitert ⇒ kein Schluessel waste', async () => {
+      waste.getUpcoming.and.returnValue(throwError(() => new Error('x')));
+      expect('waste' in await firstValueFrom(service.loadExtras(byKind('waste')))).toBeFalse();
+    });
+
     it('Thermostat: ein einziger thermostats.list, liefert Raumwert und Modus', async () => {
       const device = HOUSE_DEVICES.find(d => d.kind === 'thermostat' && thermostatIdOf(d.target) !== null) as
         Extract<HouseDevice, { kind: 'thermostat' }>;
