@@ -1,0 +1,37 @@
+// Eigene Styles: lumina-Klassen erreichen Kind-Komponenten nicht. Farben nur ueber die
+// --house-*-Tokens der Seite (erben als CSS-Variablen).
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  gap: 0.6rem;
+}
+
+$neon-rgb: var(--house-neon-rgb, 91, 140, 255);
+$accent: var(--house-accent, #8fd3ff);
+
+.door-lock {
+  &__button {
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border-radius: 0.6rem;
+    border: 1px solid $accent;
+    background: rgba($neon-rgb, 0.3);
+    color: $accent;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ff8f8f;
+  }
+}

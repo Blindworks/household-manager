@@ -438,6 +438,18 @@ describe('HouseDeviceDetailComponent', () => {
     });
   });
 
+  it('Haustür offen: der Feldtext bietet nur Verriegeln, nie Entriegeln oder Öffnen', () => {
+    create({
+      deviceId: 'haustuer', title: 'Haustür', icon: 'door_front', headline: { text: 'entriegelt', stale: false },
+      lines: [], history: null, control: { type: 'lock', smartlockId: 18241688572, locked: false }
+    });
+    const text = el.textContent ?? '';
+    expect(text).toContain('Verriegeln');
+    expect(text).not.toContain('Entriegeln');
+    expect(text).not.toContain('Öffnen');
+    expect(text).not.toContain('öffnen');
+  });
+
   it('✕ emittiert closed', () => {
     create(climate);
     let closed = false;

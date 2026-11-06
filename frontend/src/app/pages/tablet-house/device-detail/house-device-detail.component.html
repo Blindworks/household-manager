@@ -60,6 +60,12 @@
     </div>
   }
 
+  @if (lockControl; as lock) {
+    <div class="device-detail__control device-detail__control--lock">
+      <app-door-lock-control [control]="lock" (changed)="changed.emit()"></app-door-lock-control>
+    </div>
+  }
+
   @if (error) {
     <p class="device-detail__error" role="alert">{{ error }}</p>
   }

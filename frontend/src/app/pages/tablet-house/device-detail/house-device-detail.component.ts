@@ -13,6 +13,7 @@ import { DetailControl, DeviceDetail } from '../../../shared/house/device-detail
 import { LAMP_OFF, TARGET_GRACE_MS, UNREACHABLE } from './detail-texts';
 import { LightColorControlComponent } from './light-color-control.component';
 import { ThermostatModeControlComponent } from './thermostat-mode-control.component';
+import { DoorLockControlComponent } from './door-lock-control.component';
 import { HistoryRange, HistorySeries, HouseDeviceControlService } from '../house-device-control.service';
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
@@ -20,6 +21,7 @@ echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, Canvas
 type HistoryState = 'none' | 'loading' | 'ready' | 'empty';
 type TargetControl = Extract<DetailControl, { type: 'target' }>;
 type SwitchControl = Extract<DetailControl, { type: 'switch' }>;
+type LockControl = Extract<DetailControl, { type: 'lock' }>;
 
 /** Sammelpause fuer −/+: erst nach so langer Ruhe geht EIN Sollwert raus. */
 export const TARGET_DEBOUNCE_MS = 600;
@@ -39,7 +41,7 @@ const SERIES_COLORS = ['#8fd3ff', '#ffb35b'];
 @Component({
   selector: 'app-house-device-detail',
   standalone: true,
-  imports: [NgxEchartsDirective, LightColorControlComponent, ThermostatModeControlComponent],
+  imports: [NgxEchartsDirective, LightColorControlComponent, ThermostatModeControlComponent, DoorLockControlComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './house-device-detail.component.html',
   styleUrl: './house-device-detail.component.scss',
@@ -121,6 +123,10 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
 
   get switchControl(): SwitchControl | null {
     return this.detail.control?.type === 'switch' ? this.detail.control : null;
+  }
+
+  get lockControl(): LockControl | null {
+    return this.detail.control?.type === 'lock' ? this.detail.control : null;
   }
 
   get shownTarget(): number | null {

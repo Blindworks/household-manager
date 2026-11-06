@@ -1,0 +1,6 @@
+@if (control.locked === false) {
+  <button type="button" class="door-lock__button" [disabled]="pending" (click)="lock()">Verriegeln</button>
+}
+@if (error) {
+  <p class="door-lock__error" role="alert">{{ error }}</p>
+}
