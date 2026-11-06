@@ -90,6 +90,9 @@ function colorExtras(light: LightExtras | null | undefined): LightExtras | null 
   return light && (light.supportsColor || light.supportsColorTemp) ? light : null;
 }
 
+/** Nur diese Zustaende haben einen deutschen Text; Zwischenzustaende (locking, uncalibrated …) zeigen „–“. */
+const LOCK_HEADLINE_STATES = new Set(['locked', 'unlocked', 'unlatched', 'jammed']);
+
 function doorBody(device: Extract<HouseDevice, { kind: 'door' }>, entities: EntityMap, extras: DetailExtras)
   : DetailBody {
   const lock = entities.get(device.lockEntityId);
@@ -97,7 +100,7 @@ function doorBody(device: Extract<HouseDevice, { kind: 'door' }>, entities: Enti
   const smartlockId = extras.lock?.smartlockId ?? smartlockIdOf(device.lockEntityId);
   const battery = lockBatteryLine(extras.lock);
   return {
-    headline: !isReadable(lock) ? MISSING : fresh(lockText(lock.state)),
+    headline: !isReadable(lock) || !LOCK_HEADLINE_STATES.has(lock.state) ? MISSING : fresh(lockText(lock.state)),
     lines: [
       ...(isReadable(contact) ? [fresh(contact.state === 'on' ? 'offen' : 'zu'), ...sinceLine(contact)] : []),
       ...(battery ? [battery] : [])

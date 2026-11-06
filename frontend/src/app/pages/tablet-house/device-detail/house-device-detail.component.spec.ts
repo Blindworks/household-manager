@@ -107,6 +107,12 @@ describe('HouseDeviceDetailComponent', () => {
     });
   });
 
+  it('markiert critical-Zeilen mit der Hervorhebungsklasse', () => {
+    create({ ...climate, lines: [{ text: 'ok', stale: false }, { text: 'knapp', stale: false, critical: true }] });
+    const items = Array.from(el.querySelectorAll('.device-detail__line'));
+    expect(items.map(i => i.classList.contains('device-detail__line--critical'))).toEqual([false, true]);
+  });
+
   it('zeigt Titel, headline groß, lines; veraltete Werte abgedunkelt', () => {
     create(climate);
     expect(q('.device-detail__title')?.textContent).toContain('Wohnzimmer');

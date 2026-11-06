@@ -1,3 +1,4 @@
+import { BlinkCamera } from '../../models/blink.model';
 import { EntityState } from '../../models/entity-state.model';
 import { HOUSE_DEVICES, HouseDevice } from './house-devices';
 import { buildDeviceDetail, opensDetail, thermostatIdOf } from './device-detail.util';
@@ -152,6 +153,16 @@ describe('buildDeviceDetail mit Zusatzdaten', () => {
     expect(detail.history).toBeNull();
   });
 
+  it('Tür: Zwischenzustände (locking, uncalibrated …) zeigen „–“ statt Rohtext', () => {
+    const d = find('door', () => true);
+    for (const state of ['locking', 'unlocking', 'unlatching', 'uncalibrated']) {
+      const detail = buildDeviceDetail(d, mapOf(entity(d.lockEntityId, state)), NOW, { lock: lockExtras });
+      expect(detail.headline.text).withContext(state).toBe('–');
+    }
+    expect(buildDeviceDetail(d, mapOf(entity(d.lockEntityId, 'jammed')), NOW, { lock: lockExtras }).headline.text)
+      .toBe('klemmt');
+  });
+
   it('Tür: locked ⇒ true, unavailable ⇒ null, ohne smartlockId kein Bedienelement', () => {
     const d = doorDevice();
     const locked = buildDeviceDetail(d, mapOf(entity(d.lockEntityId, 'locked')), NOW, { lock: lockExtras });
@@ -172,11 +183,14 @@ describe('buildDeviceDetail mit Zusatzdaten', () => {
     const gone = buildDeviceDetail(d, new Map(), NOW, { camera: null });
     expect(gone.headline.text).toBe('–');
     expect((gone.control as { camera: unknown }).camera).toBeNull();
-    const cam = { id: '511671', name: 'K', armed: true, lastMotionAt: new Date(NOW).toISOString() } as never;
+    const cam: BlinkCamera = {
+      cameraId: '511671', name: 'K', type: 'doorbell', armed: true, battery: null, syncName: 's', syncArmed: true,
+      lastMotionAt: new Date(NOW).toISOString()
+    };
     const on = buildDeviceDetail(d, new Map(), NOW, { camera: cam });
     expect(on.headline.text).toBe('aktiv');
     expect(on.lines.length).toBe(1);
-    const off = buildDeviceDetail(d, new Map(), NOW, { camera: { ...(cam as object), armed: false } as never });
+    const off = buildDeviceDetail(d, new Map(), NOW, { camera: { ...cam, armed: false } });
     expect(off.headline.text).toBe('deaktiviert');
   });
 

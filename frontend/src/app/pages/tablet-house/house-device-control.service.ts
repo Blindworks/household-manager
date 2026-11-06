@@ -182,7 +182,10 @@ export class HouseDeviceControlService {
 
   /** null = kein Smart-Device zu dieser Entity-ID. */
   lightDevice(entityId: string): Observable<LightExtras | null> {
-    return this.findDevice(entityId).pipe(map(device => device
+    return this.smartDevices.getAllDevices().pipe(
+      tap(list => this.deviceList = list),
+      map(list => list.find(d => d.entityId === entityId)),
+      map(device => device
       ? {
           dimmable: device.capabilities.includes('BRIGHTNESS'),
           brightness: device.brightness ?? null,
@@ -214,9 +217,10 @@ export class HouseDeviceControlService {
       }
       case 'camera': {
         const cameraId = cameraIdOf(device.armedEntityId);
-        return cameraId === null ? of({}) : this.part(
-          this.blink.getCameras().pipe(map(list => list.find(c => c.cameraId === cameraId) ?? null)),
-          camera => ({ camera }));
+        // Ein Fehler (Blink nicht angemeldet, Sidecar weg) heisst „nicht erreichbar“ (null), nicht „laedt noch“.
+        return cameraId === null ? of({}) : this.blink.getCameras().pipe(
+          map((list): Partial<DetailExtras> => ({ camera: list.find(c => c.cameraId === cameraId) ?? null })),
+          catchError(() => of<Partial<DetailExtras>>({ camera: null })));
       }
       case 'waste':
         return this.part(this.waste.getUpcoming(), waste => ({ waste }));

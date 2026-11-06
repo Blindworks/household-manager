@@ -3,6 +3,7 @@ import { PetSupply } from '../../models/pet-supply.model';
 import { ThermostatMode } from '../../models/thermostat.model';
 import { TractivePet, TractiveWalk } from '../../models/tractive.model';
 import { WasteCollectionEvent } from '../../models/waste-collection.model';
+import { petSupplyTone } from '../pet-supply-level.util';
 import { walkDistance, walkDuration, walkTimeRange } from '../walk-format.util';
 import { BubbleValue, MISSING, fresh } from './house-bubbles.util';
 import { ColorTempRange } from './light-color.util';
@@ -107,8 +108,10 @@ function walkLine(extras: PetExtras | undefined): BubbleValue {
 }
 
 export function petLines(pet: PetExtras | undefined, supplies: PetSupply[] | undefined): BubbleValue[] {
-  const supplyLines = (supplies ?? []).map(supply =>
-    fresh(`${supply.name} ${germanNumber(supply.amountRemaining)} ${supply.unit} · noch ${supply.daysRemaining} Tage`));
+  const supplyLines = (supplies ?? []).map((supply): BubbleValue => ({
+    ...fresh(`${supply.name} ${germanNumber(supply.amountRemaining)} ${supply.unit} · noch ${supply.daysRemaining} Tage`),
+    critical: petSupplyTone(supply) === 'critical'
+  }));
   return [batteryLine(pet?.pet), walkLine(pet), ...supplyLines];
 }
 
@@ -130,7 +133,7 @@ export function lockBatteryLine(lock: LockExtras | null | undefined): BubbleValu
   if (!lock || lock.batteryCharge === null || lock.batteryCharge === undefined) {
     return null;
   }
-  return fresh(`Akku ${lock.batteryCharge} %${lock.batteryCritical ? ' · schwach' : ''}`);
+  return { ...fresh(`Akku ${lock.batteryCharge} %${lock.batteryCritical ? ' · schwach' : ''}`), critical: lock.batteryCritical };
 }
 
 function idAfterPrefix(entityId: string, prefix: string, suffix: string): string | null {

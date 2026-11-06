@@ -179,7 +179,9 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       switchMap(() => {
         const id = this.openDeviceId();
         const device = deviceById(id);
-        return device ? this.deviceControl.loadExtras(device).pipe(map(partial => ({ id, partial }))) : EMPTY;
+        return device ? this.deviceControl.loadExtras(device).pipe(
+          map(partial => ({ id, partial })),
+          catchError(() => EMPTY)) : EMPTY;
       }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(({ id, partial }) => {

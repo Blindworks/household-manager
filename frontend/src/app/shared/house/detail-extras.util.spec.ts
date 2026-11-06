@@ -91,6 +91,24 @@ describe('detail-extras.util', () => {
     });
   });
 
+  describe('critical-Markierung', () => {
+    const supply = (daysRemaining: number): PetSupply => ({
+      key: 'k', name: 'Futter', unit: 'Dosen', amountRemaining: 5, targetAmount: 48, step: 0.5,
+      perDay: 1, percent: 60, daysRemaining
+    });
+
+    it('Vorratszeile ist unter 7 Tagen critical, sonst nicht', () => {
+      const lines = petLines({ pet: pet({ batteryPercent: 50 }), lastWalk: null }, [supply(6), supply(7)]);
+      expect(lines[2].critical).toBeTrue();
+      expect(lines[3].critical).toBeFalse();
+    });
+
+    it('Schlossakku-Zeile ist critical bei batteryCritical', () => {
+      expect(lockBatteryLine({ smartlockId: 1, batteryCharge: 10, batteryCritical: true })!.critical).toBeTrue();
+      expect(lockBatteryLine({ smartlockId: 1, batteryCharge: 80, batteryCritical: false })!.critical).toBeFalse();
+    });
+  });
+
   describe('lockBatteryLine', () => {
     it('markiert schwachen Akku', () => {
       expect(lockBatteryLine({ smartlockId: 1, batteryCharge: 64, batteryCritical: true })!.text).toBe('Akku 64 % · schwach');

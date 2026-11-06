@@ -380,7 +380,7 @@ describe('HouseDeviceControlService', () => {
 
       expect(await firstValueFrom(service.lightDevice('switch.a'))).toEqual(jasmine.objectContaining({ dimmable: false, brightness: null }));
       expect(await firstValueFrom(service.lightDevice('switch.x'))).toBeNull();
-      expect(devices.getAllDevices).toHaveBeenCalledTimes(1);
+      expect(devices.getAllDevices).toHaveBeenCalledTimes(2);
     });
 
     it('lampBrightness: Helligkeit je Entity nur dimmbarer Lampen, immer frisch geladen', async () => {
@@ -391,8 +391,16 @@ describe('HouseDeviceControlService', () => {
 
       expect(await firstValueFrom(service.lampBrightness())).toEqual(new Map([['switch.flur', 40]]));
       expect(await firstValueFrom(service.lampBrightness())).toEqual(new Map([['switch.flur', 90]]));
-      // Der frische Stand dient auch dem Detail-Feld.
-      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual(jasmine.objectContaining({ dimmable: true, brightness: 90 }));
+      expect(devices.getAllDevices).toHaveBeenCalledTimes(2);
+    });
+
+    it('lightDevice lädt immer frisch statt einer zwischengespeicherten Liste', async () => {
+      devices.getAllDevices.and.returnValues(
+        of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 40)]),
+        of([device(7, 'switch.flur', ['SWITCH', 'BRIGHTNESS'], 90)]));
+
+      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual(jasmine.objectContaining({ brightness: 40 }));
+      expect(await firstValueFrom(service.lightDevice('switch.flur'))).toEqual(jasmine.objectContaining({ brightness: 90 }));
       expect(devices.getAllDevices).toHaveBeenCalledTimes(2);
     });
 
@@ -607,6 +615,11 @@ describe('HouseDeviceControlService', () => {
     it('Kamera fehlt in der Liste ⇒ camera null', async () => {
       blink.getCameras.and.returnValue(of([]));
       expect((await firstValueFrom(service.loadExtras(byKind('camera')))).camera).toBeNull();
+    });
+
+    it('getCameras scheitert ⇒ camera null (nicht erreichbar), nicht fehlender Schluessel', async () => {
+      blink.getCameras.and.returnValue(throwError(() => new Error('400')));
+      expect(await firstValueFrom(service.loadExtras(byKind('camera')))).toEqual({ camera: null });
     });
 
     it('getUpcoming scheitert ⇒ kein Schluessel waste', async () => {

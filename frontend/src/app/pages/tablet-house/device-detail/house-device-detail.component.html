@@ -13,7 +13,8 @@
   @if (detail.lines.length > 0) {
     <ul class="device-detail__lines">
       @for (line of detail.lines; track $index) {
-        <li class="device-detail__line" [class.device-detail__value--stale]="line.stale">{{ line.text }}</li>
+        <li class="device-detail__line" [class.device-detail__value--stale]="line.stale"
+            [class.device-detail__line--critical]="line.critical">{{ line.text }}</li>
       }
     </ul>
   }

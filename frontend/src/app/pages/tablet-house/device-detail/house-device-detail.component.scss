@@ -89,6 +89,11 @@ $bg: var(--house-bg, #05070f);
     font-size: 0.95rem;
   }
 
+  &__line--critical {
+    color: #ff8f8f;
+    font-weight: 700;
+  }
+
   &__value--stale {
     opacity: 0.45;
   }

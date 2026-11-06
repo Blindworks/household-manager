@@ -6,7 +6,8 @@ import { OUTDOOR_AREAS, roomById } from './house-plan';
 export type BubbleFlag = 'window_open' | 'heating' | 'appliance_running' | 'appliance_finished' | 'motion';
 
 /** `text` ist '–' bei fehlendem, `unavailable`- oder `unknown`-Wert. */
-export interface BubbleValue { text: string; stale: boolean }
+/** `critical`: die Zeile ist ein Warnwert (z. B. Vorrat knapp, Akku schwach) und wird hervorgehoben. */
+export interface BubbleValue { text: string; stale: boolean; critical?: boolean }
 
 export interface RoomBubble {
   areaId: string;

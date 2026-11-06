@@ -55,7 +55,7 @@ export class HouseDeviceDetailComponent implements OnChanges, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
 
   @Input({ required: true }) detail!: DeviceDetail;
-  /** Aktuelle Helligkeit (0–100) einer dimmbaren Lampe; die Seite fuellt sie ueber `lightDevice`. */
+  /** Aktuelle Helligkeit (0–100) einer dimmbaren Lampe; die Seite liefert sie aus ihren `openExtras` (`loadExtras`). */
   @Input() brightness: number | null = null;
   @Output() readonly closed = new EventEmitter<void>();
   /**

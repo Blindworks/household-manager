@@ -48,6 +48,10 @@ export class CameraControlComponent implements OnChanges {
     if (!changes['control']) {
       return;
     }
+    if (!this.control.camera || !this.control.camera.armed) {
+      // Ohne aktive Kamera darf ein Dialog nicht stehen bleiben und spaeter wieder auftauchen.
+      this.confirmingOff = false;
+    }
     if (this.cameraId !== null && this.cameraId !== this.control.cameraId) {
       this.cacheKey = Date.now();
       this.imageFailed = false;

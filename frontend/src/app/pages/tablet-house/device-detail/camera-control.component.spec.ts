@@ -72,6 +72,16 @@ describe('CameraControlComponent', () => {
     expect(el.querySelector('button')).toBeNull();
   });
 
+  it('Dialog verschwindet, wenn die Kamera nicht mehr da ist, und kommt nicht wieder', () => {
+    const el = create(cam(true));
+    sw(el).click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('deaktivieren?');
+    setControl(null);
+    setControl(cam(true));
+    expect(el.textContent).not.toContain('deaktivieren?');
+  });
+
   it('Ausschalten fragt: Abbrechen ruft nichts auf, Deaktivieren schaltet aus', () => {
     const el = create(cam(true));
     expect(sw(el).getAttribute('aria-checked')).toBe('true');
