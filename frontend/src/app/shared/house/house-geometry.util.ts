@@ -16,7 +16,7 @@ export interface CameraView { position: Vec3; target: Vec3 }
 /** Höhe der Raum-Anker (Bubbles, Kameraziel) über dem Etagenboden. */
 const ANCHOR_HEIGHT_M = 1.2;
 /** Höhe der Geräte-Anker über dem Boden und ihr Abstand zur Wand. */
-const DEVICE_ANCHOR_HEIGHT_M = 1.0;
+export const DEVICE_ANCHOR_HEIGHT_M = 1.0;
 const DEVICE_WALL_MARGIN_M = 0.4;
 
 const CENTER_X = (HOUSE_BOUNDS.x1 + HOUSE_BOUNDS.x2) / 2;

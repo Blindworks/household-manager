@@ -12,7 +12,8 @@ export type HouseDevice =
   | { kind: 'contact'; id: string; area: string; label: string; entityId: string }
   | { kind: 'motion'; id: string; area: string; label: string; entityId: string }
   | { kind: 'button'; id: string; area: string; label: string; entityIds: string[] }
-  | { kind: 'switch'; id: string; area: string; label: string; entityId: string; powerEntityId?: string }
+  /** `lamp`: leuchtet in der Szene warm (sonst ein kuehler Punkt fuer „an“); einzige Definition, was Licht ist. */
+  | { kind: 'switch'; id: string; area: string; label: string; entityId: string; powerEntityId?: string; lamp?: true }
   | { kind: 'appliance'; id: string; area: string; label: string; switchEntityId: string; powerEntityId: string; runningEntityId: string; finishedEntityId: string }
   /** Haustuer: Schloss und Tuerkontakt als ein Geraet. */
   | { kind: 'door'; id: string; area: string; label: string; lockEntityId: string; contactEntityId: string }
@@ -53,6 +54,11 @@ function plug(area: string, label: string, source: 'tapo' | 'kasa', ref: string,
   };
 }
 
+/** Markiert einen Schalter als Lampe (siehe `lamp`). */
+function asLamp(device: HouseDevice): HouseDevice {
+  return device.kind === 'switch' ? { ...device, lamp: true } : device;
+}
+
 function contact(area: string, label: string, entityId: string): HouseDevice {
   return { kind: 'contact', id: `${area}-contact-${entityId.split('.')[1].slice(0, 24)}`, area, label, entityId };
 }
@@ -81,16 +87,16 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   thermostat('wohnzimmer', 3, 'Heizung Fenster'),
   { kind: 'camera', id: 'wohnzimmer-camera', area: 'wohnzimmer', label: 'Kamera', armedEntityId: 'binary_sensor.blink_511671_armed' },
   meross('wohnzimmer', 'Fernseher', '2112152941687590863548e1e9817812'),
-  plug('wohnzimmer', 'Stehlampe', 'tapo', '802366e0c88d0dba80336f9f7363f8c4216c350a'),
-  plug('wohnzimmer', 'Stern', 'tapo', '80225ff5f331563993ff0df4adbedae5243f7caa'),
+  asLamp(plug('wohnzimmer', 'Stehlampe', 'tapo', '802366e0c88d0dba80336f9f7363f8c4216c350a')),
+  asLamp(plug('wohnzimmer', 'Stern', 'tapo', '80225ff5f331563993ff0df4adbedae5243f7caa')),
   { kind: 'switch', id: 'wohnzimmer-meross-couch', area: 'wohnzimmer', label: 'Couch-Lichterkette',
-    entityId: 'switch.meross_24041984068833510d06c4e7ae039150' },
+    entityId: 'switch.meross_24041984068833510d06c4e7ae039150', lamp: true },
   contact('wohnzimmer', 'Terrassentür', 'binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact'),
 
   // Esszimmer
   roomClimate('esszimmer', 'sensor.dirigera_dcc8d385781d4071adf85f403b0cb997'),
   thermostat('esszimmer', 2),
-  plug('esszimmer', 'Lampe', 'kasa', '8012e05a14a26399f80f21e4fbff42ac1cdf5b50'),
+  asLamp(plug('esszimmer', 'Lampe', 'kasa', '8012e05a14a26399f80f21e4fbff42ac1cdf5b50')),
 
   // Kueche
   roomClimate('kueche', 'sensor.dirigera_4a8044b0974e4885b2f60967af2201e1'),
@@ -105,7 +111,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   roomClimate('flur', 'sensor.dirigera_f2af71e53e924b0895cec17793205733'),
   thermostat('flur', 6),
   motion('flur', 'binary_sensor.zigbee_motion_flur_occupancy'),
-  plug('flur', 'Licht', 'tapo', '80232e39ed1bbdd537ab39cac50eede2216b55c7'),
+  asLamp(plug('flur', 'Licht', 'tapo', '80232e39ed1bbdd537ab39cac50eede2216b55c7')),
 
   // Laufband-Raum
   roomClimate('laufband', 'sensor.zigbee_temperatur_aqara_laufband'),
@@ -114,7 +120,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   // Schlafzimmer
   roomClimate('schlafzimmer', 'sensor.alexa_gaj230043055005a'),
   thermostat('schlafzimmer', 5),
-  plug('schlafzimmer', 'Licht', 'tapo', '80238e15a36182550737e4ce654d2f2420b98b5c'),
+  asLamp(plug('schlafzimmer', 'Licht', 'tapo', '80238e15a36182550737e4ce654d2f2420b98b5c')),
   meross('schlafzimmer', 'Fernseher', '2112153143211390863548e1e98182b1'),
 
   // Buero
@@ -127,9 +133,9 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
     'event.zigbee_button_buero_action'
   ]),
   meross('buero', 'PC', '2112159340612090863548e1e98183ba'),
-  meross('buero', 'Desktop Light', '24041948162696510d06c4e7ae038ae1'),
+  asLamp(meross('buero', 'Desktop Light', '24041948162696510d06c4e7ae038ae1')),
   meross('buero', 'Drucker', '24041903314491510d06c4e7ae038da2'),
-  plug('buero', 'Lichtstreifen', 'tapo', '8023261c2124d3bf658efedd6f6c46c020952267'),
+  asLamp(plug('buero', 'Lichtstreifen', 'tapo', '8023261c2124d3bf658efedd6f6c46c020952267')),
 
   // Bad
   roomClimate('bad', 'sensor.zigbee_temperatur_aqara_badezimmer'),
@@ -144,7 +150,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
     'event.dirigera_4ab740b2efb543018bf563c702722938_2_action',
     'event.zigbee_schalter_treppenhaus_action'
   ]),
-  plug('treppenhaus', 'Licht', 'kasa', '80121a1cd98950323721a763bc9f1b9f1ce0f7c0'),
+  asLamp(plug('treppenhaus', 'Licht', 'kasa', '80121a1cd98950323721a763bc9f1b9f1ce0f7c0')),
 
   // Kellereingang
   roomClimate('kellereingang', 'sensor.zigbee_temperatur_aqara_keller'),
