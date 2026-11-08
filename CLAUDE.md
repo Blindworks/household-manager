@@ -356,7 +356,7 @@ docker-compose down
 - Discovery via the behaviors "entities" API (`getSmarthomeEntities`), filtered to `deviceType === 'AIR_QUALITY_MONITOR'` (the older `/api/phoenix` discovery returns only `{success:true}`); state via `querySmarthomeDevices(entityIds, 'ENTITY')`
 - Amazon exposes the sensors as bare numbered `Alexa.RangeController` instances with NO asset labels; the instance→sensor mapping is fixed in the sidecar (`RANGE_INSTANCE_SENSORS` in `alexa-sidecar/smarthome.js`), verified against the Alexa app. IAQ is 0-100 where HIGHER is better
 - Sidecar endpoints: `GET /smarthome/air-quality-monitors` (discovery), `GET /smarthome/air-quality-monitors/state` (normalized flat values), `GET /smarthome/raw` (debug)
-- Backend polls every 5 minutes (`AlexaAirQualityPollingService`), stores readings in `alexa_air_quality_readings`, reports entity states (`EntitySource.ALEXA`) usable as flow triggers
+- Backend polls every minute (`AlexaAirQualityPollingService`, `fixedRate`, since 2026-11-08; before every 5 min with `fixedDelay`). Reason: about 15 % of the sidecar calls hang into the 30-s client timeout (Amazon cloud via alexa-remote2), and with `fixedDelay` every failure left a 10-min gap. The devices themselves deliver fresh values at least every 5 min. Cost: 2 rows per minute in `alexa_air_quality_readings` (no retention), stores readings in `alexa_air_quality_readings`, reports entity states (`EntitySource.ALEXA`) usable as flow triggers
 - Sensors: IAQ score, PM2.5, VOC, CO, temperature, humidity; device identity via the stable hardware serial (`applianceId`)
 - Frontend: indoor section on the air quality page (`alexa-air-quality-section.component`)
 

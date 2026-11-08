@@ -33,7 +33,7 @@ import java.util.Map;
 @Slf4j
 public class AlexaAirQualityPollingService {
 
-    private static final String SCHEDULE = "Alle 5 Minuten";
+    private static final String SCHEDULE = "Jede Minute";
 
     private final AlexaSidecarClient sidecarClient;
     private final AlexaAirQualityReadingRepository repository;
@@ -56,8 +56,11 @@ public class AlexaAirQualityPollingService {
         taskScheduler.schedule(this::safePoll, Instant.now());
     }
 
+    // fixedRate statt fixedDelay: haengt eine Abfrage bis zum 30-s-Timeout des Sidecar-Clients,
+    // startet die naechste trotzdem im Minutentakt statt erst eine volle Minute danach.
+    // Laeufe ueberlappen nie (Spring startet den naechsten erst nach Ende des vorigen).
     @Scheduled(
-            fixedDelayString = "${alexa.air-quality.polling.interval-ms:300000}",
+            fixedRateString = "${alexa.air-quality.polling.interval-ms:60000}",
             initialDelayString = "${alexa.air-quality.polling.initial-delay-ms:20000}"
     )
     public void scheduledPoll() {
