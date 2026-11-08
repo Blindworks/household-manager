@@ -44,6 +44,11 @@ import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
 import { buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
 import { buildDoorInsights, buildWindowInsights } from '../../shared/door-insight.util';
+import {
+  BALCONY_DOOR_ENTITY_ID,
+  BEDROOM_TEMPERATURE_ENTITY_ID,
+  buildBalconyColdInsight
+} from '../../shared/balcony-cold-insight.util';
 import { buildApplianceInsights } from '../../shared/appliance-insight.util';
 import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
@@ -1795,12 +1800,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ]).pipe(map(([zigbee, dirigera]) => [...zigbee, ...dirigera]));
   }
 
+  /**
+   * Tuer-/Fensterkarten plus die Vorwarnung „Schlafzimmer kuehlt aus“. Steht diese,
+   * ersetzt sie die normale Fensterkarte der Balkontuer. Ein Fehler beim Temperaturabruf
+   * laesst nur die Vorwarnung weg, nie die Tuer- und Fensterkarten.
+   */
   private loadDoorInsights(): Observable<void> {
-    return this.loadContactEntities().pipe(
-      catchError(() => of([])),
-      map(entities => {
+    return forkJoin([
+      this.loadContactEntities().pipe(catchError(() => of<EntityState[]>([]))),
+      this.entityStateService.getEntities('SENSOR', 'ALEXA').pipe(catchError(() => of<EntityState[]>([])))
+    ]).pipe(
+      map(([contacts, alexaSensors]) => {
         const now = Date.now();
-        this.doorInsights = [...buildDoorInsights(entities, now), ...buildWindowInsights(entities, now)];
+        const bedroom = alexaSensors.find(entity => entity.entityId === BEDROOM_TEMPERATURE_ENTITY_ID);
+        const coldWarning = buildBalconyColdInsight(contacts, bedroom, now);
+        const windowContacts = coldWarning
+          ? contacts.filter(entity => entity.entityId !== BALCONY_DOOR_ENTITY_ID)
+          : contacts;
+        this.doorInsights = [
+          ...(coldWarning ? [coldWarning] : []),
+          ...buildDoorInsights(contacts, now),
+          ...buildWindowInsights(windowContacts, now)
+        ];
         this.rebuildInsights();
       })
     );
