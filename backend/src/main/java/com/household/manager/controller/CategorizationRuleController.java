@@ -2,7 +2,10 @@ package com.household.manager.controller;
 
 import com.household.manager.dto.CategorizationRuleRequest;
 import com.household.manager.dto.CategorizationRuleResponse;
+import com.household.manager.dto.RuleChangeRequest;
+import com.household.manager.dto.RuleReevaluationPreview;
 import com.household.manager.service.CategorizationRuleService;
+import com.household.manager.service.RuleReevaluationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class CategorizationRuleController {
 
     private final CategorizationRuleService service;
+    private final RuleReevaluationService reevaluationService;
 
     @GetMapping
     public ResponseEntity<List<CategorizationRuleResponse>> getAll() {
@@ -39,14 +43,19 @@ public class CategorizationRuleController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Map<String, Integer>> delete(
+            @PathVariable Long id, @RequestParam(defaultValue = "false") boolean apply) {
+        return ResponseEntity.ok(Map.of("applied", service.delete(id, apply)));
+    }
+
+    @PostMapping("/preview")
+    public ResponseEntity<RuleReevaluationPreview> preview(@Valid @RequestBody RuleChangeRequest change) {
+        return ResponseEntity.ok(reevaluationService.preview(change));
     }
 
     @PostMapping("/apply")
     public ResponseEntity<Map<String, Integer>> applyAll() {
-        return ResponseEntity.ok(Map.of("applied", service.applyAllToUncategorized()));
+        return ResponseEntity.ok(Map.of("applied", service.applyAll()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

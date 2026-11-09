@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261109-0090-drop-rule-match-field" author="benedikt">
+        <comment>Finanz-Regeln: Spalte match_field der Regel entfaellt (steht jetzt in categorization_rule_condition).</comment>
+        <dropColumn tableName="categorization_rules" columnName="match_field"/>
+        <rollback>
+            <addColumn tableName="categorization_rules">
+                <column name="match_field" type="VARCHAR(30)"/>
+            </addColumn>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -2,6 +2,7 @@ package com.household.manager.service;
 
 import com.household.manager.dto.CategorizeResponse;
 import com.household.manager.dto.RuleSuggestion;
+import com.household.manager.dto.RuleConditionDto;
 import com.household.manager.model.entity.RuleMatchField;
 import com.household.manager.model.entity.Transaction;
 import com.household.manager.repository.TransactionRepository;
@@ -35,13 +36,15 @@ class TransactionServiceTest {
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
         when(categorizationService.suggestRule(any(Transaction.class), Mockito.eq(5L)))
                 .thenReturn(RuleSuggestion.builder()
-                        .field(RuleMatchField.COUNTERPARTY_NAME).pattern("NETFLIX").categoryId(5L).build());
+                        .conditions(java.util.List.of(RuleConditionDto.builder()
+                                .field(RuleMatchField.COUNTERPARTY_NAME).pattern("NETFLIX").build()))
+                        .categoryId(5L).build());
 
         CategorizeResponse response = service.categorize(1L, 5L);
 
         assertTrue(response.getTransaction().isManuallyCategorized());
         assertEquals(5L, response.getTransaction().getCategoryId());
         assertNotNull(response.getRuleSuggestion());
-        assertEquals("NETFLIX", response.getRuleSuggestion().getPattern());
+        assertEquals("NETFLIX", response.getRuleSuggestion().getConditions().get(0).getPattern());
     }
 }

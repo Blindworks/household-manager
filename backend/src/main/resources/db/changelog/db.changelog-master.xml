@@ -197,4 +197,11 @@
     <!-- Digitaler Zwilling: Geraeteplaetze im Grundriss -->
     <include file="db/changelog/changes/20261106-0087-create-house-device-position.xml"/>
 
+    <!-- Finanz-Regeln: UND-Bedingungen -->
+    <include file="db/changelog/changes/20261109-0088-create-categorization-rule-condition.xml"/>
+    <include file="db/changelog/changes/20261109-0089-migrate-categorization-rule-conditions.xml"/>
+    <include file="db/changelog/changes/20261109-0090-drop-rule-match-field.xml"/>
+    <include file="db/changelog/changes/20261109-0091-drop-rule-match-type.xml"/>
+    <include file="db/changelog/changes/20261109-0092-drop-rule-pattern.xml"/>
+
 </databaseChangeLog>

@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import {
   BankAccount, BankAccountRequest, Budget, BudgetRequest, BudgetStatusResponse,
   Category, CategoryRequest, CategorizationRule, CategorizationRuleRequest,
+  RuleChangeRequest, RuleReevaluationPreview,
   CategorizeResponse, ImportSummary, OverviewResponse, RecurringPayment,
   TransactionDto, TrendPoint
 } from '../models/finance.model';
@@ -79,8 +80,13 @@ export class FinanceService {
   updateRule(id: number, req: CategorizationRuleRequest): Observable<CategorizationRule> {
     return this.http.put<CategorizationRule>(`${this.baseUrl}/rules/${id}`, req).pipe(catchError(this.handleError));
   }
-  deleteRule(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/rules/${id}`).pipe(catchError(this.handleError));
+  deleteRule(id: number, apply: boolean): Observable<{ applied: number }> {
+    return this.http.delete<{ applied: number }>(`${this.baseUrl}/rules/${id}`, { params: { apply } })
+      .pipe(catchError(this.handleError));
+  }
+  previewRuleChange(change: RuleChangeRequest): Observable<RuleReevaluationPreview> {
+    return this.http.post<RuleReevaluationPreview>(`${this.baseUrl}/rules/preview`, change)
+      .pipe(catchError(this.handleError));
   }
   applyRules(): Observable<{ applied: number }> {
     return this.http.post<{ applied: number }>(`${this.baseUrl}/rules/apply`, {}).pipe(catchError(this.handleError));

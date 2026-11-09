@@ -1,6 +1,7 @@
 package com.household.manager.finance;
 
 import com.household.manager.model.entity.CategorizationRule;
+import com.household.manager.model.entity.CategorizationRuleCondition;
 import com.household.manager.model.entity.Transaction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,23 +14,31 @@ import java.util.regex.PatternSyntaxException;
 @Slf4j
 public class RuleMatcher {
 
+    /** A rule matches when it has conditions and all of them match. */
     public boolean matches(CategorizationRule rule, Transaction tx) {
-        String value = fieldValue(rule, tx);
+        if (rule.getConditions() == null || rule.getConditions().isEmpty()) {
+            return false;
+        }
+        return rule.getConditions().stream().allMatch(c -> matches(c, tx));
+    }
+
+    public boolean matches(CategorizationRuleCondition condition, Transaction tx) {
+        String value = fieldValue(condition, tx);
         if (value == null) {
             return false;
         }
         String haystack = value.toLowerCase();
-        String needle = rule.getPattern() == null ? "" : rule.getPattern().toLowerCase();
+        String needle = condition.getPattern() == null ? "" : condition.getPattern().toLowerCase();
 
-        return switch (rule.getMatchType()) {
+        return switch (condition.getMatchType()) {
             case CONTAINS -> haystack.contains(needle);
             case EQUALS -> haystack.equals(needle);
-            case REGEX -> regexMatches(rule.getPattern(), value);
+            case REGEX -> regexMatches(condition.getPattern(), value);
         };
     }
 
-    private String fieldValue(CategorizationRule rule, Transaction tx) {
-        return switch (rule.getMatchField()) {
+    private String fieldValue(CategorizationRuleCondition condition, Transaction tx) {
+        return switch (condition.getMatchField()) {
             case COUNTERPARTY_NAME -> tx.getCounterpartyName();
             case COUNTERPARTY_IBAN -> tx.getCounterpartyIban();
             case PURPOSE -> tx.getPurpose();

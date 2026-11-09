@@ -3,14 +3,27 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
+import { FinanceRuleEditorComponent } from '../../components/finance-rule-editor/finance-rule-editor.component';
+import { FinanceRulePreviewComponent } from '../../components/finance-rule-preview/finance-rule-preview.component';
 import {
-  BankAccount, Category, RuleSuggestion, TransactionDto
+  BankAccount, Category, CategorizationRuleRequest, RuleReevaluationPreview, RuleSuggestion, TransactionDto
 } from '../../models/finance.model';
+
+interface SuggestionEditor {
+  /** Neuer Schlüssel je Vorschlag: der Editor übernimmt seine Eingaben nur beim ersten Setzen. */
+  key: number;
+  suggestion: RuleSuggestion;
+}
+
+interface SuggestionDialog {
+  rule: CategorizationRuleRequest;
+  preview: RuleReevaluationPreview;
+}
 
 @Component({
   selector: 'app-finance-transactions',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FinanceRuleEditorComponent, FinanceRulePreviewComponent],
   templateUrl: './finance-transactions.component.html',
   styleUrl: './finance-transactions.component.scss'
 })
@@ -29,8 +42,15 @@ export class FinanceTransactionsComponent implements OnInit {
 
   loading = false;
   errorMessage: string | null = null;
+  infoMessage: string | null = null;
 
-  pendingSuggestion: RuleSuggestion | null = null;
+  suggestionEditor: SuggestionEditor | null = null;
+  suggestionDialog: SuggestionDialog | null = null;
+  /** Vorschau- oder Speicher-Request läuft; weitere Klicks lösen nichts aus. */
+  ruleBusy = false;
+  readonly defaultPriority = 100;
+
+  private nextEditorKey = 1;
 
   ngOnInit(): void {
     this.financeService.getCategories().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -76,36 +96,68 @@ export class FinanceTransactionsComponent implements OnInit {
   }
 
   onCategoryChange(tx: TransactionDto, categoryId: number): void {
+    this.infoMessage = null;
     this.financeService.categorize(tx.id, categoryId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         tx.categoryId = response.transaction.categoryId;
         tx.manuallyCategorized = response.transaction.manuallyCategorized;
-        this.pendingSuggestion = response.ruleSuggestion ?? null;
+        this.showSuggestion(response.ruleSuggestion ?? null);
       },
       error: (e: Error) => this.errorMessage = e.message
     });
   }
 
-  acceptSuggestion(): void {
-    if (!this.pendingSuggestion) {
+  /** Höchstens ein Editor; als Liste, damit `@for … track key` ihn je Vorschlag neu erzeugt. */
+  get suggestionEditors(): SuggestionEditor[] {
+    return this.suggestionEditor ? [this.suggestionEditor] : [];
+  }
+
+  onSuggestionSubmitted(rule: CategorizationRuleRequest): void {
+    if (!this.suggestionEditor || this.ruleBusy) {
       return;
     }
-    const s = this.pendingSuggestion;
-    this.financeService.createRule({
-      field: s.field, matchType: s.matchType, pattern: s.pattern,
-      categoryId: s.categoryId, applyToExisting: true
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => { this.pendingSuggestion = null; this.load(); },
-      error: (e: Error) => this.errorMessage = e.message
-    });
+    this.ruleBusy = true;
+    this.errorMessage = null;
+    this.financeService.previewRuleChange({ type: 'CREATE', rule })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (preview) => { this.ruleBusy = false; this.suggestionDialog = { rule, preview }; },
+        error: (e: Error) => { this.errorMessage = e.message; this.ruleBusy = false; }
+      });
+  }
+
+  /** Legt die Regel aus dem Vorschlag an; `apply` = bestehende Buchungen neu bewerten. */
+  confirmSuggestion(apply: boolean): void {
+    const dialog = this.suggestionDialog;
+    if (!dialog || this.ruleBusy) {
+      return;
+    }
+    this.ruleBusy = true;
+    this.errorMessage = null;
+    this.financeService.createRule({ ...dialog.rule, applyToExisting: apply })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (created) => {
+          this.ruleBusy = false;
+          this.showSuggestion(null);
+          this.infoMessage = `Regel gespeichert, ${created.appliedToExistingCount} Buchungen neu zugeordnet.`;
+          this.load();
+        },
+        error: (e: Error) => { this.errorMessage = e.message; this.ruleBusy = false; }
+      });
+  }
+
+  cancelSuggestionDialog(): void {
+    if (!this.ruleBusy) {
+      this.suggestionDialog = null;
+    }
   }
 
   dismissSuggestion(): void {
-    this.pendingSuggestion = null;
+    this.showSuggestion(null);
   }
 
-  suggestedCategoryName(): string {
-    return this.categoryName(this.pendingSuggestion?.categoryId);
+  private showSuggestion(suggestion: RuleSuggestion | null): void {
+    this.suggestionDialog = null;
+    this.suggestionEditor = suggestion ? { key: this.nextEditorKey++, suggestion } : null;
   }
 
   private currentMonth(): string {

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261109-0088-create-categorization-rule-condition" author="benedikt">
+        <comment>Finanz-Regeln: UND-Bedingungen je Regel (1-5), ersetzen die Einzelbedingung in categorization_rules.</comment>
+        <createTable tableName="categorization_rule_condition">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="rule_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_rule_condition_rule"
+                             references="categorization_rules(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="position" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="match_field" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="match_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pattern" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback><dropTable tableName="categorization_rule_condition"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

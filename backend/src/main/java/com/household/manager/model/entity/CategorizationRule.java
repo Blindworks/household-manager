@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * A rule that auto-assigns a category when a transaction field matches a pattern.
+ * A rule that auto-assigns a category when all of its conditions match a transaction.
  */
 @Entity
 @Table(name = "categorization_rules")
@@ -21,16 +23,12 @@ public class CategorizationRule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "match_field", nullable = false, length = 30)
-    private RuleMatchField matchField;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "match_type", nullable = false, length = 20)
-    private RuleMatchType matchType;
-
-    @Column(name = "pattern", nullable = false, length = 255)
-    private String pattern;
+    /** All conditions must match (AND); at least one, at most five. */
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JoinColumn(name = "rule_id", nullable = false)
+    @OrderBy("position ASC")
+    @Builder.Default
+    private List<CategorizationRuleCondition> conditions = new ArrayList<>();
 
     @Column(name = "category_id", nullable = false)
     private Long categoryId;

@@ -1,16 +1,16 @@
 package com.household.manager.dto;
 
-import com.household.manager.model.entity.RuleMatchField;
-import com.household.manager.model.entity.RuleMatchType;
 import lombok.Builder;
 import lombok.Data;
+
+import java.util.List;
 
 /** A proposed categorization rule derived from a manual category change. */
 @Data
 @Builder
 public class RuleSuggestion {
-    private final RuleMatchField field;
-    private final RuleMatchType matchType;
-    private final String pattern;
+    private final List<RuleConditionDto> conditions;
     private final Long categoryId;
+    /** Optional note for the user, e.g. why the suggestion has more than one condition. */
+    private final String hint;
 }

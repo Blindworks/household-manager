@@ -16,18 +16,48 @@
     </div>
   </header>
 
-  @if (errorMessage) {
+  @if (errorMessage && !suggestionDialog) {
     <p class="error">{{ errorMessage }}</p>
   }
   @if (loading) {
     <p>Lade…</p>
   }
 
-  @if (pendingSuggestion; as s) {
+  @if (infoMessage) {
+    <p class="info">{{ infoMessage }}</p>
+  }
+
+  @for (e of suggestionEditors; track e.key) {
     <div class="suggestion">
-      <span>Künftig „{{ s.pattern }}" immer als <strong>{{ suggestedCategoryName() }}</strong>?</span>
-      <button type="button" (click)="acceptSuggestion()">Regel anlegen</button>
-      <button type="button" class="ghost" (click)="dismissSuggestion()">Nein danke</button>
+      <h2>Regel für künftige Buchungen?</h2>
+      <app-finance-rule-editor
+        [conditions]="e.suggestion.conditions"
+        [categoryId]="e.suggestion.categoryId"
+        [categories]="categories"
+        [priority]="defaultPriority"
+        [busy]="ruleBusy"
+        [hint]="e.suggestion.hint ?? null"
+        cancelLabel="Nein danke"
+        (submitted)="onSuggestionSubmitted($event)"
+        (cancelled)="dismissSuggestion()" />
+    </div>
+  }
+
+  @if (suggestionDialog; as d) {
+    <div class="rule-dialog-backdrop">
+      <div class="rule-dialog" role="dialog" aria-modal="true">
+        <h2>Neue Regel – Vorschau</h2>
+        @if (errorMessage) {
+          <p class="error">{{ errorMessage }}</p>
+        }
+        <app-finance-rule-preview
+          [preview]="d.preview"
+          [categories]="categories"
+          [busy]="ruleBusy"
+          (applyAndSave)="confirmSuggestion(true)"
+          (saveOnly)="confirmSuggestion(false)"
+          (cancelled)="cancelSuggestionDialog()" />
+      </div>
     </div>
   }
 

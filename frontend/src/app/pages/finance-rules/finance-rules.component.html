@@ -1,49 +1,69 @@
 <section class="manage">
   <h1>Kategorisierungs-Regeln</h1>
-  @if (errorMessage) {
+  @if (errorMessage && !dialog) {
     <p class="error">{{ errorMessage }}</p>
   }
   @if (infoMessage) {
     <p class="info">{{ infoMessage }}</p>
   }
 
-  <form class="row-form" (ngSubmit)="create()">
-    <select [(ngModel)]="form.field" name="field">
-      @for (f of fields; track f) {
-        <option [ngValue]="f">{{ f }}</option>
-      }
-    </select>
-    <select [(ngModel)]="form.matchType" name="matchType">
-      @for (t of matchTypes; track t) {
-        <option [ngValue]="t">{{ t }}</option>
-      }
-    </select>
-    <input type="text" [(ngModel)]="form.pattern" name="pattern" placeholder="Muster" required />
-    <select [(ngModel)]="form.categoryId" name="categoryId">
-      @for (c of categories; track c.id) {
-        <option [ngValue]="c.id">{{ c.name }}</option>
-      }
-    </select>
-    <input type="number" [(ngModel)]="form.priority" name="priority" placeholder="Prio" />
-    <button type="submit">Regel anlegen</button>
-  </form>
+  <div class="toolbar">
+    <button type="button" class="new-rule" [disabled]="busy" (click)="openNew()">Neue Regel</button>
+    <button type="button" class="ghost reapply-rules" [disabled]="busy" (click)="reapplyAll()">Alle Regeln neu anwenden</button>
+  </div>
 
-  <button type="button" class="apply" (click)="applyAll()">Regeln auf unkategorisierte anwenden</button>
+  @for (e of editors; track e.key) {
+    <div class="editor-panel">
+      <h2>{{ e.heading }}</h2>
+      <app-finance-rule-editor
+        [conditions]="e.conditions"
+        [categoryId]="e.categoryId"
+        [priority]="e.priority"
+        [categories]="categories"
+        [busy]="busy"
+        (submitted)="onEditorSubmitted($event)"
+        (cancelled)="closeEditor()" />
+    </div>
+  }
 
   <table>
-    <thead><tr><th>Feld</th><th>Typ</th><th>Muster</th><th>Kategorie</th><th>Prio</th><th>Aktiv</th><th></th></tr></thead>
+    <thead><tr><th>Bedingungen</th><th>Kategorie</th><th>Prio</th><th>Aktiv</th><th></th></tr></thead>
     <tbody>
       @for (r of rules; track r.id) {
         <tr [class.disabled]="!r.enabled">
-          <td>{{ r.field }}</td><td>{{ r.matchType }}</td><td>{{ r.pattern }}</td>
+          <td>{{ describe(r) }}</td>
           <td>{{ categoryName(r.categoryId) }}</td><td>{{ r.priority }}</td>
-          <td><button type="button" (click)="toggle(r)">{{ r.enabled ? 'an' : 'aus' }}</button></td>
-          <td><button type="button" class="danger" (click)="remove(r)">Löschen</button></td>
+          <td><button type="button" class="ghost toggle-rule" [disabled]="busy" (click)="toggle(r)">{{ r.enabled ? 'an' : 'aus' }}</button></td>
+          <td class="row-actions">
+            <button type="button" class="ghost edit-rule" [disabled]="busy" (click)="openEdit(r)">Bearbeiten</button>
+            <button type="button" class="danger delete-rule" [disabled]="busy" (click)="remove(r)">Löschen</button>
+          </td>
         </tr>
       }
       @if (rules.length === 0) {
-        <tr><td colspan="7" class="muted">Noch keine Regeln.</td></tr>
+        <tr><td colspan="5" class="muted">Noch keine Regeln.</td></tr>
       }
     </tbody>
   </table>
+
+  @if (dialog; as d) {
+    <div class="rule-dialog-backdrop">
+      <div class="rule-dialog" role="dialog" aria-modal="true">
+        <h2>{{ d.title }}</h2>
+        @if (errorMessage) {
+          <p class="error">{{ errorMessage }}</p>
+        }
+        <app-finance-rule-preview
+          [preview]="d.preview"
+          [categories]="categories"
+          [busy]="busy"
+          [allowSaveOnly]="d.allowSaveOnly"
+          [applyLabel]="d.applyLabel"
+          [saveOnlyLabel]="d.saveOnlyLabel"
+          (applyAndSave)="confirm(true)"
+          (saveOnly)="confirm(false)"
+          (cancelled)="cancelDialog()" />
+      </div>
+    </div>
+  }
 </section>
