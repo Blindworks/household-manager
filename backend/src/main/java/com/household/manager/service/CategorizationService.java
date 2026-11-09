@@ -1,8 +1,10 @@
 package com.household.manager.service;
 
+import com.household.manager.dto.RuleConditionDto;
 import com.household.manager.dto.RuleSuggestion;
 import com.household.manager.finance.CounterpartyNameNormalizer;
 import com.household.manager.finance.RuleMatcher;
+import com.household.manager.finance.RuleOrdering;
 import com.household.manager.model.entity.CategorizationRule;
 import com.household.manager.model.entity.RuleMatchField;
 import com.household.manager.model.entity.RuleMatchType;
@@ -37,10 +39,10 @@ public class CategorizationService {
         return null;
     }
 
-    /** Loads enabled rules once (callers use this before a batch). */
+    /** Loads enabled rules once, sorted by {@link RuleOrdering} (callers use this before a batch). */
     @Transactional(readOnly = true)
     public List<CategorizationRule> loadActiveRules() {
-        return ruleRepository.findByEnabledTrueOrderByPriorityAsc();
+        return RuleOrdering.sort(ruleRepository.findByEnabledTrueOrderByPriorityAsc());
     }
 
     /**
@@ -49,7 +51,7 @@ public class CategorizationService {
      */
     @Transactional(readOnly = true)
     public RuleSuggestion suggestRule(Transaction tx, Long categoryId) {
-        List<CategorizationRule> active = ruleRepository.findByEnabledTrueOrderByPriorityAsc();
+        List<CategorizationRule> active = RuleOrdering.sort(ruleRepository.findByEnabledTrueOrderByPriorityAsc());
         Long alreadyAssigned = findCategory(tx, active);
         if (alreadyAssigned != null && alreadyAssigned.equals(categoryId)) {
             return null;
@@ -59,9 +61,11 @@ public class CategorizationService {
             return null;
         }
         return RuleSuggestion.builder()
-                .field(RuleMatchField.COUNTERPARTY_NAME)
-                .matchType(RuleMatchType.CONTAINS)
-                .pattern(pattern)
+                .conditions(List.of(RuleConditionDto.builder()
+                        .field(RuleMatchField.COUNTERPARTY_NAME)
+                        .matchType(RuleMatchType.CONTAINS)
+                        .pattern(pattern)
+                        .build()))
                 .categoryId(categoryId)
                 .build();
     }

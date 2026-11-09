@@ -2,8 +2,12 @@ package com.household.manager.service;
 
 import com.household.manager.dto.CategorizationRuleRequest;
 import com.household.manager.dto.CategorizationRuleResponse;
+import com.household.manager.dto.RuleConditionDto;
+import com.household.manager.finance.RuleConditionsValidator;
+import com.household.manager.finance.RuleOrdering;
 import com.household.manager.finance.RuleMatcher;
 import com.household.manager.model.entity.CategorizationRule;
+import com.household.manager.model.entity.CategorizationRuleCondition;
 import com.household.manager.model.entity.Transaction;
 import com.household.manager.repository.CategorizationRuleRepository;
 import com.household.manager.repository.TransactionRepository;
@@ -12,7 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -30,10 +36,9 @@ public class CategorizationRuleService {
 
     @Transactional
     public CategorizationRuleResponse create(CategorizationRuleRequest request) {
+        RuleConditionsValidator.validate(request.getConditions());
         CategorizationRule rule = ruleRepository.save(CategorizationRule.builder()
-                .matchField(request.getField())
-                .matchType(request.getMatchType())
-                .pattern(request.getPattern())
+                .conditions(toEntityConditions(request.getConditions()))
                 .categoryId(request.getCategoryId())
                 .priority(request.getPriority() != null ? request.getPriority() : 100)
                 .enabled(request.getEnabled() == null || request.getEnabled())
@@ -50,9 +55,9 @@ public class CategorizationRuleService {
     public CategorizationRuleResponse update(Long id, CategorizationRuleRequest request) {
         CategorizationRule rule = ruleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown rule id: " + id));
-        rule.setMatchField(request.getField());
-        rule.setMatchType(request.getMatchType());
-        rule.setPattern(request.getPattern());
+        RuleConditionsValidator.validate(request.getConditions());
+        rule.getConditions().clear();
+        rule.getConditions().addAll(toEntityConditions(request.getConditions()));
         rule.setCategoryId(request.getCategoryId());
         if (request.getPriority() != null) rule.setPriority(request.getPriority());
         if (request.getEnabled() != null) rule.setEnabled(request.getEnabled());
@@ -67,7 +72,8 @@ public class CategorizationRuleService {
     /** Apply all enabled rules to transactions that have no category and were not set by hand. */
     @Transactional
     public int applyAllToUncategorized() {
-        List<CategorizationRule> rules = ruleRepository.findByEnabledTrueOrderByPriorityAsc();
+        List<CategorizationRule> rules =
+                RuleOrdering.sort(ruleRepository.findByEnabledTrueOrderByPriorityAsc());
         List<Transaction> targets =
                 transactionRepository.findByCategoryIdIsNullAndManuallyCategorizedFalse();
         int count = 0;
@@ -99,10 +105,26 @@ public class CategorizationRuleService {
         return count;
     }
 
+    static List<CategorizationRuleCondition> toEntityConditions(List<RuleConditionDto> dtos) {
+        return new ArrayList<>(IntStream.range(0, dtos.size())
+                .mapToObj(i -> CategorizationRuleCondition.builder()
+                        .position(i)
+                        .matchField(dtos.get(i).getField())
+                        .matchType(dtos.get(i).getMatchType())
+                        .pattern(dtos.get(i).getPattern())
+                        .build())
+                .toList());
+    }
+
     private CategorizationRuleResponse toResponse(CategorizationRule r, int applied) {
         return CategorizationRuleResponse.builder()
-                .id(r.getId()).field(r.getMatchField()).matchType(r.getMatchType())
-                .pattern(r.getPattern()).categoryId(r.getCategoryId())
+                .id(r.getId())
+                .conditions(r.getConditions().stream()
+                        .map(c -> RuleConditionDto.builder()
+                                .field(c.getMatchField()).matchType(c.getMatchType())
+                                .pattern(c.getPattern()).build())
+                        .toList())
+                .categoryId(r.getCategoryId())
                 .priority(r.getPriority()).enabled(r.isEnabled())
                 .appliedToExistingCount(applied)
                 .build();

@@ -27,9 +27,18 @@ class CategorizationServiceTest {
     }
 
     private CategorizationRule rule(int priority, String pattern, long categoryId) {
-        return CategorizationRule.builder()
-                .matchField(RuleMatchField.COUNTERPARTY_NAME).matchType(RuleMatchType.CONTAINS)
-                .pattern(pattern).categoryId(categoryId).priority(priority).enabled(true).build();
+        return ruleWith(priority, categoryId, pattern);
+    }
+
+    private CategorizationRule ruleWith(int priority, long categoryId, String... patterns) {
+        List<CategorizationRuleCondition> conditions = new java.util.ArrayList<>();
+        for (int i = 0; i < patterns.length; i++) {
+            conditions.add(CategorizationRuleCondition.builder().position(i)
+                    .matchField(RuleMatchField.COUNTERPARTY_NAME).matchType(RuleMatchType.CONTAINS)
+                    .pattern(patterns[i]).build());
+        }
+        return CategorizationRule.builder().conditions(conditions)
+                .categoryId(categoryId).priority(priority).enabled(true).build();
     }
 
     @Test
@@ -49,9 +58,10 @@ class CategorizationServiceTest {
     void suggestRuleUsesNormalizedCounterpartyName() {
         Transaction tx = Transaction.builder().counterpartyName("Netflix 12345 01.06.2026").build();
         RuleSuggestion suggestion = service.suggestRule(tx, 5L);
-        assertEquals(RuleMatchField.COUNTERPARTY_NAME, suggestion.getField());
-        assertEquals(RuleMatchType.CONTAINS, suggestion.getMatchType());
-        assertEquals("NETFLIX", suggestion.getPattern());
+        assertEquals(1, suggestion.getConditions().size());
+        assertEquals(RuleMatchField.COUNTERPARTY_NAME, suggestion.getConditions().get(0).getField());
+        assertEquals(RuleMatchType.CONTAINS, suggestion.getConditions().get(0).getMatchType());
+        assertEquals("NETFLIX", suggestion.getConditions().get(0).getPattern());
         assertEquals(5L, suggestion.getCategoryId());
     }
 
@@ -62,5 +72,13 @@ class CategorizationServiceTest {
         Transaction tx = Transaction.builder().counterpartyName("NETFLIX").build();
         assertNull(service.suggestRule(tx, 5L),
                 "no suggestion when an existing rule already assigns this category");
+    }
+
+    @Test
+    void loadActiveRulesIsSortedBySpecificity() {
+        CategorizationRule single = ruleWith(10, 1L, "a");
+        CategorizationRule dual = ruleWith(100, 2L, "a", "b");
+        when(ruleRepository.findByEnabledTrueOrderByPriorityAsc()).thenReturn(List.of(single, dual));
+        assertSame(dual, service.loadActiveRules().get(0));
     }
 }

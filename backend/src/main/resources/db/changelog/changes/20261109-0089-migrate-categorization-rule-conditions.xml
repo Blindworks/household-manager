@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261109-0089-migrate-categorization-rule-conditions" author="benedikt">
+        <comment>Finanz-Regeln: bestehende Einzelbedingung jeder Regel als Bedingung 0 uebernehmen.</comment>
+        <sql>INSERT INTO categorization_rule_condition (rule_id, position, match_field, match_type, pattern) SELECT id, 0, match_field, match_type, pattern FROM categorization_rules</sql>
+        <rollback><sql>DELETE FROM categorization_rule_condition</sql></rollback>
+    </changeSet>
+
+</databaseChangeLog>
