@@ -174,4 +174,41 @@ describe('FinanceRulesComponent', () => {
     expect(el().textContent).toContain('Serverfehler');
     expect(dialogButton('Speichern und anwenden')!.disabled).toBeFalse();
   });
+
+  it('editingShowsStoredPriorityAndSendsChangedValue', () => {
+    click('.edit-rule', rowOf(1));
+    const field = el().querySelector('app-finance-rule-editor .priority-input') as HTMLInputElement;
+    expect(field.value).toBe('50');
+    field.value = '20';
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    click('app-finance-rule-editor .submit');
+    expect(lastPreviewRequest()).toEqual(jasmine.objectContaining({ type: 'UPDATE', ruleId: 2 }));
+    expect(lastPreviewRequest().rule!.priority).toBe(20);
+  });
+
+  it('newRuleStartsWithPriority100', () => {
+    click('.new-rule');
+    const field = el().querySelector('app-finance-rule-editor .priority-input') as HTMLInputElement;
+    expect(field.value).toBe('100');
+  });
+
+  it('toggleWhileEditorOpenIsNotRevertedByEditorSave', () => {
+    finance.updateRule.and.returnValue(of({ ...ruleA, enabled: false }));
+    click('.edit-rule', rowOf(0));
+    click('.toggle-rule', rowOf(0));
+    finance.getRules.and.returnValue(of([{ ...ruleA, enabled: false }, ruleB]));
+    clickDialog('Speichern und anwenden');
+    expect(el().querySelector('app-finance-rule-editor')).not.toBeNull();
+
+    click('app-finance-rule-editor .submit');
+    expect(lastPreviewRequest().rule!.enabled).toBeFalse();
+  });
+
+  it('editorSubmitDisabledWhilePreviewLoads', () => {
+    finance.previewRuleChange.and.returnValue(new Subject<RuleReevaluationPreview>());
+    click('.edit-rule', rowOf(0));
+    click('app-finance-rule-editor .submit');
+    expect((el().querySelector('app-finance-rule-editor .submit') as HTMLButtonElement).disabled).toBeTrue();
+  });
 });

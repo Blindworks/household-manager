@@ -19,6 +19,8 @@ export class FinanceRuleEditorComponent {
   readonly hint = input<string | null>(null);
   readonly submitLabel = input<string>('Weiter zur Vorschau');
   readonly cancelLabel = input<string>('Abbrechen');
+  /** Ein Vorschau- oder Speicher-Request der Seite läuft: Absenden gesperrt. */
+  readonly busy = input<boolean>(false);
 
   @Output() submitted = new EventEmitter<CategorizationRuleRequest>();
   @Output() cancelled = new EventEmitter<void>();
@@ -31,11 +33,22 @@ export class FinanceRuleEditorComponent {
   // Arbeitskopien; null = noch nicht angefasst, dann gilt die (kopierte) Eingabe.
   private readonly editedConditions = signal<RuleCondition[] | null>(null);
   private readonly editedCategoryId = signal<number | null>(null);
+  /** undefined = nicht angefasst; null = Feld geleert (Server-Default); NaN = keine ganze Zahl. */
+  private readonly editedPriority = signal<number | null | undefined>(undefined);
 
   readonly rows = computed(() => this.editedConditions() ?? this.conditions().map(c => ({ ...c })));
   readonly selectedCategoryId = computed(() => this.editedCategoryId() ?? this.categoryId());
+  readonly selectedPriority = computed(() => {
+    const edited = this.editedPriority();
+    return edited === undefined ? this.priority() : edited;
+  });
+  readonly priorityValid = computed(() => {
+    const p = this.selectedPriority();
+    return p === null || Number.isInteger(p);
+  });
   readonly canAdd = computed(() => this.rows().length < MAX_RULE_CONDITIONS);
-  readonly canSubmit = computed(() => canSaveConditions(this.rows()) && this.selectedCategoryId() > 0);
+  readonly canSubmit = computed(() =>
+    !this.busy() && canSaveConditions(this.rows()) && this.selectedCategoryId() > 0 && this.priorityValid());
 
   addCondition(): void {
     if (this.canAdd()) {
@@ -65,6 +78,11 @@ export class FinanceRuleEditorComponent {
     this.editedCategoryId.set(Number((event.target as HTMLSelectElement).value));
   }
 
+  setPriority(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.trim();
+    this.editedPriority.set(raw === '' ? null : Number(raw));
+  }
+
   submit(): void {
     if (!this.canSubmit()) {
       return;
@@ -73,7 +91,7 @@ export class FinanceRuleEditorComponent {
       conditions: this.rows().map(c => ({ ...c, pattern: c.pattern.trim() })),
       categoryId: this.selectedCategoryId()
     };
-    const priority = this.priority();
+    const priority = this.selectedPriority();
     if (priority !== null) {
       request.priority = priority;
     }

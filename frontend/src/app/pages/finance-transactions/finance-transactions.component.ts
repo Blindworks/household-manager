@@ -48,6 +48,7 @@ export class FinanceTransactionsComponent implements OnInit {
   suggestionDialog: SuggestionDialog | null = null;
   /** Vorschau- oder Speicher-Request läuft; weitere Klicks lösen nichts aus. */
   ruleBusy = false;
+  readonly defaultPriority = 100;
 
   private nextEditorKey = 1;
 

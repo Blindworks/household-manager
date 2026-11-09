@@ -73,4 +73,35 @@ describe('FinanceRuleEditorComponent', () => {
     fixture.detectChanges();
     expect(original).toEqual([cond('a')]);
   });
+
+  it('showsAndEmitsEditedPriority', () => {
+    setup([cond('a')]);
+    fixture.componentRef.setInput('priority', 40);
+    fixture.detectChanges();
+    const field = el().querySelector('.priority-input') as HTMLInputElement;
+    expect(field.value).toBe('40');
+    let emitted: CategorizationRuleRequest | undefined;
+    fixture.componentInstance.submitted.subscribe(r => emitted = r);
+    field.value = '10';
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    submitBtn().click();
+    expect(emitted!.priority).toBe(10);
+  });
+
+  it('submitDisabledForNonIntegerPriority', () => {
+    setup([cond('a')]);
+    const field = el().querySelector('.priority-input') as HTMLInputElement;
+    field.value = '1.5';
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(submitBtn().disabled).toBeTrue();
+  });
+
+  it('submitDisabledWhileBusy', () => {
+    setup([cond('a')]);
+    fixture.componentRef.setInput('busy', true);
+    fixture.detectChanges();
+    expect(submitBtn().disabled).toBeTrue();
+  });
 });

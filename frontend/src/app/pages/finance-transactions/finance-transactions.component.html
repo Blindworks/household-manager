@@ -34,6 +34,8 @@
         [conditions]="e.suggestion.conditions"
         [categoryId]="e.suggestion.categoryId"
         [categories]="categories"
+        [priority]="defaultPriority"
+        [busy]="ruleBusy"
         [hint]="e.suggestion.hint ?? null"
         cancelLabel="Nein danke"
         (submitted)="onSuggestionSubmitted($event)"

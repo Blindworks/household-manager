@@ -36,6 +36,13 @@
         }
       </select>
     </label>
+    <label>Priorität
+      <input type="number" step="1" class="priority-input"
+             [value]="selectedPriority() ?? ''"
+             [class.is-empty]="!priorityValid()"
+             (input)="setPriority($event)" />
+      <small class="priority-hint">Kleinere Zahl gewinnt bei gleich vielen Bedingungen.</small>
+    </label>
   </div>
 
   <div class="actions">

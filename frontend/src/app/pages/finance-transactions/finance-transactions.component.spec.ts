@@ -65,6 +65,7 @@ describe('FinanceTransactionsComponent', () => {
     expect(el().textContent).toContain('Regel für künftige Buchungen?');
     expect(el().textContent).toContain('PayPal erkannt');
     expect(editorPatterns()).toEqual(['paypal', 'zalando']);
+    expect((el().querySelector('app-finance-rule-editor .priority-input') as HTMLInputElement).value).toBe('100');
   });
 
   it('newSuggestionCreatesFreshEditor', () => {

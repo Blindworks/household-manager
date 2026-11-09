@@ -17,6 +17,7 @@ interface EditorState {
   conditions: RuleCondition[];
   categoryId: number;
   priority: number | null;
+  /** Nur für neue Regeln; eine bestehende nimmt beim Absenden ihren aktuellen Stand (Toggle bei offenem Editor). */
   enabled: boolean;
 }
 
@@ -34,6 +35,7 @@ interface DialogState {
 }
 
 const APPLY_LABEL = 'Speichern und anwenden';
+const DEFAULT_PRIORITY = 100;
 
 @Component({
   selector: 'app-finance-rules',
@@ -77,7 +79,7 @@ export class FinanceRulesComponent implements OnInit {
   }
 
   openNew(): void {
-    this.openEditor('Neue Regel', null, [newCondition()], this.categories[0]?.id ?? 0, null, true);
+    this.openEditor('Neue Regel', null, [newCondition()], this.categories[0]?.id ?? 0, DEFAULT_PRIORITY, true);
   }
 
   openEdit(rule: CategorizationRule): void {
@@ -93,7 +95,8 @@ export class FinanceRulesComponent implements OnInit {
     if (!editor || this.busy) {
       return;
     }
-    const rule: CategorizationRuleRequest = { ...request, enabled: editor.enabled };
+    const current = this.rules.find(r => r.id === editor.ruleId);
+    const rule: CategorizationRuleRequest = { ...request, enabled: current?.enabled ?? editor.enabled };
     const isNew = editor.ruleId === null;
     this.requestPreview(
       isNew ? { type: 'CREATE', rule } : { type: 'UPDATE', ruleId: editor.ruleId!, rule },
