@@ -18,6 +18,7 @@ export class FinanceRuleEditorComponent {
   readonly categories = input<Category[]>([]);
   readonly hint = input<string | null>(null);
   readonly submitLabel = input<string>('Weiter zur Vorschau');
+  readonly cancelLabel = input<string>('Abbrechen');
 
   @Output() submitted = new EventEmitter<CategorizationRuleRequest>();
   @Output() cancelled = new EventEmitter<void>();

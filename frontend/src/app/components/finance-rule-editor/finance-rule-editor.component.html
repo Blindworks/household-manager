@@ -40,6 +40,6 @@
 
   <div class="actions">
     <button type="button" class="submit" [disabled]="!canSubmit()" (click)="submit()">{{ submitLabel() }}</button>
-    <button type="button" class="ghost cancel" (click)="cancelled.emit()">Abbrechen</button>
+    <button type="button" class="ghost cancel" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
   </div>
 </div>

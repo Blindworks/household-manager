@@ -28,7 +28,7 @@ export class FinanceRulePreviewComponent {
     if (id === null || id === undefined) {
       return 'Unkategorisiert';
     }
-    return this.categories().find(c => c.id === id)?.name ?? 'Unkategorisiert';
+    return this.categories().find(c => c.id === id)?.name ?? '?';
   }
 
   formatDate(iso: string): string {

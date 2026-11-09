@@ -50,4 +50,9 @@ describe('FinanceRulePreviewComponent', () => {
     setup({ totalChanges: 0, rows: [] }, { allowSaveOnly: false });
     expect(buttons().map(b => b.textContent!.trim())).toEqual(['Speichern und anwenden', 'Abbrechen']);
   });
+
+  it('unknownCategoryIdIsShownAsQuestionMark', () => {
+    setup({ totalChanges: 1, rows: [{ ...row, oldCategoryId: 99, newCategoryId: null }] });
+    expect(el().querySelector('tbody td:last-child')!.textContent!.trim()).toBe('? → Unkategorisiert');
+  });
 });
