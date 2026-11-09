@@ -166,6 +166,34 @@ class RuleReevaluationServiceTest {
     }
 
     @Test
+    void previewUpdateKeepsStoredEnabledWhenRequestOmitsIt() {
+        givenRules(rule(1L, 7, false, dto(RuleMatchField.COUNTERPARTY_NAME, "paypal")));
+        when(transactionRepository.findByManuallyCategorizedFalse()).thenReturn(List.of(
+                tx(1, "PayPal", "x", null, LocalDate.of(2026, 1, 1))));
+
+        RuleReevaluationPreview p = service.preview(change(RuleChangeType.UPDATE, 1L,
+                request(7, null, dto(RuleMatchField.COUNTERPARTY_NAME, "paypal"))));
+
+        assertEquals(0, p.getTotalChanges());
+    }
+
+    @Test
+    void previewUpdateKeepsStoredPriorityWhenRequestOmitsIt() {
+        CategorizationRule edited = rule(1L, 7, true, dto(RuleMatchField.COUNTERPARTY_NAME, "paypal"));
+        edited.setPriority(5);
+        CategorizationRule other = rule(2L, 8, true, dto(RuleMatchField.COUNTERPARTY_NAME, "paypal"));
+        other.setPriority(50);
+        givenRules(edited, other);
+        when(transactionRepository.findByManuallyCategorizedFalse()).thenReturn(List.of(
+                tx(1, "PayPal", "x", 7L, LocalDate.of(2026, 1, 1))));
+
+        RuleReevaluationPreview p = service.preview(change(RuleChangeType.UPDATE, 1L,
+                request(7, null, dto(RuleMatchField.COUNTERPARTY_NAME, "paypal"))));
+
+        assertEquals(0, p.getTotalChanges());
+    }
+
+    @Test
     void applyAllSavesOnlyChangedTransactions() {
         givenRules(rule(1L, 7, true, dto(RuleMatchField.COUNTERPARTY_NAME, "paypal")));
         when(transactionRepository.findByManuallyCategorizedFalse()).thenReturn(List.of(

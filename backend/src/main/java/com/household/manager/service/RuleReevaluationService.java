@@ -90,7 +90,7 @@ public class RuleReevaluationService {
             if (targetsExisting && Objects.equals(stored.getId(), change.getRuleId())) {
                 found = true;
                 if (type == RuleChangeType.UPDATE) {
-                    rules.add(fromRequest(stored.getId(), change.getRule()));
+                    rules.add(fromRequest(stored.getId(), change.getRule(), stored));
                 }
             } else {
                 rules.add(copy(stored));
@@ -100,12 +100,13 @@ public class RuleReevaluationService {
             throw new IllegalArgumentException("Unknown rule id: " + change.getRuleId());
         }
         if (type == RuleChangeType.CREATE) {
-            rules.add(fromRequest(null, change.getRule()));
+            rules.add(fromRequest(null, change.getRule(), null));
         }
         return rules;
     }
 
-    private CategorizationRule fromRequest(Long id, CategorizationRuleRequest request) {
+    private CategorizationRule fromRequest(Long id, CategorizationRuleRequest request,
+                                         CategorizationRule stored) {
         if (request == null) {
             throw new IllegalArgumentException("Regel fehlt.");
         }
@@ -117,8 +118,10 @@ public class RuleReevaluationService {
                 .id(id)
                 .conditions(CategorizationRuleService.toEntityConditions(request.getConditions()))
                 .categoryId(request.getCategoryId())
-                .priority(request.getPriority() != null ? request.getPriority() : DEFAULT_PRIORITY)
-                .enabled(request.getEnabled() == null || request.getEnabled())
+                .priority(request.getPriority() != null ? request.getPriority()
+                        : stored != null ? stored.getPriority() : DEFAULT_PRIORITY)
+                .enabled(request.getEnabled() != null ? request.getEnabled()
+                        : stored == null || stored.isEnabled())
                 .build();
     }
 
