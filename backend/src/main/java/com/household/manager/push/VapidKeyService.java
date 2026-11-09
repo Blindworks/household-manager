@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
-import java.security.Security;
 import java.util.Base64;
 import java.util.Map;
 
@@ -57,9 +56,7 @@ public class VapidKeyService {
 
     private VapidKeys generate() {
         try {
-            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-                Security.addProvider(new BouncyCastleProvider());
-            }
+            BouncyCastleRegistration.ensureRegistered();
             KeyPairGenerator generator =
                     KeyPairGenerator.getInstance("ECDH", BouncyCastleProvider.PROVIDER_NAME);
             generator.initialize(ECNamedCurveTable.getParameterSpec("prime256v1"), new SecureRandom());

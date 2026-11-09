@@ -6,12 +6,10 @@ import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.security.Security;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -41,6 +39,10 @@ public class MartijnDwarsWebPushClient implements WebPushClient {
 
     @Override
     public int send(PushSubscription subscription, String payload) throws Exception {
+        // Vor new Notification(...): deren Konstruktor laedt den Empfaenger-Schluessel schon
+        // ueber "BC". Nach einem Neustart (VAPID-Schluessel liegen in der DB, VapidKeyService
+        // erzeugt nichts) hat sonst niemand den Provider registriert.
+        BouncyCastleRegistration.ensureRegistered();
         Notification notification = new Notification(
                 subscription.getEndpoint(),
                 subscription.getP256dhKey(),
@@ -63,9 +65,6 @@ public class MartijnDwarsWebPushClient implements WebPushClient {
         if (pushService == null) {
             synchronized (this) {
                 if (pushService == null) {
-                    if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-                        Security.addProvider(new BouncyCastleProvider());
-                    }
                     VapidKeyService.VapidKeys keys = vapidKeyService.keyPair();
                     pushService = new PushService(keys.publicKey(), keys.privateKey(), VAPID_SUBJECT);
                 }
