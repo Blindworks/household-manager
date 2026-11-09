@@ -36,7 +36,7 @@
   <div class="actions">
     <button type="button" [disabled]="busy()" (click)="applyAndSave.emit()">{{ applyLabel() }}</button>
     @if (allowSaveOnly()) {
-      <button type="button" class="ghost" [disabled]="busy()" (click)="saveOnly.emit()">Nur speichern</button>
+      <button type="button" class="ghost" [disabled]="busy()" (click)="saveOnly.emit()">{{ saveOnlyLabel() }}</button>
     }
     <button type="button" class="ghost" [disabled]="busy()" (click)="cancelled.emit()">Abbrechen</button>
   </div>

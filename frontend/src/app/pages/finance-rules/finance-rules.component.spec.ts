@@ -80,7 +80,8 @@ describe('FinanceRulesComponent', () => {
   it('deleteSaveOnlyDeletesWithoutApply', () => {
     finance.deleteRule.and.returnValue(of({ applied: 0 }));
     click('.delete-rule', rowOf(0));
-    clickDialog('Nur speichern');
+    expect(dialogButton('Nur speichern')).toBeUndefined();
+    clickDialog('Nur löschen');
     expect(finance.deleteRule).toHaveBeenCalledOnceWith(1, false);
   });
 
@@ -107,7 +108,8 @@ describe('FinanceRulesComponent', () => {
     click('.reapply-rules');
     expect(lastPreviewRequest()).toEqual({ type: 'REAPPLY' });
     expect(dialogButton('Nur speichern')).toBeUndefined();
-    clickDialog('Speichern und anwenden');
+    expect(dialogButton('Speichern und anwenden')).toBeUndefined();
+    clickDialog('Neu anwenden');
     expect(finance.applyRules).toHaveBeenCalledTimes(1);
     expect(el().textContent).toContain('4 Buchungen neu zugeordnet');
   });

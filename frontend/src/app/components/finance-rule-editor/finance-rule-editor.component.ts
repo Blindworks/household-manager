@@ -46,9 +46,10 @@ export class FinanceRuleEditorComponent {
     const p = this.selectedPriority();
     return p === null || Number.isInteger(p);
   });
+  readonly categoryListed = computed(() => this.categories().some(c => c.id === this.selectedCategoryId()));
   readonly canAdd = computed(() => this.rows().length < MAX_RULE_CONDITIONS);
   readonly canSubmit = computed(() =>
-    !this.busy() && canSaveConditions(this.rows()) && this.selectedCategoryId() > 0 && this.priorityValid());
+    !this.busy() && canSaveConditions(this.rows()) && this.categoryListed() && this.priorityValid());
 
   addCondition(): void {
     if (this.canAdd()) {

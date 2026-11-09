@@ -32,6 +32,19 @@ describe('FinanceRuleEditorComponent', () => {
     expect(addBtn().disabled).toBeTrue();
   });
 
+  it('showsPlaceholderAndBlocksSubmitWhenCategoryNotListed', () => {
+    setup([cond('amazon')], 0);
+    const select = el().querySelector('select.category-select, .category-row select') as HTMLSelectElement;
+    expect(select.selectedOptions[0].textContent!.trim()).toBe('Kategorie wählen …');
+    expect(select.selectedOptions[0].disabled).toBeTrue();
+    expect(submitBtn().disabled).toBeTrue();
+  });
+
+  it('blocksSubmitWhenCategoryIdIsNotInList', () => {
+    setup([cond('amazon')], 99);
+    expect(submitBtn().disabled).toBeTrue();
+  });
+
   it('submitDisabledWhilePatternEmpty', () => {
     setup([cond('amazon'), cond('')]);
     expect(submitBtn().disabled).toBeTrue();

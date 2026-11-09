@@ -32,9 +32,11 @@ interface DialogState {
   preview: RuleReevaluationPreview;
   allowSaveOnly: boolean;
   applyLabel: string;
+  saveOnlyLabel: string;
 }
 
 const APPLY_LABEL = 'Speichern und anwenden';
+const SAVE_ONLY_LABEL = 'Nur speichern';
 const DEFAULT_PRIORITY = 100;
 
 @Component({
@@ -118,11 +120,11 @@ export class FinanceRulesComponent implements OnInit {
 
   remove(rule: CategorizationRule): void {
     this.requestPreview({ type: 'DELETE', ruleId: rule.id }, { kind: 'delete', ruleId: rule.id },
-      'Regel löschen – Vorschau', true, 'Löschen und anwenden');
+      'Regel löschen – Vorschau', true, 'Löschen und anwenden', 'Nur löschen');
   }
 
   reapplyAll(): void {
-    this.requestPreview({ type: 'REAPPLY' }, { kind: 'reapply' }, 'Alle Regeln neu anwenden – Vorschau', false);
+    this.requestPreview({ type: 'REAPPLY' }, { kind: 'reapply' }, 'Alle Regeln neu anwenden – Vorschau', false, 'Neu anwenden');
   }
 
   /** Führt die Aktion des offenen Dialogs aus; `apply` = bestehende Buchungen neu bewerten. */
@@ -168,7 +170,7 @@ export class FinanceRulesComponent implements OnInit {
   }
 
   private requestPreview(change: RuleChangeRequest, action: PendingAction, title: string,
-                         allowSaveOnly = true, applyLabel = APPLY_LABEL): void {
+                         allowSaveOnly = true, applyLabel = APPLY_LABEL, saveOnlyLabel = SAVE_ONLY_LABEL): void {
     if (this.busy) {
       return;
     }
@@ -178,7 +180,7 @@ export class FinanceRulesComponent implements OnInit {
     this.financeService.previewRuleChange(change).subscribe({
       next: (preview) => {
         this.busy = false;
-        this.dialog = { title, action, preview, allowSaveOnly, applyLabel };
+        this.dialog = { title, action, preview, allowSaveOnly, applyLabel, saveOnlyLabel };
       },
       error: (e: Error) => { this.errorMessage = e.message; this.busy = false; }
     });

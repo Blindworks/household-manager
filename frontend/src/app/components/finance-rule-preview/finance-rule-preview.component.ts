@@ -17,6 +17,7 @@ export class FinanceRulePreviewComponent {
   readonly busy = input<boolean>(false);
   readonly allowSaveOnly = input<boolean>(true);
   readonly applyLabel = input<string>('Speichern und anwenden');
+  readonly saveOnlyLabel = input<string>('Nur speichern');
 
   @Output() applyAndSave = new EventEmitter<void>();
   @Output() saveOnly = new EventEmitter<void>();

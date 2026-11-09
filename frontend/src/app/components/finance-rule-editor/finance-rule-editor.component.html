@@ -31,6 +31,9 @@
   <div class="category-row">
     <label>Kategorie
       <select (change)="setCategory($event)">
+        @if (!categoryListed()) {
+          <option value="" disabled selected>Kategorie wählen …</option>
+        }
         @for (c of categories(); track c.id) {
           <option [value]="c.id" [selected]="c.id === selectedCategoryId()">{{ c.name }}</option>
         }

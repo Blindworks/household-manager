@@ -96,6 +96,7 @@ export class FinanceTransactionsComponent implements OnInit {
   }
 
   onCategoryChange(tx: TransactionDto, categoryId: number): void {
+    this.infoMessage = null;
     this.financeService.categorize(tx.id, categoryId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         tx.categoryId = response.transaction.categoryId;

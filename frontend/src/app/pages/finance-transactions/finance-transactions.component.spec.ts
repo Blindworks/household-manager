@@ -99,4 +99,13 @@ describe('FinanceTransactionsComponent', () => {
     expect(el().textContent).toContain('Regel gespeichert, 4 Buchungen neu zugeordnet.');
     expect(finance.getTransactions).toHaveBeenCalledTimes(2);
   });
+
+  it('clearsInfoMessageOnNextCategoryChange', () => {
+    fixture.componentInstance.infoMessage = 'Regel gespeichert, 2 Buchungen neu zugeordnet.';
+    finance.categorize.and.returnValue(of({ transaction: { ...tx, categoryId: 7, manuallyCategorized: true } }));
+    fixture.componentInstance.onCategoryChange(fixture.componentInstance.transactions[0], 7);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.infoMessage).toBeNull();
+    expect(el().querySelector('.info')).toBeNull();
+  });
 });
