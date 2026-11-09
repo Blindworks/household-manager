@@ -2,9 +2,10 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { describeConditions } from '../../shared/finance-rule.util';
 import { FinanceService } from '../../services/finance.service';
 import {
-  BankAccount, Category, RuleSuggestion, TransactionDto
+  BankAccount, Category, RuleCondition, RuleSuggestion, TransactionDto
 } from '../../models/finance.model';
 
 @Component({
@@ -92,7 +93,7 @@ export class FinanceTransactionsComponent implements OnInit {
     }
     const s = this.pendingSuggestion;
     this.financeService.createRule({
-      field: s.field, matchType: s.matchType, pattern: s.pattern,
+      conditions: s.conditions,
       categoryId: s.categoryId, applyToExisting: true
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => { this.pendingSuggestion = null; this.load(); },
@@ -102,6 +103,10 @@ export class FinanceTransactionsComponent implements OnInit {
 
   dismissSuggestion(): void {
     this.pendingSuggestion = null;
+  }
+
+  describeSuggestion(conditions: RuleCondition[]): string {
+    return describeConditions(conditions);
   }
 
   suggestedCategoryName(): string {

@@ -47,11 +47,16 @@ export interface TransactionDto {
   manuallyCategorized: boolean;
 }
 
-export interface RuleSuggestion {
+export interface RuleCondition {
   field: RuleMatchField;
   matchType: RuleMatchType;
   pattern: string;
+}
+
+export interface RuleSuggestion {
+  conditions: RuleCondition[];
   categoryId: number;
+  hint?: string;
 }
 
 export interface CategorizeResponse {
@@ -61,9 +66,7 @@ export interface CategorizeResponse {
 
 export interface CategorizationRule {
   id: number;
-  field: RuleMatchField;
-  matchType: RuleMatchType;
-  pattern: string;
+  conditions: RuleCondition[];
   categoryId: number;
   priority: number;
   enabled: boolean;
@@ -71,13 +74,35 @@ export interface CategorizationRule {
 }
 
 export interface CategorizationRuleRequest {
-  field: RuleMatchField;
-  matchType: RuleMatchType;
-  pattern: string;
+  conditions: RuleCondition[];
   categoryId: number;
   priority?: number;
   enabled?: boolean;
   applyToExisting?: boolean;
+}
+
+export type RuleChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'REAPPLY';
+
+export interface RuleChangeRequest {
+  type: RuleChangeType;
+  ruleId?: number;
+  rule?: CategorizationRuleRequest;
+}
+
+export interface RuleReevaluationRow {
+  transactionId: number;
+  bookingDate: string;
+  counterpartyName?: string;
+  purpose?: string;
+  amount: number;
+  oldCategoryId?: number | null;
+  newCategoryId?: number | null;
+}
+
+export interface RuleReevaluationPreview {
+  totalChanges: number;
+  rows: RuleReevaluationRow[];
+  warning?: string | null;
 }
 
 export interface ImportSummary {

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { canSaveConditions, describeConditions } from '../../shared/finance-rule.util';
 import { FinanceService } from '../../services/finance.service';
 import {
   Category, CategorizationRule, CategorizationRuleRequest, RuleMatchField, RuleMatchType
@@ -22,7 +23,7 @@ export class FinanceRulesComponent implements OnInit {
   readonly matchTypes: RuleMatchType[] = ['CONTAINS', 'EQUALS', 'REGEX'];
 
   form: CategorizationRuleRequest = {
-    field: 'COUNTERPARTY_NAME', matchType: 'CONTAINS', pattern: '',
+    conditions: [{ field: 'COUNTERPARTY_NAME', matchType: 'CONTAINS', pattern: '' }],
     categoryId: 0, priority: 100, enabled: true, applyToExisting: true
   };
   errorMessage: string | null = null;
@@ -49,13 +50,13 @@ export class FinanceRulesComponent implements OnInit {
   }
 
   create(): void {
-    if (!this.form.pattern || !this.form.categoryId) {
+    if (!canSaveConditions(this.form.conditions) || !this.form.categoryId) {
       return;
     }
     this.financeService.createRule(this.form).subscribe({
       next: (rule) => {
         this.infoMessage = `Regel angelegt, ${rule.appliedToExistingCount} bestehende Buchungen zugeordnet.`;
-        this.form.pattern = '';
+        this.form.conditions[0].pattern = '';
         this.load();
       },
       error: (e: Error) => this.errorMessage = e.message
@@ -64,13 +65,13 @@ export class FinanceRulesComponent implements OnInit {
 
   toggle(rule: CategorizationRule): void {
     this.financeService.updateRule(rule.id, {
-      field: rule.field, matchType: rule.matchType, pattern: rule.pattern,
+      conditions: rule.conditions,
       categoryId: rule.categoryId, priority: rule.priority, enabled: !rule.enabled
     }).subscribe({ next: () => this.load(), error: (e: Error) => this.errorMessage = e.message });
   }
 
   remove(rule: CategorizationRule): void {
-    this.financeService.deleteRule(rule.id).subscribe({
+    this.financeService.deleteRule(rule.id, false).subscribe({
       next: () => this.load(), error: (e: Error) => this.errorMessage = e.message
     });
   }
@@ -80,6 +81,10 @@ export class FinanceRulesComponent implements OnInit {
       next: (r) => this.infoMessage = `${r.applied} Buchungen neu zugeordnet.`,
       error: (e: Error) => this.errorMessage = e.message
     });
+  }
+
+  describe(rule: CategorizationRule): string {
+    return describeConditions(rule.conditions);
   }
 
   categoryName(id: number): string {
