@@ -23,7 +23,8 @@ class CategorizationServiceTest {
     @BeforeEach
     void setUp() {
         ruleRepository = Mockito.mock(CategorizationRuleRepository.class);
-        service = new CategorizationService(ruleRepository, new RuleMatcher(), new CounterpartyNameNormalizer());
+        service = new CategorizationService(ruleRepository, new RuleMatcher(), new CounterpartyNameNormalizer(),
+                new com.household.manager.finance.MerchantNameExtractor());
     }
 
     private CategorizationRule rule(int priority, String pattern, long categoryId) {
@@ -80,5 +81,38 @@ class CategorizationServiceTest {
         CategorizationRule dual = ruleWith(100, 2L, "a", "b");
         when(ruleRepository.findByEnabledTrueOrderByPriorityAsc()).thenReturn(List.of(single, dual));
         assertSame(dual, service.loadActiveRules().get(0));
+    }
+
+    private static final String SHELL_PURPOSE =
+            "1053795742551/. SHELL DEUTSCHLAND GmbH, Ihr Einkauf bei SHELL DEUTSCHLAND GmbH";
+
+    @Test
+    void paypalSuggestionHasCounterpartyAndPurposeCondition() {
+        Transaction tx = Transaction.builder().counterpartyName("PayPal Europe S.a.r.l. et Cie S.C.A")
+                .purpose(SHELL_PURPOSE).build();
+        RuleSuggestion s = service.suggestRule(tx, 5L);
+        assertEquals(2, s.getConditions().size());
+        assertEquals(RuleMatchField.COUNTERPARTY_NAME, s.getConditions().get(0).getField());
+        assertEquals(RuleMatchType.CONTAINS, s.getConditions().get(0).getMatchType());
+        assertEquals("PAYPAL", s.getConditions().get(0).getPattern());
+        assertEquals(RuleMatchField.PURPOSE, s.getConditions().get(1).getField());
+        assertEquals(RuleMatchType.CONTAINS, s.getConditions().get(1).getMatchType());
+        assertEquals("SHELL DEUTSCHLAND", s.getConditions().get(1).getPattern());
+        assertNull(s.getHint());
+    }
+
+    @Test
+    void paypalWithoutMerchantPhraseLeavesPurposePatternEmpty() {
+        Transaction tx = Transaction.builder().counterpartyName("PayPal Europe S.a.r.l. et Cie S.C.A")
+                .purpose("Referenz 4711").build();
+        RuleSuggestion s = service.suggestRule(tx, 5L);
+        assertEquals("", s.getConditions().get(1).getPattern());
+        assertTrue(s.getHint().startsWith("Bitte den Händler"));
+    }
+
+    @Test
+    void amzSuggestionUsesMatchedToken() {
+        Transaction tx = Transaction.builder().counterpartyName("AMZN Mktp DE").purpose("Bestellung").build();
+        assertEquals("AMZN", service.suggestRule(tx, 5L).getConditions().get(0).getPattern());
     }
 }

@@ -29,7 +29,8 @@ class RuleReevaluationServiceTest {
         ruleRepository = mock(CategorizationRuleRepository.class);
         transactionRepository = mock(TransactionRepository.class);
         CategorizationService categorizationService =
-                new CategorizationService(ruleRepository, new RuleMatcher(), new CounterpartyNameNormalizer());
+                new CategorizationService(ruleRepository, new RuleMatcher(), new CounterpartyNameNormalizer(),
+                new com.household.manager.finance.MerchantNameExtractor());
         service = new RuleReevaluationService(ruleRepository, transactionRepository, categorizationService);
     }
 
