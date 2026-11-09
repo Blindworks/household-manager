@@ -25,6 +25,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findByCategoryIdIsNullAndManuallyCategorizedFalse();
 
+    List<Transaction> findByManuallyCategorizedFalse();
+
     Optional<Transaction> findByDedupHash(String dedupHash);
 
     /** Sum of amounts per non-TRANSFER category in a date range, returned as [categoryId, sum]. */
