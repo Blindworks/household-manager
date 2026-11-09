@@ -42,4 +42,13 @@ class PaymentIntermediaryTest {
                 cond(RuleMatchField.COUNTERPARTY_NAME, "PAYPAL"), cond(RuleMatchField.PURPOSE, "shell"))));
         assertNull(PaymentIntermediary.broadRuleWarning(List.of(cond(RuleMatchField.COUNTERPARTY_NAME, "REWE"))));
     }
+
+    @Test
+    void matchesWholeWordsOnly() {
+        assertTrue(PaymentIntermediary.detect("Amazonas Apotheke").isEmpty());
+        assertNull(PaymentIntermediary.matchedToken("Amazonas Apotheke"));
+        assertEquals(PaymentIntermediary.AMAZON, PaymentIntermediary.detect("Amazon EU S.a.r.l.").orElseThrow());
+        assertEquals(PaymentIntermediary.AMAZON, PaymentIntermediary.detect("AMAZON PAYMENTS EUROPE").orElseThrow());
+        assertNull(PaymentIntermediary.broadRuleWarning(List.of(cond(RuleMatchField.COUNTERPARTY_NAME, "Amazonas"))));
+    }
 }

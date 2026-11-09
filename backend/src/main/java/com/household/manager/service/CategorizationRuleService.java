@@ -4,6 +4,7 @@ import com.household.manager.dto.CategorizationRuleRequest;
 import com.household.manager.dto.CategorizationRuleResponse;
 import com.household.manager.dto.RuleConditionDto;
 import com.household.manager.finance.RuleConditionsValidator;
+import com.household.manager.finance.RuleOrdering;
 import com.household.manager.model.entity.CategorizationRule;
 import com.household.manager.model.entity.CategorizationRuleCondition;
 import com.household.manager.repository.CategorizationRuleRepository;
@@ -26,7 +27,7 @@ public class CategorizationRuleService {
 
     @Transactional(readOnly = true)
     public List<CategorizationRuleResponse> getAll() {
-        return ruleRepository.findAll().stream().map(r -> toResponse(r, 0)).toList();
+        return RuleOrdering.sort(ruleRepository.findAll()).stream().map(r -> toResponse(r, 0)).toList();
     }
 
     @Transactional

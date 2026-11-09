@@ -6,6 +6,7 @@ import com.household.manager.model.entity.RuleMatchField;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /** Payment intermediaries whose bookings hide the real merchant behind their own name. */
 public enum PaymentIntermediary {
@@ -25,32 +26,31 @@ public enum PaymentIntermediary {
     }
 
     public static Optional<PaymentIntermediary> detect(String counterpartyName) {
+        return find(counterpartyName).map(Match::intermediary);
+    }
+
+    /** The token that matched, or null when the name is no intermediary. */
+    public static String matchedToken(String counterpartyName) {
+        return find(counterpartyName).map(Match::token).orElse(null);
+    }
+
+    private record Match(PaymentIntermediary intermediary, String token) {
+    }
+
+    /** Tokens match as whole words only, so "Amazonas Apotheke" is no Amazon payment. */
+    private static Optional<Match> find(String counterpartyName) {
         if (counterpartyName == null) {
             return Optional.empty();
         }
         String upper = counterpartyName.toUpperCase(Locale.ROOT);
         for (PaymentIntermediary i : values()) {
-            if (i.tokens.stream().anyMatch(upper::contains)) {
-                return Optional.of(i);
-            }
-        }
-        return Optional.empty();
-    }
-
-    /** The token that matched, or null when the name is no intermediary. */
-    public static String matchedToken(String counterpartyName) {
-        if (counterpartyName == null) {
-            return null;
-        }
-        String upper = counterpartyName.toUpperCase(Locale.ROOT);
-        for (PaymentIntermediary i : values()) {
             for (String token : i.tokens) {
-                if (upper.contains(token)) {
-                    return token;
+                if (Pattern.compile("\\b" + Pattern.quote(token) + "\\b").matcher(upper).find()) {
+                    return Optional.of(new Match(i, token));
                 }
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     /** Warning for rules that only look at the counterparty name and thus catch every payment of one. */

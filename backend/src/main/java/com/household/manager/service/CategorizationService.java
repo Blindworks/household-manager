@@ -33,7 +33,7 @@ public class CategorizationService {
     private final CounterpartyNameNormalizer normalizer;
     private final MerchantNameExtractor merchantNameExtractor;
 
-    /** Returns the category id of the first matching rule (by priority), or null. */
+    /** Returns the category id of the first matching rule in the given order (callers pass RuleOrdering order), or null. */
     public Long findCategory(Transaction tx, List<CategorizationRule> rulesByPriority) {
         for (CategorizationRule rule : rulesByPriority) {
             if (ruleMatcher.matches(rule, tx)) {

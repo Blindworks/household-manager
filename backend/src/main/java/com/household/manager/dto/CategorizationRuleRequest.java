@@ -17,6 +17,6 @@ public class CategorizationRuleRequest {
     @NotNull private Long categoryId;
     private Integer priority;
     private Boolean enabled;
-    /** When true, apply this rule to existing uncategorized transactions immediately. */
+    /** When true, re-evaluate all transactions not categorized by hand immediately. */
     private boolean applyToExisting;
 }
