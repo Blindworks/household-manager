@@ -1,0 +1,43 @@
+<div class="rule-preview">
+  @if (preview().warning) {
+    <p class="warning">{{ preview().warning }}</p>
+  }
+
+  @if (preview().totalChanges === 0) {
+    <p class="summary">Keine bestehende Buchung ändert sich.</p>
+  } @else {
+    <p class="summary">
+      {{ preview().totalChanges }}
+      {{ preview().totalChanges === 1 ? 'Buchung wechselt' : 'Buchungen wechseln' }} ihre Kategorie
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Datum</th><th>Empfänger</th><th>Verwendungszweck</th><th>Betrag</th><th>Kategorie</th></tr>
+        </thead>
+        <tbody>
+          @for (row of preview().rows; track row.transactionId) {
+            <tr>
+              <td>{{ formatDate(row.bookingDate) }}</td>
+              <td>{{ row.counterpartyName }}</td>
+              <td>{{ row.purpose }}</td>
+              <td class="amount">{{ formatAmount(row.amount) }}</td>
+              <td>{{ categoryName(row.oldCategoryId) }} → {{ categoryName(row.newCategoryId) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (preview().totalChanges > preview().rows.length) {
+      <p class="cap-notice">Es werden die neuesten {{ maxRows }} von {{ preview().totalChanges }} gezeigt.</p>
+    }
+  }
+
+  <div class="actions">
+    <button type="button" [disabled]="busy()" (click)="applyAndSave.emit()">{{ applyLabel() }}</button>
+    @if (allowSaveOnly()) {
+      <button type="button" class="ghost" [disabled]="busy()" (click)="saveOnly.emit()">Nur speichern</button>
+    }
+    <button type="button" class="ghost" [disabled]="busy()" (click)="cancelled.emit()">Abbrechen</button>
+  </div>
+</div>

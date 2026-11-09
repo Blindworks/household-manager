@@ -1,0 +1,6 @@
+.rule-editor { display: flex; flex-direction: column; gap: 0.6rem; }
+.condition-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.condition-row input { flex: 1 1 12rem; }
+.category-row label { display: flex; flex-direction: column; gap: 0.25rem; }
+.actions { display: flex; gap: 0.5rem; }
+.add-condition { align-self: flex-start; }

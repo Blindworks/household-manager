@@ -1,0 +1,45 @@
+<div class="rule-editor">
+  @if (hint()) {
+    <p class="hint">{{ hint() }}</p>
+  }
+
+  @for (condition of rows(); track $index; let i = $index) {
+    <div class="condition-row">
+      <select (change)="setField(i, $event)">
+        @for (f of fields; track f) {
+          <option [value]="f" [selected]="f === condition.field">{{ fieldLabels[f] }}</option>
+        }
+      </select>
+      <select (change)="setMatchType(i, $event)">
+        @for (m of matchTypes; track m) {
+          <option [value]="m" [selected]="m === condition.matchType">{{ matchTypeLabels[m] }}</option>
+        }
+      </select>
+      <input type="text" maxlength="255" [value]="condition.pattern"
+             [class.is-empty]="condition.pattern.trim().length === 0"
+             (input)="setPattern(i, $event)" />
+      @if (rows().length > 1) {
+        <button type="button" class="ghost remove-condition" (click)="removeCondition(i)">Entfernen</button>
+      }
+    </div>
+  }
+
+  <button type="button" class="ghost add-condition" [disabled]="!canAdd()" (click)="addCondition()">
+    Bedingung hinzufügen
+  </button>
+
+  <div class="category-row">
+    <label>Kategorie
+      <select (change)="setCategory($event)">
+        @for (c of categories(); track c.id) {
+          <option [value]="c.id" [selected]="c.id === selectedCategoryId()">{{ c.name }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="submit" [disabled]="!canSubmit()" (click)="submit()">{{ submitLabel() }}</button>
+    <button type="button" class="ghost cancel" (click)="cancelled.emit()">Abbrechen</button>
+  </div>
+</div>
