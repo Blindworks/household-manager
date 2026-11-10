@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,5 +61,99 @@ class RecurrenceAnalyzerTest {
         Optional<RecurrenceResult> result = analyzer.analyze(dates, amounts);
         assertTrue(result.isPresent());
         assertEquals(RecurrenceInterval.YEARLY, result.get().getInterval());
+    }
+
+    private static List<BigDecimal> same(int n, String amount) {
+        return Collections.nCopies(n, new BigDecimal(amount));
+    }
+
+    private static LocalDate d(int m, int day) {
+        return LocalDate.of(2026, m, day);
+    }
+
+    @Test
+    void bookingWithinFiveDaysJoinsTerm() {
+        List<LocalDate> dates = List.of(d(1, 1), d(2, 1), d(3, 1), d(3, 4), d(4, 1), d(5, 1));
+        RecurrenceResult r = analyzer.analyze(dates, same(6, "-10")).orElseThrow();
+        assertEquals(RecurrenceInterval.MONTHLY, r.getInterval());
+        assertEquals(d(1, 1), r.getFirstSeenDate());
+        assertEquals(d(5, 1), r.getLastSeenDate());
+        assertEquals(d(6, 1), r.getNextDueDate());
+    }
+
+    @Test
+    void skippedMonthIsNoBreak() {
+        List<LocalDate> dates = List.of(d(1, 1), d(2, 1), d(4, 1), d(5, 1), d(6, 1));
+        assertEquals(RecurrenceInterval.MONTHLY, analyzer.analyze(dates, same(5, "-10")).orElseThrow().getInterval());
+    }
+
+    @Test
+    void duplicateWithinFiveDaysDoesNotDoubleAmount() {
+        List<LocalDate> dates = List.of(d(1, 1), d(2, 1), d(3, 1), d(4, 1), d(4, 3));
+        List<BigDecimal> amounts = List.of(new BigDecimal("-25.00"), new BigDecimal("-25.00"),
+                new BigDecimal("-25.00"), new BigDecimal("-25.00"), new BigDecimal("-30.00"));
+        RecurrenceResult r = analyzer.analyze(dates, amounts).orElseThrow();
+        assertEquals(RecurrenceInterval.MONTHLY, r.getInterval());
+        assertEquals(0, new BigDecimal("-30.00").compareTo(r.getExpectedAmount()));
+        assertEquals(d(4, 1), r.getLastSeenDate());
+    }
+
+    @Test
+    void nullDatesAndAmountsAreSkipped() {
+        List<LocalDate> dates = Arrays.asList(d(1, 1), null, d(2, 1), d(3, 1), d(4, 1), d(4, 2));
+        List<BigDecimal> amounts = Arrays.asList(new BigDecimal("-10"), new BigDecimal("-99"),
+                new BigDecimal("-10"), new BigDecimal("-10"), new BigDecimal("-10"), null);
+        RecurrenceResult r = analyzer.analyze(dates, amounts).orElseThrow();
+        assertEquals(d(1, 1), r.getFirstSeenDate());
+        assertEquals(d(4, 1), r.getLastSeenDate());
+        assertEquals(0, new BigDecimal("-10").compareTo(r.getExpectedAmount()));
+    }
+
+    @Test
+    void nextDueAdvancesByInterval() {
+        assertEquals(d(2, 28), RecurrenceAnalyzer.nextDue(d(1, 31), RecurrenceInterval.MONTHLY));
+        assertEquals(d(4, 15), RecurrenceAnalyzer.nextDue(d(1, 15), RecurrenceInterval.QUARTERLY));
+        assertEquals(LocalDate.of(2027, 1, 15), RecurrenceAnalyzer.nextDue(d(1, 15), RecurrenceInterval.YEARLY));
+    }
+
+    @Test
+    void latestAmountWins() {
+        List<LocalDate> dates = List.of(d(1, 1), d(2, 1), d(3, 1), d(4, 1));
+        List<BigDecimal> amounts = List.of(new BigDecimal("-21.96"), new BigDecimal("-21.96"),
+                new BigDecimal("-21.96"), new BigDecimal("-22.50"));
+        assertEquals(0, new BigDecimal("-22.50").compareTo(analyzer.analyze(dates, amounts).orElseThrow().getExpectedAmount()));
+    }
+
+    @Test
+    void toleratesQuarterOfGapsOff() {
+        List<LocalDate> dates = List.of(d(1, 1), d(2, 1), d(3, 1), d(3, 13), d(4, 1), d(5, 1), d(6, 1), d(7, 1), d(8, 1));
+        assertEquals(RecurrenceInterval.MONTHLY, analyzer.analyze(dates, same(9, "-10")).orElseThrow().getInterval());
+    }
+
+    @Test
+    void rejectsIrregular() {
+        LocalDate day = d(1, 1);
+        // Terms start on 1/1, 1/25, 2/12, 2/19, 3/5, 3/12 (1/5 joins the first term): effective gaps 24, 18, 7, 14, 7
+        // days - median 14, far from any interval.
+        List<LocalDate> dates = new ArrayList<>(List.of(day));
+        for (int gap : new int[]{4, 20, 18, 7, 14, 7}) {
+            day = day.plusDays(gap);
+            dates.add(day);
+        }
+        assertTrue(analyzer.analyze(dates, same(dates.size(), "-5")).isEmpty());
+    }
+
+    @Test
+    void quarterly() {
+        LocalDate a = d(1, 1);
+        List<LocalDate> dates = List.of(a, a.plusDays(91), a.plusDays(179), a.plusDays(273));
+        assertEquals(RecurrenceInterval.QUARTERLY, analyzer.analyze(dates, same(4, "-30")).orElseThrow().getInterval());
+    }
+
+    @Test
+    void intervalDaysAreRounded() {
+        assertEquals(30, RecurrenceAnalyzer.intervalDays(RecurrenceInterval.MONTHLY));
+        assertEquals(91, RecurrenceAnalyzer.intervalDays(RecurrenceInterval.QUARTERLY));
+        assertEquals(365, RecurrenceAnalyzer.intervalDays(RecurrenceInterval.YEARLY));
     }
 }

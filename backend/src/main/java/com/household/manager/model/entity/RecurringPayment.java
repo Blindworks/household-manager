@@ -43,8 +43,16 @@ public class RecurringPayment {
     @Column(name = "next_due_date")
     private LocalDate nextDueDate;
 
+    /** Date of the latest booking of the detected series; null for legacy rows no run finds. */
+    @Column(name = "last_seen_date")
+    private LocalDate lastSeenDate;
+
     @Column(name = "confirmed", nullable = false)
     private boolean confirmed;
+
+    /** Dismissed rows stay stored so later runs keep matching them, but are never listed. */
+    @Column(name = "dismissed", nullable = false)
+    private boolean dismissed;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

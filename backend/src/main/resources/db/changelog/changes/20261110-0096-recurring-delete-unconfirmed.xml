@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261110-0096-recurring-delete-unconfirmed" author="benedikt">
+        <comment>Wiederkehrende Zahlungen: unbestaetigte Altkandidaten der bisherigen Erkennung entfernen.
+            Die neue Erkennung legt sie mit Haendlerschluessel neu an; bestaetigte Eintraege bleiben.</comment>
+        <sql>
+            DELETE FROM recurring_payments WHERE confirmed = FALSE
+        </sql>
+        <rollback>
+            <!-- geloeschte Altkandidaten werden nicht wiederhergestellt; der naechste Lauf findet sie neu -->
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -6,7 +6,7 @@ import {
   BankAccount, BankAccountRequest, Budget, BudgetRequest, BudgetStatusResponse,
   Category, CategoryRequest, CategorizationRule, CategorizationRuleRequest,
   RuleChangeRequest, RuleReevaluationPreview,
-  CategorizeResponse, ImportSummary, OverviewResponse, RecurringPayment,
+  CategorizeResponse, ImportSummary, OverviewResponse, RecurringDetectionResult, RecurringPayment,
   TransactionDto, TrendPoint
 } from '../models/finance.model';
 
@@ -135,9 +135,9 @@ export class FinanceService {
     return this.http.get<RecurringPayment[]>(`${this.baseUrl}/recurring`, { params })
       .pipe(catchError(this.handleError));
   }
-  detectRecurring(accountId: number): Observable<RecurringPayment[]> {
+  detectRecurring(accountId: number): Observable<RecurringDetectionResult> {
     const params = new HttpParams().set('accountId', accountId);
-    return this.http.post<RecurringPayment[]>(`${this.baseUrl}/recurring/detect`, {}, { params })
+    return this.http.post<RecurringDetectionResult>(`${this.baseUrl}/recurring/detect`, {}, { params })
       .pipe(catchError(this.handleError));
   }
   confirmRecurring(id: number): Observable<RecurringPayment> {

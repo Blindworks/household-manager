@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FinanceService } from '../../services/finance.service';
+import { merchantLabel, recurringStatusLabel } from '../../shared/recurring-view.util';
 import { BankAccount, Category, RecurringPayment } from '../../models/finance.model';
 
 @Component({
@@ -13,6 +14,8 @@ import { BankAccount, Category, RecurringPayment } from '../../models/finance.mo
 })
 export class FinanceRecurringComponent implements OnInit {
   private readonly financeService = inject(FinanceService);
+  readonly merchantLabel = merchantLabel;
+  readonly statusLabel = recurringStatusLabel;
 
   accounts: BankAccount[] = [];
   categories: Category[] = [];
@@ -53,7 +56,7 @@ export class FinanceRecurringComponent implements OnInit {
     this.financeService.detectRecurring(this.selectedAccountId).subscribe({
       next: (found) => {
         this.detecting = false;
-        this.infoMessage = `${found.length} neue Kandidaten gefunden.`;
+        this.infoMessage = `${found.created} neue, ${found.updated} aktualisierte Einträge.`;
         this.load();
       },
       error: (e: Error) => { this.detecting = false; this.errorMessage = e.message; }
