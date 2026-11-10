@@ -95,6 +95,7 @@ export class HeaderComponent {
       minRole: 'MEMBER',
       children: [
         { path: '/finance', label: 'Uebersicht', exact: true },
+        { path: '/finance/category-trend', label: 'Kategorien im Verlauf' },
         { path: '/finance/transactions', label: 'Transaktionen' },
         { path: '/finance/recurring', label: 'Wiederkehrende' },
         { path: '/finance/budgets', label: 'Budgets' },

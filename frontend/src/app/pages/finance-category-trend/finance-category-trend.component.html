@@ -1,0 +1,88 @@
+<section class="category-trend">
+  <header class="toolbar">
+    <h1>Kategorien im Verlauf</h1>
+    <div class="filters">
+      <label>
+        Konto
+        <select [(ngModel)]="selectedAccountId" (ngModelChange)="load()">
+          <option [ngValue]="null">Alle</option>
+          @for (account of accounts; track account.id) {
+            <option [ngValue]="account.id">{{ account.name }}</option>
+          }
+        </select>
+      </label>
+      <div class="range" role="group" aria-label="Zeitraum">
+        @for (months of rangeOptions; track months) {
+          <button type="button" class="ghost" [class.active]="rangeMonths === months"
+                  (click)="setRange(months)">{{ months }} Monate</button>
+        }
+      </div>
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <p class="error">{{ errorMessage }}</p>
+  }
+
+  @if (data; as d) {
+    @if (d.categories.length === 0) {
+      <p class="muted">In diesem Zeitraum gibt es keine Ausgaben.</p>
+    } @else {
+      <div class="card">
+        <div class="chart-head">
+          <h2>{{ selectedRow ? selectedRow.categoryName : 'Ausgaben je Monat' }}</h2>
+          @if (selectedRow) {
+            <button type="button" class="ghost show-all" (click)="showAll()">Alle Kategorien</button>
+          }
+        </div>
+        <div echarts [options]="chartOption" class="chart"></div>
+      </div>
+
+      <div class="card table-card">
+        <p class="hint">Zeile antippen, um nur diese Kategorie im Diagramm zu sehen.</p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="name">Kategorie</th>
+                @for (month of d.months; track month) {
+                  <th class="num" [class.running]="month === currentMonth">{{ label(month) }}</th>
+                }
+                <th class="num">Summe</th>
+                <th class="num">Ø je Monat</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of d.categories; track rowKey(row)) {
+                <tr [class.selected]="isSelected(row)" (click)="toggleCategory(row)">
+                  <td class="name">
+                    <span class="dot" [style.background]="row.color || '#90a4ae'"></span>{{ row.categoryName }}
+                  </td>
+                  @for (amount of row.amounts; track $index) {
+                    <td class="num" [class.zero]="amount === 0">{{ amount === 0 ? '–' : (amount | number:'1.0-0') }}</td>
+                  }
+                  <td class="num strong">{{ row.total | number:'1.0-0' }}</td>
+                  <td class="num">{{ average(row) | number:'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="name">Gesamt</td>
+                @for (month of d.months; track month; let i = $index) {
+                  <td class="num">{{ monthTotal(i) | number:'1.0-0' }}</td>
+                }
+                <td class="num strong">{{ grandTotal | number:'1.0-0' }}</td>
+                <td class="num">{{ averageTotal | number:'1.0-0' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p class="hint">Beträge in €. Erstattungen sind mit den Ausgaben ihrer Kategorie verrechnet.
+          Der laufende Monat ist noch nicht vollständig (kursiv) und zählt nicht zum Durchschnitt.</p>
+      </div>
+    }
+  } @else if (loading) {
+    <p class="muted">Lade …</p>
+  }
+</section>

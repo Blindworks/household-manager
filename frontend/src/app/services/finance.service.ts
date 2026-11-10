@@ -7,7 +7,7 @@ import {
   Category, CategoryRequest, CategorizationRule, CategorizationRuleRequest,
   RuleChangeRequest, RuleReevaluationPreview,
   CategorizeResponse, ImportSummary, OverviewResponse, RecurringDetectionResult, RecurringPayment,
-  TransactionDto, TrendPoint
+  TransactionDto, CategoryTrendResponse, TrendPoint
 } from '../models/finance.model';
 
 /**
@@ -107,6 +107,15 @@ export class FinanceService {
       params = params.set('accountId', accountId);
     }
     return this.http.get<TrendPoint[]>(`${this.baseUrl}/analytics/trend`, { params })
+      .pipe(catchError(this.handleError));
+  }
+
+  getCategoryTrend(from: string, to: string, accountId?: number): Observable<CategoryTrendResponse> {
+    let params = new HttpParams().set('from', from).set('to', to);
+    if (accountId != null) {
+      params = params.set('accountId', accountId);
+    }
+    return this.http.get<CategoryTrendResponse>(`${this.baseUrl}/analytics/category-trend`, { params })
       .pipe(catchError(this.handleError));
   }
 

@@ -147,6 +147,19 @@ export interface OverviewResponse {
   categories: CategorySpendItem[];
 }
 
+export interface CategoryTrendRow {
+  categoryId: number | null;
+  categoryName: string;
+  color?: string | null;
+  amounts: number[];
+  total: number;
+}
+
+export interface CategoryTrendResponse {
+  months: string[];
+  categories: CategoryTrendRow[];
+}
+
 export interface TrendPoint {
   month: string;
   expenses: number;

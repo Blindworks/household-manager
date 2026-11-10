@@ -1,8 +1,10 @@
 package com.household.manager.controller;
 
+import com.household.manager.dto.CategoryTrendResponse;
 import com.household.manager.dto.OverviewResponse;
 import com.household.manager.dto.TrendPoint;
 import com.household.manager.service.AnalyticsService;
+import com.household.manager.service.CategoryTrendService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,7 @@ import java.util.List;
 public class AnalyticsController {
 
     private final AnalyticsService service;
+    private final CategoryTrendService categoryTrendService;
 
     /** month format: yyyy-MM */
     @GetMapping("/overview")
@@ -34,5 +37,14 @@ public class AnalyticsController {
             @RequestParam String to,
             @RequestParam(required = false) Long accountId) {
         return ResponseEntity.ok(service.trend(YearMonth.parse(from), YearMonth.parse(to), accountId));
+    }
+
+    /** Ausgaben je Kategorie und Monat; from/to format: yyyy-MM, hoechstens 36 Monate. */
+    @GetMapping("/category-trend")
+    public ResponseEntity<CategoryTrendResponse> categoryTrend(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) Long accountId) {
+        return ResponseEntity.ok(categoryTrendService.trend(YearMonth.parse(from), YearMonth.parse(to), accountId));
     }
 }
