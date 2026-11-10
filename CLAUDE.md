@@ -914,6 +914,11 @@ docker-compose down
 - **Regel:** in einer Kategorie der Art `EXPENSE` werden Eingänge mit Abbuchungen je Kalendermonat verrechnet; das Ergebnis wird bei 0 abgeschnitten, ein Überschuss zählt als Einnahme. Unkategorisierte Buchungen und `INCOME`-Kategorien bleiben nach Vorzeichen getrennt, `TRANSFER` ist wie bisher außen vor. Wirkt auch für Retouren in Einkaufskategorien
 - **Kehrseite:** kommt eine Erstattung in einem anderen Monat als die Ausgabe an, senkt sie dort die Ausgaben (bis 0) bzw. zählt als Einnahme — kein Monatsübergriff. Der Anteil muss der Ausgabenkategorie zugeordnet sein (einmal von Hand, dann per Regel „Empfänger enthält …“); keine DB-Änderung, keine neue Oberfläche
 
+### Kategorien im Verlauf (Finanzen)
+- Seite `/finance/category-trend` (`pages/finance-category-trend/`, Navi „Ausgaben → Kategorien im Verlauf"): Ausgaben je Kategorie über 6/12/24 Monate bis zum laufenden Monat, gestapelte Balken (die 7 größten einzeln, Rest als „Sonstige"; Zeile antippen zeigt nur diese Kategorie) und Tabelle Kategorie × Monat mit Summe und Ø je Monat
+- `GET /v1/finance/analytics/category-trend?from&to&accountId` (`CategoryTrendService`, höchstens 36 Monate, sonst 400) rechnet jeden Monat über `CashflowService` — die Zahlen stimmen damit mit Übersicht, Verlauf und Budget überein (Erstattungen verrechnet, Umbuchungen außen vor, nur Ausgaben). Je Monat eine Abfrage; bei 24 Monaten 24 Queries, für Haushaltsgröße unkritisch
+- **Der Durchschnitt lässt den laufenden Monat weg** (`averagePerMonth` in `category-trend.util.ts`), Monate ohne Ausgaben zählen als 0 mit. Keine Security-Zeile (MEMBER über `/v1/finance/**`)
+
 ### Benutzerverwaltung & API-Sicherheit
 - Spring Security mit Server-Sessions (HttpOnly-Cookie) + Remember-Me-Cookie (90 Tage, überlebt Backend-Neustarts nur mit gesetztem `REMEMBER_ME_KEY`); kein JWT — bewusste Entscheidung für LAN-only-Betrieb
 - **Remember-Me ist TokenBased (stateless, MD5-Signatur über Passwort+Key):** Logout löscht nur das Cookie im Browser — ein exfiltriertes Cookie bleibt bis zu 90 Tage gültig; serverseitiger Widerruf nur über Passwortänderung (pro Nutzer) oder Rotation von `REMEMBER_ME_KEY` (alle Nutzer). Bewusster LAN-only-Trade-off gegen eine zusätzliche Token-Tabelle

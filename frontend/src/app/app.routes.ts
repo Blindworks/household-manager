@@ -318,6 +318,12 @@ export const routes: Routes = [
     title: 'Wiederkehrende - Household Manager'
   },
   {
+    path: 'finance/category-trend',
+    loadComponent: () => import('./pages/finance-category-trend/finance-category-trend.component').then(m => m.FinanceCategoryTrendComponent),
+    canActivate: [authGuard],
+    title: 'Kategorien im Verlauf - Household Manager'
+  },
+  {
     path: 'waste-collection',
     loadComponent: () => import('./pages/waste-collection/waste-collection.component').then(m => m.WasteCollectionComponent),
     canActivate: [authGuard],

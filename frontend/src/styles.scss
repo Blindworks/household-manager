@@ -209,10 +209,10 @@ button {
    Scoped under the finance container classes so these raw-element
    rules never bleed into other pages that already use .form-control
    or .btn utilities.
-   Containers: .import-box, .finance-overview, .transactions, .manage
+   Containers: .import-box, .finance-overview, .transactions, .manage, .category-trend
    ============================================================ */
 
-$finance-scopes: '.import-box, .finance-overview, .transactions, .manage';
+$finance-scopes: '.import-box, .finance-overview, .transactions, .manage, .category-trend';
 
 // Shared input/select/textarea mixin — genutzt vom Finanz- UND vom Admin-Scope
 @mixin form-field {
