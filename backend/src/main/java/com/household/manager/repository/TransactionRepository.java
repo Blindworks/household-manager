@@ -29,9 +29,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByDedupHash(String dedupHash);
 
-    /** Sum of amounts per non-TRANSFER category in a date range, returned as [categoryId, sum]. */
+    /**
+     * Abbuchungen und Eingänge je Nicht-TRANSFER-Kategorie im Zeitraum, als
+     * [categoryId, Summe der negativen Beträge, Summe der positiven Beträge].
+     * Verrechnet wird in {@link com.household.manager.finance.MonthlyCashflow}.
+     */
     @Query("""
-            SELECT t.categoryId, SUM(t.amount)
+            SELECT t.categoryId,
+                   COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END), 0),
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0)
             FROM Transaction t
             WHERE t.bookingDate BETWEEN :from AND :to
               AND (:accountId IS NULL OR t.accountId = :accountId)
@@ -39,37 +45,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                    (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER))
             GROUP BY t.categoryId
             """)
-    List<Object[]> sumAmountByCategory(@Param("from") LocalDate from,
-                                       @Param("to") LocalDate to,
-                                       @Param("accountId") Long accountId);
-
-    /** Total of negative amounts (expenses) in range, excluding TRANSFER categories. Returns 0 if none. */
-    @Query("""
-            SELECT COALESCE(SUM(t.amount), 0)
-            FROM Transaction t
-            WHERE t.amount < 0
-              AND t.bookingDate BETWEEN :from AND :to
-              AND (:accountId IS NULL OR t.accountId = :accountId)
-              AND (t.categoryId IS NULL OR t.categoryId NOT IN
-                   (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER))
-            """)
-    BigDecimal sumExpenses(@Param("from") LocalDate from,
-                           @Param("to") LocalDate to,
-                           @Param("accountId") Long accountId);
-
-    /** Total of positive amounts (income) in range, excluding TRANSFER categories. Returns 0 if none. */
-    @Query("""
-            SELECT COALESCE(SUM(t.amount), 0)
-            FROM Transaction t
-            WHERE t.amount > 0
-              AND t.bookingDate BETWEEN :from AND :to
-              AND (:accountId IS NULL OR t.accountId = :accountId)
-              AND (t.categoryId IS NULL OR t.categoryId NOT IN
-                   (SELECT c.id FROM Category c WHERE c.kind = com.household.manager.model.entity.CategoryKind.TRANSFER))
-            """)
-    BigDecimal sumIncome(@Param("from") LocalDate from,
-                         @Param("to") LocalDate to,
-                         @Param("accountId") Long accountId);
+    List<Object[]> sumFlowsByCategory(@Param("from") LocalDate from,
+                                      @Param("to") LocalDate to,
+                                      @Param("accountId") Long accountId);
 
     /** Total outflow (negative amounts) for TRANSFER categories — wealth-building transfers (investments, savings). */
     @Query("""
@@ -84,16 +62,4 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     BigDecimal sumTransferOutflows(@Param("from") LocalDate from,
                                    @Param("to") LocalDate to,
                                    @Param("accountId") Long accountId);
-
-    /** Sum of expenses for one category in range (negative number). */
-    @Query("""
-            SELECT COALESCE(SUM(t.amount), 0)
-            FROM Transaction t
-            WHERE t.categoryId = :categoryId
-              AND t.amount < 0
-              AND t.bookingDate BETWEEN :from AND :to
-            """)
-    BigDecimal sumByCategory(@Param("categoryId") Long categoryId,
-                             @Param("from") LocalDate from,
-                             @Param("to") LocalDate to);
 }
