@@ -6,11 +6,11 @@ import com.household.manager.dto.BudgetStatusItem;
 import com.household.manager.dto.BudgetStatusResponse;
 import com.household.manager.finance.BudgetEvaluation;
 import com.household.manager.finance.BudgetEvaluator;
+import com.household.manager.finance.MonthlyCashflow;
 import com.household.manager.model.entity.Budget;
 import com.household.manager.model.entity.Category;
 import com.household.manager.repository.BudgetRepository;
 import com.household.manager.repository.CategoryRepository;
-import com.household.manager.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,9 +34,9 @@ import java.util.stream.Collectors;
 public class BudgetService {
 
     private final BudgetRepository budgetRepository;
-    private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final BudgetEvaluator evaluator;
+    private final CashflowService cashflowService;
 
     @Transactional(readOnly = true)
     public List<BudgetResponse> getAll() {
@@ -67,12 +67,11 @@ public class BudgetService {
     /** Compute the status of all budgets for the given month. */
     @Transactional(readOnly = true)
     public BudgetStatusResponse getStatus(YearMonth month) {
-        LocalDate from = month.atDay(1);
-        LocalDate to = month.atEndOfMonth();
+        MonthlyCashflow.Result cashflow = cashflowService.forMonth(month, null);
 
         BudgetStatusItem overall = budgetRepository.findByCategoryIdIsNull()
                 .map(b -> {
-                    BigDecimal spent = transactionRepository.sumExpenses(from, to, null).abs();
+                    BigDecimal spent = cashflow.totalExpenses();
                     BudgetEvaluation e = evaluator.evaluate(b.getAmount(), spent);
                     return item(null, "Gesamt", e);
                 })
@@ -83,8 +82,7 @@ public class BudgetService {
 
         List<BudgetStatusItem> categories = new ArrayList<>();
         for (Budget b : budgetRepository.findByCategoryIdNotNull()) {
-            BigDecimal spent = transactionRepository
-                    .sumByCategory(b.getCategoryId(), from, to).abs();
+            BigDecimal spent = cashflow.expensesFor(b.getCategoryId());
             BudgetEvaluation e = evaluator.evaluate(b.getAmount(), spent);
             String name = categoryNames.getOrDefault(b.getCategoryId(), "?");
             categories.add(item(b.getCategoryId(), name, e));
