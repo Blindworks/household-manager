@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.InputStream;
 import java.time.LocalDate;
@@ -35,6 +37,7 @@ public class StatementImportService {
     private final TransactionRepository transactionRepository;
     private final ImportBatchRepository importBatchRepository;
     private final BankAccountRepository bankAccountRepository;
+    private final RecurringDetectionService recurringDetectionService;
 
     @Transactional
     public ImportSummaryResponse importStatement(Long accountId, String filename, InputStream xml) {
@@ -91,6 +94,8 @@ public class StatementImportService {
 
         log.info("Import finished: {} imported, {} duplicates, {} failed", imported, skipped, failed);
 
+        scheduleRecurringDetection(accountId);
+
         return ImportSummaryResponse.builder()
                 .batchId(batch.getId())
                 .importedCount(imported)
@@ -100,6 +105,27 @@ public class StatementImportService {
                 .dateFrom(from)
                 .dateTo(to)
                 .build();
+    }
+
+    private void scheduleRecurringDetection(Long accountId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    detectRecurringSafely(accountId);
+                }
+            });
+        } else {
+            detectRecurringSafely(accountId);
+        }
+    }
+
+    private void detectRecurringSafely(Long accountId) {
+        try {
+            recurringDetectionService.detect(accountId);
+        } catch (Exception e) {
+            log.warn("Recurring payment detection failed for account {}", accountId, e);
+        }
     }
 
     private Transaction toEntity(Long accountId, ParsedTransaction p, String hash, Long batchId) {
