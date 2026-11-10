@@ -40,6 +40,14 @@ class RecurringMerchantKeyTest {
     }
 
     @Test
+    void tabsAndNewlinesInMerchantCollapsed() {
+        assertEquals(Optional.of("PAYPAL:FOO BAR"),
+                key.keyFor("PayPal Europe", "Ihr Einkauf bei Foo\t\tBar"));
+        assertEquals(Optional.of("PAYPAL:FOO BAR"),
+                key.keyFor("PayPal Europe", "Ihr Einkauf bei Foo \t Bar"));
+    }
+
+    @Test
     void blankCounterpartyIsSkipped() {
         assertEquals(Optional.empty(), key.keyFor(null, null));
         assertEquals(Optional.empty(), key.keyFor("   ", "x"));
