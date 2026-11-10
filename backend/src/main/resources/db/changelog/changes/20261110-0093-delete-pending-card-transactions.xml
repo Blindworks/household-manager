@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261110-0093-delete-pending-card-transactions" author="benedikt">
+        <comment>Finanzen: bereits importierte vorgemerkte Kartenumsaetze ("Umsatz vorgemerkt", Zweck "MO ...")
+            entfernen. Sie erscheinen nach der Buchung ein zweites Mal und zaehlten doppelt; der Import
+            ueberspringt sie seitdem. Merkmale: Buchungstext SONSTIGER EINZUG, kein Valutadatum,
+            Zweck beginnt mit "MO " - in allen vorliegenden Exporten trifft das nie eine gebuchte Zeile.</comment>
+        <sql>
+            DELETE FROM transactions
+            WHERE bank_tx_code = 'SONSTIGER EINZUG'
+              AND value_date IS NULL
+              AND purpose LIKE 'MO %'
+        </sql>
+        <rollback>
+            <!-- geloeschte Vormerkungen werden nicht wiederhergestellt -->
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

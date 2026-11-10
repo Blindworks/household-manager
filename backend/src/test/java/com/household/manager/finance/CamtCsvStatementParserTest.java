@@ -86,4 +86,22 @@ class CamtCsvStatementParserTest {
         assertThrows(CamtParseException.class,
                 () -> parser.parse(new ByteArrayInputStream(html)));
     }
+
+    @Test
+    void pendingRowsAreSkippedBecauseTheyAreBookedAgainLater() {
+        // Sparkasse exportiert vorgemerkte Kartenumsaetze ("MO ...") zusaetzlich; nach der
+        // Buchung erscheinen sie ein zweites Mal mit anderem Zweck - importiert waeren sie doppelt.
+        String csv = "\"Auftragskonto\";\"Buchungstag\";\"Valutadatum\";\"Buchungstext\";\"Verwendungszweck\";"
+                + "\"Beguenstigter/Zahlungspflichtiger\";\"Kontonummer/IBAN\";\"Betrag\";\"Waehrung\";\"Info\"\n"
+                + "\"DE00\";\"09.11.26\";\"\";\"SONSTIGER EINZUG\";\"MO 54385708 071126142513C13 \";"
+                + "\"\";\"0000000000\";\"-15,90\";\"EUR\";\"Umsatz vorgemerkt\"\n"
+                + "\"DE00\";\"09.11.26\";\"09.11.26\";\"DIGITALE KARTE (APPLE PAY)\";\"2026-11-07T14:25 Debitk.13 2027-12\";"
+                + "\"CINEPLEX MARBURG//MARBURG/DE\";\"DE62664926000009104208\";\"-15,90\";\"EUR\";\"Umsatz gebucht\"\n";
+
+        List<ParsedTransaction> transactions = parser.parse(
+                new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1))).getTransactions();
+
+        assertEquals(1, transactions.size(), "vorgemerkte Zeile darf nicht importiert werden");
+        assertEquals("CINEPLEX MARBURG//MARBURG/DE", transactions.get(0).getCounterpartyName());
+    }
 }

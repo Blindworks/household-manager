@@ -203,5 +203,6 @@
     <include file="db/changelog/changes/20261109-0090-drop-rule-match-field.xml"/>
     <include file="db/changelog/changes/20261109-0091-drop-rule-match-type.xml"/>
     <include file="db/changelog/changes/20261109-0092-drop-rule-pattern.xml"/>
+    <include file="db/changelog/changes/20261110-0093-delete-pending-card-transactions.xml"/>
 
 </databaseChangeLog>

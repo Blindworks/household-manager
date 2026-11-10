@@ -105,6 +105,10 @@ public class CamtCsvStatementParser implements StatementParser {
      * Throws on a non-blank but malformed value so the caller can log and skip the row.
      */
     private ParsedTransaction toTransaction(CSVRecord record) {
+        if (isPending(record)) {
+            log.debug("Skipping CSV row {} — Umsatz vorgemerkt", record.getRecordNumber());
+            return null;
+        }
         String betrag = value(record, "Betrag");
         if (betrag == null) {
             log.warn("Skipping CSV row {} — Betrag is empty", record.getRecordNumber());
@@ -131,6 +135,16 @@ public class CamtCsvStatementParser implements StatementParser {
                 .bankTxCode(value(record, "Buchungstext"))
                 .accountServicerReference(null)
                 .build();
+    }
+
+    /**
+     * Vorgemerkte Umsaetze (Spalte "Info" = "Umsatz vorgemerkt", z. B. Kartenzahlungen mit Zweck
+     * "MO …") sind noch nicht gebucht. Die Sparkasse liefert sie nach der Buchung ein zweites Mal
+     * mit anderem Zweck und Empfaenger; die Dedup-Pruefung erkennt das nicht, sie zaehlten doppelt.
+     */
+    private boolean isPending(CSVRecord record) {
+        String info = value(record, "Info");
+        return info != null && info.toLowerCase(java.util.Locale.ROOT).contains("vorgemerkt");
     }
 
     /** Returns the trimmed cell value, or {@code null} if the cell is blank or absent. */
