@@ -24,11 +24,15 @@ public class RecurringMerchantKey {
         String key;
         if (intermediary.isPresent()) {
             Optional<String> merchant = merchantExtractor.extract(intermediary.get(), purpose);
-            if (merchant.isEmpty()) {
+            if (merchant.isPresent()) {
+                key = PaymentIntermediary.matchedToken(counterpartyName).toUpperCase(Locale.ROOT)
+                        + ":" + collapse(merchant.get());
+            } else if (intermediary.get() == PaymentIntermediary.AMAZON) {
+                // Amazon's purpose format is unknown; amount grouping separates subscriptions from purchases.
+                key = normalizer.normalize(counterpartyName);
+            } else {
                 return Optional.empty();
             }
-            key = PaymentIntermediary.matchedToken(counterpartyName).toUpperCase(Locale.ROOT)
-                    + ":" + collapse(merchant.get());
         } else {
             key = normalizer.normalize(counterpartyName);
         }

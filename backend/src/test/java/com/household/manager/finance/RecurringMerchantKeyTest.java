@@ -33,6 +33,13 @@ class RecurringMerchantKeyTest {
     }
 
     @Test
+    void amazonWithoutMerchantFallsBackToCounterparty() {
+        String name = "AMAZON EU S.A R.L., NIEDERLASSUNG DEUTSCHLAND";
+        assertEquals(Optional.of(new CounterpartyNameNormalizer().normalize(name)),
+                key.keyFor(name, "123-456 Amazon.de"));
+    }
+
+    @Test
     void blankCounterpartyIsSkipped() {
         assertEquals(Optional.empty(), key.keyFor(null, null));
         assertEquals(Optional.empty(), key.keyFor("   ", "x"));
