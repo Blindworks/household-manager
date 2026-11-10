@@ -17,5 +17,8 @@ public class RecurringPaymentResponse {
     private final BigDecimal expectedAmount;
     private final RecurrenceInterval interval;
     private final LocalDate nextDueDate;
+    private final LocalDate lastSeenDate;
     private final boolean confirmed;
+    /** Computed on read: today is later than the last booking plus 1.5 intervals. */
+    private final boolean ended;
 }

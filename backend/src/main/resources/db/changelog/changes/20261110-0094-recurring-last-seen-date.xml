@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261110-0094-recurring-last-seen-date" author="benedikt">
+        <comment>Wiederkehrende Zahlungen: letzter Termin der Reihe. Daraus wird "beendet" beim Lesen berechnet
+            (heute nach letztem Termin + 1,5 x Intervall). NULL bei Altzeilen, die kein Lauf mehr findet.</comment>
+        <addColumn tableName="recurring_payments">
+            <column name="last_seen_date" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -204,5 +204,8 @@
     <include file="db/changelog/changes/20261109-0091-drop-rule-match-type.xml"/>
     <include file="db/changelog/changes/20261109-0092-drop-rule-pattern.xml"/>
     <include file="db/changelog/changes/20261110-0093-delete-pending-card-transactions.xml"/>
+    <include file="db/changelog/changes/20261110-0094-recurring-last-seen-date.xml"/>
+    <include file="db/changelog/changes/20261110-0095-recurring-dismissed.xml"/>
+    <include file="db/changelog/changes/20261110-0096-recurring-delete-unconfirmed.xml"/>
 
 </databaseChangeLog>

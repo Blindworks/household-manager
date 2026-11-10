@@ -1,5 +1,6 @@
 package com.household.manager.controller;
 
+import com.household.manager.dto.RecurringDetectionResponse;
 import com.household.manager.dto.RecurringPaymentResponse;
 import com.household.manager.service.RecurringDetectionService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class RecurringPaymentController {
     }
 
     @PostMapping("/detect")
-    public ResponseEntity<List<RecurringPaymentResponse>> detect(@RequestParam Long accountId) {
+    public ResponseEntity<RecurringDetectionResponse> detect(@RequestParam Long accountId) {
         return ResponseEntity.ok(service.detect(accountId));
     }
 
@@ -33,9 +34,10 @@ public class RecurringPaymentController {
         return ResponseEntity.ok(service.confirm(id));
     }
 
+    /** "Verwerfen": marks the row as dismissed; it stays stored but is never listed. */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
+    public ResponseEntity<Void> dismiss(@PathVariable Long id) {
+        service.dismiss(id);
         return ResponseEntity.noContent().build();
     }
 
