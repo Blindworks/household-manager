@@ -1,6 +1,5 @@
 package com.household.manager.service;
 
-import com.household.manager.dto.ImportSummaryResponse;
 import com.household.manager.finance.DedupHasher;
 import com.household.manager.finance.ParsedStatement;
 import com.household.manager.finance.StatementParser;
@@ -13,6 +12,11 @@ import com.household.manager.repository.TransactionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -22,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -34,6 +39,8 @@ class StatementImportServiceTest {
 
     private RecurringDetectionService detectionService;
     private StatementImportService service;
+    private PlatformTransactionManager transactionManager;
+    private TransactionStatus txStatus;
 
     @BeforeEach
     void setUp() {
@@ -56,8 +63,12 @@ class StatementImportServiceTest {
         when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(new BankAccount()));
 
         detectionService = mock(RecurringDetectionService.class);
+        transactionManager = mock(PlatformTransactionManager.class);
+        txStatus = mock(TransactionStatus.class);
+        when(transactionManager.getTransaction(any())).thenReturn(txStatus);
         service = new StatementImportService(resolver, mock(DedupHasher.class), categorization,
-                mock(TransactionRepository.class), batchRepository, accountRepository, detectionService);
+                mock(TransactionRepository.class), batchRepository, accountRepository, detectionService,
+                transactionManager);
     }
 
     @AfterEach
@@ -71,12 +82,11 @@ class StatementImportServiceTest {
     void detectionRunsAfterCommit() {
         TransactionSynchronizationManager.initSynchronization();
 
-        ImportSummaryResponse summary = runImport();
+        runImport();
 
         verify(detectionService, never()).detect(any());
         triggerAfterCommit();
         verify(detectionService, times(1)).detect(ACCOUNT_ID);
-        org.junit.jupiter.api.Assertions.assertNotNull(summary);
     }
 
     @Test
@@ -99,8 +109,21 @@ class StatementImportServiceTest {
         verify(detectionService, times(1)).detect(ACCOUNT_ID);
     }
 
-    private ImportSummaryResponse runImport() {
-        return service.importStatement(ACCOUNT_ID, "file.xml", new ByteArrayInputStream(new byte[0]));
+    @Test
+    void detectionRunsInNewTransactionAfterCommit() {
+        TransactionSynchronizationManager.initSynchronization();
+        runImport();
+        triggerAfterCommit();
+
+        InOrder order = inOrder(transactionManager, detectionService);
+        order.verify(transactionManager).getTransaction(ArgumentMatchers.argThat(
+                d -> d.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+        order.verify(detectionService).detect(ACCOUNT_ID);
+        order.verify(transactionManager).commit(txStatus);
+    }
+
+    private void runImport() {
+        service.importStatement(ACCOUNT_ID, "file.xml", new ByteArrayInputStream(new byte[0]));
     }
 
     private void triggerAfterCommit() {
