@@ -14,4 +14,8 @@ public class RecurrenceResult {
     private final RecurrenceInterval interval;
     private final BigDecimal expectedAmount;
     private final LocalDate nextDueDate;
+    /** Date of the first term (after merging bookings within the term window). */
+    private final LocalDate firstSeenDate;
+    /** Date of the last term. */
+    private final LocalDate lastSeenDate;
 }
