@@ -20,18 +20,19 @@
 
   <table>
     <thead>
-      <tr><th>Empfänger</th><th>Betrag</th><th>Intervall</th><th>Nächste Fälligkeit</th>
+      <tr><th>Empfänger</th><th>Betrag</th><th>Intervall</th><th>Letzte Zahlung</th><th>Nächste Fälligkeit</th>
           <th>Kategorie</th><th>Status</th><th></th></tr>
     </thead>
     <tbody>
       @for (item of items; track item.id) {
-        <tr>
-          <td>{{ item.counterpartyPattern }}</td>
+        <tr [class.ended]="item.ended">
+          <td>{{ merchantLabel(item.counterpartyPattern) }}</td>
           <td>{{ item.expectedAmount | number:'1.2-2' }} €</td>
           <td>{{ item.interval }}</td>
+          <td>{{ item.lastSeenDate ?? '—' }}</td>
           <td>{{ item.nextDueDate }}</td>
           <td>{{ categoryName(item.categoryId) }}</td>
-          <td>{{ item.confirmed ? 'bestätigt' : 'Kandidat' }}</td>
+          <td>{{ statusLabel(item) }}</td>
           <td>
             @if (!item.confirmed) {
               <button type="button" (click)="confirm(item)">Bestätigen</button>
@@ -41,7 +42,7 @@
         </tr>
       }
       @if (items.length === 0) {
-        <tr><td colspan="7" class="muted">Noch nichts erkannt.</td></tr>
+        <tr><td colspan="8" class="muted">Noch nichts erkannt.</td></tr>
       }
     </tbody>
   </table>

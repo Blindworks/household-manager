@@ -174,4 +174,11 @@ export interface RecurringPayment {
   interval: RecurrenceInterval;
   nextDueDate?: string;
   confirmed: boolean;
+  lastSeenDate?: string;
+  ended: boolean;
+}
+
+export interface RecurringDetectionResult {
+  created: number;
+  updated: number;
 }
