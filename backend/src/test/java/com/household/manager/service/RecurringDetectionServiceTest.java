@@ -29,6 +29,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -218,8 +219,8 @@ class RecurringDetectionServiceTest {
         List<RecurringPaymentResponse> list = service.list(null);
 
         assertThat(list).extracting(RecurringPaymentResponse::getId, RecurringPaymentResponse::isEnded)
-                .containsExactly(org.assertj.core.groups.Tuple.tuple(1L, false),
-                        org.assertj.core.groups.Tuple.tuple(2L, true));
+                .containsExactly(tuple(1L, false),
+                        tuple(2L, true));
     }
 
     @Test
@@ -246,6 +247,7 @@ class RecurringDetectionServiceTest {
     @Test
     void skipsIncomeAndKeyless() {
         Transaction expense = tx("-10.99", "Spotify AB", "abo");
+        expense.setId(42L);
         Transaction income = tx("2500.00", "Arbeitgeber", "Gehalt");
         Transaction keyless = tx("-3.00", null, "bar");
         when(transactionRepository.findByAccountIdAndBookingDateBetweenOrderByBookingDateDesc(
@@ -261,7 +263,7 @@ class RecurringDetectionServiceTest {
         ArgumentCaptor<List<RecurringBooking>> bookings = ArgumentCaptor.forClass(List.class);
         verify(detector).detect(bookings.capture());
         assertThat(bookings.getValue()).containsExactly(new RecurringBooking(
-                TODAY.minusDays(3), new BigDecimal("-10.99"), "SPOTIFY AB", 7L));
+                TODAY.minusDays(3), new BigDecimal("-10.99"), "SPOTIFY AB", 7L, 42L));
         verify(merchantKey, never()).keyFor(eq("Arbeitgeber"), anyString());
     }
 

@@ -15,6 +15,8 @@ import java.util.Optional;
  * Detects whether dated amounts form a regular monthly/quarterly/yearly pattern.
  * Bookings within {@link #TERM_WINDOW_DAYS} days of a term's first booking belong to that
  * term. The rhythm is tolerant: skipped periods and a share of off gaps are accepted.
+ * Pairs with a missing date or amount are skipped; among bookings of the same day the one given
+ * last counts as the latest (callers pass them in a deterministic order).
  */
 @Component
 public class RecurrenceAnalyzer {
@@ -31,7 +33,9 @@ public class RecurrenceAnalyzer {
         }
         List<Integer> order = new ArrayList<>();
         for (int i = 0; i < dates.size(); i++) {
-            order.add(i);
+            if (dates.get(i) != null && amounts.get(i) != null) {
+                order.add(i);
+            }
         }
         order.sort(Comparator.comparing(dates::get));
 
@@ -58,16 +62,21 @@ public class RecurrenceAnalyzer {
         LocalDate first = terms.get(0);
         LocalDate last = terms.get(terms.size() - 1);
         BigDecimal latestAmount = amounts.get(order.get(order.size() - 1));
-        LocalDate nextDue = switch (interval) {
-            case MONTHLY -> last.plusMonths(1);
-            case QUARTERLY -> last.plusMonths(3);
-            case YEARLY -> last.plusYears(1);
-        };
+        LocalDate nextDue = nextDue(last, interval);
 
         return Optional.of(RecurrenceResult.builder()
                 .interval(interval).expectedAmount(latestAmount).nextDueDate(nextDue)
                 .firstSeenDate(first).lastSeenDate(last)
                 .build());
+    }
+
+    /** Due date of the term after {@code last}. */
+    public static LocalDate nextDue(LocalDate last, RecurrenceInterval interval) {
+        return switch (interval) {
+            case MONTHLY -> last.plusMonths(1);
+            case QUARTERLY -> last.plusMonths(3);
+            case YEARLY -> last.plusYears(1);
+        };
     }
 
     /** Rounded interval length in days, for the 1.5x rules of later steps. */

@@ -56,6 +56,9 @@ public class RecurringDetectionService {
 
         int created = 0;
         int updated = 0;
+        // Greedy in detector order: each series takes its best stored row, and a taken row is out for
+        // the following series. Accepted: two series competing for one row are rare (same key, same
+        // interval, both within 10 %), and the loser just becomes a new candidate.
         for (DetectedSeries series : detected) {
             Optional<RecurringPayment> match = findMatch(series, unmatched);
             if (match.isPresent()) {
@@ -111,7 +114,8 @@ public class RecurringDetectionService {
                 continue; // expenses only
             }
             merchantKey.keyFor(tx.getCounterpartyName(), tx.getPurpose()).ifPresent(key ->
-                    bookings.add(new RecurringBooking(tx.getBookingDate(), tx.getAmount(), key, tx.getCategoryId())));
+                    bookings.add(new RecurringBooking(tx.getBookingDate(), tx.getAmount(), key, tx.getCategoryId(),
+                            tx.getId())));
         }
         return bookings;
     }
