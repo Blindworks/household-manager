@@ -43,6 +43,6 @@ public class RecurringMerchantKey {
     }
 
     private static String collapse(String value) {
-        return value.toUpperCase(Locale.ROOT).replaceAll("\s+", " ").trim();
+        return value.toUpperCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 }
