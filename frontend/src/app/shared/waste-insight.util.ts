@@ -8,39 +8,36 @@ const URGENT_DAYS_UNTIL = 1;
 const SOON_DAYS_UNTIL = 2;
 
 /**
- * Fasst die anstehenden Termine zu einer einzigen Hub-Meldung zusammen, z. B.
- * "Morgen: Biotonne · Übermorgen: Gelbe Tonne".
- *
- * @returns `null`, wenn nichts ansteht — dann erscheint im Hub kein Muell-Eintrag.
+ * Ab dieser Stunde (lokale Zeit) gilt die Abfuhr des heutigen Tages als erledigt —
+ * die Tonne ist dann geleert, die Karte waere nur noch Rauschen.
  */
-export function buildWasteInsight(events: WasteCollectionEvent[]): HubInsight | null {
-  if (events.length === 0) {
-    return null;
-  }
-  return {
-    icon: 'delete',
-    tone: toneFor(events),
-    title: 'Müllabfuhr',
-    text: events.map(describe).join(' · ')
-  };
-}
+export const WASTE_DONE_HOUR = 10;
 
 /**
- * Faerbt den Indikator nach der Dringlichkeit: heute und morgen rot, uebermorgen gelb,
- * alles Weitere blau.
+ * Baut je anstehendem Termin einen eigenen Hub-Eintrag, z. B. "Morgen: Biotonne".
+ * Termine von heute entfallen ab {@link WASTE_DONE_HOUR} Uhr.
  *
- * <p>Bei mehreren Terminen zaehlt der naechstliegende — die Meldung fasst sie zu einer
- * Zeile zusammen, und ein "Morgen: Biotonne" darf nicht dadurch verblassen, dass
- * uebermorgen noch etwas folgt.
+ * @returns leere Liste, wenn nichts (mehr) ansteht — dann erscheint im Hub kein Muell-Eintrag.
  */
-function toneFor(events: WasteCollectionEvent[]): HubInsight['tone'] {
-  const daysUntil = Math.min(...events.map(event => event.daysUntil));
+export function buildWasteInsights(events: WasteCollectionEvent[], now: Date = new Date()): HubInsight[] {
+  return events
+    .filter(event => !isCollectedToday(event, now))
+    .map(event => ({
+      icon: 'delete',
+      tone: toneFor(event.daysUntil),
+      title: 'Müllabfuhr',
+      text: `${relativeDayLabel(event.daysUntil, event.date)}: ${event.label}`
+    }));
+}
+
+function isCollectedToday(event: WasteCollectionEvent, now: Date): boolean {
+  return event.daysUntil <= 0 && now.getHours() >= WASTE_DONE_HOUR;
+}
+
+/** Heute und morgen rot, uebermorgen gelb, alles Weitere blau. */
+function toneFor(daysUntil: number): HubInsight['tone'] {
   if (daysUntil <= URGENT_DAYS_UNTIL) {
     return 'error';
   }
   return daysUntil === SOON_DAYS_UNTIL ? 'tertiary' : 'primary';
-}
-
-function describe(event: WasteCollectionEvent): string {
-  return `${relativeDayLabel(event.daysUntil, event.date)}: ${event.label}`;
 }

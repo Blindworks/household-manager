@@ -456,6 +456,45 @@ describe('DashboardComponent (Muellabfuhr-Meldung im Intelligence Hub)', () => {
 
     discardPeriodicTasks();
   }));
+
+  it('zeigt jeden Muelltermin als eigenen Eintrag', fakeAsync(() => {
+    wasteServiceSpy.getUpcoming.and.returnValue(of([
+      { date: '2026-07-17', label: 'Biotonne', daysUntil: 1 },
+      { date: '2026-07-18', label: 'Gelbe Tonne', daysUntil: 2 }
+    ]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const texts = insightTexts(fixture);
+    expect(texts[0]).toContain('Morgen: Biotonne');
+    expect(texts[0]).not.toContain('Gelbe Tonne');
+    expect(texts[1]).toContain('Übermorgen: Gelbe Tonne');
+
+    discardPeriodicTasks();
+  }));
+
+  it('blendet die heutige Abfuhr kurz nach 10 Uhr aus', fakeAsync(() => {
+    wasteServiceSpy.getUpcoming.and.returnValue(of([
+      { date: '2026-07-17', label: 'Hausmüll', daysUntil: 0 }
+    ]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    wasteServiceSpy.getUpcoming.calls.reset();
+
+    // Bis kurz nach dem naechsten 10-Uhr-Zeitpunkt (heute oder morgen).
+    const now = new Date();
+    const ten = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 6);
+    if (ten.getTime() <= now.getTime()) {
+      ten.setDate(ten.getDate() + 1);
+    }
+    tick(ten.getTime() - now.getTime());
+    fixture.detectChanges();
+
+    expect(wasteServiceSpy.getUpcoming).toHaveBeenCalled();
+    expect(insightTexts(fixture).join(' ')).not.toContain('Hausmüll');
+
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent (Kalender-Termine im Intelligence Hub)', () => {

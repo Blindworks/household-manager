@@ -37,7 +37,7 @@ import {
   isDogModeActive
 } from '../../shared/dog-mode.util';
 import { WasteCollectionService } from '../../services/waste-collection.service';
-import { buildWasteInsight } from '../../shared/waste-insight.util';
+import { buildWasteInsights, WASTE_DONE_HOUR } from '../../shared/waste-insight.util';
 import { CalendarService } from '../../services/calendar.service';
 import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
@@ -323,8 +323,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   hubReloading = false;
   private hubReloadSubscription?: Subscription;
 
-  /** Zuletzt gebaute Muell-Meldung; null = nichts ansteht. */
-  private wasteInsight: HubInsight | null = null;
+  /** Zuletzt gebaute Muell-Meldungen, je Termin eine; leer = nichts steht an. */
+  private wasteInsights: HubInsight[] = [];
   /** Karte "Hausverstand"; null = keine offenen Vorschlaege. */
   agentInsight: HubInsight | null = null;
   /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
@@ -1631,15 +1631,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Haelt die Muell-Meldung im Hub aktuell. Neben dem stuendlichen Takt zusaetzlich kurz
-   * nach Mitternacht: `daysUntil` wird serverseitig zum Abrufzeitpunkt berechnet, ein rein
-   * stuendlicher Takt liesse "Morgen" also bis zu eine Stunde ueber den Tageswechsel
-   * hinaus stehen bleiben.
+   * Haelt die Muell-Meldungen im Hub aktuell. Neben dem stuendlichen Takt zusaetzlich kurz
+   * nach Mitternacht (`daysUntil` wird serverseitig zum Abrufzeitpunkt berechnet, ein rein
+   * stuendlicher Takt liesse "Morgen" bis zu eine Stunde ueber den Tageswechsel stehen) und
+   * kurz nach 10 Uhr, damit die heutige Abfuhr dann sofort verschwindet.
    */
   private startWasteRefresh(): void {
     this.wasteSubscription = merge(
       interval(DashboardComponent.WASTE_REFRESH_MS),
-      timer(this.msUntilNextMidnight(), DashboardComponent.DAY_MS)
+      timer(this.msUntilNextMidnight(), DashboardComponent.DAY_MS),
+      timer(this.msUntilNextHour(WASTE_DONE_HOUR), DashboardComponent.DAY_MS)
     )
       .pipe(startWith(0), switchMap(() => this.loadWasteInsight()))
       .subscribe();
@@ -1649,7 +1650,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.wasteService.getUpcoming().pipe(
       catchError(() => of([])),
       map(events => {
-        this.wasteInsight = buildWasteInsight(events);
+        this.wasteInsights = buildWasteInsights(events);
         this.rebuildInsights();
       })
     );
@@ -1769,7 +1770,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...this.doorInsights,
       ...this.applianceInsights,
       ...(this.agentInsight ? [this.agentInsight] : []),
-      ...(this.wasteInsight ? [this.wasteInsight] : []),
+      ...this.wasteInsights,
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
       ...(this.trackerBatteryInsight ? [this.trackerBatteryInsight] : [])
@@ -1858,6 +1859,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const now = new Date();
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     return midnight.getTime() - now.getTime();
+  }
+
+  /** Millisekunden bis kurz nach der naechsten lokalen Stunde `hour` (heute oder morgen). */
+  private msUntilNextHour(hour: number): number {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 5);
+    if (next.getTime() <= now.getTime()) {
+      next.setDate(next.getDate() + 1);
+    }
+    return next.getTime() - now.getTime();
   }
 
   private startNukiRefresh(): void {

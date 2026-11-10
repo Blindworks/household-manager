@@ -1,61 +1,75 @@
-import { buildWasteInsight } from './waste-insight.util';
+import { buildWasteInsights } from './waste-insight.util';
 import { WasteCollectionEvent } from '../models/waste-collection.model';
 
 function event(daysUntil: number, label: string, date = '2026-07-20'): WasteCollectionEvent {
   return { date, label, daysUntil };
 }
 
-describe('buildWasteInsight', () => {
+/** 2026-07-20, lokale Uhrzeit. */
+function at(hours: number, minutes = 0): Date {
+  return new Date(2026, 6, 20, hours, minutes);
+}
+
+const MORNING = at(8);
+
+describe('buildWasteInsights', () => {
 
   it('liefert keine Meldung, wenn nichts ansteht', () => {
-    expect(buildWasteInsight([])).toBeNull();
+    expect(buildWasteInsights([], MORNING)).toEqual([]);
   });
 
-  it('fasst mehrere Termine zu einer Textzeile zusammen', () => {
-    const insight = buildWasteInsight([event(1, 'Biotonne'), event(2, 'Gelbe Tonne')]);
+  it('zeigt jeden Termin als eigenen Eintrag', () => {
+    const insights = buildWasteInsights([event(1, 'Biotonne'), event(2, 'Gelbe Tonne')], MORNING);
 
-    expect(insight?.text).toBe('Morgen: Biotonne · Übermorgen: Gelbe Tonne');
-    expect(insight?.title).toBe('Müllabfuhr');
+    expect(insights.map(i => i.text)).toEqual(['Morgen: Biotonne', 'Übermorgen: Gelbe Tonne']);
+    expect(insights.every(i => i.title === 'Müllabfuhr')).toBeTrue();
   });
 
   it('uebersetzt daysUntil in relative Tageslabels', () => {
-    expect(buildWasteInsight([event(0, 'Hausmüll')])?.text).toBe('Heute: Hausmüll');
-    expect(buildWasteInsight([event(1, 'Hausmüll')])?.text).toBe('Morgen: Hausmüll');
-    expect(buildWasteInsight([event(2, 'Hausmüll')])?.text).toBe('Übermorgen: Hausmüll');
+    expect(buildWasteInsights([event(0, 'Hausmüll')], MORNING)[0].text).toBe('Heute: Hausmüll');
+    expect(buildWasteInsights([event(1, 'Hausmüll')], MORNING)[0].text).toBe('Morgen: Hausmüll');
+    expect(buildWasteInsights([event(2, 'Hausmüll')], MORNING)[0].text).toBe('Übermorgen: Hausmüll');
   });
 
   it('nennt ab dem dritten Tag den Wochentag', () => {
     // 2026-07-20 ist ein Montag.
-    expect(buildWasteInsight([event(4, 'Altpapier', '2026-07-20')])?.text)
+    expect(buildWasteInsights([event(4, 'Altpapier', '2026-07-20')], MORNING)[0].text)
       .toBe('Montag: Altpapier');
   });
 
   it('liest den Wochentag lokal, nicht als UTC-Mitternacht', () => {
     // Die Kurzform new Date('2026-07-20') parst als UTC und zeigte bei negativem
     // Offset den Sonntag. Der Test haelt die lokale Auslegung fest.
-    const insight = buildWasteInsight([event(9, 'Altpapier', '2026-07-20')]);
+    const insights = buildWasteInsights([event(9, 'Altpapier', '2026-07-20')], MORNING);
 
     const erwartet = new Date(2026, 6, 20).toLocaleDateString('de-DE', { weekday: 'long' });
-    expect(insight?.text).toBe(`${erwartet}: Altpapier`);
+    expect(insights[0].text).toBe(`${erwartet}: Altpapier`);
   });
 
-  it('faerbt den Indikator rot, wenn heute oder morgen etwas ansteht', () => {
-    expect(buildWasteInsight([event(0, 'Hausmüll')])?.tone).toBe('error');
-    expect(buildWasteInsight([event(1, 'Hausmüll')])?.tone).toBe('error');
+  it('zeigt einen Termin von heute bis 9:59 Uhr', () => {
+    expect(buildWasteInsights([event(0, 'Hausmüll')], at(9, 59)).length).toBe(1);
   });
 
-  it('faerbt den Indikator gelb, wenn uebermorgen etwas ansteht', () => {
-    expect(buildWasteInsight([event(2, 'Hausmüll')])?.tone).toBe('tertiary');
+  it('blendet einen Termin von heute ab 10 Uhr aus', () => {
+    expect(buildWasteInsights([event(0, 'Hausmüll')], at(10))).toEqual([]);
+    expect(buildWasteInsights([event(0, 'Hausmüll')], at(18))).toEqual([]);
   });
 
-  it('bleibt bei spaeteren Terminen blau', () => {
-    expect(buildWasteInsight([event(3, 'Hausmüll')])?.tone).toBe('primary');
+  it('laesst spaetere Termine ab 10 Uhr stehen', () => {
+    const insights = buildWasteInsights([event(0, 'Hausmüll'), event(1, 'Biotonne')], at(11));
+
+    expect(insights.map(i => i.text)).toEqual(['Morgen: Biotonne']);
   });
 
-  it('richtet die Farbe bei mehreren Terminen nach dem naechstliegenden', () => {
-    expect(buildWasteInsight([event(1, 'Biotonne'), event(2, 'Gelbe Tonne')])?.tone)
-      .toBe('error');
-    expect(buildWasteInsight([event(2, 'Gelbe Tonne'), event(3, 'Altpapier')])?.tone)
-      .toBe('tertiary');
+  it('faerbt jeden Eintrag nach seinem eigenen Termin', () => {
+    const tones = buildWasteInsights(
+      [event(1, 'Biotonne'), event(2, 'Gelbe Tonne'), event(3, 'Altpapier')], MORNING
+    ).map(i => i.tone);
+
+    expect(tones).toEqual(['error', 'tertiary', 'primary']);
+  });
+
+  it('faerbt heute rot', () => {
+    expect(buildWasteInsights([event(0, 'Hausmüll')], MORNING)[0].tone).toBe('error');
   });
 });
