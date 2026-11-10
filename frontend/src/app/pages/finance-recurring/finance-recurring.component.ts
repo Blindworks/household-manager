@@ -14,6 +14,8 @@ import { BankAccount, Category, RecurringPayment } from '../../models/finance.mo
 })
 export class FinanceRecurringComponent implements OnInit {
   private readonly financeService = inject(FinanceService);
+  readonly merchantLabel = merchantLabel;
+  readonly statusLabel = recurringStatusLabel;
 
   accounts: BankAccount[] = [];
   categories: Category[] = [];
@@ -72,9 +74,6 @@ export class FinanceRecurringComponent implements OnInit {
       next: () => this.load(), error: (e: Error) => this.errorMessage = e.message
     });
   }
-
-  readonly merchantLabel = merchantLabel;
-  readonly statusLabel = recurringStatusLabel;
 
   categoryName(id?: number): string {
     if (id == null) {

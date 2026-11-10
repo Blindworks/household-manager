@@ -50,4 +50,13 @@ describe('FinanceRecurringComponent', () => {
     expect(rows[1].textContent).toContain('SPOTIFY AB (über PayPal)');
     expect(rows[1].textContent).toContain('Bestätigen');
   });
+
+  it('zeigt fehlende Fälligkeit und letzte Zahlung als Strich', () => {
+    flushInit([{ ...row(1, false, false), nextDueDate: undefined, lastSeenDate: undefined }]);
+    fixture.detectChanges();
+    const cells = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr td'))
+      .map(td => td.textContent?.trim());
+    expect(cells[3]).toBe('—');
+    expect(cells[4]).toBe('—');
+  });
 });

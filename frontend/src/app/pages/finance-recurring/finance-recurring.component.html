@@ -30,7 +30,7 @@
           <td>{{ item.expectedAmount | number:'1.2-2' }} €</td>
           <td>{{ item.interval }}</td>
           <td>{{ item.lastSeenDate ?? '—' }}</td>
-          <td>{{ item.nextDueDate }}</td>
+          <td>{{ item.nextDueDate ?? '—' }}</td>
           <td>{{ categoryName(item.categoryId) }}</td>
           <td>{{ statusLabel(item) }}</td>
           <td>
