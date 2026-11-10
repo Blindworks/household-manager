@@ -294,6 +294,27 @@ class RecurringSeriesDetectorTest {
         assertEquals(9L, series.categoryId());
     }
 
+    @Test
+    void supermarketCoincidenceIsDropped() {
+        List<RecurringBooking> bookings = new ArrayList<>();
+        LocalDate day = LocalDate.of(2025, 1, 2);
+        for (int i = 0; i < 50; i++) {
+            day = day.plusDays(2 + (i * 5) % 9);
+            int euros = 10 + (i * 37) % 81;
+            if (euros >= 28 && euros <= 38) {
+                euros += 15; // keep the coincidental quarterly group its own amount group
+            }
+            bookings.add(booking("SUPERMARKT", "-" + euros + "." + (i * 13) % 100 / 10 + "0", day));
+        }
+        LocalDate first = LocalDate.of(2025, 2, 10);
+        bookings.add(booking("SUPERMARKT", "-32.68", first));
+        bookings.add(booking("SUPERMARKT", "-33.49", first.plusDays(91)));
+        bookings.add(booking("SUPERMARKT", "-31.51", first.plusDays(182)));
+        bookings.add(booking("SUPERMARKT", "-33.47", first.plusDays(273)));
+
+        assertTrue(detector.detect(bookings).isEmpty());
+    }
+
     private static DetectedSeries single(List<DetectedSeries> result) {
         assertEquals(1, result.size(), "expected one series but was " + result);
         return result.get(0);

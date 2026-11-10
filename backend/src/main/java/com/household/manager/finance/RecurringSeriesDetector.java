@@ -9,10 +9,13 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -66,7 +69,32 @@ public class RecurringSeriesDetector {
         smallGroups.sort(Comparator.comparing(RecurringSeriesDetector::firstDate));
         List<Series> merged = mergePriceChanges(series, smallGroups);
         attachFreshPriceChanges(merged, smallGroups);
-        return merged.stream().map(s -> s.toDetected(merchantKey)).toList();
+        return dropCoincidences(merged, bookings).stream().map(s -> s.toDetected(merchantKey)).toList();
+    }
+
+    /**
+     * Keeps a series only if, within its span, the merchant's bookings outside all its series are at
+     * most as many as those inside: a by-chance regular amount group carved out of many grocery
+     * purchases is no subscription, while parallel contracts explain all their bookings.
+     */
+    private static List<Series> dropCoincidences(List<Series> series, List<RecurringBooking> merchantBookings) {
+        Set<RecurringBooking> explained = Collections.newSetFromMap(new IdentityHashMap<>());
+        series.forEach(s -> explained.addAll(s.bookings));
+        return series.stream().filter(s -> {
+            long inside = 0;
+            long outside = 0;
+            for (RecurringBooking booking : merchantBookings) {
+                if (booking.date().isBefore(s.firstSeen) || booking.date().isAfter(s.lastSeen)) {
+                    continue;
+                }
+                if (explained.contains(booking)) {
+                    inside++;
+                } else {
+                    outside++;
+                }
+            }
+            return outside <= inside;
+        }).toList();
     }
 
     /**
