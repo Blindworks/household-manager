@@ -55,7 +55,12 @@ public final class LaundrySessionStepper {
             session.setWeakLoad(session.getCurveCriterionLoad());
             return;
         }
-        climate.ifPresent(c -> accumulate(session, c, now));
+        if (climate.isPresent()) {
+            accumulate(session, climate.get(), now);
+        } else {
+            // Eine Funkpause darf nicht als Haltezeit des Kurvenkriteriums zaehlen
+            session.setCurveLowSince(null);
+        }
         // Ohne Klima nur die Uhr nachziehen, damit die Luecke spaeter nicht nachgezaehlt wird
         session.setLastAccumulatedAt(now);
 

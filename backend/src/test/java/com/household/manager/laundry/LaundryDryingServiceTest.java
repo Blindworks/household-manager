@@ -190,6 +190,52 @@ class LaundryDryingServiceTest {
     }
 
     @Test
+    void kurvenkriteriumWartetDieHaltezeitAb() {
+        startDrying(50.0);
+        runMinutes(329, 16, 58);   // bis Start + 5:29 Mehrfeuchte 8 pp
+        runMinutes(60, 16, 52);    // tief ab 5:30, Start + 6:29
+        assertThat(service.currentState().status()).isEqualTo("drying");
+
+        runMinutes(1, 16, 52);     // Start + 6:30: 60 min unter 25 %
+
+        assertThat(store.get(0).getStatus()).isEqualTo(LaundrySessionStatus.MAYBE_DRY);
+        assertThat(store.get(0).getCurveCriterionAt()).isEqualTo(store.get(0).getStartedAt().plusMinutes(390));
+    }
+
+    @Test
+    void erneuterAnstiegSetztDieHaltezeitZurueck() {
+        startDrying(50.0);
+        runMinutes(329, 16, 58);   // bis 5:29
+        runMinutes(30, 16, 52);    // tief 5:30 bis 5:59
+        runMinutes(1, 16, 55);     // 6:00 wieder 5 pp ueber Grund
+        runMinutes(60, 16, 52);    // tief ab 6:01, Start + 7:00
+        assertThat(store.get(0).getCurveCriterionAt()).isNull();
+        assertThat(service.currentState().status()).isEqualTo("drying");
+
+        runMinutes(1, 16, 52);     // Start + 7:01: 60 min seit 6:01
+
+        assertThat(store.get(0).getStatus()).isEqualTo(LaundrySessionStatus.MAYBE_DRY);
+    }
+
+    @Test
+    void fuehlerpauseZaehltNichtAlsHaltezeit() {
+        startDrying(50.0);
+        runMinutes(329, 16, 58);   // bis 5:29
+        runMinutes(10, 16, 52);    // tief 5:30 bis 5:39
+        climate = Optional.empty();
+        for (int i = 0; i < 50; i++) {   // 5:40 bis 6:29 keine Werte
+            clock.advance(Duration.ofMinutes(1));
+            service.tick();
+        }
+        runMinutes(60, 16, 52);    // tief ab 6:30, Start + 7:29
+        assertThat(service.currentState().status()).isEqualTo("drying");
+
+        runMinutes(1, 16, 52);     // Start + 7:30
+
+        assertThat(store.get(0).getStatus()).isEqualTo(LaundrySessionStatus.MAYBE_DRY);
+    }
+
+    @Test
     void kurvenkriteriumGreiftNichtBeiKleinemAnstieg() {
         startDrying(50.0);
         runMinutes(60, 16, 52);    // Hoechstwert nur 2 pp
