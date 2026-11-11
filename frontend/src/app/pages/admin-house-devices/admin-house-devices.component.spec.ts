@@ -1,3 +1,5 @@
+import { HouseOpening } from '../../models/house-opening.model';
+import { HOUSE_DEVICES } from '../../shared/house/house-devices';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { AdminHouseDevicesComponent } from './admin-house-devices.component';
@@ -34,6 +36,7 @@ class FakePositionService {
 describe('AdminHouseDevicesComponent', () => {
   let fixture: ComponentFixture<AdminHouseDevicesComponent>;
   let service: FakePositionService;
+  let openings: HouseOpening[];
 
   function render(): void {
     fixture = TestBed.createComponent(AdminHouseDevicesComponent);
@@ -78,11 +81,12 @@ describe('AdminHouseDevicesComponent', () => {
 
   beforeEach(() => {
     service = new FakePositionService();
+    openings = [];
     TestBed.configureTestingModule({
       imports: [AdminHouseDevicesComponent],
       providers: [
         { provide: HouseDevicePositionService, useValue: service },
-        { provide: HouseOpeningService, useValue: { list: () => of([]) } }
+        { provide: HouseOpeningService, useValue: { list: () => of(openings) } }
       ]
     });
   });
@@ -118,6 +122,18 @@ describe('AdminHouseDevicesComponent', () => {
     expect(dot(FRIDGE)).toBeNull();
     expect(listItem(FRIDGE)).not.toBeNull();
     expect(dot(DINING_LAMP)!.querySelector('circle.admin-house-devices__dot-mark')!.getAttribute('fill')).toBe('#ffd36b');
+  });
+
+  it('verknuepfterKontaktErscheintWederAlsPunktNochInDerListe', () => {
+    const terrasse = HOUSE_DEVICES.find(d => d.kind === 'contact' && d.area === 'wohnzimmer')!;
+    service.positions = [{ deviceId: terrasse.id, x: 300, y: 150 }];
+    openings = [{
+      id: 1, floor: 'ground', kind: 'DOOR', size: 'NORMAL', x1: 20, y1: 200, x2: 20, y2: 236,
+      hinge: 'START', swing: 'POSITIVE', deviceId: terrasse.id
+    }];
+    render();
+    expect(dot(terrasse.id)).toBeNull();
+    expect(listItem(terrasse.id)).toBeNull();
   });
 
   it('ungueltigerPlatzStehtMitVermerkInDerListe', () => {

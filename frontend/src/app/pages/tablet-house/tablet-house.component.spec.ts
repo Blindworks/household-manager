@@ -977,6 +977,22 @@ describe('TabletHouseComponent', () => {
       expect(effects.some(e => e.kind === 'open')).toBeTrue();
     });
 
+    it('verknuepfterKontaktHatKeineEigeneBubbleMehr', () => {
+      const terrasse = HOUSE_DEVICES.find(d => d.kind === 'contact' && d.area === 'wohnzimmer')!;
+      openingService.list.and.returnValue(of([opening({ deviceId: terrasse.id })]));
+      create();
+      click(bubble('Wohnzimmer'));
+      expect(device(terrasse.id)).toBeNull();
+      expect(device('wohnzimmer-thermostat-8')).not.toBeNull();
+    });
+
+    it('unverknuepfterKontaktBehaeltSeineBubble', () => {
+      const terrasse = HOUSE_DEVICES.find(d => d.kind === 'contact' && d.area === 'wohnzimmer')!;
+      create();
+      click(bubble('Wohnzimmer'));
+      expect(device(terrasse.id)).not.toBeNull();
+    });
+
     it('elementOhneWandWirdNichtGezeichnet', () => {
       openingService.list.and.returnValue(of([opening({ x1: 100, y1: 150, x2: 140, y2: 150 })]));
       create();

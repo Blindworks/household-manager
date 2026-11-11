@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
 import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
 import { FLOORS, FloorId, HOUSE_ROOMS, OUTDOOR_AREAS, PlanRect, areaFloor, outdoorAreasOn, roomById } from '../../shared/house/house-plan';
 import { HouseOpeningsEditorComponent } from './house-openings-editor/house-openings-editor.component';
+import { absorbedDeviceIds } from '../../shared/house/house-openings.util';
 import { DevicePositions, PlanPoint, isPointInArea, toPositionMap, validPlacement } from '../../shared/house/house-placement.util';
 
 /** Ab dieser Strecke (Pixel) ist eine Geste ein Ziehen, darunter ein Tipp. */
@@ -104,9 +105,15 @@ export class AdminHouseDevicesComponent implements OnInit {
     ];
   });
 
+  private readonly openingsEditor = viewChild(HouseOpeningsEditorComponent);
+
+  /** Kontakte, fuer die ein Fenster/eine Tuer steht: kein eigener Punkt, kein Listeneintrag. */
+  private readonly absorbed = computed(() => absorbedDeviceIds(this.openingsEditor()?.openings() ?? []));
+
   private readonly floorDevices = computed(() => {
     const floor = this.floor();
-    return HOUSE_DEVICES.filter(device => areaFloor(device.area) === floor);
+    const absorbed = this.absorbed();
+    return HOUSE_DEVICES.filter(device => areaFloor(device.area) === floor && !absorbed.has(device.id));
   });
 
   private readonly labels = computed(() => {

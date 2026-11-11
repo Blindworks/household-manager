@@ -3,7 +3,7 @@ import { HouseOpening } from '../../models/house-opening.model';
 import { EntityMap } from './house-bubbles.util';
 import { floorBase, toWorldX, toWorldZ } from './house-geometry.util';
 import {
-  defaultSwing, hingeForSide, isInnerWall, isOnWall, linkableDevices, normalizeSegment, openingIsOpen, openingShape,
+  absorbedDeviceIds, defaultSwing, hingeForSide, isInnerWall, isOnWall, linkableDevices, normalizeSegment, openingIsOpen, openingShape,
   overlapsAny, sideForHinge, snapToWall, wallSides, widthUnits
 } from './house-openings.util';
 
@@ -140,6 +140,22 @@ describe('linkableDevices', () => {
     expect(labels).toContain('schlafzimmer:Balkontür');
     expect(labels).toContain('front:Haustür');
     expect(labels).not.toContain('waschkeller:Gaszähler');
+  });
+});
+
+describe('absorbedDeviceIds', () => {
+  it('verknuepfter Kontakt an einer Wand entfaellt als Geraet', () => {
+    expect(absorbedDeviceIds([opening({ deviceId: TERRASSENTUER, x1: 20, y1: 200, x2: 20, y2: 240 })]))
+      .toEqual(new Set([TERRASSENTUER]));
+  });
+
+  it('Haustuer bleibt Geraet, Element ohne Wand und ohne Sensor zaehlen nicht', () => {
+    expect(absorbedDeviceIds([
+      opening({ kind: 'DOOR', deviceId: HAUSTUER, x1: 20, y1: 200, x2: 20, y2: 236 }),
+      opening({ id: 2, deviceId: TERRASSENTUER, x1: 100, y1: 150, x2: 140, y2: 150 }),
+      opening({ id: 3, deviceId: null, x1: 20, y1: 260, x2: 20, y2: 300 }),
+      opening({ id: 4, deviceId: 'gibt-es-nicht', x1: 20, y1: 300, x2: 20, y2: 340 })
+    ]).size).toBe(0);
   });
 });
 

@@ -230,6 +230,23 @@ export function linkableDevices(): HouseDevice[] {
     (device.kind === 'contact' && isWindowContact(device)) || device.kind === 'door');
 }
 
+/**
+ * Kontakte, die an einem gezeichneten Element (an einer Wand) haengen: das Element steht fuer sie,
+ * als eigenes Geraet (Punkt, Bubble, Liste „Noch ohne Platz“) entfallen sie. Die Haustuer bleibt
+ * trotz Verknuepfung ein Geraet — ihre Bubble traegt auch das Schloss. Raum-Hinweise (Fenster offen)
+ * lesen die Kontakte weiterhin.
+ */
+export function absorbedDeviceIds(openings: readonly HouseOpening[]): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const o of openings) {
+    const device = o.deviceId ? HOUSE_DEVICES.find(entry => entry.id === o.deviceId) : undefined;
+    if (device?.kind === 'contact' && isOnWall(o.floor, o)) {
+      ids.add(device.id);
+    }
+  }
+  return ids;
+}
+
 /** Offen nur bei explizitem `on` des verknuepften Kontakts; ohne/unbekannter Sensor: geschlossen. */
 export function openingIsOpen(o: HouseOpening, entities: EntityMap): boolean {
   const device = o.deviceId ? HOUSE_DEVICES.find(entry => entry.id === o.deviceId) : undefined;

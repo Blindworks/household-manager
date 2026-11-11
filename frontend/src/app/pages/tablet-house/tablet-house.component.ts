@@ -28,7 +28,7 @@ import {
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
 import { HouseOpeningService } from '../../services/house-opening.service';
 import { HouseOpening } from '../../models/house-opening.model';
-import { OpeningShape, isOnWall, openingIsOpen, openingShape } from '../../shared/house/house-openings.util';
+import { OpeningShape, absorbedDeviceIds, isOnWall, openingIsOpen, openingShape } from '../../shared/house/house-openings.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -163,8 +163,12 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     const bubbles = focused
       ? buildDeviceBubbles(focused, entities, now, tabletMode)
       : this.selectedFloor() === 'ground' ? buildOutdoorBubbles(entities, now, tabletMode) : [];
-    return placeByArea(bubbles, this.positions());
+    const absorbed = this.absorbedDeviceIds();
+    return placeByArea(bubbles.filter(bubble => !absorbed.has(bubble.deviceId)), this.positions());
   });
+
+  /** Kontakte, fuer die ein Fenster/eine Tuer steht: keine eigene Bubble mehr. */
+  private readonly absorbedDeviceIds = computed(() => absorbedDeviceIds(this.openings()));
 
   /**
    * Zustandseffekte der gezeigten Etage (im EG auch die Aussenbereiche), in Ueberblick
