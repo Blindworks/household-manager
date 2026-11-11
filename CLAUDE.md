@@ -366,6 +366,7 @@ docker-compose down
 - Aktionen: verriegeln/entsperren/Tür öffnen via `POST /v1/nuki/locks/{smartlockId}/actions`; nach jeder Aktion sofortiges Nachpollen
 - Flow-Engine: Zustands-Trigger über den Entity-State-Layer, Aktions-Node `nuki-lock-action` (smartlockId als String!)
 - Dashboard: Türschloss-Kachel im Footer (ersetzt die statische „System gesichert“-Karte); Verriegeln direkt, Entsperren/Tür öffnen mit Bestätigungsdialog
+- **Schlossakku (seit 2026-11-11):** der Akkustand steht als Attribut `batteryCharge` am Schloss **und** als eigene Entität `sensor.nuki_<smartlockId>_battery` (State = Prozent, `unit: %`, kein `deviceClass`, nur bei bekanntem Wert) — Flow-Trigger reagieren nur auf den Zustand, nicht auf Attribute. Unter 30 % zeigt der Intelligence Hub die Karte „Türschloss“ (gelb, unter 20 % oder bei `batteryCritical` rot; `buildLockBatteryInsight` in `shared/battery-insight.util.ts`, Quelle ist der 30-s-Abruf von `/v1/nuki/locks`). Unter 20 % schickt Flow #31 einen Push (Rate-Limit 24 h). **Die 20 % stehen damit zweimal** (Util und Flow)
 - Implementierung in `backend/src/main/java/com/household/manager/nuki/`
 
 ### Telegram-KI-Assistent

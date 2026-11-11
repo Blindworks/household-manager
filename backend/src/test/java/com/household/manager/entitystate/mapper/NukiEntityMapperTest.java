@@ -24,7 +24,7 @@ class NukiEntityMapperTest {
     void mapsLockedStateWithBatteryAttributes() {
         List<EntityStateUpdate> updates = mapper.map(smartlock(1, null));
 
-        assertEquals(1, updates.size());
+        assertEquals(2, updates.size());
         EntityStateUpdate lock = updates.get(0);
         assertEquals("lock.nuki_17958143231", lock.entityId());
         assertEquals(EntityDomain.LOCK, lock.domain());
@@ -53,7 +53,7 @@ class NukiEntityMapperTest {
     @Test
     void mapsDoorSensorWithOnEqualsOpenSemantics() {
         List<EntityStateUpdate> open = mapper.map(smartlock(1, 3));
-        assertEquals(2, open.size());
+        assertEquals(3, open.size());
         EntityStateUpdate door = open.get(1);
         assertEquals("binary_sensor.nuki_17958143231_door", door.entityId());
         assertEquals(EntityDomain.BINARY_SENSOR, door.domain());
@@ -66,9 +66,32 @@ class NukiEntityMapperTest {
 
     @Test
     void skipsDoorSensorWhenDeactivatedOrUnavailable() {
-        assertEquals(1, mapper.map(smartlock(1, null)).size());
-        assertEquals(1, mapper.map(smartlock(1, 0)).size());
-        assertEquals(1, mapper.map(smartlock(1, 1)).size());
+        assertEquals(2, mapper.map(smartlock(1, null)).size());
+        assertEquals(2, mapper.map(smartlock(1, 0)).size());
+        assertEquals(2, mapper.map(smartlock(1, 1)).size());
+    }
+
+    @Test
+    void mapsBatteryChargeToOwnSensorForFlowTriggers() {
+        List<EntityStateUpdate> updates = mapper.map(smartlock(1, 2));
+
+        EntityStateUpdate battery = updates.get(updates.size() - 1);
+        assertEquals("sensor.nuki_17958143231_battery", battery.entityId());
+        assertEquals(EntityDomain.SENSOR, battery.domain());
+        assertEquals(EntitySource.NUKI, battery.source());
+        assertEquals("85", battery.state());
+        assertEquals("Haustür Akku", battery.friendlyName());
+        assertEquals("%", battery.attributes().get("unit"));
+        assertNull(battery.attributes().get("deviceClass"));
+    }
+
+    @Test
+    void skipsBatterySensorWithoutCharge() {
+        NukiSmartlockDto noCharge = new NukiSmartlockDto(1L, "Ohne Akku",
+                new NukiSmartlockStateDto(1, null, false, null));
+        List<EntityStateUpdate> updates = mapper.map(noCharge);
+        assertEquals(1, updates.size());
+        assertEquals("lock.nuki_1", updates.get(0).entityId());
     }
 
     @Test

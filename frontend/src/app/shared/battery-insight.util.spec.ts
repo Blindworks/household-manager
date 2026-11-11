@@ -1,4 +1,5 @@
-import { buildTrackerBatteryInsight } from './battery-insight.util';
+import { buildLockBatteryInsight, buildTrackerBatteryInsight } from './battery-insight.util';
+import { NukiLock } from '../models/nuki.model';
 import { TractivePet } from '../models/tractive.model';
 
 function pet(overrides: Partial<TractivePet> = {}): TractivePet {
@@ -57,5 +58,50 @@ describe('buildTrackerBatteryInsight', () => {
 
     expect(insight?.tone).toBe('error');
     expect(insight?.text).toBe('Tracker-Akku von Toni: 32 % · Tracker-Akku von Bello: 12 %');
+  });
+});
+
+function lock(overrides: Partial<NukiLock> = {}): NukiLock {
+  return {
+    smartlockId: 1,
+    name: 'Haustür',
+    state: 'locked',
+    doorState: 'off',
+    batteryCharge: 27,
+    batteryCritical: false,
+    ...overrides
+  };
+}
+
+describe('buildLockBatteryInsight', () => {
+
+  it('liefert keine Karte ohne Schloss', () => {
+    expect(buildLockBatteryInsight([])).toBeNull();
+  });
+
+  it('liefert keine Karte exakt auf 30 Prozent', () => {
+    expect(buildLockBatteryInsight([lock({ batteryCharge: 30 })])).toBeNull();
+  });
+
+  it('warnt gelb unter 30 Prozent', () => {
+    const insight = buildLockBatteryInsight([lock()])!;
+    expect(insight.tone).toBe('tertiary');
+    expect(insight.title).toBe('Türschloss');
+    expect(insight.text).toBe('Akku von Haustür: 27 % – bald wechseln');
+  });
+
+  it('warnt rot unter 20 Prozent', () => {
+    expect(buildLockBatteryInsight([lock({ batteryCharge: 19 })])!.tone).toBe('error');
+    expect(buildLockBatteryInsight([lock({ batteryCharge: 20 })])!.tone).toBe('tertiary');
+  });
+
+  it('warnt rot, wenn das Schloss den Akku als kritisch meldet', () => {
+    const insight = buildLockBatteryInsight([lock({ batteryCharge: null, batteryCritical: true })])!;
+    expect(insight.tone).toBe('error');
+    expect(insight.text).toBe('Akku von Haustür kritisch – bald wechseln');
+  });
+
+  it('raet ohne Akkuwert nichts', () => {
+    expect(buildLockBatteryInsight([lock({ batteryCharge: null })])).toBeNull();
   });
 });

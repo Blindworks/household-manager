@@ -1315,6 +1315,20 @@ describe('DashboardComponent (Nuki-Tuerschloss)', () => {
     discardPeriodicTasks();
   }));
 
+  it('zeigt im Hub eine Akku-Karte, sobald der Schlossakku unter 30 Prozent faellt', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.insights.some(i => i.title === 'Türschloss')).toBeFalse();
+
+    nukiServiceSpy.getLocks.and.returnValue(of([lock({ batteryCharge: 25 })]));
+    tick(30000);
+
+    const card = fixture.componentInstance.insights.find(i => i.title === 'Türschloss');
+    expect(card?.text).toBe('Akku von Haustür: 25 % – bald wechseln');
+
+    discardPeriodicTasks();
+  }));
+
   it('markiert veraltete Daten bei einem Pollfehler, statt sie stillschweigend stehen zu lassen', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();

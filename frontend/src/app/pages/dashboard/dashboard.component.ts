@@ -42,7 +42,7 @@ import { CalendarService } from '../../services/calendar.service';
 import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
-import { buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
+import { buildLockBatteryInsight, buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
 import { buildDoorInsights, buildWindowInsights } from '../../shared/door-insight.util';
 import {
   BALCONY_DOOR_ENTITY_ID,
@@ -333,6 +333,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private ventilationInsight: HubInsight | null = null;
   /** Zuletzt gebaute Tracker-Akku-Warnung; null = alle Akkus ausreichend. */
   private trackerBatteryInsight: HubInsight | null = null;
+  private lockBatteryInsight: HubInsight | null = null;
   /** Zuletzt gebaute Tuer-offen-Karten (Haustuer/Terrassentuer); leer = alles zu. */
   private doorInsights: HubInsight[] = [];
   /** Karten fuer fertige Maschinen; gesetzt von den Flows ueber Helfer-Entitaeten. */
@@ -1764,7 +1765,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.rebuildInsights();
   }
 
-  /** Komponiert den Hub: offene Tueren und Fenster voran, dann fertige Maschinen, Muell, Termine, Lueften, Tracker-Akku. */
+  /** Komponiert den Hub: offene Tueren und Fenster voran, dann fertige Maschinen, Muell, Termine, Lueften, Schloss- und Tracker-Akku. */
   private rebuildInsights(): void {
     this.insights = [
       ...this.doorInsights,
@@ -1773,6 +1774,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...this.wasteInsights,
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
+      ...(this.lockBatteryInsight ? [this.lockBatteryInsight] : []),
       ...(this.trackerBatteryInsight ? [this.trackerBatteryInsight] : [])
     ];
   }
@@ -1881,7 +1883,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(locks => {
         this.nukiLoading = false;
         if (locks) {
-          this.nukiLocks = locks;
+          this.applyNukiLocks(locks);
           this.nukiError = null;
         } else if (this.nukiLocks.length === 0) {
           this.nukiError = 'Schloss nicht erreichbar.';
@@ -2292,9 +2294,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private refreshNukiLocks(): void {
     this.nukiService.getLocks().pipe(catchError(() => of<NukiLock[]>([]))).subscribe(locks => {
       if (locks.length > 0) {
-        this.nukiLocks = locks;
+        this.applyNukiLocks(locks);
       }
     });
+  }
+
+  /** Uebernimmt die Schloesser und haelt die Akku-Karte im Hub dazu aktuell. */
+  private applyNukiLocks(locks: NukiLock[]): void {
+    this.nukiLocks = locks;
+    this.lockBatteryInsight = buildLockBatteryInsight(locks);
+    this.rebuildInsights();
   }
 
   private loadTopSwitches(): void {

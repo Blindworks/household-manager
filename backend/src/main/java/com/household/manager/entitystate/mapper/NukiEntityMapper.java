@@ -17,7 +17,10 @@ import java.util.Map;
 /**
  * Mappt ein Nuki-Smartlock auf Entity-Zustände: das Schloss als
  * {@code lock.nuki_<smartlockId>}, der optionale Türsensor als
- * {@code binary_sensor.nuki_<smartlockId>_door} (on = offen).
+ * {@code binary_sensor.nuki_<smartlockId>_door} (on = offen) und der Akkustand als
+ * {@code sensor.nuki_<smartlockId>_battery} (Prozent). Der Akkustand steht zusätzlich als
+ * Attribut am Schloss; die eigene Entität gibt es, weil Flow-Trigger nur auf den Zustand
+ * reagieren, nicht auf Attribute.
  */
 @Component
 public class NukiEntityMapper {
@@ -55,6 +58,17 @@ public class NukiEntityMapper {
                     .friendlyName(smartlock.name() + " Tür")
                     .state(doorState)
                     .attributes(Map.of("deviceClass", "door"))
+                    .build());
+        }
+        if (state != null && state.batteryCharge() != null) {
+            updates.add(EntityStateUpdate.builder()
+                    .entityId(EntityIds.build(EntityDomain.SENSOR, EntitySource.NUKI, ref, "battery"))
+                    .domain(EntityDomain.SENSOR)
+                    .source(EntitySource.NUKI)
+                    .sourceRef(ref)
+                    .friendlyName(smartlock.name() + " Akku")
+                    .state(String.valueOf(state.batteryCharge()))
+                    .attributes(Map.of("unit", "%"))
                     .build());
         }
         return updates;
