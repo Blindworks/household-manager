@@ -135,22 +135,20 @@ export function isOnWall(floor: FloorId, s: Segment): boolean {
  */
 export function snapToWall(floor: FloorId, point: PlanPoint, kind: OpeningKind, size: OpeningSize): Segment | null {
   const width = widthUnits(kind, size);
-  let best: { line: WallLine; distance: number } | null = null;
+  let best: { line: WallLine; interval: [number, number]; distance: number } | null = null;
   for (const line of wallLines(floor)) {
     const distance = Math.abs((line.orientation === 'H' ? point.y : point.x) - line.coord);
-    if (distance <= SNAP_DISTANCE_UNITS && (!best || distance < best.distance)) {
-      best = { line, distance };
+    const projected = line.orientation === 'H' ? point.x : point.y;
+    const interval = line.intervals.find(([a, b]) => projected >= a && projected <= b && b - a >= width);
+    if (interval && distance <= SNAP_DISTANCE_UNITS && (!best || distance < best.distance)) {
+      best = { line, interval, distance };
     }
   }
   if (!best) {
     return null;
   }
-  const { line } = best;
+  const { line, interval } = best;
   const along = line.orientation === 'H' ? point.x : point.y;
-  const interval = line.intervals.find(([from, to]) => along >= from && along <= to);
-  if (!interval || interval[1] - interval[0] < width) {
-    return null;
-  }
   const from = Math.min(Math.max(along - width / 2, interval[0]), interval[1] - width);
   const to = from + width;
   return line.orientation === 'H'

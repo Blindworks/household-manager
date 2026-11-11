@@ -111,9 +111,9 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly positions = signal<DevicePositions>(new Map());
   /** Gespeicherte Fenster und Tueren aller Etagen; ohne Stand (nie geladen) gibt es keine Elemente. */
   private readonly openings = signal<readonly HouseOpening[]>([]);
-  /** Ids der Kontakte/Tueren, die an ein Element der Szene gebunden sind (gluehen dann nicht mehr selbst). */
+  /** Ids der Kontakte/Tueren, die an ein gezeichnetes Element (an einer Wand) gebunden sind (gluehen dann nicht mehr selbst). */
   private readonly linkedDeviceIds = computed<ReadonlySet<string>>(() =>
-    new Set(this.openings().flatMap(o => o.deviceId ? [o.deviceId] : [])));
+    new Set(this.openings().flatMap(o => o.deviceId && isOnWall(o.floor, o) ? [o.deviceId] : [])));
   /** Gezeichnete Elemente aller Etagen (die Sichtbarkeit regelt der Renderer); nur an einer Wand, offen nur bei `on`. */
   private readonly openingShapes = computed<OpeningShape[]>(() => {
     const entities = this.entities();

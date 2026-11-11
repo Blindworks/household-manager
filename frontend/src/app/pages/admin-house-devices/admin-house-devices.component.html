@@ -55,6 +55,7 @@
           <svg
             #plan
             class="admin-house-devices__plan"
+            [class.admin-house-devices__plan--placing]="!!openings.placingKind()"
             viewBox="0 0 440 490"
             (pointerdown)="onPlanPointerDown($event)">
             @for (shape of shapes(); track shape.id) {

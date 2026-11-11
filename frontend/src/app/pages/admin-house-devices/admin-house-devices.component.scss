@@ -73,6 +73,12 @@
     max-width: 720px;
   }
 
+  // Im Setz-Modus gehoert jeder Tipp auf den Plan dem Setzen: Flaechen und Punkte sind dann nicht treffbar.
+  &__plan--placing &__area,
+  &__plan--placing &__dot {
+    pointer-events: none;
+  }
+
   &__plan {
     display: block;
     width: 100%;

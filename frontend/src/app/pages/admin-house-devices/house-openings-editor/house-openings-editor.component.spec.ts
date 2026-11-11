@@ -200,7 +200,7 @@ describe('HouseOpeningsEditorComponent', () => {
     pointer(svg(), 'pointermove', 208, 150);
     pointer(svg(), 'pointerup', 208, 150);
     expect(service.updateCalls).toEqual([{
-      id: 1, request: requestOf(opening({ x1: 210, x2: 210, swing: 'NEGATIVE' }))
+      id: 1, request: requestOf(opening({ x1: 210, x2: 210, swing: 'NEGATIVE', hinge: 'END' }))
     }]);
   });
 
@@ -313,6 +313,62 @@ describe('HouseOpeningsEditorComponent', () => {
     sensorSelect().dispatchEvent(new Event('change'));
     fixture.detectChanges();
     expect(service.updateCalls).toEqual([{ id: 1, request: requestOf(opening({ deviceId: null })) }]);
+  });
+
+  it('sensorAuswahlSpringtNachSpeicherfehlerZurueck', () => {
+    service.openings = [opening()];
+    render();
+    tapOpening(1, 20, 150);
+    service.writeError = new Error('weg');
+    const haustuer = Array.from(sensorSelect().options).find(o => o.textContent?.startsWith('Haustür'))!;
+    sensorSelect().value = haustuer.value;
+    sensorSelect().dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(text()).toContain('Speichern fehlgeschlagen.');
+    expect(sensorSelect().value).toBe('');
+  });
+
+  it('doppelterTippBeimSetzenLegtNurEinElementAn', () => {
+    render();
+    click('Fenster hinzufügen');
+    const catcher = fixture.nativeElement.querySelector('.house-openings__catcher') as Element;
+    pointer(catcher, 'pointerdown', 25, 150);
+    pointer(catcher, 'pointerup', 25, 150);
+    // Der Setz-Modus ist beendet, der Fänger weg: ein zweiter Tipp erreicht nichts mehr.
+    expect(fixture.nativeElement.querySelector('.house-openings__catcher')).toBeNull();
+    pointer(catcher, 'pointerdown', 25, 150);
+    pointer(catcher, 'pointerup', 25, 150);
+    expect(service.createCalls.length).toBe(1);
+  });
+
+  it('fangerIstImSetzModusDasLetzteKindDesPlans', () => {
+    render();
+    expect(fixture.nativeElement.querySelector('.house-openings__catcher')).toBeNull();
+    click('Fenster hinzufügen');
+    const catcher = fixture.nativeElement.querySelector('.house-openings__catcher') as Element;
+    expect(svg().lastElementChild).toBe(catcher);
+    expect(svg().classList).toContain('admin-house-devices__plan--placing');
+  });
+
+  it('etagenwechselBeendetDenSetzModus', () => {
+    render();
+    click('Fenster hinzufügen');
+    expect(fixture.nativeElement.querySelector('.house-openings__catcher')).not.toBeNull();
+    click('Obergeschoss');
+    click('Erdgeschoss');
+    expect(fixture.nativeElement.querySelector('.house-openings__catcher')).toBeNull();
+    expect(button('Fenster hinzufügen').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('umzugAnAndereWandBehaeltDieAnschlagSeite', () => {
+    service.openings = [opening({ hinge: 'START' })];
+    render();
+    tapOpening(1, 20, 150);
+    const before = button('links', panel()).getAttribute('aria-pressed');
+    pointer(hit(1)!, 'pointerdown', 20, 150);
+    pointer(svg(), 'pointermove', 208, 150);
+    pointer(svg(), 'pointerup', 208, 150);
+    expect(button('links', panel()).getAttribute('aria-pressed')).toBe(before);
   });
 
   it('loeschenMitRueckfrage', () => {

@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, HostListener, OnInit, TemplateRef, ViewChild, computed, inject, input, output, signal
+  ChangeDetectionStrategy, Component, HostListener, OnInit, TemplateRef, ViewChild, computed, effect, inject, input, output, signal, untracked
 } from '@angular/core';
 import { HouseOpening, HouseOpeningRequest, OpeningKind, OpeningSize, OpeningSwing } from '../../../models/house-opening.model';
 import { HouseOpeningService } from '../../../services/house-opening.service';
@@ -231,6 +231,19 @@ export class HouseOpeningsEditorComponent implements OnInit {
     };
   });
 
+  constructor() {
+    // Ein Etagenwechsel beendet den Setz-Modus.
+    effect(() => {
+      const floor = this.floor();
+      untracked(() => {
+        const placing = this.placing();
+        if (placing && placing.floor !== floor) {
+          this.placing.set(null);
+        }
+      });
+    });
+  }
+
   ngOnInit(): void {
     this.load();
   }
@@ -348,7 +361,9 @@ export class HouseOpeningsEditorComponent implements OnInit {
 
   onSensorChange(o: HouseOpening, event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    this.save({ ...o, deviceId: value === '' ? null : value });
+    const select = event.target as HTMLSelectElement;
+    // Nach einem Fehler zeigt das Auswahlfeld wieder den gespeicherten Sensor.
+    this.save({ ...o, deviceId: value === '' ? null : value }, () => select.value = o.deviceId ?? '');
   }
 
   askDelete(id: number): void {
@@ -401,12 +416,13 @@ export class HouseOpeningsEditorComponent implements OnInit {
     const request: HouseOpeningRequest = {
       floor, kind, size, ...segment, hinge: hingeForSide(segment, swing, 'LEFT'), swing, deviceId: null
     };
+    // Setz-Modus sofort verlassen, damit ein zweiter Tipp waehrend der Anfrage nichts doppelt anlegt.
+    this.placing.set(null);
+    this.hintChange.emit(null);
     this.api.create(request).subscribe({
       next: created => {
         this.openings.set([...this.openings(), created]);
-        this.placing.set(null);
         this.selected.set(created.id);
-        this.hintChange.emit(null);
       },
       error: () => this.errorChange.emit(SAVE_FAILED)
     });
@@ -424,16 +440,21 @@ export class HouseOpeningsEditorComponent implements OnInit {
       return;
     }
     const swing = sameWallLine(segment, normalizeSegment(o)) ? o.swing : defaultSwing(o.floor, segment);
+    // Die Seite des Anschlags (links/rechts) bleibt beim Umzug an eine andere Wand erhalten.
+    const side = sideForHinge(o, o.swing, o.hinge);
     this.hintChange.emit(null);
-    this.save({ ...o, ...segment, swing });
+    this.save({ ...o, ...segment, swing, hinge: hingeForSide(segment, swing, side) });
   }
 
   /** Speichert per `update`; bei einem Fehler (auch 409) bleibt der letzte gespeicherte Stand. */
-  private save(next: HouseOpening): void {
+  private save(next: HouseOpening, onError?: () => void): void {
     this.errorChange.emit(null);
     this.api.update(next.id, toRequest(next)).subscribe({
       next: saved => this.openings.set(this.openings().map(o => o.id === saved.id ? saved : o)),
-      error: () => this.errorChange.emit(SAVE_FAILED)
+      error: () => {
+        this.errorChange.emit(SAVE_FAILED);
+        onError?.();
+      }
     });
   }
 

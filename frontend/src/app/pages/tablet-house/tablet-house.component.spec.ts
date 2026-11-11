@@ -966,6 +966,17 @@ describe('TabletHouseComponent', () => {
       expect(effects.some(e => e.kind === 'open')).toBeFalse();
     });
 
+    it('verknuepfterKontaktGluehtWiederWennSeinElementAufKeinerWandLiegt', () => {
+      openingService.list.and.returnValue(of([
+        opening({ deviceId: BAD_WINDOW.id, x1: 100, y1: 150, x2: 140, y2: 150 })
+      ]));
+      entityService.getEntities.and.returnValue(of([entity((BAD_WINDOW as { entityId: string }).entityId, 'on')]));
+      create();
+      click(el().querySelector('[data-floor="upper"]') as HTMLElement);
+      const effects: HouseEffect[] = fake.setEffects.calls.mostRecent().args[0];
+      expect(effects.some(e => e.kind === 'open')).toBeTrue();
+    });
+
     it('elementOhneWandWirdNichtGezeichnet', () => {
       openingService.list.and.returnValue(of([opening({ x1: 100, y1: 150, x2: 140, y2: 150 })]));
       create();

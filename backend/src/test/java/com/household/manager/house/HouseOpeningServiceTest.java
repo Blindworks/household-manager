@@ -60,7 +60,7 @@ class HouseOpeningServiceTest {
     }
 
     private void stubSave(long id) {
-        lenient().when(repository.save(any(HouseOpening.class))).thenAnswer(i -> {
+        lenient().when(repository.saveAndFlush(any(HouseOpening.class))).thenAnswer(i -> {
             HouseOpening o = i.getArgument(0);
             o.setId(id);
             return o;
@@ -74,7 +74,7 @@ class HouseOpeningServiceTest {
         HouseOpeningDtos.Response response = service.create(window(100, 90, 60, 90));
 
         ArgumentCaptor<HouseOpening> captor = ArgumentCaptor.forClass(HouseOpening.class);
-        verify(repository).save(captor.capture());
+        verify(repository).saveAndFlush(captor.capture());
         HouseOpening saved = captor.getValue();
         assertThat(saved.getX1()).isEqualByComparingTo(new BigDecimal("60"));
         assertThat(saved.getX2()).isEqualByComparingTo(new BigDecimal("100"));
@@ -95,7 +95,7 @@ class HouseOpeningServiceTest {
     void lehntFalscheLaengeAb() {
         assertThatThrownBy(() -> service.create(window(60, 90, 99, 90)))
                 .isInstanceOf(IllegalArgumentException.class);
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -138,7 +138,7 @@ class HouseOpeningServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.create(request("ground", HouseOpeningKind.WINDOW, HouseOpeningSize.NORMAL,
                 60.0, 90.0, 100.0, 90.0, "Bad Fenster"))).isInstanceOf(IllegalArgumentException.class);
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
         verifyNoInteractions(auditService);
     }
 
@@ -149,7 +149,7 @@ class HouseOpeningServiceTest {
 
         assertThatThrownBy(() -> service.create(request("ground", HouseOpeningKind.WINDOW, HouseOpeningSize.NORMAL,
                 60.0, 90.0, 100.0, 90.0, "bad-fenster"))).isInstanceOf(DuplicateEntityException.class);
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -157,7 +157,7 @@ class HouseOpeningServiceTest {
         HouseOpening existing = HouseOpening.builder().id(3L).deviceId("bad-fenster").build();
         when(repository.findById(3L)).thenReturn(Optional.of(existing));
         when(repository.findByDeviceId("bad-fenster")).thenReturn(Optional.of(existing));
-        when(repository.save(any(HouseOpening.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.saveAndFlush(any(HouseOpening.class))).thenAnswer(i -> i.getArgument(0));
 
         service.update(3L, request("ground", HouseOpeningKind.WINDOW, HouseOpeningSize.NORMAL,
                 60.0, 90.0, 100.0, 90.0, "bad-fenster"));

@@ -80,6 +80,11 @@ describe('snapToWall', () => {
   it('zu kurzes Wandstueck ergibt null', () => {
     expect(snapToWall('ground', { x: 291, y: 400 }, 'DOOR', 'TERRACE')).toBeNull();
   });
+
+  it('nimmt eine passende Wand, auch wenn eine naehere Linie die Projektion nicht abdeckt (T-Stoss)', () => {
+    // x = 290 ist naeher (2), endet aber bei y = 370; y = 370 liegt 8 entfernt und deckt x = 288 ab.
+    expect(snapToWall('ground', { x: 288, y: 362 }, 'WINDOW', 'NORMAL')).toEqual(seg(250, 370, 290, 370));
+  });
 });
 
 describe('wallSides / isInnerWall', () => {

@@ -84,7 +84,7 @@ public class HouseOpeningService {
 
     private HouseOpening save(HouseOpening opening) {
         try {
-            return repository.save(opening);
+            return repository.saveAndFlush(opening);
         } catch (DataIntegrityViolationException e) {
             // Wettlauf an der Vorabpruefung vorbei: der Unique-Constraint ist die letzte Instanz.
             throw new DuplicateEntityException("Dieser Kontakt ist bereits einem anderen Fenster oder einer Tuer zugeordnet.");
