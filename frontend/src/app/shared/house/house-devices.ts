@@ -3,7 +3,8 @@
  * (Stand 2026-11-05, vom Nutzer bestaetigt). Einzige Definition der Zuordnung.
  *
  * Bewusst nicht enthalten: Geraete ohne Raum (Router, Wasserpumpe, Ladestation, Klimageraet,
- * Lichterkette, Staubsauger-Ladegeraet, Fire Tablet, Balkontuer). Aussen zeigt v1 genau vier
+ * Lichterkette, Staubsauger-Ladegeraet, Fire Tablet). Die Balkontuer ist seit 2026-11-11
+ * ein Kontakt im Schlafzimmer (Fenster und Tueren an der Wand). Aussen zeigt v1 genau vier
  * Bubbles (Muelltonne, Toni, Haustuer, Garten): Haustuer-Kamera und Feinstaub entfallen.
  */
 export type HouseDevice =
@@ -122,6 +123,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   thermostat('schlafzimmer', 5),
   asLamp(plug('schlafzimmer', 'Licht', 'tapo', '80238e15a36182550737e4ce654d2f2420b98b5c')),
   meross('schlafzimmer', 'Fernseher', '2112153143211390863548e1e98182b1'),
+  contact('schlafzimmer', 'Balkontür', 'binary_sensor.dirigera_f3992ae92ca54fb6b276c2c4d5f832c9_1_contact'),
 
   // Buero
   roomClimate('buero', 'sensor.zigbee_temperatur_aqara_buero'),

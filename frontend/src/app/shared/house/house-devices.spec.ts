@@ -46,10 +46,16 @@ describe('HOUSE_DEVICES', () => {
     }
   });
 
-  it('Balkontür und Router sind nicht zugeordnet', () => {
+  it('Router ist nicht zugeordnet', () => {
     const all = HOUSE_DEVICES.flatMap(entityIdsOf);
-    expect(all).not.toContain('binary_sensor.dirigera_f3992ae92ca54fb6b276c2c4d5f832c9_1_contact');
     expect(all).not.toContain('switch.tapo_80223493d58341bf26cdbbf42d330231243f3a4d');
+  });
+
+  it('Balkontür ist ein Kontakt im Schlafzimmer', () => {
+    const balcony = HOUSE_DEVICES.find(d => d.kind === 'contact'
+      && d.entityId === 'binary_sensor.dirigera_f3992ae92ca54fb6b276c2c4d5f832c9_1_contact');
+    expect(balcony?.area).toBe('schlafzimmer');
+    expect(balcony?.label).toBe('Balkontür');
   });
 
   it('Haustür-Kamera und Feinstaub sind in v1 nicht Teil der 3D-Ansicht', () => {
