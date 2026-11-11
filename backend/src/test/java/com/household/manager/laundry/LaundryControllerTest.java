@@ -1,7 +1,6 @@
 package com.household.manager.laundry;
 
 import com.household.manager.repository.AppUserRepository;
-import com.household.manager.repository.LaundryDryingSessionRepository;
 import com.household.manager.security.ServiceTokenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +28,6 @@ class LaundryControllerTest {
     private MockMvc mockMvc;
     @MockitoBean
     private LaundryDryingService service;
-    @MockitoBean
-    private LaundryDryingSessionRepository repository;
     @MockitoBean
     private AppUserRepository appUserRepository;
     @MockitoBean
@@ -61,8 +58,7 @@ class LaundryControllerTest {
     @Test
     void sessionsLiefertGelerntenWert() throws Exception {
         when(service.requiredLoad()).thenReturn(14.0);
-        when(repository.findTop10ByStatusInOrderByAskedAtDesc(LaundrySessionStatus.FINISHED))
-                .thenReturn(List.of());
+        when(service.recentSessions()).thenReturn(List.of());
 
         mockMvc.perform(get("/v1/laundry/sessions"))
                 .andExpect(status().isOk())

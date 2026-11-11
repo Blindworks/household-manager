@@ -113,8 +113,24 @@ class LaundryTriggerListenerTest {
         listener.onStateChanged(event(properties.getRunningHelper(), "off", "on"));
         listener.onStateChanged(event(properties.getHumidityEntity(), "60", "65"));
 
-        verify(service).onNewWash();
+        verify(service, org.mockito.Mockito.times(2)).onNewWash();   // fertig und laeuft
         verify(service, never()).ask(any(), anyDouble());
+    }
+
+    @Test
+    void fertigHebtEineSperreDurchNeinAuf() {
+        listener.onStateChanged(event(properties.getFinishedHelper(), "off", "on"));
+
+        verify(service).onNewWash();
+    }
+
+    @Test
+    void fertigHebtDieSperreAuchOhneKlimaAuf() {
+        when(climateReader.current()).thenReturn(Optional.empty());
+
+        listener.onStateChanged(event(properties.getFinishedHelper(), "off", "on"));
+
+        verify(service).onNewWash();
     }
 
     @Test

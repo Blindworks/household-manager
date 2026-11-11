@@ -1,7 +1,6 @@
 package com.household.manager.laundry;
 
 import com.household.manager.exception.ErrorResponse;
-import com.household.manager.repository.LaundryDryingSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,7 +23,6 @@ import java.time.LocalDateTime;
 public class LaundryController {
 
     private final LaundryDryingService service;
-    private final LaundryDryingSessionRepository repository;
 
     @GetMapping("/state")
     public LaundryStateView state() {
@@ -51,7 +49,7 @@ public class LaundryController {
 
     @GetMapping("/sessions")
     public LaundrySessionsView sessions() {
-        var entries = repository.findTop10ByStatusInOrderByAskedAtDesc(LaundrySessionStatus.FINISHED).stream()
+        var entries = service.recentSessions().stream()
                 .map(s -> new LaundrySessionsView.Entry(s.getAskedAt(), s.getStartedAt(), s.getEndedAt(),
                         s.getStatus(), s.getConfirmedLoad(), s.getWeakLoad(), s.getLowerBoundLoad()))
                 .toList();

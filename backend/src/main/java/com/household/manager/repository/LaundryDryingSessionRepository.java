@@ -14,5 +14,9 @@ public interface LaundryDryingSessionRepository extends JpaRepository<LaundryDry
 
     List<LaundryDryingSession> findTop10ByStatusInOrderByAskedAtDesc(Collection<LaundrySessionStatus> statuses);
 
+    /** Nur Waschgaenge, die wirklich gestartet wurden (eine verfallene Frage ohne Start war keiner). */
+    List<LaundryDryingSession> findTop10ByStatusInAndStartedAtIsNotNullOrderByAskedAtDesc(
+            Collection<LaundrySessionStatus> statuses);
+
     Optional<LaundryDryingSession> findFirstByOrderByAskedAtDesc();
 }

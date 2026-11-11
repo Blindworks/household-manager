@@ -272,6 +272,18 @@ class LaundryDryingServiceTest {
         assertThat(store.get(0).getMaybeDryAt()).isEqualTo(LocalDateTime.of(2026, 11, 12, 7, 0));
     }
 
+    @Test
+    void nachtkarteNenntDasEndeDerRuhezeitStattJetzt() {
+        clock.set(LocalDateTime.of(2026, 11, 11, 17, 10));
+        startDrying(50.0);
+        runMinutes(120, 16, 58);
+        runMinutes(240, 16, 52);   // Kriterium greift um 23:10, Frage wartet bis 07:00
+
+        assertThat(service.currentState().predictedDryAt()).isEqualTo(LocalDateTime.of(2026, 11, 12, 7, 0));
+        runMinutes(5, 16, 52);
+        assertThat(service.currentState().predictedDryAt()).isEqualTo(LocalDateTime.of(2026, 11, 12, 7, 0));
+    }
+
     // ---------- Rueckmeldung ----------
 
     @Test
@@ -423,6 +435,23 @@ class LaundryDryingServiceTest {
         }
     }
 
+    @Test
+    void verfalleneFrageOhneStartFliesstNichtInsLernenEin() {
+        for (int i = 0; i < 10; i++) {
+            LaundryDryingSession asked = new LaundryDryingSession();
+            asked.setStatus(LaundrySessionStatus.EXPIRED);
+            asked.setTrigger(LaundryTrigger.SWITCH_OFF);
+            asked.setAskedAt(clock.now().minusHours(i + 1));
+            store.add(asked);
+        }
+        finishedSession(12.0, 5);
+        finishedSession(12.0, 6);
+        finishedSession(12.0, 7);
+
+        assertThat(service.recentSessions()).hasSize(3);
+        assertThat(service.requiredLoad()).isEqualTo(12.0);
+    }
+
     private void finishedSession(double confirmedLoad, int daysAgo) {
         LaundryDryingSession session = new LaundryDryingSession();
         session.setStatus(LaundrySessionStatus.DONE);
@@ -448,8 +477,9 @@ class LaundryDryingServiceTest {
         });
         when(repository.findFirstByStatusInOrderByAskedAtDesc(anyCollection())).thenAnswer(inv ->
                 newestFirst((Collection<LaundrySessionStatus>) inv.getArgument(0)).stream().findFirst());
-        when(repository.findTop10ByStatusInOrderByAskedAtDesc(anyCollection())).thenAnswer(inv ->
-                newestFirst((Collection<LaundrySessionStatus>) inv.getArgument(0)).stream().limit(10).toList());
+        when(repository.findTop10ByStatusInAndStartedAtIsNotNullOrderByAskedAtDesc(anyCollection())).thenAnswer(inv ->
+                newestFirst((Collection<LaundrySessionStatus>) inv.getArgument(0)).stream()
+                        .filter(s -> s.getStartedAt() != null).limit(10).toList());
         when(repository.findFirstByOrderByAskedAtDesc()).thenAnswer(inv ->
                 newestFirst(List.of(LaundrySessionStatus.values())).stream().findFirst());
         return repository;

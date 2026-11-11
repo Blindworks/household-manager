@@ -69,6 +69,8 @@ public class LaundryTriggerListener {
         if (!STATE_ON.equals(event.newState())) {
             return;
         }
+        // Ein spaeteres "fertig" ist ein neuer Waschgang: ein frueheres "Nein" sperrt nicht mehr
+        service.onNewWash();
         var climate = climateReader.current();
         if (climate.isEmpty()) {
             finishedKnown = false;

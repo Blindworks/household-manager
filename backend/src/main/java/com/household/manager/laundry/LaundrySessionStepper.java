@@ -123,7 +123,7 @@ public final class LaundrySessionStepper {
     }
 
     /** K erreicht oder Kurvenkriterium gegriffen; Letzteres bleibt stehen (Ruhezeit-Verschiebung). */
-    private static boolean maybeDry(LaundryDryingSession session, double requiredLoad) {
+    static boolean maybeDry(LaundryDryingSession session, double requiredLoad) {
         return valueOrZero(session.getAccumulatedLoad()) >= requiredLoad || session.getCurveCriterionAt() != null;
     }
 

@@ -140,18 +140,25 @@ public class LaundryDryingService {
                 ? LaundryStateView.PROMPT_DRY : LaundryStateView.PROMPT_NONE;
         Optional<KellerClimate> climate = climateReader.current();
         LocalDateTime predicted = climate.map(c -> predictDryAt(session, c, requiredLoad)).orElse(null);
+        if (predicted != null && session.getStatus() == LaundrySessionStatus.DRYING
+                && LaundrySessionStepper.maybeDry(session, requiredLoad)) {
+            // K oder Kurvenkriterium erreicht, die Frage wartet nur auf das Ende der Ruhezeit
+            predicted = LaundrySessionStepper.outsideQuietHours(now());
+        }
         return new LaundryStateView(status, prompt, session.getStartedAt(), predicted, climate.isEmpty(), requiredLoad);
     }
 
     /** Gelernter Bedarf K aus den letzten abgeschlossenen Waschgaengen. */
     public double requiredLoad() {
-        List<List<DryingSample>> samples = repository
-                .findTop10ByStatusInOrderByAskedAtDesc(LaundrySessionStatus.FINISHED).stream()
-                // eine verfallene Frage ohne Start war kein Waschgang
-                .filter(s -> s.getStartedAt() != null)
+        List<List<DryingSample>> samples = recentSessions().stream()
                 .map(LaundryDryingService::samplesOf)
                 .toList();
         return DryingCalibration.requiredLoad(samples);
+    }
+
+    /** Die letzten zehn abgeschlossenen, tatsaechlich gestarteten Waschgaenge, neueste zuerst. */
+    public List<LaundryDryingSession> recentSessions() {
+        return repository.findTop10ByStatusInAndStartedAtIsNotNullOrderByAskedAtDesc(LaundrySessionStatus.FINISHED);
     }
 
     /** Jetzt plus Restzeit, nie nach dem Ende des Waschgangs (Start + 72 h); leer ohne Trockenleistung. */
