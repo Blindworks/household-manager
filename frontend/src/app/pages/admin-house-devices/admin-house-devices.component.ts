@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
 import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
 import { FLOORS, FloorId, HOUSE_ROOMS, OUTDOOR_AREAS, PlanRect, areaFloor, outdoorAreasOn, roomById } from '../../shared/house/house-plan';
+import { HouseOpeningsEditorComponent } from './house-openings-editor/house-openings-editor.component';
 import { DevicePositions, PlanPoint, isPointInArea, toPositionMap, validPlacement } from '../../shared/house/house-placement.util';
 
 /** Ab dieser Strecke (Pixel) ist eine Geste ein Ziehen, darunter ein Tipp. */
@@ -70,6 +72,7 @@ function shapeFor(id: string, label: string, rects: PlanRect[], outdoor: boolean
 @Component({
   selector: 'app-admin-house-devices',
   standalone: true,
+  imports: [NgTemplateOutlet, HouseOpeningsEditorComponent],
   templateUrl: './admin-house-devices.component.html',
   styleUrl: './admin-house-devices.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

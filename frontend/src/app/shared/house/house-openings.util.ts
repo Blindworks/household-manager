@@ -1,4 +1,4 @@
-import { HouseOpening, OpeningKind, OpeningSize, OpeningSwing } from '../../models/house-opening.model';
+import { HouseOpening, OpeningHinge, OpeningKind, OpeningSize, OpeningSwing } from '../../models/house-opening.model';
 import { EntityMap, isOn, isWindowContact } from './house-bubbles.util';
 import { HOUSE_DEVICES, HouseDevice } from './house-devices';
 import { Vec3, floorBase, toWorldX, toWorldZ } from './house-geometry.util';
@@ -199,6 +199,29 @@ export function overlapsAny(s: Segment, others: readonly Segment[]): boolean {
     const b = linePosition(other);
     return a.orientation === b.orientation && a.coord === b.coord && a.from < b.to && b.from < a.to;
   });
+}
+
+// ---- Anschlag links/rechts ---------------------------------------------------------------
+
+/** Seite des Anschlags, von der `swing`-Seite aus auf die Wand geblickt. */
+export type HingeSide = 'LEFT' | 'RIGHT';
+
+/**
+ * Anschlag-Endpunkt fuer „links“/„rechts“. Plan-Koordinaten: x nach rechts, y nach unten; man
+ * steht auf der `swing`-Seite und blickt auf die Wand. Waagerecht: bei POSITIVE (Blick nach -y)
+ * ist links das kleinere x (START). Senkrecht: bei POSITIVE (Blick nach -x) ist links das
+ * groessere y (END). NEGATIVE kehrt beides um. START/END beziehen sich auf die normalisierte Strecke.
+ */
+export function hingeForSide(s: Segment, swing: OpeningSwing, side: HingeSide): OpeningHinge {
+  const n = normalizeSegment(s);
+  const horizontal = n.y1 === n.y2;
+  const leftIsStart = horizontal === (swing === 'POSITIVE');
+  return (side === 'LEFT') === leftIsStart ? 'START' : 'END';
+}
+
+/** Umkehrung von `hingeForSide`. */
+export function sideForHinge(s: Segment, swing: OpeningSwing, hinge: OpeningHinge): HingeSide {
+  return hingeForSide(s, swing, 'LEFT') === hinge ? 'LEFT' : 'RIGHT';
 }
 
 // ---- Sensoren -----------------------------------------------------------------------------

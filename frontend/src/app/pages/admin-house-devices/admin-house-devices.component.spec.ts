@@ -4,6 +4,7 @@ import { AdminHouseDevicesComponent } from './admin-house-devices.component';
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
 import { HouseDevicePosition } from '../../models/house-device-position.model';
 import { PlanPoint } from '../../shared/house/house-placement.util';
+import { HouseOpeningService } from '../../services/house-opening.service';
 
 const FRIDGE = 'kueche-meross-2112155672709990863548e1e98181eb';
 const DINING_LAMP = 'esszimmer-kasa-8012e05a';
@@ -79,7 +80,10 @@ describe('AdminHouseDevicesComponent', () => {
     service = new FakePositionService();
     TestBed.configureTestingModule({
       imports: [AdminHouseDevicesComponent],
-      providers: [{ provide: HouseDevicePositionService, useValue: service }]
+      providers: [
+        { provide: HouseDevicePositionService, useValue: service },
+        { provide: HouseOpeningService, useValue: { list: () => of([]) } }
+      ]
     });
   });
 

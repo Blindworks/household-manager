@@ -3,8 +3,8 @@ import { HouseOpening } from '../../models/house-opening.model';
 import { EntityMap } from './house-bubbles.util';
 import { floorBase, toWorldX, toWorldZ } from './house-geometry.util';
 import {
-  defaultSwing, isInnerWall, isOnWall, linkableDevices, normalizeSegment, openingIsOpen, openingShape,
-  overlapsAny, snapToWall, wallSides, widthUnits
+  defaultSwing, hingeForSide, isInnerWall, isOnWall, linkableDevices, normalizeSegment, openingIsOpen, openingShape,
+  overlapsAny, sideForHinge, snapToWall, wallSides, widthUnits
 } from './house-openings.util';
 
 const seg = (x1: number, y1: number, x2: number, y2: number) => ({ x1, y1, x2, y2 });
@@ -213,5 +213,43 @@ describe('openingShape', () => {
     expect(b[1].x).toBeCloseTo(toWorldX(266), 6);
     expect(a[0].y).toBeCloseTo(base, 6);
     expect(a[3].y).toBeCloseTo(base + 2.1, 6);
+  });
+});
+
+describe('hingeForSide / sideForHinge', () => {
+  it('waagerechte Aussenwand oben, Blick nach -y: links ist das kleinere x', () => {
+    const top = seg(60, 90, 100, 90);
+    expect(hingeForSide(top, 'POSITIVE', 'LEFT')).toBe('START');
+    expect(hingeForSide(top, 'POSITIVE', 'RIGHT')).toBe('END');
+    expect(hingeForSide(top, 'NEGATIVE', 'LEFT')).toBe('END');
+    expect(hingeForSide(top, 'NEGATIVE', 'RIGHT')).toBe('START');
+  });
+
+  it('senkrechte linke Aussenwand, Blick nach -x: links ist das groessere y', () => {
+    const left = seg(20, 130, 20, 170);
+    expect(hingeForSide(left, 'POSITIVE', 'LEFT')).toBe('END');
+    expect(hingeForSide(left, 'POSITIVE', 'RIGHT')).toBe('START');
+    expect(hingeForSide(left, 'NEGATIVE', 'LEFT')).toBe('START');
+    expect(hingeForSide(left, 'NEGATIVE', 'RIGHT')).toBe('END');
+  });
+
+  it('sideForHinge kehrt hingeForSide um', () => {
+    const top = seg(60, 90, 100, 90);
+    const left = seg(20, 130, 20, 170);
+    expect(sideForHinge(top, 'POSITIVE', 'START')).toBe('LEFT');
+    expect(sideForHinge(top, 'POSITIVE', 'END')).toBe('RIGHT');
+    expect(sideForHinge(left, 'POSITIVE', 'END')).toBe('LEFT');
+    expect(sideForHinge(left, 'POSITIVE', 'START')).toBe('RIGHT');
+    for (const s of [top, left]) {
+      for (const swing of ['POSITIVE', 'NEGATIVE'] as const) {
+        for (const side of ['LEFT', 'RIGHT'] as const) {
+          expect(sideForHinge(s, swing, hingeForSide(s, swing, side))).toBe(side);
+        }
+      }
+    }
+  });
+
+  it('nicht normalisierte Eingabe ergibt dasselbe', () => {
+    expect(hingeForSide(seg(100, 90, 60, 90), 'POSITIVE', 'LEFT')).toBe('START');
   });
 });

@@ -1,0 +1,132 @@
+/*
+ * Stile fuer Werkzeugleiste, Plan-Ebene und Feld. Plan-Ebene und Feld sind Templates dieser
+ * Komponente, die die Seite einsetzt; sie werden in dieser Komponente deklariert und tragen
+ * deshalb ihre Kapselung, die Regeln hier greifen also auch dort. Button-Optik kommt aus dem
+ * Admin-Scope (.ghost/.danger) der Seite.
+ */
+:host {
+  display: block;
+}
+
+.house-openings {
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs, 6px);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__error {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+
+  // Erhoehte Spezifitaet gegen die globalen .ghost-Regeln des Admin-Scopes.
+  &__toolbar button.house-openings__add--active,
+  &__choices button.house-openings__choice--active {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  &__item {
+    cursor: grab;
+
+    &--dragging {
+      cursor: grabbing;
+    }
+  }
+
+  &__line {
+    stroke-linecap: butt;
+    pointer-events: none;
+  }
+
+  &__halo {
+    stroke: #111827;
+    stroke-width: 10;
+    stroke-dasharray: 3 3;
+    pointer-events: none;
+  }
+
+  &__arc {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+    pointer-events: none;
+  }
+
+  &__linked {
+    fill: #1f2937;
+    pointer-events: none;
+  }
+
+  // Unsichtbare, breite Trefferlinie (Finger).
+  &__hit {
+    stroke: transparent;
+    stroke-width: 18;
+  }
+
+  &__catcher {
+    fill: transparent;
+    cursor: crosshair;
+  }
+
+  &__panel,
+  &__orphans {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+    border: 1px solid #d1d5db;
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  &__title {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__label {
+    color: var(--color-gray);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__missing {
+    display: block;
+    margin: -4px 0 var(--spacing-sm);
+    color: var(--color-error);
+    font-size: 0.75rem;
+  }
+
+  &__delete,
+  &__orphan {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  &__orphan {
+    margin-bottom: 6px;
+  }
+}

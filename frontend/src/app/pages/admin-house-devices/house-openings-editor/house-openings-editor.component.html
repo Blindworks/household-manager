@@ -1,0 +1,146 @@
+@switch (loadState()) {
+  @case ('failed') {
+    <div class="house-openings__error" role="alert">
+      <span>Fenster und Türen konnten nicht geladen werden.</span>
+      <button type="button" (click)="load()">Neu laden</button>
+    </div>
+  }
+  @case ('ok') {
+    <div class="house-openings__toolbar">
+      <button
+        type="button"
+        class="ghost"
+        [class.house-openings__add--active]="placingKind() === 'WINDOW'"
+        [attr.aria-pressed]="placingKind() === 'WINDOW'"
+        (click)="startPlacing('WINDOW')">Fenster hinzufügen</button>
+      <button
+        type="button"
+        class="ghost"
+        [class.house-openings__add--active]="placingKind() === 'DOOR'"
+        [attr.aria-pressed]="placingKind() === 'DOOR'"
+        (click)="startPlacing('DOOR')">Tür hinzufügen</button>
+      @if (placingKind()) {
+        <button type="button" class="ghost" (click)="stopPlacing()">Abbrechen</button>
+      }
+    </div>
+  }
+}
+
+<!-- Ebene im SVG der Seite, unter den Geraetepunkten. svg:-Praefix, weil das Template ausserhalb eines <svg> steht. -->
+<ng-template #layer>
+  @for (line of lines(); track line.id) {
+    <svg:g class="house-openings__item" [class.house-openings__item--selected]="line.selected"
+           [class.house-openings__item--dragging]="isDragging(line.id)">
+      @if (line.selected) {
+        <svg:line class="house-openings__halo" [attr.x1]="line.x1" [attr.y1]="line.y1" [attr.x2]="line.x2" [attr.y2]="line.y2" />
+      }
+      @for (arc of line.arcs; track $index) {
+        <svg:path class="house-openings__arc" [attr.data-opening-id]="line.id" [attr.d]="arc" [attr.stroke]="line.color" />
+      }
+      <svg:line
+        class="house-openings__line"
+        [attr.data-opening-id]="line.id"
+        [attr.x1]="line.x1" [attr.y1]="line.y1" [attr.x2]="line.x2" [attr.y2]="line.y2"
+        [attr.stroke]="line.color"
+        stroke-width="6" />
+      @if (line.linked; as mid) {
+        <svg:circle class="house-openings__linked" [attr.data-opening-id]="line.id" [attr.cx]="mid.x" [attr.cy]="mid.y" r="2.5" />
+      }
+      <svg:line
+        class="house-openings__hit"
+        [attr.data-opening-id]="line.id"
+        [attr.x1]="line.x1" [attr.y1]="line.y1" [attr.x2]="line.x2" [attr.y2]="line.y2"
+        (pointerdown)="onOpeningPointerDown(line.id, $event)" />
+    </svg:g>
+  }
+</ng-template>
+
+<!-- Im Setz-Modus faengt eine Flaeche ueber allem den Tipp ab, damit kein Geraetepunkt ihn bekommt. -->
+<ng-template #catcher>
+  @if (placingKind()) {
+    <svg:rect class="house-openings__catcher" x="0" y="0" width="440" height="490"
+              (pointerdown)="onCatcherPointerDown($event)" />
+  }
+</ng-template>
+
+<ng-template #panel>
+  @if (selectedPanel(); as p) {
+    <section class="house-openings__panel" aria-label="Fenster oder Tür">
+      <h2 class="house-openings__title">{{ p.title }}</h2>
+
+      <div class="house-openings__field">
+        <span class="house-openings__label">Größe</span>
+        <div class="house-openings__choices">
+          @for (s of p.sizes; track s.size) {
+            <button type="button" class="ghost" [class.house-openings__choice--active]="s.active"
+                    [attr.aria-pressed]="s.active" (click)="selectSize(p.opening, s.size)">{{ s.label }}</button>
+          }
+        </div>
+      </div>
+
+      @if (p.hingeSide; as side) {
+        <div class="house-openings__field">
+          <span class="house-openings__label">Anschlag</span>
+          <div class="house-openings__choices">
+            <button type="button" class="ghost" [class.house-openings__choice--active]="side === 'LEFT'"
+                    [attr.aria-pressed]="side === 'LEFT'" (click)="selectHingeSide(p.opening, 'LEFT')">links</button>
+            <button type="button" class="ghost" [class.house-openings__choice--active]="side === 'RIGHT'"
+                    [attr.aria-pressed]="side === 'RIGHT'" (click)="selectHingeSide(p.opening, 'RIGHT')">rechts</button>
+          </div>
+        </div>
+      }
+
+      @if (p.opensInto; as sides) {
+        <div class="house-openings__field">
+          <span class="house-openings__label">Öffnet in:</span>
+          <div class="house-openings__choices">
+            @for (side of sides; track side.swing) {
+              <button type="button" class="ghost" [class.house-openings__choice--active]="side.active"
+                      [attr.aria-pressed]="side.active" (click)="selectSwing(p.opening, side.swing)">{{ side.label }}</button>
+            }
+          </div>
+        </div>
+      }
+
+      <label class="house-openings__field">
+        <span class="house-openings__label">Sensor</span>
+        <select (change)="onSensorChange(p.opening, $event)">
+          @for (option of p.sensorOptions; track option.value) {
+            <option [value]="option.value" [selected]="option.value === (p.opening.deviceId ?? '')">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+      @if (p.sensorMissing) {
+        <small class="house-openings__missing">Sensor nicht gefunden</small>
+      }
+
+      <div class="house-openings__delete">
+        @if (confirmDeleteId() === p.opening.id) {
+          <span>Dieses Element löschen?</span>
+          <button type="button" class="danger" (click)="confirmDelete(p.opening.id)">Ja, löschen</button>
+          <button type="button" class="ghost" (click)="cancelDelete()">Abbrechen</button>
+        } @else {
+          <button type="button" class="danger" (click)="askDelete(p.opening.id)">Löschen</button>
+        }
+      </div>
+    </section>
+  }
+
+  @if (orphans().length > 0) {
+    <section class="house-openings__orphans">
+      <h2 class="house-openings__title">Liegt auf keiner Wand</h2>
+      @for (orphan of orphans(); track orphan.id) {
+        <div class="house-openings__orphan">
+          <span>{{ orphan.label }}</span>
+          @if (confirmDeleteId() === orphan.id) {
+            <span>Dieses Element löschen?</span>
+            <button type="button" class="danger" (click)="confirmDelete(orphan.id)">Ja, löschen</button>
+            <button type="button" class="ghost" (click)="cancelDelete()">Abbrechen</button>
+          } @else {
+            <button type="button" class="danger" (click)="askDelete(orphan.id)">Löschen</button>
+          }
+        </div>
+      }
+    </section>
+  }
+</ng-template>

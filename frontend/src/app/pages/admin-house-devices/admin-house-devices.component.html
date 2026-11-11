@@ -6,7 +6,8 @@
     die du an ihren echten Platz ziehst. Rechts stehen die Geräte ohne Platz: auf den Plan ziehen
     oder antippen und danach in den Plan tippen. Bis dahin stehen sie im Raster in der Raummitte.
     Ein Gerät lässt sich nur in seinem eigenen Raum ablegen. Einen Punkt antippen, um seinen Platz
-    zurückzusetzen.
+    zurückzusetzen. Fenster und Türen legst du mit den Knöpfen unter der Etagenwahl auf eine Wand,
+    ziehst sie entlang der Wände und tippst sie an, um Größe, Anschlag und Sensor einzustellen.
   </p>
 
   @switch (loadState()) {
@@ -32,6 +33,13 @@
             (click)="selectFloor(tab.id)">{{ tab.label }}</button>
         }
       </div>
+
+      <app-house-openings-editor
+        #openings
+        [floor]="floor()"
+        [plan]="plan"
+        (hintChange)="hint.set($event)"
+        (errorChange)="errorMessage.set($event)" />
 
       <div class="admin-house-devices__messages">
         @if (errorMessage()) {
@@ -62,6 +70,8 @@
               <text class="admin-house-devices__name" [attr.x]="shape.nameX" [attr.y]="shape.nameY">{{ shape.label }}</text>
             }
 
+            <ng-container [ngTemplateOutlet]="openings.layer" />
+
             @for (dot of dots(); track dot.device.id) {
               <g
                 class="admin-house-devices__dot"
@@ -76,6 +86,8 @@
                 <text class="admin-house-devices__dot-label" [class.admin-house-devices__dot-label--left]="dot.labelLeft" [attr.x]="dot.labelLeft ? -12 : 12" y="4">{{ dot.label }}</text>
               </g>
             }
+
+            <ng-container [ngTemplateOutlet]="openings.catcher" />
           </svg>
 
           <div class="admin-house-devices__legend">
@@ -85,6 +97,8 @@
             <span><i style="background:#ff6b6b"></i>Kontakt/Tür</span>
             <span><i style="background:#8fb4ff"></i>Schalter/Maschine</span>
             <span><i style="background:#c9a6ff"></i>Sonstiges</span>
+            <span><b style="background:#5b8cff"></b>Fenster</span>
+            <span><b style="background:#c9d6f0"></b>Tür</span>
           </div>
 
           @if (selectedDotLabel(); as label) {
@@ -96,6 +110,7 @@
         </div>
 
         <aside class="admin-house-devices__side">
+          <ng-container [ngTemplateOutlet]="openings.panel" />
           <h2 class="admin-house-devices__side-title">Noch ohne Platz ({{ floorLabel() }})</h2>
           @for (group of unplacedGroups(); track group.area) {
             <h3 class="admin-house-devices__group">{{ group.area }}</h3>
