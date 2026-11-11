@@ -231,6 +231,9 @@ public class SecurityConfig {
                         // GET-Regel), Setzen und Entfernen nur ADMIN.
                         .requestMatchers(HttpMethod.PUT, "/v1/house/device-positions/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/v1/house/device-positions/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/v1/house/openings").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/v1/house/openings/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/house/openings/*").hasRole("ADMIN")
                         // Hub-Pflege der Heizung (Hub-IP setzen, Thermostat umbenennen, Raumfuehler
                         // zuordnen) ist ADMIN.
                         // Methodenspezifisch und VOR der KIOSK-Whitelist weiter unten: lesen und

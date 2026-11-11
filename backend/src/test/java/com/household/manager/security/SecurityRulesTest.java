@@ -953,6 +953,42 @@ class SecurityRulesTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfFensterUndTuerenLesen() throws Exception {
+        mockMvc.perform(get("/v1/house/openings")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfOeffnungNichtAnlegen() throws Exception {
+        mockMvc.perform(post("/v1/house/openings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfOeffnungenNichtSchreiben() throws Exception {
+        mockMvc.perform(post("/v1/house/openings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/house/openings/1").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/v1/house/openings/1").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminDarfOeffnungAnlegen() throws Exception {
+        // Kein Controller im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+        mockMvc.perform(post("/v1/house/openings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+    }
+
     /** Die generische GET-Regel fuer Preise bleibt: das Wandtablet liest weiter Preise. */
     @Test
     @WithMockUser(roles = "KIOSK")

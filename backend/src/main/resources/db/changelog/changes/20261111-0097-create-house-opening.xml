@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261111-0097-create-house-opening" author="benedikt">
+        <comment>Digitaler Zwilling: Fenster und Tueren als waagerechte/senkrechte Strecke (Plan-Einheiten 0-500) auf einer Etage; device_id optional, eindeutig, ohne Fremdschluessel.</comment>
+        <createTable tableName="house_opening">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="floor" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="x1" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="y1" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="x2" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="y2" type="DECIMAL(6,1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hinge" type="VARCHAR(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="swing" type="VARCHAR(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_id" type="VARCHAR(100)">
+                <constraints nullable="true" unique="true" uniqueConstraintName="uk_house_opening_device"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback><dropTable tableName="house_opening"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
