@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261111-0098-create-laundry-drying-session" author="benedikt">
+        <comment>Waeschetrocknung: ein Waschgang je Zeile (Status, Ausloeser, Feuchte-Last und Kalibrierwerte).</comment>
+        <createTable tableName="laundry_drying_session">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="trigger_type" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asked_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="started_at" type="DATETIME"/>
+            <column name="baseline_humidity" type="DOUBLE"/>
+            <column name="peak_excess" type="DOUBLE"/>
+            <column name="accumulated_load" type="DOUBLE"/>
+            <column name="last_accumulated_at" type="DATETIME"/>
+            <column name="curve_low_since" type="DATETIME"/>
+            <column name="curve_criterion_at" type="DATETIME"/>
+            <column name="curve_criterion_load" type="DOUBLE"/>
+            <column name="maybe_dry_at" type="DATETIME"/>
+            <column name="dry_question_open" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dry_question_at" type="DATETIME"/>
+            <column name="lower_bound_load" type="DOUBLE"/>
+            <column name="confirmed_load" type="DOUBLE"/>
+            <column name="weak_load" type="DOUBLE"/>
+            <column name="ended_at" type="DATETIME"/>
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback><dropTable tableName="laundry_drying_session"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

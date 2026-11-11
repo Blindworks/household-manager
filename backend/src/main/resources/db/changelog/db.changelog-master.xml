@@ -208,5 +208,6 @@
     <include file="db/changelog/changes/20261110-0095-recurring-dismissed.xml"/>
     <include file="db/changelog/changes/20261110-0096-recurring-delete-unconfirmed.xml"/>
     <include file="db/changelog/changes/20261111-0097-create-house-opening.xml"/>
+    <include file="db/changelog/changes/20261111-0098-create-laundry-drying-session.xml"/>
 
 </databaseChangeLog>
