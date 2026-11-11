@@ -7,6 +7,7 @@ import {
   toPlanX, toPlanY, toWorldX, toWorldZ
 } from '../../shared/house/house-geometry.util';
 import { HouseEffect, HouseEffectKind } from '../../shared/house/house-effects.util';
+import { OpeningShape } from '../../shared/house/house-openings.util';
 
 /**
  * Three.js-Szene der 3D-Hausansicht. Einzige Datei, die `three` importiert -
@@ -45,7 +46,21 @@ const EFFECT_COLORS: Record<HouseEffectKind, number> = {
 interface FloorLayer {
   group: THREE.Group;
   plates: THREE.Mesh[];
+  /** Fenster und Tueren der Etage; Kind der Layer-Gruppe und folgt deren Sichtbarkeit. */
+  openings: THREE.Group;
 }
+
+/** Fenster: bläuliches Glas; Tuerblatt: heller; offen: rot. Rahmenfarbe je Zustand. */
+const OPENING_COLORS = {
+  windowPane: 0x8fd3ff,
+  doorPane: 0xdff3ff,
+  openPane: 0xff8f8f,
+  frame: 0xb9e6ff,
+  openFrame: 0xff8f8f
+} as const;
+const OPENING_PANE_OPACITY = { window: 0.22, door: 0.4, open: 0.35 } as const;
+/** Versatz vor die Wandebene, damit die Flaeche nicht mit den Raumkanten flimmert. */
+const OPENING_OFFSET_M = 0.015;
 
 const easeInOut = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
@@ -79,6 +94,8 @@ export class HouseSceneRenderer {
   private motionRings: THREE.Mesh[] = [];
   private runningArcs: THREE.Mesh[] = [];
   private playback: { handle: number | null } | null = null;
+  /** Fenster-/Tuermaterialien je Zustand, geteilt. */
+  private readonly openingMaterials = new Map<string, THREE.Material>();
 
   private selectedFloor: FloorId = 'ground';
   private frameHandle: number | null = null;
@@ -233,6 +250,21 @@ export class HouseSceneRenderer {
   }
 
   /**
+   * Ersetzt die Fenster und Tueren aller Etagen (je Etage eine Gruppe in deren Layer-Gruppe).
+   * Gezeichnet wird nur bei Bedarf wie sonst auch.
+   */
+  setOpenings(shapes: readonly OpeningShape[]): void {
+    if (this.disposed) {
+      return;
+    }
+    for (const layer of this.layers.values()) {
+      this.clearGroup(layer.openings);
+    }
+    shapes.forEach(shape => this.addOpening(shape));
+    this.requestRender();
+  }
+
+  /**
    * Spielt die Effekte kurz animiert ab (Pulsieren, Ringe, drehender Bogen) und kehrt
    * danach in die statische Pose zurueck - nur waehrend dieser Zeit wird dauernd gezeichnet.
    */
@@ -281,7 +313,7 @@ export class HouseSceneRenderer {
         object.geometry.dispose();
       }
     });
-    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial,
+    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial, ...this.openingMaterials.values(),
       ...this.spriteMaterials.values(), ...this.floorGlowMaterials.values(), ...this.solidMaterials.values()]
       .forEach(material => material.dispose());
     // Geteilte Effekt-Geometrien haengen nicht dauerhaft in der Szene, der traverse oben erreicht sie nicht sicher.
@@ -338,7 +370,9 @@ export class HouseSceneRenderer {
   private buildFloors(): void {
     for (const floor of FLOORS) {
       const group = new THREE.Group();
-      this.layers.set(floor.id, { group, plates: [] });
+      const openings = new THREE.Group();
+      group.add(openings);
+      this.layers.set(floor.id, { group, plates: [], openings });
       this.scene.add(group);
     }
     for (const box of roomBoxes()) {
@@ -369,6 +403,65 @@ export class HouseSceneRenderer {
       // Der Umriss gehoert zur Layer-Gruppe seiner Etage und folgt deren Sichtbarkeit.
       this.layers.get(area.floor)!.group.add(outline);
     }
+  }
+
+  /** Entfernt alle Kinder und gibt deren Geometrien frei (Materialien sind geteilt und bleiben). */
+  private clearGroup(group: THREE.Group): void {
+    for (const child of [...group.children]) {
+      if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+        child.geometry.dispose();
+      }
+      group.remove(child);
+    }
+  }
+
+  private addOpening(shape: OpeningShape): void {
+    const layer = this.layers.get(shape.floor);
+    if (!layer) {
+      return;
+    }
+    // Versatz senkrecht zur Wand; beide Seiten sind sichtbar (DoubleSide), die Richtung ist gleichgueltig.
+    const [a, b] = shape.frame;
+    const length = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+    const nx = -(b.z - a.z) / length * OPENING_OFFSET_M;
+    const nz = (b.x - a.x) / length * OPENING_OFFSET_M;
+    const toVector = (p: Vec3) => new THREE.Vector3(p.x + nx, p.y, p.z + nz);
+    const open = shape.open;
+    const door = shape.kind === 'DOOR';
+
+    shape.panels.forEach(({ corners }) => {
+      const points = corners.map(toVector);
+      const geometry = new THREE.BufferGeometry().setFromPoints(
+        [points[0], points[1], points[2], points[0], points[2], points[3]]);
+      layer.openings.add(new THREE.Mesh(geometry, this.paneMaterial(door, open)));
+      layer.openings.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), this.frameMaterial(open)));
+    });
+    layer.openings.add(new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(shape.frame.map(toVector)), this.frameMaterial(open)));
+  }
+
+  private paneMaterial(door: boolean, open: boolean): THREE.MeshBasicMaterial {
+    const key = `pane:${door ? 'door' : 'window'}:${open}`;
+    let material = this.openingMaterials.get(key) as THREE.MeshBasicMaterial | undefined;
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({
+        color: open ? OPENING_COLORS.openPane : door ? OPENING_COLORS.doorPane : OPENING_COLORS.windowPane,
+        opacity: open ? OPENING_PANE_OPACITY.open : door ? OPENING_PANE_OPACITY.door : OPENING_PANE_OPACITY.window,
+        transparent: true, depthWrite: false, side: THREE.DoubleSide
+      });
+      this.openingMaterials.set(key, material);
+    }
+    return material;
+  }
+
+  private frameMaterial(open: boolean): THREE.LineBasicMaterial {
+    const key = `frame:${open}`;
+    let material = this.openingMaterials.get(key) as THREE.LineBasicMaterial | undefined;
+    if (!material) {
+      material = new THREE.LineBasicMaterial({ color: open ? OPENING_COLORS.openFrame : OPENING_COLORS.frame });
+      this.openingMaterials.set(key, material);
+    }
+    return material;
   }
 
   private hasAnimatedEffects(): boolean {

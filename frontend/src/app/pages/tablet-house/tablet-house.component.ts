@@ -26,6 +26,9 @@ import {
   DevicePositions, deviceAnchor, deviceBubbleAnchor, samePositions, toPositionMap
 } from '../../shared/house/house-placement.util';
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
+import { HouseOpeningService } from '../../services/house-opening.service';
+import { HouseOpening } from '../../models/house-opening.model';
+import { OpeningShape, isOnWall, openingIsOpen, openingShape } from '../../shared/house/house-openings.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -79,6 +82,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly createRenderer = inject(HOUSE_RENDERER_FACTORY);
   private readonly deviceControl = inject(HouseDeviceControlService);
   private readonly positionService = inject(HouseDevicePositionService);
+  private readonly openingService = inject(HouseOpeningService);
 
   @ViewChild('sceneHost', { static: true }) private sceneHost!: ElementRef<HTMLElement>;
   @ViewChildren('bubble') private bubbleRefs!: QueryList<ElementRef<HTMLElement>>;
@@ -105,6 +109,18 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly brightness = signal<ReadonlyMap<string, number>>(new Map());
   /** Gespeicherte Geraeteplaetze; ohne Stand (nie geladen) gilt das Raster. */
   private readonly positions = signal<DevicePositions>(new Map());
+  /** Gespeicherte Fenster und Tueren aller Etagen; ohne Stand (nie geladen) gibt es keine Elemente. */
+  private readonly openings = signal<readonly HouseOpening[]>([]);
+  /** Ids der Kontakte/Tueren, die an ein Element der Szene gebunden sind (gluehen dann nicht mehr selbst). */
+  private readonly linkedDeviceIds = computed<ReadonlySet<string>>(() =>
+    new Set(this.openings().flatMap(o => o.deviceId ? [o.deviceId] : [])));
+  /** Gezeichnete Elemente aller Etagen (die Sichtbarkeit regelt der Renderer); nur an einer Wand, offen nur bei `on`. */
+  private readonly openingShapes = computed<OpeningShape[]>(() => {
+    const entities = this.entities();
+    return this.openings()
+      .filter(o => isOnWall(o.floor, o))
+      .map(o => openingShape(o, openingIsOpen(o, entities)));
+  }, { equal: sameShapes });
 
   /**
    * Gehalten wird nur die Id des offenen Geraets, nie das Feld-Modell: das Feld
@@ -160,7 +176,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       ...this.visibleRooms().map(room => room.id),
       ...outdoorAreasOn(floor).map(area => area.id)
     ];
-    return buildHouseEffects(areas, this.entities(), this.brightness(), this.positions());
+    return buildHouseEffects(areas, this.entities(), this.brightness(), this.positions(),
+      this.linkedDeviceIds());
   }, { equal: sameEffects });
 
   constructor() {
@@ -191,6 +208,15 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
         this.outside(renderer => renderer.requestRender());
       }
     });
+    // Fenster und Tueren: ein Fehler behaelt still den letzten Stand (ohne Stand gibt es keine Elemente).
+    ticks.pipe(
+      switchMap(() => this.openingService.list().pipe(catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
+      if (result && !sameOpenings(result, this.openings())) {
+        this.openings.set(result);
+      }
+    });
     // Zusatzdaten nur bei offenem Feld; switchMap bestellt den alten Abruf ab (Schliessen, Geraetewechsel).
     merge(ticks, this.extrasRequests).pipe(
       switchMap(() => {
@@ -211,6 +237,10 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       const effects = this.effects();
       this.outside(renderer => renderer.setEffects(effects));
     });
+    effect(() => {
+      const shapes = this.openingShapes();
+      this.outside(renderer => renderer.setOpenings(shapes));
+    });
   }
 
   ngAfterViewInit(): void {
@@ -226,6 +256,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       renderer.onRendered(() => this.positionBubbles());
       renderer.setFloor(this.selectedFloor());
       renderer.setEffects(this.effects());
+      renderer.setOpenings(this.openingShapes());
       renderer.flyTo(cameraForOverview(this.selectedFloor()), 0);
     });
     // Neue Bubble-Elemente (Etagenwechsel, Raumansicht) sofort einordnen.
@@ -390,6 +421,15 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
 /** Gleiche Effekte (nach Inhalt): ein Takt mit unveraendertem Stand baut die Szene nicht neu auf. */
 function sameEffects(a: HouseEffect[], b: HouseEffect[]): boolean {
   return a.length === b.length && a.every((effect, i) => JSON.stringify(effect) === JSON.stringify(b[i]));
+}
+
+/** Gleiche Elemente (nach Inhalt): ein Takt mit unveraendertem Stand baut die Szene nicht neu auf. */
+function sameShapes(a: OpeningShape[], b: OpeningShape[]): boolean {
+  return a.length === b.length && a.every((shape, i) => JSON.stringify(shape) === JSON.stringify(b[i]));
+}
+
+function sameOpenings(a: readonly HouseOpening[], b: readonly HouseOpening[]): boolean {
+  return a.length === b.length && a.every((opening, i) => JSON.stringify(opening) === JSON.stringify(b[i]));
 }
 
 function deviceById(id: string | null): HouseDevice | undefined {

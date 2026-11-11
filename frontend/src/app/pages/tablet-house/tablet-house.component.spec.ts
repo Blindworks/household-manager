@@ -15,6 +15,10 @@ import {
 } from '../../shared/house/house-geometry.util';
 import { BUBBLE_HEIGHT_M, deviceAnchor, deviceBubbleAnchor } from '../../shared/house/house-placement.util';
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
+import { HouseOpeningService } from '../../services/house-opening.service';
+import { HouseOpening } from '../../models/house-opening.model';
+import { OpeningShape } from '../../shared/house/house-openings.util';
+import { HOUSE_DEVICES } from '../../shared/house/house-devices';
 import { HouseEffect } from '../../shared/house/house-effects.util';
 import { BrightnessOutcome, HouseDeviceControlService, SwitchOutcome } from './house-device-control.service';
 import { DetailExtras, LightExtras } from '../../shared/house/detail-extras.util';
@@ -52,6 +56,7 @@ class FakeRenderer {
     (points: Vec3[]): ScreenPoint[] => points.map((_, i) => ({ x: 10 * i, y: 20, visible: true })));
   readonly requestRender = jasmine.createSpy('requestRender');
   readonly setEffects = jasmine.createSpy('setEffects');
+  readonly setOpenings = jasmine.createSpy('setOpenings');
   readonly playEffects = jasmine.createSpy('playEffects');
   readonly dispose = jasmine.createSpy('dispose');
   readonly renderedCallbacks: (() => void)[] = [];
@@ -74,6 +79,7 @@ describe('TabletHouseComponent', () => {
   let lightTheme$: BehaviorSubject<boolean>;
   let control: jasmine.SpyObj<HouseDeviceControlService>;
   let positionService: jasmine.SpyObj<HouseDevicePositionService>;
+  let openingService: jasmine.SpyObj<HouseOpeningService>;
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
   const roomBubbles = (): HTMLElement[] => Array.from(el().querySelectorAll<HTMLElement>('.house-bubble--room'));
@@ -112,6 +118,8 @@ describe('TabletHouseComponent', () => {
     control.setSwitch.and.returnValue(of<SwitchOutcome>('switched'));
     positionService = jasmine.createSpyObj<HouseDevicePositionService>('HouseDevicePositionService', ['list']);
     positionService.list.and.returnValue(of([]));
+    openingService = jasmine.createSpyObj<HouseOpeningService>('HouseOpeningService', ['list']);
+    openingService.list.and.returnValue(of([]));
     const weather = jasmine.createSpyObj('WeatherService', ['getOverview']);
     weather.getOverview.and.returnValue(
       of({ current: { temperature: 18, icon: 1 } } as unknown as WeatherOverview));
@@ -124,6 +132,7 @@ describe('TabletHouseComponent', () => {
         { provide: AppearanceService, useValue: { isLight$: lightTheme$ } },
         { provide: EntityStateService, useValue: entityService },
         { provide: HouseDevicePositionService, useValue: positionService },
+        { provide: HouseOpeningService, useValue: openingService },
         { provide: ViewModeService, useValue: { isTabletView: tabletView } },
         {
           provide: HOUSE_RENDERER_FACTORY,
@@ -923,6 +932,74 @@ describe('TabletHouseComponent', () => {
       const expected = deviceAnchor(FLUR_LIGHT_ID, new Map([[FLUR_LIGHT_ID, { x: 400, y: 300 }]]))!;
       expect(fake.flyTo).toHaveBeenCalledWith(cameraForDevice(expected));
     });
+  });
+
+  describe('Fenster und Türen in der Szene', () => {
+    const BAD_WINDOW = HOUSE_DEVICES.find(d => d.kind === 'contact' && d.area === 'bad')!;
+    const wall = { x1: 20, y1: 200, x2: 20, y2: 260 };
+    const opening = (over: Partial<HouseOpening> = {}): HouseOpening => ({
+      id: 1, floor: 'ground', kind: 'WINDOW', size: 'NORMAL', ...wall, hinge: 'START', swing: 'POSITIVE',
+      deviceId: null, ...over
+    });
+    const lastShapes = (): OpeningShape[] => fake.setOpenings.calls.mostRecent().args[0];
+
+    it('zeichnetElementeDerEtage', () => {
+      openingService.list.and.returnValue(of([opening()]));
+      create();
+      expect(lastShapes().length).toBe(1);
+      expect(lastShapes()[0].open).toBeFalse();
+    });
+
+    it('offenesElementWirdOffenGezeichnet', () => {
+      openingService.list.and.returnValue(of([opening({ deviceId: BAD_WINDOW.id })]));
+      entityService.getEntities.and.returnValue(of([entity((BAD_WINDOW as { entityId: string }).entityId, 'on')]));
+      create();
+      expect(lastShapes()[0].open).toBeTrue();
+    });
+
+    it('verknuepfterKontaktGluehtNichtInDerSzene', () => {
+      openingService.list.and.returnValue(of([opening({ deviceId: BAD_WINDOW.id })]));
+      entityService.getEntities.and.returnValue(of([entity((BAD_WINDOW as { entityId: string }).entityId, 'on')]));
+      create();
+      click(el().querySelector('[data-floor="upper"]') as HTMLElement);
+      const effects: HouseEffect[] = fake.setEffects.calls.mostRecent().args[0];
+      expect(effects.some(e => e.kind === 'open')).toBeFalse();
+    });
+
+    it('elementOhneWandWirdNichtGezeichnet', () => {
+      openingService.list.and.returnValue(of([opening({ x1: 100, y1: 150, x2: 140, y2: 150 })]));
+      create();
+      expect(lastShapes()).toEqual([]);
+    });
+
+    it('ladefehlerOhneStandZeichnetNichts', () => {
+      openingService.list.and.returnValue(throwError(() => new Error('weg')));
+      create();
+      expect(lastShapes()).toEqual([]);
+      expect(el().querySelector('.tablet-house__error')).toBeNull();
+    });
+
+    it('ladefehlerBehaeltLetztenStand', fakeAsync(() => {
+      openingService.list.and.returnValue(of([opening()]));
+      create();
+      openingService.list.and.returnValue(throwError(() => new Error('weg')));
+      tick(30000);
+      fixture.detectChanges();
+      expect(lastShapes().length).toBe(1);
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
+
+    it('unveraenderteElementeRufenSetOpeningsNichtErneut', fakeAsync(() => {
+      openingService.list.and.callFake(() => of([opening()]));
+      create();
+      fake.setOpenings.calls.reset();
+      tick(30000);
+      fixture.detectChanges();
+      expect(fake.setOpenings).not.toHaveBeenCalled();
+      fixture.destroy();
+      discardPeriodicTasks();
+    }));
   });
 
   describe('Höhenkette', () => {

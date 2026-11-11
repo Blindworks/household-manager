@@ -26,6 +26,7 @@ function find<K extends HouseDevice['kind']>(kind: K, predicate: (d: Extract<Hou
 
 const NO_BRIGHTNESS = new Map<string, number>();
 const NO_POSITIONS = new Map<string, { x: number; y: number }>();
+const NO_LINKED: ReadonlySet<string> = new Set<string>();
 
 describe('buildHouseEffects', () => {
   const stehlampe = find('switch', d => d.label === 'Stehlampe');
@@ -33,26 +34,26 @@ describe('buildHouseEffects', () => {
 
   it('eingeschaltete Lampe leuchtet, Staerke aus der Helligkeit', () => {
     const effects = buildHouseEffects(['wohnzimmer'], mapOf(entity(stehlampe.entityId, 'on')),
-      new Map([[stehlampe.entityId, 40]]), NO_POSITIONS);
+      new Map([[stehlampe.entityId, 40]]), NO_POSITIONS, NO_LINKED);
     expect(effects).toEqual([jasmine.objectContaining({ deviceId: stehlampe.id, kind: 'light', intensity: 0.4 })]);
   });
 
   it('Lampe ohne bekannte Helligkeit leuchtet voll, sehr dunkle nie unter der Mindeststaerke', () => {
     const on = mapOf(entity(stehlampe.entityId, 'on'));
-    expect(buildHouseEffects(['wohnzimmer'], on, NO_BRIGHTNESS, NO_POSITIONS)[0].intensity).toBe(1);
-    expect(buildHouseEffects(['wohnzimmer'], on, new Map([[stehlampe.entityId, 1]]), NO_POSITIONS)[0].intensity)
+    expect(buildHouseEffects(['wohnzimmer'], on, NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED)[0].intensity).toBe(1);
+    expect(buildHouseEffects(['wohnzimmer'], on, new Map([[stehlampe.entityId, 1]]), NO_POSITIONS, NO_LINKED)[0].intensity)
       .toBe(MIN_LIGHT_INTENSITY);
   });
 
   it('eingeschaltetes Geraet ohne Lampe bekommt den kuehlen Punkt', () => {
-    const effects = buildHouseEffects(['wohnzimmer'], mapOf(entity(fernseher.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS);
+    const effects = buildHouseEffects(['wohnzimmer'], mapOf(entity(fernseher.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
     expect(effects).toEqual([jasmine.objectContaining({ deviceId: fernseher.id, kind: 'powered' })]);
   });
 
   it('aus, unavailable oder unbekannt erzeugt keinen Effekt', () => {
     for (const state of ['off', 'unavailable', 'unknown']) {
       const entities = mapOf(entity(stehlampe.entityId, state), entity(fernseher.entityId, state));
-      expect(buildHouseEffects(['wohnzimmer'], entities, NO_BRIGHTNESS, NO_POSITIONS)).withContext(state).toEqual([]);
+      expect(buildHouseEffects(['wohnzimmer'], entities, NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED)).withContext(state).toEqual([]);
     }
   });
 
@@ -60,13 +61,13 @@ describe('buildHouseEffects', () => {
     const heizung = find('thermostat', d => d.area === 'bad');
     const fenster = find('contact', d => d.area === 'bad');
     const effects = buildHouseEffects(['bad'], mapOf(entity(heizung.heating, 'on'), entity(fenster.entityId, 'on')),
-      NO_BRIGHTNESS, NO_POSITIONS);
+      NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
     expect(effects.map(e => [e.deviceId, e.kind])).toEqual([[heizung.id, 'heating'], [fenster.id, 'open']]);
   });
 
   it('der Gaszaehler-Reedkontakt ist kein Fenster', () => {
     const gas = find('contact', d => d.entityId.includes('sensor_gas'));
-    expect(buildHouseEffects([gas.area], mapOf(entity(gas.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS)).toEqual([]);
+    expect(buildHouseEffects([gas.area], mapOf(entity(gas.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED)).toEqual([]);
   });
 
   it('Bewegung und laufende Maschine; der Schalter der Maschine allein zeigt nichts', () => {
@@ -76,37 +77,56 @@ describe('buildHouseEffects', () => {
       entity(melder.entityId, 'on'),
       entity(spuelmaschine.switchEntityId, 'on'),
       entity(spuelmaschine.runningEntityId, 'on')
-    ), NO_BRIGHTNESS, NO_POSITIONS);
+    ), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
     expect(effects.map(e => [e.deviceId, e.kind])).toEqual([[melder.id, 'motion'], [spuelmaschine.id, 'running']]);
-    expect(buildHouseEffects(['kueche'], mapOf(entity(spuelmaschine.switchEntityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS))
+    expect(buildHouseEffects(['kueche'], mapOf(entity(spuelmaschine.switchEntityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED))
       .toEqual([]);
   });
 
   it('offene Haustuer leuchtet rot vor dem Haus', () => {
     const tuer = find('door', () => true);
-    const effects = buildHouseEffects(['front'], mapOf(entity(tuer.contactEntityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS);
+    const effects = buildHouseEffects(['front'], mapOf(entity(tuer.contactEntityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
     expect(effects).toEqual([jasmine.objectContaining({ deviceId: tuer.id, kind: 'open' })]);
   });
 
+  it('verknuepfterKontaktGluehtNicht', () => {
+    const fenster = find('contact', d => d.area === 'bad');
+    const entities = mapOf(entity(fenster.entityId, 'on'));
+    expect(buildHouseEffects(['bad'], entities, NO_BRIGHTNESS, NO_POSITIONS, new Set([fenster.id]))).toEqual([]);
+  });
+
+  it('unverknuepfterKontaktGluehtWeiter', () => {
+    const fenster = find('contact', d => d.area === 'bad');
+    const entities = mapOf(entity(fenster.entityId, 'on'));
+    expect(buildHouseEffects(['bad'], entities, NO_BRIGHTNESS, NO_POSITIONS, new Set(['anderes'])))
+      .toEqual([jasmine.objectContaining({ deviceId: fenster.id, kind: 'open' })]);
+  });
+
+  it('verknuepfteHaustuerGluehtNicht', () => {
+    const tuer = find('door', () => true);
+    const entities = mapOf(entity(tuer.contactEntityId, 'on'));
+    expect(buildHouseEffects(['front'], entities, NO_BRIGHTNESS, NO_POSITIONS, new Set([tuer.id]))).toEqual([]);
+  });
+
   it('nur die angefragten Bereiche', () => {
-    expect(buildHouseEffects(['kueche'], mapOf(entity(stehlampe.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS)).toEqual([]);
+    expect(buildHouseEffects(['kueche'], mapOf(entity(stehlampe.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED)).toEqual([]);
   });
 
   it('Effekt sitzt am Anker des Geraets', () => {
-    const [effect] = buildHouseEffects(['wohnzimmer'], mapOf(entity(stehlampe.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS);
+    const [effect] = buildHouseEffects(['wohnzimmer'], mapOf(entity(stehlampe.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
     expect(effect.anchor).toEqual(deviceAnchor(stehlampe.id, NO_POSITIONS)!);
   });
 
   it('effectFloorYIstEtagenboden: unabhaengig von der Ankerhoehe', () => {
     const licht = find('switch', d => d.area === 'schlafzimmer' && !!d.lamp);
-    const [effect] = buildHouseEffects(['schlafzimmer'], mapOf(entity(licht.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS);
+    const [effect] = buildHouseEffects(['schlafzimmer'], mapOf(entity(licht.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
     expect(effect.floorY).toBeCloseTo(floorBase('upper'), 6);
     expect(effect.anchor.y).toBeGreaterThan(effect.floorY + 2);
   });
 
   it('gespeicherter Platz bestimmt den Anker des Effekts', () => {
     const positions = new Map([[stehlampe.id, { x: 300, y: 150 }]]);
-    const [effect] = buildHouseEffects(['wohnzimmer'], mapOf(entity(stehlampe.entityId, 'on')), NO_BRIGHTNESS, positions);
+    const [effect] = buildHouseEffects(['wohnzimmer'], mapOf(entity(stehlampe.entityId, 'on')), NO_BRIGHTNESS, positions, NO_LINKED);
     expect(effect.anchor).toEqual(deviceAnchor(stehlampe.id, positions)!);
   });
 });

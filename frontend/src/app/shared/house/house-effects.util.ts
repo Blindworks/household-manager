@@ -11,6 +11,9 @@ import { DevicePositions, deviceAnchor } from './house-placement.util';
  * (`isOn`, kein Veraltungsfilter): sonst zeigte die Bubble „Fenster offen“, waehrend
  * die Szene nichts zeigt - ein ruhender Kontakt meldet sich tagelang nicht.
  * `unavailable`/`unknown` sind nie `on` und erzeugen deshalb nie einen Effekt.
+ *
+ * Ein Kontakt oder eine Haustuer, die mit einem Fenster/einer Tuer der Szene verknuepft ist
+ * (`linkedDeviceIds`), zeigt „offen“ am Element selbst und gluehte sonst doppelt.
  */
 export type HouseEffectKind = 'light' | 'powered' | 'heating' | 'open' | 'motion' | 'running';
 
@@ -30,11 +33,12 @@ export const MIN_LIGHT_INTENSITY = 0.15;
 
 /** Effekte aller Geraete der angefragten Bereiche; `brightness` je Schalter-Entity in Prozent. */
 export function buildHouseEffects(areaIds: readonly string[], entities: EntityMap,
-                                  brightness: ReadonlyMap<string, number>, positions: DevicePositions): HouseEffect[] {
+                                  brightness: ReadonlyMap<string, number>, positions: DevicePositions,
+                                  linkedDeviceIds: ReadonlySet<string>): HouseEffect[] {
   const effects: HouseEffect[] = [];
   for (const areaId of areaIds) {
     for (const device of devicesInArea(areaId)) {
-      const effect = effectOf(device, entities, brightness);
+      const effect = effectOf(device, entities, brightness, linkedDeviceIds);
       const anchor = effect ? deviceAnchor(device.id, positions) : null;
       if (effect && anchor) {
         effects.push({ deviceId: device.id, ...effect, anchor, floorY: areaFloorBase(device.area) });
@@ -44,7 +48,8 @@ export function buildHouseEffects(areaIds: readonly string[], entities: EntityMa
   return effects;
 }
 
-function effectOf(device: HouseDevice, entities: EntityMap, brightness: ReadonlyMap<string, number>)
+function effectOf(device: HouseDevice, entities: EntityMap, brightness: ReadonlyMap<string, number>,
+                  linkedDeviceIds: ReadonlySet<string>)
   : { kind: HouseEffectKind; intensity: number } | null {
   switch (device.kind) {
     case 'switch':
@@ -57,10 +62,11 @@ function effectOf(device: HouseDevice, entities: EntityMap, brightness: Readonly
     case 'thermostat':
       return isOn(entities, device.heating) ? { kind: 'heating', intensity: 1 } : null;
     case 'contact':
-      return isWindowContact(device) && isOn(entities, device.entityId)
+      return !linkedDeviceIds.has(device.id) && isWindowContact(device) && isOn(entities, device.entityId)
         ? { kind: 'open', intensity: 1 } : null;
     case 'door':
-      return isOn(entities, device.contactEntityId) ? { kind: 'open', intensity: 1 } : null;
+      return !linkedDeviceIds.has(device.id) && isOn(entities, device.contactEntityId)
+        ? { kind: 'open', intensity: 1 } : null;
     case 'motion':
       return isOn(entities, device.entityId) ? { kind: 'motion', intensity: 1 } : null;
     case 'appliance':
