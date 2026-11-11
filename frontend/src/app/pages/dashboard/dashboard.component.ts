@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { AppearanceService } from '../../services/appearance.service';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subscription, forkJoin, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
+import { EMPTY, Observable, Subscription, forkJoin, interval, merge, of, startWith, switchMap, timer } from 'rxjs';
 import { catchError, finalize, map } from 'rxjs/operators';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -65,6 +65,9 @@ import { SystemService } from '../../services/system.service';
 import { ModeEntity } from '../../models/mode.model';
 import { SwitchListComponent } from '../../components/switch-list/switch-list.component';
 import { NukiService } from '../../services/nuki.service';
+import { LaundryService } from '../../services/laundry.service';
+import { LaundryState } from '../../models/laundry.model';
+import { buildLaundryInsight } from '../../shared/laundry-insight.util';
 import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
 import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
@@ -132,6 +135,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly wasteService = inject(WasteCollectionService);
   private readonly calendarService = inject(CalendarService);
   private readonly nukiService = inject(NukiService);
+  private readonly laundryService = inject(LaundryService);
   private readonly powerConsumerService = inject(PowerConsumerService);
   private readonly tractiveService = inject(TractiveService);
   private readonly zigbeeService = inject(ZigbeeService);
@@ -175,6 +179,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private zigbeeHealthSubscription?: Subscription;
   private doorSubscription?: Subscription;
   private applianceSubscription?: Subscription;
+  private laundrySubscription?: Subscription;
   private petSupplySubscription?: Subscription;
   private presenceSubscription?: Subscription;
   private agentSubscription?: Subscription;
@@ -220,6 +225,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly DOOR_REFRESH_MS = 30000;
   /** Wie die Tuerkarten: die Helfer aendern sich selten, 30 s reichen. */
   private static readonly APPLIANCE_REFRESH_MS = 30000;
+  private static readonly LAUNDRY_REFRESH_MS = 30000;
   /** Anzahl der Verbraucher in der Energiefluss-Kachel; alle weiteren stehen im Dialog. */
   private static readonly CONSUMER_TILE_LIMIT = 3;
   /** Aktualisierungsintervall der Verbraucher-Kachel (30 s). */
@@ -338,6 +344,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private doorInsights: HubInsight[] = [];
   /** Karten fuer fertige Maschinen; gesetzt von den Flows ueber Helfer-Entitaeten. */
   private applianceInsights: HubInsight[] = [];
+  private laundryInsight: HubInsight | null = null;
 
   /**
    * Letzter geladener Stand der manuellen Helfer. Wird beim Wegtippen gebraucht,
@@ -468,6 +475,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startZigbeeHealthRefresh();
     this.startDoorRefresh();
     this.startApplianceRefresh();
+    this.startLaundryRefresh();
     this.startPetSupplyRefresh();
     this.startPresenceRefresh();
     this.startAgentRefresh();
@@ -495,6 +503,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.zigbeeHealthSubscription?.unsubscribe();
     this.doorSubscription?.unsubscribe();
     this.applianceSubscription?.unsubscribe();
+    this.laundrySubscription?.unsubscribe();
     this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
     this.agentSubscription?.unsubscribe();
@@ -1709,14 +1718,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Tastatur fokussiertes Element verlöre im Takt den Fokus.
    */
   trackByInsight(_index: number, item: HubInsight): string {
-    return item.dismissEntityId ?? item.title;
+    return item.dismissEntityId ?? item.tapAction ?? item.title;
   }
 
   /** Klick/Tastatur auf eine Hub-Karte; nur antippbare Karten tun etwas. */
   activateInsight(item: HubInsight): void {
     if (item.dismissEntityId) {
       this.dismissInsight(item.dismissEntityId);
+    } else if (item.tapAction === 'laundry-removed') {
+      this.markLaundryRemoved();
     }
+  }
+
+  /**
+   * Meldet die Waesche als abgenommen. Wie beim Wegtippen der Maschinenkarten wird der
+   * Stand vorher frisch geladen: endete die Trocknung inzwischen anderweitig, wird
+   * nichts gemeldet (der Server wuerde mit 409 antworten).
+   */
+  private markLaundryRemoved(): void {
+    this.laundryService.getState().subscribe({
+      next: state => {
+        if (state.status !== 'drying' && state.status !== 'maybe_dry') {
+          this.applyLaundryState(state);
+          return;
+        }
+        this.laundryService.markRemoved().subscribe({
+          next: updated => this.applyLaundryState(updated),
+          error: () => { /* Karte bleibt stehen, bis der naechste Abruf die Wahrheit bringt. */ }
+        });
+      },
+      error: () => { /* Frischer Stand nicht verfuegbar: nicht melden. */ }
+    });
+  }
+
+  private applyLaundryState(state: LaundryState | null): void {
+    this.laundryInsight = buildLaundryInsight(state, new Date());
+    this.rebuildInsights();
+  }
+
+  /** Waesche-Karte: 30-s-Abruf, ein Fehler behaelt den letzten Stand. */
+  private startLaundryRefresh(): void {
+    this.laundrySubscription = interval(DashboardComponent.LAUNDRY_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.laundryService.getState().pipe(catchError(() => EMPTY)))
+      )
+      .subscribe(state => this.applyLaundryState(state));
   }
 
   /**
@@ -1770,6 +1817,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.insights = [
       ...this.doorInsights,
       ...this.applianceInsights,
+      ...(this.laundryInsight ? [this.laundryInsight] : []),
       ...(this.agentInsight ? [this.agentInsight] : []),
       ...this.wasteInsights,
       ...this.calendarInsights,

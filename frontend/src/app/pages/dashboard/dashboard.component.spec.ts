@@ -33,6 +33,8 @@ import { AgentSummary } from '../../models/agent.model';
 import { PresencePersonStatus, PresenceStatusResponse } from '../../models/presence.model';
 import { PetSupplyService } from '../../services/pet-supply.service';
 import { PetSupply } from '../../models/pet-supply.model';
+import { LaundryService } from '../../services/laundry.service';
+import { LaundryState } from '../../models/laundry.model';
 
 // `presenceLabel` formatiert die Abwesenheitszeit ueber `formatDate(..., 'de')`.
 // Karma laedt `main.ts` nicht, das Locale muss hier also selbst registriert
@@ -3659,6 +3661,127 @@ describe('DashboardComponent (Hausverstand im Intelligence Hub)', () => {
     fixture.detectChanges();
 
     expect(titles(fixture)).toContain('Hausverstand');
+
+    discardPeriodicTasks();
+  }));
+});
+
+
+describe('DashboardComponent (Waesche im Intelligence Hub)', () => {
+  let laundrySpy: jasmine.SpyObj<LaundryService>;
+
+  const laundryState = (status: LaundryState['status']): LaundryState => ({
+    status,
+    prompt: 'NONE',
+    startedAt: '2026-11-12T08:00:00',
+    predictedDryAt: null,
+    estimatePaused: false,
+    requiredLoad: 1
+  });
+
+  function insightTexts(fixture: ComponentFixture<DashboardComponent>): string {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.lumina__insight'))
+      .map(card => (card.textContent ?? '').replace(/\s+/g, ' '))
+      .join(' | ');
+  }
+
+  function laundryCard(fixture: ComponentFixture<DashboardComponent>): HTMLElement | undefined {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.lumina__insight'))
+      .find(card => (card.textContent ?? '').includes('Wäsche'));
+  }
+
+  beforeEach(async () => {
+    laundrySpy = jasmine.createSpyObj('LaundryService', ['getState', 'answerHung', 'answerDry', 'markRemoved']);
+    laundrySpy.getState.and.returnValue(of(laundryState('drying')));
+    laundrySpy.markRemoved.and.returnValue(of(laundryState('idle')));
+
+    const entitySpy = jasmine.createSpyObj('EntityStateService', ['getEntities']);
+    entitySpy.getEntities.and.returnValue(of([]));
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+    const wasteSpy = jasmine.createSpyObj('WasteCollectionService', ['getUpcoming']);
+    wasteSpy.getUpcoming.and.returnValue(of([]));
+    const calendarSpy = jasmine.createSpyObj('CalendarService', ['getUpcoming']);
+    calendarSpy.getUpcoming.and.returnValue(of([]));
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: LaundryService, useValue: laundrySpy },
+        { provide: EntityStateService, useValue: entitySpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WasteCollectionService, useValue: wasteSpy },
+        { provide: CalendarService, useValue: calendarSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  it('zeigtWaeschekarteImHub', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture)).toContain('Wäsche trocknet');
+    const card = laundryCard(fixture)!;
+    expect(card.getAttribute('role')).toBe('button');
+    expect(card.getAttribute('aria-label')).toBe('Wäsche trocknet als abgenommen markieren');
+
+    discardPeriodicTasks();
+  }));
+
+  it('antippenLaedtFrischUndMeldetAbgenommen', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    laundrySpy.getState.calls.reset();
+
+    laundryCard(fixture)!.click();
+    fixture.detectChanges();
+
+    expect(laundrySpy.getState).toHaveBeenCalledTimes(1);
+    expect(laundrySpy.markRemoved).toHaveBeenCalledTimes(1);
+    expect(insightTexts(fixture)).not.toContain('Wäsche');
+
+    discardPeriodicTasks();
+  }));
+
+  it('antippenNachAnderweitigemEndeTutNichts', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    laundrySpy.getState.and.returnValue(of(laundryState('idle')));
+
+    laundryCard(fixture)!.click();
+    fixture.detectChanges();
+
+    expect(laundrySpy.markRemoved).not.toHaveBeenCalled();
+    expect(insightTexts(fixture)).not.toContain('Wäsche');
+
+    discardPeriodicTasks();
+  }));
+
+  it('behaeltBeiFehlerDenLetztenStand', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    laundrySpy.getState.and.returnValue(throwError(() => new Error('kaputt')));
+
+    tick(30000);
+    fixture.detectChanges();
+
+    expect(insightTexts(fixture)).toContain('Wäsche trocknet');
 
     discardPeriodicTasks();
   }));
