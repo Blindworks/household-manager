@@ -7,6 +7,8 @@ import { TabletShellComponent } from './tablet-shell.component';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { TABLET_VIEWS } from '../../shared/tablet-views';
+import { LaundryService } from '../../services/laundry.service';
+import { ViewModeService } from '../../services/view-mode.service';
 
 @Component({
   standalone: true,
@@ -120,5 +122,27 @@ describe('TabletShellComponent', () => {
     expect(host.textContent).toContain('Nicht verfügbar');
 
     fixture.destroy();
+  });
+
+  describe('Waesche-Frage', () => {
+    const asking = { status: 'asking', prompt: 'HUNG', startedAt: null, predictedDryAt: null, estimatePaused: false, requiredLoad: 0 };
+
+    function render(tablet: boolean): HTMLElement {
+      const laundry = jasmine.createSpyObj('LaundryService', ['getState']);
+      laundry.getState.and.returnValue(of(asking));
+      TestBed.overrideProvider(LaundryService, { useValue: laundry });
+      TestBed.inject(ViewModeService).isTabletView.set(tablet);
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('promptNurImTabletModus', () => {
+      expect(render(true).querySelector('app-laundry-prompt .laundry-prompt')).not.toBeNull();
+    });
+
+    it('promptNichtImWebsiteModus', () => {
+      expect(render(false).querySelector('app-laundry-prompt')).toBeNull();
+    });
   });
 });

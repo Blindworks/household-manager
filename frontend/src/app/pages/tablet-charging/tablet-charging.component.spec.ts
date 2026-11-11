@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, of, throwError } from 'rxjs';
 import { TabletChargingComponent } from './tablet-charging.component';
 import { ChargingService } from '../../services/charging.service';
+import { LaundryService } from '../../services/laundry.service';
 import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherService } from '../../services/weather.service';
 import { WeatherOverview } from '../../models/weather.model';
@@ -69,6 +70,7 @@ describe('TabletChargingComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ChargingService, useValue: chargingSpy },
+        { provide: LaundryService, useValue: { getState: () => of({ status: 'idle', prompt: 'NONE', startedAt: null, predictedDryAt: null, estimatePaused: false, requiredLoad: 0 }) } },
         { provide: WeatherService, useValue: weatherSpy },
         { provide: AppearanceService, useValue: { isLight$: of(false) } }
       ]

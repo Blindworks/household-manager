@@ -50,4 +50,8 @@
       <span class="lumina__viewbar-label">{{ view.label }}</span>
     </a>
   </nav>
+
+  @if (viewMode.isTabletView()) {
+    <app-laundry-prompt></app-laundry-prompt>
+  }
 </div>

@@ -28,6 +28,7 @@ import {
   buildSensorDetail
 } from '../../shared/temperature-comfort.util';
 import { EnergyFlowComponent } from '../../components/energy-flow/energy-flow.component';
+import { LaundryPromptComponent } from '../../components/laundry-prompt/laundry-prompt.component';
 import { DogModeScreenComponent } from '../../components/dog-mode-screen/dog-mode-screen.component';
 import {
   DOG_MODE_ENTITY_ID,
@@ -113,7 +114,7 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent],
+  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent, LaundryPromptComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
   // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro
@@ -1751,7 +1752,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private applyLaundryState(state: LaundryState | null): void {
+  applyLaundryState(state: LaundryState | null): void {
     this.laundryInsight = buildLaundryInsight(state, new Date());
     this.rebuildInsights();
   }
