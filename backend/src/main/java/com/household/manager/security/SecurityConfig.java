@@ -272,6 +272,8 @@ public class SecurityConfig {
                                 "/v1/pet-supplies/*/purchases", "/v1/pet-supplies/*/corrections",
                                 // Ladesaeulen-Refresh zieht nur Daten - sonst waere der Knopf am Tablet tot.
                                 "/v1/charging/refresh",
+                                // Fragen am Wandtablet (Spec Waeschetrocknung): aufgehaengt/trocken/abgenommen.
+                                "/v1/laundry/answers/*", "/v1/laundry/removed",
                                 // Sammelaktion der Heizung; der Schutz ist der Bestaetigungsdialog
                                 // der Tablet-Ansicht, keine serverseitige Sperre (Spec Heizungssteuerung).
                                 "/v1/thermostats/bulk")
