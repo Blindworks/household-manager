@@ -396,8 +396,10 @@ export class HouseOpeningsEditorComponent implements OnInit {
       return;
     }
     this.errorChange.emit(null);
+    // Neu angelegt mit „Anschlag links“, von der Standard-Oeffnungsseite aus gesehen.
+    const swing = defaultSwing(floor, segment);
     const request: HouseOpeningRequest = {
-      floor, kind, size, ...segment, hinge: 'START', swing: defaultSwing(floor, segment), deviceId: null
+      floor, kind, size, ...segment, hinge: hingeForSide(segment, swing, 'LEFT'), swing, deviceId: null
     };
     this.api.create(request).subscribe({
       next: created => {

@@ -138,7 +138,8 @@ describe('HouseOpeningsEditorComponent', () => {
     pointer(catcher, 'pointerup', 25, 150);
     expect(service.createCalls).toEqual([{
       floor: 'ground', kind: 'WINDOW', size: 'NORMAL', x1: 20, y1: 130, x2: 20, y2: 170,
-      hinge: 'START', swing: 'POSITIVE', deviceId: null
+      // Linke Aussenwand, Blick nach -x: „links“ ist das groessere y.
+      hinge: 'END', swing: 'POSITIVE', deviceId: null
     }]);
     expect(line(100)).not.toBeNull();
     expect(line(100)!.getAttribute('stroke')).toBe('#5b8cff');
@@ -154,6 +155,7 @@ describe('HouseOpeningsEditorComponent', () => {
     expect(service.createCalls[0]).toEqual(jasmine.objectContaining({
       kind: 'DOOR', size: 'NORMAL', x1: 210, y1: 132, x2: 210, y2: 168, swing: 'NEGATIVE', hinge: 'START'
     }));
+    // Trennwand, Oeffnung nach -x (Esszimmer), Blick nach +x: „links“ ist das kleinere y = START.
     expect(line(100)!.getAttribute('stroke')).toBe('#c9d6f0');
     expect(fixture.nativeElement.querySelector('.house-openings__arc[data-opening-id="100"]')).not.toBeNull();
   });
