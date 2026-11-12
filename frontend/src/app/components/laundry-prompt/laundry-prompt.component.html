@@ -1,0 +1,16 @@
+@if (prompt) {
+  <div class="laundry-prompt__backdrop">
+    <section class="laundry-prompt" role="dialog" aria-modal="true" [attr.aria-label]="prompt === 'HUNG' ? 'Wäsche aufgehängt?' : 'Ist die Wäsche trocken?'">
+      <span class="material-symbols-outlined laundry-prompt__icon">dry_cleaning</span>
+      <h2 class="laundry-prompt__question">
+        {{ prompt === 'HUNG' ? 'Wäsche aufgehängt?' : 'Ist die Wäsche trocken?' }}
+      </h2>
+      <div class="laundry-prompt__actions">
+        <button type="button" class="laundry-prompt__btn laundry-prompt__btn--yes" [disabled]="busy" (click)="answer(true)">Ja</button>
+        <button type="button" class="laundry-prompt__btn" [disabled]="busy" (click)="answer(false)">
+          {{ prompt === 'HUNG' ? 'Nein' : 'Noch nicht' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

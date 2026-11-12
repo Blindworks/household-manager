@@ -7,6 +7,7 @@ import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer, ScreenPoint } from './house
 import { WeatherService } from '../../services/weather.service';
 import { AppearanceService } from '../../services/appearance.service';
 import { EntityStateService } from '../../services/entity-state.service';
+import { LaundryService } from '../../services/laundry.service';
 import { ViewModeService } from '../../services/view-mode.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { EntityState } from '../../models/entity-state.model';
@@ -133,6 +134,7 @@ describe('TabletHouseComponent', () => {
         { provide: EntityStateService, useValue: entityService },
         { provide: HouseDevicePositionService, useValue: positionService },
         { provide: HouseOpeningService, useValue: openingService },
+        { provide: LaundryService, useValue: { getState: () => of({ status: 'idle', prompt: 'NONE', startedAt: null, predictedDryAt: null, estimatePaused: false, requiredLoad: 0 }) } },
         { provide: ViewModeService, useValue: { isTabletView: tabletView } },
         {
           provide: HOUSE_RENDERER_FACTORY,

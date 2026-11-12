@@ -17,4 +17,6 @@ export interface HubInsight {
   readonly dismissEntityId?: string;
   /** Interne Route, auf die ein Antippen der Karte fuehrt (nur in der Website-Ansicht). */
   readonly link?: string;
+  /** Aktion, die ein Antippen der Karte ausloest (Waesche als abgenommen melden). */
+  readonly tapAction?: 'laundry-removed';
 }

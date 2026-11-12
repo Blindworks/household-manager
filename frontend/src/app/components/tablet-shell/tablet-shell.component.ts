@@ -6,6 +6,8 @@ import { WeatherService } from '../../services/weather.service';
 import { AppearanceService } from '../../services/appearance.service';
 import { WeatherOverview } from '../../models/weather.model';
 import { weatherSymbol, weatherMaterialSymbol } from '../../shared/weather-icon.util';
+import { ViewModeService } from '../../services/view-mode.service';
+import { LaundryPromptComponent } from '../laundry-prompt/laundry-prompt.component';
 import { TABLET_VIEWS } from '../../shared/tablet-views';
 
 /**
@@ -20,7 +22,7 @@ import { TABLET_VIEWS } from '../../shared/tablet-views';
 @Component({
   selector: 'app-tablet-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, LaundryPromptComponent],
   templateUrl: './tablet-shell.component.html',
   styleUrl: './tablet-shell.component.scss'
 })
@@ -30,6 +32,7 @@ export class TabletShellComponent implements OnInit, OnDestroy {
   /** Seite bleibt dunkel, egal was im Dashboard eingestellt ist (3D-Hausansicht mit Neon-Farben). */
   @Input() forceDark = false;
 
+  readonly viewMode = inject(ViewModeService);
   private readonly weatherService = inject(WeatherService);
   /** Dieselbe globale Hell/Dunkel-Einstellung wie im Dashboard. */
   readonly lightTheme$ = inject(AppearanceService).isLight$;

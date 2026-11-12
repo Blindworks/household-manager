@@ -1,0 +1,71 @@
+// Farben und Knoepfe nur ueber lumina-Tokens (vom .lumina-Wurzelelement vererbt),
+// damit der Dialog in hell und dunkel stimmt.
+.laundry-prompt__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.laundry-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: min(32rem, 100%);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: 1rem;
+  background: var(--surface-solid, #111113);
+  color: var(--on-surface, #e4e2e4);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.4);
+}
+
+.laundry-prompt__icon {
+  font-size: 4rem;
+  color: var(--primary, #aac7ff);
+}
+
+.laundry-prompt__question {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 400;
+  color: var(--text-strong, #f4f3f5);
+}
+
+.laundry-prompt__actions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.laundry-prompt__btn {
+  flex: 1;
+  min-height: 4.5rem;
+  padding: var(--btn-padding, 4px 24px);
+  border-radius: var(--radius-btn, 4px);
+  border: 1px solid var(--btn-border, #d0d1d2);
+  background: var(--btn-bg, #f4f4f4);
+  color: var(--btn-fg, #393c41);
+  font: var(--btn-font, 500 14px/20px -apple-system, Arial, sans-serif);
+  font-size: 1.5rem;
+  box-shadow: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #ffffff;
+  }
+
+  &:disabled {
+    color: var(--btn-fg-muted, rgba(57, 60, 65, 0.72));
+    cursor: default;
+  }
+}
+
+.laundry-prompt__btn--yes {
+  font-weight: 700;
+}

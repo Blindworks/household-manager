@@ -168,11 +168,11 @@
             *ngFor="let item of insights; trackBy: trackByInsight"
             class="lumina__insight"
             [ngClass]="'lumina__insight--' + item.tone"
-            [class.lumina__insight--clickable]="!!item.dismissEntityId || !!item.link"
+            [class.lumina__insight--clickable]="!!item.dismissEntityId || !!item.link || !!item.tapAction"
             [routerLink]="item.link && !viewMode.isTabletView() ? item.link : null"
-            [attr.role]="item.dismissEntityId ? 'button' : null"
-            [attr.tabindex]="item.dismissEntityId ? 0 : null"
-            [attr.aria-label]="item.dismissEntityId ? item.title + ' als erledigt markieren' : null"
+            [attr.role]="item.dismissEntityId || item.tapAction ? 'button' : null"
+            [attr.tabindex]="item.dismissEntityId || item.tapAction ? 0 : null"
+            [attr.aria-label]="item.dismissEntityId ? item.title + ' als erledigt markieren' : (item.tapAction ? item.title + ' als abgenommen markieren' : null)"
             (click)="activateInsight(item)"
             (keydown.enter)="activateInsight(item)"
             (keydown.space)="$event.preventDefault(); activateInsight(item)"
@@ -183,7 +183,7 @@
               <p class="lumina__insight-text">{{ item.text }}</p>
             </div>
             <span
-              *ngIf="item.dismissEntityId"
+              *ngIf="item.dismissEntityId || item.tapAction"
               class="material-symbols-outlined lumina__insight-dismiss"
               aria-hidden="true"
             >done</span>
@@ -1102,6 +1102,9 @@
   </div>
 
   <!-- Dog-Mode-Screen (Muster Tesla): Vollbild, solange „Toni allein" an ist, nur Tablet-Ansicht -->
+  @if (viewMode.isTabletView()) {
+    <app-laundry-prompt (answered)="applyLaundryState($event)"></app-laundry-prompt>
+  }
   @if (dogModeVisible) {
     <app-dog-mode-screen
       [clockTime]="clockTime"

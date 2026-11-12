@@ -47,5 +47,7 @@ public enum EntitySource {
     /** Bluetooth-Thermometer (ThermoBeacon/SensorBlue), empfangen ueber das Wandtablet; je Sensor Temperatur + Feuchte. */
     BLE,
     /** IKEA Dirigera-Hub (lokale API), je TIMMERFLOTTE-Sensor Temperatur + Feuchte. */
-    DIRIGERA
+    DIRIGERA,
+    /** Waeschetrocknung im Keller (berechnet aus Feuchte und Waschmaschine, keine externe Quelle). */
+    LAUNDRY
 }

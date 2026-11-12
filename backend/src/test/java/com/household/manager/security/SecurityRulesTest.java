@@ -1492,4 +1492,19 @@ class SecurityRulesTest {
     void adminDarfAgentKonfigurieren() throws Exception {
         mockMvc.perform(get("/v1/agent/policies")).andExpect(status().isOk());
     }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfWaescheFragenBeantworten() throws Exception {
+        // Kein LaundryController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst
+        mockMvc.perform(post("/v1/laundry/answers/hung").with(csrf())).andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/laundry/answers/dry").with(csrf())).andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/laundry/removed").with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfWaescheZustandLesen() throws Exception {
+        mockMvc.perform(get("/v1/laundry/state")).andExpect(status().isNotFound());
+    }
 }
