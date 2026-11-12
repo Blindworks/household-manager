@@ -7,6 +7,9 @@
  * ein Kontakt im Schlafzimmer (Fenster und Tueren an der Wand). Aussen zeigt v1 genau vier
  * Bubbles (Muelltonne, Toni, Haustuer, Garten): Haustuer-Kamera und Feinstaub entfallen.
  */
+/** Art des 3D-Koerpers eines Grossgeraets (siehe `house-appliance-bodies.util.ts`); einzige Markierung. */
+export type ApplianceBodyKind = 'washer' | 'dishwasher' | 'fridge' | 'tv' | 'pc' | 'printer' | 'treadmill' | 'coffee';
+
 export type HouseDevice =
   | { kind: 'climate'; id: string; area: string; label: string; temperature?: string; humidity?: string; iaq?: string; roomSensor: boolean }
   | { kind: 'thermostat'; id: string; area: string; label: string; temperature: string; target: string; heating: string }
@@ -14,8 +17,8 @@ export type HouseDevice =
   | { kind: 'motion'; id: string; area: string; label: string; entityId: string }
   | { kind: 'button'; id: string; area: string; label: string; entityIds: string[] }
   /** `lamp`: leuchtet in der Szene warm (sonst ein kuehler Punkt fuer „an“); einzige Definition, was Licht ist. */
-  | { kind: 'switch'; id: string; area: string; label: string; entityId: string; powerEntityId?: string; lamp?: true }
-  | { kind: 'appliance'; id: string; area: string; label: string; switchEntityId: string; powerEntityId: string; runningEntityId: string; finishedEntityId: string }
+  | { kind: 'switch'; id: string; area: string; label: string; entityId: string; powerEntityId?: string; lamp?: true; body?: ApplianceBodyKind }
+  | { kind: 'appliance'; id: string; area: string; label: string; switchEntityId: string; powerEntityId: string; runningEntityId: string; finishedEntityId: string; body?: ApplianceBodyKind }
   /** Haustuer: Schloss und Tuerkontakt als ein Geraet. */
   | { kind: 'door'; id: string; area: string; label: string; lockEntityId: string; contactEntityId: string }
   | { kind: 'camera'; id: string; area: string; label: string; armedEntityId: string }
@@ -55,6 +58,11 @@ function plug(area: string, label: string, source: 'tapo' | 'kasa', ref: string,
   };
 }
 
+/** Markiert ein Grossgeraet mit seiner Koerperart (siehe `body`). */
+function withBody(device: HouseDevice, body: ApplianceBodyKind): HouseDevice {
+  return device.kind === 'switch' || device.kind === 'appliance' ? { ...device, body } : device;
+}
+
 /** Markiert einen Schalter als Lampe (siehe `lamp`). */
 function asLamp(device: HouseDevice): HouseDevice {
   return device.kind === 'switch' ? { ...device, lamp: true } : device;
@@ -87,7 +95,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   thermostat('wohnzimmer', 8),
   thermostat('wohnzimmer', 3, 'Heizung Fenster'),
   { kind: 'camera', id: 'wohnzimmer-camera', area: 'wohnzimmer', label: 'Kamera', armedEntityId: 'binary_sensor.blink_511671_armed' },
-  meross('wohnzimmer', 'Fernseher', '2112152941687590863548e1e9817812'),
+  withBody(meross('wohnzimmer', 'Fernseher', '2112152941687590863548e1e9817812'), 'tv'),
   asLamp(plug('wohnzimmer', 'Stehlampe', 'tapo', '802366e0c88d0dba80336f9f7363f8c4216c350a')),
   asLamp(plug('wohnzimmer', 'Stern', 'tapo', '80225ff5f331563993ff0df4adbedae5243f7caa')),
   { kind: 'switch', id: 'wohnzimmer-meross-couch', area: 'wohnzimmer', label: 'Couch-Lichterkette',
@@ -103,10 +111,10 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   roomClimate('kueche', 'sensor.dirigera_4a8044b0974e4885b2f60967af2201e1'),
   thermostat('kueche', 4),
   motion('kueche', 'binary_sensor.zigbee_motion_kueche_occupancy'),
-  meross('kueche', 'Kaffeemaschine', '2112150005305590863548e1e98183b3'),
-  meross('kueche', 'Kühlschrank', '2112155672709990863548e1e98181eb'),
+  withBody(meross('kueche', 'Kaffeemaschine', '2112150005305590863548e1e98183b3'), 'coffee'),
+  withBody(meross('kueche', 'Kühlschrank', '2112155672709990863548e1e98181eb'), 'fridge'),
   meross('kueche', 'Küchenzeile', '2205069806156351080148e1e991d1f0'),
-  appliance('kueche', 'Spülmaschine', '2205060757549251080148e1e991c4f9', 'spuelmaschine'),
+  withBody(appliance('kueche', 'Spülmaschine', '2205060757549251080148e1e991c4f9', 'spuelmaschine'), 'dishwasher'),
 
   // Flur
   roomClimate('flur', 'sensor.dirigera_f2af71e53e924b0895cec17793205733'),
@@ -116,13 +124,13 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
 
   // Laufband-Raum
   roomClimate('laufband', 'sensor.zigbee_temperatur_aqara_laufband'),
-  plug('laufband', 'Laufband', 'tapo', '802238b61a02b19027d329013d5647a9243f6e59', true),
+  withBody(plug('laufband', 'Laufband', 'tapo', '802238b61a02b19027d329013d5647a9243f6e59', true), 'treadmill'),
 
   // Schlafzimmer
   roomClimate('schlafzimmer', 'sensor.alexa_gaj230043055005a'),
   thermostat('schlafzimmer', 5),
   asLamp(plug('schlafzimmer', 'Licht', 'tapo', '80238e15a36182550737e4ce654d2f2420b98b5c')),
-  meross('schlafzimmer', 'Fernseher', '2112153143211390863548e1e98182b1'),
+  withBody(meross('schlafzimmer', 'Fernseher', '2112153143211390863548e1e98182b1'), 'tv'),
   contact('schlafzimmer', 'Balkontür', 'binary_sensor.dirigera_f3992ae92ca54fb6b276c2c4d5f832c9_1_contact'),
 
   // Buero
@@ -134,9 +142,9 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
     'event.dirigera_e66219cc17d542fab6ce241b53855360_2_action',
     'event.zigbee_button_buero_action'
   ]),
-  meross('buero', 'PC', '2112159340612090863548e1e98183ba'),
+  withBody(meross('buero', 'PC', '2112159340612090863548e1e98183ba'), 'pc'),
   asLamp(meross('buero', 'Desktop Light', '24041948162696510d06c4e7ae038ae1')),
-  meross('buero', 'Drucker', '24041903314491510d06c4e7ae038da2'),
+  withBody(meross('buero', 'Drucker', '24041903314491510d06c4e7ae038da2'), 'printer'),
   asLamp(plug('buero', 'Lichtstreifen', 'tapo', '8023261c2124d3bf658efedd6f6c46c020952267')),
 
   // Bad
@@ -162,7 +170,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   roomClimate('paincave', 'sensor.zigbee_temperatur_buero'),
 
   // Waschkeller
-  appliance('waschkeller', 'Waschmaschine', '2112156531504590863548e1e9817420', 'waschmaschine'),
+  withBody(appliance('waschkeller', 'Waschmaschine', '2112156531504590863548e1e9817420', 'waschmaschine'), 'washer'),
   contact('waschkeller', 'Gaszähler', 'binary_sensor.zigbee_sensor_gas_contact'),
 
   // Garten: nur die Aussentemperatur

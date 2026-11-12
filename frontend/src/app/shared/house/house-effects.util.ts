@@ -1,3 +1,4 @@
+import { BODY_DEVICE_IDS } from './house-appliance-bodies.util';
 import { EntityMap, isOn, isWindowContact } from './house-bubbles.util';
 import { HouseDevice, devicesInArea } from './house-devices';
 import { Vec3, areaFloorBase } from './house-geometry.util';
@@ -14,6 +15,9 @@ import { DevicePositions, deviceAnchor } from './house-placement.util';
  *
  * Ein Kontakt oder eine Haustuer, die mit einem Fenster/einer Tuer der Szene verknuepft ist
  * (`linkedDeviceIds`), zeigt „offen“ am Element selbst und gluehte sonst doppelt.
+ *
+ * Ein Grossgeraet mit Koerper (`BODY_DEVICE_IDS`) zeigt „an“/„laeuft“ am Koerper selbst und
+ * bekommt deshalb weder den blauen Punkt noch den Laufbogen.
  */
 export type HouseEffectKind = 'light' | 'powered' | 'heating' | 'open' | 'motion' | 'running';
 
@@ -51,6 +55,9 @@ export function buildHouseEffects(areaIds: readonly string[], entities: EntityMa
 function effectOf(device: HouseDevice, entities: EntityMap, brightness: ReadonlyMap<string, number>,
                   linkedDeviceIds: ReadonlySet<string>)
   : { kind: HouseEffectKind; intensity: number } | null {
+  if (BODY_DEVICE_IDS.has(device.id)) {
+    return null;
+  }
   switch (device.kind) {
     case 'switch':
       if (!isOn(entities, device.entityId)) {

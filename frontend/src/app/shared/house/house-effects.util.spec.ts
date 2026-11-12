@@ -45,9 +45,15 @@ describe('buildHouseEffects', () => {
       .toBe(MIN_LIGHT_INTENSITY);
   });
 
-  it('eingeschaltetes Geraet ohne Lampe bekommt den kuehlen Punkt', () => {
-    const effects = buildHouseEffects(['wohnzimmer'], mapOf(entity(fernseher.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
-    expect(effects).toEqual([jasmine.objectContaining({ deviceId: fernseher.id, kind: 'powered' })]);
+  it('eingeschaltetes Geraet ohne Lampe und ohne Koerper bekommt den kuehlen Punkt', () => {
+    const kuechenzeile = find('switch', d => d.label === 'Küchenzeile');
+    const effects = buildHouseEffects(['kueche'], mapOf(entity(kuechenzeile.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
+    expect(effects).toEqual([jasmine.objectContaining({ deviceId: kuechenzeile.id, kind: 'powered' })]);
+  });
+
+  it('Grossgeraet mit Koerper bekommt keinen Punkt', () => {
+    expect(buildHouseEffects(['wohnzimmer'], mapOf(entity(fernseher.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED))
+      .toEqual([]);
   });
 
   it('aus, unavailable oder unbekannt erzeugt keinen Effekt', () => {
@@ -70,7 +76,7 @@ describe('buildHouseEffects', () => {
     expect(buildHouseEffects([gas.area], mapOf(entity(gas.entityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED)).toEqual([]);
   });
 
-  it('Bewegung und laufende Maschine; der Schalter der Maschine allein zeigt nichts', () => {
+  it('Bewegung leuchtet; eine laufende Maschine mit Koerper bekommt keinen Bogen', () => {
     const melder = find('motion', d => d.area === 'kueche');
     const spuelmaschine = find('appliance', d => d.area === 'kueche');
     const effects = buildHouseEffects(['kueche'], mapOf(
@@ -78,7 +84,7 @@ describe('buildHouseEffects', () => {
       entity(spuelmaschine.switchEntityId, 'on'),
       entity(spuelmaschine.runningEntityId, 'on')
     ), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
-    expect(effects.map(e => [e.deviceId, e.kind])).toEqual([[melder.id, 'motion'], [spuelmaschine.id, 'running']]);
+    expect(effects.map(e => [e.deviceId, e.kind])).toEqual([[melder.id, 'motion']]);
     expect(buildHouseEffects(['kueche'], mapOf(entity(spuelmaschine.switchEntityId, 'on')), NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED))
       .toEqual([]);
   });

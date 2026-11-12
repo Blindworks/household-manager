@@ -29,6 +29,7 @@ import { HouseDevicePositionService } from '../../services/house-device-position
 import { HouseOpeningService } from '../../services/house-opening.service';
 import { HouseOpening } from '../../models/house-opening.model';
 import { OpeningShape, absorbedDeviceIds, isOnWall, openingIsOpen, openingShape } from '../../shared/house/house-openings.util';
+import { ApplianceBody, buildApplianceBodies, sameBodies } from '../../shared/house/house-appliance-bodies.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -121,6 +122,13 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       .filter(o => isOnWall(o.floor, o))
       .map(o => openingShape(o, openingIsOpen(o, entities)));
   }, { equal: sameShapes });
+  /** Koerper der Grossgeraete aller Etagen (die Sichtbarkeit regelt der Renderer). */
+  private readonly applianceBodies = computed<ApplianceBody[]>(() => {
+    const entities = this.entities();
+    const positions = this.positions();
+    const now = this.now();
+    return FLOORS.flatMap(floor => buildApplianceBodies(floor.id, entities, positions, now));
+  }, { equal: sameBodies });
 
   /**
    * Gehalten wird nur die Id des offenen Geraets, nie das Feld-Modell: das Feld
@@ -245,6 +253,10 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       const shapes = this.openingShapes();
       this.outside(renderer => renderer.setOpenings(shapes));
     });
+    effect(() => {
+      const bodies = this.applianceBodies();
+      this.outside(renderer => renderer.setBodies(bodies));
+    });
   }
 
   ngAfterViewInit(): void {
@@ -261,6 +273,7 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
       renderer.setFloor(this.selectedFloor());
       renderer.setEffects(this.effects());
       renderer.setOpenings(this.openingShapes());
+      renderer.setBodies(this.applianceBodies());
       renderer.flyTo(cameraForOverview(this.selectedFloor()), 0);
     });
     // Neue Bubble-Elemente (Etagenwechsel, Raumansicht) sofort einordnen.

@@ -21,6 +21,7 @@ import { HouseOpening } from '../../models/house-opening.model';
 import { OpeningShape } from '../../shared/house/house-openings.util';
 import { HOUSE_DEVICES } from '../../shared/house/house-devices';
 import { HouseEffect } from '../../shared/house/house-effects.util';
+import { ApplianceBody } from '../../shared/house/house-appliance-bodies.util';
 import { BrightnessOutcome, HouseDeviceControlService, SwitchOutcome } from './house-device-control.service';
 import { DetailExtras, LightExtras } from '../../shared/house/detail-extras.util';
 
@@ -58,6 +59,7 @@ class FakeRenderer {
   readonly requestRender = jasmine.createSpy('requestRender');
   readonly setEffects = jasmine.createSpy('setEffects');
   readonly setOpenings = jasmine.createSpy('setOpenings');
+  readonly setBodies = jasmine.createSpy('setBodies');
   readonly playEffects = jasmine.createSpy('playEffects');
   readonly dispose = jasmine.createSpy('dispose');
   readonly renderedCallbacks: (() => void)[] = [];
@@ -933,6 +935,30 @@ describe('TabletHouseComponent', () => {
 
       const expected = deviceAnchor(FLUR_LIGHT_ID, new Map([[FLUR_LIGHT_ID, { x: 400, y: 300 }]]))!;
       expect(fake.flyTo).toHaveBeenCalledWith(cameraForDevice(expected));
+    });
+  });
+
+  describe('Grossgeraete als Koerper', () => {
+    const tv = HOUSE_DEVICES.find(d => d.kind === 'switch' && d.area === 'wohnzimmer' && d.body === 'tv')! as
+      Extract<(typeof HOUSE_DEVICES)[number], { kind: 'switch' }>;
+    const lastBodies = (): ApplianceBody[] => fake.setBodies.calls.mostRecent().args[0];
+
+    it('gibtAlleKoerperAnDenRenderer', () => {
+      create();
+      expect(lastBodies().length).toBe(9);
+      expect(lastBodies().find(b => b.deviceId === tv.id)!.state).toBe('idle');
+    });
+
+    it('laufenderFernseherWirdAktiv', () => {
+      entityService.getEntities.and.returnValue(of([entity(tv.entityId, 'on'), entity(tv.powerEntityId!, '85')]));
+      create();
+      expect(lastBodies().find(b => b.deviceId === tv.id)!.state).toBe('active');
+    });
+
+    it('fernseherBehaeltSeineBubbleInDerRaumansicht', () => {
+      create();
+      click(bubble('Wohnzimmer'));
+      expect(device(tv.id)).not.toBeNull();
     });
   });
 

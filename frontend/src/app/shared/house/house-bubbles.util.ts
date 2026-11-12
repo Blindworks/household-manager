@@ -264,12 +264,18 @@ export function lastButtonAction(entities: EntityMap, entityIds: string[]): Bubb
 
 /** Watt-Zeile nur bei frischer Messung; eine alte Leistung waere eine erfundene Live-Angabe. */
 export function livePower(entities: EntityMap, entityId: string, nowMs: number): BubbleValue | null {
+  const watts = livePowerWatts(entities, entityId, nowMs);
+  return watts === null ? null : fresh(watts.toFixed(0) + ' W');
+}
+
+/** Frische Leistung in Watt (juenger als 5 min, Regel „Switch Power Display“), sonst null. */
+export function livePowerWatts(entities: EntityMap, entityId: string, nowMs: number): number | null {
   const entity = entities.get(entityId);
-  if (!isReadable(entity) || ageMs(entity, nowMs) >= POWER_FRESH_MS) {
+  if (!isReadable(entity) || ageMs(entity, nowMs) >= POWER_FRESH_MS || entity.state.trim() === '') {
     return null;
   }
-  const formatted = formatNumber(entity.state, 0);
-  return formatted === null ? null : fresh(formatted + ' W');
+  const value = Number(entity.state);
+  return Number.isFinite(value) ? value : null;
 }
 
 function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabletMode: boolean): DeviceBubble {

@@ -8,6 +8,7 @@ import {
 } from '../../shared/house/house-geometry.util';
 import { HouseEffect, HouseEffectKind } from '../../shared/house/house-effects.util';
 import { OpeningShape } from '../../shared/house/house-openings.util';
+import { ApplianceBody, ApplianceBodyState } from '../../shared/house/house-appliance-bodies.util';
 
 /**
  * Three.js-Szene der 3D-Hausansicht. Einzige Datei, die `three` importiert -
@@ -48,6 +49,8 @@ interface FloorLayer {
   plates: THREE.Mesh[];
   /** Fenster und Tueren der Etage; Kind der Layer-Gruppe und folgt deren Sichtbarkeit. */
   openings: THREE.Group;
+  /** Koerper der Grossgeraete der Etage; ebenfalls Kind der Layer-Gruppe. */
+  bodies: THREE.Group;
 }
 
 /** Fenster: bläuliches Glas; Tuerblatt: heller; offen: rot. Rahmenfarbe je Zustand. */
@@ -61,6 +64,17 @@ const OPENING_COLORS = {
 const OPENING_PANE_OPACITY = { window: 0.22, door: 0.4, open: 0.35 } as const;
 /** Versatz vor die Wandebene, damit die Flaeche nicht mit den Raumkanten flimmert. */
 const OPENING_OFFSET_M = 0.015;
+
+/** Grossgeraete (Stil wie Glas/Tuerblatt): Flaeche, Kante und Merkmal je Zustand. */
+const BODY_COLORS = {
+  fill: 0x8fd3ff, edge: 0xb9e6ff, active: 0x5ff2d6, screen: 0x8caaff, finished: 0xffd36b, alarm: 0xff8f8f
+} as const;
+const BODY_FILL_OPACITY = { normal: 0.10, alarm: 0.2 } as const;
+/** Merkmal knapp vor der Vorderseite, damit es nicht mit ihr flimmert. */
+const BODY_FEATURE_OFFSET_M = 0.006;
+/** Laufflaeche des Laufbands; das Pult steht am Kopfende (an der Wand). */
+const TREADMILL_DECK_M = 0.15;
+const TREADMILL_CONSOLE_DEPTH_M = 0.12;
 
 const easeInOut = (t: number): number => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
@@ -96,6 +110,8 @@ export class HouseSceneRenderer {
   private playback: { handle: number | null } | null = null;
   /** Fenster-/Tuermaterialien je Zustand, geteilt. */
   private readonly openingMaterials = new Map<string, THREE.Material>();
+  /** Geraetekoerper-Materialien je Zustand, geteilt. */
+  private readonly bodyMaterials = new Map<string, THREE.Material>();
 
   private selectedFloor: FloorId = 'ground';
   private frameHandle: number | null = null;
@@ -265,6 +281,21 @@ export class HouseSceneRenderer {
   }
 
   /**
+   * Ersetzt die Koerper der Grossgeraete aller Etagen (je Etage eine Gruppe in deren Layer-Gruppe).
+   * Koerper sind statisch; gezeichnet wird nur bei Bedarf.
+   */
+  setBodies(bodies: readonly ApplianceBody[]): void {
+    if (this.disposed) {
+      return;
+    }
+    for (const layer of this.layers.values()) {
+      this.clearGroup(layer.bodies);
+    }
+    bodies.forEach(body => this.addBody(body));
+    this.requestRender();
+  }
+
+  /**
    * Spielt die Effekte kurz animiert ab (Pulsieren, Ringe, drehender Bogen) und kehrt
    * danach in die statische Pose zurueck - nur waehrend dieser Zeit wird dauernd gezeichnet.
    */
@@ -313,7 +344,7 @@ export class HouseSceneRenderer {
         object.geometry.dispose();
       }
     });
-    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial, ...this.openingMaterials.values(),
+    [this.fillMaterial, this.solidEdgeMaterial, this.outdoorMaterial, ...this.openingMaterials.values(), ...this.bodyMaterials.values(),
       ...this.spriteMaterials.values(), ...this.floorGlowMaterials.values(), ...this.solidMaterials.values()]
       .forEach(material => material.dispose());
     // Geteilte Effekt-Geometrien haengen nicht dauerhaft in der Szene, der traverse oben erreicht sie nicht sicher.
@@ -371,8 +402,9 @@ export class HouseSceneRenderer {
     for (const floor of FLOORS) {
       const group = new THREE.Group();
       const openings = new THREE.Group();
-      group.add(openings);
-      this.layers.set(floor.id, { group, plates: [], openings });
+      const bodies = new THREE.Group();
+      group.add(openings, bodies);
+      this.layers.set(floor.id, { group, plates: [], openings, bodies });
       this.scene.add(group);
     }
     for (const box of roomBoxes()) {
@@ -405,15 +437,126 @@ export class HouseSceneRenderer {
     }
   }
 
-  /** Entfernt alle Kinder und gibt deren Geometrien frei (Materialien sind geteilt und bleiben). */
+  /** Entfernt alle Kinder und gibt deren Geometrien frei, auch verschachtelte (Materialien sind geteilt und bleiben). */
   private clearGroup(group: THREE.Group): void {
     for (const child of [...group.children]) {
-      if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
-        child.geometry.dispose();
-      }
+      child.traverse(object => {
+        if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
+          object.geometry.dispose();
+        }
+      });
       group.remove(child);
     }
   }
+
+  private addBody(body: ApplianceBody): void {
+    const layer = this.layers.get(body.floor);
+    if (!layer) {
+      return;
+    }
+    const group = new THREE.Group();
+    group.position.set(body.base.x, body.base.y, body.base.z);
+    group.rotation.y = body.rotationY;
+    const { widthM: w, depthM: d, heightM: h } = body;
+    if (body.kind === 'treadmill') {
+      this.addBox(group, body.state, w, TREADMILL_DECK_M, d, 0);
+      const consoleZ = -d / 2 + TREADMILL_CONSOLE_DEPTH_M / 2;
+      this.addBox(group, body.state, w, h, TREADMILL_CONSOLE_DEPTH_M, consoleZ);
+      this.addFeature(group, body.state, false, 0.3, 0.15, h - 0.15, consoleZ + TREADMILL_CONSOLE_DEPTH_M / 2);
+    } else {
+      this.addBox(group, body.state, w, h, d, 0);
+      this.addKindFeature(group, body, w, h, d / 2);
+    }
+    layer.bodies.add(group);
+  }
+
+  /** Quader mit Unterkante auf y = 0 der Gruppe, Mitte bei z. */
+  private addBox(group: THREE.Group, state: ApplianceBodyState, w: number, h: number, d: number, z: number): void {
+    const geometry = new THREE.BoxGeometry(w, h, d);
+    const fill = new THREE.Mesh(geometry, this.bodyFillMaterial(state));
+    fill.position.set(0, h / 2, z);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), this.bodyEdgeMaterial(state));
+    edges.position.copy(fill.position);
+    group.add(fill, edges);
+  }
+
+  private addKindFeature(group: THREE.Group, body: ApplianceBody, w: number, h: number, front: number): void {
+    const state = body.state;
+    switch (body.kind) {
+      case 'washer': {
+        const geometry = new THREE.CircleGeometry(0.18, 32);
+        const glass = new THREE.Mesh(geometry, this.bodyFeatureMaterial(state, false));
+        glass.position.set(0, h * 0.45, front + BODY_FEATURE_OFFSET_M);
+        const ring = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), this.bodyEdgeMaterial(state));
+        ring.position.copy(glass.position);
+        group.add(glass, ring);
+        break;
+      }
+      case 'dishwasher':
+        this.addFeature(group, state, false, w * 0.9, 0.06, h - 0.06, front);
+        break;
+      case 'fridge':
+        this.addFeature(group, state, false, w, 0.02, h * 0.65, front);
+        break;
+      case 'tv':
+        this.addFeature(group, state, true, w * 0.94, h * 0.9, h / 2, front);
+        break;
+      case 'pc':
+        this.addFeature(group, state, false, 0.03, h * 0.7, h / 2, front);
+        break;
+      case 'printer':
+        this.addFeature(group, state, false, w * 0.7, 0.03, h * 0.7, front);
+        break;
+      case 'coffee':
+        this.addFeature(group, state, false, 0.14, 0.08, 0.06, front);
+        break;
+      case 'treadmill':
+        break;
+    }
+  }
+
+  /** Flaches Merkmal auf der Vorderseite (lokale +z), Mitte auf Hoehe `centerY`. */
+  private addFeature(group: THREE.Group, state: ApplianceBodyState, screen: boolean,
+                     w: number, h: number, centerY: number, front: number): void {
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), this.bodyFeatureMaterial(state, screen));
+    mesh.position.set(0, centerY, front + BODY_FEATURE_OFFSET_M);
+    group.add(mesh);
+  }
+
+  private bodyFillMaterial(state: ApplianceBodyState): THREE.MeshBasicMaterial {
+    const alarm = state === 'alarm';
+    return this.bodyMaterial(`fill:${alarm}`, () => new THREE.MeshBasicMaterial({
+      color: alarm ? BODY_COLORS.alarm : BODY_COLORS.fill,
+      opacity: alarm ? BODY_FILL_OPACITY.alarm : BODY_FILL_OPACITY.normal,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide
+    }));
+  }
+
+  private bodyEdgeMaterial(state: ApplianceBodyState): THREE.LineBasicMaterial {
+    const color = state === 'active' ? BODY_COLORS.active : state === 'alarm' ? BODY_COLORS.alarm : BODY_COLORS.edge;
+    return this.bodyMaterial(`edge:${color}`, () => new THREE.LineBasicMaterial({ color }));
+  }
+
+  /** Ruhend nur angedeutet; an leuchtet es (Bildschirm blau-hell, sonst tuerkis), fertig gelb, Alarm rot. */
+  private bodyFeatureMaterial(state: ApplianceBodyState, screen: boolean): THREE.MeshBasicMaterial {
+    const lit = state !== 'idle';
+    const color = state === 'active' ? (screen ? BODY_COLORS.screen : BODY_COLORS.active)
+      : state === 'finished' ? BODY_COLORS.finished : state === 'alarm' ? BODY_COLORS.alarm : BODY_COLORS.edge;
+    const opacity = lit ? (screen && state === 'active' ? 0.55 : 0.75) : 0.18;
+    return this.bodyMaterial(`feature:${color}:${opacity}`, () => new THREE.MeshBasicMaterial({
+      color, opacity, transparent: true, depthWrite: false, side: THREE.DoubleSide
+    }));
+  }
+
+  private bodyMaterial<T extends THREE.Material>(key: string, create: () => T): T {
+    let material = this.bodyMaterials.get(key) as T | undefined;
+    if (!material) {
+      material = create();
+      this.bodyMaterials.set(key, material);
+    }
+    return material;
+  }
+
 
   private addOpening(shape: OpeningShape): void {
     const layer = this.layers.get(shape.floor);
