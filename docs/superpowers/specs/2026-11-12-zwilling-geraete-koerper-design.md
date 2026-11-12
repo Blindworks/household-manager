@@ -80,7 +80,7 @@ Breite liegt parallel zur Wand, Tiefe zeigt in den Raum. Beim Laufband ist die l
 Eine einzige Regel in derselben Util-Datei, Zustände `idle | active | finished | alarm`:
 
 - **Waschmaschine, Spülmaschine** (`kind: 'appliance'`): `active`, wenn `runningEntityId` `on` ist; sonst `finished`, wenn `finishedEntityId` `on` ist; sonst `idle`. Watt spielt hier keine Rolle (Regel „Gerät läuft kommt nur aus den Helfern“).
-- **Fernseher, PC, Drucker, Laufband, Kaffeemaschine** (`kind: 'switch'` mit `powerEntityId`): `active`, wenn der Schalter `on` ist **und** der Leistungswert eine Zahl > **10 W** ist **und** die Messung (`lastUpdated`) höchstens **5 min** alt ist (dieselbe Frische wie „Switch Power Display“); sonst `idle`. Alle sechs Schalter-Geräte mit Körper haben heute einen `powerEntityId` (Meross-Steckdosen immer, das Laufband per `plug(…, true)`); ein künftiges Gerät ohne Leistungssensor ist immer `idle` (Entscheidung Claude — „an“ ohne Watt wäre geraten). Die 10-W-Schwelle ist Claudes Wahl (Standby liegt bei diesen Geräten darunter) und steht als eine Konstante in der Util-Datei.
+- **Fernseher, PC, Drucker, Laufband, Kaffeemaschine** (`kind: 'switch'` mit `powerEntityId`): `active`, wenn der Schalter `on` ist **und** der Leistungswert eine Zahl > **10 W** ist **und** die Messung (`lastUpdated`) jünger als **5 min** ist (dieselbe Frische wie die Watt-Zeile der Bubble, „Switch Power Display“); sonst `idle`. Alle sechs Schalter-Geräte mit Körper haben heute einen `powerEntityId` (Meross-Steckdosen immer, das Laufband per `plug(…, true)`); ein künftiges Gerät ohne Leistungssensor ist immer `idle` (Entscheidung Claude — „an“ ohne Watt wäre geraten). Die 10-W-Schwelle ist Claudes Wahl (Standby liegt bei diesen Geräten darunter) und steht als eine Konstante in der Util-Datei.
 - **Kühlschrank:** `alarm`, wenn der Schalter genau `off` ist; sonst `idle` (er leuchtet nie). `unavailable`/`unknown` ⇒ `idle`, kein Alarm (nie geraten — ein toter Stecker-Sensor ist kein Beweis für einen ausgeschalteten Kühlschrank).
 
 Zuordnung „welches Gerät ist welcher Körper“: über das Label des Eintrags in `house-devices.ts` ist zerbrechlich; der Bauende markiert die neun Einträge stattdessen ausdrücklich mit einer Körperart (z. B. Feld `body: 'washer' | 'dishwasher' | 'fridge' | 'tv' | 'pc' | 'printer' | 'treadmill' | 'coffee'`, analog zu `lamp: true`). Ein neues Großgerät braucht dann nur dieses Feld.
@@ -96,7 +96,7 @@ Zuordnung „welches Gerät ist welcher Körper“: über das Label des Eintrags
 
 ## Qualitätsanforderungen
 
-- Unit-Tests für die Util: Zustandsregel aller vier Zustände je Geräteart inkl. Grenzfälle (genau 10 W ist nicht aktiv, Messung 5 min alt noch frisch / älter nicht, `unavailable`, Schalter aus bei Watt > 10), Ausrichtung zu jeder der vier Wände, Gleichstand deterministisch, ungültiger Platz ⇒ Raster.
+- Unit-Tests für die Util: Zustandsregel aller vier Zustände je Geräteart inkl. Grenzfälle (genau 10 W ist nicht aktiv, Messung knapp unter 5 min frisch, ab 5 min nicht, `unavailable`, Schalter aus bei Watt > 10), Ausrichtung zu jeder der vier Wände, Gleichstand deterministisch, ungültiger Platz ⇒ Raster.
 - Komponententest: Körper werden für die gewählte Etage an den Fake-Renderer gegeben; Gerät mit Körper erzeugt keinen Punkt/Bogen-Effekt mehr; Bubble bleibt da.
 - Frontend-Testbasis: nur die drei bekannten Altfehler (AppComponent ×2, HeroComponent).
 - Browser-Sichtprüfung der Szene im Dev-Server (Muster der vorigen Stufen).
