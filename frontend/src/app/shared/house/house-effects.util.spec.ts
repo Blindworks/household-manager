@@ -63,12 +63,12 @@ describe('buildHouseEffects', () => {
     }
   });
 
-  it('heizendes Thermostat glueht, offener Kontakt leuchtet rot', () => {
+  it('heizendes Thermostat glueht nicht (sein Heizkoerper zeigt es), offener Kontakt leuchtet rot', () => {
     const heizung = find('thermostat', d => d.area === 'bad');
     const fenster = find('contact', d => d.area === 'bad');
     const effects = buildHouseEffects(['bad'], mapOf(entity(heizung.heating, 'on'), entity(fenster.entityId, 'on')),
       NO_BRIGHTNESS, NO_POSITIONS, NO_LINKED);
-    expect(effects.map(e => [e.deviceId, e.kind])).toEqual([[heizung.id, 'heating'], [fenster.id, 'open']]);
+    expect(effects.map(e => [e.deviceId, e.kind])).toEqual([[fenster.id, 'open']]);
   });
 
   it('der Gaszaehler-Reedkontakt ist kein Fenster', () => {

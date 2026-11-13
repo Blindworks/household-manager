@@ -945,8 +945,19 @@ describe('TabletHouseComponent', () => {
 
     it('gibtAlleKoerperAnDenRenderer', () => {
       create();
-      expect(lastBodies().length).toBe(9);
+      // 9 Grossgeraete + 8 Heizkoerper
+      expect(lastBodies().length).toBe(17);
       expect(lastBodies().find(b => b.deviceId === tv.id)!.state).toBe('idle');
+    });
+
+    it('heizendesThermostatLaesstSeinenHeizkoerperGluehen', () => {
+      const heizung = HOUSE_DEVICES.find(d => d.kind === 'thermostat' && d.area === 'kueche')! as
+        Extract<(typeof HOUSE_DEVICES)[number], { kind: 'thermostat' }>;
+      entityService.getEntities.and.returnValue(of([entity(heizung.heating, 'on')]));
+      create();
+      const body = lastBodies().find(b => b.deviceId === heizung.id)!;
+      expect(body.kind).toBe('radiator');
+      expect(body.state).toBe('heating');
     });
 
     it('laufenderFernseherWirdAktiv', () => {

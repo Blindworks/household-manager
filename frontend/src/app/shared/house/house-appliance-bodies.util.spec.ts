@@ -23,10 +23,13 @@ function entities(states: Record<string, string>, lastUpdated = T0): EntityMap {
 const TV = byBody('wohnzimmer', 'tv') as Extract<HouseDevice, { kind: 'switch' }>;
 const FRIDGE = byBody('kueche', 'fridge') as Extract<HouseDevice, { kind: 'switch' }>;
 const WASHER = byBody('waschkeller', 'washer') as Extract<HouseDevice, { kind: 'appliance' }>;
+const RADIATOR = HOUSE_DEVICES.find(d => d.kind === 'thermostat' && d.area === 'kueche') as Extract<HouseDevice, { kind: 'thermostat' }>;
 
 describe('BODY_DEVICE_IDS', () => {
-  it('umfasst genau die neun Grossgeraete', () => {
-    const labels = HOUSE_DEVICES.filter(d => BODY_DEVICE_IDS.has(d.id)).map(d => `${d.area}:${d.label}`).sort();
+  it('umfasst genau die neun Grossgeraete und alle Thermostate', () => {
+    expect(HOUSE_DEVICES.filter(d => d.kind === 'thermostat').every(d => BODY_DEVICE_IDS.has(d.id))).toBeTrue();
+    const labels = HOUSE_DEVICES.filter(d => BODY_DEVICE_IDS.has(d.id) && d.kind !== 'thermostat')
+      .map(d => `${d.area}:${d.label}`).sort();
     expect(labels).toEqual([
       'buero:Drucker', 'buero:PC', 'kueche:Kaffeemaschine', 'kueche:Kühlschrank', 'kueche:Spülmaschine',
       'laufband:Laufband', 'schlafzimmer:Fernseher', 'waschkeller:Waschmaschine', 'wohnzimmer:Fernseher'
@@ -70,6 +73,12 @@ describe('applianceBodyState', () => {
       .toBe('idle');
   });
 
+  it('Heizkoerper: heizt nur bei ausdruecklichem an', () => {
+    expect(applianceBodyState(RADIATOR, entities({ [RADIATOR.heating]: 'on' }), NOW)).toBe('heating');
+    expect(applianceBodyState(RADIATOR, entities({ [RADIATOR.heating]: 'off' }), NOW)).toBe('idle');
+    expect(applianceBodyState(RADIATOR, entities({ [RADIATOR.heating]: 'unavailable' }), NOW)).toBe('idle');
+  });
+
   it('Waschmaschine: laeuft vor fertig, Watt egal', () => {
     expect(applianceBodyState(WASHER, entities({ [WASHER.runningEntityId]: 'on', [WASHER.finishedEntityId]: 'on' }), NOW))
       .toBe('active');
@@ -102,7 +111,7 @@ describe('buildApplianceBodies', () => {
 
   it('liefert nur Koerper der Etage', () => {
     const ground = buildApplianceBodies('ground', entities({}), new Map(), NOW).map(b => b.kind).sort();
-    expect(ground).toEqual(['coffee', 'dishwasher', 'fridge', 'treadmill', 'tv']);
+    expect(ground.filter(kind => kind !== 'radiator')).toEqual(['coffee', 'dishwasher', 'fridge', 'treadmill', 'tv']);
     expect(buildApplianceBodies('basement', entities({}), new Map(), NOW).map(b => b.kind)).toEqual(['washer']);
   });
 
@@ -138,6 +147,16 @@ describe('buildApplianceBodies', () => {
     const grid = deviceAnchor(FRIDGE.id, new Map())!;
     expect(body.base.x).toBeCloseTo(grid.x);
     expect(body.base.z).toBeCloseTo(grid.z);
+  });
+
+  it('Heizkoerper rueckt an die Wand, Unterkante 15 cm', () => {
+    // Kueche: x 20..210, y 240..350; naechste Wand unten (y 350)
+    const body = buildApplianceBodies('ground', entities({}), at(RADIATOR.id, 100, 330), NOW)
+      .find(b => b.deviceId === RADIATOR.id)!;
+    expect(body.kind).toBe('radiator');
+    expect(body.base.x).toBeCloseTo(toWorldX(100));
+    expect(body.base.z).toBeCloseTo(toWorldZ(350) - body.depthM / 2);
+    expect(body.base.y).toBeCloseTo(areaFloorBase('kueche') + 0.15);
   });
 
   it('traegt den Zustand', () => {

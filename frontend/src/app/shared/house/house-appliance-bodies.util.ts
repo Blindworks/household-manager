@@ -8,11 +8,12 @@ import { DevicePositions, PlanPoint, deviceAnchor, isPointInArea } from './house
  * Grossgeraete als Koerper in der 3D-Hausansicht: Form, Lage, Drehung und Zustand.
  * Einzige Definition; der Renderer zeichnet nur (Muster `openingShape`).
  *
- * Ort ist der Platz aus `house-placement.util.ts` (wie Bubble und Effekt), nur der Fernseher
- * rueckt mit dem Ruecken an die Wand. Gedreht wird automatisch: Ruecken zur naechsten Wand
+ * Ort ist der Platz aus `house-placement.util.ts` (wie Bubble und Effekt), nur Fernseher und
+ * Heizkoerper (`WALL_MOUNTED`) ruecken mit dem Ruecken an die Wand. Gedreht wird automatisch: Ruecken zur naechsten Wand
  * des eigenen Bereichs, Vorderseite in den Raum.
  */
-export type ApplianceBodyState = 'idle' | 'active' | 'finished' | 'alarm';
+/** `heating`: Heizkoerper, dessen Thermostat gerade heizt (glueht orange). */
+export type ApplianceBodyState = 'idle' | 'active' | 'finished' | 'alarm' | 'heating';
 
 /** Gespeicherte Drehung je Geraete-Id in Grad (0/90/180/270); fehlt = automatisch zur Wand. */
 export type DeviceRotations = ReadonlyMap<string, number>;
@@ -61,19 +62,27 @@ export const BODY_DIMENSIONS: Record<ApplianceBodyKind, BodyDimensions> = {
   printer: { widthM: 0.45, depthM: 0.35, heightM: 0.25, bottomM: 0.9 },
   // Hoehe = Pult am Kopfende; die Lauffläche zeichnet der Renderer flach
   treadmill: { widthM: 0.8, depthM: 1.8, heightM: 1.3, bottomM: 0 },
-  coffee: { widthM: 0.3, depthM: 0.4, heightM: 0.4, bottomM: 0.9 }
+  coffee: { widthM: 0.3, depthM: 0.4, heightM: 0.4, bottomM: 0.9 },
+  // Flachheizkoerper, ueberall gleich
+  radiator: { widthM: 1.0, depthM: 0.1, heightM: 0.6, bottomM: 0.15 }
 };
 
-type BodyDevice = Extract<HouseDevice, { kind: 'switch' | 'appliance' }> & { body: ApplianceBodyKind };
+/** Koerper, die mit der Rueckseite an der Wand haengen statt auf ihrem Platz zu stehen. */
+const WALL_MOUNTED: ReadonlySet<ApplianceBodyKind> = new Set(['tv', 'radiator']);
+
+type BodyDevice = Extract<HouseDevice, { kind: 'switch' | 'appliance' | 'thermostat' }> & { body: ApplianceBodyKind };
 
 function hasBody(device: HouseDevice): device is BodyDevice {
-  return (device.kind === 'switch' || device.kind === 'appliance') && !!device.body;
+  return (device.kind === 'switch' || device.kind === 'appliance' || device.kind === 'thermostat') && !!device.body;
 }
 
-/** Ids aller Geraete mit Koerper (sie zeigen keinen „an“-Punkt und keinen Laufbogen mehr). */
+/** Ids aller Geraete mit Koerper (sie zeigen keinen „an“-Punkt, keinen Laufbogen und kein Heiz-Gluehen mehr). */
 export const BODY_DEVICE_IDS: ReadonlySet<string> = new Set(HOUSE_DEVICES.filter(hasBody).map(device => device.id));
 
 export function applianceBodyState(device: HouseDevice, entities: EntityMap, nowMs: number): ApplianceBodyState {
+  if (device.kind === 'thermostat') {
+    return isOn(entities, device.heating) ? 'heating' : 'idle';
+  }
   if (device.kind === 'appliance') {
     if (isOn(entities, device.runningEntityId)) {
       return 'active';
@@ -123,7 +132,7 @@ function bodyFor(device: BodyDevice, floor: FloorId, anchor: Vec3, state: Applia
   const front = fixedFront ?? wall?.front ?? { x: 0, z: 1 };
   let x = anchor.x;
   let z = anchor.z;
-  if (device.body === 'tv' && wall) {
+  if (WALL_MOUNTED.has(device.body) && wall) {
     // Nur senkrecht zur Wand verschieben: Rueckseite liegt auf der Wand.
     x = front.x === 0 ? x : toWorldX(wall.foot.x) + front.x * dims.depthM / 2;
     z = front.z === 0 ? z : toWorldZ(wall.foot.y) + front.z * dims.depthM / 2;

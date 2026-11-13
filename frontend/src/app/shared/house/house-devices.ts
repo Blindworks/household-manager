@@ -8,11 +8,13 @@
  * Bubbles (Muelltonne, Toni, Haustuer, Garten): Haustuer-Kamera und Feinstaub entfallen.
  */
 /** Art des 3D-Koerpers eines Grossgeraets (siehe `house-appliance-bodies.util.ts`); einzige Markierung. */
-export type ApplianceBodyKind = 'washer' | 'dishwasher' | 'fridge' | 'tv' | 'pc' | 'printer' | 'treadmill' | 'coffee';
+export type ApplianceBodyKind = 'washer' | 'dishwasher' | 'fridge' | 'tv' | 'pc' | 'printer' | 'treadmill' | 'coffee'
+  | 'radiator';
 
 export type HouseDevice =
   | { kind: 'climate'; id: string; area: string; label: string; temperature?: string; humidity?: string; iaq?: string; roomSensor: boolean }
-  | { kind: 'thermostat'; id: string; area: string; label: string; temperature: string; target: string; heating: string }
+  /** Jedes Thermostat sitzt an einem Heizkoerper und hat deshalb immer einen Koerper (`radiator`). */
+  | { kind: 'thermostat'; id: string; area: string; label: string; temperature: string; target: string; heating: string; body: 'radiator' }
   | { kind: 'contact'; id: string; area: string; label: string; entityId: string }
   | { kind: 'motion'; id: string; area: string; label: string; entityId: string }
   | { kind: 'button'; id: string; area: string; label: string; entityIds: string[] }
@@ -39,7 +41,8 @@ function thermostat(area: string, n: number, label = 'Heizung'): HouseDevice {
     kind: 'thermostat', id: `${area}-thermostat-${n}`, area, label,
     temperature: `sensor.thermostat_${n}_temperature`,
     target: `sensor.thermostat_${n}_target`,
-    heating: `binary_sensor.thermostat_${n}_heating`
+    heating: `binary_sensor.thermostat_${n}_heating`,
+    body: 'radiator'
   };
 }
 

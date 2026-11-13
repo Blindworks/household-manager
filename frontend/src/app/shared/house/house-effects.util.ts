@@ -16,8 +16,9 @@ import { DevicePositions, deviceAnchor } from './house-placement.util';
  * Ein Kontakt oder eine Haustuer, die mit einem Fenster/einer Tuer der Szene verknuepft ist
  * (`linkedDeviceIds`), zeigt „offen“ am Element selbst und gluehte sonst doppelt.
  *
- * Ein Grossgeraet mit Koerper (`BODY_DEVICE_IDS`) zeigt „an“/„laeuft“ am Koerper selbst und
- * bekommt deshalb weder den blauen Punkt noch den Laufbogen.
+ * Ein Geraet mit Koerper (`BODY_DEVICE_IDS`) zeigt „an“/„laeuft“/„heizt“ am Koerper selbst und
+ * bekommt deshalb weder den blauen Punkt noch den Laufbogen noch das Heiz-Gluehen. Seit die
+ * Thermostate Heizkoerper sind, haben `heating` und `running` heute kein Geraet mehr.
  */
 export type HouseEffectKind = 'light' | 'powered' | 'heating' | 'open' | 'motion' | 'running';
 

@@ -67,9 +67,13 @@ const OPENING_OFFSET_M = 0.015;
 
 /** Grossgeraete (Stil wie Glas/Tuerblatt): Flaeche, Kante und Merkmal je Zustand. */
 const BODY_COLORS = {
-  fill: 0x8fd3ff, edge: 0xb9e6ff, active: 0x5ff2d6, screen: 0x8caaff, finished: 0xffd36b, alarm: 0xff8f8f
+  fill: 0x8fd3ff, edge: 0xb9e6ff, active: 0x5ff2d6, screen: 0x8caaff, finished: 0xffd36b, alarm: 0xff8f8f,
+  heating: 0xff7a2f
 } as const;
-const BODY_FILL_OPACITY = { normal: 0.10, alarm: 0.2 } as const;
+/** Ein heizender Heizkoerper glueht als Ganzes, deshalb deutlich deckender. */
+const BODY_FILL_OPACITY = { normal: 0.10, alarm: 0.2, heating: 0.45 } as const;
+/** Senkrechte Lamellen auf der Vorderseite des Flachheizkoerpers. */
+const RADIATOR_FIN_COUNT = 9;
 /** Merkmal knapp vor der Vorderseite, damit es nicht mit ihr flimmert. */
 const BODY_FEATURE_OFFSET_M = 0.006;
 /** Laufflaeche des Laufbands; das Pult steht am Kopfende (an der Wand). */
@@ -510,6 +514,14 @@ export class HouseSceneRenderer {
       case 'coffee':
         this.addFeature(group, state, false, 0.14, 0.08, 0.06, front);
         break;
+      case 'radiator':
+        for (let i = 0; i < RADIATOR_FIN_COUNT; i++) {
+          const x = -w / 2 + (w * (i + 0.5)) / RADIATOR_FIN_COUNT;
+          const fin = new THREE.Mesh(new THREE.PlaneGeometry(0.035, h * 0.86), this.bodyFeatureMaterial(state, false));
+          fin.position.set(x, h / 2, front + BODY_FEATURE_OFFSET_M);
+          group.add(fin);
+        }
+        break;
       case 'treadmill':
         break;
     }
@@ -524,24 +536,26 @@ export class HouseSceneRenderer {
   }
 
   private bodyFillMaterial(state: ApplianceBodyState): THREE.MeshBasicMaterial {
-    const alarm = state === 'alarm';
-    return this.bodyMaterial(`fill:${alarm}`, () => new THREE.MeshBasicMaterial({
-      color: alarm ? BODY_COLORS.alarm : BODY_COLORS.fill,
-      opacity: alarm ? BODY_FILL_OPACITY.alarm : BODY_FILL_OPACITY.normal,
+    const tone = state === 'alarm' || state === 'heating' ? state : 'normal';
+    return this.bodyMaterial(`fill:${tone}`, () => new THREE.MeshBasicMaterial({
+      color: tone === 'normal' ? BODY_COLORS.fill : BODY_COLORS[tone],
+      opacity: BODY_FILL_OPACITY[tone],
       transparent: true, depthWrite: false, side: THREE.DoubleSide
     }));
   }
 
   private bodyEdgeMaterial(state: ApplianceBodyState): THREE.LineBasicMaterial {
-    const color = state === 'active' ? BODY_COLORS.active : state === 'alarm' ? BODY_COLORS.alarm : BODY_COLORS.edge;
+    const color = state === 'active' ? BODY_COLORS.active : state === 'alarm' ? BODY_COLORS.alarm
+      : state === 'heating' ? BODY_COLORS.heating : BODY_COLORS.edge;
     return this.bodyMaterial(`edge:${color}`, () => new THREE.LineBasicMaterial({ color }));
   }
 
-  /** Ruhend nur angedeutet; an leuchtet es (Bildschirm blau-hell, sonst tuerkis), fertig gelb, Alarm rot. */
+  /** Ruhend nur angedeutet; an leuchtet es (Bildschirm blau-hell, sonst tuerkis), fertig gelb, Alarm rot, heizt orange. */
   private bodyFeatureMaterial(state: ApplianceBodyState, screen: boolean): THREE.MeshBasicMaterial {
     const lit = state !== 'idle';
     const color = state === 'active' ? (screen ? BODY_COLORS.screen : BODY_COLORS.active)
-      : state === 'finished' ? BODY_COLORS.finished : state === 'alarm' ? BODY_COLORS.alarm : BODY_COLORS.edge;
+      : state === 'finished' ? BODY_COLORS.finished : state === 'alarm' ? BODY_COLORS.alarm
+      : state === 'heating' ? BODY_COLORS.heating : BODY_COLORS.edge;
     const opacity = lit ? (screen && state === 'active' ? 0.55 : 0.75) : 0.18;
     return this.bodyMaterial(`feature:${color}:${opacity}`, () => new THREE.MeshBasicMaterial({
       color, opacity, transparent: true, depthWrite: false, side: THREE.DoubleSide
