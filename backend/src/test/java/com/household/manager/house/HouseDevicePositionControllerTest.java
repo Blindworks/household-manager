@@ -35,7 +35,7 @@ class HouseDevicePositionControllerTest {
 
     @Test
     void getLiefertDieListe() throws Exception {
-        when(service.list()).thenReturn(List.of(new HouseDevicePositionDtos.Response("a", 1.5, 2.0)));
+        when(service.list()).thenReturn(List.of(new HouseDevicePositionDtos.Response("a", 1.5, 2.0, null)));
 
         mockMvc.perform(get("/v1/house/device-positions"))
                 .andExpect(status().isOk())
@@ -46,19 +46,29 @@ class HouseDevicePositionControllerTest {
 
     @Test
     void putRuftSetMitPfadIdUndWerten() throws Exception {
-        when(service.set("a", 10.0, 20.0)).thenReturn(new HouseDevicePositionDtos.Response("a", 10.0, 20.0));
+        when(service.set("a", 10.0, 20.0, null)).thenReturn(new HouseDevicePositionDtos.Response("a", 10.0, 20.0, null));
 
         mockMvc.perform(put("/v1/house/device-positions/a").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"x\":10,\"y\":20}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deviceId").value("a"))
                 .andExpect(jsonPath("$.x").value(10.0));
-        verify(service).set("a", 10.0, 20.0);
+        verify(service).set("a", 10.0, 20.0, null);
+    }
+
+    @Test
+    void putReichtDieDrehungDurch() throws Exception {
+        when(service.set("a", 10.0, 20.0, 90)).thenReturn(new HouseDevicePositionDtos.Response("a", 10.0, 20.0, 90));
+
+        mockMvc.perform(put("/v1/house/device-positions/a").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"x\":10,\"y\":20,\"rotation\":90}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rotation").value(90));
     }
 
     @Test
     void putOhneBodyOderMitNullErgibt400() throws Exception {
-        when(service.set("a", null, 1.0)).thenThrow(new IllegalArgumentException("x fehlt"));
+        when(service.set("a", null, 1.0, null)).thenThrow(new IllegalArgumentException("x fehlt"));
 
         mockMvc.perform(put("/v1/house/device-positions/a")).andExpect(status().isBadRequest());
         mockMvc.perform(put("/v1/house/device-positions/a").contentType(MediaType.APPLICATION_JSON)
@@ -68,7 +78,7 @@ class HouseDevicePositionControllerTest {
 
     @Test
     void ungueltigeWerteAusDemServiceErgeben400() throws Exception {
-        when(service.set("A_b", 1.0, 1.0)).thenThrow(new IllegalArgumentException("ungueltig"));
+        when(service.set("A_b", 1.0, 1.0, null)).thenThrow(new IllegalArgumentException("ungueltig"));
 
         mockMvc.perform(put("/v1/house/device-positions/A_b").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"x\":1,\"y\":1}"))

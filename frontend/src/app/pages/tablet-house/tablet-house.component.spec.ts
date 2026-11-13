@@ -955,6 +955,12 @@ describe('TabletHouseComponent', () => {
       expect(lastBodies().find(b => b.deviceId === tv.id)!.state).toBe('active');
     });
 
+    it('gespeicherteDrehungKommtImRendererAn', () => {
+      positionService.list.and.returnValue(of([{ deviceId: tv.id, x: 300, y: 110, rotation: 180 }]));
+      create();
+      expect(lastBodies().find(b => b.deviceId === tv.id)!.rotationY).toBeCloseTo(Math.PI);
+    });
+
     it('fernseherBehaeltSeineBubbleInDerRaumansicht', () => {
       create();
       click(bubble('Wohnzimmer'));

@@ -29,7 +29,7 @@ import { HouseDevicePositionService } from '../../services/house-device-position
 import { HouseOpeningService } from '../../services/house-opening.service';
 import { HouseOpening } from '../../models/house-opening.model';
 import { OpeningShape, absorbedDeviceIds, isOnWall, openingIsOpen, openingShape } from '../../shared/house/house-openings.util';
-import { ApplianceBody, buildApplianceBodies, sameBodies } from '../../shared/house/house-appliance-bodies.util';
+import { ApplianceBody, DeviceRotations, buildApplianceBodies, sameBodies, toRotationMap } from '../../shared/house/house-appliance-bodies.util';
 import { HOUSE_RENDERER_FACTORY, HouseSceneRenderer } from './house-scene-renderer';
 
 /** Weiter als so viele Pixel zwischen Druck und Loslassen ist ein Ziehen (Drehen), kein Tipp. */
@@ -110,6 +110,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
   private readonly brightness = signal<ReadonlyMap<string, number>>(new Map());
   /** Gespeicherte Geraeteplaetze; ohne Stand (nie geladen) gilt das Raster. */
   private readonly positions = signal<DevicePositions>(new Map());
+  /** Gespeicherte Drehungen der Geraetekoerper (aus derselben Platzliste); fehlt = automatisch zur Wand. */
+  private readonly rotations = signal<DeviceRotations>(new Map());
   /** Gespeicherte Fenster und Tueren aller Etagen; ohne Stand (nie geladen) gibt es keine Elemente. */
   private readonly openings = signal<readonly HouseOpening[]>([]);
   /** Ids der Kontakte/Tueren, die an ein gezeichnetes Element (an einer Wand) gebunden sind (gluehen dann nicht mehr selbst). */
@@ -127,7 +129,8 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     const entities = this.entities();
     const positions = this.positions();
     const now = this.now();
-    return FLOORS.flatMap(floor => buildApplianceBodies(floor.id, entities, positions, now));
+    const rotations = this.rotations();
+    return FLOORS.flatMap(floor => buildApplianceBodies(floor.id, entities, positions, now, rotations));
   }, { equal: sameBodies });
 
   /**
@@ -212,12 +215,20 @@ export class TabletHouseComponent implements AfterViewInit, OnDestroy {
     });
     // Gespeicherte Plaetze: ein Fehler behaelt still den letzten Stand (ohne Stand gilt das Raster).
     ticks.pipe(
-      switchMap(() => this.positionService.list().pipe(map(toPositionMap), catchError(() => of(null)))),
+      switchMap(() => this.positionService.list().pipe(catchError(() => of(null)))),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(result => {
-      if (result && !samePositions(result, this.positions())) {
-        this.positions.set(result);
+    ).subscribe(list => {
+      if (!list) {
+        return;
+      }
+      const positions = toPositionMap(list);
+      if (!samePositions(positions, this.positions())) {
+        this.positions.set(positions);
         this.outside(renderer => renderer.requestRender());
+      }
+      const rotations = toRotationMap(list);
+      if (!sameRotations(rotations, this.rotations())) {
+        this.rotations.set(rotations);
       }
     });
     // Fenster und Tueren: ein Fehler behaelt still den letzten Stand (ohne Stand gibt es keine Elemente).
@@ -443,6 +454,10 @@ function sameEffects(a: HouseEffect[], b: HouseEffect[]): boolean {
 /** Gleiche Elemente (nach Inhalt): ein Takt mit unveraendertem Stand baut die Szene nicht neu auf. */
 function sameShapes(a: OpeningShape[], b: OpeningShape[]): boolean {
   return a.length === b.length && a.every((shape, i) => JSON.stringify(shape) === JSON.stringify(b[i]));
+}
+
+function sameRotations(a: DeviceRotations, b: DeviceRotations): boolean {
+  return a.size === b.size && [...a].every(([id, rotation]) => b.get(id) === rotation);
 }
 
 function sameOpenings(a: readonly HouseOpening[], b: readonly HouseOpening[]): boolean {

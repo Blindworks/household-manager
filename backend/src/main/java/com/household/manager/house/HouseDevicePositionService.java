@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -25,6 +26,8 @@ public class HouseDevicePositionService {
     private static final Pattern DEVICE_ID = Pattern.compile("^[a-z0-9_-]{1,100}$");
     private static final double MIN_COORDINATE = 0;
     private static final double MAX_COORDINATE = 500;
+    /** Erlaubte Drehungen eines Geraetekoerpers; null = automatisch. Welches Geraet einen Koerper hat, weiss nur das Frontend. */
+    private static final Set<Integer> ROTATIONS = Set.of(0, 90, 180, 270);
 
     private final HouseDevicePositionRepository repository;
     private final AuditService auditService;
@@ -38,8 +41,11 @@ public class HouseDevicePositionService {
     }
 
     @Transactional
-    public HouseDevicePositionDtos.Response set(String deviceId, Double x, Double y) {
+    public HouseDevicePositionDtos.Response set(String deviceId, Double x, Double y, Integer rotation) {
         requireValidId(deviceId);
+        if (rotation != null && !ROTATIONS.contains(rotation)) {
+            throw new IllegalArgumentException("Drehung muss 0, 90, 180 oder 270 Grad sein.");
+        }
         BigDecimal planX = toPlanValue(x, "x");
         BigDecimal planY = toPlanValue(y, "y");
 
@@ -47,11 +53,13 @@ public class HouseDevicePositionService {
                 .orElseGet(() -> HouseDevicePosition.builder().deviceId(deviceId).build());
         position.setPlanX(planX);
         position.setPlanY(planY);
+        position.setRotationDeg(rotation);
         position.setUpdatedAt(LocalDateTime.now(clock));
         HouseDevicePosition saved = repository.save(position);
 
         auditService.record("house.device-position.update",
-                deviceId + " x=" + planX.toPlainString() + " y=" + planY.toPlainString());
+                deviceId + " x=" + planX.toPlainString() + " y=" + planY.toPlainString()
+                        + (rotation == null ? "" : " rotation=" + rotation));
         return HouseDevicePositionDtos.Response.from(saved);
     }
 

@@ -2,9 +2,13 @@ import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, V
 import { NgTemplateOutlet } from '@angular/common';
 import { HouseDevicePositionService } from '../../services/house-device-position.service';
 import { HOUSE_DEVICES, HouseDevice } from '../../shared/house/house-devices';
-import { FLOORS, FloorId, HOUSE_ROOMS, OUTDOOR_AREAS, PlanRect, areaFloor, outdoorAreasOn, roomById } from '../../shared/house/house-plan';
+import { FLOORS, FloorId, HOUSE_ROOMS, OUTDOOR_AREAS, PlanRect, areaFloor, outdoorAreasOn, UNITS_PER_METER, roomById } from '../../shared/house/house-plan';
 import { HouseOpeningsEditorComponent } from './house-openings-editor/house-openings-editor.component';
 import { absorbedDeviceIds } from '../../shared/house/house-openings.util';
+import {
+  BODY_DEVICE_IDS, DeviceRotations, buildApplianceBodies, nextRotation, toRotationMap
+} from '../../shared/house/house-appliance-bodies.util';
+import { toPlanX, toPlanY } from '../../shared/house/house-geometry.util';
 import { DevicePositions, PlanPoint, isPointInArea, toPositionMap, validPlacement } from '../../shared/house/house-placement.util';
 
 /** Ab dieser Strecke (Pixel) ist eine Geste ein Ziehen, darunter ein Tipp. */
@@ -43,6 +47,8 @@ const PLAN_VIEW_WIDTH = 440;
 
 export interface PlanShape { id: string; label: string; rects: PlanRect[]; outdoor: boolean; nameX: number; nameY: number }
 export interface PlacedDot { device: HouseDevice; label: string; color: string; point: PlanPoint; transform: string; labelLeft: boolean }
+/** Grundflaeche eines Grossgeraets in der Draufsicht; Vorderseite liegt bei lokalem +y. */
+export interface BodyFootprint { deviceId: string; transform: string; width: number; depth: number }
 export interface UnplacedEntry { device: HouseDevice; label: string; invalid: boolean }
 export interface UnplacedGroup { area: string; entries: UnplacedEntry[] }
 
@@ -87,6 +93,8 @@ export class AdminHouseDevicesComponent implements OnInit {
   readonly floor = signal<FloorId>('ground');
   readonly loadState = signal<'loading' | 'ok' | 'failed'>('loading');
   readonly positions = signal<DevicePositions>(new Map());
+  /** Gespeicherte Drehungen der Grossgeraete; fehlt = automatisch zur Wand. */
+  readonly rotations = signal<DeviceRotations>(new Map());
   /** Per Tipp markiertes Listengeraet, das der naechste Tipp in den Plan setzt. */
   readonly selectedListId = signal<string | null>(null);
   /** Per Tipp markierter Punkt, fuer „Platz zurücksetzen“. */
@@ -151,6 +159,38 @@ export class AdminHouseDevicesComponent implements OnInit {
     return result;
   });
 
+  /**
+   * Grundflaechen der Grossgeraete mit Platz auf dieser Etage, so gedreht wie in 3D
+   * (`buildApplianceBodies`, dieselbe Regel); waehrend des Ziehens folgt die Flaeche dem Finger.
+   */
+  readonly footprints = computed<BodyFootprint[]>(() => {
+    const positions = new Map(this.positions());
+    const gesture = this.gesture();
+    if (gesture?.moved && gesture.deviceId && gesture.point && gesture.source !== 'plan') {
+      positions.set(gesture.deviceId, gesture.point);
+    }
+    const absorbed = this.absorbed();
+    return buildApplianceBodies(this.floor(), new Map(), positions, 0, this.rotations())
+      .filter(body => positions.has(body.deviceId) && !absorbed.has(body.deviceId))
+      .map(body => ({
+        deviceId: body.deviceId,
+        // SVG dreht im Uhrzeigersinn bei y nach unten: Three.js rotation.y θ entspricht rotate(-θ).
+        transform: `translate(${toPlanX(body.base.x)} ${toPlanY(body.base.z)}) rotate(${-body.rotationY * 180 / Math.PI})`,
+        width: body.widthM * UNITS_PER_METER,
+        depth: body.depthM * UNITS_PER_METER
+      }));
+  });
+
+  /** Markierter Punkt ist ein Grossgeraet: „Drehen“ und ggf. „Automatisch“ anbieten. */
+  readonly selectedHasBody = computed(() => {
+    const id = this.selectedDotId();
+    return !!id && BODY_DEVICE_IDS.has(id);
+  });
+  readonly selectedRotationFixed = computed(() => {
+    const id = this.selectedDotId();
+    return !!id && this.rotations().has(id);
+  });
+
   readonly unplacedGroups = computed<UnplacedGroup[]>(() => {
     const positions = this.positions();
     const labels = this.labels();
@@ -176,6 +216,7 @@ export class AdminHouseDevicesComponent implements OnInit {
     this.api.list().subscribe({
       next: list => {
         this.positions.set(toPositionMap(list));
+        this.rotations.set(toRotationMap(list));
         this.loadState.set('ok');
       },
       error: () => this.loadState.set('failed')
@@ -261,12 +302,33 @@ export class AdminHouseDevicesComponent implements OnInit {
         const next = new Map(this.positions());
         next.delete(deviceId);
         this.positions.set(next);
+        const rotations = new Map(this.rotations());
+        rotations.delete(deviceId);
+        this.rotations.set(rotations);
         this.selectedDotId.set(null);
       },
       error: () => this.errorMessage.set('Speichern fehlgeschlagen.')
     });
   }
 
+
+  /** Dreht den markierten Koerper von seiner aktuellen (auch automatischen) Ausrichtung um 90° weiter. */
+  rotateSelected(): void {
+    const id = this.selectedDotId();
+    const body = id ? buildApplianceBodies(this.floor(), new Map(), this.positions(), 0, this.rotations())
+      .find(entry => entry.deviceId === id) : undefined;
+    if (id && body) {
+      this.saveRotation(id, nextRotation(body.rotationY));
+    }
+  }
+
+  /** Zurueck zur Wand-Regel. */
+  automaticSelected(): void {
+    const id = this.selectedDotId();
+    if (id) {
+      this.saveRotation(id, null);
+    }
+  }
 
   isDragging(deviceId: string): boolean {
     const gesture = this.gesture();
@@ -296,15 +358,39 @@ export class AdminHouseDevicesComponent implements OnInit {
       return;
     }
     this.hint.set(null);
-    this.api.set(device.id, point).subscribe({
+    // Drehung immer mitschicken, sonst setzte das Verschieben sie auf automatisch zurueck.
+    this.api.set(device.id, point, this.rotations().get(device.id) ?? null).subscribe({
       next: saved => {
-        const next = new Map(this.positions());
-        next.set(saved.deviceId, { x: saved.x, y: saved.y });
-        this.positions.set(next);
+        this.applySaved(saved);
         this.selectedListId.set(null);
       },
       error: () => this.errorMessage.set('Speichern fehlgeschlagen.')
     });
+  }
+
+  private saveRotation(deviceId: string, rotation: number | null): void {
+    const point = this.positions().get(deviceId);
+    if (!point) {
+      return;
+    }
+    this.errorMessage.set(null);
+    this.api.set(deviceId, point, rotation).subscribe({
+      next: saved => this.applySaved(saved),
+      error: () => this.errorMessage.set('Speichern fehlgeschlagen.')
+    });
+  }
+
+  private applySaved(saved: { deviceId: string; x: number; y: number; rotation?: number | null }): void {
+    const next = new Map(this.positions());
+    next.set(saved.deviceId, { x: saved.x, y: saved.y });
+    this.positions.set(next);
+    const rotations = new Map(this.rotations());
+    if (saved.rotation == null) {
+      rotations.delete(saved.deviceId);
+    } else {
+      rotations.set(saved.deviceId, saved.rotation);
+    }
+    this.rotations.set(rotations);
   }
 
   private startGesture(source: Gesture['source'], deviceId: string | null, event: PointerEvent): void {

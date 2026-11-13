@@ -14,6 +14,23 @@ import { DevicePositions, PlanPoint, deviceAnchor, isPointInArea } from './house
  */
 export type ApplianceBodyState = 'idle' | 'active' | 'finished' | 'alarm';
 
+/** Gespeicherte Drehung je Geraete-Id in Grad (0/90/180/270); fehlt = automatisch zur Wand. */
+export type DeviceRotations = ReadonlyMap<string, number>;
+
+export const BODY_ROTATIONS: readonly number[] = [0, 90, 180, 270];
+
+/** Gespeicherte Drehungen aus der Platzliste; ungueltige Werte gelten als automatisch. */
+export function toRotationMap(list: readonly { deviceId: string; rotation?: number | null }[]): DeviceRotations {
+  return new Map(list.flatMap(entry =>
+    entry.rotation != null && BODY_ROTATIONS.includes(entry.rotation) ? [[entry.deviceId, entry.rotation] as const] : []));
+}
+
+/** Naechste Drehung beim Antippen von „Drehen“: 90° im Uhrzeigersinn weiter, ausgehend von der aktuellen. */
+export function nextRotation(currentRotationY: number): number {
+  const degrees = Math.round((currentRotationY * 180) / Math.PI / 90) * 90;
+  return (((degrees + 90) % 360) + 360) % 360;
+}
+
 /** Darueber gilt ein Steckdosengeraet als „arbeitet“ (darunter Standby); strikt groesser. */
 export const ACTIVE_POWER_THRESHOLD_W = 10;
 
@@ -79,7 +96,7 @@ export function applianceBodyState(device: HouseDevice, entities: EntityMap, now
 
 /** Koerper aller markierten Geraete der Etage. */
 export function buildApplianceBodies(floor: FloorId, entities: EntityMap, positions: DevicePositions,
-                                     nowMs: number): ApplianceBody[] {
+                                     nowMs: number, rotations: DeviceRotations = new Map()): ApplianceBody[] {
   const bodies: ApplianceBody[] = [];
   for (const device of HOUSE_DEVICES) {
     if (!hasBody(device) || areaFloor(device.area) !== floor) {
@@ -89,18 +106,21 @@ export function buildApplianceBodies(floor: FloorId, entities: EntityMap, positi
     if (!anchor) {
       continue;
     }
-    bodies.push(bodyFor(device, floor, anchor, applianceBodyState(device, entities, nowMs)));
+    bodies.push(bodyFor(device, floor, anchor, applianceBodyState(device, entities, nowMs), rotations.get(device.id)));
   }
   return bodies;
 }
 
 interface WallEdge { foot: PlanPoint; distance: number; front: { x: number; z: number } }
 
-function bodyFor(device: BodyDevice, floor: FloorId, anchor: Vec3, state: ApplianceBodyState): ApplianceBody {
+function bodyFor(device: BodyDevice, floor: FloorId, anchor: Vec3, state: ApplianceBodyState,
+                 rotation: number | undefined): ApplianceBody {
   const dims = BODY_DIMENSIONS[device.body];
   const point: PlanPoint = { x: toPlanX(anchor.x), y: toPlanY(anchor.z) };
-  const wall = nearestWall(device.area, point);
-  const front = wall?.front ?? { x: 0, z: 1 };
+  // Gespeicherte Drehung gewinnt; die Wand ist dann die hinter der Rueckseite (fuer den Fernseher).
+  const fixedFront = rotation === undefined ? undefined : frontOf(rotation);
+  const wall = nearestWall(device.area, point, fixedFront);
+  const front = fixedFront ?? wall?.front ?? { x: 0, z: 1 };
   let x = anchor.x;
   let z = anchor.z;
   if (device.body === 'tv' && wall) {
@@ -111,7 +131,7 @@ function bodyFor(device: BodyDevice, floor: FloorId, anchor: Vec3, state: Applia
   return {
     deviceId: device.id, floor, kind: device.body, state,
     base: { x, y: areaFloorBase(device.area) + dims.bottomM, z },
-    rotationY: Math.atan2(front.x, front.z),
+    rotationY: rotation === undefined ? Math.atan2(front.x, front.z) : (rotation * Math.PI) / 180,
     widthM: dims.widthM, depthM: dims.depthM, heightM: dims.heightM
   };
 }
@@ -128,7 +148,8 @@ const OUTSIDE_PROBE = 0.5;
  * Naechste Wand des eigenen Bereichs: Kante eines seiner Rechtecke, deren Lotfusspunkt auf der
  * Kante liegt und hinter der nicht derselbe Bereich weitergeht. Gleichstand: oben, rechts, unten, links.
  */
-export function nearestWall(areaId: string, point: PlanPoint): WallEdge | null {
+export function nearestWall(areaId: string, point: PlanPoint,
+                            front?: { x: number; z: number }): WallEdge | null {
   let best: WallEdge | null = null;
   for (const rect of areaRects(areaId)) {
     const minX = Math.min(rect.x1, rect.x2);
@@ -149,12 +170,19 @@ export function nearestWall(areaId: string, point: PlanPoint): WallEdge | null {
         x: edge.foot.x - edge.front.x * OUTSIDE_PROBE,
         y: edge.foot.y - edge.front.z * OUTSIDE_PROBE
       };
-      if (valid && !isPointInArea(areaId, behind) && (!best || edge.distance < best.distance)) {
+      const facing = !front || (edge.front.x === front.x && edge.front.z === front.z);
+      if (valid && facing && !isPointInArea(areaId, behind) && (!best || edge.distance < best.distance)) {
         best = edge;
       }
     }
   }
   return best;
+}
+
+/** Vorderseite (Welt x/z) einer Drehung: 0° zeigt nach +z, 90° nach +x (Three.js rotation.y). */
+function frontOf(rotation: number): { x: number; z: number } {
+  const radians = (rotation * Math.PI) / 180;
+  return { x: Math.round(Math.sin(radians)), z: Math.round(Math.cos(radians)) };
 }
 
 /** Gleichheit fuer `computed`: nur bei echter Aenderung neu zeichnen. */

@@ -14,8 +14,9 @@ export class HouseDevicePositionService {
     return this.http.get<HouseDevicePosition[]>(this.baseUrl);
   }
 
-  set(deviceId: string, point: PlanPoint): Observable<HouseDevicePosition> {
-    return this.http.put<HouseDevicePosition>(this.url(deviceId), { x: point.x, y: point.y });
+  /** Setzt Platz und Drehung zusammen; `rotation` null = automatisch (ein Teil-PUT setzte sie sonst zurueck). */
+  set(deviceId: string, point: PlanPoint, rotation: number | null = null): Observable<HouseDevicePosition> {
+    return this.http.put<HouseDevicePosition>(this.url(deviceId), { x: point.x, y: point.y, rotation });
   }
 
   remove(deviceId: string): Observable<void> {

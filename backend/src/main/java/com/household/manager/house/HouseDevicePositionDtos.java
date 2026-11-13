@@ -8,14 +8,14 @@ public final class HouseDevicePositionDtos {
     private HouseDevicePositionDtos() {
     }
 
-    public record Request(Double x, Double y) {
+    public record Request(Double x, Double y, Integer rotation) {
     }
 
-    public record Response(String deviceId, double x, double y) {
+    public record Response(String deviceId, double x, double y, Integer rotation) {
 
         public static Response from(HouseDevicePosition position) {
             return new Response(position.getDeviceId(),
-                    position.getPlanX().doubleValue(), position.getPlanY().doubleValue());
+                    position.getPlanX().doubleValue(), position.getPlanY().doubleValue(), position.getRotationDeg());
         }
     }
 }

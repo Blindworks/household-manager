@@ -1,6 +1,7 @@
 import { EntityState } from '../../models/entity-state.model';
 import {
-  ACTIVE_POWER_THRESHOLD_W, BODY_DEVICE_IDS, applianceBodyState, buildApplianceBodies, nearestWall
+  ACTIVE_POWER_THRESHOLD_W, BODY_DEVICE_IDS, applianceBodyState, buildApplianceBodies, nearestWall, nextRotation,
+  toRotationMap
 } from './house-appliance-bodies.util';
 import { EntityMap } from './house-bubbles.util';
 import { HOUSE_DEVICES, HouseDevice } from './house-devices';
@@ -142,5 +143,40 @@ describe('buildApplianceBodies', () => {
   it('traegt den Zustand', () => {
     const body = buildApplianceBodies('basement', entities({ [WASHER.runningEntityId]: 'on' }), new Map(), NOW)[0];
     expect(body.state).toBe('active');
+  });
+});
+
+describe('gespeicherte Drehung', () => {
+  const at = (id: string, x: number, y: number): Map<string, { x: number; y: number }> => new Map([[id, { x, y }]]);
+  const fridge = (rotations: Map<string, number>, x = 100, y = 245) =>
+    buildApplianceBodies('ground', entities({}), at(FRIDGE.id, x, y), NOW, rotations).find(b => b.deviceId === FRIDGE.id)!;
+
+  it('gewinnt gegen die Wand-Regel', () => {
+    // automatisch: Ruecken zur oberen Wand (0); gespeichert 90
+    expect(fridge(new Map([[FRIDGE.id, 90]])).rotationY).toBeCloseTo(Math.PI / 2);
+    expect(fridge(new Map()).rotationY).toBeCloseTo(0);
+  });
+
+  it('Fernseher rueckt an die Wand hinter seiner gedrehten Rueckseite', () => {
+    // Wohnzimmer x 210..420, y 90..270; Platz naeher an der oberen Wand, gedreht 180 => Rueckwand unten (y 270)
+    const tv = buildApplianceBodies('ground', entities({}), at(TV.id, 300, 110), NOW, new Map([[TV.id, 180]]))
+      .find(b => b.deviceId === TV.id)!;
+    expect(tv.rotationY).toBeCloseTo(Math.PI);
+    expect(tv.base.z).toBeCloseTo(toWorldZ(270) - tv.depthM / 2);
+    expect(tv.base.x).toBeCloseTo(toWorldX(300));
+  });
+
+  it('nextRotation dreht um 90 Grad weiter, auch von negativen Winkeln', () => {
+    expect(nextRotation(0)).toBe(90);
+    expect(nextRotation(Math.PI / 2)).toBe(180);
+    expect(nextRotation(Math.PI)).toBe(270);
+    expect(nextRotation(-Math.PI / 2)).toBe(0);
+  });
+
+  it('toRotationMap uebernimmt nur gueltige Drehungen', () => {
+    const map = toRotationMap([
+      { deviceId: 'a', rotation: 90 }, { deviceId: 'b', rotation: null }, { deviceId: 'c' }, { deviceId: 'd', rotation: 45 }
+    ]);
+    expect([...map.entries()]).toEqual([['a', 90]]);
   });
 });

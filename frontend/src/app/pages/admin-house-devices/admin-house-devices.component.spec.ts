@@ -17,14 +17,16 @@ class FakePositionService {
   failWrite = false;
   readonly setCalls: { deviceId: string; point: PlanPoint }[] = [];
   readonly removeCalls: string[] = [];
+  readonly rotationCalls: (number | null)[] = [];
 
   list(): Observable<HouseDevicePosition[]> {
     return this.failList ? throwError(() => new Error('weg')) : of(this.positions);
   }
 
-  set(deviceId: string, point: PlanPoint): Observable<HouseDevicePosition> {
+  set(deviceId: string, point: PlanPoint, rotation: number | null = null): Observable<HouseDevicePosition> {
     this.setCalls.push({ deviceId, point });
-    return this.failWrite ? throwError(() => new Error('weg')) : of({ deviceId, x: point.x, y: point.y });
+    this.rotationCalls.push(rotation);
+    return this.failWrite ? throwError(() => new Error('weg')) : of({ deviceId, x: point.x, y: point.y, rotation });
   }
 
   remove(deviceId: string): Observable<void> {
@@ -178,6 +180,66 @@ describe('AdminHouseDevicesComponent', () => {
     pointer(svg(), 'pointerup', 121, 300);
     expect(service.setCalls).toEqual([{ deviceId: FRIDGE, point: { x: 121, y: 300 } }]);
     expect(dot(FRIDGE)).not.toBeNull();
+  });
+
+  function button(label: string): HTMLButtonElement | undefined {
+    return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(entry => entry.textContent?.trim() === label);
+  }
+
+  function tapDot(deviceId: string, x: number, y: number): void {
+    const mark = dot(deviceId)!;
+    pointer(mark, 'pointerdown', x, y);
+    pointer(mark, 'pointerup', x + 1, y);
+  }
+
+  it('grossgeraetZeigtGrundflaecheMitGespeicherterDrehung', () => {
+    service.positions = [{ deviceId: FRIDGE, x: 100, y: 300, rotation: 90 }];
+    render();
+    const body = fixture.nativeElement.querySelector(`[data-body-id="${FRIDGE}"]`) as Element;
+    expect(body.getAttribute('transform')).toContain('rotate(-90)');
+    expect(fixture.nativeElement.querySelector(`[data-body-id="${DINING_LAMP}"]`)).toBeNull();
+  });
+
+  it('drehenDrehtVonDerAutomatischenAusrichtungWeiter', () => {
+    // Kueche y 240..350: Platz y 300 liegt naeher an der unteren Wand => Vorderseite nach oben (180 Grad)
+    service.positions = [{ deviceId: FRIDGE, x: 100, y: 300 }];
+    render();
+    tapDot(FRIDGE, 100, 300);
+    expect(button('Automatisch')).toBeUndefined();
+    button('Drehen')!.click();
+    fixture.detectChanges();
+    expect(service.rotationCalls).toEqual([270]);
+    expect(service.setCalls).toEqual([{ deviceId: FRIDGE, point: { x: 100, y: 300 } }]);
+    expect(button('Automatisch')).toBeDefined();
+  });
+
+  it('automatischSetztDieDrehungZurueck', () => {
+    service.positions = [{ deviceId: FRIDGE, x: 100, y: 300, rotation: 90 }];
+    render();
+    tapDot(FRIDGE, 100, 300);
+    button('Automatisch')!.click();
+    fixture.detectChanges();
+    expect(service.rotationCalls).toEqual([null]);
+    expect(button('Automatisch')).toBeUndefined();
+  });
+
+  it('verschiebenBehaeltDieDrehung', () => {
+    service.positions = [{ deviceId: FRIDGE, x: 100, y: 300, rotation: 90 }];
+    render();
+    const mark = dot(FRIDGE)!;
+    pointer(mark, 'pointerdown', 100, 300);
+    pointer(mark, 'pointermove', 120, 300);
+    pointer(mark, 'pointerup', 120, 300);
+    expect(service.rotationCalls).toEqual([90]);
+  });
+
+  it('gewoehnlichesGeraetHatKeinDrehen', () => {
+    service.positions = [{ deviceId: DINING_LAMP, x: 100, y: 150 }];
+    render();
+    tapDot(DINING_LAMP, 100, 150);
+    expect(button('Platz zurücksetzen')).toBeDefined();
+    expect(button('Drehen')).toBeUndefined();
   });
 
   it('zuruecksetzenRuftRemoveUndListetGeraet', () => {

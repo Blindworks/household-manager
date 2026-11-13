@@ -73,6 +73,15 @@
 
             <ng-container [ngTemplateOutlet]="openings.layer" />
 
+            @for (body of footprints(); track body.deviceId) {
+              <g class="admin-house-devices__body" [attr.data-body-id]="body.deviceId" [attr.transform]="body.transform">
+                <rect class="admin-house-devices__body-area" [attr.x]="-body.width / 2" [attr.y]="-body.depth / 2"
+                      [attr.width]="body.width" [attr.height]="body.depth" />
+                <line class="admin-house-devices__body-front" [attr.x1]="-body.width / 2" [attr.x2]="body.width / 2"
+                      [attr.y1]="body.depth / 2" [attr.y2]="body.depth / 2" />
+              </g>
+            }
+
             @for (dot of dots(); track dot.device.id) {
               <g
                 class="admin-house-devices__dot"
@@ -105,6 +114,12 @@
           @if (selectedDotLabel(); as label) {
             <div class="admin-house-devices__actions">
               <span>{{ label }}</span>
+              @if (selectedHasBody()) {
+                <button type="button" class="ghost" (click)="rotateSelected()">Drehen</button>
+                @if (selectedRotationFixed()) {
+                  <button type="button" class="ghost" (click)="automaticSelected()">Automatisch</button>
+                }
+              }
               <button type="button" class="danger" (click)="resetSelected()">Platz zurücksetzen</button>
             </div>
           }

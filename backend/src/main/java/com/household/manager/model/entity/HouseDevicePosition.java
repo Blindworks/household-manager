@@ -37,6 +37,10 @@ public class HouseDevicePosition {
     @Column(name = "plan_y", nullable = false, precision = 6, scale = 1)
     private BigDecimal planY;
 
+    /** Drehung des Geraetekoerpers in Grad (0/90/180/270), null = automatisch zur Wand. */
+    @Column(name = "rotation_deg")
+    private Integer rotationDeg;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }

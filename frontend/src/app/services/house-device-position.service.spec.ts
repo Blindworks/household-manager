@@ -24,12 +24,19 @@ describe('HouseDevicePositionService', () => {
     expect(result).toEqual([{ deviceId: 'a', x: 1, y: 2 }]);
   });
 
-  it('set: PUT mit {x, y} und kodierter Geraete-Id', () => {
+  it('set: PUT mit {x, y, rotation} und kodierter Geraete-Id; ohne Drehung null (automatisch)', () => {
     service.set('a/b c', { x: 10, y: 20 }).subscribe();
     const req = http.expectOne('/api/v1/house/device-positions/a%2Fb%20c');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ x: 10, y: 20 });
+    expect(req.request.body).toEqual({ x: 10, y: 20, rotation: null });
     req.flush({ deviceId: 'a/b c', x: 10, y: 20 });
+  });
+
+  it('set: schickt eine Drehung mit', () => {
+    service.set('a', { x: 1, y: 2 }, 90).subscribe();
+    const req = http.expectOne('/api/v1/house/device-positions/a');
+    expect(req.request.body).toEqual({ x: 1, y: 2, rotation: 90 });
+    req.flush({ deviceId: 'a', x: 1, y: 2, rotation: 90 });
   });
 
   it('remove: DELETE auf die Geraete-Id', () => {

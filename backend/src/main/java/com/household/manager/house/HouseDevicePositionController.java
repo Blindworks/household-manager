@@ -35,7 +35,7 @@ public class HouseDevicePositionController {
         if (request == null) {
             throw new IllegalArgumentException("Koordinaten fehlen.");
         }
-        return service.set(deviceId, request.x(), request.y());
+        return service.set(deviceId, request.x(), request.y(), request.rotation());
     }
 
     @DeleteMapping("/{deviceId}")
