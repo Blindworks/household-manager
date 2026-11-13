@@ -59,7 +59,7 @@ public class HouseDevicePositionService {
 
         auditService.record("house.device-position.update",
                 deviceId + " x=" + planX.toPlainString() + " y=" + planY.toPlainString()
-                        + (rotation == null ? "" : " rotation=" + rotation));
+                        + " rotation=" + (rotation == null ? "auto" : rotation));
         return HouseDevicePositionDtos.Response.from(saved);
     }
 

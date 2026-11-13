@@ -25,7 +25,7 @@ export function toRotationMap(list: readonly { deviceId: string; rotation?: numb
     entry.rotation != null && BODY_ROTATIONS.includes(entry.rotation) ? [[entry.deviceId, entry.rotation] as const] : []));
 }
 
-/** Naechste Drehung beim Antippen von „Drehen“: 90° im Uhrzeigersinn weiter, ausgehend von der aktuellen. */
+/** Naechste Drehung beim Antippen von „Drehen“: 90° weiter (in der Draufsicht gegen den Uhrzeigersinn), ausgehend von der aktuellen. */
 export function nextRotation(currentRotationY: number): number {
   const degrees = Math.round((currentRotationY * 180) / Math.PI / 90) * 90;
   return (((degrees + 90) % 360) + 360) % 360;

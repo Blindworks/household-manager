@@ -62,7 +62,7 @@ class HouseDevicePositionServiceTest {
         assertThat(response.deviceId()).isEqualTo("wohnzimmer-climate");
         assertThat(response.x()).isEqualTo(123.5);
         assertThat(response.y()).isEqualTo(200.0);
-        verify(auditService).record("house.device-position.update", "wohnzimmer-climate x=123.5 y=200.0");
+        verify(auditService).record("house.device-position.update", "wohnzimmer-climate x=123.5 y=200.0 rotation=auto");
     }
 
     @Test

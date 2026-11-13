@@ -201,6 +201,12 @@ describe('AdminHouseDevicesComponent', () => {
     expect(fixture.nativeElement.querySelector(`[data-body-id="${DINING_LAMP}"]`)).toBeNull();
   });
 
+  it('ungueltigerPlatzZeigtKeineGrundflaeche', () => {
+    service.positions = [{ deviceId: FRIDGE, x: 400, y: 100, rotation: 90 }];
+    render();
+    expect(fixture.nativeElement.querySelector(`[data-body-id="${FRIDGE}"]`)).toBeNull();
+  });
+
   it('drehenDrehtVonDerAutomatischenAusrichtungWeiter', () => {
     // Kueche y 240..350: Platz y 300 liegt naeher an der unteren Wand => Vorderseite nach oben (180 Grad)
     service.positions = [{ deviceId: FRIDGE, x: 100, y: 300 }];

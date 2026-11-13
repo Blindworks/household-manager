@@ -39,6 +39,11 @@ function areaLabel(areaId: string): string {
   return roomById(areaId)?.label ?? OUTDOOR_AREAS.find(area => area.id === areaId)?.label ?? areaId;
 }
 
+function hasValidPlacement(deviceId: string, positions: DevicePositions): boolean {
+  const device = HOUSE_DEVICES.find(entry => entry.id === deviceId);
+  return !!device && !!validPlacement(device, positions);
+}
+
 function roundPoint(point: PlanPoint): PlanPoint {
   return { x: Math.round(point.x * 10) / 10, y: Math.round(point.y * 10) / 10 };
 }
@@ -171,7 +176,8 @@ export class AdminHouseDevicesComponent implements OnInit {
     }
     const absorbed = this.absorbed();
     return buildApplianceBodies(this.floor(), new Map(), positions, 0, this.rotations())
-      .filter(body => positions.has(body.deviceId) && !absorbed.has(body.deviceId))
+      // Nur Geraete mit gueltigem Platz haben einen Punkt; sonst stuende die Flaeche auf dem Rasterplatz.
+      .filter(body => !absorbed.has(body.deviceId) && hasValidPlacement(body.deviceId, positions))
       .map(body => ({
         deviceId: body.deviceId,
         // SVG dreht im Uhrzeigersinn bei y nach unten: Three.js rotation.y θ entspricht rotate(-θ).
