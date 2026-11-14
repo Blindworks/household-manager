@@ -172,7 +172,7 @@
             [routerLink]="item.link && !viewMode.isTabletView() ? item.link : null"
             [attr.role]="item.dismissEntityId || item.tapAction ? 'button' : null"
             [attr.tabindex]="item.dismissEntityId || item.tapAction ? 0 : null"
-            [attr.aria-label]="item.dismissEntityId ? item.title + ' als erledigt markieren' : (item.tapAction ? item.title + ' als abgenommen markieren' : null)"
+            [attr.aria-label]="item.dismissEntityId ? item.title + ' als erledigt markieren' : (item.tapAction === 'laundry-hide' ? item.title + ' ausblenden' : (item.tapAction ? item.title + ' als abgenommen markieren' : null))"
             (click)="activateInsight(item)"
             (keydown.enter)="activateInsight(item)"
             (keydown.space)="$event.preventDefault(); activateInsight(item)"
@@ -186,7 +186,7 @@
               *ngIf="item.dismissEntityId || item.tapAction"
               class="material-symbols-outlined lumina__insight-dismiss"
               aria-hidden="true"
-            >done</span>
+            >{{ item.tapAction === 'laundry-hide' ? 'close' : 'done' }}</span>
           </div>
         </div>
       </div>

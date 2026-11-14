@@ -25,7 +25,7 @@ describe('buildLaundryInsight', () => {
 
     expect(insight?.title).toBe('Wäsche trocknet');
     expect(insight?.text).toBe('Voraussichtlich trocken morgen gegen 14 Uhr');
-    expect(insight?.tapAction).toBe('laundry-removed');
+    expect(insight?.tapAction).toBe('laundry-hide');
     expect(insight?.tone).toBe('primary');
     expect(insight?.icon).toBe('dry_cleaning');
   });
@@ -68,5 +68,21 @@ describe('buildLaundryInsight', () => {
     expect(insight?.text).toBe('Die Wäsche im Keller könnte jetzt trocken sein.');
     expect(insight?.tone).toBe('tertiary');
     expect(insight?.tapAction).toBe('laundry-removed');
+  });
+
+  it('ausgeblendeteTrocknungBleibtWeg', () => {
+    expect(buildLaundryInsight(state({}), now, '2026-11-12T08:00:00')).toBeNull();
+  });
+
+  it('ausblendenGiltNurFuerDiesenWaschgang', () => {
+    const insight = buildLaundryInsight(state({}), now, '2026-11-10T08:00:00');
+
+    expect(insight?.title).toBe('Wäsche trocknet');
+  });
+
+  it('vielleichtTrockenKommtTrotzAusblendenWieder', () => {
+    const insight = buildLaundryInsight(state({ status: 'maybe_dry' }), now, '2026-11-12T08:00:00');
+
+    expect(insight?.title).toBe('Wäsche könnte trocken sein');
   });
 });

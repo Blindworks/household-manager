@@ -68,7 +68,7 @@ import { SwitchListComponent } from '../../components/switch-list/switch-list.co
 import { NukiService } from '../../services/nuki.service';
 import { LaundryService } from '../../services/laundry.service';
 import { LaundryState } from '../../models/laundry.model';
-import { buildLaundryInsight } from '../../shared/laundry-insight.util';
+import { buildLaundryInsight, loadHiddenDryingSession, saveHiddenDryingSession } from '../../shared/laundry-insight.util';
 import { NukiLock, NukiLockActionType } from '../../models/nuki.model';
 import { PowerConsumerService } from '../../services/power-consumer.service';
 import { PowerConsumer, PowerHistory, PowerRange } from '../../models/power-consumer.model';
@@ -346,6 +346,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Karten fuer fertige Maschinen; gesetzt von den Flows ueber Helfer-Entitaeten. */
   private applianceInsights: HubInsight[] = [];
   private laundryInsight: HubInsight | null = null;
+  private laundryState: LaundryState | null = null;
+  private hiddenDryingSession: string | null = loadHiddenDryingSession();
 
   /**
    * Letzter geladener Stand der manuellen Helfer. Wird beim Wegtippen gebraucht,
@@ -1728,6 +1730,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.dismissInsight(item.dismissEntityId);
     } else if (item.tapAction === 'laundry-removed') {
       this.markLaundryRemoved();
+    } else if (item.tapAction === 'laundry-hide') {
+      this.hideLaundryDrying();
     }
   }
 
@@ -1752,8 +1756,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Blendet die Trocknungskarte des laufenden Waschgangs auf diesem Geraet aus. Der
+   * Waschgang laeuft weiter: wird die Waesche „vielleicht trocken“, erscheint die Karte
+   * dafuer wieder (und der Push-Flow meldet sich).
+   */
+  private hideLaundryDrying(): void {
+    const startedAt = this.laundryState?.startedAt;
+    if (!startedAt) {
+      return;
+    }
+    this.hiddenDryingSession = startedAt;
+    saveHiddenDryingSession(startedAt);
+    this.applyLaundryState(this.laundryState);
+  }
+
   applyLaundryState(state: LaundryState | null): void {
-    this.laundryInsight = buildLaundryInsight(state, new Date());
+    this.laundryState = state;
+    this.laundryInsight = buildLaundryInsight(state, new Date(), this.hiddenDryingSession);
     this.rebuildInsights();
   }
 

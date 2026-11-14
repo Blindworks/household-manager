@@ -4,12 +4,20 @@ import { relativeDayLabel } from './relative-day.util';
 
 const ICON = 'dry_cleaning';
 
+const HIDDEN_DRYING_KEY = 'laundry.hiddenDryingSession';
+
 /**
- * Hub-Karte fuer die Waesche im Keller. Nur bei laufender Trocknung (`drying`) oder
- * moeglicherweise trockener Waesche (`maybe_dry`) gibt es eine Karte; sie ist
- * antippbar ("abgenommen").
+ * Hub-Karte fuer die Waesche im Keller. Bei moeglicherweise trockener Waesche
+ * (`maybe_dry`) meldet ein Antippen sie als abgenommen. Die Karte der laufenden
+ * Trocknung (`drying`) blendet ein Antippen nur aus (`hiddenDryingStartedAt` = Beginn
+ * des ausgeblendeten Waschgangs) — sonst endete der Waschgang, und die spaetere Karte
+ * „könnte trocken sein“ samt Push kaeme nie.
  */
-export function buildLaundryInsight(state: LaundryState | null, now: Date): HubInsight | null {
+export function buildLaundryInsight(
+  state: LaundryState | null,
+  now: Date,
+  hiddenDryingStartedAt: string | null = null
+): HubInsight | null {
   if (!state) {
     return null;
   }
@@ -23,12 +31,15 @@ export function buildLaundryInsight(state: LaundryState | null, now: Date): HubI
     };
   }
   if (state.status === 'drying') {
+    if (hiddenDryingStartedAt !== null && state.startedAt === hiddenDryingStartedAt) {
+      return null;
+    }
     return {
       icon: ICON,
       tone: 'primary',
       title: 'Wäsche trocknet',
       text: dryingText(state, now),
-      tapAction: 'laundry-removed'
+      tapAction: 'laundry-hide'
     };
   }
   return null;
@@ -66,4 +77,22 @@ function startOfDay(date: Date): Date {
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
+}
+
+/** Beginn des Waschgangs, dessen Trocknungskarte auf diesem Geraet ausgeblendet ist; wirft nie. */
+export function loadHiddenDryingSession(): string | null {
+  try {
+    return localStorage.getItem(HIDDEN_DRYING_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Merkt sich den ausgeblendeten Waschgang auf diesem Geraet; wirft nie. */
+export function saveHiddenDryingSession(startedAt: string): void {
+  try {
+    localStorage.setItem(HIDDEN_DRYING_KEY, startedAt);
+  } catch {
+    /* ohne Speicher gilt das Ausblenden nur bis zum Neuladen */
+  }
 }

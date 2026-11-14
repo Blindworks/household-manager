@@ -3690,7 +3690,10 @@ describe('DashboardComponent (Waesche im Intelligence Hub)', () => {
       .find(card => (card.textContent ?? '').includes('Wäsche'));
   }
 
+  afterEach(() => localStorage.removeItem('laundry.hiddenDryingSession'));
+
   beforeEach(async () => {
+    localStorage.removeItem('laundry.hiddenDryingSession');
     laundrySpy = jasmine.createSpyObj('LaundryService', ['getState', 'answerHung', 'answerDry', 'markRemoved']);
     laundrySpy.getState.and.returnValue(of(laundryState('drying')));
     laundrySpy.markRemoved.and.returnValue(of(laundryState('idle')));
@@ -3739,12 +3742,35 @@ describe('DashboardComponent (Waesche im Intelligence Hub)', () => {
     expect(insightTexts(fixture)).toContain('Wäsche trocknet');
     const card = laundryCard(fixture)!;
     expect(card.getAttribute('role')).toBe('button');
-    expect(card.getAttribute('aria-label')).toBe('Wäsche trocknet als abgenommen markieren');
+    expect(card.getAttribute('aria-label')).toBe('Wäsche trocknet ausblenden');
+
+    discardPeriodicTasks();
+  }));
+
+  it('antippenDerTrocknungBlendetNurAus', fakeAsync(() => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    laundryCard(fixture)!.click();
+    fixture.detectChanges();
+
+    expect(laundrySpy.markRemoved).not.toHaveBeenCalled();
+    expect(insightTexts(fixture)).not.toContain('Wäsche');
+
+    tick(30000);
+    fixture.detectChanges();
+    expect(insightTexts(fixture)).not.toContain('Wäsche');
+
+    laundrySpy.getState.and.returnValue(of(laundryState('maybe_dry')));
+    tick(30000);
+    fixture.detectChanges();
+    expect(insightTexts(fixture)).toContain('Wäsche könnte trocken sein');
 
     discardPeriodicTasks();
   }));
 
   it('antippenLaedtFrischUndMeldetAbgenommen', fakeAsync(() => {
+    laundrySpy.getState.and.returnValue(of(laundryState('maybe_dry')));
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     laundrySpy.getState.calls.reset();
@@ -3760,6 +3786,7 @@ describe('DashboardComponent (Waesche im Intelligence Hub)', () => {
   }));
 
   it('antippenNachAnderweitigemEndeTutNichts', fakeAsync(() => {
+    laundrySpy.getState.and.returnValue(of(laundryState('maybe_dry')));
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     laundrySpy.getState.and.returnValue(of(laundryState('idle')));
