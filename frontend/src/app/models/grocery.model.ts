@@ -85,6 +85,10 @@ export interface GrocerySummaryItem {
   basePrice: number;
   baseUnit: GroceryBaseUnit;
   savingPercent: number;
+  /** Nur mit App-/Kundenkartenpreis ein Schnäppchen. */
+  appOnly: boolean;
+  /** Noch wenig Vergleichsdaten für den üblichen Preis. */
+  warmingUp: boolean;
 }
 
 export interface GrocerySummary {
@@ -124,12 +128,9 @@ export interface GrocerySourceStatus {
   reason: string | null;
 }
 
-export interface GroceryRunResult {
-  offers: number;
-  aiCalls: number;
-  deferred: number;
-  deals: number;
-  sourceFailures: Record<string, string>;
+/** Antwort auf „Jetzt suchen“ (202): der Lauf läuft im Hintergrund. */
+export interface GroceryRunStarted {
+  status: string;
 }
 
 export interface GroceryChainStatus {

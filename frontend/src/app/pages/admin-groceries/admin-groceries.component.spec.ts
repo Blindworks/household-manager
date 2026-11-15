@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AdminGroceriesComponent } from './admin-groceries.component';
@@ -87,6 +87,49 @@ describe('AdminGroceriesComponent', () => {
 
     expect(el.querySelector('.admin-groceries__run-message')?.textContent).toContain('Bitte 10 Minuten warten.');
   });
+
+  it('runNowPollsSourcesUntilARunIsNewerAndShowsTheResult', fakeAsync(() => {
+    flushInitial();
+    (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
+
+    httpMock.expectOne(`${BASE}/runs`).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+    fixture.detectChanges();
+    expect(el.querySelector('.admin-groceries__run-message')?.textContent).toContain('Suche läuft');
+    expect((el.querySelector('.admin-groceries__run') as HTMLButtonElement).disabled).toBeTrue();
+
+    tick(10000);
+    httpMock.expectOne(`${BASE}/sources`).flush([
+      { source: 'MARKTGURU', enabled: true, lastRunAt: '2026-11-15T03:00:00', offerCount: 120, ok: true, reason: null }
+    ]);
+    fixture.detectChanges();
+    expect(el.querySelector('.admin-groceries__run-message')?.textContent).toContain('Suche läuft');
+
+    tick(10000);
+    httpMock.expectOne(`${BASE}/sources`).flush([
+      { source: 'MARKTGURU', enabled: true, lastRunAt: '2026-11-15T20:31:00', offerCount: 130, ok: true, reason: null },
+      { source: 'REWE', enabled: true, lastRunAt: '2026-11-15T20:31:05', offerCount: 0, ok: false, reason: 'HTTP 500' }
+    ]);
+    fixture.detectChanges();
+
+    const message = el.querySelector('.admin-groceries__run-message')?.textContent ?? '';
+    expect(message).toContain('Suche fertig: 130 Angebote');
+    expect(message).toContain('1 Quelle gestört');
+    expect((el.querySelector('.admin-groceries__run') as HTMLButtonElement).disabled).toBeFalse();
+    tick(30000);
+    httpMock.expectNone(`${BASE}/sources`);
+  }));
+
+  it('pollingStopsOnDestroy', fakeAsync(() => {
+    flushInitial();
+    (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
+    httpMock.expectOne(`${BASE}/runs`).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+
+    fixture.destroy();
+    tick(30000);
+
+    httpMock.expectNone(`${BASE}/sources`);
+    discardPeriodicTasks();
+  }));
 
   it('blocksSavingOutsideThresholdRange', () => {
     flushInitial();

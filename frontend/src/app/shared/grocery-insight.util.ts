@@ -29,5 +29,8 @@ export function buildGroceryInsight(
 }
 
 function describeItem(item: GrocerySummaryItem): string {
-  return `${item.productName} bei ${item.chainName} ${formatBasePrice(item.basePrice, item.baseUnit)} (−${item.savingPercent} %)`;
+  const app = item.appOnly ? ' mit App' : '';
+  const warmingUp = item.warmingUp ? ', noch wenig Vergleichsdaten' : '';
+  return `${item.productName} bei ${item.chainName} ${formatBasePrice(item.basePrice, item.baseUnit)}${app}`
+    + ` (−${item.savingPercent} %${warmingUp})`;
 }

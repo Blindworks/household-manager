@@ -4,7 +4,7 @@ import { buildGroceryInsight } from './grocery-insight.util';
 function item(over: Partial<GrocerySummaryItem> = {}): GrocerySummaryItem {
   return {
     productName: 'Cola Zero', ownerUserId: null, ownerName: null, chain: 'PENNY', chainName: 'Penny',
-    basePrice: 1.43, baseUnit: 'LITER', savingPercent: 23, ...over
+    basePrice: 1.43, baseUnit: 'LITER', savingPercent: 23, appOnly: false, warmingUp: false, ...over
   };
 }
 
@@ -27,6 +27,15 @@ describe('buildGroceryInsight', () => {
     expect(insight.icon).toBe('shopping_cart');
     expect(insight.tone).toBe('secondary');
     expect(insight.link).toBe('/groceries');
+  });
+
+  it('marksAppOnlyAndWarmingUpItems', () => {
+    const summary: GrocerySummary = {
+      items: [item({ productName: 'Cola', chainName: 'Lidl', basePrice: 0.69, savingPercent: 25, appOnly: true }),
+        item({ productName: 'Milch', warmingUp: true })]
+    };
+    expect(buildGroceryInsight(summary, 1, false)!.text)
+      .toBe('Cola bei Lidl 0,69 €/l mit App (−25 %) · Milch bei Penny 1,43 €/l (−23 %, noch wenig Vergleichsdaten)');
   });
 
   it('websiteShowsOwnAndHouseholdOnly', () => {

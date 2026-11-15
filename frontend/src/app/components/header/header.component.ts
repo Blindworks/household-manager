@@ -29,7 +29,7 @@ export class HeaderComponent {
     { path: '/meter-readings', label: 'Zaehlerstaende' },
     { path: '/consumption', label: 'Verbrauch' },
     { path: '/calendar', label: 'Kalender' },
-    { path: '/groceries', label: 'Angebote' },
+    { path: '/groceries', label: 'Angebote', minRole: 'MEMBER' },
     {
       path: '/energy',
       label: 'Energie',

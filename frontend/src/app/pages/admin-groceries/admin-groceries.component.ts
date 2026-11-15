@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Subscription, catchError, of, switchMap, take, timer } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GroceryService } from '../../services/grocery.service';
@@ -24,6 +25,10 @@ const SOURCE_NAMES: Record<string, string> = {
 export const THRESHOLD_MIN = 1;
 export const THRESHOLD_MAX = 50;
 
+/** „Jetzt suchen“ läuft im Hintergrund: Quellenstatus alle 10 s, höchstens 15 Minuten lang. */
+const RUN_POLL_MS = 10_000;
+const RUN_MAX_POLLS = 90;
+
 interface Message {
   text: string;
   type: 'success' | 'error';
@@ -37,7 +42,7 @@ interface Message {
   templateUrl: './admin-groceries.component.html',
   styleUrl: './admin-groceries.component.scss'
 })
-export class AdminGroceriesComponent implements OnInit {
+export class AdminGroceriesComponent implements OnInit, OnDestroy {
   private readonly api = inject(GroceryService);
 
   readonly thresholdMin = THRESHOLD_MIN;
@@ -58,6 +63,7 @@ export class AdminGroceriesComponent implements OnInit {
   threshold: number | null = null;
   private lat: number | null = null;
   private lng: number | null = null;
+  private runPoll: Subscription | null = null;
 
   readonly marketGroups = computed(() => MARKET_CHAINS.map(({ chain, name }) => ({
     chain, name, markets: this.markets().filter(m => m.chain === chain)
@@ -150,23 +156,54 @@ export class AdminGroceriesComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.runPoll?.unsubscribe();
+  }
+
+  /**
+   * Startet den Lauf (202) und fragt den Quellenstatus ab, bis eine Quelle einen jüngeren Lauf meldet als beim
+   * Klick bekannt. Verglichen wird mit dem Serverstand statt der Browseruhr, damit Uhrabweichungen nicht stören.
+   */
   runNow(): void {
     if (this.running()) {
       return;
     }
     this.running.set(true);
     this.runMessage.set(null);
+    const before = latestRunAt(this.sources());
     this.api.runNow().subscribe({
-      next: result => {
-        this.running.set(false);
-        this.runMessage.set({
-          text: `${result.offers} Angebote geprüft, ${result.deals} Schnäppchen.`, type: 'success'
-        });
-        this.loadSources();
+      next: () => {
+        this.runMessage.set({ text: 'Suche läuft …', type: 'success' });
+        this.pollUntilRunFinished(before);
       },
       error: error => {
         this.running.set(false);
         this.runMessage.set({ text: error.message, type: 'error' });
+      }
+    });
+  }
+
+  private pollUntilRunFinished(before: string | null): void {
+    this.runPoll?.unsubscribe();
+    this.runPoll = timer(RUN_POLL_MS, RUN_POLL_MS).pipe(
+      take(RUN_MAX_POLLS),
+      switchMap(() => this.api.getSources().pipe(catchError(() => of(null))))
+    ).subscribe({
+      next: sources => {
+        const fresh = (sources ?? []).filter(s => s.lastRunAt !== null && (before === null || s.lastRunAt > before));
+        if (sources === null || fresh.length === 0) {
+          return;
+        }
+        this.sources.set(sources);
+        this.running.set(false);
+        this.runMessage.set({ text: runSummary(fresh), type: 'success' });
+        this.runPoll?.unsubscribe();
+      },
+      complete: () => {
+        if (this.running()) {
+          this.running.set(false);
+          this.runMessage.set({ text: 'Die Suche läuft noch – den Stand später hier prüfen.', type: 'success' });
+        }
       }
     });
   }
@@ -191,4 +228,16 @@ export class AdminGroceriesComponent implements OnInit {
       error: error => this.errorMessage.set(error.message)
     });
   }
+}
+
+function latestRunAt(sources: GrocerySourceStatus[]): string | null {
+  return sources.reduce<string | null>(
+    (latest, s) => (s.lastRunAt !== null && (latest === null || s.lastRunAt > latest) ? s.lastRunAt : latest), null);
+}
+
+function runSummary(fresh: GrocerySourceStatus[]): string {
+  const offers = fresh.reduce((sum, s) => sum + (s.offerCount ?? 0), 0);
+  const failed = fresh.filter(s => s.ok === false).length;
+  const failures = failed === 0 ? '' : failed === 1 ? ', 1 Quelle gestört' : `, ${failed} Quellen gestört`;
+  return `Suche fertig: ${offers} Angebote${failures}.`;
 }
