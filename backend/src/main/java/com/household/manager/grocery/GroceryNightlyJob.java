@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** Nächtlicher Lauf der Supermarkt-Angebote um 04:00; meldet gestörte Quellen und den Claude-Deckel. Wirft nie. */
+/** Nächtlicher Lauf der Supermarkt-Angebote um 04:00; meldet gestörte Quellen, den Claude-Deckel und fehlgeschlagene Claude-Bewertungen. Wirft nie. */
 @Slf4j
 @Component
 public class GroceryNightlyJob {
@@ -54,6 +54,9 @@ public class GroceryNightlyJob {
         }
         if (result.deferred() > 0) {
             parts.add("Claude-Deckel erreicht, " + result.deferred() + " Produkte verschoben");
+        }
+        if (result.aiFailures() > 0) {
+            parts.add("Claude nicht erreichbar: " + result.aiFailures() + " Bewertungen fehlgeschlagen");
         }
         return String.join("; ", parts);
     }

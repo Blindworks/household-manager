@@ -28,8 +28,9 @@ public class MatchingService {
                                boolean userDecided) {
     }
 
+    /** {@code aiFailures}: Claude-Aufrufe ohne verwertbare Antwort (Claude nicht erreichbar oder Antwort unlesbar). */
     public record MatchingResult(Map<Long, List<MatchedOffer>> matches, int aiCallsUsed, int productsDeferred,
-                                 int inputTokens, int outputTokens) {
+                                 int inputTokens, int outputTokens, int aiFailures) {
     }
 
     static final String USER_REJECTED_REASON = "vom Nutzer abgelehnt";
@@ -56,6 +57,7 @@ public class MatchingService {
         int calls;
         int inputTokens;
         int outputTokens;
+        int failures;
     }
 
     private record ProductOutcome(List<MatchedOffer> matched, boolean deferred) {
@@ -79,7 +81,7 @@ public class MatchingService {
                 deferred++;
             }
         }
-        return new MatchingResult(result, run.calls, deferred, run.inputTokens, run.outputTokens);
+        return new MatchingResult(result, run.calls, deferred, run.inputTokens, run.outputTokens, run.failures);
     }
 
     private ProductOutcome matchProduct(GroceryProduct product, List<GroceryOffer> offers, Run run) {
@@ -108,11 +110,11 @@ public class MatchingService {
                 List<GroceryOffer> block = new ArrayList<>(pending.subList(from,
                         Math.min(from + ClaudeOfferJudge.MAX_CANDIDATES, pending.size())));
                 run.calls++;
-                judge.judge(product, block, rejected).ifPresent(response -> {
+                judge.judge(product, block, rejected).ifPresentOrElse(response -> {
                     run.inputTokens += response.inputTokens();
                     run.outputTokens += response.outputTokens();
                     storeJudgements(product, block, response.judgements(), stored);
-                });
+                }, () -> run.failures++);
             }
         }
         return new ProductOutcome(collect(product, candidates, stored), deferred);

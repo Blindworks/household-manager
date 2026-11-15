@@ -27,7 +27,8 @@ import java.util.function.Function;
  * <p>Zwei Angebote gelten als dasselbe, wenn Kette, überlappende Gültigkeit und Preis passen und Marke+Titel
  * (Jaccard über Wort-Tokens ab 0,5) oder der Text-Fingerabdruck ähneln. Direktquellen kennen den Markt und gewinnen
  * bei Preis, Treuepreis, Markt und Grundpreis; Aggregatoren (ohne Markt) schließen sich jedem passenden
- * Direktangebot an und bleiben sonst kettenweit.
+ * Direktangebot an und bleiben sonst kettenweit. Ohne Direktangebot verschmelzen ein kettenweites und ein
+ * marktgenaues Aggregator-Angebot; der genaue Markt wird übernommen.
  */
 @Component
 @Slf4j
@@ -97,13 +98,18 @@ public class OfferMerger {
                 }
             }
             if (!merged) {
+                // kettenweit (marktguru) und marktgenau (kaufDA) sind dasselbe Angebot; der genaue Markt gewinnt
                 Group target = aggregatorOnly.stream()
-                        .filter(g -> java.util.Objects.equals(g.marketId, market) && g.accepts(offer))
+                        .filter(g -> (g.marketId == null || market == null || g.marketId.equals(market))
+                                && g.accepts(offer))
                         .findFirst().orElse(null);
                 if (target == null) {
                     aggregatorOnly.add(new Group(offer, market, false));
                 } else {
                     target.add(offer);
+                    if (target.marketId == null) {
+                        target.marketId = market;
+                    }
                 }
             }
         }
@@ -118,7 +124,7 @@ public class OfferMerger {
     private final class Group {
 
         private final List<RawOffer> members = new ArrayList<>();
-        private final Long marketId;
+        private Long marketId;
         private final boolean directPrimary;
 
         Group(RawOffer primary, Long marketId, boolean directPrimary) {

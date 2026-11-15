@@ -36,7 +36,7 @@ class GroceryNightlyJobTest {
         Map<String, String> failures = new LinkedHashMap<>();
         failures.put("REWE", "Zugriff gesperrt (HTTP 403)");
         failures.put("PENNY", "HTTP 500");
-        when(runService.run()).thenReturn(new RunResultDto(10, 50, 3, 2, failures));
+        when(runService.run()).thenReturn(new RunResultDto(10, 50, 3, 2, 0, failures));
 
         job.run();
 
@@ -45,8 +45,19 @@ class GroceryNightlyJobTest {
     }
 
     @Test
+    void failedClaudeCallsAreReportedTogetherWithOtherProblems() {
+        when(runService.run()).thenReturn(new RunResultDto(10, 5, 2, 2, 4, Map.of("PENNY", "HTTP 500")));
+
+        job.run();
+
+        verify(monitor).reportFailure("Quellen gestört: PENNY (HTTP 500); "
+                + "Claude-Deckel erreicht, 2 Produkte verschoben; "
+                + "Claude nicht erreichbar: 4 Bewertungen fehlgeschlagen");
+    }
+
+    @Test
     void cleanRunReportsNothing() {
-        when(runService.run()).thenReturn(new RunResultDto(10, 5, 0, 2, Map.of()));
+        when(runService.run()).thenReturn(new RunResultDto(10, 5, 0, 2, 0, Map.of()));
 
         job.run();
 

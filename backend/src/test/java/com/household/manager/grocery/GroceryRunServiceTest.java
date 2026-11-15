@@ -96,12 +96,17 @@ class GroceryRunServiceTest {
         when(collector.collect()).thenReturn(new CollectionResult(5, Map.of()));
         when(offers.findActiveFrom(TODAY)).thenReturn(List.of());
         when(matching.matchAll(anyList(), anyList(), anyInt()))
-                .thenReturn(new MatchingResult(Map.of(), 0, 0, 0, 0));
+                .thenReturn(new MatchingResult(Map.of(), 0, 0, 0, 0, 0));
     }
 
     private GroceryRunService service(MatchingService matchingService, DealEvaluator dealEvaluator) {
+        return service(matchingService, dealEvaluator, Runnable::run);
+    }
+
+    private GroceryRunService service(MatchingService matchingService, DealEvaluator dealEvaluator,
+                                      java.util.concurrent.Executor manualExecutor) {
         return new GroceryRunService(collector, products, offers, matchingService, recorder, usualPrices,
-                dealEvaluator, settings, properties, reporter, clock);
+                dealEvaluator, settings, properties, reporter, clock, manualExecutor);
     }
 
     private static GroceryProduct product(long id, String search) {
@@ -141,7 +146,7 @@ class GroceryRunServiceTest {
         when(products.findAll()).thenReturn(List.of(a, b));
         when(offers.findActiveFrom(TODAY)).thenReturn(List.of(offer));
         when(matching.matchAll(List.of(a, b), List.of(offer), 50)).thenReturn(new MatchingResult(
-                Map.of(1L, List.of(), 2L, List.of(matchB)), 2, 0, 100, 20));
+                Map.of(1L, List.of(), 2L, List.of(matchB)), 2, 0, 100, 20, 1));
         when(usualPrices.usual(1L, TODAY)).thenThrow(new RuntimeException("DB weg"));
         when(usualPrices.usual(2L, TODAY)).thenReturn(USUAL);
         when(evaluator.evaluate(b, List.of(matchB), USUAL, 10)).thenReturn(List.of(dealB));
@@ -153,6 +158,7 @@ class GroceryRunServiceTest {
         assertThat(result.deals()).isEqualTo(1);
         assertThat(result.offers()).isEqualTo(5);
         assertThat(result.aiCalls()).isEqualTo(2);
+        assertThat(result.aiFailures()).isEqualTo(1);
         assertThat(service.snapshot().deals()).containsEntry(2L, List.of(dealB)).containsEntry(1L, List.of());
         verify(recorder).record(b, List.of(matchB));
         verify(reporter).report(Map.of(1L, List.of(), 2L, List.of(dealB)), List.of(a, b));
@@ -235,6 +241,39 @@ class GroceryRunServiceTest {
         verify(collector, times(1)).collect();
         // Die abgelehnte manuelle Anfrage hat keinen Mindestabstand verbraucht
         service.runManually();
+    }
+
+    @Test
+    void manualRunStartsInBackgroundAndBlocksFurtherRunsUntilDone() {
+        List<Runnable> queued = new java.util.ArrayList<>();
+        GroceryRunService service = service(matching, evaluator, queued::add);
+
+        service.runManually();
+
+        verify(collector, never()).collect();
+        assertThat(queued).hasSize(1);
+        assertThatThrownBy(service::run).isInstanceOf(TooManyRequestsException.class)
+                .hasMessage("Lauf läuft bereits");
+
+        queued.get(0).run();
+
+        verify(collector, times(1)).collect();
+        service.run();
+        verify(collector, times(2)).collect();
+    }
+
+    @Test
+    void failingBackgroundRunReleasesTheRunningFlag() {
+        List<Runnable> queued = new java.util.ArrayList<>();
+        GroceryRunService service = service(matching, evaluator, queued::add);
+        when(collector.collect()).thenThrow(new RuntimeException("Netz weg"))
+                .thenReturn(new CollectionResult(0, Map.of()));
+
+        service.runManually();
+        queued.get(0).run();
+
+        service.run();
+        verify(collector, times(2)).collect();
     }
 
     @Test

@@ -66,6 +66,22 @@ class OfferMergerTest {
     }
 
     @Test
+    void chainWideAndMarketSpecificAggregatorOffersMergeAndKeepTheMarket() {
+        Map<String, Long> markets = Map.of("EDEKA|55", 55L);
+        RawOffer marktguru = raw(SourceKey.MARKTGURU, Chain.EDEKA, null, "Butter", "1.49").brand("Kerrygold").build();
+        RawOffer kaufda = raw(SourceKey.KAUFDA, Chain.EDEKA, "55", "Kerrygold Butter", "1.49").build();
+
+        List<OfferMerger.MergedOffer> forward = merger.merge(List.of(marktguru, kaufda), markets);
+        List<OfferMerger.MergedOffer> backward = merger.merge(List.of(kaufda, marktguru), markets);
+
+        assertThat(forward).hasSize(1);
+        assertThat(forward.get(0).marketId()).isEqualTo(55L);
+        assertThat(forward.get(0).sources()).containsExactlyInAnyOrder(SourceKey.MARKTGURU, SourceKey.KAUFDA);
+        assertThat(backward).hasSize(1);
+        assertThat(backward.get(0).marketId()).isEqualTo(55L);
+    }
+
+    @Test
     void aggregatorMergesIntoEveryMatchingDirectMarket() {
         Map<String, Long> markets = Map.of("REWE|1", 1L, "REWE|2", 2L);
         RawOffer mg = raw(SourceKey.MARKTGURU, Chain.REWE, null, "Cola", "7.99").brand("Coca-Cola").build();

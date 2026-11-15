@@ -1,5 +1,6 @@
 package com.household.manager.grocery;
 
+import com.household.manager.entitystate.EntityDomain;
 import com.household.manager.entitystate.EntitySource;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.entitystate.EntityStateUpdate;
@@ -10,6 +11,7 @@ import com.household.manager.grocery.matching.Verdict;
 import com.household.manager.grocery.pricing.BaseUnit;
 import com.household.manager.grocery.pricing.Deal;
 import com.household.manager.model.entity.AppUser;
+import com.household.manager.model.entity.EntityState;
 import com.household.manager.repository.AppUserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,12 +49,16 @@ class GroceryEntityReporterTest {
     }
 
     static Deal deal(Chain chain, String basePrice, int saving) {
+        return deal(chain, basePrice, saving, Verdict.MATCH, false);
+    }
+
+    static Deal deal(Chain chain, String basePrice, int saving, Verdict verdict, boolean userDecided) {
         GroceryOffer o = new GroceryOffer();
         o.setChain(chain);
         o.setBasePrice(new BigDecimal(basePrice));
         o.setBaseUnit(BaseUnit.LITER);
         o.setFingerprint("fp-" + chain + basePrice);
-        MatchedOffer m = new MatchedOffer(o, Verdict.MATCH, null, null, false);
+        MatchedOffer m = new MatchedOffer(o, verdict, null, null, userDecided);
         return new Deal(m, new BigDecimal(basePrice), new BigDecimal("2.000"), Deal.ReferenceKind.USUAL, saving,
                 false, false, null);
     }
@@ -109,5 +115,44 @@ class GroceryEntityReporterTest {
         Map<String, EntityStateUpdate> byId = reported(2);
         EntityStateUpdate any = byId.values().stream().filter(u -> "6".equals(u.state())).findFirst().orElseThrow();
         assertThat((List<?>) any.attributes().get("items")).hasSize(5);
+    }
+
+    @Test
+    void stateCountsOnlySureDealsAndMaybeCountIsAttribute() {
+        when(users.findAll()).thenReturn(List.of());
+
+        reporter.report(Map.of(1L, List.of(deal(Chain.PENNY, "1.43", 23),
+                        deal(Chain.LIDL, "0.99", 30, Verdict.MAYBE, false),
+                        deal(Chain.ALDI_SUED, "1.10", 15, Verdict.MATCH, true))),
+                List.of(product(1L, null, "Cola")));
+
+        EntityStateUpdate household = reported(1).get("sensor.grocery_deals_household");
+        assertThat(household.state()).isEqualTo("2");
+        assertThat(household.attributes().get("maybeCount")).isEqualTo(1);
+        assertThat((List<?>) household.attributes().get("items")).hasSize(2)
+                .noneMatch(item -> item.toString().contains("Lidl"));
+    }
+
+    @Test
+    void orphanedUserEntityIsReportedAsZero() {
+        when(users.findAll()).thenReturn(List.of());
+        EntityState orphan = new EntityState();
+        orphan.setEntityId("sensor.grocery_deals_9");
+        orphan.setSourceRef("deals_9");
+        orphan.setFriendlyName("Schnäppchen Anna");
+        orphan.setState("3");
+        EntityState household = new EntityState();
+        household.setEntityId("sensor.grocery_deals_household");
+        household.setSourceRef("deals_household");
+        when(entityStateService.find(EntityDomain.SENSOR, EntitySource.GROCERY))
+                .thenReturn(List.of(orphan, household));
+
+        reporter.report(Map.of(), List.of());
+
+        Map<String, EntityStateUpdate> byId = reported(2);
+        EntityStateUpdate reportedOrphan = byId.get("sensor.grocery_deals_9");
+        assertThat(reportedOrphan.state()).isEqualTo("0");
+        assertThat(reportedOrphan.friendlyName()).isEqualTo("Schnäppchen Anna");
+        assertThat(reportedOrphan.attributes().get("items")).isEqualTo(List.of());
     }
 }

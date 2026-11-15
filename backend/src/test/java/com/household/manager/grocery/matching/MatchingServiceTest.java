@@ -178,6 +178,7 @@ class MatchingServiceTest {
         MatchingResult result = service.matchAll(List.of(product(1, "butter", "")), offers, 5);
 
         assertThat(result.aiCallsUsed()).isEqualTo(2);
+        assertThat(result.aiFailures()).isEqualTo(2);
         assertThat(result.productsDeferred()).isZero();
         ArgumentCaptor<List<GroceryOffer>> block = ArgumentCaptor.forClass(List.class);
         verify(judge, times(2)).judge(any(), block.capture(), anyList());
@@ -195,6 +196,7 @@ class MatchingServiceTest {
                 List.of(offer("Butter", "fp1")), 5);
 
         assertThat(result.matches().get(1L)).isEmpty();
+        assertThat(result.aiFailures()).isZero();
     }
 
     @Test

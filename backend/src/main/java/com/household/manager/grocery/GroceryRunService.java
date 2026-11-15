@@ -16,6 +16,8 @@ import com.household.manager.grocery.pricing.UsualPriceCalculator.UsualPrice;
 import com.household.manager.repository.GroceryOfferRepository;
 import com.household.manager.repository.GroceryProductRepository;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -43,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class GroceryRunService {
 
     static final Duration MANUAL_COOLDOWN = Duration.ofMinutes(10);
+    static final String MANUAL_RUN_THREAD = "grocery-manual-run";
 
     /** Zugeordnete Angebote und Schnäppchen je Produkt-Id; {@code collectedAt} = jüngster Sammelzeitpunkt. */
     public record Snapshot(Map<Long, List<MatchedOffer>> matches, Map<Long, List<Deal>> deals,
@@ -63,17 +69,33 @@ public class GroceryRunService {
     private final GroceryProperties properties;
     private final GroceryEntityReporter reporter;
     private final Clock clock;
+    private final Executor manualRunExecutor;
 
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicReference<Instant> lastManualRun = new AtomicReference<>();
     private final AtomicReference<Snapshot> snapshot = new AtomicReference<>();
     private final Object snapshotLock = new Object();
 
+    @Autowired
     public GroceryRunService(OfferCollectionService collector, GroceryProductRepository products,
                              GroceryOfferRepository offers, MatchingService matching,
                              PriceObservationRecorder recorder, UsualPriceCalculator usualPrices,
                              DealEvaluator evaluator, GrocerySettingsService settings, GroceryProperties properties,
                              GroceryEntityReporter reporter, Clock clock) {
+        this(collector, products, offers, matching, recorder, usualPrices, evaluator, settings, properties, reporter,
+                clock, Executors.newSingleThreadExecutor(runnable -> {
+                    Thread thread = new Thread(runnable, MANUAL_RUN_THREAD);
+                    thread.setDaemon(true);
+                    return thread;
+                }));
+    }
+
+    GroceryRunService(OfferCollectionService collector, GroceryProductRepository products,
+                      GroceryOfferRepository offers, MatchingService matching,
+                      PriceObservationRecorder recorder, UsualPriceCalculator usualPrices,
+                      DealEvaluator evaluator, GrocerySettingsService settings, GroceryProperties properties,
+                      GroceryEntityReporter reporter, Clock clock, Executor manualRunExecutor) {
+        this.manualRunExecutor = manualRunExecutor;
         this.collector = collector;
         this.products = products;
         this.offers = offers;
@@ -103,13 +125,41 @@ public class GroceryRunService {
         }
     }
 
-    /** „Jetzt suchen“: Mindestabstand 10 min, vor dem Lauf reserviert; ein laufender Lauf verbraucht ihn nicht. */
-    public RunResultDto runManually() {
-        if (running.get()) {
+    /**
+     * „Jetzt suchen“: prüft synchron Laufsperre und Mindestabstand (10 min, vor dem Lauf reserviert; ein laufender
+     * Lauf verbraucht ihn nicht) und startet den Lauf dann im Hintergrund — ein voller Lauf dauert Minuten und
+     * überschritte sonst die Proxy-Timeouts.
+     *
+     * @throws TooManyRequestsException wenn bereits ein Lauf läuft oder der Mindestabstand nicht erreicht ist
+     */
+    public void runManually() {
+        if (!running.compareAndSet(false, true)) {
             throw new TooManyRequestsException("Lauf läuft bereits");
         }
-        reserveManualSlot();
-        return run();
+        try {
+            reserveManualSlot();
+            manualRunExecutor.execute(this::runManualInBackground);
+        } catch (RuntimeException e) {
+            running.set(false);
+            throw e;
+        }
+    }
+
+    private void runManualInBackground() {
+        try {
+            runExclusive();
+        } catch (RuntimeException e) {
+            log.warn("Manueller Supermarkt-Lauf fehlgeschlagen: {}", e.getMessage(), e);
+        } finally {
+            running.set(false);
+        }
+    }
+
+    @PreDestroy
+    void shutdownManualRuns() {
+        if (manualRunExecutor instanceof ExecutorService service) {
+            service.shutdownNow();
+        }
     }
 
     private void reserveManualSlot() {
@@ -135,13 +185,14 @@ public class GroceryRunService {
         MatchingResult result = computation.matching();
         int dealCount = computation.deals().values().stream().mapToInt(List::size).sum();
         log.info("Supermarkt-Lauf: {} Angebote, {} Produkte, {} Claude-Aufrufe ({} Eingabe-/{} Ausgabe-Tokens), "
-                        + "{} verschoben, {} Schnäppchen, {} Quelle(n) gestört",
+                        + "{} fehlgeschlagen, {} verschoben, {} Schnäppchen, {} Quelle(n) gestört",
                 collection.offerCount(), active.size(), result.aiCallsUsed(), result.inputTokens(),
-                result.outputTokens(), result.productsDeferred(), dealCount, collection.failures().size());
+                result.outputTokens(), result.aiFailures(), result.productsDeferred(), dealCount,
+                collection.failures().size());
         Map<String, String> failures = new LinkedHashMap<>();
         collection.failures().forEach((key, reason) -> failures.put(key.name(), reason));
         return new RunResultDto(collection.offerCount(), result.aiCallsUsed(), result.productsDeferred(), dealCount,
-                failures);
+                result.aiFailures(), failures);
     }
 
     /** Nach dem Start: Schnäppchen aus gespeicherten Angeboten und Urteilen, ohne Claude. Wirft nie. */

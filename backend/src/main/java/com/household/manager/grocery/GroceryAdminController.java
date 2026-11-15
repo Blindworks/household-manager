@@ -7,12 +7,14 @@ import com.household.manager.grocery.dto.GrocerySettingsDto;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
 import com.household.manager.grocery.dto.MarketSelectionDto;
-import com.household.manager.grocery.dto.RunResultDto;
+import com.household.manager.grocery.dto.RunStartedDto;
 import com.household.manager.grocery.dto.SourceStatusDto;
 import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.SourceKey;
 import com.household.manager.repository.GrocerySourceRunRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,13 +92,14 @@ public class GroceryAdminController {
         return body;
     }
 
-    /** „Jetzt suchen“: synchroner Lauf, höchstens alle 10 Minuten (sonst 429). */
+    /** „Jetzt suchen“: startet den Lauf im Hintergrund (202), höchstens alle 10 Minuten (sonst 429). */
     @PostMapping("/runs")
-    public RunResultDto runNow() {
+    public ResponseEntity<RunStartedDto> runNow() {
         if (!properties.isEnabled()) {
             throw new IllegalStateException("Supermarkt-Angebote sind deaktiviert");
         }
-        return runService.runManually();
+        runService.runManually();
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RunStartedDto("gestartet"));
     }
 
     @GetMapping("/sources")

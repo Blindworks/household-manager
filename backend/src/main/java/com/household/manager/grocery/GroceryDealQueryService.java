@@ -111,7 +111,7 @@ public class GroceryDealQueryService {
         List<SummaryItem> items = new ArrayList<>();
         for (GroceryProduct product : products.findAll()) {
             for (Deal deal : snapshot.deals().getOrDefault(product.getId(), List.of())) {
-                if (deal.match().verdict() == Verdict.MATCH) {
+                if (deal.isSure()) {
                     GroceryOffer offer = deal.match().offer();
                     items.add(new SummaryItem(product.getName(), product.getOwnerUserId(),
                             GroceryOwners.ownerName(product.getOwnerUserId(), names), offer.getChain(),
