@@ -68,14 +68,22 @@ class GrocerySettingsServiceTest {
     }
 
     @Test
+    void updateRejectsMissingFields() {
+        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", null, 8.0, 10)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", 50.0, 8.0, null)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void updateRejectsInvalidValues() {
-        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("6031", 50, 8, 10)))
+        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("6031", 50.0, 8.0, 10)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", Double.NaN, 8, 10)))
+        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", Double.NaN, 8.0, 10)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", 50, 181, 10)))
+        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", 50.0, 181.0, 10)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", 50, 8, 0)))
+        assertThatThrownBy(() -> service.update(new GrocerySettingsDto("60311", 50.0, 8.0, 0)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

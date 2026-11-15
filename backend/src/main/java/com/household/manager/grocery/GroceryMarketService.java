@@ -1,5 +1,6 @@
 package com.household.manager.grocery;
 
+import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
 import com.household.manager.grocery.entity.GroceryMarket;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 /** Marktkandidaten, deren Auswahl und die daraus abgeleiteten Abrufeingaben. */
@@ -34,7 +34,7 @@ public class GroceryMarketService implements FetchContextProvider {
         return refresh().markets();
     }
 
-    @Transactional
+    /** Bewusst ohne umschließende Transaktion: Netzabrufe halten keine DB-Transaktion, jedes save() ist eigen. */
     public MarketRefreshDto refresh() {
         String zip = settings.zip();
         double lat = settings.lat();
@@ -65,7 +65,7 @@ public class GroceryMarketService implements FetchContextProvider {
     @Transactional
     public MarketDto setSelected(long id, boolean selected) {
         GroceryMarket market = markets.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Markt " + id + " nicht gefunden"));
+                .orElseThrow(() -> new ResourceNotFoundException("Markt " + id + " nicht gefunden"));
         market.setSelected(selected);
         return toDto(markets.save(market));
     }

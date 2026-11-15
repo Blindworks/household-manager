@@ -62,7 +62,7 @@ public class GrocerySettingsService {
     }
 
     /** Zufällige, einmalig erzeugte Kennung für kaufDA; dieselbe Zeile nutzt {@code KaufdaSource}. */
-    public String kaufdaAccountId() {
+    public synchronized String kaufdaAccountId() {
         String existing = settings.getString(CATEGORY, ACCOUNT_ID, "");
         if (existing != null && !existing.isBlank()) {
             return existing;
@@ -86,7 +86,10 @@ public class GrocerySettingsService {
     }
 
     public void update(GrocerySettingsDto dto) {
-        if (dto == null || dto.zip() == null || !isValidZip(dto.zip())) {
+        if (dto == null || dto.lat() == null || dto.lng() == null || dto.dealThresholdPercent() == null) {
+            throw new IllegalArgumentException("Alle Felder müssen angegeben werden.");
+        }
+        if (dto.zip() == null || !isValidZip(dto.zip())) {
             throw new IllegalArgumentException("Die PLZ muss aus genau 5 Ziffern bestehen.");
         }
         if (!Double.isFinite(dto.lat()) || Math.abs(dto.lat()) > 90) {

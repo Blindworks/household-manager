@@ -26,10 +26,12 @@ class GroceryMarketServiceTest {
     private MarketSearch rewe;
     private MarketSearch penny;
     private GroceryMarketService service;
+    private GroceryMarketRepository repoMock;
 
     @BeforeEach
     void setUp() {
         GroceryMarketRepository repo = mock(GroceryMarketRepository.class);
+        repoMock = repo;
         when(repo.findAll()).thenAnswer(i -> new ArrayList<>(db));
         when(repo.findBySelectedTrue()).thenAnswer(i -> db.stream().filter(GroceryMarket::isSelected).toList());
         when(repo.findById(any())).thenAnswer(i -> db.stream()
@@ -109,6 +111,35 @@ class GroceryMarketServiceTest {
         service.setSelected(db.get(0).getId(), true);
         assertThat(service.enabledChains()).contains(Chain.REWE);
         assertThat(service.current().selectedMarkets()).hasSize(1);
+    }
+
+    @Test
+    void persistenceErrorOfOneChainDoesNotLoseTheOthers() throws Exception {
+        GroceryMarketRepository repo = repoMock;
+        org.mockito.Mockito.doAnswer(i -> {
+            GroceryMarket m = i.getArgument(0);
+            if (m.getChain() == Chain.REWE) {
+                throw new org.springframework.dao.DataIntegrityViolationException("boom");
+            }
+            m.setId((long) db.size() + 1);
+            db.add(m);
+            return m;
+        }).when(repo).save(any());
+        when(rewe.search(any(), anyDouble(), anyDouble()))
+                .thenReturn(List.of(candidate(Chain.REWE, "1", "REWE")));
+        when(penny.search(any(), anyDouble(), anyDouble()))
+                .thenReturn(List.of(candidate(Chain.PENNY, "9", "Penny")));
+
+        MarketRefreshDto result = service.refresh();
+
+        assertThat(result.failedChains()).containsExactly(Chain.REWE);
+        assertThat(result.markets()).extracting(m -> m.chain()).containsExactly(Chain.PENNY);
+    }
+
+    @Test
+    void unknownMarketIdIsNotFound() {
+        assertThatThrownBy(() -> service.setSelected(99, true))
+                .isInstanceOf(com.household.manager.exception.ResourceNotFoundException.class);
     }
 
     @Test
