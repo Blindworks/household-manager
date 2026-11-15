@@ -90,3 +90,50 @@ export interface GrocerySummaryItem {
 export interface GrocerySummary {
   items: GrocerySummaryItem[];
 }
+
+/** Spiegel der Admin-DTOs unter /v1/admin/groceries. */
+export interface GrocerySettings {
+  zip: string | null;
+  lat: number | null;
+  lng: number | null;
+  dealThresholdPercent: number | null;
+}
+
+export interface GroceryMarket {
+  id: number;
+  chain: string;
+  externalId: string;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  selected: boolean;
+}
+
+export interface GroceryMarketRefresh {
+  markets: GroceryMarket[];
+  failedChains: string[];
+}
+
+export interface GrocerySourceStatus {
+  source: string;
+  enabled: boolean;
+  lastRunAt: string | null;
+  offerCount: number | null;
+  ok: boolean | null;
+  reason: string | null;
+}
+
+export interface GroceryRunResult {
+  offers: number;
+  aiCalls: number;
+  deferred: number;
+  deals: number;
+  sourceFailures: Record<string, string>;
+}
+
+export interface GroceryChainStatus {
+  chain: string;
+  name: string;
+  enabled: boolean;
+}

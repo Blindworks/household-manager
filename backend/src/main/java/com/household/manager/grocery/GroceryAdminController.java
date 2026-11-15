@@ -2,6 +2,7 @@ package com.household.manager.grocery;
 
 import com.household.manager.audit.AuditService;
 import com.household.manager.grocery.dto.ChainEnabledDto;
+import com.household.manager.grocery.dto.ChainStatusDto;
 import com.household.manager.grocery.dto.GrocerySettingsDto;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -69,6 +71,16 @@ public class GroceryAdminController {
         auditService.record("grocery.market.select",
                 market.chain() + " " + market.name() + " -> " + body.selected());
         return market;
+    }
+
+    /** Ketten ohne Märkte mit ihrem Schalter (Märkte-Ketten steuert die Marktauswahl). */
+    @GetMapping("/chains")
+    public List<ChainStatusDto> getChains() {
+        Set<Chain> enabled = marketService.enabledChains();
+        return Arrays.stream(Chain.values())
+                .filter(chain -> !chain.hasMarkets())
+                .map(chain -> new ChainStatusDto(chain, chain.displayName(), enabled.contains(chain)))
+                .toList();
     }
 
     @PutMapping("/chains/{chain}")

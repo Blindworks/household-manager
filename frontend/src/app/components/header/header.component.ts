@@ -82,6 +82,7 @@ export class HeaderComponent {
         { path: '/admin/network-devices', label: 'Netzwerk-Geräte', minRole: 'ADMIN' },
         { path: '/admin/charging', label: 'Ladesäulen', minRole: 'ADMIN' },
         { path: '/admin/heating', label: 'Heizung', minRole: 'ADMIN' },
+        { path: '/admin/groceries', label: 'Supermärkte', minRole: 'ADMIN' },
         { path: '/admin/presence', label: 'Anwesenheit', minRole: 'ADMIN' },
         { path: '/admin/ble-sensors', label: 'Bluetooth-Thermometer', minRole: 'ADMIN' },
         { path: '/admin/dirigera', label: 'IKEA Dirigera', minRole: 'ADMIN' },

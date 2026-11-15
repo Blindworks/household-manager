@@ -4,7 +4,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
   GroceryDeal, GroceryDealsView, GroceryOwner, GroceryPriceObservation, GroceryProduct,
-  GroceryProductRequest, GrocerySummary
+  GroceryProductRequest, GrocerySummary, GrocerySettings, GroceryMarket, GroceryMarketRefresh,
+  GrocerySourceStatus, GroceryRunResult, GroceryChainStatus
 } from '../models/grocery.model';
 
 /** Service fuer die Supermarkt-Angebote-API. */
@@ -12,6 +13,7 @@ import {
 export class GroceryService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1/groceries';
+  private readonly adminUrl = '/api/v1/admin/groceries';
 
   getProducts(owner: GroceryOwner): Observable<GroceryProduct[]> {
     return this.http.get<GroceryProduct[]>(`${this.baseUrl}/products`, { params: this.ownerParams(owner) })
@@ -56,6 +58,50 @@ export class GroceryService {
   getSummary(): Observable<GrocerySummary> {
     return this.http.get<GrocerySummary>(`${this.baseUrl}/summary`)
       .pipe(catchError(this.handleError));
+  }
+
+  // ---- Admin (/v1/admin/groceries) ----
+
+  getSettings(): Observable<GrocerySettings> {
+    return this.http.get<GrocerySettings>(`${this.adminUrl}/settings`).pipe(catchError(this.handleError));
+  }
+
+  updateSettings(settings: GrocerySettings): Observable<GrocerySettings> {
+    return this.http.put<GrocerySettings>(`${this.adminUrl}/settings`, settings).pipe(catchError(this.handleError));
+  }
+
+  getMarkets(): Observable<GroceryMarket[]> {
+    return this.http.get<GroceryMarket[]>(`${this.adminUrl}/markets`).pipe(catchError(this.handleError));
+  }
+
+  refreshMarkets(): Observable<GroceryMarketRefresh> {
+    return this.http.post<GroceryMarketRefresh>(`${this.adminUrl}/markets/refresh`, {})
+      .pipe(catchError(this.handleError));
+  }
+
+  setMarketSelected(id: number, selected: boolean): Observable<GroceryMarket> {
+    return this.http.put<GroceryMarket>(`${this.adminUrl}/markets/${id}`, { selected })
+      .pipe(catchError(this.handleError));
+  }
+
+  getChains(): Observable<GroceryChainStatus[]> {
+    return this.http.get<GroceryChainStatus[]>(`${this.adminUrl}/chains`).pipe(catchError(this.handleError));
+  }
+
+  setChainEnabled(chain: string, enabled: boolean): Observable<{ enabled: boolean }> {
+    return this.http.put<{ enabled: boolean }>(`${this.adminUrl}/chains/${chain}`, { enabled })
+      .pipe(catchError(this.handleError));
+  }
+
+  getSources(): Observable<GrocerySourceStatus[]> {
+    return this.http.get<GrocerySourceStatus[]>(`${this.adminUrl}/sources`).pipe(catchError(this.handleError));
+  }
+
+  runNow(): Observable<GroceryRunResult> {
+    return this.http.post<GroceryRunResult>(`${this.adminUrl}/runs`, {}).pipe(
+      catchError((error: HttpErrorResponse) => error.status === 429
+        ? throwError(() => new Error(error.error?.message || 'Bitte 10 Minuten warten.'))
+        : this.handleError(error)));
   }
 
   private ownerParams(owner: GroceryOwner): HttpParams {
