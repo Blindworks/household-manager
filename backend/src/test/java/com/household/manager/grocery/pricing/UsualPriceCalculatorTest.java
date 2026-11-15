@@ -36,9 +36,9 @@ class UsualPriceCalculatorTest {
     @Test
     void medianOfTwelveWeeksOnePerChainAndWeek() {
         when(repo.findByProductIdAndIsoWeekIn(anyLong(), anyCollection())).thenReturn(List.of(
-                obs(Chain.EDEKA, "2026-W44", "1.10"), obs(Chain.REWE, "2026-W44", "1.20"),
-                obs(Chain.EDEKA, "2026-W45", "1.15"), obs(Chain.REWE, "2026-W45", "1.30"),
-                obs(Chain.EDEKA, "2026-W46", "1.05"), obs(Chain.REWE, "2026-W46", "1.25")));
+                obs(Chain.EDEKA, "2026-W43", "1.10"), obs(Chain.REWE, "2026-W43", "1.20"),
+                obs(Chain.EDEKA, "2026-W44", "1.15"), obs(Chain.REWE, "2026-W44", "1.30"),
+                obs(Chain.EDEKA, "2026-W45", "1.05"), obs(Chain.REWE, "2026-W45", "1.25")));
 
         UsualPrice usual = calculator.usual(1, today);
 
@@ -50,13 +50,13 @@ class UsualPriceCalculatorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void windowCoversTwelveWeeksIncludingCurrent() {
+    void windowCoversTwelveCompletedWeeksExcludingCurrent() {
         when(repo.findByProductIdAndIsoWeekIn(anyLong(), anyCollection())).thenReturn(List.of());
         calculator.usual(1, today);
 
         ArgumentCaptor<Collection<String>> weeks = ArgumentCaptor.forClass(Collection.class);
         verify(repo).findByProductIdAndIsoWeekIn(anyLong(), weeks.capture());
-        assertThat(weeks.getValue()).hasSize(12).contains("2026-W46", "2026-W35").doesNotContain("2026-W34", "2026-W47");
+        assertThat(weeks.getValue()).hasSize(12).contains("2026-W45", "2026-W34").doesNotContain("2026-W33", "2026-W46", "2026-W47");
     }
 
     @Test
@@ -70,11 +70,25 @@ class UsualPriceCalculatorTest {
         assertThat(oneWeek.warmingUp()).isTrue();
 
         when(repo.findByProductIdAndIsoWeekIn(anyLong(), anyCollection())).thenReturn(List.of(
-                obs(Chain.EDEKA, "2026-W44", "1.10"), obs(Chain.EDEKA, "2026-W45", "1.20"),
-                obs(Chain.EDEKA, "2026-W46", "1.15")));
+                obs(Chain.EDEKA, "2026-W43", "1.10"), obs(Chain.EDEKA, "2026-W44", "1.20"),
+                obs(Chain.EDEKA, "2026-W45", "1.15")));
         UsualPrice fewObservations = calculator.usual(1, today);
         assertThat(fewObservations.distinctWeeks()).isEqualTo(3);
         assertThat(fewObservations.warmingUp()).isTrue();
+    }
+
+    @Test
+    void currentWeekObservationIsIgnored() {
+        when(repo.findByProductIdAndIsoWeekIn(anyLong(), anyCollection())).thenAnswer(inv -> {
+            Collection<String> weeks = inv.getArgument(1);
+            return List.of(obs(Chain.EDEKA, "2026-W46", "0.50"), obs(Chain.EDEKA, "2026-W45", "1.50"))
+                    .stream().filter(o -> weeks.contains(o.getIsoWeek())).toList();
+        });
+
+        UsualPrice usual = calculator.usual(1, today);
+
+        assertThat(usual.observations()).isEqualTo(1);
+        assertThat(usual.median()).isEqualByComparingTo("1.500");
     }
 
     @Test

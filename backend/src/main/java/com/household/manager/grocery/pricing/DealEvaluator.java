@@ -18,7 +18,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-/** Entscheidet, welche zugeordneten Angebote echte Schnäppchen sind. Ein Streichpreis ist nie Maßstab. */
+/**
+ * Entscheidet, welche zugeordneten Angebote echte Schnäppchen sind. Ein Streichpreis ist nie Maßstab.
+ * Ein Angebot ohne Enddatum ({@code validTo == null}) gilt als aktuell.
+ */
 @Component
 @RequiredArgsConstructor
 public class DealEvaluator {
@@ -59,12 +62,14 @@ public class DealEvaluator {
             return Optional.empty();
         }
         Reference ref = reference.get();
+        BigDecimal app = scale(offer, offer.getLoyaltyPrice()).orElse(null);
         if (isBelowThreshold(offer.getBasePrice(), ref.value(), threshold)) {
-            return Optional.of(deal(match, offer.getBasePrice(), ref, false, usual));
+            return Optional.of(deal(match, offer.getBasePrice(), ref, false, usual, app));
         }
-        return scale(offer, offer.getLoyaltyPrice())
-                .filter(app -> isBelowThreshold(app, ref.value(), threshold))
-                .map(app -> deal(match, app, ref, true, usual));
+        if (app != null && isBelowThreshold(app, ref.value(), threshold)) {
+            return Optional.of(deal(match, app, ref, true, usual, app));
+        }
+        return Optional.empty();
     }
 
     private Optional<Reference> reference(GroceryProduct product, GroceryOffer offer, UsualPrice usual) {
@@ -94,9 +99,10 @@ public class DealEvaluator {
         return basePrice.compareTo(limit) <= 0;
     }
 
-    private Deal deal(MatchedOffer match, BigDecimal basePrice, Reference ref, boolean appOnly, UsualPrice usual) {
+    private Deal deal(MatchedOffer match, BigDecimal basePrice, Reference ref, boolean appOnly, UsualPrice usual,
+                      BigDecimal appBasePrice) {
         int saving = ref.value().subtract(basePrice).multiply(HUNDRED)
                 .divide(ref.value(), 0, RoundingMode.HALF_UP).intValue();
-        return new Deal(match, basePrice, ref.value(), ref.kind(), saving, appOnly, usual.warmingUp());
+        return new Deal(match, basePrice, ref.value(), ref.kind(), saving, appOnly, usual.warmingUp(), appBasePrice);
     }
 }

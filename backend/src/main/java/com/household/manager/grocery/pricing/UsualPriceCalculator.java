@@ -14,7 +14,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Üblicher Grundpreis: Median der Beobachtungen der letzten 12 ISO-Wochen (inklusive der laufenden). */
+/** Üblicher Grundpreis: Median der Beobachtungen der letzten 12 abgeschlossenen ISO-Wochen.
+ * Die laufende Woche zählt nicht mit, damit ein Angebot nie seinen eigenen Maßstab verschiebt. */
 @Component
 @RequiredArgsConstructor
 public class UsualPriceCalculator {
@@ -30,7 +31,7 @@ public class UsualPriceCalculator {
 
     public UsualPrice usual(long productId, LocalDate today) {
         List<String> weeks = new ArrayList<>();
-        for (int i = 0; i < WINDOW_WEEKS; i++) {
+        for (int i = 1; i <= WINDOW_WEEKS; i++) {
             weeks.add(IsoWeeks.of(today.minusWeeks(i)));
         }
         List<GroceryPriceObservation> found = observations.findByProductIdAndIsoWeekIn(productId, weeks);

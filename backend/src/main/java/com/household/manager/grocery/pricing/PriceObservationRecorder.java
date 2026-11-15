@@ -32,7 +32,7 @@ public class PriceObservationRecorder {
                     upsertLowest(product, match.offer());
                 }
             } catch (RuntimeException e) {
-                log.warn("Preisbeobachtung für Produkt {} nicht gespeichert: {}", product.getId(), e.getMessage());
+                log.warn("Preisbeobachtung für Produkt {} nicht gespeichert", product.getId(), e);
             }
         }
     }

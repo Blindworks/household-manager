@@ -85,7 +85,6 @@ class DealEvaluatorTest {
         assertThat(own.get(0).referenceKind()).isEqualTo(ReferenceKind.OWN_NORMAL_PRICE);
         assertThat(own.get(0).warmingUp()).isTrue();
 
-        // lowest30d 1.00 bei Preis 0.80 / Grundpreis 1.60 -> Referenz 2.000; Angebot 1.43 -> Deal
         GroceryOffer o = offer("0.80", "1.43");
         o.setLowestPrice30d(new BigDecimal("1.00"));
         // Faktor 1.43/0.80 = 1.7875 -> Referenz 1.7875; 1.43 <= 1.60875
@@ -112,6 +111,31 @@ class DealEvaluatorTest {
         assertThat(deals.get(0).appOnly()).isTrue();
         assertThat(deals.get(0).basePrice()).isEqualByComparingTo("1.440");
         assertThat(deals.get(0).savingPercent()).isEqualTo(22);
+        assertThat(deals.get(0).appBasePrice()).isEqualByComparingTo("1.440");
+    }
+
+    @Test
+    void appBasePriceIsSetEvenWhenNormalPriceQualifies() {
+        GroceryOffer o = offer("0.86", "1.43");
+        o.setLoyaltyPrice(new BigDecimal("0.50")); // Faktor 1.43/0.86 -> ca. 0.831
+        Deal d = evaluator.evaluate(product(null), List.of(match(o, Verdict.MATCH)), USUAL, 10).get(0);
+
+        assertThat(d.appOnly()).isFalse();
+        assertThat(d.basePrice()).isEqualByComparingTo("1.43");
+        assertThat(d.appBasePrice()).isEqualByComparingTo("0.831");
+    }
+
+    @Test
+    void appBasePriceIsNullWithoutLoyaltyPrice() {
+        Deal d = evaluator.evaluate(product(null), List.of(match(offer("0.86", "1.43"), Verdict.MATCH)), USUAL, 10).get(0);
+        assertThat(d.appBasePrice()).isNull();
+    }
+
+    @Test
+    void offerWithoutValidToCountsAsCurrent() {
+        GroceryOffer o = offer("0.86", "1.43");
+        o.setValidTo(null);
+        assertThat(evaluator.evaluate(product(null), List.of(match(o, Verdict.MATCH)), USUAL, 10)).hasSize(1);
     }
 
     @Test
