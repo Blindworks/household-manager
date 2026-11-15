@@ -1,0 +1,742 @@
+{
+ "totalResults": 255,
+ "skippedResults": 0,
+ "results": [
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25769317,
+   "description": "je 250-g-Pckg.",
+   "product": {
+    "id": 341418,
+    "name": "Mini Kuchen"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 105479,
+    "name": "Dan Cake",
+    "uniqueName": "dan-cake",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 1.29,
+   "oldPrice": 0.0,
+   "referencePrice": 5.16,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25769377,
+   "description": "Details im Prospekt",
+   "product": {
+    "id": 63854,
+    "name": "Adventsgestecke"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 125322,
+    "name": "thisisnobrand123",
+    "uniqueName": "thisisnobrand123",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "Stk",
+    "id": 3,
+    "name": "Stück"
+   },
+   "price": 14.99,
+   "oldPrice": 0.0,
+   "referencePrice": 14.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25755747,
+   "description": "je-750-g-Btl.",
+   "product": {
+    "id": 66546,
+    "name": "Grünkohl"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 125322,
+    "name": "thisisnobrand123",
+    "uniqueName": "thisisnobrand123",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 2.69,
+   "oldPrice": 0.0,
+   "referencePrice": 3.59,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25754392,
+   "description": "oder Graved Wildlachs je 100-g-Pckg.",
+   "product": {
+    "id": 413356,
+    "name": "Kodiak Wildlachs"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 121228,
+    "name": "Rewe Feine Welt",
+    "uniqueName": "rewe-feine-welt",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 4.89,
+   "oldPrice": 0.0,
+   "referencePrice": 48.9,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25769417,
+   "description": "Details im Prospekt",
+   "product": {
+    "id": 720532,
+    "name": "Adventskranz Klassik"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 125322,
+    "name": "thisisnobrand123",
+    "uniqueName": "thisisnobrand123",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "Stk",
+    "id": 3,
+    "name": "Stück"
+   },
+   "price": 12.99,
+   "oldPrice": 0.0,
+   "referencePrice": 12.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25755767,
+   "description": "Kl. I, je St.",
+   "product": {
+    "id": 755788,
+    "name": "Auberginen"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 125322,
+    "name": "thisisnobrand123",
+    "uniqueName": "thisisnobrand123",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "Stk",
+    "id": 3,
+    "name": "Stück"
+   },
+   "price": 0.69,
+   "oldPrice": 0.0,
+   "referencePrice": 0.69,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25754412,
+   "description": "100-g-Abtropfgew., je 250-g-Becher",
+   "product": {
+    "id": 199104,
+    "name": "Burrata"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 121228,
+    "name": "Rewe Feine Welt",
+    "uniqueName": "rewe-feine-welt",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 1.49,
+   "oldPrice": 0.0,
+   "referencePrice": 14.9,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25758537,
+   "description": "HINWEIS: MIT APP 0,10 € REWE BONUS versch. Sorten, je 0,5-l-Dose zzgl. 0.25 Pfand",
+   "product": {
+    "id": 961002,
+    "name": "5,0 Original Pils"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 126259,
+    "name": "Oettinger",
+    "uniqueName": "oettinger",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 0.59,
+   "oldPrice": 0.0,
+   "referencePrice": 1.18,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25753117,
+   "description": "versch. Sorten, je 1-l-Fl.",
+   "product": {
+    "id": 49090,
+    "name": "Fruchtglühwein"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 100864,
+    "name": "Katlenburger",
+    "uniqueName": "katlenburger",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 2.99,
+   "oldPrice": 0.0,
+   "referencePrice": 2.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25753137,
+   "description": "versch. Sorten, je 12 x 85-g-Multipckg.",
+   "product": {
+    "id": 225030,
+    "name": "Felix Katzennassfutter"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 120795,
+    "name": "Purina",
+    "uniqueName": "purina",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 3.99,
+   "oldPrice": 0.0,
+   "referencePrice": 3.91,
+   "volume": 0,
+   "quantity": 12,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25754512,
+   "description": "Details im Prospekt",
+   "product": {
+    "id": 1373992,
+    "name": "Grinch X-Mas Hausschuh Slipper"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 141827,
+    "name": "Dr. Seuss Enterprises",
+    "uniqueName": "dr-seuss-enterprises",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "Stk",
+    "id": 3,
+    "name": "Stück"
+   },
+   "price": 9.99,
+   "oldPrice": 0.0,
+   "referencePrice": 9.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25754532,
+   "description": "Details im Prospekt",
+   "product": {
+    "id": 1373977,
+    "name": "Grinch X-Mas Mütze"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 141827,
+    "name": "Dr. Seuss Enterprises",
+    "uniqueName": "dr-seuss-enterprises",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "Stk",
+    "id": 3,
+    "name": "Stück"
+   },
+   "price": 3.99,
+   "oldPrice": 0.0,
+   "referencePrice": 3.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25753937,
+   "description": "HINWEIS: MIT APP 0,10 € REWE BONUS versch. Sorten, teilw. koffeinhaltig, je 1,25-l-Fl. zzgl. 0.25 Pfand.",
+   "product": {
+    "id": 351468,
+    "name": "Cola"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 104494,
+    "name": "Coca-Cola",
+    "uniqueName": "coca-cola",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 1.19,
+   "oldPrice": 0.0,
+   "referencePrice": 0.95,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25752632,
+   "description": "je 270-ml-Pckg.",
+   "product": {
+    "id": 520146,
+    "name": "Stieleis Vanilla & Chocolate Swirl"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 118352,
+    "name": "Milka",
+    "uniqueName": "milka",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 2.22,
+   "oldPrice": 0.0,
+   "referencePrice": 8.22,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25758152,
+   "description": "versch. Sorten, koffeinhaltig, je 6 x 1-l-Fl.-Kasten zzgl. 2.40 Pfand",
+   "product": {
+    "id": 351468,
+    "name": "Cola"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 104494,
+    "name": "Coca-Cola",
+    "uniqueName": "coca-cola",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 7.99,
+   "oldPrice": 0.0,
+   "referencePrice": 1.33,
+   "volume": 1,
+   "quantity": 6,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25755367,
+   "description": "versch. Sorten, koffeinhaltig, je 1,75-l-Fl. zzgl. 0.25 Pfand",
+   "product": {
+    "id": 367277,
+    "name": "Pepsi Cola"
+   },
+   "retailer": {
+    "id": 126802,
+    "name": "REWE",
+    "uniqueName": "rewe",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 120111,
+    "name": "Pepsi",
+    "uniqueName": "pepsi",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 1.19,
+   "oldPrice": 0.0,
+   "referencePrice": 0.68,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  }
+ ]
+}

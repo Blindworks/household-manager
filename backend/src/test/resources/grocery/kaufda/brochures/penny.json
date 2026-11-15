@@ -1,0 +1,1412 @@
+{
+ "contents": [
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.9729676,
+       "y": 0.9488618
+      },
+      "topLeft": {
+       "x": 0.6607159,
+       "y": 0.6395758
+      }
+     }
+    }
+   },
+   "id": "9aa994dd-ff76-4661-b7d8-38d4fe186d4d",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.00101010101010101,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/9aa994dd-ff76-4661-b7d8-38d4fe186d4d/82739f93-70a3-4e99-a2a6-84817b00c852.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/9aa994dd-ff76-4661-b7d8-38d4fe186d4d/82739f93-70a3-4e99-a2a6-84817b00c852.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/9aa994dd-ff76-4661-b7d8-38d4fe186d4d/82739f93-70a3-4e99-a2a6-84817b00c852.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Kaffee",
+   "description": "Versch. Sorten, gemahlen, je 500 g",
+   "brand": "Melitta",
+   "categories": [
+    "Kaffee",
+    "Melitta"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-142937115",
+      "name": "Heißgetränk"
+     },
+     {
+      "id": "DE-1476",
+      "name": "Kaffee"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-24475",
+      "name": "Melitta"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:00.000+0000",
+   "prices": {
+    "mainPrice": 5.49,
+    "secondaryPrice": 10.35,
+    "mainPriceFormatted": "5,49 €",
+    "secondaryPriceFormatted": "10,35 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 10.98)",
+    "secondaryPriceIsUVP": true,
+    "conditions": [
+     {
+      "other": "Nur mit PENNY App"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": true,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.6453141,
+       "y": 0.457953
+      },
+      "topLeft": {
+       "x": 0.33889815,
+       "y": 0.13619554
+      }
+     }
+    }
+   },
+   "id": "5c970e90-194f-4590-a236-9ad123e91800",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.0020729684908789387,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/5c970e90-194f-4590-a236-9ad123e91800/1338bca0-97c3-490f-8cca-938910675721.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/5c970e90-194f-4590-a236-9ad123e91800/1338bca0-97c3-490f-8cca-938910675721.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/5c970e90-194f-4590-a236-9ad123e91800/1338bca0-97c3-490f-8cca-938910675721.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Haltbare Milch",
+   "description": "1,5% oder 3,5% Fett, je 1 l",
+   "brand": "Weihenstephan",
+   "categories": [
+    "H-Milch",
+    "Weihenstephan"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-128",
+      "name": "Milchprodukte"
+     },
+     {
+      "id": "DE-5887",
+      "name": "Milch"
+     },
+     {
+      "id": "DE-103935419",
+      "name": "Kuhmilch"
+     },
+     {
+      "id": "DE-99411964",
+      "name": "H-Milch"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-959",
+      "name": "Weihenstephan"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 0.99,
+    "secondaryPrice": 1.49,
+    "mainPriceFormatted": "0,99 €",
+    "secondaryPriceFormatted": "1,49 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.9768757,
+       "y": 0.5707025
+      },
+      "topLeft": {
+       "x": 0.43999398,
+       "y": 0.41586494
+      }
+     }
+    }
+   },
+   "id": "10b7737c-5cbf-449c-ac82-65fe823773c8",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.0026431718061674008,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/10b7737c-5cbf-449c-ac82-65fe823773c8/c19cabbf-ae77-49e5-84eb-b5a1447535c8.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/10b7737c-5cbf-449c-ac82-65fe823773c8/c19cabbf-ae77-49e5-84eb-b5a1447535c8.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/10b7737c-5cbf-449c-ac82-65fe823773c8/c19cabbf-ae77-49e5-84eb-b5a1447535c8.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Original Irische Butter oder Extra",
+   "description": "Versch. Sorten, je 250 g",
+   "brand": "Kerrygold",
+   "categories": [
+    "Irische Butter",
+    "Kerrygold"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-128",
+      "name": "Milchprodukte"
+     },
+     {
+      "id": "DE-1349",
+      "name": "Butter"
+     },
+     {
+      "id": "DE-640767428",
+      "name": "Irische Butter"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-2251654",
+      "name": "Kerrygold"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 1.59,
+    "secondaryPrice": 3.29,
+    "mainPriceFormatted": "1,59 €",
+    "secondaryPriceFormatted": "3,29 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": true,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.33889815,
+       "y": 0.6352193
+      },
+      "topLeft": {
+       "x": 0.03672788,
+       "y": 0.39187914
+      }
+     }
+    }
+   },
+   "id": "1d722c57-970d-4ed4-9e23-51461586c7fe",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.003590664272890485,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/1d722c57-970d-4ed4-9e23-51461586c7fe/f05ab623-d1f8-4596-94ae-3cd8663babad.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/1d722c57-970d-4ed4-9e23-51461586c7fe/f05ab623-d1f8-4596-94ae-3cd8663babad.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/1d722c57-970d-4ed4-9e23-51461586c7fe/f05ab623-d1f8-4596-94ae-3cd8663babad.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Schwip Schwap, Pepsi oder 7up",
+   "description": "Erfrischungsgetränk, versch. Sorten, tw. koffein- haltig, zzgl. 0.25 Pfand, je 1,25 l",
+   "categories": [
+    "Erfrischungsgetränk",
+    "Pepsi",
+    "Schwip Schwap",
+    "7up"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-130126879",
+      "name": "Erfrischungsgetränk"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-5934",
+      "name": "Pepsi"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-100390115",
+      "name": "Schwip Schwap"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-28055404",
+      "name": "7up"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 0.69,
+    "secondaryPrice": 1.49,
+    "mainPriceFormatted": "0,69 €",
+    "secondaryPriceFormatted": "1,49 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 0.55)",
+    "secondaryPriceIsUVP": true,
+    "conditions": [
+     {
+      "other": "Nur mit App"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": true,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.6594324,
+       "y": 0.9503139
+      },
+      "topLeft": {
+       "x": 0.33889815,
+       "y": 0.63884974
+      }
+     }
+    }
+   },
+   "id": "2c074ee5-d22a-4ca8-af3b-fd83633d9e69",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.0012690355329949238,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/2c074ee5-d22a-4ca8-af3b-fd83633d9e69/08c55cf9-42ab-4665-abd0-c9b5e6c0404d.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/2c074ee5-d22a-4ca8-af3b-fd83633d9e69/08c55cf9-42ab-4665-abd0-c9b5e6c0404d.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/2c074ee5-d22a-4ca8-af3b-fd83633d9e69/08c55cf9-42ab-4665-abd0-c9b5e6c0404d.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Frischkäsezubereitung",
+   "description": "Versch. Sorten, je 195 g",
+   "brand": "PHILADELPHIA",
+   "categories": [
+    "Philadelphia",
+    "Frischkäsezubereitung",
+    "Frischkäse mit Kräutern"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-24612",
+      "name": "Philadelphia"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-128",
+      "name": "Milchprodukte"
+     },
+     {
+      "id": "DE-227643",
+      "name": "Käse"
+     },
+     {
+      "id": "DE-46411",
+      "name": "Weichkäse"
+     },
+     {
+      "id": "DE-1340",
+      "name": "Frischkäse"
+     },
+     {
+      "id": "DE-103677572",
+      "name": "Frischkäsezubereitung"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-128",
+      "name": "Milchprodukte"
+     },
+     {
+      "id": "DE-227643",
+      "name": "Käse"
+     },
+     {
+      "id": "DE-46411",
+      "name": "Weichkäse"
+     },
+     {
+      "id": "DE-1340",
+      "name": "Frischkäse"
+     },
+     {
+      "id": "DE-103677572",
+      "name": "Frischkäsezubereitung"
+     },
+     {
+      "id": "DE-112828542",
+      "name": "Frischkäse mit Kräutern"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 1.11,
+    "secondaryPrice": 2.29,
+    "mainPriceFormatted": "1,11 €",
+    "secondaryPriceFormatted": "2,29 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 5.69)",
+    "secondaryPriceIsUVP": true,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.3376147,
+       "y": 0.9546704
+      },
+      "topLeft": {
+       "x": 0.035444397,
+       "y": 0.64248013
+      }
+     }
+    }
+   },
+   "id": "e688f31a-9a75-40e4-998c-c34155ef23a7",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.001260239445494644,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/e688f31a-9a75-40e4-998c-c34155ef23a7/45e85782-c529-415c-9aab-a978ca304552.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/e688f31a-9a75-40e4-998c-c34155ef23a7/45e85782-c529-415c-9aab-a978ca304552.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/e688f31a-9a75-40e4-998c-c34155ef23a7/45e85782-c529-415c-9aab-a978ca304552.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Orangen",
+   "description": "Kl. I. je 3-kg-Netz",
+   "categories": [
+    "Orangen"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-135",
+      "name": "Obst"
+     },
+     {
+      "id": "DE-50648363",
+      "name": "Zitrusfrüchte"
+     },
+     {
+      "id": "DE-212",
+      "name": "Orangen"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:00.000+0000",
+   "prices": {
+    "mainPrice": 3.33,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "3,33 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 1.11)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.33889815,
+       "y": 0.39115304
+      },
+      "topLeft": {
+       "x": 0.03672788,
+       "y": 0.10692264
+      }
+     }
+    }
+   },
+   "id": "b484fdf7-d2ad-45df-a05a-2a5597045da3",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.0029455081001472753,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/b484fdf7-d2ad-45df-a05a-2a5597045da3/ceabf9fe-ba82-46de-8dd1-4540894cd03e.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/b484fdf7-d2ad-45df-a05a-2a5597045da3/ceabf9fe-ba82-46de-8dd1-4540894cd03e.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/b484fdf7-d2ad-45df-a05a-2a5597045da3/ceabf9fe-ba82-46de-8dd1-4540894cd03e.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Sekt",
+   "description": "Versch. Sorten, je 0,75 l",
+   "brand": "Freixenet",
+   "categories": [
+    "Sekt",
+    "Freixenet-Sekt"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-142945659",
+      "name": "Alkoholische Getränke"
+     },
+     {
+      "id": "DE-104408549",
+      "name": "Schaumwein"
+     },
+     {
+      "id": "DE-5938",
+      "name": "Sekt"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-142945659",
+      "name": "Alkoholische Getränke"
+     },
+     {
+      "id": "DE-104408549",
+      "name": "Schaumwein"
+     },
+     {
+      "id": "DE-5938",
+      "name": "Sekt"
+     },
+     {
+      "id": "DE-250019170",
+      "name": "Sektmarken"
+     },
+     {
+      "id": "DE-125039832",
+      "name": "Freixenet-Sekt"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:00.000+0000",
+   "prices": {
+    "mainPrice": 3.77,
+    "secondaryPrice": 6.79,
+    "mainPriceFormatted": "3,77 €",
+    "secondaryPriceFormatted": "6,79 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 5.03)",
+    "secondaryPriceIsUVP": true,
+    "conditions": [
+     {
+      "other": "Nur mit PENNY App"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": true,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.97168404,
+       "y": 0.4220963
+      },
+      "topLeft": {
+       "x": 0.6594324,
+       "y": 0.13692163
+      }
+     }
+    }
+   },
+   "id": "1219967b-b1b8-4cbd-b6eb-727187dc12ef",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.003935071323167732,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/1219967b-b1b8-4cbd-b6eb-727187dc12ef/66416b05-6ab0-4732-8b13-4f0e779e6a44.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/1219967b-b1b8-4cbd-b6eb-727187dc12ef/66416b05-6ab0-4732-8b13-4f0e779e6a44.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/1219967b-b1b8-4cbd-b6eb-727187dc12ef/66416b05-6ab0-4732-8b13-4f0e779e6a44.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Big Pack Kinder Riegel",
+   "description": "je 18 x 21 g",
+   "brand": "Ferrero",
+   "categories": [
+    "Ferrero",
+    "Kinder Riegel"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-24474",
+      "name": "Ferrero"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-24474",
+      "name": "Ferrero"
+     },
+     {
+      "id": "DE-13727",
+      "name": "Kinder"
+     },
+     {
+      "id": "DE-103990817",
+      "name": "Kinder Riegel"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 3.79,
+    "secondaryPrice": 5.39,
+    "mainPriceFormatted": "3,79 €",
+    "secondaryPriceFormatted": "5,39 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 10.03)",
+    "secondaryPriceIsUVP": true,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "Big Pack Kinder Riegel",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 2,
+     "area": {
+      "bottomRight": {
+       "x": 1,
+       "y": 0.35128498
+      },
+      "topLeft": {
+       "x": 0.5173488,
+       "y": 0.1732379
+      }
+     }
+    }
+   },
+   "id": "96d3c1b1-c2de-4b51-b4b6-94dfd3eddceb",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.001763668430335097,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/96d3c1b1-c2de-4b51-b4b6-94dfd3eddceb/0504a767-1411-482c-9722-98ed7f987ed4.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/96d3c1b1-c2de-4b51-b4b6-94dfd3eddceb/0504a767-1411-482c-9722-98ed7f987ed4.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/96d3c1b1-c2de-4b51-b4b6-94dfd3eddceb/0504a767-1411-482c-9722-98ed7f987ed4.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Sun Gold Kiwi",
+   "description": "Kl. I",
+   "brand": "Zespri",
+   "categories": [
+    "Kiwi Gold",
+    "Zespri",
+    "Kiwi"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-135",
+      "name": "Obst"
+     },
+     {
+      "id": "DE-5867",
+      "name": "Kiwi"
+     },
+     {
+      "id": "DE-107175917",
+      "name": "Kiwi Gold"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-219291297",
+      "name": "Zespri"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-135",
+      "name": "Obst"
+     },
+     {
+      "id": "DE-5867",
+      "name": "Kiwi"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 0.59,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "0,59 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je Stück"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 2,
+     "area": {
+      "bottomRight": {
+       "x": 0.32220367,
+       "y": 0.93578845
+      },
+      "topLeft": {
+       "x": 0.016694492,
+       "y": 0.6846081
+      }
+     }
+    }
+   },
+   "id": "de2b5898-b99e-40b5-8b06-32e9ff6fe734",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.004775549188156638,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/de2b5898-b99e-40b5-8b06-32e9ff6fe734/4b07980b-3fcf-4948-be59-87f4ff5a274f.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/de2b5898-b99e-40b5-8b06-32e9ff6fe734/4b07980b-3fcf-4948-be59-87f4ff5a274f.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/de2b5898-b99e-40b5-8b06-32e9ff6fe734/4b07980b-3fcf-4948-be59-87f4ff5a274f.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Mini-Tannenbaum",
+   "description": "Im Potcover",
+   "categories": [
+    "Tannenbaum"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-6206",
+      "name": "Saison und Events"
+     },
+     {
+      "id": "DE-49940801",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-49941203",
+      "name": "Saison"
+     },
+     {
+      "id": "DE-6210",
+      "name": "Weihnachten"
+     },
+     {
+      "id": "DE-59755",
+      "name": "Weihnachtsbaum"
+     },
+     {
+      "id": "DE-161175501",
+      "name": "Christbaum"
+     },
+     {
+      "id": "DE-163848274",
+      "name": "Tannenbaum"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:59.000+0000",
+   "prices": {
+    "mainPrice": 2.29,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "2,29 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "545f1802-9596-46bc-b502-869d2508f30a",
+    "legacyId": "2501326864",
+    "type": "static_brochure",
+    "page": {
+     "number": 41,
+     "area": {
+      "bottomRight": {
+       "x": 0.97495824,
+       "y": 0.49386212
+      },
+      "topLeft": {
+       "x": 0.34891486,
+       "y": 0.2625118
+      }
+     }
+    }
+   },
+   "id": "d26bb7bd-4ced-464b-bc17-fda16ef118c3",
+   "preview": false,
+   "publisherId": "DE-1050",
+   "publisherName": "Penny",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0.005681818181818182,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/d26bb7bd-4ced-464b-bc17-fda16ef118c3/820e723f-7d58-47d1-8c82-8b52b2cefc53.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/d26bb7bd-4ced-464b-bc17-fda16ef118c3/820e723f-7d58-47d1-8c82-8b52b2cefc53.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/d26bb7bd-4ced-464b-bc17-fda16ef118c3/820e723f-7d58-47d1-8c82-8b52b2cefc53.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Erfrischungsgetränk",
+   "description": "versch. Sorten, tw. koffeinhaltig, je 18 x 0,33 l, zzgl. 4.50 Pfand",
+   "brand": "Fanta Exotic oder Coca-Cola",
+   "categories": [
+    "Fanta Exotic",
+    "Cola",
+    "Coca Cola"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-13942",
+      "name": "Fanta"
+     },
+     {
+      "id": "DE-420132183",
+      "name": "Fanta Exotic"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-26031",
+      "name": "Limonade"
+     },
+     {
+      "id": "DE-330648062",
+      "name": "Koffeinhaltige Limonade"
+     },
+     {
+      "id": "DE-1497",
+      "name": "Cola"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-86316175",
+      "name": "Coca Cola"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-18T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:59:00.000+0000",
+   "prices": {
+    "mainPrice": 8.49,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "8,49 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 1.43)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  }
+ ]
+}
