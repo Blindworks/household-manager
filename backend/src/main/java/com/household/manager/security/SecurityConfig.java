@@ -249,6 +249,11 @@ public class SecurityConfig {
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet
                         .requestMatchers("/v1/finance/**").hasRole("MEMBER")
+                        // Supermarkt-Angebote: nur die Zusammenfassung fuer die Hub-Karte ist KIOSK; Produkte,
+                        // Schnaeppchen und Urteile sind MEMBER, auch LESEN. Methodenlos, VOR der generischen
+                        // GET-Regel; /summary steht ausdruecklich davor.
+                        .requestMatchers(HttpMethod.GET, "/v1/groceries/summary").hasRole("KIOSK")
+                        .requestMatchers("/v1/groceries", "/v1/groceries/**").hasRole("MEMBER")
                         // KIOSK-Whitelist: Dashboard lesen + Schalter/Modi/Nuki
                         // (LOCK-only fuer KIOSK erzwingt der NukiController)
                         // /v1/tractive/pets/refresh schaltet nichts, es zieht nur Daten —

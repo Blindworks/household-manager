@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,4 +19,10 @@ public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long
 
     @Query("select o from GroceryOffer o where o.validTo is null or o.validTo >= :today")
     List<GroceryOffer> findActiveFrom(@Param("today") LocalDate today);
+
+    /** Retention: Angebote, deren Gültigkeit vor {@code cutoff} endete. Eigene Transaktion. */
+    @Transactional
+    @Modifying
+    @Query("delete from GroceryOffer o where o.validTo < :cutoff")
+    int deleteExpiredBefore(@Param("cutoff") LocalDate cutoff);
 }

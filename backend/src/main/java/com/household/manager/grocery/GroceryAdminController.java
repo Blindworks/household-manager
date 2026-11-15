@@ -6,6 +6,7 @@ import com.household.manager.grocery.dto.GrocerySettingsDto;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
 import com.household.manager.grocery.dto.MarketSelectionDto;
+import com.household.manager.grocery.dto.RunResultDto;
 import com.household.manager.grocery.dto.SourceStatusDto;
 import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.SourceKey;
@@ -36,6 +37,7 @@ public class GroceryAdminController {
     private final GrocerySourceRunRepository sourceRuns;
     private final GroceryProperties properties;
     private final AuditService auditService;
+    private final GroceryRunService runService;
 
     @GetMapping("/settings")
     public GrocerySettingsDto getSettings() {
@@ -74,6 +76,15 @@ public class GroceryAdminController {
         marketService.setChainEnabled(chain, body.enabled());
         auditService.record("grocery.chain.update", chain + " -> " + body.enabled());
         return body;
+    }
+
+    /** „Jetzt suchen“: synchroner Lauf, höchstens alle 10 Minuten (sonst 429). */
+    @PostMapping("/runs")
+    public RunResultDto runNow() {
+        if (!properties.isEnabled()) {
+            throw new IllegalStateException("Supermarkt-Angebote sind deaktiviert");
+        }
+        return runService.runManually();
     }
 
     @GetMapping("/sources")
