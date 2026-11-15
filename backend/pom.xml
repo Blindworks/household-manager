@@ -26,6 +26,13 @@
     </properties>
 
     <dependencies>
+        <!-- HTML-Parsing (REWE-Angebotsseiten) -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.19.1</version>
+        </dependency>
+
         <!-- Spring Boot Starter Web - REST API -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
