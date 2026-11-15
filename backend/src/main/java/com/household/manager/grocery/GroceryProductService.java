@@ -83,6 +83,9 @@ public class GroceryProductService {
                 baseUnit = suggestion.baseUnit();
             }
         }
+        if (searchWords.isEmpty()) {
+            throw new IllegalArgumentException("Bitte Suchwörter angeben.");
+        }
         GroceryProduct product = new GroceryProduct();
         product.setOwnerUserId(Boolean.TRUE.equals(request.household()) ? null : me);
         product.setActive(request.active() == null || request.active());
@@ -130,6 +133,9 @@ public class GroceryProductService {
         owners.requireEditable(product.getOwnerUserId());
         if (request.fingerprint() == null || request.fingerprint().isBlank()) {
             throw new IllegalArgumentException("Fingerabdruck fehlt");
+        }
+        if (request.fits() == null) {
+            throw new IllegalArgumentException("Urteil fehlt");
         }
         try {
             matching.recordUserVerdict(id, request.fingerprint(), request.fits());

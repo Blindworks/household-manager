@@ -32,6 +32,7 @@ class GroceryRetentionJobTest {
         job.run();
 
         verify(offers).deleteExpiredBefore(LocalDate.of(2026, 10, 18));
+        verify(offers).deleteUndatedCollectedBefore(LocalDateTime.of(2026, 10, 18, 3, 35));
         verify(observations).deleteObservedBefore(LocalDateTime.of(2025, 11, 15, 3, 35));
         verify(matches).deleteDecidedBefore(GroceryMatch.DecidedBy.CLAUDE, LocalDateTime.of(2025, 11, 15, 3, 35));
     }
@@ -42,6 +43,7 @@ class GroceryRetentionJobTest {
 
         job.run();
 
+        verify(offers).deleteUndatedCollectedBefore(any());
         verify(observations).deleteObservedBefore(any());
         verify(matches).deleteDecidedBefore(any(), any());
         verify(monitor).reportFailure("Aufräumen fehlgeschlagen: Angebote");

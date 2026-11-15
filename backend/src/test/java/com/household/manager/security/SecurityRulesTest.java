@@ -486,7 +486,7 @@ class SecurityRulesTest {
     @WithMockUser(roles = "ADMIN")
     void groceriesRunsPostIstFuerAdminErlaubt() throws Exception {
         when(groceryProperties.isEnabled()).thenReturn(true);
-        mockMvc.perform(post("/v1/admin/groceries/runs").with(csrf())).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/admin/groceries/runs").with(csrf())).andExpect(status().isAccepted());
     }
 
     // Kein GroceryController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.

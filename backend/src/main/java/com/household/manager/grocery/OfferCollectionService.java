@@ -35,6 +35,15 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OfferCollectionService {
 
+    // Spaltenlängen aus Changeset 20261115-0102
+    static final int SOURCES_LENGTH = 100;
+    static final int SOURCE_OFFER_IDS_LENGTH = 500;
+    static final int TITLE_LENGTH = 300;
+    static final int BRAND_LENGTH = 150;
+    static final int PACKAGING_LENGTH = 200;
+    static final int IMAGE_URL_LENGTH = 500;
+
+
     private static final int MAX_REASON_LENGTH = 300;
     private static final String EMPTY_REASON = "Keine Angebote geliefert";
 
@@ -210,13 +219,14 @@ public class OfferCollectionService {
             GroceryOffer entity = new GroceryOffer();
             entity.setChain(offer.chain());
             entity.setMarketId(offer.marketId());
-            entity.setSources(offer.sources().stream().sorted().map(Enum::name).collect(Collectors.joining(",")));
-            entity.setSourceOfferIds(offer.sourceOfferIds().entrySet().stream()
-                    .map(e -> e.getKey() + ":" + e.getValue()).collect(Collectors.joining(",")));
-            entity.setTitle(offer.title());
-            entity.setBrand(offer.brand());
+            entity.setSources(cut(offer.sources().stream().sorted().map(Enum::name)
+                    .collect(Collectors.joining(",")), SOURCES_LENGTH));
+            entity.setSourceOfferIds(joinFitting(offer.sourceOfferIds().entrySet().stream()
+                    .map(e -> e.getKey() + ":" + e.getValue()).toList(), SOURCE_OFFER_IDS_LENGTH));
+            entity.setTitle(cut(offer.title(), TITLE_LENGTH));
+            entity.setBrand(cut(offer.brand(), BRAND_LENGTH));
             entity.setDescription(offer.description());
-            entity.setPackaging(offer.packaging());
+            entity.setPackaging(cut(offer.packaging(), PACKAGING_LENGTH));
             entity.setPrice(offer.price());
             entity.setOldPrice(offer.oldPrice());
             entity.setLoyaltyPrice(offer.loyaltyPrice());
@@ -227,10 +237,32 @@ public class OfferCollectionService {
             }
             entity.setValidFrom(offer.validFrom());
             entity.setValidTo(offer.validTo());
-            entity.setImageUrl(offer.imageUrl());
+            entity.setImageUrl(offer.imageUrl() == null || offer.imageUrl().length() > IMAGE_URL_LENGTH
+                    ? null : offer.imageUrl());
             entity.setFingerprint(offer.fingerprint());
             entity.setCollectedAt(now);
             return entity;
         }).toList();
+    }
+
+    /** Kürzt auf die Spaltenlänge (Changeset 20261115-0102); null bleibt null. */
+    static String cut(String value, int maxLength) {
+        return value == null || value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    /** Verbindet ganze Einträge mit Komma, solange sie passen; ein zerschnittener Eintrag wäre nicht mehr lesbar. */
+    static String joinFitting(List<String> entries, int maxLength) {
+        StringBuilder joined = new StringBuilder();
+        for (String entry : entries) {
+            int needed = joined.isEmpty() ? entry.length() : joined.length() + 1 + entry.length();
+            if (needed > maxLength) {
+                continue;
+            }
+            if (!joined.isEmpty()) {
+                joined.append(',');
+            }
+            joined.append(entry);
+        }
+        return joined.isEmpty() ? null : joined.toString();
     }
 }

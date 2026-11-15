@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long> {
@@ -25,4 +26,10 @@ public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long
     @Modifying
     @Query("delete from GroceryOffer o where o.validTo < :cutoff")
     int deleteExpiredBefore(@Param("cutoff") LocalDate cutoff);
+
+    /** Retention: Angebote ohne Enddatum, die vor {@code cutoff} gesammelt wurden. Eigene Transaktion. */
+    @Transactional
+    @Modifying
+    @Query("delete from GroceryOffer o where o.validTo is null and o.collectedAt < :cutoff")
+    int deleteUndatedCollectedBefore(@Param("cutoff") LocalDateTime cutoff);
 }

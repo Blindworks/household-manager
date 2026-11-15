@@ -109,6 +109,20 @@ class PennySourceTest {
     }
 
     @Test
+    void promoTileWithoutAppMarkerIsAnOrdinaryReduction() {
+        String json = """
+                {"offerTiles":[
+                 {"primaryType":"promo","title":"Kaffee*","quantity":"je 500 g","price":"4.99","crossOutPrice":"6.49","basePrice":"(1 kg = 9.98)","uuid":"k"}
+                ]}""";
+
+        RawOffer coffee = source(new FakeHttpTransport()).parseCategory(json, market("1", REGION), "2026-47").get(0);
+
+        assertThat(coffee.price()).isEqualByComparingTo("4.99");
+        assertThat(coffee.oldPrice()).isEqualByComparingTo("6.49");
+        assertThat(coffee.loyaltyPrice()).isNull();
+    }
+
+    @Test
     void uvpIsNotOldPriceButCrossedOutPriceIs() {
         String json = """
                 {"offerTiles":[

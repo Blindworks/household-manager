@@ -106,12 +106,14 @@ class GroceryControllerTest {
     @Test
     void summaryListsItems() throws Exception {
         when(dealQueryService.summary()).thenReturn(new GrocerySummaryDto(List.of(new SummaryItem("Cola Zero", null,
-                "Haushalt", Chain.PENNY, "Penny", new BigDecimal("1.430"), BaseUnit.LITER, 23))));
+                "Haushalt", Chain.PENNY, "Penny", new BigDecimal("1.430"), BaseUnit.LITER, 23, true, false))));
 
         mockMvc.perform(get("/v1/groceries/summary"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].productName").value("Cola Zero"))
-                .andExpect(jsonPath("$.items[0].savingPercent").value(23));
+                .andExpect(jsonPath("$.items[0].savingPercent").value(23))
+                .andExpect(jsonPath("$.items[0].appOnly").value(true))
+                .andExpect(jsonPath("$.items[0].warmingUp").value(false));
     }
 
     @Test

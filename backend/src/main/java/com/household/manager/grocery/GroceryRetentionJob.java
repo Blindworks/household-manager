@@ -16,7 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Nächtliche Aufräumrunde (03:35): Angebote 28 Tage nach Ablauf, Preisbeobachtungen und Claude-Urteile nach
+ * Nächtliche Aufräumrunde (03:35): Angebote 28 Tage nach Ablauf (ohne Enddatum 28 Tage nach dem Sammeln),
+ * Preisbeobachtungen und Claude-Urteile nach
  * 365 Tagen. Nutzerurteile bleiben. Jede Tabelle isoliert; wirft nie.
  */
 @Slf4j
@@ -49,6 +50,8 @@ public class GroceryRetentionJob {
         List<String> failures = new ArrayList<>();
         attempt("Angebote", failures,
                 () -> offers.deleteExpiredBefore(today.minusDays(OFFER_DAYS_AFTER_EXPIRY)));
+        attempt("Angebote ohne Enddatum", failures,
+                () -> offers.deleteUndatedCollectedBefore(now.minusDays(OFFER_DAYS_AFTER_EXPIRY)));
         attempt("Preisbeobachtungen", failures,
                 () -> observations.deleteObservedBefore(now.minusDays(OBSERVATION_DAYS)));
         attempt("Claude-Urteile", failures, () -> matches.deleteDecidedBefore(GroceryMatch.DecidedBy.CLAUDE,

@@ -13,6 +13,7 @@ import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.SourceKey;
 import com.household.manager.repository.GrocerySourceRunRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Admin-API der Supermarkt-Angebote (Einstellungen, Märkte, Quellenstatus). */
+@Slf4j
 @RestController
 @RequestMapping("/v1/admin/groceries")
 @RequiredArgsConstructor
@@ -54,6 +56,7 @@ public class GroceryAdminController {
         settings.update(dto);
         auditService.record("grocery.settings.update",
                 "zip=" + dto.zip() + ", threshold=" + dto.dealThresholdPercent());
+        recomputeDeals();
         return getSettings();
     }
 
@@ -72,6 +75,7 @@ public class GroceryAdminController {
         MarketDto market = marketService.setSelected(id, body.selected());
         auditService.record("grocery.market.select",
                 market.chain() + " " + market.name() + " -> " + body.selected());
+        recomputeDeals();
         return market;
     }
 
@@ -89,7 +93,17 @@ public class GroceryAdminController {
     public ChainEnabledDto updateChain(@PathVariable Chain chain, @RequestBody ChainEnabledDto body) {
         marketService.setChainEnabled(chain, body.enabled());
         auditService.record("grocery.chain.update", chain + " -> " + body.enabled());
+        recomputeDeals();
         return body;
+    }
+
+    /** Schwelle oder Auswahl geändert: Schnäppchen und Entitäten sofort aus der Datenbank neu (ohne Claude). */
+    private void recomputeDeals() {
+        try {
+            runService.rebuildFromDatabase();
+        } catch (RuntimeException e) {
+            log.warn("Schnäppchen nach Einstellungsänderung nicht neu berechnet: {}", e.getMessage());
+        }
     }
 
     /** „Jetzt suchen“: startet den Lauf im Hintergrund (202), höchstens alle 10 Minuten (sonst 429). */

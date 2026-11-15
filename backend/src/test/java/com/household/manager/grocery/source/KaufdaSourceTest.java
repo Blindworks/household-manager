@@ -48,7 +48,8 @@ class KaufdaSourceTest {
     }
 
     private KaufdaSource source(FakeHttpTransport transport) {
-        return new KaufdaSource(new GroceryHttp(transport), properties, settingsService);
+        return new KaufdaSource(new GroceryHttp(transport), properties,
+                new com.household.manager.grocery.GrocerySettingsService(settingsService));
     }
 
     private static String shelfOf(String... entries) {

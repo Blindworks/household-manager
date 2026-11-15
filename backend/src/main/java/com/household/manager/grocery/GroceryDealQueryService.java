@@ -116,7 +116,7 @@ public class GroceryDealQueryService {
                     items.add(new SummaryItem(product.getName(), product.getOwnerUserId(),
                             GroceryOwners.ownerName(product.getOwnerUserId(), names), offer.getChain(),
                             offer.getChain().displayName(), deal.basePrice(), offer.getBaseUnit(),
-                            deal.savingPercent()));
+                            deal.savingPercent(), deal.appOnly(), deal.warmingUp()));
                 }
             }
         }

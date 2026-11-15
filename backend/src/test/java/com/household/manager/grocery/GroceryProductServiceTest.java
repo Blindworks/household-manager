@@ -131,6 +131,24 @@ class GroceryProductServiceTest {
     }
 
     @Test
+    void createWithoutAnySearchWordsIsRejected() {
+        when(suggester.suggest("???")).thenReturn(new Suggestion(List.of(), BaseUnit.PIECE));
+
+        assertThatThrownBy(() -> service.create(new ProductRequest("???", null, null, null, null, null, null, null)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("Bitte Suchwörter angeben.");
+        verify(products, never()).save(any());
+    }
+
+    @Test
+    void verdictWithoutFitsIsRejected() {
+        stored(1L, 3L);
+
+        assertThatThrownBy(() -> service.verdict(1L, new VerdictRequest("fp", null)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(matching, never()).recordUserVerdict(anyLong(), anyString(), anyBoolean());
+    }
+
+    @Test
     void createWithSearchWordsSkipsSuggester() {
         service.create(request("Milch", List.of("Milch", "vollmilch")));
 

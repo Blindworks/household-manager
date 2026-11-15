@@ -267,8 +267,10 @@ public class PennySource implements OfferSource, MarketSearch {
     }
 
     /**
-     * {@code price} ist immer der normale Ladenpreis. Bei {@code promo}-Kacheln steht im Feld {@code price} der
-     * App-Preis und der Normalpreis in {@code crossOutPrice}; bei {@code promoPlus} ist es umgekehrt
+     * {@code price} ist immer der normale Ladenpreis. Bei {@code promo}-Kacheln mit App-Marker
+     * ({@code benefitGroundPrice}) steht im Feld {@code price} der App-Preis und der Normalpreis in
+     * {@code crossOutPrice}; ohne Marker ist {@code crossOutPrice} ein gewöhnlicher Streichpreis. Bei {@code promoPlus}
+     * ist es umgekehrt
      * ({@code benefitPrice} = App-Preis). Ein UVP ({@code originalPriceType: uvp}, {@code listPrice}) ist nie
      * Vergleichspreis.
      */
@@ -283,7 +285,7 @@ public class PennySource implements OfferSource, MarketSearch {
         BigDecimal price = shown;
         BigDecimal loyalty = number(tile.path("benefitPrice"));
         BigDecimal oldPrice = crossOut;
-        if ("promo".equals(tile.path("primaryType").asText()) && crossOut != null) {
+        if ("promo".equals(tile.path("primaryType").asText()) && crossOut != null && isAppTile(tile)) {
             price = crossOut;
             loyalty = shown;
             oldPrice = null;
@@ -313,6 +315,12 @@ public class PennySource implements OfferSource, MarketSearch {
                 .validTo(to)
                 .imageUrl(textOrNull(tile.path("imageRendition").path("tileMd")))
                 .build());
+    }
+
+    /** Nur App-Kacheln tragen einen App-Grundpreis. */
+    private static boolean isAppTile(JsonNode tile) {
+        JsonNode marker = tile.path("benefitGroundPrice");
+        return marker.isTextual() && !marker.asText().isBlank();
     }
 
     /** Preise kommen als Text mit angehängter Fußnotenziffer ({@code "12.99²"}); es zählt die führende Zahl. */

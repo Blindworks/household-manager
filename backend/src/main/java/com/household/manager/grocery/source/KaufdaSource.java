@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.grocery.Chain;
 import com.household.manager.grocery.GroceryProperties;
+import com.household.manager.grocery.GrocerySettingsService;
 import com.household.manager.grocery.pricing.BasePrice;
 import com.household.manager.grocery.pricing.BasePriceParser;
-import com.household.manager.service.ApplicationSettingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,8 +39,6 @@ import java.util.regex.Pattern;
 public class KaufdaSource implements OfferSource, MarketSearch {
 
     private static final String BASE = "https://www.kaufda.de/";
-    private static final String SETTINGS_CATEGORY = "GROCERY";
-    private static final String ACCOUNT_ID_KEY = "kaufda_account_id";
     private static final int SHELF_PAGE_SIZE = 60;
     private static final int MAX_SHELF_PAGES = 10;
     private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
@@ -56,9 +53,9 @@ public class KaufdaSource implements OfferSource, MarketSearch {
 
     private final GroceryHttp http;
     private final GroceryProperties properties;
-    private final ApplicationSettingsService settings;
+    private final GrocerySettingsService settings;
 
-    public KaufdaSource(GroceryHttp http, GroceryProperties properties, ApplicationSettingsService settings) {
+    public KaufdaSource(GroceryHttp http, GroceryProperties properties, GrocerySettingsService settings) {
         this.http = http;
         this.properties = properties;
         this.settings = settings;
@@ -122,7 +119,7 @@ public class KaufdaSource implements OfferSource, MarketSearch {
                 log.warn("kaufDA: Aldi-Süd-Prospekt nicht abrufbar: {}", e.getMessage());
             }
         }
-        String accountId = accountId();
+        String accountId = settings.kaufdaAccountId();
         Map<String, RawOffer> offersById = new LinkedHashMap<>();
         int succeeded = 0;
         String lastError = null;
@@ -234,16 +231,6 @@ public class KaufdaSource implements OfferSource, MarketSearch {
             throw new SourceFetchException("Aldi-Süd-Prospekt nicht gefunden");
         }
         return Optional.of(new Brochure(id.get(), "ALDI SÜD", Chain.ALDI_SUED, null, null, null, null, null, null));
-    }
-
-    private String accountId() {
-        String existing = settings.getString(SETTINGS_CATEGORY, ACCOUNT_ID_KEY, "");
-        if (existing != null && !existing.isBlank()) {
-            return existing;
-        }
-        String generated = UUID.randomUUID().toString();
-        settings.saveSetting(SETTINGS_CATEGORY, ACCOUNT_ID_KEY, generated);
-        return generated;
     }
 
     private static Optional<String> selectedMarketId(Brochure brochure, List<MarketCandidate> selected) {

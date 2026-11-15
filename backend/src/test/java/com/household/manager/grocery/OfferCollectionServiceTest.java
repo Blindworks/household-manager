@@ -258,6 +258,39 @@ class OfferCollectionServiceTest {
     }
 
     @Test
+    void overlongTextsAreCutToColumnLengthAndOverlongUrlDropped() {
+        String longText = "x".repeat(400);
+        OfferSource penny = new FakeSource(SourceKey.PENNY, true, () -> List.of(RawOffer.builder()
+                .source(SourceKey.PENNY).sourceOfferId("i".repeat(600)).chain(Chain.PENNY).title(longText)
+                .brand(longText).packaging(longText).imageUrl("http://img/" + "a".repeat(600))
+                .price(new BigDecimal("1.99")).validFrom(TODAY).validTo(TODAY.plusDays(5)).build()));
+
+        service(penny).collect();
+
+        GroceryOffer saved = savedOffers().get(0);
+        assertThat(saved.getTitle()).hasSize(300);
+        assertThat(saved.getBrand()).hasSize(150);
+        assertThat(saved.getPackaging()).hasSize(200);
+        assertThat(saved.getImageUrl()).isNull();
+        assertThat(saved.getSourceOfferIds()).isNull();
+        assertThat(saved.getFingerprint()).hasSize(64);
+    }
+
+    @Test
+    void sourceOfferIdsKeepOnlyWholeEntriesThatFit() {
+        OfferSource marktguru = new FakeSource(SourceKey.MARKTGURU, true, () -> List.of(RawOffer.builder()
+                .source(SourceKey.MARKTGURU).sourceOfferId("m1").chain(Chain.PENNY).title("Butter")
+                .price(new BigDecimal("1.99")).validFrom(TODAY).validTo(TODAY.plusDays(5)).build()));
+        OfferSource penny = new FakeSource(SourceKey.PENNY, true, () -> List.of(RawOffer.builder()
+                .source(SourceKey.PENNY).sourceOfferId("p".repeat(495)).chain(Chain.PENNY).title("Butter")
+                .price(new BigDecimal("1.99")).validFrom(TODAY).validTo(TODAY.plusDays(5)).build()));
+
+        service(marktguru, penny).collect();
+
+        assertThat(savedOffers().get(0).getSourceOfferIds()).isEqualTo("MARKTGURU:m1");
+    }
+
+    @Test
     void resolvesMarketIdFromChainAndExternalId() {
         GroceryMarket market = new GroceryMarket();
         market.setId(7L);
