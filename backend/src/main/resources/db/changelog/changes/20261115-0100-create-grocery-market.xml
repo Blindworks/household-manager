@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261115-0100-create-grocery-market" author="benedikt">
+        <comment>Supermarkt-Angebote: Maerkte der Ketten (gewaehlt = Angebote werden fuer ihn beobachtet).</comment>
+        <sql>
+            CREATE TABLE grocery_market (
+                id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+                chain VARCHAR(20) NOT NULL,
+                external_id VARCHAR(100) NOT NULL,
+                name VARCHAR(200) NOT NULL,
+                address VARCHAR(300) NULL,
+                lat DOUBLE NULL,
+                lng DOUBLE NULL,
+                region VARCHAR(40) NULL,
+                selected BOOLEAN NOT NULL DEFAULT FALSE,
+                CONSTRAINT uq_grocery_market_chain_external UNIQUE (chain, external_id)
+            )
+        </sql>
+        <rollback><dropTable tableName="grocery_market"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

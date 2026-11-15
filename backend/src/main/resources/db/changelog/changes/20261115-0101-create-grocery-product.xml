@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261115-0101-create-grocery-product" author="benedikt">
+        <comment>Supermarkt-Angebote: beobachtete Produkte (owner NULL = Haushalt).</comment>
+        <createTable tableName="grocery_product">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="owner_user_id" type="BIGINT">
+                <constraints foreignKeyName="fk_grocery_product_owner" referencedTableName="app_user" referencedColumnNames="id" deleteCascade="true"/>
+            </column>
+            <column name="name" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="base_unit" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="search_words" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="must_words" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="exclude_words" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="normal_price_per_unit" type="DECIMAL(8,3)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback><dropTable tableName="grocery_product"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

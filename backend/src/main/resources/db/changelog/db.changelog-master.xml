@@ -210,5 +210,12 @@
     <include file="db/changelog/changes/20261111-0097-create-house-opening.xml"/>
     <include file="db/changelog/changes/20261111-0098-create-laundry-drying-session.xml"/>
     <include file="db/changelog/changes/20261113-0099-house-device-position-rotation.xml"/>
+    <include file="db/changelog/changes/20261115-0100-create-grocery-market.xml"/>
+    <include file="db/changelog/changes/20261115-0101-create-grocery-product.xml"/>
+    <include file="db/changelog/changes/20261115-0102-create-grocery-offer.xml"/>
+    <include file="db/changelog/changes/20261115-0103-create-grocery-match.xml"/>
+    <include file="db/changelog/changes/20261115-0104-create-grocery-price-observation.xml"/>
+    <include file="db/changelog/changes/20261115-0105-create-grocery-source-run.xml"/>
+    <include file="db/changelog/changes/20261115-0106-index-grocery-offer-valid-to.xml"/>
 
 </databaseChangeLog>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261115-0104-create-grocery-price-observation" author="benedikt">
+        <comment>Supermarkt-Angebote: beobachteter Grundpreis je Produkt, Kette und ISO-Woche.</comment>
+        <sql>
+            CREATE TABLE grocery_price_observation (
+                id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+                product_id BIGINT NOT NULL,
+                chain VARCHAR(20) NOT NULL,
+                iso_week VARCHAR(8) NOT NULL,
+                base_price DECIMAL(9,3) NOT NULL,
+                observed_at DATETIME NOT NULL,
+                CONSTRAINT uq_grocery_price_obs UNIQUE (product_id, chain, iso_week),
+                CONSTRAINT fk_grocery_price_obs_product FOREIGN KEY (product_id) REFERENCES grocery_product (id) ON DELETE CASCADE
+            )
+        </sql>
+        <rollback><dropTable tableName="grocery_price_observation"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

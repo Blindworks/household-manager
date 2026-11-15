@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261115-0102-create-grocery-offer" author="benedikt">
+        <comment>Supermarkt-Angebote: zusammengefuehrter Angebotsbestand (market_id NULL = kettenweit).</comment>
+        <createTable tableName="grocery_offer">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="chain" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="market_id" type="BIGINT">
+                <constraints foreignKeyName="fk_grocery_offer_market" referencedTableName="grocery_market" referencedColumnNames="id" deleteCascade="true"/>
+            </column>
+            <column name="sources" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_offer_ids" type="VARCHAR(500)"/>
+            <column name="title" type="VARCHAR(300)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="brand" type="VARCHAR(150)"/>
+            <column name="description" type="TEXT"/>
+            <column name="packaging" type="VARCHAR(200)"/>
+            <column name="price" type="DECIMAL(8,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="old_price" type="DECIMAL(8,2)"/>
+            <column name="loyalty_price" type="DECIMAL(8,2)"/>
+            <column name="lowest_price_30d" type="DECIMAL(8,2)"/>
+            <column name="base_price" type="DECIMAL(9,3)"/>
+            <column name="base_unit" type="VARCHAR(10)"/>
+            <column name="valid_from" type="DATE"/>
+            <column name="valid_to" type="DATE"/>
+            <column name="image_url" type="VARCHAR(500)"/>
+            <column name="fingerprint" type="CHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="collected_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback><dropTable tableName="grocery_offer"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
