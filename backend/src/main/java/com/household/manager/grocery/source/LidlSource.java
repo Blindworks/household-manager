@@ -147,7 +147,7 @@ public class LidlSource implements OfferSource {
                 .build());
     }
 
-    /** Datum aus dem Filial-Badge, sonst die laufende Woche Montag bis Samstag. */
+    /** Datum aus dem Filial-Badge, sonst die laufende Woche Montag bis Samstag (sonntags die kommende). */
     private LocalDate[] validity(JsonNode badges) {
         LocalDate today = LocalDate.now(clock);
         if (badges.isArray()) {
@@ -161,7 +161,9 @@ public class LidlSource implements OfferSource {
                 }
             }
         }
-        LocalDate monday = today.with(DayOfWeek.MONDAY);
+        // Sonntags zeigt Lidl schon die neue Woche; die vergangene wäre abgelaufen.
+        LocalDate monday = today.getDayOfWeek() == DayOfWeek.SUNDAY
+                ? today.plusDays(1) : today.with(DayOfWeek.MONDAY);
         return new LocalDate[]{monday, monday.with(DayOfWeek.SATURDAY)};
     }
 

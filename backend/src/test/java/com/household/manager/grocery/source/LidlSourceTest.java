@@ -5,6 +5,9 @@ import com.household.manager.grocery.GroceryProperties;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -66,8 +69,8 @@ class LidlSourceTest {
         assertThat(offer.oldPrice()).isEqualByComparingTo("1.69");
         assertThat(offer.packaging()).isEqualTo("Je 200 g");
         assertThat(offer.brand()).isEqualTo("MARKE");
-        assertThat(offer.validFrom()).isEqualTo(LocalDate.of(2026, 11, 9));
-        assertThat(offer.validTo()).isEqualTo(LocalDate.of(2026, 11, 14));
+        assertThat(offer.validFrom()).isEqualTo(LocalDate.of(2026, 11, 16));
+        assertThat(offer.validTo()).isEqualTo(LocalDate.of(2026, 11, 21));
     }
 
     @Test
@@ -132,5 +135,50 @@ class LidlSourceTest {
 
         assertThat(source(transport).fetch(context(Set.of(Chain.REWE)))).isEmpty();
         assertThat(transport.requests()).isEmpty();
+    }
+
+    private static String realFixture() throws Exception {
+        return Files.readString(Path.of("src/test/resources/grocery/lidl/food_items.json"), StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void parsesOnlyFoodStoreOffersFromRealPage() throws Exception {
+        FakeHttpTransport transport = new FakeHttpTransport();
+        transport.respond(URL, 200, realFixture());
+
+        List<RawOffer> offers = source(transport).fetch(context(Set.of(Chain.LIDL)));
+
+        assertThat(offers).extracting(RawOffer::sourceOfferId).containsExactly("11677959", "11685936");
+    }
+
+    @Test
+    void realItemWithoutPackagingHasNoBasePrice() throws Exception {
+        FakeHttpTransport transport = new FakeHttpTransport();
+        transport.respond(URL, 200, realFixture());
+
+        RawOffer offer = source(transport).fetch(context(Set.of(Chain.LIDL))).get(0);
+
+        assertThat(offer.price()).isEqualByComparingTo("0.55");
+        assertThat(offer.packaging()).isNull();
+        assertThat(offer.basePriceText()).isNull();
+        assertThat(offer.basePrice()).isNull();
+        assertThat(offer.oldPrice()).isNull();
+        assertThat(offer.loyaltyPrice()).isNull();
+    }
+
+    @Test
+    void realLidlPlusItemKeepsNormalPriceAndBasePrice() throws Exception {
+        FakeHttpTransport transport = new FakeHttpTransport();
+        transport.respond(URL, 200, realFixture());
+
+        RawOffer offer = source(transport).fetch(context(Set.of(Chain.LIDL))).get(1);
+
+        assertThat(offer.price()).isEqualByComparingTo("1.59");
+        assertThat(offer.oldPrice()).isEqualByComparingTo("1.69");
+        assertThat(offer.loyaltyPrice()).isEqualByComparingTo("1.43");
+        assertThat(offer.packaging()).isEqualTo("Je 200 g");
+        assertThat(offer.basePriceText()).isEqualTo("1 kg = 7.95");
+        assertThat(offer.basePrice()).isNotNull();
+        assertThat(offer.basePrice().amount()).isEqualByComparingTo("7.95");
     }
 }
