@@ -181,7 +181,9 @@ public class SecurityConfig {
                                 "/v1/agent", "/v1/agent/**",
                                 // Systemprotokoll: Fehlertexte und Flow-Details sind Admin-Daten, auch LESEN.
                                 // Methodenlos, VOR der generischen GET-Regel.
-                                "/v1/admin/system-log", "/v1/admin/system-log/**").hasRole("ADMIN")
+                                "/v1/admin/system-log", "/v1/admin/system-log/**",
+                                // Supermarkt-Angebote: Einstellungen, Maerkte, Quellenstatus, Laeufe - auch LESEN ADMIN.
+                                "/v1/admin/groceries", "/v1/admin/groceries/**").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
