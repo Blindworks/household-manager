@@ -135,17 +135,21 @@ public class OfferMerger {
             members.add(offer);
         }
 
+        /** Passt, wenn das Angebot zu irgendeinem Mitglied der Gruppe passt (Überlappung, Preisregel, Ähnlichkeit). */
         boolean accepts(RawOffer other) {
-            RawOffer primary = primary();
-            if (!overlaps(primary, other) || !similar(primary, other)) {
+            return members.stream().anyMatch(member -> matches(member, other));
+        }
+
+        private boolean matches(RawOffer member, RawOffer other) {
+            if (!overlaps(member, other) || !similar(member, other)) {
                 return false;
             }
-            if (primary.price().compareTo(other.price()) == 0) {
+            if (member.price().compareTo(other.price()) == 0) {
                 return true;
             }
-            if (directPrimary && withinTolerance(primary.price(), other.price())) {
+            if (!member.source().isAggregator() && withinTolerance(member.price(), other.price())) {
                 log.warn("Preisabweichung zwischen {} und {} ({}): '{}' {} gegen {} - Direktpreis gewinnt",
-                        primary.source(), other.source(), primary.chain(), primary.title(), primary.price(), other.price());
+                        member.source(), other.source(), member.chain(), member.title(), member.price(), other.price());
                 return true;
             }
             return false;

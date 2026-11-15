@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long> {
 
@@ -14,4 +15,7 @@ public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long
     @Modifying
     @Query("delete from GroceryOffer o where o.validTo is null or o.validTo >= :today")
     int deleteActiveFrom(@Param("today") LocalDate today);
+
+    @Query("select o from GroceryOffer o where o.validTo is null or o.validTo >= :today")
+    List<GroceryOffer> findActiveFrom(@Param("today") LocalDate today);
 }

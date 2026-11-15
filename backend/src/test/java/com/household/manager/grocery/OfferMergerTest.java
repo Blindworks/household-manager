@@ -80,6 +80,18 @@ class OfferMergerTest {
     }
 
     @Test
+    void aggregatorMatchingOnlyAnotherMemberStillMergesIntoOneOffer() {
+        RawOffer rewe = raw(SourceKey.REWE, Chain.REWE, "240767", "Coca-Cola Cola", "7.99").build();
+        RawOffer mg = raw(SourceKey.MARKTGURU, Chain.REWE, null, "Cola Getraenk", "7.99").brand("Coca-Cola").build();
+        RawOffer kaufda = raw(SourceKey.KAUFDA, Chain.REWE, null, "Getraenk Zero", "7.99").brand("Cola").build();
+
+        List<OfferMerger.MergedOffer> merged = merger.merge(List.of(rewe, mg, kaufda), MARKETS);
+
+        assertThat(merged).hasSize(1);
+        assertThat(merged.get(0).sources()).containsExactlyInAnyOrder(SourceKey.REWE, SourceKey.MARKTGURU, SourceKey.KAUFDA);
+    }
+
+    @Test
     void differentPriceIsNotMerged() {
         RawOffer a = raw(SourceKey.MARKTGURU, Chain.LIDL, null, "Cola Zero", "7.99").build();
         RawOffer b = raw(SourceKey.KAUFDA, Chain.LIDL, null, "Cola Zero", "8.49").build();

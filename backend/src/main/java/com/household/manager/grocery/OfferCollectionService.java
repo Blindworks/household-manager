@@ -3,6 +3,7 @@ package com.household.manager.grocery;
 import com.household.manager.grocery.entity.GroceryMarket;
 import com.household.manager.grocery.entity.GroceryOffer;
 import com.household.manager.grocery.entity.GrocerySourceRun;
+import com.household.manager.grocery.pricing.BasePrice;
 import com.household.manager.grocery.source.FetchContext;
 import com.household.manager.grocery.source.OfferSource;
 import com.household.manager.grocery.source.RawOffer;
@@ -23,6 +24,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +36,7 @@ import java.util.stream.Collectors;
 public class OfferCollectionService {
 
     private static final int MAX_REASON_LENGTH = 300;
+    private static final String EMPTY_REASON = "Keine Angebote geliefert";
 
     public record CollectionResult(int offerCount, Map<SourceKey, String> failures) {
     }
@@ -47,6 +50,7 @@ public class OfferCollectionService {
     private final OfferMerger merger;
     private final Clock clock;
     private final TransactionTemplate transactions;
+    private final AtomicBoolean running = new AtomicBoolean();
 
     public OfferCollectionService(List<OfferSource> sources, GroceryProperties properties,
             FetchContextProvider contextProvider, GroceryMarketRepository markets, GroceryOfferRepository offers,
@@ -62,8 +66,25 @@ public class OfferCollectionService {
         this.transactions = transactions;
     }
 
+    /**
+     * @throws IllegalStateException wenn bereits ein Sammellauf läuft
+     */
     public CollectionResult collect() {
+        if (!running.compareAndSet(false, true)) {
+            throw new IllegalStateException("Ein Sammellauf läuft bereits");
+        }
+        try {
+            return runCollection();
+        } finally {
+            running.set(false);
+        }
+    }
+
+    private CollectionResult runCollection() {
         FetchContext context = contextProvider.current();
+        LocalDate today = LocalDate.now(clock);
+        List<GroceryOffer> stock = offers.findActiveFrom(today);
+        List<GroceryMarket> marketList = markets.findAll();
         List<RawOffer> collected = new ArrayList<>();
         Map<SourceKey, String> failures = new EnumMap<>(SourceKey.class);
         boolean anySourceDelivered = false;
@@ -75,7 +96,13 @@ public class OfferCollectionService {
                 continue;
             }
             try {
-                List<RawOffer> delivered = source.fetch(context);
+                List<RawOffer> delivered = source.fetch(context).stream()
+                        .filter(o -> o.validTo() == null || !o.validTo().isBefore(today))
+                        .toList();
+                if (delivered.isEmpty() && stockContains(stock, key)) {
+                    fail(key, EMPTY_REASON, failures, null);
+                    continue;
+                }
                 collected.addAll(delivered);
                 anySourceDelivered |= !delivered.isEmpty();
                 recordRun(key, delivered.size(), true, null);
@@ -90,8 +117,13 @@ public class OfferCollectionService {
             log.warn("Keine Angebotsquelle hat Angebote geliefert - der bisherige Bestand bleibt erhalten");
             return new CollectionResult(0, failures);
         }
-        List<GroceryOffer> merged = toEntities(merger.merge(collected, marketIds()));
-        LocalDate today = LocalDate.now(clock);
+        Map<Long, String> externalIds = marketList.stream()
+                .collect(Collectors.toMap(GroceryMarket::getId, GroceryMarket::getExternalId, (a, b) -> a));
+        for (SourceKey failed : failures.keySet()) {
+            stock.stream().filter(o -> hasSource(o, failed))
+                    .forEach(o -> collected.add(rehydrate(o, failed, externalIds)));
+        }
+        List<GroceryOffer> merged = toEntities(merger.merge(collected, marketIds(marketList)));
         transactions.executeWithoutResult(status -> {
             offers.deleteActiveFrom(today);
             offers.saveAll(merged);
@@ -101,8 +133,50 @@ public class OfferCollectionService {
         return new CollectionResult(merged.size(), failures);
     }
 
+    private static boolean stockContains(List<GroceryOffer> stock, SourceKey key) {
+        return stock.stream().anyMatch(o -> hasSource(o, key));
+    }
+
+    private static boolean hasSource(GroceryOffer offer, SourceKey key) {
+        return offer.getSources() != null && List.of(offer.getSources().split(",")).contains(key.name());
+    }
+
+    /** Alte Angebote einer ausgefallenen Quelle bleiben bis zum Ablauf ihrer Gültigkeit erhalten. */
+    private static RawOffer rehydrate(GroceryOffer offer, SourceKey key, Map<Long, String> externalIds) {
+        String sourceOfferId = null;
+        if (offer.getSourceOfferIds() != null) {
+            for (String entry : offer.getSourceOfferIds().split(",")) {
+                if (entry.startsWith(key.name() + ":")) {
+                    sourceOfferId = entry.substring(key.name().length() + 1);
+                }
+            }
+        }
+        return RawOffer.builder()
+                .source(key)
+                .sourceOfferId(sourceOfferId)
+                .chain(offer.getChain())
+                .marketExternalId(offer.getMarketId() == null ? null : externalIds.get(offer.getMarketId()))
+                .title(offer.getTitle())
+                .brand(offer.getBrand())
+                .description(offer.getDescription())
+                .packaging(offer.getPackaging())
+                .price(offer.getPrice())
+                .oldPrice(offer.getOldPrice())
+                .loyaltyPrice(offer.getLoyaltyPrice())
+                .lowestPrice30Days(offer.getLowestPrice30d())
+                .basePrice(offer.getBasePrice() == null ? null : new BasePrice(offer.getBasePrice(), offer.getBaseUnit()))
+                .validFrom(offer.getValidFrom())
+                .validTo(offer.getValidTo())
+                .imageUrl(offer.getImageUrl())
+                .build();
+    }
+
     private void fail(SourceKey key, String reason, Map<SourceKey, String> failures, Exception cause) {
-        log.warn("Angebotsquelle {} fehlgeschlagen: {}", key, reason, cause);
+        if (cause == null) {
+            log.warn("Angebotsquelle {} fehlgeschlagen: {}", key, reason);
+        } else {
+            log.warn("Angebotsquelle {} fehlgeschlagen: {}", key, reason, cause);
+        }
         failures.put(key, reason);
         recordRun(key, 0, false, reason);
     }
@@ -122,9 +196,9 @@ public class OfferCollectionService {
         }
     }
 
-    private Map<String, Long> marketIds() {
+    private Map<String, Long> marketIds(List<GroceryMarket> marketList) {
         Map<String, Long> ids = new HashMap<>();
-        for (GroceryMarket market : markets.findAll()) {
+        for (GroceryMarket market : marketList) {
             ids.put(market.getChain().name() + "|" + market.getExternalId(), market.getId());
         }
         return ids;

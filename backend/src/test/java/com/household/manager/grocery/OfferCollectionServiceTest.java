@@ -77,6 +77,7 @@ class OfferCollectionServiceTest {
 
     @Test
     void failingSourceDoesNotAbortRun() {
+        when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Rewe Schnaeppchen", "REWE", "REWE:r1", null)));
         OfferCollectionService service = service(
                 failing(SourceKey.REWE, "Zugriff gesperrt (HTTP 403)"),
                 source(SourceKey.PENNY, Chain.PENNY, "Butter"),
@@ -84,19 +85,126 @@ class OfferCollectionServiceTest {
 
         OfferCollectionService.CollectionResult result = service.collect();
 
-        assertThat(result.offerCount()).isEqualTo(2);
+        assertThat(result.offerCount()).isEqualTo(3);
         assertThat(result.failures()).containsEntry(SourceKey.REWE, "Zugriff gesperrt (HTTP 403)");
         assertThat(result.failures()).hasSize(1);
         verify(offers).deleteActiveFrom(TODAY);
         ArgumentCaptor<Iterable<GroceryOffer>> saved = ArgumentCaptor.forClass(Iterable.class);
         verify(offers).saveAll(saved.capture());
-        assertThat(saved.getValue()).extracting(GroceryOffer::getTitle).containsExactlyInAnyOrder("Butter", "Milch");
+        assertThat(saved.getValue()).extracting(GroceryOffer::getTitle).containsExactlyInAnyOrder("Butter", "Milch", "Rewe Schnaeppchen");
         GrocerySourceRun rewe = savedRuns.stream().filter(r -> r.getSourceKey() == SourceKey.REWE).findFirst().orElseThrow();
         assertThat(rewe.isOk()).isFalse();
         assertThat(rewe.getReason()).isEqualTo("Zugriff gesperrt (HTTP 403)");
         GrocerySourceRun penny = savedRuns.stream().filter(r -> r.getSourceKey() == SourceKey.PENNY).findFirst().orElseThrow();
         assertThat(penny.isOk()).isTrue();
         assertThat(penny.getOfferCount()).isEqualTo(1);
+    }
+
+    private static GroceryOffer stored(String title, String sources, String sourceOfferIds, Long marketId) {
+        GroceryOffer o = new GroceryOffer();
+        o.setChain(Chain.REWE);
+        o.setMarketId(marketId);
+        o.setSources(sources);
+        o.setSourceOfferIds(sourceOfferIds);
+        o.setTitle(title);
+        o.setPrice(new BigDecimal("2.49"));
+        o.setValidFrom(TODAY);
+        o.setValidTo(TODAY.plusDays(3));
+        o.setFingerprint("x");
+        return o;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<GroceryOffer> savedOffers() {
+        ArgumentCaptor<Iterable<GroceryOffer>> saved = ArgumentCaptor.forClass(Iterable.class);
+        verify(offers).saveAll(saved.capture());
+        List<GroceryOffer> list = new ArrayList<>();
+        saved.getValue().forEach(list::add);
+        return list;
+    }
+
+    @Test
+    void offerOnlyFromFailedSourceSurvivesItsFailure() {
+        GroceryMarket market = new GroceryMarket();
+        market.setId(7L);
+        market.setChain(Chain.REWE);
+        market.setExternalId("240767");
+        when(markets.findAll()).thenReturn(List.of(market));
+        when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Alter Schnaeppchen", "REWE", "REWE:r9", 7L)));
+
+        OfferCollectionService.CollectionResult result = service(
+                failing(SourceKey.REWE, "HTTP 500"), source(SourceKey.PENNY, Chain.PENNY, "Butter")).collect();
+
+        List<GroceryOffer> saved = savedOffers();
+        assertThat(saved).extracting(GroceryOffer::getTitle).containsExactlyInAnyOrder("Alter Schnaeppchen", "Butter");
+        GroceryOffer kept = saved.stream().filter(o -> o.getTitle().startsWith("Alter")).findFirst().orElseThrow();
+        assertThat(kept.getMarketId()).isEqualTo(7L);
+        assertThat(kept.getSourceOfferIds()).isEqualTo("REWE:r9");
+        assertThat(result.failures()).containsKey(SourceKey.REWE);
+    }
+
+    @Test
+    void offerFromFailedAndHealthySourceAppearsOnce() {
+        when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Cola", "MARKTGURU,REWE", "MARKTGURU:m1,REWE:r1", null)));
+        OfferSource marktguru = new FakeSource(SourceKey.MARKTGURU, true, () -> List.of(RawOffer.builder()
+                .source(SourceKey.MARKTGURU).sourceOfferId("m1").chain(Chain.REWE).title("Cola")
+                .price(new BigDecimal("2.49")).validFrom(TODAY).validTo(TODAY.plusDays(3)).build()));
+
+        service(failing(SourceKey.REWE, "HTTP 500"), marktguru).collect();
+
+        List<GroceryOffer> saved = savedOffers();
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getSources()).isEqualTo("MARKTGURU,REWE");
+    }
+
+    @Test
+    void emptyDeliveryWithStockIsTreatedAsFailure() {
+        when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Cola", "REWE", "REWE:r1", null)));
+
+        OfferCollectionService.CollectionResult result = service(
+                new FakeSource(SourceKey.REWE, true, List::of), source(SourceKey.PENNY, Chain.PENNY, "Butter")).collect();
+
+        assertThat(result.failures()).containsEntry(SourceKey.REWE, "Keine Angebote geliefert");
+        GrocerySourceRun rewe = savedRuns.stream().filter(r -> r.getSourceKey() == SourceKey.REWE).findFirst().orElseThrow();
+        assertThat(rewe.isOk()).isFalse();
+        assertThat(savedOffers()).extracting(GroceryOffer::getTitle).containsExactlyInAnyOrder("Cola", "Butter");
+    }
+
+    @Test
+    void emptyDeliveryWithoutStockIsOk() {
+        OfferCollectionService.CollectionResult result = service(
+                new FakeSource(SourceKey.REWE, true, List::of), source(SourceKey.PENNY, Chain.PENNY, "Butter")).collect();
+
+        assertThat(result.failures()).isEmpty();
+        GrocerySourceRun rewe = savedRuns.stream().filter(r -> r.getSourceKey() == SourceKey.REWE).findFirst().orElseThrow();
+        assertThat(rewe.isOk()).isTrue();
+    }
+
+    @Test
+    void expiredRawOffersAreDropped() {
+        OfferSource penny = new FakeSource(SourceKey.PENNY, true, () -> List.of(
+                RawOffer.builder().source(SourceKey.PENNY).sourceOfferId("a").chain(Chain.PENNY).title("Alt")
+                        .price(new BigDecimal("1")).validTo(TODAY.minusDays(1)).build(),
+                RawOffer.builder().source(SourceKey.PENNY).sourceOfferId("b").chain(Chain.PENNY).title("Neu")
+                        .price(new BigDecimal("1")).validTo(TODAY).build()));
+
+        service(penny).collect();
+
+        assertThat(savedOffers()).extracting(GroceryOffer::getTitle).containsExactly("Neu");
+    }
+
+    @Test
+    void concurrentRunIsRejected() {
+        OfferCollectionService[] holder = new OfferCollectionService[1];
+        OfferSource reentrant = new FakeSource(SourceKey.PENNY, true, () -> {
+            holder[0].collect();
+            return List.of();
+        });
+        holder[0] = service(reentrant);
+
+        OfferCollectionService.CollectionResult result = holder[0].collect();
+
+        assertThat(result.failures().get(SourceKey.PENNY)).contains("läuft bereits");
     }
 
     @Test
