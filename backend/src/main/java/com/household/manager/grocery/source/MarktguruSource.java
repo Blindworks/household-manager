@@ -89,18 +89,20 @@ public class MarktguruSource implements OfferSource {
         for (int page = 0; page < MAX_PAGES; page++) {
             String url = API + "publishers/retailer/" + uniqueName + "/offers?as=web&zipCode=" + zip
                     + "&limit=" + PAGE_SIZE + "&offset=" + (page * PAGE_SIZE);
-            List<RawOffer> offers = parseRetailerOffers(session.get(url), chain);
+            List<RawOffer> offers = offersOf(readTree(session.get(url), uniqueName), chain);
             result.addAll(offers);
             if (offers.size() < PAGE_SIZE) {
-                break;
+                return result;
             }
         }
+        log.warn("marktguru: Seitenlimit ({}) für {} erreicht, weitere Angebote werden ignoriert",
+                MAX_PAGES, uniqueName);
         return result;
     }
 
     private List<String> retailerNames(String publishersJson) throws SourceFetchException {
         List<String> names = new ArrayList<>();
-        for (JsonNode publisher : readTree(publishersJson).path("results")) {
+        for (JsonNode publisher : readTree(publishersJson, "Händlerliste").path("results")) {
             String name = publisher.path("uniqueName").asText("");
             if (!name.isEmpty()) {
                 names.add(name);
@@ -131,14 +133,20 @@ public class MarktguruSource implements OfferSource {
         return Optional.empty();
     }
 
+    /** Nachsichtig: eine unlesbare Antwort ergibt eine leere Liste (der Abrufpfad prüft strikt). */
     List<RawOffer> parseRetailerOffers(String json, Chain chain) {
-        List<RawOffer> offers = new ArrayList<>();
         try {
-            for (JsonNode node : MAPPER.readTree(json).path("results")) {
-                parseOffer(node, chain).ifPresent(offers::add);
-            }
+            return offersOf(MAPPER.readTree(json), chain);
         } catch (JsonProcessingException e) {
             log.warn("marktguru: Angebotsantwort nicht lesbar: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<RawOffer> offersOf(JsonNode tree, Chain chain) {
+        List<RawOffer> offers = new ArrayList<>();
+        for (JsonNode node : tree.path("results")) {
+            parseOffer(node, chain).ifPresent(offers::add);
         }
         return offers;
     }
@@ -205,11 +213,11 @@ public class MarktguruSource implements OfferSource {
         }
     }
 
-    private static JsonNode readTree(String json) throws SourceFetchException {
+    private static JsonNode readTree(String json, String what) throws SourceFetchException {
         try {
             return MAPPER.readTree(json);
         } catch (JsonProcessingException e) {
-            throw new SourceFetchException("Antwort nicht lesbar: " + e.getOriginalMessage(), e);
+            throw new SourceFetchException("Antwort nicht lesbar (" + what + ")", e);
         }
     }
 

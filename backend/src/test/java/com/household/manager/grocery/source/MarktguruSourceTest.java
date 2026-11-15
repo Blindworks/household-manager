@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MarktguruSourceTest {
 
@@ -109,6 +110,29 @@ class MarktguruSourceTest {
                 .filter(u -> u.startsWith("https://www.marktguru.de/")).count();
         assertThat(homeRequests).isEqualTo(2);
         assertThat(transport.requests().get(1).headers().firstValue("x-apikey")).contains("TEST_API_KEY");
+    }
+
+    @Test
+    void fetchFailsOnUnparseableRetailerResponse() throws IOException {
+        FakeHttpTransport transport = new FakeHttpTransport()
+                .respond("https://www.marktguru.de/", 200, fixture("home.html"))
+                .respond(BASE + "offers/publishers", 200, PUBLISHERS)
+                .respond(BASE + "publishers/retailer/penny/offers", 200, "<html>Block</html>");
+
+        assertThatThrownBy(() -> source(transport).fetch(context(Chain.PENNY)))
+                .isInstanceOf(SourceFetchException.class)
+                .hasMessage("Antwort nicht lesbar (penny)");
+    }
+
+    @Test
+    void fetchFailsOnUnparseablePublisherList() throws IOException {
+        FakeHttpTransport transport = new FakeHttpTransport()
+                .respond("https://www.marktguru.de/", 200, fixture("home.html"))
+                .respond(BASE + "offers/publishers", 200, "<html>Block</html>");
+
+        assertThatThrownBy(() -> source(transport).fetch(context(Chain.PENNY)))
+                .isInstanceOf(SourceFetchException.class)
+                .hasMessageContaining("Antwort nicht lesbar");
     }
 
     @Test
