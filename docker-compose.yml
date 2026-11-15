@@ -66,6 +66,8 @@ services:
       AGENT_QUIET_HOURS: ${AGENT_QUIET_HOURS:-22:00-07:00}
       AGENT_DAILY_TOKEN_BUDGET: ${AGENT_DAILY_TOKEN_BUDGET:-300000}
       CHARGING_ENBW_API_KEY: ${CHARGING_ENBW_API_KEY:-}
+      GROCERY_ENABLED: ${GROCERY_ENABLED:-true}
+      GROCERY_AI_MODEL: ${GROCERY_AI_MODEL:-claude-haiku-4-5-20251001}
 
       # Blink-Gesichtserkennung (blink-vision-Sidecar)
       VISION_SIDECAR_URL: http://blink-vision:8090
