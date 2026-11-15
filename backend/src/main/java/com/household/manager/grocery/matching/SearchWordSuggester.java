@@ -27,7 +27,7 @@ public class SearchWordSuggester {
     static final int MAX_SEARCH_WORDS = 8;
     private static final Set<String> FILLER = Set.of("dose", "dosen", "flasche", "flaschen", "fl", "packung",
             "pack", "stück", "stueck", "stk", "je", "liter", "ml", "kg", "und", "oder", "mit", "ohne", "von", "der",
-            "die", "das");
+            "die", "das", "gramm", "kilo", "cl");
     private static final Pattern LITER = Pattern.compile("(?<![\\p{L}])(l|ml|cl|liter)(?![\\p{L}])",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern KILOGRAM = Pattern.compile("(?<![\\p{L}])(g|kg|gramm|kilo)(?![\\p{L}])",
@@ -68,7 +68,8 @@ public class SearchWordSuggester {
             JsonNode root = objectMapper.readTree(FENCE.matcher(text.trim()).replaceAll("").trim());
             LinkedHashSet<String> words = new LinkedHashSet<>();
             for (JsonNode node : root.path("searchWords")) {
-                String word = node.asText("").trim().toLowerCase(Locale.ROOT);
+                String word = node.asText("").replace(',', ' ').trim().replaceAll("\\s+", " ")
+                        .toLowerCase(Locale.ROOT);
                 if (!word.isEmpty() && words.size() < MAX_SEARCH_WORDS) {
                     words.add(word);
                 }
@@ -88,6 +89,14 @@ public class SearchWordSuggester {
             boolean hasDigit = raw.chars().anyMatch(Character::isDigit);
             if (word.length() >= 3 && !hasDigit && !FILLER.contains(word) && words.size() < MAX_SEARCH_WORDS) {
                 words.add(word);
+            }
+        }
+        if (words.isEmpty()) {
+            for (String token : ProductWords.tokens(name)) {
+                if (token.length() >= 2 && token.chars().anyMatch(Character::isLetter)
+                        && words.size() < MAX_SEARCH_WORDS) {
+                    words.add(token);
+                }
             }
         }
         BaseUnit unit = LITER.matcher(name).find() ? BaseUnit.LITER

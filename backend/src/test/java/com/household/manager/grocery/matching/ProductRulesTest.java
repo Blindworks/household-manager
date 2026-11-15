@@ -37,4 +37,19 @@ class ProductRulesTest {
         assertThat(ProductRules.excludes(product("cola", ""), "Chocolate Riegel")).isTrue();
         assertThat(ProductRules.excludes(product("", "cola"), "Chocolate Riegel")).isFalse();
     }
+
+    @Test
+    void commaInsideNumberStaysOnePhrase() {
+        GroceryProduct p = product("0,33", "");
+        assertThat(ProductRules.excludes(p, "18 x 0,33 l")).isFalse();
+        assertThat(ProductRules.excludes(p, "Dose 10,33 l")).isTrue();
+        assertThat(ProductRules.excludes(p, "0 Stück, 33 g")).isTrue();
+    }
+
+    @Test
+    void sharpSEqualsDoubleS() {
+        GroceryProduct p = product("", "süß");
+        assertThat(ProductRules.excludes(p, "SÜSS Sorte")).isTrue();
+        assertThat(ProductRules.excludes(p, "süß")).isTrue();
+    }
 }

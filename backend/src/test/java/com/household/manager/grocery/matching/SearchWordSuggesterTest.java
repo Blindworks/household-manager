@@ -63,4 +63,20 @@ class SearchWordSuggesterTest {
 
         assertThat(suggester.suggest("Eier Freiland").baseUnit()).isEqualTo(BaseUnit.PIECE);
     }
+
+    @Test
+    void fallbackKeepsDigitTokens() {
+        when(client.createMessage(any(AnthropicRequest.class))).thenThrow(new AiException("x", null));
+
+        assertThat(suggester.suggest("7up").searchWords()).containsExactly("7up");
+        assertThat(suggester.suggest("S-Budget 1a").searchWords()).isNotEmpty().contains("s-budget");
+    }
+
+    @Test
+    void commasInClaudeWordsAreRemoved() {
+        when(client.createMessage(any(AnthropicRequest.class)))
+                .thenReturn(text("{\"searchWords\":[\"cola, zero\"],\"baseUnit\":\"LITER\"}"));
+
+        assertThat(suggester.suggest("Cola Zero").searchWords()).containsExactly("cola zero");
+    }
 }
