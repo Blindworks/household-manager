@@ -21,8 +21,12 @@ public final class BasePriceParser {
     private static final Pattern DEPOSIT = Pattern.compile(
             "(?:zzgl\\.?\\s*)?" + NUMBER + "\\s*€?\\s*Pfand", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUANTITY = Pattern.compile(
-            "(?<![\\d.,])(?:(\\d+)\\s*x\\s*)?(" + NUMBER + ")\\s*-?\\s*(ml|cl|kg|liter|g|l)(?!\\p{L})",
+            "(?<![\\d.,])(?:(\\d+)\\s*[x×]\\s*)?(" + NUMBER + ")\\s*-?\\s*(ml|cl|kg|liter|g|l)(?!\\p{L})",
             Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern COUNT_WORD_BEFORE = Pattern.compile(
+            "(?:\\d+\\s*(?:er(?:-?pack)?|fl\\.?|flaschen|dosen|stk\\.?|st\\.?)|à|\\ba)\\s*$",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private static final BigDecimal THOUSAND = new BigDecimal("1000");
     private static final BigDecimal HUNDRED = new BigDecimal("100");
@@ -59,9 +63,17 @@ public final class BasePriceParser {
         if (packagingOrDescription == null || price == null || price.signum() <= 0) {
             return Optional.empty();
         }
-        String withoutDeposit = DEPOSIT.matcher(packagingOrDescription).replaceAll(" ");
-        Matcher matcher = QUANTITY.matcher(withoutDeposit);
+        String cleaned = DEPOSIT.matcher(packagingOrDescription).replaceAll(" ");
+        cleaned = UNIT_PRICE.matcher(cleaned).replaceAll(" ");
+        cleaned = PIECE_PRICE.matcher(cleaned).replaceAll(" ");
+        cleaned = LABELLED_PRICE.matcher(cleaned).replaceAll(" ");
+        Matcher matcher = QUANTITY.matcher(cleaned);
         if (!matcher.find()) {
+            return Optional.empty();
+        }
+        if (matcher.group(1) == null
+                && COUNT_WORD_BEFORE.matcher(cleaned.substring(0, matcher.start())).find()) {
+            // Gebindeangabe ("6er-Pack", "24 Fl. à") ohne verlässliche Stückzahl
             return Optional.empty();
         }
         BigDecimal count = matcher.group(1) == null ? BigDecimal.ONE : new BigDecimal(matcher.group(1));
@@ -81,6 +93,7 @@ public final class BasePriceParser {
         }
         return fromText(basePriceText)
                 .or(() -> fromPackaging(packaging, price))
+                .or(() -> fromText(description))
                 .or(() -> fromPackaging(description, price));
     }
 

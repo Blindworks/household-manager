@@ -85,4 +85,29 @@ class BasePriceParserTest {
         assertThat(BasePriceParser.resolve(null, null, null, "4 l", price)).contains(bp("0.500", BaseUnit.LITER));
         assertThat(BasePriceParser.resolve(null, null, null, null, price)).isEqualTo(Optional.empty());
     }
+
+    @Test
+    void baseTextInsideDescriptionIsNotTakenAsPackSize() {
+        BigDecimal price = new BigDecimal("0.99");
+        assertThat(BasePriceParser.resolve(null, null, null, "versch. Sorten (1 l = 0.66)", price))
+                .contains(bp("0.660", BaseUnit.LITER));
+        assertThat(BasePriceParser.resolve(null, null, null, "je 1,5-l-Fl. (1 l = 0.66)", new BigDecimal("0.99")))
+                .contains(bp("0.660", BaseUnit.LITER));
+        assertThat(BasePriceParser.fromPackaging("versch. Sorten (1 l = 0.66)", price)).isEmpty();
+    }
+
+    @Test
+    void multiplicationSignIsAMultiplier() {
+        assertThat(BasePriceParser.fromPackaging("6 × 0,33 l", new BigDecimal("1.98")))
+                .contains(bp("1.000", BaseUnit.LITER));
+        assertThat(BasePriceParser.fromPackaging("je 2 x 250 g", new BigDecimal("3.98")))
+                .contains(bp("7.960", BaseUnit.KILOGRAM));
+    }
+
+    @Test
+    void otherMultipackNotationsYieldEmpty() {
+        BigDecimal price = new BigDecimal("1.98");
+        assertThat(BasePriceParser.fromPackaging("6er-Pack 0,33 l", price)).isEmpty();
+        assertThat(BasePriceParser.fromPackaging("24 Fl. à 0,33 l", price)).isEmpty();
+    }
 }
