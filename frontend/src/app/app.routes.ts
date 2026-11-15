@@ -348,6 +348,12 @@ export const routes: Routes = [
     title: 'Hundetracker - Household Manager'
   },
   {
+    path: 'groceries',
+    loadComponent: () => import('./pages/groceries/groceries.component').then(m => m.GroceriesComponent),
+    canActivate: [authGuard],
+    title: 'Angebote - Household Manager'
+  },
+  {
     path: 'pet-food',
     loadComponent: () => import('./pages/pet-food/pet-food.component').then(m => m.PetFoodComponent),
     canActivate: [authGuard],
