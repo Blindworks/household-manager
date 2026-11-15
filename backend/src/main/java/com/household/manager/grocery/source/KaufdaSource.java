@@ -51,7 +51,7 @@ public class KaufdaSource implements OfferSource, MarketSearch {
     private static final Pattern HOUSE_NUMBER =
             Pattern.compile("\\s+\\d+\\s*[a-zA-Z]?(\\s*[-/–]\\s*\\d+\\s*[a-zA-Z]?)*\\s*$");
     private static final Pattern ZIP = Pattern.compile("\\b(\\d{5})\\b");
-    private static final Pattern LOYALTY_CONDITION = Pattern.compile("(?i)\\bapp\\b|\\bplus\\b");
+    private static final Pattern LOYALTY_CONDITION = Pattern.compile("(?i)\\bapp\\b|lidl plus|kaufland card|mit karte");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final GroceryHttp http;
@@ -100,34 +100,50 @@ public class KaufdaSource implements OfferSource, MarketSearch {
         List<Brochure> shelf = fetchShelf(ctx.lat(), ctx.lng());
         List<Brochure> relevant = new ArrayList<>();
         Map<Brochure, String> marketIds = new LinkedHashMap<>();
-        Set<Chain> chainWideSeen = new HashSet<>();
-        Set<String> marketsSeen = new HashSet<>();
+        Set<String> seenIds = new HashSet<>();
         for (Brochure brochure : shelf) {
-            if (!ctx.enabledChains().contains(brochure.chain())) {
+            if (!ctx.enabledChains().contains(brochure.chain()) || !seenIds.add(brochure.contentId())) {
                 continue;
             }
             if (brochure.chain().hasMarkets()) {
-                Optional<String> marketId = selectedMarketId(brochure, ctx.selectedMarkets());
-                if (marketId.isPresent() && marketsSeen.add(marketId.get())) {
+                selectedMarketId(brochure, ctx.selectedMarkets()).ifPresent(marketId -> {
                     relevant.add(brochure);
-                    marketIds.put(brochure, marketId.get());
-                }
-            } else if (chainWideSeen.add(brochure.chain())) {
+                    marketIds.put(brochure, marketId);
+                });
+            } else {
                 relevant.add(brochure);
             }
         }
-        if (ctx.enabledChains().contains(Chain.ALDI_SUED) && chainWideSeen.add(Chain.ALDI_SUED)) {
-            aldiSuedBrochure().ifPresent(relevant::add);
+        if (ctx.enabledChains().contains(Chain.ALDI_SUED)
+                && relevant.stream().noneMatch(b -> b.chain() == Chain.ALDI_SUED)) {
+            try {
+                aldiSuedBrochure().filter(b -> seenIds.add(b.contentId())).ifPresent(relevant::add);
+            } catch (SourceFetchException e) {
+                log.warn("kaufDA: Aldi-Süd-Prospekt nicht abrufbar: {}", e.getMessage());
+            }
         }
         String accountId = accountId();
         Map<String, RawOffer> offersById = new LinkedHashMap<>();
+        int succeeded = 0;
+        String lastError = null;
         for (Brochure brochure : relevant) {
-            String json = http.get(URI.create(BASE + "api/personalisedOffers?brochureId=" + brochure.contentId()
-                    + "&size=1000&bonialAccountId=" + accountId + "&userPlatformCategory=desktop"), Map.of());
-            for (RawOffer offer : offersOf(readTree(json, "Angebote " + brochure.publisherName()),
-                    brochure, marketIds.get(brochure))) {
-                offersById.putIfAbsent(offer.sourceOfferId(), offer);
+            try {
+                String json = http.get(URI.create(BASE + "api/personalisedOffers?brochureId="
+                        + brochure.contentId() + "&size=1000&bonialAccountId=" + accountId
+                        + "&userPlatformCategory=desktop"), Map.of());
+                for (RawOffer offer : offersOf(readTree(json, "Angebote " + brochure.publisherName()),
+                        brochure, marketIds.get(brochure))) {
+                    offersById.putIfAbsent(offer.sourceOfferId(), offer);
+                }
+                succeeded++;
+            } catch (SourceFetchException e) {
+                lastError = e.getMessage();
+                log.warn("kaufDA: Prospekt {} ({}) nicht abrufbar: {}", brochure.contentId(),
+                        brochure.publisherName(), e.getMessage());
             }
+        }
+        if (!relevant.isEmpty() && succeeded == 0) {
+            throw new SourceFetchException("Kein Prospekt abrufbar (" + lastError + ")");
         }
         return new ArrayList<>(offersById.values());
     }
@@ -329,9 +345,10 @@ public class KaufdaSource implements OfferSource, MarketSearch {
         if (id.isEmpty() || title.isEmpty() || main == null || main.signum() <= 0) {
             return Optional.empty();
         }
-        boolean hasSecondary = secondary != null && secondary.signum() > 0;
+        boolean secondaryIsUvp = !prices.has("secondaryPriceIsUVP") || prices.path("secondaryPriceIsUVP").asBoolean(true);
+        boolean hasNormalPrice = secondary != null && !secondaryIsUvp && secondary.compareTo(main) > 0;
         boolean loyalty = isLoyaltyCondition(prices.path("conditions"));
-        if (loyalty && !hasSecondary) {
+        if (loyalty && !hasNormalPrice) {
             return Optional.empty();
         }
         BigDecimal price = loyalty ? secondary : main;
@@ -351,7 +368,7 @@ public class KaufdaSource implements OfferSource, MarketSearch {
                 .brand(textOrNull(node.path("brand")))
                 .description(description)
                 .price(price)
-                .oldPrice(!loyalty && hasSecondary ? secondary : null)
+                .oldPrice(!loyalty && hasNormalPrice ? secondary : null)
                 .loyaltyPrice(loyalty ? main : null)
                 .basePrice(basePrice)
                 .basePriceText(basePriceText)

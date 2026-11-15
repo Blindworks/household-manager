@@ -149,7 +149,7 @@ class KaufdaSourceTest {
                 offer("b", "Ohne Normalpreis", """
                         {"mainPrice":1.99,"secondaryPrice":0,"conditions":[{"other":"Nur mit PENNY App"}]}"""),
                 offer("c", "Je", """
-                        {"mainPrice":2.99,"secondaryPrice":3.99,"conditions":[{"other":"Je"}]}"""));
+                        {"mainPrice":2.99,"secondaryPrice":3.99,"secondaryPriceIsUVP":false,"conditions":[{"other":"Je"}]}"""));
 
         List<RawOffer> offers = source(new FakeHttpTransport()).parseOffers(json, brochure);
 
@@ -286,5 +286,97 @@ class KaufdaSourceTest {
                 new FetchContext("61118", 50.1, 8.7, List.of(selected), Set.of(Chain.EDEKA)));
 
         assertThat(offers).extracting(RawOffer::marketExternalId).containsExactly(selected.externalId());
+    }
+
+    private static String priced(String id, String prices) {
+        return offer(id, "T" + id, prices);
+    }
+
+    @Test
+    void uvpOrOddSecondaryPriceIsNotANormalPrice() {
+        KaufdaSource.Brochure brochure = new KaufdaSource.Brochure("b", "Penny", Chain.PENNY, "P", "61118", null, null, null, null);
+        String app = "[{\"other\":\"Nur mit PENNY App\"}]";
+        String json = offersOf(
+                priced("1", "{\"mainPrice\":5.0,\"secondaryPrice\":9.0,\"secondaryPriceIsUVP\":true,\"conditions\":" + app + "}"),
+                priced("2", "{\"mainPrice\":5.0,\"secondaryPrice\":9.0,\"conditions\":" + app + "}"),
+                priced("3", "{\"mainPrice\":5.0,\"secondaryPrice\":9.0,\"secondaryPriceIsUVP\":true,\"conditions\":[]}"),
+                priced("4", "{\"mainPrice\":5.0,\"secondaryPrice\":4.0,\"secondaryPriceIsUVP\":false,\"conditions\":" + app + "}"));
+
+        List<RawOffer> offers = source(new FakeHttpTransport()).parseOffers(json, brochure);
+
+        assertThat(offers).extracting(RawOffer::sourceOfferId).containsExactly("3");
+        assertThat(offers.get(0).oldPrice()).isNull();
+        assertThat(offers.get(0).price()).isEqualByComparingTo("5.0");
+    }
+
+    @Test
+    void plusAsPlainWordIsNoLoyaltyCondition() {
+        KaufdaSource.Brochure brochure = new KaufdaSource.Brochure("b", "Penny", Chain.PENNY, "P", "61118", null, null, null, null);
+        String json = offersOf(priced("1", "{\"mainPrice\":5.0,\"secondaryPrice\":0,"
+                + "\"conditions\":[{\"other\":\"zzgl. Pfand plus Versand\"}]}"));
+
+        List<RawOffer> offers = source(new FakeHttpTransport()).parseOffers(json, brochure);
+
+        assertThat(offers).hasSize(1);
+        assertThat(offers.get(0).loyaltyPrice()).isNull();
+    }
+
+    @Test
+    void allBrochuresOfAChainAreFetched() throws SourceFetchException {
+        String shelf = shelfOf(
+                brochure("brochure", "lidl-1", "Lidl", "Lidl", "Ring", "1", "61118"),
+                brochure("brochure", "lidl-2", "Lidl", "Lidl", "Ring", "1", "61118"),
+                brochure("brochure", "lidl-1", "Lidl", "Lidl", "Ring", "1", "61118"));
+        FakeHttpTransport transport = new FakeHttpTransport().respond(SHELF_URL, 200, shelf)
+                .respond(OFFERS_URL + "brochureId=lidl-1", 200, offersOf(offer("o1", "Alt", SIMPLE_PRICES)))
+                .respond(OFFERS_URL + "brochureId=lidl-2", 200, offersOf(offer("o2", "Neu", SIMPLE_PRICES)));
+
+        List<RawOffer> offers = source(transport).fetch(
+                new FetchContext("61118", 50.1, 8.7, List.of(), Set.of(Chain.LIDL)));
+
+        assertThat(offers).extracting(RawOffer::title).containsExactlyInAnyOrder("Alt", "Neu");
+        assertThat(transport.requestedUrls().stream().filter(u -> u.startsWith(OFFERS_URL))).hasSize(2);
+    }
+
+    @Test
+    void aldiLandingPageFailureKeepsOtherChains() throws SourceFetchException {
+        FakeHttpTransport transport = new FakeHttpTransport()
+                .respond(SHELF_URL, 200, shelfOf(brochure("brochure", "lidl-1", "Lidl", "Lidl", "Ring", "1", "61118")))
+                .respond("https://www.kaufda.de/Geschaefte/Aldi-Sued", 404, "nope")
+                .respond(OFFERS_URL, 200, offersOf(offer("o1", "Milch", SIMPLE_PRICES)));
+
+        List<RawOffer> offers = source(transport).fetch(
+                new FetchContext("61118", 50.1, 8.7, List.of(), Set.of(Chain.LIDL, Chain.ALDI_SUED)));
+
+        assertThat(offers).extracting(RawOffer::title).containsExactly("Milch");
+    }
+
+    @Test
+    void oneFailingBrochureDoesNotDiscardTheOthers() throws SourceFetchException {
+        String shelf = shelfOf(
+                brochure("brochure", "lidl-1", "Lidl", "Lidl", "Ring", "1", "61118"),
+                brochure("brochure", "lidl-2", "Lidl", "Lidl", "Ring", "1", "61118"));
+        FakeHttpTransport transport = new FakeHttpTransport().respond(SHELF_URL, 200, shelf)
+                .respond(OFFERS_URL + "brochureId=lidl-1", 500, "boom")
+                .respond(OFFERS_URL + "brochureId=lidl-2", 200, offersOf(offer("o2", "Neu", SIMPLE_PRICES)));
+
+        List<RawOffer> offers = source(transport).fetch(
+                new FetchContext("61118", 50.1, 8.7, List.of(), Set.of(Chain.LIDL)));
+
+        assertThat(offers).extracting(RawOffer::title).containsExactly("Neu");
+    }
+
+    @Test
+    void allBrochuresFailingThrows() {
+        String shelf = shelfOf(
+                brochure("brochure", "lidl-1", "Lidl", "Lidl", "Ring", "1", "61118"),
+                brochure("brochure", "lidl-2", "Lidl", "Lidl", "Ring", "1", "61118"));
+        FakeHttpTransport transport = new FakeHttpTransport().respond(SHELF_URL, 200, shelf)
+                .respond(OFFERS_URL + "brochureId=lidl-1", 500, "boom")
+                .respond(OFFERS_URL + "brochureId=lidl-2", 200, "<html>kaputt</html>");
+        KaufdaSource source = source(transport);
+        FetchContext ctx = new FetchContext("61118", 50.1, 8.7, List.of(), Set.of(Chain.LIDL));
+
+        assertThatThrownBy(() -> source.fetch(ctx)).isInstanceOf(SourceFetchException.class);
     }
 }
