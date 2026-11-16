@@ -8,6 +8,7 @@ import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
 import com.household.manager.grocery.dto.MarketSelectionDto;
 import com.household.manager.grocery.dto.RunStartedDto;
+import com.household.manager.grocery.dto.RunStatusDto;
 import com.household.manager.grocery.dto.SourceStatusDto;
 import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.SourceKey;
@@ -114,6 +115,12 @@ public class GroceryAdminController {
         }
         runService.runManually();
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RunStartedDto("gestartet"));
+    }
+
+    /** Laufstand für das Polling der Admin-Seite (ADMIN über den methodenlosen Matcher). */
+    @GetMapping("/runs/status")
+    public RunStatusDto runStatus() {
+        return runService.runStatus();
     }
 
     @GetMapping("/sources")

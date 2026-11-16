@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GroceryService } from '../../services/grocery.service';
 import {
-  GroceryChainStatus, GroceryMarket, GrocerySourceStatus
+  GroceryChainStatus, GroceryMarket, GroceryRunStatus, GrocerySourceStatus
 } from '../../models/grocery.model';
 
 /** Kettenreihenfolge und Anzeigename der Ketten mit Marktauswahl (Chain.hasMarkets im Backend). */
@@ -64,6 +64,8 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
   private lat: number | null = null;
   private lng: number | null = null;
   private runPoll: Subscription | null = null;
+  /** `finishedAt` des Laufstands, zuletzt vom Server gelesen; undefined = nie gelesen. */
+  private knownFinishedAt: string | null | undefined = undefined;
 
   readonly marketGroups = computed(() => MARKET_CHAINS.map(({ chain, name }) => ({
     chain, name, markets: this.markets().filter(m => m.chain === chain)
@@ -82,6 +84,7 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
     this.loadMarkets();
     this.loadChains();
     this.loadSources();
+    this.loadRunStatus();
   }
 
   get thresholdValid(): boolean {
@@ -161,8 +164,8 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Startet den Lauf (202) und fragt den Quellenstatus ab, bis eine Quelle einen jüngeren Lauf meldet als beim
-   * Klick bekannt. Verglichen wird mit dem Serverstand statt der Browseruhr, damit Uhrabweichungen nicht stören.
+   * Startet den Lauf (202) und fragt danach den Laufstand ab, bis der Server `running: false` mit einem anderen
+   * `finishedAt` meldet als vor dem Klick. Verglichen wird der Serverstand als Text, nie die Browseruhr.
    */
   runNow(): void {
     if (this.running()) {
@@ -170,11 +173,11 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
     }
     this.running.set(true);
     this.runMessage.set(null);
-    const before = latestRunAt(this.sources());
+    const baseline = this.knownFinishedAt;
     this.api.runNow().subscribe({
       next: () => {
         this.runMessage.set({ text: 'Suche läuft …', type: 'success' });
-        this.pollUntilRunFinished(before);
+        this.pollRunStatus(baseline);
       },
       error: error => {
         this.running.set(false);
@@ -183,20 +186,43 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
     });
   }
 
-  private pollUntilRunFinished(before: string | null): void {
+  /** Beim Laden: läuft gerade ein Lauf (Nachtlauf oder anderer Tab), wird er wie nach einem Klick verfolgt. */
+  private loadRunStatus(): void {
+    this.api.getRunStatus().subscribe({
+      next: status => {
+        this.knownFinishedAt = status.finishedAt;
+        if (status.running && !this.running()) {
+          this.running.set(true);
+          this.runMessage.set({ text: 'Suche läuft …', type: 'success' });
+          this.pollRunStatus(status.finishedAt);
+        }
+      },
+      error: () => {
+        // Ohne Laufstand bleibt der Knopf bedienbar; ein Klick verfolgt den Lauf trotzdem
+      }
+    });
+  }
+
+  /** `baseline` undefined = unbekannt (Laufstand nie gelesen): dann zählt erst ein Ende nach gesehenem Lauf. */
+  private pollRunStatus(baseline: string | null | undefined): void {
     this.runPoll?.unsubscribe();
+    let seenRunning = false;
     this.runPoll = timer(RUN_POLL_MS, RUN_POLL_MS).pipe(
       take(RUN_MAX_POLLS),
-      switchMap(() => this.api.getSources().pipe(catchError(() => of(null))))
+      switchMap(() => this.api.getRunStatus().pipe(catchError(() => of(null))))
     ).subscribe({
-      next: sources => {
-        const fresh = (sources ?? []).filter(s => s.lastRunAt !== null && (before === null || s.lastRunAt > before));
-        if (sources === null || fresh.length === 0) {
+      next: status => {
+        if (status === null) {
           return;
         }
-        this.sources.set(sources);
+        seenRunning = seenRunning || status.running;
+        if (!isRunFinished(status, baseline, seenRunning)) {
+          return;
+        }
+        this.knownFinishedAt = status.finishedAt;
         this.running.set(false);
-        this.runMessage.set({ text: runSummary(fresh), type: 'success' });
+        this.runMessage.set(runOutcome(status));
+        this.loadSources();
         this.runPoll?.unsubscribe();
       },
       complete: () => {
@@ -230,14 +256,25 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
   }
 }
 
-function latestRunAt(sources: GrocerySourceStatus[]): string | null {
-  return sources.reduce<string | null>(
-    (latest, s) => (s.lastRunAt !== null && (latest === null || s.lastRunAt > latest) ? s.lastRunAt : latest), null);
+function isRunFinished(status: GroceryRunStatus, baseline: string | null | undefined, seenRunning: boolean): boolean {
+  if (status.running || status.finishedAt === null) {
+    return false;
+  }
+  return baseline === undefined ? seenRunning : status.finishedAt !== baseline;
 }
 
-function runSummary(fresh: GrocerySourceStatus[]): string {
-  const offers = fresh.reduce((sum, s) => sum + (s.offerCount ?? 0), 0);
-  const failed = fresh.filter(s => s.ok === false).length;
-  const failures = failed === 0 ? '' : failed === 1 ? ', 1 Quelle gestört' : `, ${failed} Quellen gestört`;
-  return `Suche fertig: ${offers} Angebote${failures}.`;
+function runOutcome(status: GroceryRunStatus): Message {
+  if (status.lastError !== null || status.lastResult === null) {
+    return { text: `Suche fehlgeschlagen: ${status.lastError ?? 'unbekannter Fehler'}`, type: 'error' };
+  }
+  const result = status.lastResult;
+  const parts = [`Suche fertig: ${result.offers} Angebote`, `${result.deals} Schnäppchen`];
+  if (result.aiFailures > 0) {
+    parts.push(`${result.aiFailures} Claude-Bewertungen fehlgeschlagen`);
+  }
+  const failures = Object.entries(result.sourceFailures);
+  if (failures.length > 0) {
+    parts.push(`gestört: ${failures.map(([source, reason]) => `${source} (${reason})`).join(', ')}`);
+  }
+  return { text: parts.join(', ') + '.', type: failures.length > 0 || result.aiFailures > 0 ? 'error' : 'success' };
 }

@@ -3,6 +3,7 @@ package com.household.manager.grocery;
 import com.household.manager.exception.TooManyRequestsException;
 import com.household.manager.grocery.OfferCollectionService.CollectionResult;
 import com.household.manager.grocery.dto.RunResultDto;
+import com.household.manager.grocery.dto.RunStatusDto;
 import com.household.manager.grocery.entity.GroceryMatch;
 import com.household.manager.grocery.entity.GroceryOffer;
 import com.household.manager.grocery.entity.GroceryProduct;
@@ -274,6 +275,69 @@ class GroceryRunServiceTest {
 
         service.run();
         verify(collector, times(2)).collect();
+    }
+
+    @Test
+    void runStatusIsRunningUntilTheBackgroundRunFinishes() {
+        List<Runnable> queued = new java.util.ArrayList<>();
+        GroceryRunService service = service(matching, evaluator, queued::add);
+        assertThat(service.runStatus().running()).isFalse();
+        assertThat(service.runStatus().finishedAt()).isNull();
+
+        service.runManually();
+
+        RunStatusDto during = service.runStatus();
+        assertThat(during.running()).isTrue();
+        assertThat(during.startedAt()).isEqualTo(LocalDateTime.of(2026, 11, 15, 11, 0));
+        assertThat(during.finishedAt()).isNull();
+
+        clock.advance(Duration.ofMinutes(3));
+        queued.get(0).run();
+
+        RunStatusDto after = service.runStatus();
+        assertThat(after.running()).isFalse();
+        assertThat(after.finishedAt()).isEqualTo(LocalDateTime.of(2026, 11, 15, 11, 3));
+        assertThat(after.lastResult()).isNotNull();
+        assertThat(after.lastResult().offers()).isEqualTo(5);
+        assertThat(after.lastError()).isNull();
+    }
+
+    @Test
+    void failedRunRecordsTheErrorInTheStatus() {
+        GroceryRunService service = service(matching, evaluator);
+        when(collector.collect()).thenThrow(new IllegalStateException("DB weg"));
+
+        assertThatThrownBy(service::run).isInstanceOf(IllegalStateException.class);
+
+        RunStatusDto status = service.runStatus();
+        assertThat(status.running()).isFalse();
+        assertThat(status.finishedAt()).isNotNull();
+        assertThat(status.lastResult()).isNull();
+        assertThat(status.lastError()).isEqualTo("DB weg");
+    }
+
+    @Test
+    void nightlyRunAlsoUpdatesTheStatus() {
+        GroceryRunService service = service(matching, evaluator);
+
+        service.run();
+
+        assertThat(service.runStatus().finishedAt()).isNotNull();
+        assertThat(service.runStatus().lastResult()).isNotNull();
+    }
+
+    @Test
+    void rejectedSubmitReleasesRunningFlagAndCooldown() {
+        GroceryRunService service = service(matching, evaluator, command -> {
+            throw new java.util.concurrent.RejectedExecutionException("voll");
+        });
+
+        assertThatThrownBy(service::runManually).isInstanceOf(IllegalStateException.class);
+
+        assertThat(service.runStatus().running()).isFalse();
+        // Weder Sperre noch Mindestabstand bleiben hängen
+        service.run();
+        assertThatThrownBy(service::runManually).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

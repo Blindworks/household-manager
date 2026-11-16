@@ -5,7 +5,7 @@ import { catchError } from 'rxjs/operators';
 import {
   GroceryDeal, GroceryDealsView, GroceryOwner, GroceryPriceObservation, GroceryProduct,
   GroceryProductRequest, GrocerySummary, GrocerySettings, GroceryMarket, GroceryMarketRefresh,
-  GrocerySourceStatus, GroceryRunStarted, GroceryChainStatus
+  GrocerySourceStatus, GroceryRunStarted, GroceryRunStatus, GroceryChainStatus
 } from '../models/grocery.model';
 
 /** Service fuer die Supermarkt-Angebote-API. */
@@ -95,6 +95,10 @@ export class GroceryService {
 
   getSources(): Observable<GrocerySourceStatus[]> {
     return this.http.get<GrocerySourceStatus[]>(`${this.adminUrl}/sources`).pipe(catchError(this.handleError));
+  }
+
+  getRunStatus(): Observable<GroceryRunStatus> {
+    return this.http.get<GroceryRunStatus>(`${this.adminUrl}/runs/status`).pipe(catchError(this.handleError));
   }
 
   /** Startet den Lauf im Hintergrund (202); das Ergebnis zeigt danach der Quellenstatus. */

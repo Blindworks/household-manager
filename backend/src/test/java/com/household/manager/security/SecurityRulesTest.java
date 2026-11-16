@@ -483,6 +483,12 @@ class SecurityRulesTest {
     }
 
     @Test
+    @WithMockUser(roles = "MEMBER")
+    void groceriesRunStatusIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/runs/status")).andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void groceriesRunsPostIstFuerAdminErlaubt() throws Exception {
         when(groceryProperties.isEnabled()).thenReturn(true);

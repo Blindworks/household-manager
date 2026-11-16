@@ -128,6 +128,24 @@ export interface GrocerySourceStatus {
   reason: string | null;
 }
 
+export interface GroceryRunResult {
+  offers: number;
+  aiCalls: number;
+  deferred: number;
+  deals: number;
+  aiFailures: number;
+  sourceFailures: Record<string, string>;
+}
+
+/** Laufstand (GET /v1/admin/groceries/runs/status); Zeiten sind Serverzeit ohne Zone. */
+export interface GroceryRunStatus {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  lastResult: GroceryRunResult | null;
+  lastError: string | null;
+}
+
 /** Antwort auf „Jetzt suchen“ (202): der Lauf läuft im Hintergrund. */
 export interface GroceryRunStarted {
   status: string;

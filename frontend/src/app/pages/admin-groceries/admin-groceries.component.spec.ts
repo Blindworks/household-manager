@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AdminGroceriesComponent } from './admin-groceries.component';
-import { GroceryMarket } from '../../models/grocery.model';
+import { GroceryMarket, GroceryRunResult, GroceryRunStatus } from '../../models/grocery.model';
 
 const BASE = '/api/v1/admin/groceries';
 
@@ -16,7 +16,16 @@ describe('AdminGroceriesComponent', () => {
   let httpMock: HttpTestingController;
   let el: HTMLElement;
 
-  function flushInitial(markets: GroceryMarket[] = [MARKET]): void {
+  const NIGHT = '2026-11-15T04:10:00';
+  const RESULT: GroceryRunResult = { offers: 512, aiCalls: 4, deferred: 0, deals: 3, aiFailures: 1,
+    sourceFailures: { REWE: 'HTTP 500' } };
+
+  function status(over: Partial<GroceryRunStatus> = {}): GroceryRunStatus {
+    return { running: false, startedAt: '2026-11-15T04:00:00', finishedAt: NIGHT, lastResult: RESULT,
+      lastError: null, ...over };
+  }
+
+  function flushInitial(markets: GroceryMarket[] = [MARKET], runStatus: GroceryRunStatus | 'fail' = status()): void {
     httpMock.expectOne(`${BASE}/settings`).flush({ zip: '60311', lat: 50.1, lng: 8.6, dealThresholdPercent: 10 });
     httpMock.expectOne(`${BASE}/markets`).flush(markets);
     httpMock.expectOne(`${BASE}/chains`).flush([{ chain: 'LIDL', name: 'Lidl', enabled: true }]);
@@ -24,7 +33,27 @@ describe('AdminGroceriesComponent', () => {
       { source: 'MARKTGURU', enabled: true, lastRunAt: '2026-11-15T03:00:00', offerCount: 120, ok: true, reason: null },
       { source: 'REWE', enabled: true, lastRunAt: '2026-11-15T03:00:00', offerCount: 0, ok: false, reason: 'HTTP 500' }
     ]);
+    const statusRequest = httpMock.expectOne(`${BASE}/runs/status`);
+    if (runStatus === 'fail') {
+      statusRequest.flush({ message: 'kaputt' }, { status: 500, statusText: 'Server Error' });
+    } else {
+      statusRequest.flush(runStatus);
+    }
     fixture.detectChanges();
+  }
+
+  function clickRun(): void {
+    (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
+    httpMock.expectOne(`${BASE}/runs`).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+    fixture.detectChanges();
+  }
+
+  function message(): string {
+    return el.querySelector('.admin-groceries__run-message')?.textContent ?? '';
+  }
+
+  function runButton(): HTMLButtonElement {
+    return el.querySelector('.admin-groceries__run') as HTMLButtonElement;
   }
 
   beforeEach(async () => {
@@ -88,46 +117,96 @@ describe('AdminGroceriesComponent', () => {
     expect(el.querySelector('.admin-groceries__run-message')?.textContent).toContain('Bitte 10 Minuten warten.');
   });
 
-  it('runNowPollsSourcesUntilARunIsNewerAndShowsTheResult', fakeAsync(() => {
+  it('runFinishesOnlyWhenServerSaysNotRunningWithNewFinishedAt', fakeAsync(() => {
     flushInitial();
-    (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
+    clickRun();
+    expect(message()).toContain('Suche läuft');
+    expect(runButton().disabled).toBeTrue();
 
-    httpMock.expectOne(`${BASE}/runs`).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+    // erste Quelle ist fertig, der Lauf aber nicht: das darf nicht als fertig gelten
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ running: true, startedAt: '2026-11-16T20:30:00' }));
     fixture.detectChanges();
-    expect(el.querySelector('.admin-groceries__run-message')?.textContent).toContain('Suche läuft');
-    expect((el.querySelector('.admin-groceries__run') as HTMLButtonElement).disabled).toBeTrue();
+    expect(message()).toContain('Suche läuft');
+
+    // alter Stand ohne laufenden Lauf (noch der Nachtlauf) gilt ebenfalls nicht
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status());
+    fixture.detectChanges();
+    expect(message()).toContain('Suche läuft');
 
     tick(10000);
-    httpMock.expectOne(`${BASE}/sources`).flush([
-      { source: 'MARKTGURU', enabled: true, lastRunAt: '2026-11-15T03:00:00', offerCount: 120, ok: true, reason: null }
-    ]);
-    fixture.detectChanges();
-    expect(el.querySelector('.admin-groceries__run-message')?.textContent).toContain('Suche läuft');
-
-    tick(10000);
-    httpMock.expectOne(`${BASE}/sources`).flush([
-      { source: 'MARKTGURU', enabled: true, lastRunAt: '2026-11-15T20:31:00', offerCount: 130, ok: true, reason: null },
-      { source: 'REWE', enabled: true, lastRunAt: '2026-11-15T20:31:05', offerCount: 0, ok: false, reason: 'HTTP 500' }
-    ]);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T20:34:00',
+      lastResult: { ...RESULT, offers: 640, deals: 5 } }));
+    httpMock.expectOne(`${BASE}/sources`).flush([]);
     fixture.detectChanges();
 
-    const message = el.querySelector('.admin-groceries__run-message')?.textContent ?? '';
-    expect(message).toContain('Suche fertig: 130 Angebote');
-    expect(message).toContain('1 Quelle gestört');
-    expect((el.querySelector('.admin-groceries__run') as HTMLButtonElement).disabled).toBeFalse();
+    expect(message()).toContain('Suche fertig: 640 Angebote');
+    expect(message()).toContain('5 Schnäppchen');
+    expect(message()).toContain('1 Claude-Bewertungen fehlgeschlagen');
+    expect(message()).toContain('REWE (HTTP 500)');
+    expect(runButton().disabled).toBeFalse();
     tick(30000);
-    httpMock.expectNone(`${BASE}/sources`);
+    httpMock.expectNone(`${BASE}/runs/status`);
+  }));
+
+  it('showsTheErrorOfAFailedRun', fakeAsync(() => {
+    flushInitial();
+    clickRun();
+
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T20:34:00', lastResult: null,
+      lastError: 'DB weg' }));
+    httpMock.expectOne(`${BASE}/sources`).flush([]);
+    fixture.detectChanges();
+
+    expect(message()).toContain('Suche fehlgeschlagen: DB weg');
+  }));
+
+  it('pageLoadWhileRunningShowsRunningAndPolls', fakeAsync(() => {
+    flushInitial([MARKET], status({ running: true, startedAt: '2026-11-16T04:00:00' }));
+    expect(message()).toContain('Suche läuft');
+    expect(runButton().disabled).toBeTrue();
+
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T04:06:00' }));
+    httpMock.expectOne(`${BASE}/sources`).flush([]);
+    fixture.detectChanges();
+
+    expect(message()).toContain('Suche fertig: 512 Angebote');
+    expect(runButton().disabled).toBeFalse();
+  }));
+
+  it('failedStatusRequestsDoNotStopPolling', fakeAsync(() => {
+    flushInitial([MARKET], 'fail');
+    expect(runButton().disabled).toBeFalse();
+    clickRun();
+
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush({ message: 'weg' }, { status: 502, statusText: 'Bad Gateway' });
+    tick(10000);
+    // ohne bekannten Ausgangsstand zählt ein altes Ende nicht, erst nach gesehenem Lauf
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status());
+    fixture.detectChanges();
+    expect(message()).toContain('Suche läuft');
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ running: true }));
+    tick(10000);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T20:40:00' }));
+    httpMock.expectOne(`${BASE}/sources`).flush([]);
+    fixture.detectChanges();
+
+    expect(message()).toContain('Suche fertig');
   }));
 
   it('pollingStopsOnDestroy', fakeAsync(() => {
     flushInitial();
-    (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
-    httpMock.expectOne(`${BASE}/runs`).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+    clickRun();
 
     fixture.destroy();
     tick(30000);
 
-    httpMock.expectNone(`${BASE}/sources`);
+    httpMock.expectNone(`${BASE}/runs/status`);
     discardPeriodicTasks();
   }));
 

@@ -7,6 +7,7 @@ import com.household.manager.grocery.dto.GrocerySettingsDto;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketSelectionDto;
 import com.household.manager.grocery.dto.RunStartedDto;
+import com.household.manager.grocery.dto.RunStatusDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +58,14 @@ class GroceryAdminControllerRunTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody()).isEqualTo(new RunStartedDto("gestartet"));
         verify(runService).runManually();
+    }
+
+    @Test
+    void runStatusComesFromTheRunService() {
+        RunStatusDto status = new RunStatusDto(true, java.time.LocalDateTime.of(2026, 11, 16, 4, 0), null, null, null);
+        when(runService.runStatus()).thenReturn(status);
+
+        assertThat(controller.runStatus()).isEqualTo(status);
     }
 
     @Test

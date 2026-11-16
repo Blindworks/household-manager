@@ -3,6 +3,7 @@ package com.household.manager.grocery;
 import com.household.manager.exception.TooManyRequestsException;
 import com.household.manager.grocery.OfferCollectionService.CollectionResult;
 import com.household.manager.grocery.dto.RunResultDto;
+import com.household.manager.grocery.dto.RunStatusDto;
 import com.household.manager.grocery.entity.GroceryOffer;
 import com.household.manager.grocery.entity.GroceryProduct;
 import com.household.manager.grocery.matching.MatchingService;
@@ -35,6 +36,7 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -74,6 +76,7 @@ public class GroceryRunService {
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicReference<Instant> lastManualRun = new AtomicReference<>();
     private final AtomicReference<Snapshot> snapshot = new AtomicReference<>();
+    private final AtomicReference<RunStatusDto> status = new AtomicReference<>(RunStatusDto.idle());
     private final Object snapshotLock = new Object();
 
     @Autowired
@@ -119,10 +122,16 @@ public class GroceryRunService {
             throw new TooManyRequestsException("Lauf läuft bereits");
         }
         try {
-            return runExclusive();
+            markStarted();
+            return runTracked();
         } finally {
             running.set(false);
         }
+    }
+
+    /** Laufstand für die Admin-Seite (nächtlicher und manueller Lauf). */
+    public RunStatusDto runStatus() {
+        return status.get();
     }
 
     /**
@@ -136,18 +145,28 @@ public class GroceryRunService {
         if (!running.compareAndSet(false, true)) {
             throw new TooManyRequestsException("Lauf läuft bereits");
         }
+        Instant reserved;
         try {
-            reserveManualSlot();
-            manualRunExecutor.execute(this::runManualInBackground);
+            reserved = reserveManualSlot();
         } catch (RuntimeException e) {
             running.set(false);
             throw e;
+        }
+        RunStatusDto before = status.get();
+        markStarted();
+        try {
+            manualRunExecutor.execute(this::runManualInBackground);
+        } catch (RejectedExecutionException e) {
+            lastManualRun.compareAndSet(reserved, null);
+            status.set(before);
+            running.set(false);
+            throw new IllegalStateException("Lauf konnte nicht gestartet werden");
         }
     }
 
     private void runManualInBackground() {
         try {
-            runExclusive();
+            runTracked();
         } catch (RuntimeException e) {
             log.warn("Manueller Supermarkt-Lauf fehlgeschlagen: {}", e.getMessage(), e);
         } finally {
@@ -162,7 +181,28 @@ public class GroceryRunService {
         }
     }
 
-    private void reserveManualSlot() {
+    private void markStarted() {
+        RunStatusDto previous = status.get();
+        status.set(new RunStatusDto(true, LocalDateTime.now(clock), previous.finishedAt(), previous.lastResult(),
+                previous.lastError()));
+    }
+
+    /** Führt den Lauf aus und hält Ergebnis oder Fehler im Laufstand fest. */
+    private RunResultDto runTracked() {
+        LocalDateTime startedAt = status.get().startedAt();
+        try {
+            RunResultDto result = runExclusive();
+            status.set(new RunStatusDto(false, startedAt, LocalDateTime.now(clock), result, null));
+            return result;
+        } catch (RuntimeException e) {
+            String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            status.set(new RunStatusDto(false, startedAt, LocalDateTime.now(clock), null, message));
+            throw e;
+        }
+    }
+
+    /** Reserviert den Mindestabstand und liefert den reservierten Zeitpunkt (zum Zurückgeben). */
+    private Instant reserveManualSlot() {
         Instant now = clock.instant();
         while (true) {
             Instant previous = lastManualRun.get();
@@ -170,7 +210,7 @@ public class GroceryRunService {
                 throw new TooManyRequestsException("Bitte 10 Minuten warten.");
             }
             if (lastManualRun.compareAndSet(previous, now)) {
-                return;
+                return now;
             }
         }
     }
