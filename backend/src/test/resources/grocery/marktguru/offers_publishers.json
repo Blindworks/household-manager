@@ -1,0 +1,4072 @@
+{
+ "totalResults": 24,
+ "skippedResults": 0,
+ "results": [
+  {
+   "id": "retailers/126802",
+   "uniqueName": "rewe",
+   "name": "REWE",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25769417,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 12.99,
+     "oldPrice": null,
+     "referencePrice": 12.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301717,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126802",
+       "name": "REWE",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 720532,
+      "name": "Adventskranz Klassik",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.3698296836982968,
+        "width": 1.0,
+        "height": 0.7300177619893428
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25769387,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 29.99,
+     "oldPrice": null,
+     "referencePrice": 29.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301717,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126802",
+       "name": "REWE",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 1373677,
+      "name": "Adventsgesteck Birkenscheibe",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.0473186119873816,
+        "width": 1.0,
+        "height": 0.9548192771084337
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25769382,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 7.99,
+     "oldPrice": null,
+     "referencePrice": 7.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301717,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126802",
+       "name": "REWE",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 63854,
+      "name": "Adventsgestecke",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      },
+      {
+       "id": 424,
+       "name": "Kerzen",
+       "description": null,
+       "parentId": 144
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.9810606060606061,
+        "width": 1.0,
+        "height": 1.0193050193050193
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25769377,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 14.99,
+     "oldPrice": null,
+     "referencePrice": 14.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301717,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126802",
+       "name": "REWE",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 63854,
+      "name": "Adventsgestecke",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      },
+      {
+       "id": 424,
+       "name": "Kerzen",
+       "description": null,
+       "parentId": 144
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.8426395939086294,
+        "width": 1.0,
+        "height": 1.1867469879518073
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25769367,
+     "description": "HINWEIS: MIT APP 0,20 € REWE BONUS je 80-ml-Fl. oder Smoothie Mango, Maracuja & Apfel, je 250-ml-Fl. zzgl. 0.25 Pfand",
+     "volume": 0.08,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 1.69,
+     "oldPrice": null,
+     "referencePrice": 21.13,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301717,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126802",
+       "name": "REWE",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 835761,
+      "name": "Smoothie Mango Maracuja & Apfel",
+      "description": null
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 113761,
+      "name": "Innocent",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 359,
+       "name": "Softdrinks",
+       "description": "Märkte wie beispielsweise der [toom Getränkemarkt](https://www.marktguru.de/rp/toom-getraenkemarkt-prospekte) halten eine große Auswahl an [alkoholfreien Getränken](https://www.marktguru.de/c/getraenke-alkoholfrei) bereit. Dazu zählen [Coca-Cola](https://www.marktguru.de/b/coca-cola), Säfte von [Granini](https://www.marktguru.de/b/granini) oder Energydrinks von [Red Bull](https://www.marktguru.de/b/red-bull).",
+       "parentId": 69
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.5274725274725275,
+        "width": 1.0,
+        "height": 1.8958333333333333
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126804",
+   "uniqueName": "rewe-center",
+   "name": "REWE Center",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25750387,
+     "description": "extra scharf, je 250-ml-Glas",
+     "volume": 0.25,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1.49,
+     "oldPrice": null,
+     "referencePrice": 5.96,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301577,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126804",
+       "name": "REWE Center",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 91424,
+      "name": "Senf",
+      "description": "~twxde~ ~twxwde~ ~twxnw~ ~twxrhl~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 117201,
+      "name": "Löwensenf",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 172,
+       "name": "Dips",
+       "description": null,
+       "parentId": 108
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.6434108527131783,
+        "width": 1.0,
+        "height": 1.5542168674698795
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25750362,
+     "description": "HINWEIS: MIT APP 0.10 € REWE BONUS versch. Sorten, je 250-ml-Pckg.",
+     "volume": 0.25,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 1.49,
+     "oldPrice": null,
+     "referencePrice": 5.96,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301577,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126804",
+       "name": "REWE Center",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 316898,
+      "name": "Sauce Hollandaise",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 102266,
+      "name": "Lukull",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 327,
+       "name": "Hollandaise",
+       "description": null,
+       "parentId": 108
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.1314984709480123,
+        "width": 1.0,
+        "height": 0.8837837837837837
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25750127,
+     "description": "HINWEIS: MIT APP 0.20 € REWE BONUS je 120-g-Btl. oder Cashewkerne je 175-g-Btl.",
+     "volume": 0.12,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 2.99,
+     "oldPrice": null,
+     "referencePrice": 24.92,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301577,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126804",
+       "name": "REWE Center",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 384594,
+      "name": "Walnusskerne",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 108708,
+      "name": "Farmer's Snack",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 132,
+       "name": "Veganes",
+       "description": "Liebhaber der vegetarischen und veganen Küche erhalten entsprechende Produkte von Herstellern wie [Alpro](https://www.marktguru.de/b/alpro), [Rügenwalder Mühle](https://www.marktguru.de/b/ruegenwalder-muehle), [Valess](https://www.marktguru.de/b/valess) und vielen anderen. Zu finden sind diese Artikel unter anderem bei [denn's Biomarkt](https://www.marktguru.de/r/denns-biomarkt), [basic](https://www.marktguru.de/r/basic) sowie [Biomärkte](https://www.marktguru.de/ip/biomaerkte-prospekte).",
+       "parentId": 16
+      },
+      {
+       "id": 158,
+       "name": "Nüsse",
+       "description": null,
+       "parentId": 102
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.1647727272727273,
+        "width": 1.0,
+        "height": 0.8585365853658536
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25750107,
+     "description": "HINWEIS: MIT APP 0.10 € REWE BONUS  ausreichend für 7 Liter, je Glas oder Sauce Pur Sauce zu Braten, je 4 x 28-g-Pckg.",
+     "volume": 7.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 1.49,
+     "oldPrice": null,
+     "referencePrice": 0.21,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301577,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126804",
+       "name": "REWE Center",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 1073351,
+      "name": "Gemüse Bouillon vegan",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 115455,
+      "name": "Knorr",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 132,
+       "name": "Veganes",
+       "description": "Liebhaber der vegetarischen und veganen Küche erhalten entsprechende Produkte von Herstellern wie [Alpro](https://www.marktguru.de/b/alpro), [Rügenwalder Mühle](https://www.marktguru.de/b/ruegenwalder-muehle), [Valess](https://www.marktguru.de/b/valess) und vielen anderen. Zu finden sind diese Artikel unter anderem bei [denn's Biomarkt](https://www.marktguru.de/r/denns-biomarkt), [basic](https://www.marktguru.de/r/basic) sowie [Biomärkte](https://www.marktguru.de/ip/biomaerkte-prospekte).",
+       "parentId": 16
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.4319526627218935,
+        "width": 1.0,
+        "height": 0.6983471074380165
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25750052,
+     "description": "HINWEIS: MIT APP 0.10 € REWE BONUS je 4 x 30-g-Riegel Pckg.  oder Müsliriegel Schoko je 6 x 25-g-Riegel Pckg.",
+     "volume": 0.03,
+     "quantity": 4.0,
+     "isMultiProduct": true,
+     "price": 1.79,
+     "oldPrice": null,
+     "referencePrice": 14.92,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301577,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302017;10367284;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEKaufDAMeinProspektA4CLEProspektnnAdgapId01984610141314295001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]%22",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126804",
+       "name": "REWE Center",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 848451,
+      "name": "Corny Müsliriegel Milch Classic",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 122180,
+      "name": "Schwartau",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 350,
+       "name": "Müsliriegel",
+       "description": null,
+       "parentId": 119
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.6305818673883626,
+        "width": 1.0,
+        "height": 1.5858369098712446
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126654",
+   "uniqueName": "kaufland",
+   "name": "Kaufland",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25776532,
+     "description": "Ital. lose KI. I je Stück",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 0.99,
+     "oldPrice": null,
+     "referencePrice": 0.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301852,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T18:00:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://filiale.kaufland.de/angebote/uebersicht.html?kloffer-articleID=398636&pdp=true",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126654",
+       "name": "Kaufland",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 420312,
+      "name": "Endiviensalat",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 472,
+       "name": "Salate und Blattgemüse",
+       "description": "Das schmeckt besonders gut: knackiger Salat und frisches [Gemüse](https://www.marktguru.de/c/gemuese). Anbieter wie [Unsere Heimat](https://www.marktguru.de/b/unsere-heimat), [Bonduelle](https://www.marktguru.de/b/bonduelle) oder [Florette](https://www.marktguru.de/b/florette) sorgen für Vielfalt auf dem Teller. Märkte wie [Scheck-in Center](https://www.marktguru.de/r/scheck-in-center) und viele andere haben diese im Sortiment.",
+       "parentId": 147
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.2733990147783252,
+        "width": 1.0,
+        "height": 0.7852998065764023
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25776407,
+     "description": "Marokk./dtsch.  Kl. I je 500-g-Packg.",
+     "volume": 0.5,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1.99,
+     "oldPrice": null,
+     "referencePrice": 3.98,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301852,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T18:00:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://filiale.kaufland.de/angebote/uebersicht.html?kloffer-articleID=00370379",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126654",
+       "name": "Kaufland",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 373892,
+      "name": "Buschbohnen",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 348,
+       "name": "Bohnen",
+       "description": null,
+       "parentId": 116
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.2424503882657463,
+        "width": 1.0,
+        "height": 0.8048611111111111
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25776212,
+     "description": "Dtsch./belg. Multicolor- oder  KI.1 Je Stück",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 0.99,
+     "oldPrice": null,
+     "referencePrice": 0.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301852,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T18:00:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://filiale.kaufland.de/angebote/uebersicht.html?kloffer-articleID=373985&pdp=true",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126654",
+       "name": "Kaufland",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 161805,
+      "name": "Kopfsalat",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 472,
+       "name": "Salate und Blattgemüse",
+       "description": "Das schmeckt besonders gut: knackiger Salat und frisches [Gemüse](https://www.marktguru.de/c/gemuese). Anbieter wie [Unsere Heimat](https://www.marktguru.de/b/unsere-heimat), [Bonduelle](https://www.marktguru.de/b/bonduelle) oder [Florette](https://www.marktguru.de/b/florette) sorgen für Vielfalt auf dem Teller. Märkte wie [Scheck-in Center](https://www.marktguru.de/r/scheck-in-center) und viele andere haben diese im Sortiment.",
+       "parentId": 147
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.916267942583732,
+        "width": 1.0,
+        "height": 1.0913838120104438
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25776177,
+     "description": "Ultimate Citrus, Ultimate Plus Fresh oder Quantum Fresh, = 105-126 Anwendungen",
+     "volume": 1.0,
+     "quantity": 120.0,
+     "isMultiProduct": true,
+     "price": 15.99,
+     "oldPrice": null,
+     "referencePrice": 0.13,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301852,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T18:00:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://filiale.kaufland.de/angebote/uebersicht.html?kloffer-articleID=20929910&pdp=true",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126654",
+       "name": "Kaufland",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 888825,
+      "name": "Spülmaschinencaps",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 109194,
+      "name": "Finish",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 418,
+       "name": "Spülmittel",
+       "description": "[Haushaltsartikel](https://www.marktguru.de/c/haushaltsartikel) wie [Pril](https://www.marktguru.de/b/pril) zum Abwaschen mit der Hand, [Finish](https://www.marktguru.de/b/finish) sowie [Somat](https://www.marktguru.de/b/somat) für den Geschirrspüler sind in vielen Geschäften erhältlich. Darunter Supermärkte und Discounter wie [EDEKA Neukauf](https://www.marktguru.de/r/edeka-neukauf) und [ROSSMANN](https://www.marktguru.de/r/rossmann).",
+       "parentId": 50
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.8120411160058737,
+        "width": 1.0,
+        "height": 1.2314647377938517
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25776147,
+     "description": "Bioland dtsch. Kl. I je 1-kg-Beutel",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1.59,
+     "oldPrice": null,
+     "referencePrice": 1.59,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301852,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T18:00:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackimp/N1106503.2671411MARKGURUDE/B26240841.309225179;dc_pre=CIaFzIm8jI0DFZ2L_Qcd5l8Plg;dc_trk_aid=502197466;dc_trk_cid=154816736;ord={{mg-timestamp}};dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=${GDPR};gdpr_consent=${GDPR_CONSENT_755};ltd=;dc_tdv=1",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://filiale.kaufland.de/angebote/uebersicht.html?kloffer-articleID=01537574",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126654",
+       "name": "Kaufland",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 372113,
+      "name": "Bio-Möhren",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 432,
+       "name": "Wurzelgemüse",
+       "description": "Wurzelgemüse ist das Fundament der herzhaften Küche. Ob knackige Karotten, erdige Rote Bete oder würziger Knollensellerie – diese Kraftpakete speichern das Beste aus dem Boden direkt in der Knolle. Reich an Ballaststoffen, Vitaminen und Mineralien sind sie die idealen Begleiter für eine bewusste Ernährung.",
+       "parentId": 147
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.9753086419753085,
+        "width": 1.0,
+        "height": 0.50625
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126831",
+   "uniqueName": "sconto",
+   "name": "Sconto SB",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25730572,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 39.99,
+     "oldPrice": null,
+     "referencePrice": 39.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301682,
+     "validityDates": [
+      {
+       "from": "2026-11-10T23:00:00Z",
+       "to": "2026-12-15T22:59:00Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126831",
+       "name": "Sconto SB",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1375227,
+      "name": "Trennstation",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 126528,
+      "name": "KHG",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 421,
+       "name": "Müllentsorgung",
+       "description": null,
+       "parentId": 143
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.1826280623608019,
+        "width": 1.0,
+        "height": 0.8455743879472694
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25730282,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 99.95,
+     "oldPrice": null,
+     "referencePrice": 99.95,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301672,
+     "validityDates": [
+      {
+       "from": "2026-11-10T23:00:00Z",
+       "to": "2026-12-15T22:59:00Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126831",
+       "name": "Sconto SB",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1375197,
+      "name": "Keramik-Waschtisch",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 293,
+       "name": "Badmöbel",
+       "description": "Badmöbel schaffen viel Stauraum und Ordnung im Badezimmer. Angefangen von einem Waschbeckenunterschrank bis hin zum Spiegelschrank und Kommode als Ablage. Händler wie [POCO](https://www.marktguru.de/rp/poco-prospekte), [Hammer](https://www.marktguru.de/rp/hammer-prospekte), [mömax](https://www.marktguru.de/rp/moemax-prospekte) uvm. bieten ein großes Auswahl an Badmöbeln.",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 3.212121212121212,
+        "width": 1.0,
+        "height": 0.3113207547169811
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25730157,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 79.95,
+     "oldPrice": null,
+     "referencePrice": 79.95,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301672,
+     "validityDates": [
+      {
+       "from": "2026-11-10T23:00:00Z",
+       "to": "2026-12-15T22:59:00Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126831",
+       "name": "Sconto SB",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1375187,
+      "name": "Stuhlsessel Stade",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 281,
+       "name": "Sessel",
+       "description": "Sessel schaffen es jeden Raum ein wenig gemütlicher zu machen. Eine große Auswahl gibt es unter anderem bei [ROLLER](https://www.marktguru.de/r/roller), [XXXL](https://www.marktguru.de/r/xxxl), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) und vielen mehr. Zusammen mit anderen schönen [Möbeln](https://www.marktguru.de/c/moebel) lässt sich jeder Raum einzigartig gestalten.",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.6768402154398564,
+        "width": 1.0,
+        "height": 1.4774535809018567
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25726062,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 229.0,
+     "oldPrice": null,
+     "referencePrice": 229.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301672,
+     "validityDates": [
+      {
+       "from": "2026-11-10T23:00:00Z",
+       "to": "2026-12-15T22:59:00Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126831",
+       "name": "Sconto SB",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1374617,
+      "name": "Schlafsessel Avilena",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 281,
+       "name": "Sessel",
+       "description": "Sessel schaffen es jeden Raum ein wenig gemütlicher zu machen. Eine große Auswahl gibt es unter anderem bei [ROLLER](https://www.marktguru.de/r/roller), [XXXL](https://www.marktguru.de/r/xxxl), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) und vielen mehr. Zusammen mit anderen schönen [Möbeln](https://www.marktguru.de/c/moebel) lässt sich jeder Raum einzigartig gestalten.",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.3279352226720649,
+        "width": 1.0,
+        "height": 0.7530487804878049
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25723477,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 199.99,
+     "oldPrice": null,
+     "referencePrice": 199.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301672,
+     "validityDates": [
+      {
+       "from": "2026-11-10T23:00:00Z",
+       "to": "2026-12-15T22:59:00Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126831",
+       "name": "Sconto SB",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1374552,
+      "name": "Winterdecke Norwegen",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125987,
+      "name": "Heidelberger",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 145,
+       "name": "Heimtextilien",
+       "description": "Für ein schönes Zuhause: Kuschelige Heimtextilien von Herstellern wie [Schiesser](https://www.marktguru.de/b/schiesser) oder [Dormia](https://www.marktguru.de/b/dormia) sowie attraktive [Möbel & Einrichtungen](https://www.marktguru.de/c/moebel-einrichtung) sind erhältlich bei Unternehmen wie beispielsweise [Dänisches Bettenlager](https://www.marktguru.de/rp/daenisches-bettenlager-prospekte), [ALDI Nord](https://www.marktguru.de/rp/aldi-nord-prospekte), [SEGMÜLLER](https://www.marktguru.de/rp/segmueller-prospekte) und vielen anderen.",
+       "parentId": 3
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.765886287625418,
+        "width": 1.0,
+        "height": 0.5662878787878788
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126836",
+   "uniqueName": "segmueller",
+   "name": "SEGMÜLLER",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25752242,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 169.99,
+     "oldPrice": null,
+     "referencePrice": 169.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301842,
+     "validityDates": [
+      {
+       "from": "2026-11-14T23:00:00Z",
+       "to": "2026-11-30T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.segmueller.de/produkte/led-deckenleuchte-invertina-3822091-00000?filiale=pulheim&pbl-sku=3822091-00000&utm_campaign=2611gg-pu&utm_content=na&utm_medium=display&utm_source=marktguru",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126836",
+       "name": "SEGMÜLLER",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1105999,
+      "name": "LED-Deckenleuchte Invertina",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 468,
+       "name": "Leuchten",
+       "description": null,
+       "parentId": 398
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.831360946745562,
+        "width": 1.0,
+        "height": 0.5460420032310178
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25752237,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 229.0,
+     "oldPrice": null,
+     "referencePrice": 229.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301842,
+     "validityDates": [
+      {
+       "from": "2026-11-14T23:00:00Z",
+       "to": "2026-11-30T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.segmueller.de/produkte/esstisch-heaven-o-110-cm-3549922-00000?filiale=pulheim&pbl-sku=3549922-00000&utm_campaign=2611gg-pu&utm_content=na&utm_medium=display&utm_source=marktguru",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126836",
+       "name": "SEGMÜLLER",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1300683,
+      "name": "Esstisch Heaven",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 289,
+       "name": "Tische",
+       "description": "[Möbelhäuser](https://www.marktguru.de/ip/moebelhaeuser-prospekte) wie zum Beispiel [SEGMÜLLER](https://www.marktguru.de/r/segmueller), [ROLLER](https://www.marktguru.de/r/roller) und [Musterring](https://www.marktguru.de/b/musterring) verkaufen diverse Tische als [Möbel](https://www.marktguru.de/c/moebel) für alle Räume im Haus. Abgerundet wird das Angebot durch die vielen Produkte von [Schöner Wohnen](https://www.marktguru.de/b/schoener-wohnen).",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.1777777777777778,
+        "width": 1.0,
+        "height": 0.8490566037735849
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25752227,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 139.99,
+     "oldPrice": null,
+     "referencePrice": 139.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301842,
+     "validityDates": [
+      {
+       "from": "2026-11-14T23:00:00Z",
+       "to": "2026-11-30T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.segmueller.de/produkte/kommode-mister-3729680-00001?filiale=pulheim&pbl-sku=3729680-00001&utm_campaign=2611gg-pu&utm_content=na&utm_medium=display&utm_source=marktguru",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126836",
+       "name": "SEGMÜLLER",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1376397,
+      "name": "Kommode Mister",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 287,
+       "name": "Kommoden",
+       "description": null,
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.4596100278551531,
+        "width": 1.0,
+        "height": 0.6851145038167938
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25752217,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 30.0,
+     "isMultiProduct": false,
+     "price": 169.99,
+     "oldPrice": null,
+     "referencePrice": 5.67,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301842,
+     "validityDates": [
+      {
+       "from": "2026-11-14T23:00:00Z",
+       "to": "2026-11-30T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.segmueller.de/produkte/kombiservice-for-me-30tlg-2969902-00000?filiale=pulheim&pbl-sku=2969902-00000&utm_campaign=2611gg-pu&utm_content=na&utm_medium=display&utm_source=marktguru",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126836",
+       "name": "SEGMÜLLER",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1281380,
+      "name": "Kombi-Service For Me 30-tlg.",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 124561,
+      "name": "Villeroy & Boch",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 296,
+       "name": "Essgeschirr",
+       "description": "Essgeschirr ist das Herzstück jeder Tischkultur. Es umfasst alle Gefäße und Utensilien, die zum Anrichten und Verzehren von Speisen benötigt werden. Von schlichten Basics für den Alltag bis hin zu edlen Sets für besondere Anlässe vereint modernes Geschirr zeitloses Design mit hoher Funktionalität. Die Wahl des richtigen Materials und Stils prägt dabei maßgeblich das Ambiente bei Tisch.",
+       "parentId": 143
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.649789029535865,
+        "width": 1.0,
+        "height": 0.6061381074168798
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25752207,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 149.99,
+     "oldPrice": null,
+     "referencePrice": 149.99,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301842,
+     "validityDates": [
+      {
+       "from": "2026-11-14T23:00:00Z",
+       "to": "2026-11-30T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.segmueller.de/produkte/bett-lafabrica-120-x-200-cm-3528603-00001?filiale=pulheim&pbl-sku=3528603-00001&utm_campaign=2611gg-pu&utm_content=na&utm_medium=display&utm_source=marktguru",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126836",
+       "name": "SEGMÜLLER",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1300548,
+      "name": "Bett La Fabrica",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 285,
+       "name": "Betten",
+       "description": "Für einen erholsamen und bequemen Schlafkomfort sorgen Betten und Matratzen von Marken wie [Schlaraffia](https://www.marktguru.de/b/schlaraffia), [Ruf Betten](https://www.marktguru.de/b/ruf-betten) oder [Ergo Dream](https://www.marktguru.de/b/ergo-dream). Diese gibt es unter anderem bei [mömax](https://www.marktguru.de/r/moemax), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) oder [Dänisches Bettenlager](https://www.marktguru.de/r/daenisches-bettenlager).",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 2.2744565217391304,
+        "width": 1.0,
+        "height": 0.43966547192353644
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126924",
+   "uniqueName": "woolworth",
+   "name": "Woolworth",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25765692,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 20.0,
+     "oldPrice": null,
+     "referencePrice": 20.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301857,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-11-23T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1002,
+       "name": "Kaufhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126924",
+       "name": "Woolworth",
+       "industryId": 1002
+      }
+     ],
+     "product": {
+      "id": 1377422,
+      "name": "Herren Winterstiefel",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 153082,
+      "name": "Concept",
+      "industryId": 1002
+     },
+     "categories": [
+      {
+       "id": 276,
+       "name": "Herren Schuhe",
+       "description": "Kaufhäuser, darunter [Karstadt](https://www.marktguru.de/r/karstadt), führen Herrenschuhe in diversen Stilrichtungen. Legere Alltagsschuhe stammen von Marken wie [Rieker](https://www.marktguru.de/b/Rieker) oder [MUSTANG](https://www.marktguru.de/b/mustang). Hersteller, unter anderem [Bugatti](https://www.marktguru.de/b/bugatti) oder [Hirmer](https://www.marktguru.de/r/hirmer), bieten exklusives Schuhwerk. Marken wie [Adidas](https://www.marktguru.de/b/adidas) sind ein Sinnbild für sportliche Sneaker.",
+       "parentId": 95
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.6947791164658634,
+        "width": 1.0,
+        "height": 0.590047393364929
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25765677,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 3.0,
+     "oldPrice": null,
+     "referencePrice": 3.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301857,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-11-23T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1002,
+       "name": "Kaufhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126924",
+       "name": "Woolworth",
+       "industryId": 1002
+      }
+     ],
+     "product": {
+      "id": 1377417,
+      "name": "Schlafmaske The Grinch",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 141827,
+      "name": "Dr. Seuss Enterprises",
+      "industryId": 1002
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      },
+      {
+       "id": 601,
+       "name": "Damen Nachtwäsche",
+       "description": null,
+       "parentId": 427
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.8859857482185274,
+        "width": 1.0,
+        "height": 0.5302267002518891
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25765667,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 10.0,
+     "oldPrice": null,
+     "referencePrice": 10.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301857,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-11-23T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1002,
+       "name": "Kaufhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126924",
+       "name": "Woolworth",
+       "industryId": 1002
+      }
+     ],
+     "product": {
+      "id": 1377412,
+      "name": "Damen Hose The Grinch",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 141827,
+      "name": "Dr. Seuss Enterprises",
+      "industryId": 1002
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      },
+      {
+       "id": 601,
+       "name": "Damen Nachtwäsche",
+       "description": null,
+       "parentId": 427
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.6367041198501873,
+        "width": 1.0,
+        "height": 1.5705882352941176
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25765612,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 3.0,
+     "oldPrice": null,
+     "referencePrice": 3.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301857,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-11-23T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1002,
+       "name": "Kaufhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126924",
+       "name": "Woolworth",
+       "industryId": 1002
+      }
+     ],
+     "product": {
+      "id": 844845,
+      "name": "Damen Handschuhe Grinch",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 141827,
+      "name": "Dr. Seuss Enterprises",
+      "industryId": 1002
+     },
+     "categories": [
+      {
+       "id": 261,
+       "name": "Weihnachtsdeko",
+       "description": "Mit Beginn der Adventszeit wird in vielen Familien die erste Weihnachtsdeko hervorgeholt. Egal ob [LED Teelichter](https://www.marktguru.de/c/weihnachtsdeko), [Christbaumkugeln](https://www.marktguru.de/c/weihnachtsdeko), [LED Lichterketten](https://www.marktguru.de/c/weihnachtsdeko) oder [Weihnachtsservietten](https://www.marktguru.de/c/weihnachtsdeko), sie verbreiten einfach eine schöne weihnachtliche Stimmung und wecken Vorfreude auf die Weihnachtsfeiertage.",
+       "parentId": 144
+      },
+      {
+       "id": 604,
+       "name": "Damen Outdoorbekleidung",
+       "description": null,
+       "parentId": 427
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.358273381294964,
+        "width": 1.0,
+        "height": 0.736228813559322
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25759092,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1.0,
+     "oldPrice": null,
+     "referencePrice": 1.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301857,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-11-23T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1002,
+       "name": "Kaufhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126924",
+       "name": "Woolworth",
+       "industryId": 1002
+      }
+     ],
+     "product": {
+      "id": 1376717,
+      "name": "Miniatur Popcorn",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1002
+     },
+     "categories": [
+      {
+       "id": 242,
+       "name": "Deko",
+       "description": "Schöne Dekoration sorgt für mehr Gemütlichkeit. Dazu gehören beispielsweise Kissen von [Bella Casa](https://www.marktguru.de/b/bella-casa), Fotorahmen von [Pfennigpfeiffer](https://www.marktguru.de/r/pfennigpfeiffer), Kerzen von [Casa Deko](https://www.marktguru.de/b/casa-deco), Tischläufer von [Living Art](https://www.marktguru.de/b/living-art) sowie andere Deko von [Centershop](https://www.marktguru.de/r/centershop) oder [Wohnaccessoires](https://www.marktguru.de/c/wohnaccessoires).",
+       "parentId": 144
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.8374760994263862,
+        "width": 1.0,
+        "height": 1.1940639269406392
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/127151",
+   "uniqueName": "fressnapf",
+   "name": "Fressnapf",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25716357,
+     "description": "Trockennahrung für Katzen. Verschiedene Sorten. 7 kg-Sack Beim Kauf eines 7 kg-Sacks + 2,5 kg-Sack gratis",
+     "volume": 7.0,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 53.99,
+     "oldPrice": null,
+     "referencePrice": 7.71,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301632,
+     "validityDates": [
+      {
+       "from": "2026-10-28T23:00:00Z",
+       "to": "2026-11-25T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1027,
+       "name": "Zoo & Garten"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/127151",
+       "name": "Fressnapf",
+       "industryId": 1027
+      }
+     ],
+     "product": {
+      "id": 327106,
+      "name": "Wilderness",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 121031,
+      "name": "Real Nature",
+      "industryId": 1027
+     },
+     "categories": [
+      {
+       "id": 422,
+       "name": "Hundefutter",
+       "description": "Hundefutter von [Rinti](https://www.marktguru.de/b/rinti), [Pedigree](https://www.marktguru.de/b/pedigree) oder [Purina](https://www.marktguru.de/b/purina) ist bei verschiedenen Anbietern erhältlich; beispielsweise bei [ZOO und CO](https://www.marktguru.de/r/zoo-co) und im [Kiebitzmarkt](https://www.marktguru.de/r/kiebitzmarkt). [Tierbedarf](https://www.marktguru.de/c/tierbedarf) für andere Tiere ist hier ebenfalls zu bekommen.",
+       "parentId": 83
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.2297297297297298,
+        "width": 1.0,
+        "height": 0.8131868131868132
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25716322,
+     "description": "Speziell für Langhaarkatzen. Klumpend. Ultra saugstark und ergiebig. 12 kg-Sack",
+     "volume": 12.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 11.99,
+     "oldPrice": null,
+     "referencePrice": 1.0,
+     "requiresLoyalityMembership": true,
+     "leafletFlightId": 301632,
+     "validityDates": [
+      {
+       "from": "2026-10-28T23:00:00Z",
+       "to": "2026-11-25T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1027,
+       "name": "Zoo & Garten"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/127151",
+       "name": "Fressnapf",
+       "industryId": 1027
+      }
+     ],
+     "product": {
+      "id": 73968,
+      "name": "Excellent XL",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 120575,
+      "name": "Premiere Tierbedarf",
+      "industryId": 1027
+     },
+     "categories": [
+      {
+       "id": 266,
+       "name": "Katzenzubehör",
+       "description": "Hochwertiger und vielseitiger [Katzenbedarf](https://www.marktguru.de/c/katzenbedarf) ist von [Catsan](https://www.marktguru.de/b/catsan), [Trixie](https://www.marktguru.de/b/trixie) oder [Biokats](https://www.marktguru.de/b/biokats) erhältlich. Händler wie [ZOO & CO](https://www.marktguru.de/r/zoo-co) und der [Kiebitzmarkt](https://www.marktguru.de/r/kiebitzmarkt) haben ein großes Sortiment an Spielzeug, Futter und Bedarfsgegenständen für Katzen.",
+       "parentId": 85
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.7893772893772893,
+        "width": 1.0,
+        "height": 1.2668213457076567
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25716287,
+     "description": "Nassnahrung für Katzen. Verschiedene Sorten. 48 x 100 g-Beutel",
+     "volume": 0.1,
+     "quantity": 48.0,
+     "isMultiProduct": true,
+     "price": 11.99,
+     "oldPrice": 13.39,
+     "referencePrice": 2.5,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301632,
+     "validityDates": [
+      {
+       "from": "2026-10-28T23:00:00Z",
+       "to": "2026-11-25T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1027,
+       "name": "Zoo & Garten"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/127151",
+       "name": "Fressnapf",
+       "industryId": 1027
+      }
+     ],
+     "product": {
+      "id": 106374,
+      "name": "Katzennahrung Multipack",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 118834,
+      "name": "MultiFit",
+      "industryId": 1027
+     },
+     "categories": [
+      {
+       "id": 425,
+       "name": "Katzenfutter",
+       "description": "Schmackhafte Nahrung für vierpfotige Samtnasen gibt es unter anderem bei [Marktkauf](https://www.marktguru.de/rp/marktkauf-prospekte), [ZOO und CO](https://www.marktguru.de/r/zoo-co) und dem [Hagebaumarkt](https://www.marktguru.de/r/hagebaumarkt). Futter von Marken wie [Whiskas](https://www.marktguru.de/b/whiskas), [Purina](https://www.marktguru.de/b/purina) oder [Sheba](https://www.marktguru.de/b/sheba) wird von den Katzen gerne angenommen.",
+       "parentId": 85
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 2.0491803278688523,
+        "width": 1.0,
+        "height": 0.488
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25716382,
+     "description": "ab 7.29 Verschiedene Sorten und Größen z.B. Adult Rind mit Kartoffel, Karotte & Erbse, 750 g-Beutel",
+     "volume": 0.75,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 7.29,
+     "oldPrice": null,
+     "referencePrice": 9.72,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301632,
+     "validityDates": [
+      {
+       "from": "2026-11-11T23:00:00Z",
+       "to": "2026-11-18T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1027,
+       "name": "Zoo & Garten"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/127151",
+       "name": "Fressnapf",
+       "industryId": 1027
+      }
+     ],
+     "product": {
+      "id": 1259642,
+      "name": "frish",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 121031,
+      "name": "Real Nature",
+      "industryId": 1027
+     },
+     "categories": [
+      {
+       "id": 422,
+       "name": "Hundefutter",
+       "description": "Hundefutter von [Rinti](https://www.marktguru.de/b/rinti), [Pedigree](https://www.marktguru.de/b/pedigree) oder [Purina](https://www.marktguru.de/b/purina) ist bei verschiedenen Anbietern erhältlich; beispielsweise bei [ZOO und CO](https://www.marktguru.de/r/zoo-co) und im [Kiebitzmarkt](https://www.marktguru.de/r/kiebitzmarkt). [Tierbedarf](https://www.marktguru.de/c/tierbedarf) für andere Tiere ist hier ebenfalls zu bekommen.",
+       "parentId": 83
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.5215189873417722,
+        "width": 1.0,
+        "height": 1.9174757281553398
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25716257,
+     "description": "ab 0.89 Nassnahrung für Katzen. 85 g-Beutel / 100 g-Schale z.B. Adult Rind & Huhn, 100 g-Schale: 0,89 Adult Rind, 85 g-Beutel: 0,99 10+2 gratis",
+     "volume": 0.085,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 0.89,
+     "oldPrice": null,
+     "referencePrice": 10.47,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301632,
+     "validityDates": [
+      {
+       "from": "2026-11-11T23:00:00Z",
+       "to": "2026-11-18T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://ad.doubleclick.net/ddm/trackclk/N9657.2621703SEVEN.ONEMEDIAGMBH/B36971197.459482411;dc_trk_aid=654419176;dc_trk_cid=266826269;dc_lat=;dc_rdid=;tag_for_child_directed_treatment=;tfua=;gdpr=$%7BGDPR%7D;gdpr_consent=$%7BGDPR_CONSENT_755%7D;ltd=;dc_tdv=1?cachebuster=MarktguruCacheBusterTimestamp",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1027,
+       "name": "Zoo & Garten"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/127151",
+       "name": "Fressnapf",
+       "industryId": 1027
+      }
+     ],
+     "product": {
+      "id": 327267,
+      "name": "Meat Menu",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 120575,
+      "name": "Premiere Tierbedarf",
+      "industryId": 1027
+     },
+     "categories": [
+      {
+       "id": 425,
+       "name": "Katzenfutter",
+       "description": "Schmackhafte Nahrung für vierpfotige Samtnasen gibt es unter anderem bei [Marktkauf](https://www.marktguru.de/rp/marktkauf-prospekte), [ZOO und CO](https://www.marktguru.de/r/zoo-co) und dem [Hagebaumarkt](https://www.marktguru.de/r/hagebaumarkt). Futter von Marken wie [Whiskas](https://www.marktguru.de/b/whiskas), [Purina](https://www.marktguru.de/b/purina) oder [Sheba](https://www.marktguru.de/b/sheba) wird von den Katzen gerne angenommen.",
+       "parentId": 85
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.2079207920792079,
+        "width": 1.0,
+        "height": 0.8278688524590164
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126641",
+   "uniqueName": "kabs-polsterwelt",
+   "name": "Kabs PolsterWelt",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25737862,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1190.0,
+     "oldPrice": 3521.0,
+     "referencePrice": 1190.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301827,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-12-02T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.kabs.de/kabs-boxspringbett-callin-art0013871-0004?utm_source=marktguru&utm_medium=prospekt&utm_campaign=nov-26_black-weeks-p3",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126641",
+       "name": "Kabs PolsterWelt",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 991880,
+      "name": "Boxspringbett Callin",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 285,
+       "name": "Betten",
+       "description": "Für einen erholsamen und bequemen Schlafkomfort sorgen Betten und Matratzen von Marken wie [Schlaraffia](https://www.marktguru.de/b/schlaraffia), [Ruf Betten](https://www.marktguru.de/b/ruf-betten) oder [Ergo Dream](https://www.marktguru.de/b/ergo-dream). Diese gibt es unter anderem bei [mömax](https://www.marktguru.de/r/moemax), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) oder [Dänisches Bettenlager](https://www.marktguru.de/r/daenisches-bettenlager).",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 2.057810578105781,
+        "width": 1.0,
+        "height": 0.4859533771667663
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25737812,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1290.0,
+     "oldPrice": 4129.0,
+     "referencePrice": 1290.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301827,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-12-02T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.kabs.de/kabs-boxbett-cervino-art0013942-0002?utm_source=marktguru&utm_medium=prospekt&utm_campaign=nov-26_black-weeks-p3",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126641",
+       "name": "Kabs PolsterWelt",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1067008,
+      "name": "Polsterbett Cervino",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 285,
+       "name": "Betten",
+       "description": "Für einen erholsamen und bequemen Schlafkomfort sorgen Betten und Matratzen von Marken wie [Schlaraffia](https://www.marktguru.de/b/schlaraffia), [Ruf Betten](https://www.marktguru.de/b/ruf-betten) oder [Ergo Dream](https://www.marktguru.de/b/ergo-dream). Diese gibt es unter anderem bei [mömax](https://www.marktguru.de/r/moemax), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) oder [Dänisches Bettenlager](https://www.marktguru.de/r/daenisches-bettenlager).",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 2.4115432873274782,
+        "width": 1.0,
+        "height": 0.41467221644120705
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25737757,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1190.0,
+     "oldPrice": 3419.0,
+     "referencePrice": 1190.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301827,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-12-02T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.kabs.de/kabs-boxspringbett-samera-art0014231-0001?utm_source=marktguru&utm_medium=prospekt&utm_campaign=nov-26_black-weeks-p3",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126641",
+       "name": "Kabs PolsterWelt",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1261898,
+      "name": "Boxspringbett Samera",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 285,
+       "name": "Betten",
+       "description": "Für einen erholsamen und bequemen Schlafkomfort sorgen Betten und Matratzen von Marken wie [Schlaraffia](https://www.marktguru.de/b/schlaraffia), [Ruf Betten](https://www.marktguru.de/b/ruf-betten) oder [Ergo Dream](https://www.marktguru.de/b/ergo-dream). Diese gibt es unter anderem bei [mömax](https://www.marktguru.de/r/moemax), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) oder [Dänisches Bettenlager](https://www.marktguru.de/r/daenisches-bettenlager).",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.9879324215607401,
+        "width": 1.0,
+        "height": 1.012214983713355
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25737727,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 990.0,
+     "oldPrice": 2148.0,
+     "referencePrice": 990.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301827,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-12-02T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.kabs.de/kabs-schlafsofa-lumi-art0017344-0003?utm_source=marktguru&utm_medium=prospekt&utm_campaign=nov-26_black-weeks-p3",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126641",
+       "name": "Kabs PolsterWelt",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 1367977,
+      "name": "SCHLAFSOFA LUMI |",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 280,
+       "name": "Sofas",
+       "description": "Zu einem Wohnzimmer gehört ein bequemes Sofa. Diese [Möbel](https://www.marktguru.de/c/moebel) gibt es bei Anbietern wie [ROLLER](https://www.marktguru.de/r/roller), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) oder [Kabs PolsterWelt](https://www.marktguru.de/r/kabs-polsterwelt). Zur Auswahl stehen Sofas von [Himolla](https://www.marktguru.de/b/himolla), [W. Schillig](https://www.marktguru.de/b/w-schillig) und vielen weiteren Herstellern.",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.9918981481481481,
+        "width": 1.0,
+        "height": 0.5020337013364323
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25737677,
+     "description": "Details im Prospekt",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1490.0,
+     "oldPrice": 4376.0,
+     "referencePrice": 1490.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301827,
+     "validityDates": [
+      {
+       "from": "2026-11-12T23:00:00Z",
+       "to": "2026-12-02T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": "https://www.kabs.de/kabs-relaxsessel-herbert-art0008907-0010?utm_source=marktguru&utm_medium=prospekt&utm_campaign=nov-26_black-weeks-p3",
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1003,
+       "name": "Möbelhaus"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126641",
+       "name": "Kabs PolsterWelt",
+       "industryId": 1003
+      }
+     ],
+     "product": {
+      "id": 797173,
+      "name": "Fernsehsessel Herbert",
+      "description": null
+     },
+     "unit": {
+      "shortName": "Stk",
+      "id": 3,
+      "name": "Stück"
+     },
+     "brand": {
+      "id": 125322,
+      "name": "thisisnobrand123",
+      "industryId": 1003
+     },
+     "categories": [
+      {
+       "id": 281,
+       "name": "Sessel",
+       "description": "Sessel schaffen es jeden Raum ein wenig gemütlicher zu machen. Eine große Auswahl gibt es unter anderem bei [ROLLER](https://www.marktguru.de/r/roller), [XXXL](https://www.marktguru.de/r/xxxl), [SEGMÜLLER](https://www.marktguru.de/r/segmueller) und vielen mehr. Zusammen mit anderen schönen [Möbeln](https://www.marktguru.de/c/moebel) lässt sich jeder Raum einzigartig gestalten.",
+       "parentId": 97
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.5870646766169154,
+        "width": 1.0,
+        "height": 0.6300940438871473
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/126887",
+   "uniqueName": "trinkgut",
+   "name": "trinkgut",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25785022,
+     "description": "oder Export 20 x 0,5 L, zzgl. 3,10 Pfand, Licher Pilsner oder Natur Radler 24 x 0,33 L, zzgl. 3,42 Pfand",
+     "volume": 0.5,
+     "quantity": 20.0,
+     "isMultiProduct": true,
+     "price": 11.99,
+     "oldPrice": null,
+     "referencePrice": 1.2,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 302107,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1001,
+       "name": "Getränkemarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126887",
+       "name": "trinkgut",
+       "industryId": 1001
+      }
+     ],
+     "product": {
+      "id": 302788,
+      "name": "Pilsner",
+      "description": "~twxde~ ~twxmde~ ~twxhe~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 116779,
+      "name": "Licher",
+      "industryId": 1001
+     },
+     "categories": [
+      {
+       "id": 361,
+       "name": "Bier",
+       "description": "Bier- und Biermischgetränke sind bei deutschen Konsumenten sehr beliebt. Anbieter wie [real](https://www.marktguru.de/r/real) haben [alkoholische Getränke](https://www.marktguru.de/c/getraenke-alkoholisch) von gefragten deutschen Brauereien wie [Bitburger](https://www.marktguru.de/b/bitburger), [Krombacher](https://www.marktguru.de/b/krombacher) oder [Veltins](https://www.marktguru.de/b/veltins) im Angebot.",
+       "parentId": 70
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.3978494623655914,
+        "width": 1.0,
+        "height": 2.5135135135135136
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25784922,
+     "description": "versch. Sorten, 12 x 1 L, zzgl. 3,30 Pfand",
+     "volume": 1.0,
+     "quantity": 12.0,
+     "isMultiProduct": true,
+     "price": 5.49,
+     "oldPrice": null,
+     "referencePrice": 0.46,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 302107,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1001,
+       "name": "Getränkemarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126887",
+       "name": "trinkgut",
+       "industryId": 1001
+      }
+     ],
+     "product": {
+      "id": 322009,
+      "name": "Mineralwasser",
+      "description": "~twxde~ ~twxmde~ ~twxhe~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 102694,
+      "name": "Elisabethen Quelle",
+      "industryId": 1001
+     },
+     "categories": [
+      {
+       "id": 360,
+       "name": "Wasser",
+       "description": "Mineralwasser gehört zu der Kategorie der [alkoholfreien Getränke](https://www.marktguru.de/c/getraenke-alkoholfrei). Getränkemärkte wie [trinkgut](https://www.marktguru.de/rp/trinkgut-prospekte), [toom Getränkemarkt](https://www.marktguru.de/rp/toom-getraenkemarkt-prospekte) und andere führen unter anderem die Marken [Volvic](https://www.marktguru.de/b/volvic), [Gerolsteiner](https://www.marktguru.de/b/gerolsteiner), [Apollinaris](https://www.marktguru.de/b/apollinaris) sowie viele weitere.",
+       "parentId": 69
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.4575645756457565,
+        "width": 1.0,
+        "height": 2.185483870967742
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25784227,
+     "description": "versch. Sorten, 12 x 0,75 L, zzgl. 3,30 Pfand",
+     "volume": 0.75,
+     "quantity": 12.0,
+     "isMultiProduct": true,
+     "price": 4.99,
+     "oldPrice": null,
+     "referencePrice": 0.55,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 302107,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1001,
+       "name": "Getränkemarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126887",
+       "name": "trinkgut",
+       "industryId": 1001
+      }
+     ],
+     "product": {
+      "id": 155949,
+      "name": "Mineralwasser",
+      "description": "~twxde~ ~twxmde~ ~twxhe~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 121579,
+      "name": "Rosbacher",
+      "industryId": 1001
+     },
+     "categories": [
+      {
+       "id": 360,
+       "name": "Wasser",
+       "description": "Mineralwasser gehört zu der Kategorie der [alkoholfreien Getränke](https://www.marktguru.de/c/getraenke-alkoholfrei). Getränkemärkte wie [trinkgut](https://www.marktguru.de/rp/trinkgut-prospekte), [toom Getränkemarkt](https://www.marktguru.de/rp/toom-getraenkemarkt-prospekte) und andere führen unter anderem die Marken [Volvic](https://www.marktguru.de/b/volvic), [Gerolsteiner](https://www.marktguru.de/b/gerolsteiner), [Apollinaris](https://www.marktguru.de/b/apollinaris) sowie viele weitere.",
+       "parentId": 69
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.4172661870503597,
+        "width": 1.0,
+        "height": 2.396551724137931
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25770332,
+     "description": "auch 0,0% Alkoholfrei versch. Sorten, 20 x 0,5 L, zzgl. 3,10 Pfand oder 24 x 0,33 L, zzgl. 3,42 Pfand",
+     "volume": 0.5,
+     "quantity": 20.0,
+     "isMultiProduct": true,
+     "price": 11.99,
+     "oldPrice": null,
+     "referencePrice": 1.2,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 302107,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1001,
+       "name": "Getränkemarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126887",
+       "name": "trinkgut",
+       "industryId": 1001
+      }
+     ],
+     "product": {
+      "id": 28521,
+      "name": "Pils",
+      "description": "~twxde~ ~twxwde~ ~twxrp~ ~twxeif~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 125354,
+      "name": "Bitburger",
+      "industryId": 1001
+     },
+     "categories": [
+      {
+       "id": 361,
+       "name": "Bier",
+       "description": "Bier- und Biermischgetränke sind bei deutschen Konsumenten sehr beliebt. Anbieter wie [real](https://www.marktguru.de/r/real) haben [alkoholische Getränke](https://www.marktguru.de/c/getraenke-alkoholisch) von gefragten deutschen Brauereien wie [Bitburger](https://www.marktguru.de/b/bitburger), [Krombacher](https://www.marktguru.de/b/krombacher) oder [Veltins](https://www.marktguru.de/b/veltins) im Angebot.",
+       "parentId": 70
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.32234432234432236,
+        "width": 1.0,
+        "height": 3.102272727272727
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25770322,
+     "description": "Mezzo Mix, Fanta Orange (koffeinhaltig) und weitere Sorten, 12 x 1 L, zzgl. 3,30 Pfand",
+     "volume": 1.0,
+     "quantity": 12.0,
+     "isMultiProduct": true,
+     "price": 11.99,
+     "oldPrice": null,
+     "referencePrice": 1.0,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 302107,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      ""
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1001,
+       "name": "Getränkemarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/126887",
+       "name": "trinkgut",
+       "industryId": 1001
+      }
+     ],
+     "product": {
+      "id": 351468,
+      "name": "Cola",
+      "description": "~twxus~ ~twxnam~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 104494,
+      "name": "Coca-Cola",
+      "industryId": 1001
+     },
+     "categories": [
+      {
+       "id": 359,
+       "name": "Softdrinks",
+       "description": "Märkte wie beispielsweise der [toom Getränkemarkt](https://www.marktguru.de/rp/toom-getraenkemarkt-prospekte) halten eine große Auswahl an [alkoholfreien Getränken](https://www.marktguru.de/c/getraenke-alkoholfrei) bereit. Dazu zählen [Coca-Cola](https://www.marktguru.de/b/coca-cola), Säfte von [Granini](https://www.marktguru.de/b/granini) oder Energydrinks von [Red Bull](https://www.marktguru.de/b/red-bull).",
+       "parentId": 69
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.4085106382978723,
+        "width": 1.0,
+        "height": 2.4479166666666665
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  },
+  {
+   "id": "retailers/137320",
+   "uniqueName": "nahkauf",
+   "name": "nahkauf",
+   "indexOffer": true,
+   "offers": [
+    {
+     "id": 25747412,
+     "description": "versch. Sorten, je 0,75-l-Fl.",
+     "volume": 0.75,
+     "quantity": 1.0,
+     "isMultiProduct": true,
+     "price": 2.79,
+     "oldPrice": null,
+     "referencePrice": 3.72,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301582,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/137320",
+       "name": "nahkauf",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 304457,
+      "name": "Brillant Sekt",
+      "description": null
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 122728,
+      "name": "Söhnlein",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 627,
+       "name": "Sekt",
+       "description": "Sekt- und Prosecco-Angebote bzw. Frizzante findet man immer wieder im Lebensmitteleinzelhandel. Beide Kategorien gehören in die Kategorie der Schaumweine. Besonders italienische Proseccos sind oft gefragt. Bekannte Sekt-Marken in den Regalen der [Getränkemärkte](https://www.marktguru.de/ip/getraenkemaerkte-prospekte) sind zB [Henkell-Sekt](https://www.marktguru.de/b/henkell-sekt), [Rotkläppchen-Sekt](https://www.marktguru.de/b/rotkaeppchen), [Fürst von Metternich](https://www.marktguru.de/b/fuerst-von-metternich) und [Mumm & co](https://www.marktguru.de/b/mumm-co). Auch Prosecco und Frizzante von [Freixenet](https://www.marktguru.de/b/freixenet) sind bei den Käufern hoch im Kurs.",
+       "parentId": 497
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.49789621318373073,
+        "width": 1.0,
+        "height": 2.008450704225352
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25747377,
+     "description": "versch. Sorten, je 20 x 0,5-l-Fl.-Kasten zzgl. 3.10 Pfand",
+     "volume": 0.5,
+     "quantity": 20.0,
+     "isMultiProduct": true,
+     "price": 10.99,
+     "oldPrice": null,
+     "referencePrice": 1.1,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301582,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/137320",
+       "name": "nahkauf",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 19560,
+      "name": "Pils",
+      "description": "~twxde~ ~twxnde~ ~twxhb~"
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 122235,
+      "name": "Beck's",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 361,
+       "name": "Bier",
+       "description": "Bier- und Biermischgetränke sind bei deutschen Konsumenten sehr beliebt. Anbieter wie [real](https://www.marktguru.de/r/real) haben [alkoholische Getränke](https://www.marktguru.de/c/getraenke-alkoholisch) von gefragten deutschen Brauereien wie [Bitburger](https://www.marktguru.de/b/bitburger), [Krombacher](https://www.marktguru.de/b/krombacher) oder [Veltins](https://www.marktguru.de/b/veltins) im Angebot.",
+       "parentId": 70
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 1.2617354196301565,
+        "width": 1.0,
+        "height": 0.7925591882750845
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25747302,
+     "description": "Direktsaft, je 1-l-Pckg.",
+     "volume": 1.0,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1.59,
+     "oldPrice": null,
+     "referencePrice": 1.59,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301582,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/137320",
+       "name": "nahkauf",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 1292753,
+      "name": "Apfelsaft Naturtrüb",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "l",
+      "id": 1,
+      "name": "Liter"
+     },
+     "brand": {
+      "id": 120974,
+      "name": "Rapp's Kelterei",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 359,
+       "name": "Softdrinks",
+       "description": "Märkte wie beispielsweise der [toom Getränkemarkt](https://www.marktguru.de/rp/toom-getraenkemarkt-prospekte) halten eine große Auswahl an [alkoholfreien Getränken](https://www.marktguru.de/c/getraenke-alkoholfrei) bereit. Dazu zählen [Coca-Cola](https://www.marktguru.de/b/coca-cola), Säfte von [Granini](https://www.marktguru.de/b/granini) oder Energydrinks von [Red Bull](https://www.marktguru.de/b/red-bull).",
+       "parentId": 69
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.3932432432432432,
+        "width": 1.0,
+        "height": 2.542955326460481
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25747237,
+     "description": "gesalzen, je 125-g-Btl.",
+     "volume": 0.125,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 0.99,
+     "oldPrice": null,
+     "referencePrice": 7.92,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301582,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/137320",
+       "name": "nahkauf",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 1050926,
+      "name": "Bio Tortilla Chips",
+      "description": ""
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 121227,
+      "name": "Rewe Bio",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 156,
+       "name": "Chips",
+       "description": null,
+       "parentId": 102
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.7129798903107861,
+        "width": 1.0,
+        "height": 1.4025641025641025
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    },
+    {
+     "id": 25747217,
+     "description": "50% Kakao, je 100-g-Pckg.",
+     "volume": 0.1,
+     "quantity": 1.0,
+     "isMultiProduct": false,
+     "price": 1.19,
+     "oldPrice": null,
+     "referencePrice": 11.9,
+     "requiresLoyalityMembership": false,
+     "leafletFlightId": 301582,
+     "validityDates": [
+      {
+       "from": "2026-11-15T23:00:00Z",
+       "to": "2026-11-21T22:59:59Z"
+      }
+     ],
+     "externalTrackingUrls": [
+      "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]"
+     ],
+     "externalTrackings": [
+      {
+       "type": "click",
+       "url": "https://servedby.flashtalking.com/imp/2/302014;10366753;201;pixel;SevenOneMediaDE;nnCPSevenOneMediaDEMarktguruA4CLEProspektnnAdgapId01984610141313447001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&pbMethods=&cachebuster=[CACHEBUSTER]",
+       "ugpctfet": 5
+      }
+     ],
+     "externalUrl": null,
+     "type": "standard",
+     "industries": [
+      {
+       "id": 1009,
+       "name": "Supermarkt"
+      }
+     ],
+     "advertisers": [
+      {
+       "id": "retailers/137320",
+       "name": "nahkauf",
+       "industryId": 1009
+      }
+     ],
+     "product": {
+      "id": 964489,
+      "name": "Zartbitterschokolade",
+      "description": null
+     },
+     "unit": {
+      "shortName": "kg",
+      "id": 2,
+      "name": "Kilogramm"
+     },
+     "brand": {
+      "id": 121215,
+      "name": "Rewe Beste Wahl",
+      "industryId": 1009
+     },
+     "categories": [
+      {
+       "id": 151,
+       "name": "Schokoladen",
+       "description": "Schokolade gehört wohl zu den beliebtesten [Süßigkeiten](https://www.marktguru.de/c/suessigkeiten) überhaupt. Sie ist lecker und begeistert nicht nur Kinder. Produkte von Marken wie [Milka](https://www.marktguru.de/b/milka), [Mars](https://www.marktguru.de/b/mars) oder [Ritter Sport](https://www.marktguru.de/b/ritter-sport) sind sehr gefragt. Erhältlich sind sie unter anderem im [EDEKA Center](https://www.marktguru.de/rp/edeka-center-prospekte).",
+       "parentId": 20
+      }
+     ],
+     "images": {
+      "count": 1,
+      "isCdnSuccessfullyPurged": null,
+      "metadata": [
+       {
+        "aspectRatio": 0.5621019108280255,
+        "width": 1.0,
+        "height": 1.7790368271954675
+       }
+      ]
+     },
+     "imageType": "offer",
+     "externalId": null
+    }
+   ]
+  }
+ ]
+}

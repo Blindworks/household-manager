@@ -1,0 +1,604 @@
+{
+ "totalResults": 298,
+ "skippedResults": 0,
+ "results": [
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25716052,
+   "description": "Grüne Tafelbirnen Kl. I, je 1-kg-Schale",
+   "product": {
+    "id": 127801,
+    "name": "Tafelbirnen"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 125322,
+    "name": "thisisnobrand123",
+    "uniqueName": "thisisnobrand123",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 1.29,
+   "oldPrice": 0.0,
+   "referencePrice": 1.29,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25717507,
+   "description": "1,5% oder 3,5% Fett, je 1 l",
+   "product": {
+    "id": 72025,
+    "name": "Haltbare Milch"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 124811,
+    "name": "Weihenstephan",
+    "uniqueName": "weihenstephan",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 0.99,
+   "oldPrice": 0.0,
+   "referencePrice": 0.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25714777,
+   "description": "Versch. Sorten, je 45 g",
+   "product": {
+    "id": 1309588,
+    "name": "PWR Filled Protein Bar"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 110390,
+    "name": "Rewe",
+    "uniqueName": "rewe",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 1.19,
+   "oldPrice": 0.0,
+   "referencePrice": 26.44,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25720257,
+   "description": "je 500 g oder Backmischung Knusperplätzchen, je 380 g",
+   "product": {
+    "id": 1374327,
+    "name": "Backmischung Spritzgebäck"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 120749,
+    "name": "Puda",
+    "uniqueName": "Puda",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 1.49,
+   "oldPrice": 0.0,
+   "referencePrice": 2.98,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25716212,
+   "description": "Aus der Schulter, ohne Knochen, Haltungsform 2, im Frischfleischregal, je kg",
+   "product": {
+    "id": 477361,
+    "name": "Schweine-Krustenbraten"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 129769,
+    "name": "Mühlenhof",
+    "uniqueName": "muehlenhof",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 4.99,
+   "oldPrice": 0.0,
+   "referencePrice": 4.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25720317,
+   "description": "je 20 g",
+   "product": {
+    "id": 1374332,
+    "name": "Bunte Mini Macarons"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 120749,
+    "name": "Puda",
+    "uniqueName": "Puda",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 2.49,
+   "oldPrice": 0.0,
+   "referencePrice": 124.5,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25716232,
+   "description": "Details im Prospekt",
+   "product": {
+    "id": 48229,
+    "name": "Weihnachtsstern"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 125322,
+    "name": "thisisnobrand123",
+    "uniqueName": "thisisnobrand123",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "Stk",
+    "id": 3,
+    "name": "Stück"
+   },
+   "price": 1.89,
+   "oldPrice": 0.0,
+   "referencePrice": 1.89,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25719002,
+   "description": "HINWEIS: MIT PENNY APP 0.65 € Versch. Sorten, je 70 g",
+   "product": {
+    "id": 155392,
+    "name": "Kaustreifen"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 110352,
+    "name": "Fritt",
+    "uniqueName": "fritt",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 0.75,
+   "oldPrice": 0.0,
+   "referencePrice": 10.71,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-19T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25712187,
+   "description": "Deutscher  Kl. I je kg",
+   "product": {
+    "id": 797483,
+    "name": "Knollensellerie"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 140102,
+    "name": "Marktliebe Regional",
+    "uniqueName": "marktliebe-regional",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 0.99,
+   "oldPrice": 0.0,
+   "referencePrice": 0.99,
+   "volume": 1,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-15T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25720397,
+   "description": "je 50 g",
+   "product": {
+    "id": 1374342,
+    "name": "Lebkuchenpaste"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 120749,
+    "name": "Puda",
+    "uniqueName": "Puda",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 2.29,
+   "oldPrice": 0.0,
+   "referencePrice": 45.8,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25717667,
+   "description": "Schokoladenkuchen mit feiner Aprikosenfüllung, je 100 g",
+   "product": {
+    "id": 468775,
+    "name": "Mini-Sacher"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 106544,
+    "name": "Almtaler",
+    "uniqueName": "Almtaler",
+    "indexOffer": false
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 2.29,
+   "oldPrice": 0.0,
+   "referencePrice": 22.9,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25719062,
+   "description": "HINWEIS: MIT PENNY APP 1.79 € Versch. Sorten, je 200 g oder Scharfer Grieche je 125 g",
+   "product": {
+    "id": 531147,
+    "name": "Mediterrane Cremes"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 126089,
+    "name": "Ergüllü",
+    "uniqueName": "erguellue",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "kg",
+    "id": 2,
+    "name": "Kilogramm"
+   },
+   "price": 1.99,
+   "oldPrice": 0.0,
+   "referencePrice": 9.95,
+   "volume": 0,
+   "quantity": 1,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-19T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  },
+  {
+   "images": {
+    "count": 1,
+    "isCdnSuccessfullyPurged": null,
+    "metadata": [
+     {
+      "aspectRatio": "NaN",
+      "width": 1.0,
+      "height": "NaN"
+     }
+    ]
+   },
+   "crossLinks": [],
+   "id": 25717942,
+   "description": "oder Coca-Cola Erfrischungsgetränk, tw. koffeinhaltig, zzgl. 4.50 Pfand, je 18 x 0,33 l",
+   "product": {
+    "id": 821643,
+    "name": "Exotic"
+   },
+   "retailer": {
+    "id": 126765,
+    "name": "PENNY",
+    "uniqueName": "penny",
+    "indexOffer": true
+   },
+   "brand": {
+    "id": 108640,
+    "name": "Fanta",
+    "uniqueName": "fanta",
+    "indexOffer": true
+   },
+   "unit": {
+    "shortName": "l",
+    "id": 1,
+    "name": "Liter"
+   },
+   "price": 8.49,
+   "oldPrice": 0.0,
+   "referencePrice": 1.43,
+   "volume": 0,
+   "quantity": 18,
+   "storeId": 0,
+   "storeAddress": null,
+   "validFrom": "2026-11-18T23:00:00Z",
+   "validTo": "2026-11-21T22:59:59Z"
+  }
+ ]
+}

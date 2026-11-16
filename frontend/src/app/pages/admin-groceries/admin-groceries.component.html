@@ -1,0 +1,105 @@
+<div class="admin-groceries">
+  <h1>Supermärkte</h1>
+
+  @if (errorMessage()) {
+    <div class="admin-groceries__error" role="alert">{{ errorMessage() }}</div>
+  }
+
+  <section class="admin-groceries__section">
+    <h2>Ort und Schwelle</h2>
+    <form class="admin-groceries__form" (ngSubmit)="saveSettings()">
+      <label class="admin-groceries__field">
+        <span>Postleitzahl</span>
+        <input type="text" name="zip" [(ngModel)]="zip" maxlength="5">
+      </label>
+      <label class="admin-groceries__field">
+        <span>Schnäppchen ab (% unter üblich)</span>
+        <input type="number" name="threshold" [(ngModel)]="threshold" [min]="thresholdMin" [max]="thresholdMax">
+      </label>
+      <button type="submit" [disabled]="!thresholdValid || savingSettings()">Speichern</button>
+      @if (!thresholdValid) {
+        <span class="admin-groceries__message admin-groceries__message--error">
+          Die Schwelle muss zwischen {{ thresholdMin }} und {{ thresholdMax }} liegen.
+        </span>
+      }
+      @if (settingsMessage(); as message) {
+        <span class="admin-groceries__message" [class.admin-groceries__message--error]="message.type === 'error'">
+          {{ message.text }}
+        </span>
+      }
+    </form>
+  </section>
+
+  <section class="admin-groceries__section">
+    <h2>Märkte je Kette</h2>
+    <button type="button" [disabled]="refreshingMarkets()" [attr.aria-busy]="refreshingMarkets()"
+            (click)="refreshMarkets()">Märkte suchen</button>
+    @for (chain of failedChains(); track chain) {
+      <p class="admin-groceries__message admin-groceries__message--error">{{ failedChainText(chain) }}</p>
+    }
+    @for (group of marketGroups(); track group.chain) {
+      <h3>{{ group.name }}</h3>
+      @if (group.markets.length === 0) {
+        <p class="admin-groceries__hint">Keine Märkte geladen.</p>
+      }
+      @for (market of group.markets; track market.id) {
+        <label class="admin-groceries__market">
+          <input type="checkbox" [checked]="market.selected"
+                 (change)="toggleMarket(market, $any($event.target).checked)">
+          <span>{{ market.name }}</span>
+          @if (market.address) {
+            <span class="admin-groceries__hint">{{ market.address }}</span>
+          }
+        </label>
+      }
+    }
+  </section>
+
+  <section class="admin-groceries__section">
+    <h2>Ketten ohne Märkte</h2>
+    @for (chain of chains(); track chain.chain) {
+      <label class="admin-groceries__market">
+        <input type="checkbox" [checked]="chain.enabled"
+               (change)="toggleChain(chain, $any($event.target).checked)">
+        <span>{{ chain.name }}</span>
+      </label>
+    }
+  </section>
+
+  <section class="admin-groceries__section">
+    <h2>Quellen</h2>
+    <button type="button" class="admin-groceries__run" [disabled]="running()" [attr.aria-busy]="running()"
+            (click)="runNow()">Jetzt suchen</button>
+    @if (runMessage(); as message) {
+      <p class="admin-groceries__message admin-groceries__run-message"
+         [class.admin-groceries__message--error]="message.type === 'error'">
+        {{ message.text }}
+      </p>
+    }
+    <table class="admin-groceries__sources">
+      <thead>
+        <tr><th>Quelle</th><th>Letzter Lauf</th><th>Angebote</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        @for (source of sources(); track source.source) {
+          <tr class="admin-groceries__source" [class.admin-groceries__source--failed]="source.ok === false">
+            <td>{{ sourceName(source.source) }}</td>
+            <td>{{ source.lastRunAt ? (source.lastRunAt | date: 'dd.MM.yyyy HH:mm') : '–' }}</td>
+            <td>{{ source.offerCount ?? '–' }}</td>
+            <td class="admin-groceries__status">
+              @if (!source.enabled) {
+                Deaktiviert
+              } @else if (source.ok === false) {
+                Fehler: {{ source.reason }}
+              } @else if (source.ok === true) {
+                OK
+              } @else {
+                {{ source.reason }}
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+</div>

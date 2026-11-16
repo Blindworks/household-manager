@@ -1,0 +1,1463 @@
+{
+ "contents": [
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.9682805,
+       "y": 0.9792257
+      },
+      "topLeft": {
+       "x": 0.654424,
+       "y": 0.75637394
+      }
+     }
+    }
+   },
+   "id": "c0a9fab9-24f1-43f2-a625-836de0b8a17c",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/c0a9fab9-24f1-43f2-a625-836de0b8a17c/f901e20c-a8b2-44d9-a013-8e098f0e071a.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/c0a9fab9-24f1-43f2-a625-836de0b8a17c/f901e20c-a8b2-44d9-a013-8e098f0e071a.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/c0a9fab9-24f1-43f2-a625-836de0b8a17c/f901e20c-a8b2-44d9-a013-8e098f0e071a.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Pils",
+   "description": "versch. Sorten 20 x 0,5-l-Fl.-Kasten zzgl. 3.10 Pfand",
+   "brand": "Beck's",
+   "categories": [
+    "Becks",
+    "Pils"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-142945659",
+      "name": "Alkoholische Getränke"
+     },
+     {
+      "id": "DE-1496",
+      "name": "Bier"
+     },
+     {
+      "id": "DE-108104713",
+      "name": "Biermarken"
+     },
+     {
+      "id": "DE-28828",
+      "name": "Becks"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-142945659",
+      "name": "Alkoholische Getränke"
+     },
+     {
+      "id": "DE-1496",
+      "name": "Bier"
+     },
+     {
+      "id": "DE-252606334",
+      "name": "Biersorten"
+     },
+     {
+      "id": "DE-96570862",
+      "name": "Pils"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 10.99,
+    "secondaryPrice": 19.99,
+    "mainPriceFormatted": "10,99 €",
+    "secondaryPriceFormatted": "19,99 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 1.10)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "n.G. = 10.99",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.327212,
+       "y": 0.9792257
+      },
+      "topLeft": {
+       "x": 0.013355592,
+       "y": 0.75637394
+      }
+     }
+    }
+   },
+   "id": "74404a3a-0e93-4dd7-9afb-c6141b2ce1dd",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/74404a3a-0e93-4dd7-9afb-c6141b2ce1dd/2970552b-37e5-422f-b664-1a0503d06465.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/74404a3a-0e93-4dd7-9afb-c6141b2ce1dd/2970552b-37e5-422f-b664-1a0503d06465.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/74404a3a-0e93-4dd7-9afb-c6141b2ce1dd/2970552b-37e5-422f-b664-1a0503d06465.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Coca-Cola",
+   "description": "versch. Sorten, teilw. koffeinhaltig, je 1,25-l-Fl. zzgl. 0.25 Pfand",
+   "categories": [
+    "Cola",
+    "Coca Cola"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-26031",
+      "name": "Limonade"
+     },
+     {
+      "id": "DE-330648062",
+      "name": "Koffeinhaltige Limonade"
+     },
+     {
+      "id": "DE-1497",
+      "name": "Cola"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-86316175",
+      "name": "Coca Cola"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 1.19,
+    "secondaryPrice": 1.69,
+    "mainPriceFormatted": "1,19 €",
+    "secondaryPriceFormatted": "1,69 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 0.95)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.654424,
+       "y": 0.9792257
+      },
+      "topLeft": {
+       "x": 0.327212,
+       "y": 0.75637394
+      }
+     }
+    }
+   },
+   "id": "7f17a067-e575-4be1-9bb0-1dc0d3b675d8",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/7f17a067-e575-4be1-9bb0-1dc0d3b675d8/9b847170-8166-4c95-b662-0d612c3aa9c8.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/7f17a067-e575-4be1-9bb0-1dc0d3b675d8/9b847170-8166-4c95-b662-0d612c3aa9c8.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/7f17a067-e575-4be1-9bb0-1dc0d3b675d8/9b847170-8166-4c95-b662-0d612c3aa9c8.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Krönung Mild",
+   "description": "gemahlener Bohnenkaffee, versch. Sorten 500-g-Pckg.",
+   "brand": "Jacobs",
+   "categories": [
+    "Kaffee",
+    "Jacobs"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-142937115",
+      "name": "Heißgetränk"
+     },
+     {
+      "id": "DE-1476",
+      "name": "Kaffee"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-1194",
+      "name": "Jacobs"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 5.79,
+    "secondaryPrice": 9.99,
+    "mainPriceFormatted": "5,79 €",
+    "secondaryPriceFormatted": "9,99 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 11.58)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.9682805,
+       "y": 0.75637394
+      },
+      "topLeft": {
+       "x": 0.654424,
+       "y": 0.5344665
+      }
+     }
+    }
+   },
+   "id": "92fd9e82-3196-43c3-9b28-ed6cbe10818a",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/92fd9e82-3196-43c3-9b28-ed6cbe10818a/ed041da5-25d8-4fd2-9981-aedf4ff305c0.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/92fd9e82-3196-43c3-9b28-ed6cbe10818a/ed041da5-25d8-4fd2-9981-aedf4ff305c0.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/92fd9e82-3196-43c3-9b28-ed6cbe10818a/ed041da5-25d8-4fd2-9981-aedf4ff305c0.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Alpenmilch",
+   "description": "250-g-Tafel",
+   "brand": "Milka",
+   "categories": [
+    "Milka"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-6925",
+      "name": "Milka"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 2.59,
+    "secondaryPrice": 4.99,
+    "mainPriceFormatted": "2,59 €",
+    "secondaryPriceFormatted": "4,99 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 10.36)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.327212,
+       "y": 0.75637394
+      },
+      "topLeft": {
+       "x": 0.013355592,
+       "y": 0.5344665
+      }
+     }
+    }
+   },
+   "id": "50cebf0a-bee8-4eca-96d1-0a5a2559524b",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/50cebf0a-bee8-4eca-96d1-0a5a2559524b/600d53c4-0292-4f5a-b9ed-fbc926e4453f.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/50cebf0a-bee8-4eca-96d1-0a5a2559524b/600d53c4-0292-4f5a-b9ed-fbc926e4453f.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/50cebf0a-bee8-4eca-96d1-0a5a2559524b/600d53c4-0292-4f5a-b9ed-fbc926e4453f.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Meisterschinken",
+   "description": "gegart, je 100 g",
+   "categories": [
+    "Schinken"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-156",
+      "name": "Wurstwaren"
+     },
+     {
+      "id": "DE-50675390",
+      "name": "Schinken"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 1.59,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "1,59 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {}
+    ],
+    "showConditions": false,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.654424,
+       "y": 0.75637394
+      },
+      "topLeft": {
+       "x": 0.327212,
+       "y": 0.5344665
+      }
+     }
+    }
+   },
+   "id": "88ca5287-101a-4bf0-9756-202e0cea14e2",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/88ca5287-101a-4bf0-9756-202e0cea14e2/fb012028-ce41-446a-9aa9-39315ec12b6e.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/88ca5287-101a-4bf0-9756-202e0cea14e2/fb012028-ce41-446a-9aa9-39315ec12b6e.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/88ca5287-101a-4bf0-9756-202e0cea14e2/fb012028-ce41-446a-9aa9-39315ec12b6e.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Broccoli",
+   "description": "Spanien Kl. I 500-g-Pckg.",
+   "categories": [
+    "Broccoli"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-118",
+      "name": "Gemüse"
+     },
+     {
+      "id": "DE-50627943",
+      "name": "Kohl"
+     },
+     {
+      "id": "DE-171732",
+      "name": "Broccoli"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 0.99,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "0,99 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 1.98)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 1,
+     "area": {
+      "bottomRight": {
+       "x": 0.327212,
+       "y": 0.48536354
+      },
+      "topLeft": {
+       "x": 0.013355592,
+       "y": 0.24929178
+      }
+     }
+    }
+   },
+   "id": "32810f69-3905-467e-a82b-2313c4278286",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/32810f69-3905-467e-a82b-2313c4278286/bdd88e3b-0721-4cb9-af61-9875f231f2d7.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/32810f69-3905-467e-a82b-2313c4278286/bdd88e3b-0721-4cb9-af61-9875f231f2d7.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/32810f69-3905-467e-a82b-2313c4278286/bdd88e3b-0721-4cb9-af61-9875f231f2d7.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Scheiben mild & nussig",
+   "description": "140-g-Pckg.",
+   "brand": "Grünländer",
+   "categories": [
+    "Grünländer",
+    "Tabasco",
+    "Sandwich Scheiben"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-178647928",
+      "name": "Grünländer"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-143183789",
+      "name": "Saucen"
+     },
+     {
+      "id": "DE-143184383",
+      "name": "Dips"
+     },
+     {
+      "id": "DE-99735242",
+      "name": "Feinkostsauce"
+     },
+     {
+      "id": "DE-244279",
+      "name": "Tabasco"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-128",
+      "name": "Milchprodukte"
+     },
+     {
+      "id": "DE-227643",
+      "name": "Käse"
+     },
+     {
+      "id": "DE-112824030",
+      "name": "Sandwich Scheiben"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 1.49,
+    "secondaryPrice": 2.69,
+    "mainPriceFormatted": "1,49 €",
+    "secondaryPriceFormatted": "2,69 €",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 kg = 10.64)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 2,
+     "area": {
+      "bottomRight": {
+       "x": 0.98163605,
+       "y": 0.7998111
+      },
+      "topLeft": {
+       "x": 0.654424,
+       "y": 0.6147309
+      }
+     }
+    }
+   },
+   "id": "106a7b63-b3e6-4b1d-b75d-764c0756dd23",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/106a7b63-b3e6-4b1d-b75d-764c0756dd23/da9c34fa-eee7-4e7b-8dc5-945516a3fcb1.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/106a7b63-b3e6-4b1d-b75d-764c0756dd23/da9c34fa-eee7-4e7b-8dc5-945516a3fcb1.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/106a7b63-b3e6-4b1d-b75d-764c0756dd23/da9c34fa-eee7-4e7b-8dc5-945516a3fcb1.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Passionsfrucht",
+   "description": "Kolumbien",
+   "categories": [
+    "Passionsfrucht"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-135",
+      "name": "Obst"
+     },
+     {
+      "id": "DE-1567144",
+      "name": "Passionsfrucht"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 0.59,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "0,59 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "je St."
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 2,
+     "area": {
+      "bottomRight": {
+       "x": 0.654424,
+       "y": 0.6147309
+      },
+      "topLeft": {
+       "x": 0.013355592,
+       "y": 0.30217186
+      }
+     }
+    }
+   },
+   "id": "f1ee4ecc-dc45-4ac0-b7e6-d363fad53f38",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/f1ee4ecc-dc45-4ac0-b7e6-d363fad53f38/main.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/f1ee4ecc-dc45-4ac0-b7e6-d363fad53f38/main.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/f1ee4ecc-dc45-4ac0-b7e6-d363fad53f38/main.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Orangen",
+   "description": "Spanien Sorte: siehe Etikett, Kl. I 1-kg-Netz",
+   "brand": "REWE Bio",
+   "categories": [
+    "Naturland",
+    "REWE Bio",
+    "Orangen",
+    "Bio Orangen"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-112195016",
+      "name": "Marken Bio"
+     },
+     {
+      "id": "DE-593984176",
+      "name": "Naturland"
+     }
+    ],
+    [
+     {
+      "id": "DE-935",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-13600",
+      "name": "R"
+     },
+     {
+      "id": "DE-943",
+      "name": "REWE"
+     },
+     {
+      "id": "DE-473942176",
+      "name": "REWE Bio"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-135",
+      "name": "Obst"
+     },
+     {
+      "id": "DE-50648363",
+      "name": "Zitrusfrüchte"
+     },
+     {
+      "id": "DE-212",
+      "name": "Orangen"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-147645018",
+      "name": "Bio Lebensmittel"
+     },
+     {
+      "id": "DE-147645207",
+      "name": "Bio Obst"
+     },
+     {
+      "id": "DE-152191206",
+      "name": "Bio Zitrusfrüchte"
+     },
+     {
+      "id": "DE-152191482",
+      "name": "Bio Orangen"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 1.99,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "1,99 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 2,
+     "area": {
+      "bottomRight": {
+       "x": 0.98163605,
+       "y": 0.50141644
+      },
+      "topLeft": {
+       "x": 0.41569284,
+       "y": 0.027384324
+      }
+     }
+    }
+   },
+   "id": "f87ee006-6e81-4814-8578-70cc37957ded",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/f87ee006-6e81-4814-8578-70cc37957ded/e935767c-fdab-4b00-91e9-2c7431ad114d.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/f87ee006-6e81-4814-8578-70cc37957ded/e935767c-fdab-4b00-91e9-2c7431ad114d.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/f87ee006-6e81-4814-8578-70cc37957ded/e935767c-fdab-4b00-91e9-2c7431ad114d.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Bio Bananen",
+   "description": "Ursprung: siehe Etikett 1 kg",
+   "brand": "REWE Bio",
+   "categories": [
+    "Naturland",
+    "REWE Bio",
+    "Bananen",
+    "Bio Bananen"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-112195016",
+      "name": "Marken Bio"
+     },
+     {
+      "id": "DE-593984176",
+      "name": "Naturland"
+     }
+    ],
+    [
+     {
+      "id": "DE-935",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-13600",
+      "name": "R"
+     },
+     {
+      "id": "DE-943",
+      "name": "REWE"
+     },
+     {
+      "id": "DE-473942176",
+      "name": "REWE Bio"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-135",
+      "name": "Obst"
+     },
+     {
+      "id": "DE-12130",
+      "name": "Bananen"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-147645018",
+      "name": "Bio Lebensmittel"
+     },
+     {
+      "id": "DE-147645207",
+      "name": "Bio Obst"
+     },
+     {
+      "id": "DE-152186386",
+      "name": "Bio Bananen"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 1.79,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "1,79 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 15,
+     "area": {
+      "bottomRight": {
+       "x": 0.33722872,
+       "y": 0.75637394
+      },
+      "topLeft": {
+       "x": 0.026711185,
+       "y": 0.5316336
+      }
+     }
+    }
+   },
+   "id": "736acfd1-7dbe-4c9e-b999-9d44b19c8dd8",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/736acfd1-7dbe-4c9e-b999-9d44b19c8dd8/11977be5-e8f6-4908-8eb1-a3fc51b526f5.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/736acfd1-7dbe-4c9e-b999-9d44b19c8dd8/11977be5-e8f6-4908-8eb1-a3fc51b526f5.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/736acfd1-7dbe-4c9e-b999-9d44b19c8dd8/11977be5-e8f6-4908-8eb1-a3fc51b526f5.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Vanilla & Chocolate Swirl",
+   "description": "270-ml-Pckg.",
+   "brand": "Milka",
+   "categories": [
+    "Vanilleeis",
+    "Milka"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48921103",
+      "name": "Lebensmittel"
+     },
+     {
+      "id": "DE-13927",
+      "name": "Dessert"
+     },
+     {
+      "id": "DE-5881",
+      "name": "Eis"
+     },
+     {
+      "id": "DE-103702680",
+      "name": "Eiscreme"
+     },
+     {
+      "id": "DE-33864700",
+      "name": "Vanilleeis"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-48989303",
+      "name": "Marken"
+     },
+     {
+      "id": "DE-106949053",
+      "name": "Marken Lebensmittel"
+     },
+     {
+      "id": "DE-6925",
+      "name": "Milka"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 2.22,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "2,22 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 8.22)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "Je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  },
+  {
+   "type": "OFFER",
+   "parentContent": {
+    "id": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "legacyId": "2501329038",
+    "type": "static_brochure",
+    "page": {
+     "number": 18,
+     "area": {
+      "bottomRight": {
+       "x": 0.9699499,
+       "y": 0.7573182
+      },
+      "topLeft": {
+       "x": 0.36894825,
+       "y": 0.5316336
+      }
+     }
+    }
+   },
+   "id": "66d60071-0631-4edc-94fa-13d2a79f6d93",
+   "preview": false,
+   "publisherId": "DE-1062",
+   "publisherName": "REWE",
+   "adPlacement": "",
+   "adFormat": "",
+   "score": 0,
+   "offerImages": {
+    "url": {
+     "thumbnail": "https://content-media.bonial.biz/66d60071-0631-4edc-94fa-13d2a79f6d93/38996190-d5a0-4a83-a7b3-9e885e0dfaef.jpg?impolicy=SEO-offer-thumbnails",
+     "normal": "https://content-media.bonial.biz/66d60071-0631-4edc-94fa-13d2a79f6d93/38996190-d5a0-4a83-a7b3-9e885e0dfaef.jpg?impolicy=SEO-offer-normal",
+     "large": "https://content-media.bonial.biz/66d60071-0631-4edc-94fa-13d2a79f6d93/38996190-d5a0-4a83-a7b3-9e885e0dfaef.jpg"
+    },
+    "metaData": {
+     "imageAlt": "",
+     "imageTitle": ""
+    }
+   },
+   "title": "Sprite",
+   "description": "versch. Sorten, koffeinhaltig 6 x 1-l-Fl.-Kasten zzgl. 2.40 Pfand",
+   "brand": "Coca-Cola",
+   "categories": [
+    "Cola-Mix",
+    "Coca Cola"
+   ],
+   "categoryPaths": [
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-26031",
+      "name": "Limonade"
+     },
+     {
+      "id": "DE-330648062",
+      "name": "Koffeinhaltige Limonade"
+     },
+     {
+      "id": "DE-1497",
+      "name": "Cola"
+     },
+     {
+      "id": "DE-96571970",
+      "name": "Cola-Mix"
+     }
+    ],
+    [
+     {
+      "id": "DE-104",
+      "name": "Lebensmittel und Getränke"
+     },
+     {
+      "id": "DE-105",
+      "name": "Produkte"
+     },
+     {
+      "id": "DE-48920851",
+      "name": "Getränke"
+     },
+     {
+      "id": "DE-50523564",
+      "name": "Softdrinks"
+     },
+     {
+      "id": "DE-254645365",
+      "name": "Softdrinkmarken"
+     },
+     {
+      "id": "DE-86316175",
+      "name": "Coca Cola"
+     }
+    ]
+   ],
+   "validFrom": "2026-11-15T23:00:00.000+0000",
+   "validUntil": "2026-11-21T22:00:00.000+0000",
+   "prices": {
+    "mainPrice": 7.99,
+    "secondaryPrice": 0,
+    "mainPriceFormatted": "7,99 €",
+    "secondaryPriceFormatted": "",
+    "mainPriceFrequency": "ONCE",
+    "priceByBaseUnit": "(1 l = 1.33)",
+    "secondaryPriceIsUVP": false,
+    "conditions": [
+     {
+      "other": "je"
+     }
+    ],
+    "showConditions": true,
+    "priceRange": false,
+    "description": "",
+    "currencyCode": "EUR"
+   },
+   "externalTracking": {
+    "click": [],
+    "impression": []
+   }
+  }
+ ]
+}

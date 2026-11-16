@@ -1,0 +1,38 @@
+[
+ {
+  "wwIdent": "530027",
+  "wawi": "63302372",
+  "sellingRegion": "15A-08-26",
+  "nextWeekSellingRegion": "",
+  "marketName": "Penny Hasporter Damm",
+  "streetWithHouseNumber": "Hasporter Damm 110-114",
+  "zipCode": "27749",
+  "city": "Delmenhorst",
+  "latitude": "53.03672",
+  "longitude": "8.64581"
+ },
+ {
+  "wwIdent": "230372",
+  "wawi": "63302372",
+  "sellingRegion": "15A-05-67",
+  "nextWeekSellingRegion": "",
+  "marketName": "Penny Bad Vilbel",
+  "streetWithHouseNumber": "Friedberger Str. 77",
+  "zipCode": "61118",
+  "city": "Bad Vilbel",
+  "latitude": "50.1892",
+  "longitude": "8.74159"
+ },
+ {
+  "wwIdent": "230400",
+  "wawi": "63302372",
+  "sellingRegion": "15A-05-68",
+  "nextWeekSellingRegion": "",
+  "marketName": "Penny Karben",
+  "streetWithHouseNumber": "Hauptstr. 1",
+  "zipCode": "61184",
+  "city": "Karben",
+  "latitude": "50.2300",
+  "longitude": "8.77000"
+ }
+]

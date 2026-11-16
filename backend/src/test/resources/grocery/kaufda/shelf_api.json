@@ -1,0 +1,1267 @@
+{
+ "contents": [
+  {
+   "placement": "ad_placement__shelf_fixed_position_1",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/879132a3-a81d-487e-bd28-df202145b0db"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/879132a3-a81d-487e-bd28-df202145b0db"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/879132a3-a81d-487e-bd28-df202145b0db/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/879132a3-a81d-487e-bd28-df202145b0db/publisher"
+     }
+    },
+    "id": 2501324833,
+    "contentId": "879132a3-a81d-487e-bd28-df202145b0db",
+    "closestStore": {
+     "id": 34597,
+     "externalId": "3910",
+     "name": "Lidl",
+     "latitude": 50.16837,
+     "longitude": 8.72978,
+     "street": "Alte Frankfurter Straße",
+     "streetNumber": "15",
+     "zip": "61118",
+     "city": "Bad Vilbel"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/6cf94b5b-2098-321f-b644-bf125f14b6d6.jpeg",
+      "dimensions": {
+       "width": 1500,
+       "height": 640
+      }
+     }
+    },
+    "title": "LIDL LOHNT SICH",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-14T23:00:00.000+0000",
+    "publishedUntil": "2026-11-15T19:00:00.000+0000",
+    "validFrom": "2026-11-15T23:00:00.000+0000",
+    "validUntil": "2026-11-21T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/879132a3-a81d-487e-bd28-df202145b0db/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-1013",
+     "name": "Lidl",
+     "type": "RETAILER"
+    },
+    "pageCount": 73,
+    "score": 0.02343,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "new"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_fixed_position_2",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/6bbb521a-7c07-4a62-8718-9ea133c199b1"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/6bbb521a-7c07-4a62-8718-9ea133c199b1"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/6bbb521a-7c07-4a62-8718-9ea133c199b1/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/6bbb521a-7c07-4a62-8718-9ea133c199b1/publisher"
+     }
+    },
+    "id": 2501329038,
+    "contentId": "6bbb521a-7c07-4a62-8718-9ea133c199b1",
+    "closestStore": {
+     "id": 455725812,
+     "externalId": "1464175",
+     "name": "REWE Bernd Kaffenberger oHG Bd Vilbel",
+     "latitude": 50.189,
+     "longitude": 8.73375,
+     "street": "Rodheimer Straße",
+     "streetNumber": "15",
+     "zip": "61118",
+     "city": "Bad Vilbel"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/08365443-4d23-3ab5-be35-a059aaf2949f.jpeg",
+      "dimensions": {
+       "width": 1500,
+       "height": 640
+      }
+     }
+    },
+    "title": "Dein Markt",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-14T23:00:00.000+0000",
+    "publishedUntil": "2026-11-21T23:00:00.000+0000",
+    "validFrom": "2026-11-15T23:00:00.000+0000",
+    "validUntil": "2026-11-21T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367283;201;pixel;BonialInternationalDE;nnCPBonialInternationalDEKaufDAMeinProspektA4BOFProspektnnAdgapId01984610141314297001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&cachebuster=${timestamp}"
+     ],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/6bbb521a-7c07-4a62-8718-9ea133c199b1/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-1062",
+     "name": "REWE",
+     "type": "RETAILER"
+    },
+    "pageCount": 29,
+    "score": 0.23271,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "new"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8c092b95-bb47-4e72-9e1f-e15cb39ff01c"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8c092b95-bb47-4e72-9e1f-e15cb39ff01c"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/publisher"
+     }
+    },
+    "id": 2501328483,
+    "contentId": "8c092b95-bb47-4e72-9e1f-e15cb39ff01c",
+    "closestStore": {
+     "id": 107642068,
+     "externalId": "240354",
+     "name": "REWE Frankfurt/Berge Marktstr.",
+     "latitude": 50.155,
+     "longitude": 8.74878,
+     "street": "Marktstraße",
+     "streetNumber": "1",
+     "zip": "60388",
+     "city": "Frankfurt a. M. / Bergen-Enkheim"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/08365443-4d23-3ab5-be35-a059aaf2949f.jpeg",
+      "dimensions": {
+       "width": 1500,
+       "height": 640
+      }
+     }
+    },
+    "title": "Dein Markt",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-14T23:00:00.000+0000",
+    "publishedUntil": "2026-11-21T23:00:00.000+0000",
+    "validFrom": "2026-11-15T23:00:00.000+0000",
+    "validUntil": "2026-11-21T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [
+      "https://servedby.flashtalking.com/imp/2/302017;10367283;201;pixel;BonialInternationalDE;nnCPBonialInternationalDEKaufDAMeinProspektA4BOFProspektnnAdgapId01984610141314297001/?gdpr=${GDPR}&gdpr_consent=${GDPR_CONSENT_78}&cachebuster=${timestamp}"
+     ],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/8c092b95-bb47-4e72-9e1f-e15cb39ff01c/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-1062",
+     "name": "REWE",
+     "type": "RETAILER"
+    },
+    "pageCount": 18,
+    "score": 0.35788,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "new"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/53024b08-f968-4fa2-ad5b-e41c8c27dc11"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/53024b08-f968-4fa2-ad5b-e41c8c27dc11"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/53024b08-f968-4fa2-ad5b-e41c8c27dc11/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/53024b08-f968-4fa2-ad5b-e41c8c27dc11/publisher"
+     }
+    },
+    "id": 2501327095,
+    "contentId": "53024b08-f968-4fa2-ad5b-e41c8c27dc11",
+    "closestStore": {
+     "id": 35263384,
+     "externalId": "FR",
+     "name": "mömax Frankfurt",
+     "latitude": 50.1409,
+     "longitude": 8.74843,
+     "street": "Borisgallee",
+     "streetNumber": "39",
+     "zip": "60388",
+     "city": "Frankfurt Am Main"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/ce930c87-c446-3f83-b28d-d682c4365929.jpeg",
+      "dimensions": {
+       "width": 2800,
+       "height": 1194
+      }
+     }
+    },
+    "title": "15% Extrarabatt auf viele Möbel",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-11T14:30:00.000+0000",
+    "publishedUntil": "2026-11-15T22:00:00.000+0000",
+    "validFrom": "2026-11-08T23:00:00.000+0000",
+    "validUntil": "2026-11-15T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/53024b08-f968-4fa2-ad5b-e41c8c27dc11/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-34906053",
+     "name": "mömax",
+     "type": "RETAILER"
+    },
+    "pageCount": 16,
+    "score": 0.09778,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "expiring_soon"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/303b0c74-12ff-4a82-9d0b-221a459f5617"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/303b0c74-12ff-4a82-9d0b-221a459f5617"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/303b0c74-12ff-4a82-9d0b-221a459f5617/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/303b0c74-12ff-4a82-9d0b-221a459f5617/publisher"
+     }
+    },
+    "id": 2501298377,
+    "contentId": "303b0c74-12ff-4a82-9d0b-221a459f5617",
+    "closestStore": {
+     "id": 35266593,
+     "externalId": "WS",
+     "name": "Segmüller Einrichtungshaus Weiterstadt",
+     "latitude": 49.8971,
+     "longitude": 8.60124,
+     "street": "Im Rödling",
+     "streetNumber": "2",
+     "zip": "64331",
+     "city": "Weiterstadt"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/0b2dbd33-5d99-3609-954c-2a1d6e667349.jpeg",
+      "dimensions": {
+       "width": 1280,
+       "height": 720
+      }
+     }
+    },
+    "title": "Natürlich Wohnen",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-10-22T22:00:00.000+0000",
+    "publishedUntil": "2026-11-15T22:00:00.000+0000",
+    "validFrom": "2026-10-18T22:00:00.000+0000",
+    "validUntil": "2026-11-15T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/303b0c74-12ff-4a82-9d0b-221a459f5617/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-34906847",
+     "name": "Segmüller",
+     "type": "RETAILER"
+    },
+    "pageCount": 24,
+    "score": 0.07271,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "expiring_soon"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_premium",
+   "contentType": "brochurePremium",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/5b048dcf-dfea-4ade-bc30-9efbc7b8c476"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/5b048dcf-dfea-4ade-bc30-9efbc7b8c476"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/publisher"
+     }
+    },
+    "id": 2501326662,
+    "contentId": "5b048dcf-dfea-4ade-bc30-9efbc7b8c476",
+    "closestStore": {
+     "id": 1363639961,
+     "externalId": "13134624",
+     "name": "expert klein GmbH",
+     "latitude": 50.2547,
+     "longitude": 8.64279,
+     "street": "Wilhelmstraße",
+     "streetNumber": "23",
+     "zip": "61381",
+     "city": "Friedrichsdorf"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/874065da-eada-3bc5-8fd3-94de65bf35ee.jpeg",
+      "dimensions": {
+       "width": 2800,
+       "height": 1381
+      }
+     }
+    },
+    "title": "Top Angebote",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-13T23:00:00.000+0000",
+    "publishedUntil": "2026-11-20T22:59:00.000+0000",
+    "validFrom": "2026-11-13T23:00:00.000+0000",
+    "validUntil": "2026-11-20T22:59:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/5b048dcf-dfea-4ade-bc30-9efbc7b8c476/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-32258361",
+     "name": "expert",
+     "type": "RETAILER"
+    },
+    "pageCount": 8,
+    "score": 0.05258,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "new"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/545f1802-9596-46bc-b502-869d2508f30a"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/545f1802-9596-46bc-b502-869d2508f30a"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/545f1802-9596-46bc-b502-869d2508f30a/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/545f1802-9596-46bc-b502-869d2508f30a/publisher"
+     }
+    },
+    "id": 2501326864,
+    "contentId": "545f1802-9596-46bc-b502-869d2508f30a",
+    "closestStore": {
+     "id": 82200894,
+     "externalId": "230372",
+     "name": "PENNY Markt Penny Bad Vilbel",
+     "latitude": 50.1892,
+     "longitude": 8.74159,
+     "street": "Friedberger Straße",
+     "streetNumber": "77",
+     "zip": "61118",
+     "city": "Bad Vilbel"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/361d22f3-39a3-3029-9c91-ccd916180355.jpeg",
+      "dimensions": {
+       "width": 2800,
+       "height": 1194
+      }
+     }
+    },
+    "title": "Wer günstig will, muss Penny.",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-14T23:00:00.000+0000",
+    "publishedUntil": "2026-11-21T23:00:00.000+0000",
+    "validFrom": "2026-11-15T23:00:00.000+0000",
+    "validUntil": "2026-11-21T23:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/545f1802-9596-46bc-b502-869d2508f30a/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-1050",
+     "name": "Penny",
+     "type": "RETAILER"
+    },
+    "pageCount": 44,
+    "score": 0.03073,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "new"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/1e5fc22e-9767-4f81-afe3-e6da0c88381f"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/1e5fc22e-9767-4f81-afe3-e6da0c88381f"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/1e5fc22e-9767-4f81-afe3-e6da0c88381f/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/1e5fc22e-9767-4f81-afe3-e6da0c88381f/publisher"
+     }
+    },
+    "id": 2501329645,
+    "contentId": "1e5fc22e-9767-4f81-afe3-e6da0c88381f",
+    "closestStore": {
+     "id": 39082967,
+     "externalId": "frankfurt-gruendau-lieblos",
+     "name": "Höffner Möbelgesellschaft GmbH & Co. KG",
+     "latitude": 50.2049,
+     "longitude": 9.14081,
+     "street": "Rabenaustraße",
+     "streetNumber": "3-9",
+     "zip": "63584",
+     "city": "Gründau-Lieblos"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/d6dff87e-b1da-3cec-a0d6-16b2cc52ca5c.jpeg",
+      "dimensions": {
+       "width": 2800,
+       "height": 1194
+      }
+     },
+     "linkOut": {
+      "id": "536396e9-5cb6-4887-8139-3988c84866fa",
+      "intent": "DETAILS",
+      "webUrl": "https://www.hoeffner.de/?utm_source=23&utm_chid=15&utm_pid=21&utm_medium=dynamicbrochure&utm_campaign=23KW01_DynamicBrochure",
+      "mobileUrl": "https://www.hoeffner.de/?utm_source=23&utm_chid=15&utm_pid=21&utm_medium=dynamicbrochure&utm_campaign=23KW01_DynamicBrochure"
+     }
+    },
+    "title": "Aktuelle Angebote",
+    "type": "DYNAMIC",
+    "publishedFrom": "2026-11-11T23:00:00.000+0000",
+    "publishedUntil": "2026-11-17T22:00:00.000+0000",
+    "validFrom": "2026-11-11T23:00:00.000+0000",
+    "validUntil": "2026-11-17T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg"
+    },
+    "storeDetailsEnabled": true,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/1e5fc22e-9767-4f81-afe3-e6da0c88381f/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-46660",
+     "name": "Höffner",
+     "type": "RETAILER"
+    },
+    "score": 0.02854,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "expiring_soon"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/07c05fd0-46ad-4343-be87-d035d2985733"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/07c05fd0-46ad-4343-be87-d035d2985733"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/07c05fd0-46ad-4343-be87-d035d2985733/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/07c05fd0-46ad-4343-be87-d035d2985733/publisher"
+     }
+    },
+    "id": 2501333421,
+    "contentId": "07c05fd0-46ad-4343-be87-d035d2985733",
+    "closestStore": {
+     "id": 10000268912,
+     "externalId": "ESWEST_10008943",
+     "name": "EDEKA Stenger",
+     "latitude": 50.190292,
+     "longitude": 8.802476,
+     "street": "Die Landwehr",
+     "streetNumber": "1",
+     "zip": "61138",
+     "city": "Niederdorfelden"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/41ffc736-f407-3c96-a3ec-483f4356d222.jpeg",
+      "dimensions": {
+       "width": 2800,
+       "height": 1202
+      }
+     }
+    },
+    "title": "Aktuelle Angebote",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-14T23:00:00.000+0000",
+    "publishedUntil": "2026-11-21T21:00:00.000+0000",
+    "validFrom": "2026-11-15T23:00:00.000+0000",
+    "validUntil": "2026-11-21T21:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/07c05fd0-46ad-4343-be87-d035d2985733/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-220164",
+     "name": "EDEKA",
+     "type": "RETAILER"
+    },
+    "pageCount": 59,
+    "score": 0.02679,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "new"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": null,
+   "contentType": "blogCarousel",
+   "content": [
+    {
+     "title": "Kaufland Prospekt 09.11.2026: Die Highlights der Woche entdecken!",
+     "campaignItemId": null,
+     "teaserText": "Entdeckt Kaufland Angebote vom 09.11. bis 14.11.2026: Süßigkeiten, Backwaren, Nüsse und Getränke zu attraktiven Preisen!",
+     "id": 14269,
+     "displaySponsoredBadge": false,
+     "link": "https://www.kaufda.de/insights/kaufland-prospekt-09-11-2026-die-highlights-der-woche-entdecken/",
+     "imgURL": "https://web-assets.kaufda.de/Kaufland_Prospekt_09_11_2026_6d152aeebd.png?impolicy=BLOG_ARTICLE"
+    },
+    {
+     "title": "REWE Prospekt 09.11.2026 - Entdeckt die Preis-Kracher der Woche",
+     "campaignItemId": null,
+     "teaserText": "Entdeckt bei uns den neuesten REWE Prospekt ab dem 09.11.2026 mit den besten Deals für Gemüse, alkoholfreie Getränke, Joghurt und Tiefkühlkost!",
+     "id": 14270,
+     "displaySponsoredBadge": false,
+     "link": "https://www.kaufda.de/insights/rewe-prospekt-09-11-2026-entdeckt-die-preis-kracher-der-woche/",
+     "imgURL": "https://web-assets.kaufda.de/Rewe_Prospekt_09_11_2026_98307ed829.jpg?impolicy=BLOG_ARTICLE"
+    },
+    {
+     "title": "Netto Prospekt 09.11.2026: Italienische Woche entdecken!",
+     "campaignItemId": null,
+     "teaserText": "Entdeckt Netto Angebote ab 09.11.2026: italienische Spezialitäten, Blumen, BioBio-Produkte und proteinreiche Highlights zum Sparen!",
+     "id": 14246,
+     "displaySponsoredBadge": false,
+     "link": "https://www.kaufda.de/insights/netto-prospekt-09-11-2026-italienische-woche-entdecken/",
+     "imgURL": "https://web-assets.kaufda.de/Netto_Prospekt_09_11_2026_ddab328447.png?impolicy=BLOG_ARTICLE"
+    },
+    {
+     "title": "Penny Prospekt 09.11.2026 - Tonies zum Sparpreis und weitere Schnäppchen",
+     "campaignItemId": null,
+     "teaserText": "Jetzt die Highlights aus dem Penny Prospekt ab dem 09.11.2026 entdecken: BÄCKERKRÖNUNG, alkoholfreie Getränke, Schokolade und Tonies!",
+     "id": 14215,
+     "displaySponsoredBadge": false,
+     "link": "https://www.kaufda.de/insights/penny-prospekt-09-11-2026-tonies-zum-sparpreis-und-weitere-schnaeppchen/",
+     "imgURL": "https://web-assets.kaufda.de/Penny_Prospekt_09_11_2026_934aa11cbd.jpg?impolicy=BLOG_ARTICLE"
+    },
+    {
+     "title": "ALDI Nord Prospekt 09.11.2026 - Hüttenzauber und Weihnachtsdeals",
+     "campaignItemId": null,
+     "teaserText": "Entdeckt den neuen ALDI Nord Prospekt ab dem 09.11.2026 mit Angeboten zu Alpen-Spezialitäten, Leuchtmitteln, Weihnachten und Getränken!",
+     "id": 14195,
+     "displaySponsoredBadge": false,
+     "link": "https://www.kaufda.de/insights/aldi-nord-prospekt-09-11-2026-huettenzauber-und-weihnachtsdeals/",
+     "imgURL": "https://web-assets.kaufda.de/Aldi_Nord_Prospekt_09_11_2026_445e50bbd2.jpg?impolicy=BLOG_ARTICLE"
+    }
+   ],
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  },
+  {
+   "placement": "",
+   "adFormat": null,
+   "contentType": "newsletterBanner",
+   "content": {
+    "enabled": true,
+    "name": "SHELF_DEFAULT",
+    "text": "Finde die besten Schnäppchen in deiner Stadt - jetzt abonnieren und sparen!",
+    "buttonText": "JETZT ANMELDEN",
+    "link": null
+   }
+  },
+  {
+   "placement": "ad_placement__shelf_sort_managed",
+   "adFormat": "ad_format__brochure_card_cover",
+   "contentType": "brochure",
+   "content": {
+    "_links": {
+     "self": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8f61fc36-4b52-42ff-98e9-a771def1c4e0"
+     },
+     "content:brochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8f61fc36-4b52-42ff-98e9-a771def1c4e0"
+     },
+     "content:parentBrochure": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8f61fc36-4b52-42ff-98e9-a771def1c4e0/parentBrochure"
+     },
+     "content:publisher": {
+      "href": "https://contentlookupapi-internal.kaufda.de/brochures/8f61fc36-4b52-42ff-98e9-a771def1c4e0/publisher"
+     }
+    },
+    "id": 2501325991,
+    "contentId": "8f61fc36-4b52-42ff-98e9-a771def1c4e0",
+    "closestStore": {
+     "id": 39082967,
+     "externalId": "frankfurt-gruendau-lieblos",
+     "name": "Höffner Möbelgesellschaft GmbH & Co. KG",
+     "latitude": 50.2049,
+     "longitude": 9.14081,
+     "street": "Rabenaustraße",
+     "streetNumber": "3-9",
+     "zip": "63584",
+     "city": "Gründau-Lieblos"
+    },
+    "header": {
+     "image": {
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/3997cbdd-f5e4-3e84-8d62-a9c74522e365.jpeg",
+      "dimensions": {
+       "width": 1500,
+       "height": 640
+      }
+     }
+    },
+    "title": "IMMER BESSER!",
+    "type": "BROCHURE",
+    "publishedFrom": "2026-11-10T23:00:00.000+0000",
+    "publishedUntil": "2026-11-17T22:00:00.000+0000",
+    "validFrom": "2026-11-10T23:00:00.000+0000",
+    "validUntil": "2026-11-17T22:00:00.000+0000",
+    "hideValidityDate": false,
+    "externalTracking": {
+     "click": [],
+     "impression": []
+    },
+    "badges": [],
+    "brochureImage": {
+     "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg"
+    },
+    "storeDetailsEnabled": false,
+    "brochureImages": [
+     {
+      "size": "75x96",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=previews"
+     },
+     {
+      "size": "120x150",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=120x150"
+     },
+     {
+      "size": "150x150",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=thumbnails"
+     },
+     {
+      "size": "190x200",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=190x200"
+     },
+     {
+      "size": "260x270",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=260x270"
+     },
+     {
+      "size": "320x480",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=320x480"
+     },
+     {
+      "size": "750x750",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=normal"
+     },
+     {
+      "size": "768x1024",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=768x1024"
+     },
+     {
+      "size": "1600x1600",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=large"
+     },
+     {
+      "size": "2800x2800",
+      "url": "https://content-media.bonial.biz/8f61fc36-4b52-42ff-98e9-a771def1c4e0/preview.jpg?impolicy=zoomlarge"
+     }
+    ],
+    "publisher": {
+     "id": "DE-46660",
+     "name": "Höffner",
+     "type": "RETAILER"
+    },
+    "pageCount": 28,
+    "score": 0.02056,
+    "visible": true,
+    "contentBadges": [
+     {
+      "name": "expiring_soon"
+     }
+    ]
+   },
+   "externalTracking": {
+    "impression": [],
+    "click": []
+   }
+  }
+ ],
+ "page": {
+  "size": 60,
+  "totalElements": 104,
+  "totalPages": 2,
+  "number": 0
+ }
+}

@@ -181,7 +181,9 @@ public class SecurityConfig {
                                 "/v1/agent", "/v1/agent/**",
                                 // Systemprotokoll: Fehlertexte und Flow-Details sind Admin-Daten, auch LESEN.
                                 // Methodenlos, VOR der generischen GET-Regel.
-                                "/v1/admin/system-log", "/v1/admin/system-log/**").hasRole("ADMIN")
+                                "/v1/admin/system-log", "/v1/admin/system-log/**",
+                                // Supermarkt-Angebote: Einstellungen, Maerkte, Quellenstatus, Laeufe - auch LESEN ADMIN.
+                                "/v1/admin/groceries", "/v1/admin/groceries/**").hasRole("ADMIN")
                         // Kategorien: lesen darf jeder Angemeldete ueber die generische
                         // GET-Regel weiter unten, aendern nur ADMIN. Die Regeln muessen
                         // methodenspezifisch sein — ein methodenloser Matcher wuerde das
@@ -247,6 +249,11 @@ public class SecurityConfig {
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")
                         // Finanzdaten sind privat — nicht fuers Kiosk-Tablet
                         .requestMatchers("/v1/finance/**").hasRole("MEMBER")
+                        // Supermarkt-Angebote: nur die Zusammenfassung fuer die Hub-Karte ist KIOSK; Produkte,
+                        // Schnaeppchen und Urteile sind MEMBER, auch LESEN. Methodenlos, VOR der generischen
+                        // GET-Regel; /summary steht ausdruecklich davor.
+                        .requestMatchers(HttpMethod.GET, "/v1/groceries/summary").hasRole("KIOSK")
+                        .requestMatchers("/v1/groceries", "/v1/groceries/**").hasRole("MEMBER")
                         // KIOSK-Whitelist: Dashboard lesen + Schalter/Modi/Nuki
                         // (LOCK-only fuer KIOSK erzwingt der NukiController)
                         // /v1/tractive/pets/refresh schaltet nichts, es zieht nur Daten —

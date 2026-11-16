@@ -49,5 +49,7 @@ public enum EntitySource {
     /** IKEA Dirigera-Hub (lokale API), je TIMMERFLOTTE-Sensor Temperatur + Feuchte. */
     DIRIGERA,
     /** Waeschetrocknung im Keller (berechnet aus Feuchte und Waschmaschine, keine externe Quelle). */
-    LAUNDRY
+    LAUNDRY,
+    /** Supermarkt-Angebote (berechnet aus Prospekten, je Person ein Schnäppchen-Zähler). */
+    GROCERY
 }

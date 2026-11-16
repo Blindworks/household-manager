@@ -101,7 +101,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         PushController.class, SmartDeviceController.class, ZigbeeController.class,
         ZigbeeManagementController.class, AgentController.class, BleSensorController.class,
         com.household.manager.dirigera.DirigeraController.class,
-        com.household.manager.systemlog.SystemLogController.class},
+        com.household.manager.systemlog.SystemLogController.class,
+        com.household.manager.grocery.GroceryAdminController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
@@ -160,6 +161,16 @@ class SecurityRulesTest {
     private com.household.manager.dirigera.DirigeraAdminService dirigeraAdminService;
     @MockitoBean
     private com.household.manager.dirigera.DirigeraPairingService dirigeraPairingService;
+    @MockitoBean
+    private com.household.manager.grocery.GrocerySettingsService grocerySettingsService;
+    @MockitoBean
+    private com.household.manager.grocery.GroceryMarketService groceryMarketService;
+    @MockitoBean
+    private com.household.manager.repository.GrocerySourceRunRepository grocerySourceRunRepository;
+    @MockitoBean
+    private com.household.manager.grocery.GroceryProperties groceryProperties;
+    @MockitoBean
+    private com.household.manager.grocery.GroceryRunService groceryRunService;
     @MockitoBean
     private SystemRebootService systemRebootService;
     @MockitoBean
@@ -445,6 +456,65 @@ class SecurityRulesTest {
     @WithMockUser(roles = "ADMIN")
     void dirigeraButtonsGetIstFuerAdminErlaubt() throws Exception {
         mockMvc.perform(get("/v1/dirigera/buttons")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void groceriesMarketsGetIstFuerAdminErlaubt() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/markets")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void groceriesMarketsGetIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/markets")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void groceriesMarketsGetIstFuerKioskVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/markets")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void groceriesRunsPostIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(post("/v1/admin/groceries/runs").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void groceriesRunStatusIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/runs/status")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void groceriesRunsPostIstFuerAdminErlaubt() throws Exception {
+        when(groceryProperties.isEnabled()).thenReturn(true);
+        mockMvc.perform(post("/v1/admin/groceries/runs").with(csrf())).andExpect(status().isAccepted());
+    }
+
+    // Kein GroceryController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void groceriesSummaryIstFuerKioskErlaubt() throws Exception {
+        mockMvc.perform(get("/v1/groceries/summary")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void groceriesDealsUndProdukteSindFuerKioskVerboten() throws Exception {
+        mockMvc.perform(get("/v1/groceries/deals")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/v1/groceries/products")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/v1/groceries/products/1/verdicts").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void groceriesProdukteSindFuerMemberErlaubt() throws Exception {
+        mockMvc.perform(post("/v1/groceries/products").with(csrf())).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/groceries/deals")).andExpect(status().isNotFound());
     }
 
     @Test

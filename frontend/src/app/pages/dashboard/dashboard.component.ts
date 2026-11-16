@@ -58,6 +58,10 @@ import { HubInsight } from '../../shared/hub-insight.model';
 import { AgentService } from '../../services/agent.service';
 import { AgentSummary } from '../../models/agent.model';
 import { buildAgentInsight } from '../../shared/agent-insight.util';
+import { GroceryService } from '../../services/grocery.service';
+import { GrocerySummary } from '../../models/grocery.model';
+import { buildGroceryInsight } from '../../shared/grocery-insight.util';
+import { AuthService } from '../../services/auth.service';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
 import { ModeService } from '../../services/mode.service';
@@ -144,6 +148,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly petSupplyService = inject(PetSupplyService);
   private readonly presenceService = inject(PresenceService);
   private readonly agentService = inject(AgentService);
+  private readonly groceryService = inject(GroceryService);
+  private readonly authService = inject(AuthService);
 
   /**
    * Umschalter zwischen Website- und Tablet-Ansicht. Er blendet nur den Header
@@ -184,6 +190,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private petSupplySubscription?: Subscription;
   private presenceSubscription?: Subscription;
   private agentSubscription?: Subscription;
+  private grocerySubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
   private static readonly RING_CIRCUMFERENCE = 251.2;
@@ -240,6 +247,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PRESENCE_REFRESH_MS = 30000;
   /** Offene Vorschlaege des Hausverstands. */
   private static readonly AGENT_REFRESH_MS = 60_000;
+  /** Supermarkt-Schnaeppchen: die Daten aendern sich nur nach dem naechtlichen Lauf. */
+  private static readonly GROCERY_REFRESH_MS = 600_000;
 
   /** Aktuelle Uhrzeit als Date, sekuendlich aktualisiert. */
   now = new Date();
@@ -334,6 +343,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private wasteInsights: HubInsight[] = [];
   /** Karte "Hausverstand"; null = keine offenen Vorschlaege. */
   agentInsight: HubInsight | null = null;
+  groceryInsight: HubInsight | null = null;
   /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
   private calendarInsights: HubInsight[] = [];
   /** Zuletzt gebaute Lueftungs-Karte; null = keine Empfehlung. */
@@ -482,6 +492,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPetSupplyRefresh();
     this.startPresenceRefresh();
     this.startAgentRefresh();
+    this.startGroceryRefresh();
   }
 
   ngOnDestroy(): void {
@@ -510,6 +521,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
     this.agentSubscription?.unsubscribe();
+    this.grocerySubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.hubReloadSubscription?.unsubscribe();
     this.clearNukiCollapseTimer();
@@ -1840,6 +1852,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...this.applianceInsights,
       ...(this.laundryInsight ? [this.laundryInsight] : []),
       ...(this.agentInsight ? [this.agentInsight] : []),
+      ...(this.groceryInsight ? [this.groceryInsight] : []),
       ...this.wasteInsights,
       ...this.calendarInsights,
       ...(this.ventilationInsight ? [this.ventilationInsight] : []),
@@ -2190,6 +2203,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.agentInsight = buildAgentInsight(summary);
           this.rebuildInsights();
         }
+      });
+  }
+
+  /** Schnaeppchen-Karte: ein Fehler laesst die Karte weg (nie eine veraltete Zahl behaupten). */
+  private startGroceryRefresh(): void {
+    this.grocerySubscription = interval(DashboardComponent.GROCERY_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.groceryService.getSummary()
+          .pipe(catchError(() => of<GrocerySummary | null>(null))))
+      )
+      .subscribe(summary => {
+        this.groceryInsight = summary
+          ? buildGroceryInsight(summary, this.authService.currentUser()?.id ?? null, this.viewMode.isTabletView())
+          : null;
+        this.rebuildInsights();
       });
   }
 

@@ -1,0 +1,153 @@
+<div class="groceries">
+  <header class="groceries__header">
+    <div>
+      <h1>Angebote</h1>
+      <p class="groceries__subtitle">
+        Echte Schnäppchen für deine Produkte
+        <span *ngIf="collectedAt"> · Stand {{ collectedAt | date:'dd.MM. HH:mm' }}</span>
+      </p>
+    </div>
+    <label class="groceries__owner">
+      Anzeigen für
+      <select [ngModel]="selectedOwner" (ngModelChange)="onOwnerChange($event)" name="owner">
+        <option *ngFor="let option of ownerOptions" [value]="option.value">{{ option.label }}</option>
+      </select>
+    </label>
+  </header>
+
+  <p class="groceries__error" *ngIf="error">{{ error }}</p>
+  <p class="groceries__error" *ngIf="actionError">{{ actionError }}</p>
+  <p class="groceries__hint" *ngIf="loading">Lade …</p>
+
+  <section class="groceries__section">
+    <h2>Schnäppchen</h2>
+    <p class="groceries__hint" *ngIf="!loading && deals.length === 0">
+      Gerade keine Schnäppchen für diese Produkte.
+    </p>
+
+    <article class="deal" *ngFor="let deal of deals; trackBy: trackDeal" data-test="deal">
+      <div class="deal__main">
+        <div class="deal__title">
+          <strong>{{ deal.productName }}</strong>
+          <span class="deal__saving" *ngIf="deal.savingPercent !== null">{{ savingText(deal) }}</span>
+        </div>
+        <div class="deal__where">
+          {{ deal.chainName }} · {{ deal.marketName || 'alle Märkte' }}
+          <span *ngIf="validityText(deal)"> · {{ validityText(deal) }}</span>
+        </div>
+        <div class="deal__offer">
+          {{ deal.title }}<span *ngIf="deal.packaging"> · {{ deal.packaging }}</span>
+        </div>
+        <div class="deal__price">
+          <span class="deal__price-main">{{ deal.price | number:'1.2-2':'de' }} €</span>
+          <span *ngIf="deal.basePrice !== null && deal.baseUnit"> · {{ basePriceText(deal.basePrice, deal.baseUnit) }}</span>
+          <span class="deal__reference" *ngIf="referenceText(deal)"> · {{ referenceText(deal) }}</span>
+        </div>
+        <div class="deal__app" *ngIf="deal.appBasePrice !== null && deal.baseUnit">
+          mit App {{ basePriceText(deal.appBasePrice, deal.baseUnit) }}
+        </div>
+        <div class="deal__hints">
+          <span class="deal__hint deal__hint--app" *ngIf="deal.appOnly">nur mit App</span>
+          <span class="deal__hint" *ngIf="deal.warmingUp">noch wenig Vergleichsdaten</span>
+          <span class="deal__hint deal__hint--maybe" *ngIf="isMaybe(deal)">passt vielleicht: {{ deal.reason }}</span>
+        </div>
+      </div>
+      <div class="deal__actions" *ngIf="isEditable(deal.productId)">
+        <button type="button" class="btn btn--primary" data-test="confirm-fit"
+                *ngIf="isMaybe(deal)" [disabled]="busy" (click)="confirmFit(deal)">passt</button>
+        <button type="button" class="btn" data-test="reject"
+                [disabled]="busy" (click)="reject(deal)">passt nicht</button>
+      </div>
+    </article>
+  </section>
+
+  <section class="groceries__section">
+    <div class="groceries__section-head">
+      <h2>Meine Produkte</h2>
+      <button type="button" class="btn btn--primary" data-test="add-product" (click)="openCreate()">Produkt hinzufügen</button>
+    </div>
+
+    <form class="product-form" *ngIf="form" (ngSubmit)="saveForm()" data-test="product-form">
+      <h3>{{ form.id === null ? 'Neues Produkt' : 'Produkt bearbeiten' }}</h3>
+      <label>Name
+        <input type="text" name="name" [(ngModel)]="form.name" placeholder="z. B. Coca-Cola 1,5 l">
+      </label>
+      <label>Suchwörter (kommagetrennt)
+        <input type="text" name="searchWords" [(ngModel)]="form.searchWords"
+               placeholder="leer = Vorschlag vom Server">
+      </label>
+      <label>Muss enthalten (kommagetrennt)
+        <input type="text" name="mustWords" [(ngModel)]="form.mustWords">
+      </label>
+      <label>Darf nicht enthalten (kommagetrennt)
+        <input type="text" name="excludeWords" [(ngModel)]="form.excludeWords" placeholder="z. B. zero, light">
+      </label>
+      <label>Bezugseinheit
+        <select name="baseUnit" [(ngModel)]="form.baseUnit">
+          <option *ngFor="let unit of unitOptions" [value]="unit.value">{{ unit.label }}</option>
+        </select>
+      </label>
+      <label>Normalpreis je Einheit in € (optional)
+        <input type="number" name="normalPrice" step="0.01" min="0" [(ngModel)]="form.normalPrice">
+      </label>
+      <label class="product-form__check">
+        <input type="checkbox" name="active" [(ngModel)]="form.active"> Aktiv
+      </label>
+      <label class="product-form__check" *ngIf="form.id === null">
+        <input type="checkbox" name="household" [(ngModel)]="form.household"> Für den ganzen Haushalt
+      </label>
+      <p class="groceries__error" *ngIf="formError">{{ formError }}</p>
+      <div class="product-form__buttons">
+        <button type="submit" class="btn btn--primary" [disabled]="busy">Speichern</button>
+        <button type="button" class="btn" (click)="cancelForm()">Abbrechen</button>
+      </div>
+    </form>
+
+    <p class="groceries__hint" *ngIf="!loading && products.length === 0">Noch keine Produkte.</p>
+
+    <article class="product" *ngFor="let product of products" data-test="product">
+      <div class="product__row">
+        <div>
+          <strong>{{ product.name }}</strong>
+          <span class="product__owner"> · {{ ownerLabel(product) }}</span>
+          <span class="product__owner" *ngIf="!product.active"> · inaktiv</span>
+          <div class="product__words">{{ product.searchWords.join(', ') }}</div>
+        </div>
+        <div class="product__buttons">
+          <button type="button" class="btn" data-test="details" (click)="toggleDetails(product)">
+            {{ expandedProductId === product.id ? 'Weniger' : 'Alle Angebote' }}
+          </button>
+          <button type="button" class="btn" data-test="edit" *ngIf="product.editable" (click)="openEdit(product)">Bearbeiten</button>
+          <button type="button" class="btn btn--danger" data-test="delete" *ngIf="product.editable" (click)="askDelete(product)">Löschen</button>
+        </div>
+      </div>
+
+      <div class="product__detail" *ngIf="expandedProductId === product.id && details[product.id] as detail">
+        <p class="groceries__error" *ngIf="detail.error">{{ detail.error }}</p>
+        <div class="product__chart" *ngIf="detail.chartOptions">
+          <div echarts [options]="detail.chartOptions" class="product__chart-canvas"></div>
+        </div>
+        <p class="groceries__hint" *ngIf="!detail.chartOptions">Noch kein Preisverlauf.</p>
+        <ul class="product__offers">
+          <li *ngFor="let offer of detail.offers">
+            {{ offer.chainName }} · {{ offer.marketName || 'alle Märkte' }} · {{ offer.title }}
+            · {{ offer.price | number:'1.2-2':'de' }} €
+            <span *ngIf="offer.basePrice !== null && offer.baseUnit"> ({{ basePriceText(offer.basePrice, offer.baseUnit) }})</span>
+            <span *ngIf="validityText(offer)"> · {{ validityText(offer) }}</span>
+          </li>
+        </ul>
+        <p class="groceries__hint" *ngIf="detail.offers.length === 0">Gerade keine passenden Angebote.</p>
+      </div>
+    </article>
+  </section>
+
+  <div class="dialog-backdrop" *ngIf="pendingDeleteId !== null" data-test="delete-dialog">
+    <div class="dialog">
+      <p>Produkt „{{ pendingDeleteName() }}“ wirklich löschen?</p>
+      <div class="product-form__buttons">
+        <button type="button" class="btn btn--danger" data-test="confirm-delete" [disabled]="busy" (click)="confirmDelete()">Löschen</button>
+        <button type="button" class="btn" (click)="cancelDelete()">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>

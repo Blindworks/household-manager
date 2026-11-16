@@ -210,6 +210,13 @@ export const routes: Routes = [
     title: 'Heizung - Household Manager'
   },
   {
+    path: 'admin/groceries',
+    loadComponent: () => import('./pages/admin-groceries/admin-groceries.component')
+      .then(m => m.AdminGroceriesComponent),
+    canActivate: [adminGuard],
+    title: 'Supermärkte - Household Manager'
+  },
+  {
     path: 'admin/presence',
     loadComponent: () => import('./pages/admin-presence/admin-presence.component')
       .then(m => m.AdminPresenceComponent),
@@ -346,6 +353,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/pets/pets.component').then(m => m.PetsComponent),
     canActivate: [authGuard],
     title: 'Hundetracker - Household Manager'
+  },
+  {
+    path: 'groceries',
+    loadComponent: () => import('./pages/groceries/groceries.component').then(m => m.GroceriesComponent),
+    canActivate: [authGuard],
+    title: 'Angebote - Household Manager'
   },
   {
     path: 'pet-food',

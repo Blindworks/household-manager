@@ -1,0 +1,6048 @@
+{
+ "type": "search",
+ "version": "v2.0.0",
+ "engine": "ldt-searcher",
+ "variant": {
+  "id": "ff01_flat-articles_default",
+  "testName": "engine",
+  "trackingSolution": "GA",
+  "active": true,
+  "xPayload": {
+   "groupVariantsAsFlatArticles": false,
+   "engine": "etl-ldt"
+  }
+ },
+ "xPayload": {
+  "keywordResults": {
+   "num_items_found": 457
+  }
+ },
+ "id": "5eb263d4-a5ff-42c1-80a7-18454263bbd2",
+ "locale": "de_DE",
+ "assortment": "DE",
+ "resultType": "search",
+ "rendering": {
+  "breadcrumb": false
+ },
+ "numFound": 457,
+ "offset": 0,
+ "fetchsize": 60,
+ "maxfetchsize": 1000,
+ "sort": {
+  "code": "relevancy",
+  "label": "Relevanz",
+  "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=relevancy&store=1",
+  "link": {
+   "type": "search",
+   "filter": {
+    "store": [
+     "1"
+    ]
+   },
+   "sort": "relevancy"
+  }
+ },
+ "selections": {
+  "values": [
+   {
+    "code": "store",
+    "value": "1",
+    "label": "In der Filiale",
+    "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0",
+    "link": {
+     "type": "search",
+     "filter": {}
+    },
+    "rendering": {
+     "style": "TOGGLE",
+     "searchable": false,
+     "selectedPosition": "ABOVE",
+     "renderLabel": true,
+     "collapsible": true
+    }
+   }
+  ],
+  "resetAll": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0",
+  "resetLink": {
+   "type": "search",
+   "filter": {}
+  }
+ },
+ "sorts": [
+  {
+   "code": "relevancy",
+   "label": "Relevanz",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=relevancy&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "relevancy"
+   }
+  },
+  {
+   "code": "price",
+   "label": "Preis aufsteigend",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=price&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "price"
+   }
+  },
+  {
+   "code": "price-desc",
+   "label": "Preis absteigend",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=price-desc&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "price-desc"
+   }
+  },
+  {
+   "code": "firstOnlineDate-desc",
+   "label": "Neueste Artikel zuerst",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=firstOnlineDate-desc&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "firstOnlineDate-desc"
+   }
+  },
+  {
+   "code": "ratingScore-desc",
+   "label": "Nach Bewertung",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=ratingScore-desc&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "ratingScore-desc"
+   }
+  },
+  {
+   "code": "sh_carts-desc",
+   "label": "Bestseller",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=sh_carts-desc&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "sh_carts-desc"
+   }
+  },
+  {
+   "code": "percentageDiscount-desc",
+   "label": "Deals & höchster Rabatt zuerst",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&sort=percentageDiscount-desc&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    },
+    "sort": "percentageDiscount-desc"
+   }
+  }
+ ],
+ "facets": [
+  {
+   "type": "TEXT",
+   "code": "category",
+   "label": "Kategorie",
+   "selector": "REFINE",
+   "rendering": {
+    "style": "TEXT",
+    "searchable": false,
+    "selectedPosition": "BELOW",
+    "renderLabel": true,
+    "collapsible": true
+   },
+   "topvalues": [
+    {
+     "type": "TEXT",
+     "label": "Essen & Trinken",
+     "selected": false,
+     "count": 200,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Essen+%26+Trinken",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Essen & Trinken"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10068374"
+    },
+    {
+     "type": "TEXT",
+     "label": "Wein & Spirituosen",
+     "selected": false,
+     "count": 230,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Wein+%26+Spirituosen",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Wein & Spirituosen"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067766"
+    },
+    {
+     "type": "TEXT",
+     "label": "Küche & Haushalt",
+     "selected": false,
+     "count": 55,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=K%C3%BCche+%26+Haushalt",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Küche & Haushalt"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067764"
+    },
+    {
+     "type": "TEXT",
+     "label": "Baumarkt & Garten",
+     "selected": false,
+     "count": 36,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Baumarkt+%26+Garten",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Baumarkt & Garten"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067761"
+    },
+    {
+     "type": "TEXT",
+     "label": "Sport & Freizeit",
+     "selected": false,
+     "count": 6,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Sport+%26+Freizeit",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Sport & Freizeit"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067763"
+    },
+    {
+     "type": "TEXT",
+     "label": "Wohnen & Einrichtung",
+     "selected": false,
+     "count": 50,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Wohnen+%26+Einrichtung",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Wohnen & Einrichtung"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067762"
+    },
+    {
+     "type": "TEXT",
+     "label": "Mode & Accessoires",
+     "selected": false,
+     "count": 27,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Mode+%26+Accessoires",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Mode & Accessoires"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067765"
+    },
+    {
+     "type": "TEXT",
+     "label": "Baby, Kind & Spielzeug",
+     "selected": false,
+     "count": 31,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Baby%2C+Kind+%26+Spielzeug",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Baby, Kind & Spielzeug"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067767"
+    },
+    {
+     "type": "TEXT",
+     "label": "Tierbedarf",
+     "selected": false,
+     "count": 13,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Tierbedarf",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Tierbedarf"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10100091"
+    }
+   ],
+   "values": [
+    {
+     "type": "TEXT",
+     "label": "Essen & Trinken",
+     "selected": false,
+     "count": 200,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Essen+%26+Trinken",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Essen & Trinken"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10068374"
+    },
+    {
+     "type": "TEXT",
+     "label": "Wein & Spirituosen",
+     "selected": false,
+     "count": 230,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Wein+%26+Spirituosen",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Wein & Spirituosen"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067766"
+    },
+    {
+     "type": "TEXT",
+     "label": "Küche & Haushalt",
+     "selected": false,
+     "count": 55,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=K%C3%BCche+%26+Haushalt",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Küche & Haushalt"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067764"
+    },
+    {
+     "type": "TEXT",
+     "label": "Baumarkt & Garten",
+     "selected": false,
+     "count": 36,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Baumarkt+%26+Garten",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Baumarkt & Garten"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067761"
+    },
+    {
+     "type": "TEXT",
+     "label": "Sport & Freizeit",
+     "selected": false,
+     "count": 6,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Sport+%26+Freizeit",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Sport & Freizeit"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067763"
+    },
+    {
+     "type": "TEXT",
+     "label": "Wohnen & Einrichtung",
+     "selected": false,
+     "count": 50,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Wohnen+%26+Einrichtung",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Wohnen & Einrichtung"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067762"
+    },
+    {
+     "type": "TEXT",
+     "label": "Mode & Accessoires",
+     "selected": false,
+     "count": 27,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Mode+%26+Accessoires",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Mode & Accessoires"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067765"
+    },
+    {
+     "type": "TEXT",
+     "label": "Baby, Kind & Spielzeug",
+     "selected": false,
+     "count": 31,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Baby%2C+Kind+%26+Spielzeug",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Baby, Kind & Spielzeug"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10067767"
+    },
+    {
+     "type": "TEXT",
+     "label": "Tierbedarf",
+     "selected": false,
+     "count": 13,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&category=Tierbedarf",
+     "link": {
+      "type": "search",
+      "filter": {
+       "category": [
+        "Tierbedarf"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "children": [],
+     "value": "10100091"
+    }
+   ]
+  },
+  {
+   "type": "TEXT",
+   "code": "availabilityIndicator",
+   "label": "Verfügbarkeit",
+   "selector": "OR",
+   "rendering": {
+    "style": "TEXT",
+    "searchable": false,
+    "selectedPosition": "ABOVE",
+    "renderLabel": true,
+    "collapsible": true
+   },
+   "topvalues": [
+    {
+     "type": "TEXT",
+     "label": "Nur verfügbare Artikel anzeigen",
+     "selected": false,
+     "count": 490,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&availabilityIndicator=3",
+     "link": {
+      "type": "search",
+      "filter": {
+       "availabilityIndicator": [
+        "3"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "value": "3"
+    }
+   ],
+   "values": [
+    {
+     "type": "TEXT",
+     "label": "Nur verfügbare Artikel anzeigen",
+     "selected": false,
+     "count": 490,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&availabilityIndicator=3",
+     "link": {
+      "type": "search",
+      "filter": {
+       "availabilityIndicator": [
+        "3"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     },
+     "value": "3"
+    }
+   ]
+  },
+  {
+   "type": "RANGE",
+   "code": "price",
+   "label": "Preis",
+   "selector": "REFINE",
+   "rendering": {
+    "style": "TEXT",
+    "searchable": false,
+    "selectedPosition": "BELOW",
+    "renderLabel": true,
+    "collapsible": true
+   },
+   "unit": "€",
+   "baseURL": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1",
+   "baseLink": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    }
+   },
+   "globalMin": {
+    "type": "NumericValue",
+    "unit": "€",
+    "value": 0.0
+   },
+   "globalMax": {
+    "type": "NumericValue",
+    "unit": "€",
+    "value": 499.0
+   },
+   "min": {
+    "type": "NumericValue",
+    "unit": "€",
+    "value": 0.0
+   },
+   "max": {
+    "type": "NumericValue",
+    "unit": "€",
+    "value": 499.0
+   },
+   "selectedMin": {
+    "type": "SelectedNumericValue",
+    "value": 0.0
+   },
+   "selectedMax": {
+    "type": "SelectedNumericValue",
+    "value": 499.0
+   },
+   "values": [
+    {
+     "type": "NUMERIC",
+     "label": "bis 10€",
+     "selected": false,
+     "count": 312,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&price=0+-+10",
+     "link": {
+      "type": "search",
+      "filter": {
+       "price": [
+        "0 - 10"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     }
+    },
+    {
+     "type": "NUMERIC",
+     "label": "bis 40€",
+     "selected": false,
+     "count": 417,
+     "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1&price=0+-+40",
+     "link": {
+      "type": "search",
+      "filter": {
+       "price": [
+        "0 - 40"
+       ],
+       "store": [
+        "1"
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "items": [
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100401349",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "pkKojPiXYyZlpCpDEPQdyBTYVlwXCMD2OpXSl7y7TBJ1QQOoGP/PY+7aNYs=",
+     "keywordScore": "zIr3j/9jcTp35KiiDhW8bZQMfWjVSyMbA65bTYQ4vzGCwnzJ/cntHAk3Sb0=",
+     "semanticScore": "e/YkKL9hzf6N7+3fKCSpGmmMOKE7EVsXgDPlWT6uauvLTLFKNm4xge3KI4M=",
+     "keywordScoreRaw": "YEJ2JufrbiVrfNhrYlCExDI5KiqOe2hMwpZkxcKMwXXTlxzmtvsQwnIq/0I=",
+     "ratingScore": "qWPaCRctVKl652ywZwsl+WMARJx0cOrdLYd0ghZN8xaTL1cKHG1jR2h0CW0=",
+     "freshnessScore": "md+WX/r1JeMyGW3Gj8wuXKzyPEJRTMP5ffAqoe23P90auW3GJBL0l8uIgUY=",
+     "searchHubImpressions": "UJV9HKKD9RoeGqJsAipxQca3QoDWDpvdvbynKuu3geCXnGUt5xGLayi2Tzs=",
+     "searchHubClicks": "4N8bt3NiIiAwFsGi2c/KiTYOglyGy0gubWwUhuonVGev8/LLN1WebgGvu2g=",
+     "searchHubCarts": "v2fsRjVNnQnLtcT+nyyJsgNPxScmlg9ei0a4YAesk+fZByzY3ELGy6VPP+E=",
+     "businessRuleFactor": "HxmcVdzfiq9HFqOKqi0x4qiwtSJ2xEpLs7lVBZ3VC3LKDOooc5j/+ytmTmk="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794737355241988,
+    "data": {
+     "ageRestriction": false,
+     "hasColors": false,
+     "awards": [],
+     "brand": {
+      "logo": "https://www.lidl.de/assets/gcpbf79ffdf385e472b898f12072d9e605c.png",
+      "name": "SILVERCREST®",
+      "url": "https://www.lidl.de/c/silvercrest/s10007139",
+      "id": "SILV",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/silvercrest-monsieur-cuisine-smart-skms-1200-c1-anthrazit/p100401349",
+     "canonicalUrl": "/p/silvercrest-monsieur-cuisine-smart-skms-1200-c1-anthrazit/p100401349",
+     "category": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Küchenmaschinen",
+     "categorySecondaryPath": "0/20/2010/201022",
+     "cutoutimage": {
+      "id": 1237709883,
+      "largeUrl": "https://www.lidl.de/assets/gcp6443eed4dda74c0bb549bc80c1e8644b.png",
+      "mediumUrl": "https://www.lidl.de/assets/gcp46b50d10a8f7410898b1d7132b60e396.png",
+      "smallUrl": "https://www.lidl.de/assets/gcp944bfe48add34d719cf096d689fa0596.png",
+      "basketUrl": "https://www.lidl.de/assets/gcp46b50d10a8f7410898b1d7132b60e396.png",
+      "thumbUrl": "https://www.lidl.de/assets/gcp46b50d10a8f7410898b1d7132b60e396.png",
+      "accessibility": "Küchenmaschine mit Dampfgarzubehör und Kochkorb, mit Touchscreen."
+     },
+     "cutoutimageV2": [
+      {
+       "id": 1237709883,
+       "largeUrl": "https://www.lidl.de/assets/gcp6443eed4dda74c0bb549bc80c1e8644b.png",
+       "mediumUrl": "https://www.lidl.de/assets/gcp46b50d10a8f7410898b1d7132b60e396.png",
+       "smallUrl": "https://www.lidl.de/assets/gcp944bfe48add34d719cf096d689fa0596.png",
+       "basketUrl": "https://www.lidl.de/assets/gcp46b50d10a8f7410898b1d7132b60e396.png",
+       "thumbUrl": "https://www.lidl.de/assets/gcp46b50d10a8f7410898b1d7132b60e396.png",
+       "accessibility": "Küchenmaschine mit Dampfgarzubehör und Kochkorb, mit Touchscreen."
+      }
+     ],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100401349_994ed0a3",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100401349_8cc7514a",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100401349",
+     "flashSales": false,
+     "fullTitle": "SILVERCREST® Monsieur Cuisine smart »SKMS 1200 C1«, anthrazit",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 1,
+     "ians": [
+      "525957"
+     ],
+     "image": "https://www.lidl.de/assets/gcpe1133bcdb6da4f9cb39d31e510172154.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcpe1133bcdb6da4f9cb39d31e510172154.jpg",
+      "accessibility": "Smarte Küchenmaschine mit Edelstahlschüssel und Touchscreen-Display mit Rezepten."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcpe1133bcdb6da4f9cb39d31e510172154.jpg",
+      "https://www.lidl.de/assets/gcp513dece2d8a44e5ea7ba2ce1882ca71d.jpg",
+      "https://www.lidl.de/assets/gcp031d9477be5c4632bc5cb0a978383a8a.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcpe1133bcdb6da4f9cb39d31e510172154.jpg",
+       "accessibility": "Smarte Küchenmaschine mit Edelstahlschüssel und Touchscreen-Display mit Rezepten."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp513dece2d8a44e5ea7ba2ce1882ca71d.jpg",
+       "accessibility": "Eine schwarze smarte Küchenmaschine mit Edelstahlschüssel und Touchscreen, der Rezepte anzeigt."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp031d9477be5c4632bc5cb0a978383a8a.jpg",
+       "accessibility": "Smarte Küchenmaschine mit Touchscreen, der Kochmodi und Rezepte anzeigt, auf einer Holztheke."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Smarte Küchenmaschine mit Edelstahlschüssel und Touchscreen-Display mit Rezepten.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp91954034626c42eeaa9672356e4b37f5.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcpe1133bcdb6da4f9cb39d31e510172154.jpg"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Eine schwarze smarte Küchenmaschine mit Edelstahlschüssel und Touchscreen, der Rezepte anzeigt.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp6610594b41a04d42b324f6e95594aa62.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp513dece2d8a44e5ea7ba2ce1882ca71d.jpg"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Smarte Küchenmaschine mit Touchscreen, der Kochmodi und Rezepte anzeigt, auf einer Holztheke.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp4aa7f32adac545f290e9fc803b5f65cd.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp031d9477be5c4632bc5cb0a978383a8a.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Küchenmaschinen",
+      "fullTitle": "SILVERCREST® Monsieur Cuisine smart »SKMS 1200 C1«, anthrazit",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p><strong>Leistung</strong>: 1.200&nbsp;W<br /> <strong>Fassungsverm&ouml;gen</strong>: 3 l<br /> <strong>Geschwindigkeitsstufen</strong>: 10&nbsp;</p>",
+      "title": "Monsieur Cuisine smart »SKMS 1200 C1«, anthrazit",
+      "wonCategoryPrimary": "Bedürfniswelten/Küche & Haushalt/Monsieur Cuisine",
+      "wonCategoryPrimaryPath": "0/11/1110"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {},
+      "price": 499.0,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2026-10-09T10:36:24.429Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100401349,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": false,
+     "ratings": {
+      "average": 4.7,
+      "count": 1148,
+      "recommendedNo": 51,
+      "recommendedYes": 1063,
+      "sizePercentage": 0,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1794737355,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "0ratenzahlung-kws1819-2026"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "1"
+       },
+       {
+        "date": [],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "lpdd-kw20-2026"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "1"
+       },
+       {
+        "date": [],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "0ratenzahlung-kw262026"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "1"
+       },
+       {
+        "date": [],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "lpdd-kw27-2026"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "1"
+       },
+       {
+        "date": [],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "testerES1bw-wonhuk"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "1"
+       },
+       {
+        "date": [
+         {
+          "key": "validFrom",
+          "value": "2026-11-14T23:00:00.000Z"
+         },
+         {
+          "key": "validUntil",
+          "value": "2026-11-29T23:00:00.000Z"
+         }
+        ],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "bw2026-kh-kitchen-machines"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "3"
+       }
+      ]
+     },
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale von 23.11. - 28.11.",
+         "type": "ALSO_IN_STORE_FROM_FUTURE_DATE_RANGE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale von 23.11. - 28.11.",
+          "type": "ALSO_IN_STORE_FROM_FUTURE_DATE_RANGE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ],
+        "validFrom": 1795388400,
+        "validUntil": 1795906799
+       },
+       {
+        "badges": [
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": false,
+     "storeStartDate": 1795388400,
+     "storeEndDate": 1795906799,
+     "title": "Monsieur Cuisine smart »SKMS 1200 C1«, anthrazit",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {},
+        "price": 499.0,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2026-10-09T10:36:24.429Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95,
+        "parcelShopDeliveryCharge": 5.95,
+        "parcelLockerDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100401349,
+    "meta": {
+     "sapProductCategory": {
+      "code": "201022",
+      "name": "Küchenmaschinen",
+      "pathCode": "0/20/2010/201022",
+      "pathName": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Küchenmaschinen"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10098368",
+        "name": "Küchen Upgrade: Smarte Küchenhelfer",
+        "url": "/c/asc/kuechen-upgrade-smarte-kuechenhelfer/a10098368"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10101006",
+        "name": "Goldener Oktober: Suppenküche & Soulfood",
+        "url": "/c/asc/goldener-oktober-suppenkueche-soulfood/a10101006"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10101974",
+        "name": "Monday Motivation: Power-Start am Morgen",
+        "url": "/c/asc/monday-motivation-power-start-am-morgen/a10101974"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10103709",
+        "name": "SILVERCREST",
+        "url": "/c/asc/silvercrest/a10103709"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10105237",
+        "name": "Weihnachts-Bäckerei",
+        "url": "/c/asc/weihnachts-baeckerei/a10105237"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10105263",
+        "name": "Geschenkideen für die Familie",
+        "url": "/c/asc/geschenkideen-fuer-die-familie/a10105263"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10105367",
+        "name": "Heißgetränke & Soulfood für die Couch",
+        "url": "/c/asc/heissgetraenke-soulfood-fuer-die-couch/a10105367"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10106397",
+        "name": "Küche Italiamo",
+        "url": "/c/kueche-italiamo/a10106397"
+       }
+      ]
+     ],
+     "fullTitle": "SILVERCREST® Monsieur Cuisine smart »SKMS 1200 C1«, anthrazit",
+     "ean": "4054599295404",
+     "gs1": {
+      "segment": {
+       "code": "72000000",
+       "label": "Haushaltsgeräte",
+       "family": {
+        "code": "72020000",
+        "label": "Haushaltskleingeräte",
+        "clazz": {
+         "code": "72020200",
+         "label": "Geräte zur Essens- / Getränkezubereitung",
+         "brick": {
+          "code": "10006738",
+          "label": "Küchen-Mixgerät / Handmixer / Küchenmaschine",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "201022",
+        "name": "Küchenmaschinen",
+        "parent": "2010",
+        "superCategories": {
+         "category": [
+          {
+           "code": "2010",
+           "name": "Kleingeräte Küche",
+           "parent": "20"
+          },
+          {
+           "code": "20",
+           "name": "Haushalt & Küche",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067764",
+        "name": "Küche & Haushalt",
+        "url": "/c/kueche-haushalt/s10067764"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067521",
+        "name": "Monsieur Cuisine",
+        "url": "/h/monsieur-cuisine/h10067521"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067764",
+        "name": "Küche & Haushalt",
+        "url": "/c/kueche-haushalt/s10067764"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067522",
+        "name": "Küchengeräte",
+        "url": "/h/kuechengeraete/h10067522"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10006222",
+        "name": "Küchenmaschinen",
+        "url": "/h/kuechenmaschinen/h10006222"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067764",
+        "name": "Küche & Haushalt",
+        "url": "/c/kueche-haushalt/s10067764"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067523",
+        "name": "Kochen & Backen",
+        "url": "/h/kochen-backen/h10067523"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10006222",
+        "name": "Küchenmaschinen",
+        "url": "/h/kuechenmaschinen/h10006222"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "1110",
+       "isMain": true,
+       "name": "Monsieur Cuisine",
+       "parent": "11",
+       "superCategories": [
+        {
+         "code": "11",
+         "name": "Küche & Haushalt",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100401349"
+   },
+   "tracking": {
+    "position": 1,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100401349",
+     "searchTrackingTitle": "Monsieur+Cuisine+smart+%C2%BBSKMS+1200+C1%C2%AB%2C+anthrazit",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100401349",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 1,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Küchenmaschinen"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100359243",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "jJf/ijNI93z8bXcuCsiFfQgioVHbkZSGVByTika+ieKYiyYOo1UmVHPNr0I=",
+     "keywordScore": "vDVpMCsrkd6YzOln2T+C+uB3Q+ALVsNUPViVjaOfbprB6yAWQfaNbdnqjS4=",
+     "semanticScore": "Ew5D1tx70KfAm9iBDB0jbOSZT2G7++AU7G9+u55AFj+YTz2HUufiikkUgW0=",
+     "keywordScoreRaw": "Wfss8ubgyBNWznTMb1cNuxu5UF3YWi+AweaUVKXY2J3imzVsu+l5h4dHHlQ=",
+     "ratingScore": "3oVCWheT4GmPCTOhBIQOYplCh2dlSbOzq0JHIDt7PbtzJmNCW5a37mWjV6E=",
+     "freshnessScore": "rucOJXBGRO6tKTnT6fsRt1bwh6JNCHbtmnQyrp+M+wUrNiAk12W8ITMRkK4=",
+     "searchHubImpressions": "/QPZufYDf6muf7sp9F9zIgoXymjyfu8Hf1LTIyZOEXOPvSajx5Nl7YCSTuQ=",
+     "searchHubClicks": "qXCO1HzTtLmkQpGvGzTa7XJ/P+1I3b5eZ5YskQ18mKoy/A5F2aWuSz/QdfM=",
+     "searchHubCarts": "Z87fExrejGOKHzbLuVfPk2cxfU+KTZy/EGBbFRNv0r17za8RpZ13swgobJU=",
+     "businessRuleFactor": "9z6gDDAc9BE8/hfP2Ds3ynOvhiKfgqmE3P9mSXz/ImGhk0tE3dNa6k2lA5E="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1793808641100311,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "canonicalPath": "/p/gruener-veltliner-kamptal-dac-trocken-weisswein-2025/p100359243",
+     "canonicalUrl": "/p/gruener-veltliner-kamptal-dac-trocken-weisswein-2025/p100359243",
+     "category": "Kategorien/Weinwelt/Weinart/Weißwein",
+     "categorySecondaryPath": "0/50/5010/501011",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100359243_f412de27",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100359243_dbbf6cf5",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100359243_c331dac1",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100359243",
+     "flashSales": false,
+     "fullTitle": "Grüner Veltliner Kamptal DAC trocken, Weißwein 2025",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 2,
+     "ians": [
+      "5004017"
+     ],
+     "image": "https://www.lidl.de/assets/gcpdf29517fa52b47dd8436e43f9c879eda.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcpdf29517fa52b47dd8436e43f9c879eda.jpg",
+      "accessibility": "Flasche Weißwein Grüner Veltliner Kamptal mit Zebra im Anzug auf dem Etikett."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcpdf29517fa52b47dd8436e43f9c879eda.jpg",
+      "https://www.lidl.de/assets/gcp5f095fc68c4c4e56a4d5d78b00c14a70.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcpdf29517fa52b47dd8436e43f9c879eda.jpg",
+       "accessibility": "Flasche Weißwein Grüner Veltliner Kamptal mit Zebra im Anzug auf dem Etikett."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp5f095fc68c4c4e56a4d5d78b00c14a70.jpg",
+       "accessibility": "Flasche Weißwein Grüner Veltliner Kamptal mit Zebra im Anzug auf dem Etikett."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Flasche Weißwein Grüner Veltliner Kamptal mit Zebra im Anzug auf dem Etikett.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpef886540ce6d425c85e4b96e11d70143.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcpdf29517fa52b47dd8436e43f9c879eda.jpg"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Flasche Weißwein Grüner Veltliner Kamptal mit Zebra im Anzug auf dem Etikett.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpa5cb2d206ba247159efbba35c683ea13.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp5f095fc68c4c4e56a4d5d78b00c14a70.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Weinwelt/Weinart/Weißwein",
+      "description": "",
+      "fullTitle": "Grüner Veltliner Kamptal DAC trocken, Weißwein 2025",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<img alt=\"Blaues Weinglas-Symbol.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Geschmack_2.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 4px; max-width: 6px; margin-right: 14px;\"/> fruchtig &amp; w&uuml;rzig <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> &Ouml;sterreich, Kamptal <br/> <img alt=\"Illustration von Trauben.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Rebsorte_2.png\" style=\"float: left; padding-top: 2pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 11px; margin-right: 10px;\"/> Gr&uuml;ner Veltliner, trocken <br/>",
+      "title": "Grüner Veltliner Kamptal DAC trocken, Weißwein 2025",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Wein/Weißwein",
+      "wonCategoryPrimaryPath": "0/10/1010/101010"
+     },
+     "lidlPlus": [],
+     "multipack": true,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.75,
+       "price": 5.99,
+       "text": "1 l = 5.99",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "multipackDisplayedCurrency": "€",
+      "packaging": {
+       "amount": 0.75,
+       "unit": "l"
+      },
+      "price": 4.49,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2024-10-16T17:35:25.517Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100359243,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.7,
+      "count": 16,
+      "recommendedNo": 1,
+      "recommendedYes": 15,
+      "sizePercentage": 0,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1793808640,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [],
+        "text": [],
+        "flag": [
+         {
+          "key": "HideWineQuantityHint",
+          "value": "true"
+         }
+        ],
+        "list": [],
+        "id": 223001,
+        "name": "Hide Quantity Hint for Wines",
+        "version": "4"
+       }
+      ]
+     },
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 6,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": true,
+     "title": "Grüner Veltliner Kamptal DAC trocken, Weißwein 2025",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.75,
+         "price": 5.99,
+         "text": "1 l = 5.99",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "multipackDisplayedCurrency": "€",
+        "packaging": {
+         "amount": 0.75,
+         "unit": "l"
+        },
+        "price": 4.49,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2024-10-16T17:35:25.517Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100359243,
+    "meta": {
+     "sapProductCategory": {
+      "code": "501011",
+      "name": "Weißwein",
+      "pathCode": "0/50/5010/501011",
+      "pathName": "Kategorien/Weinwelt/Weinart/Weißwein"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [],
+     "fullTitle": "Grüner Veltliner Kamptal DAC trocken, Weißwein 2025",
+     "ean": "20984380",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000276",
+          "label": "Weine - ohne Kohlensäure",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "501011",
+        "name": "Weißwein",
+        "parent": "5010",
+        "superCategories": {
+         "category": [
+          {
+           "code": "5010",
+           "name": "Weinart",
+           "parent": "50"
+          },
+          {
+           "code": "50",
+           "name": "Weinwelt",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068342",
+        "name": "Wein",
+        "url": "/c/wein/s10068342"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071451",
+        "name": "Weißwein",
+        "url": "/h/weisswein/h10071451"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101010",
+       "isMain": true,
+       "name": "Weißwein",
+       "parent": "1010",
+       "superCategories": [
+        {
+         "code": "1010",
+         "name": "Wein",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100359243"
+   },
+   "tracking": {
+    "position": 2,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100359243",
+     "searchTrackingTitle": "Gr%C3%BCner+Veltliner+Kamptal+DAC+trocken%2C+Wei%C3%9Fwein+2025",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100359243",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 2,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Weinwelt/Weinart/Weißwein"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100355617",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "pM/79gvxUGGISYnxNzoXMVV6BuAyX453zaL//zzScslaN3lvfgxRb2rAQW4=",
+     "keywordScore": "LC/PxNmBY6EpyfdcFHb0HIAX7dOiPlQTMtfHreYZGByGeJD5KgwHpXJHRAU=",
+     "semanticScore": "b8LZ7oZFQYy+gAJ2k/N9478fIUa2JR2Mi1eylc3BEL68JdlryxSE9wUjieM=",
+     "keywordScoreRaw": "lBVw9C/B18jAOvacYd263BxqiIqvCg/ohEkC7bD54pAsu6H4FEFbtFuGGjI=",
+     "ratingScore": "FTAPGxt1T/CvnpXRVMTwgllLhBt8gCE4j+u54KSAfSfjqlMlJkrQa57B2FI=",
+     "freshnessScore": "sgtnzcq3PqE7XwcU/qKKskXSld4EFpNeJk9MpsdBzq6z8liWpCpAjt3Va/M=",
+     "searchHubImpressions": "oUcJ5na2Ng6uB1gOE0UWDRAoLCQiZIxmLJiTEtzovr+q6M3eXuO0mL3FsqA=",
+     "searchHubClicks": "xDl3N+HEB/4Kl4glMct7+aKJdnuf4XpEM+UVY642zruHa5FB5B533KKHDGw=",
+     "searchHubCarts": "8VVpKLPCZFDGHKLCExTkZlFU9RJZmGPqVz7AUsymC7M34Pvx+FjvY/VvFNM=",
+     "businessRuleFactor": "aBs3LvgxyKDaV+JAbqZ6w0kSf+MiXR0u+LZmqjQzALs5I8y5kRqx9chNP1A="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794468006374078,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "canonicalPath": "/p/rheinhessen-wine-lovers-traumpaar-weissburgunder-grauburgunder-trocken-weisswein-2025/p100355617",
+     "canonicalUrl": "/p/rheinhessen-wine-lovers-traumpaar-weissburgunder-grauburgunder-trocken-weisswein-2025/p100355617",
+     "category": "Kategorien/Weinwelt/Weinart/Weißwein",
+     "categorySecondaryPath": "0/50/5010/501011",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100355617_7d30e788",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100355617_594e0a09",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100355617_5f6daace",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100355617",
+     "flashSales": false,
+     "fullTitle": "Rheinhessen Wine Lovers Traumpaar Weissburgunder/Grauburgunder trocken, Weißwein 2025",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 3,
+     "ians": [
+      "7707153"
+     ],
+     "image": "https://www.lidl.de/assets/gcpa56d3f83704c46a589ad683049db0281.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcpa56d3f83704c46a589ad683049db0281.jpg",
+      "accessibility": "Eine Flasche Weißwein mit dem Etikett 'Traum Paar'."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcpa56d3f83704c46a589ad683049db0281.jpg",
+      "https://www.lidl.de/assets/gcp6ad47ed86fe64fc8b306b0174ab154ee.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcpa56d3f83704c46a589ad683049db0281.jpg",
+       "accessibility": "Eine Flasche Weißwein mit dem Etikett 'Traum Paar'."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp6ad47ed86fe64fc8b306b0174ab154ee.jpg",
+       "accessibility": "Eine Flasche Traum Paar Weißwein, ein Glas Wein, ein Teller mit gegrilltem Fleisch, Spargel und Tomaten."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Eine Flasche Weißwein mit dem Etikett 'Traum Paar'.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp6173875c439e46dc9f979ca097265f32.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcpa56d3f83704c46a589ad683049db0281.jpg"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Eine Flasche Traum Paar Weißwein, ein Glas Wein, ein Teller mit gegrilltem Fleisch, Spargel und Tomaten.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp7d12943bf0824d7696abe22c5ec49d53.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp6ad47ed86fe64fc8b306b0174ab154ee.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Weinwelt/Weinart/Weißwein",
+      "description": "",
+      "fullTitle": "Rheinhessen Wine Lovers Traumpaar Weissburgunder/Grauburgunder trocken, Weißwein 2025",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p> <img alt=\"Blaues Weinglas-Symbol.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Geschmack_2.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 4px; max-width: 6px; margin-right: 14px;\"/> fruchtig &amp; kr&auml;ftig <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Deutschland, Rheinhessen <br/> <img alt=\"Illustration von Trauben.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Rebsorte_2.png\" style=\"float: left; padding-top: 2pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 11px; margin-right: 10px;\"/> Cuv&eacute;e, trocken </p>",
+      "title": "Rheinhessen Wine Lovers Traumpaar Weissburgunder/Grauburgunder trocken, Weißwein 2025",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Wein/Weißwein",
+      "wonCategoryPrimaryPath": "0/10/1010/101010"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.75,
+       "price": 6.65,
+       "text": "1 l = 6.65",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {
+       "amount": 0.75,
+       "unit": "l"
+      },
+      "price": 4.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2024-10-16T17:50:50.619Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100355617,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.8,
+      "count": 10,
+      "recommendedNo": 0,
+      "recommendedYes": 10,
+      "sizePercentage": 0,
+      "topRated": true,
+      "text": "Top Kundenbewertungen"
+     },
+     "regionsPrices": {},
+     "ribbons": [
+      {
+       "type": "TOP_RATED",
+       "text": "Top Kundenbewertungen",
+       "theme": "top-rated",
+       "icon": "star-10"
+      }
+     ],
+     "renderedTs": 1794468006,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [],
+        "text": [],
+        "flag": [
+         {
+          "key": "HideWineQuantityHint",
+          "value": "true"
+         }
+        ],
+        "list": [],
+        "id": 223001,
+        "name": "Hide Quantity Hint for Wines",
+        "version": "4"
+       }
+      ]
+     },
+     "seals": [
+      {
+       "altText": "Master of Wine 88, Richard Bamfield.",
+       "image": "https://www.lidl.de/assets/gcp98fa270fa90c405892474d1d14525452.png"
+      },
+      {
+       "altText": "Siegel: 87+ Punkte, Tasting 2025.",
+       "image": "https://www.lidl.de/assets/gcp9d921f8ad3a044af8293d441f86f5a5c.jpeg"
+      }
+     ],
+     "stockAvailability": {
+      "availabilityIndicator": 2,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "demnächst bestellbar",
+         "type": "SOON_ONLINE",
+         "deliveryInfoText": "Wir kümmern uns um die Verfügbarkeit deines Artikels."
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "demnächst bestellbar",
+          "type": "SOON_ONLINE",
+          "deliveryInfoText": "Wir kümmern uns um die Verfügbarkeit deines Artikels."
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": false,
+      "minOrderableQuantity": 6,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": true,
+     "title": "Rheinhessen Wine Lovers Traumpaar Weissburgunder/Grauburgunder trocken, Weißwein 2025",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.75,
+         "price": 6.65,
+         "text": "1 l = 6.65",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {
+         "amount": 0.75,
+         "unit": "l"
+        },
+        "price": 4.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2024-10-16T17:50:50.619Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY_BUT_NOT_ADD_TO_CART",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100355617,
+    "meta": {
+     "sapProductCategory": {
+      "code": "501011",
+      "name": "Weißwein",
+      "pathCode": "0/50/5010/501011",
+      "pathName": "Kategorien/Weinwelt/Weinart/Weißwein"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10007507",
+        "name": "Deutsche Weine",
+        "url": "/c/ws-deutsche-weine/a10007507"
+       }
+      ]
+     ],
+     "fullTitle": "Rheinhessen Wine Lovers Traumpaar Weissburgunder/Grauburgunder trocken, Weißwein 2025",
+     "ean": "4260639550123",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000276",
+          "label": "Weine - ohne Kohlensäure",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "501011",
+        "name": "Weißwein",
+        "parent": "5010",
+        "superCategories": {
+         "category": [
+          {
+           "code": "5010",
+           "name": "Weinart",
+           "parent": "50"
+          },
+          {
+           "code": "50",
+           "name": "Weinwelt",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068342",
+        "name": "Wein",
+        "url": "/c/wein/s10068342"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071451",
+        "name": "Weißwein",
+        "url": "/h/weisswein/h10071451"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101010",
+       "isMain": true,
+       "name": "Weißwein",
+       "parent": "1010",
+       "superCategories": [
+        {
+         "code": "1010",
+         "name": "Wein",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100355617"
+   },
+   "tracking": {
+    "position": 3,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100355617",
+     "searchTrackingTitle": "Rheinhessen+Wine+Lovers+Traumpaar+Weissburgunder%2FGrauburgunder+trocken%2C+Wei%C3%9Fwein+2025",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100355617",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 3,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Weinwelt/Weinart/Weißwein"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100186899",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "zbsiqzvOGWgIMtMR+KX40WoqLLkcXMMZYbuR+9WBJXJYZV3315aAAdLGzfU=",
+     "keywordScore": "/nRKWTWBcQNg0h0N34Cofh66PtXETmgoyLRDwO6o5mQnZM+QL0dL1XRDCII=",
+     "semanticScore": "RN31vnyDa0iK141/80iuQcMGhV70txHUDaIeAMYZBwokiGWiyK5wejYFE88=",
+     "keywordScoreRaw": "J4aZgEYGsdRdRldqGt0U+479Acz/AkiiRpSs2aep1PtmDnwK3p/OXpQ5uT0=",
+     "ratingScore": "/jOPS54UZxYvEQBKQ/HH4apS1nct8ohkIBisj+KLMPtrW7wXiFKXJJ3//3s=",
+     "freshnessScore": "pffKt1omaOJuH/CBbajkIL1dpQHbRaRFcvtfHXO/5lvU0fApPfPNcQ2WfzA=",
+     "searchHubImpressions": "ncAWwKsSVO5T64G+l4PFKPhyHXikDoZrTV8D4075JSxXctSrbHE2FaHA1lg=",
+     "searchHubClicks": "6TF+jkbvB+oXSebrxei3Vf8g3U0y/3z8eYMjlnOYLMzRuvL02d389+IUHMQ=",
+     "searchHubCarts": "a4KIdeCaXBkI2Ml/AMKCmRXt2/SEIhvgO7KohOKdBwDYhtJ8QEkqNYj85kg=",
+     "businessRuleFactor": "2jz2kxzObQoki7I3icdCI6gLH7JyqgghvLwAuIirROiJNu6bt1ykvJZobo8="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1793961579513954,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "brand": {
+      "logo": "https://www.lidl.de/assets/bdedcebd07ae7812d1134b3c244139ba.jpeg",
+      "name": "DELUXE",
+      "url": "/q/search?q=deluxe",
+      "id": "DELE",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/deluxe-schwarzwaelder-kirschwasser-40-vol/p100186899",
+     "canonicalUrl": "/p/deluxe-schwarzwaelder-kirschwasser-40-vol/p100186899",
+     "category": "Kategorien/Spirituosen/Obstbrand",
+     "categorySecondaryPath": "0/91/9115",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100186899_3faab330",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100186899_5a13d024",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100186899_12cfb603",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100186899",
+     "flashSales": false,
+     "fullTitle": "DELUXE Schwarzwälder Kirschwasser 40% Vol",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 2,
+     "ians": [
+      "27404"
+     ],
+     "image": "https://www.lidl.de/assets/gcp1963fa83d6b5453b9989af4492249d58.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcp1963fa83d6b5453b9989af4492249d58.jpg",
+      "accessibility": "Zünftler Altes Schwarzwälder Kirschwasser 10 Jahre 40% Vol"
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcp1963fa83d6b5453b9989af4492249d58.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcp1963fa83d6b5453b9989af4492249d58.jpg",
+       "accessibility": "Zünftler Altes Schwarzwälder Kirschwasser 10 Jahre 40% Vol"
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Zünftler Altes Schwarzwälder Kirschwasser 10 Jahre 40% Vol",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp93e658eabbf74e03af38cda46cd87baf.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp1963fa83d6b5453b9989af4492249d58.jpg"
+         }
+        },
+        {
+         "ratio": "3:4",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpd30c0b1d139744ccb17564a285b60e04.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp06616033bdbf436abfa9d93708d7ff2f.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Spirituosen/Obstbrand",
+      "description": "",
+      "fullTitle": "DELUXE Schwarzwälder Kirschwasser 40% Vol",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p> <img alt=\"Eisdrink mit Lippen.\" class=\"c-10\" src=\"/assets/gcpfbcd211498f643aabb111176aa9ba7bf.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 14px; margin-right: 9px;\"/> mild &amp; fruchtig <br/> <img alt=\"Whiskeyglas mit Eis und Cocktailshaker.\" class=\"c-10\" src=\"/assets/gcpc7c868a4d1b842469f87f22931be3f3c.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Kirschwasser <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Deutschland </p>",
+      "title": "Schwarzwälder Kirschwasser 40% Vol",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Spirituosen/Schnäpse & Co.",
+      "wonCategoryPrimaryPath": "0/10/1011/101114"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.7,
+       "price": 15.7,
+       "text": "1 l = 15.70",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {
+       "amount": 0.7,
+       "unit": "l"
+      },
+      "price": 10.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2024-08-15T22:00Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100186899,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.8,
+      "count": 76,
+      "recommendedNo": 1,
+      "recommendedYes": 32,
+      "sizePercentage": 0,
+      "topRated": true,
+      "text": "Top Kundenbewertungen"
+     },
+     "regionsPrices": {},
+     "ribbons": [
+      {
+       "type": "TOP_RATED",
+       "text": "Top Kundenbewertungen",
+       "theme": "top-rated",
+       "icon": "star-10"
+      }
+     ],
+     "renderedTs": 1793961579,
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": false,
+      "backInStockNotificationSoldOut": false
+     },
+     "store": true,
+     "title": "Schwarzwälder Kirschwasser 40% Vol",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.7,
+         "price": 15.7,
+         "text": "1 l = 15.70",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {
+         "amount": 0.7,
+         "unit": "l"
+        },
+        "price": 10.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2024-08-15T22:00Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100186899,
+    "meta": {
+     "sapProductCategory": {
+      "code": "9115",
+      "name": "Obstbrand",
+      "pathCode": "0/91/9115",
+      "pathName": "Kategorien/Spirituosen/Obstbrand"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [],
+     "fullTitle": "DELUXE Schwarzwälder Kirschwasser 40% Vol",
+     "ean": "20232566",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000263",
+          "label": "Spirituosen",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "9115",
+        "name": "Obstbrand",
+        "parent": "91",
+        "superCategories": {
+         "category": [
+          {
+           "code": "91",
+           "name": "Spirituosen",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068341",
+        "name": "Spirituosen",
+        "url": "/c/spirituosen/s10068341"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071539",
+        "name": "Schnäpse & Co.",
+        "url": "/h/schnaepse-co/h10071539"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10068374",
+        "name": "Essen & Trinken",
+        "url": "/c/essen-trinken/s10068374"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096268",
+        "name": "Wein, Bier & Spirituosen",
+        "url": "/h/wein-bier-spirituosen/h10096268"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096274",
+        "name": "Spirituosen",
+        "url": "/h/spirituosen/h10096274"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101114",
+       "isMain": true,
+       "name": "Schnäpse & Co.",
+       "parent": "1011",
+       "superCategories": [
+        {
+         "code": "1011",
+         "name": "Spirituosen",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100186899"
+   },
+   "tracking": {
+    "position": 4,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100186899",
+     "searchTrackingTitle": "Schwarzw%C3%A4lder+Kirschwasser+40%25+Vol",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100186899",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 4,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Spirituosen/Obstbrand"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100299644",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "t95+RK3j1Z8x5RgAiNUb29LjyUoDvexEPEQlCtJJkXafFUG7dwv9CAZ2YDA=",
+     "keywordScore": "UZeg9no503TBkbMQ/t3IoKouCbiHTGXP4WLbrssb4GMJlxp7j6kOVAFwtP4=",
+     "semanticScore": "i3bDs/5wGfIKvTQNEXrT66U+bhmQ1n3SSL0HN26pcpasQk94VlBETSZv+EU=",
+     "keywordScoreRaw": "gyl0o4yOfH0tV0aUBZI9oav3VVXOChxdPnJRx/VUEATX8hjflf+rI9xQK3E=",
+     "ratingScore": "KbRcsst8C8xzMD4GsBdyYwHQjjwUSQumBsNTXhzcZu3oBIZXkzX4Idrk73k=",
+     "freshnessScore": "K3h/CSSGxhZokAuTjZLpLxlK5fYVXc0QNcv/jCwi0dwn8mKuL0S7ob0CKyQ=",
+     "searchHubImpressions": "HlYaZwMDaylCIqPjldnxrPk9+xpoDK3NZ7y4yzrpPMCUBaObvLuXNCDBaY4=",
+     "searchHubClicks": "rMKqiyqZYBj8xSay/Gc2zks9cXFiacLHj91HAloHi651RdOVreJQ/b63Lx4=",
+     "searchHubCarts": "cX0uMkT5l/K8ikYdLgi4SS3x74v1kuMEC11m4bG8W7HFsfgN4C1Gz0woon8=",
+     "businessRuleFactor": "0IF5GFzirDovbwe7vnNvtps15NDJ4PEPHBJi8UKhkhUPDebxu77zb/bnST0="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794558152096871,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "brand": {
+      "name": "GIULIO PASOTTI",
+      "url": "https://www.lidl.de/q/brand/giulio-pasotti",
+      "id": "PASO",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/giulio-pasotti-lugana-doc-trocken-weisswein-2025/p100299644",
+     "canonicalUrl": "/p/giulio-pasotti-lugana-doc-trocken-weisswein-2025/p100299644",
+     "category": "Kategorien/Weinwelt/Weinart/Weißwein",
+     "categorySecondaryPath": "0/50/5010/501011",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100299644_b7cd60dd",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100299644_68b62a7f",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100299644_08f4e6f5",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100299644",
+     "flashSales": false,
+     "fullTitle": "GIULIO PASOTTI Lugana DOC trocken, Weißwein 2025",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 2,
+     "ians": [
+      "57643"
+     ],
+     "image": "https://www.lidl.de/assets/86eed3e4b0594162896bedc5b6ab06ff.jpeg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/86eed3e4b0594162896bedc5b6ab06ff.jpeg",
+      "accessibility": "Eine Flasche Lugana Weißwein."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/86eed3e4b0594162896bedc5b6ab06ff.jpeg",
+      "https://www.lidl.de/assets/443c13fa0ecc0ad2dd0a66fd8e23bfc7.jpeg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/86eed3e4b0594162896bedc5b6ab06ff.jpeg",
+       "accessibility": "Eine Flasche Lugana Weißwein."
+      },
+      {
+       "image": "https://www.lidl.de/assets/443c13fa0ecc0ad2dd0a66fd8e23bfc7.jpeg",
+       "accessibility": "Karte von Italien mit der Weinregion Venetien hervorgehoben."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Eine Flasche Lugana Weißwein.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/45510d585db04c114091c198707bacdb.jpeg",
+          "smallUrl": "https://www.lidl.de/assets/86eed3e4b0594162896bedc5b6ab06ff.jpeg"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Karte von Italien mit der Weinregion Venetien hervorgehoben.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/d0e7bb60e00abe5ddec079d9f3e58060.jpeg",
+          "smallUrl": "https://www.lidl.de/assets/443c13fa0ecc0ad2dd0a66fd8e23bfc7.jpeg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Weinwelt/Weinart/Weißwein",
+      "description": "<p><strong>Giulio Pasotti Lugana DOC trocken, Weißwein</strong> Ein fruchtig-frischer Weißwein aus Lugana, ideal zu Fisch, Geflügel und leichten Pastagerichten.</p><ul><li>Lugana DOC aus der Rebsorte Trebbiano di Lugana</li><li>12,5 % vol Alkoholgehalt, leichter bis mittlerer Körper</li><li>0,75-l-Flasche, praktisch für Dinner und Aperitif</li><li>Passt zu Risotto, Spargel und Geflügelgerichten</li><li>Serviertemperatur 8–10 °C für optimale Aromenentfaltung</li></ul>",
+      "fullTitle": "GIULIO PASOTTI Lugana DOC trocken, Weißwein 2025",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p> <img alt=\"Blaues Weinglas-Symbol.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Geschmack_2.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 4px; max-width: 6px; margin-right: 14px;\"/> fruchtig &amp; frisch <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Italien, <span> Venetien </span> <br/> <img alt=\"Illustration von Trauben.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Rebsorte_2.png\" style=\"float: left; padding-top: 2pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 11px; margin-right: 10px;\"/> <span> Trebbiano di Lugana </span> , trocken </p>",
+      "title": "Lugana DOC trocken, Weißwein 2025",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Wein/Weißwein",
+      "wonCategoryPrimaryPath": "0/10/1010/101010"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.75,
+       "price": 8.65,
+       "text": "1 l = 8.65",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {
+       "amount": 0.75,
+       "unit": "l"
+      },
+      "price": 6.49,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2026-02-12T11:55:00.751Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100299644,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.5,
+      "count": 42,
+      "recommendedNo": 2,
+      "recommendedYes": 25,
+      "sizePercentage": 0,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1794558152,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [],
+        "text": [],
+        "flag": [
+         {
+          "key": "HideWineQuantityHint",
+          "value": "true"
+         }
+        ],
+        "list": [],
+        "id": 223001,
+        "name": "Hide Quantity Hint for Wines",
+        "version": "4"
+       }
+      ]
+     },
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 2,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "demnächst bestellbar",
+         "type": "SOON_ONLINE",
+         "deliveryInfoText": "Wir kümmern uns um die Verfügbarkeit deines Artikels."
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "demnächst bestellbar",
+          "type": "SOON_ONLINE",
+          "deliveryInfoText": "Wir kümmern uns um die Verfügbarkeit deines Artikels."
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": false,
+      "minOrderableQuantity": 6,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": true,
+     "title": "Lugana DOC trocken, Weißwein 2025",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.75,
+         "price": 8.65,
+         "text": "1 l = 8.65",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {
+         "amount": 0.75,
+         "unit": "l"
+        },
+        "price": 6.49,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2026-02-12T11:55:00.751Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY_BUT_NOT_ADD_TO_CART",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100299644,
+    "meta": {
+     "sapProductCategory": {
+      "code": "501011",
+      "name": "Weißwein",
+      "pathCode": "0/50/5010/501011",
+      "pathName": "Kategorien/Weinwelt/Weinart/Weißwein"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [],
+     "fullTitle": "GIULIO PASOTTI Lugana DOC trocken, Weißwein 2025",
+     "ean": "4335619001473",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000276",
+          "label": "Weine - ohne Kohlensäure",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "501011",
+        "name": "Weißwein",
+        "parent": "5010",
+        "superCategories": {
+         "category": [
+          {
+           "code": "5010",
+           "name": "Weinart",
+           "parent": "50"
+          },
+          {
+           "code": "50",
+           "name": "Weinwelt",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068342",
+        "name": "Wein",
+        "url": "/c/wein/s10068342"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071451",
+        "name": "Weißwein",
+        "url": "/h/weisswein/h10071451"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101010",
+       "isMain": true,
+       "name": "Weißwein",
+       "parent": "1010",
+       "superCategories": [
+        {
+         "code": "1010",
+         "name": "Wein",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100299644"
+   },
+   "tracking": {
+    "position": 5,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100299644",
+     "searchTrackingTitle": "Lugana+DOC+trocken%2C+Wei%C3%9Fwein+2025",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100299644",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 5,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Weinwelt/Weinart/Weißwein"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100407305",
+   "colorKey": "P_FARBE|schwarz",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "o74ZgqyNpludqTP89AB3MIgHZf/lWgHJzypHGgiAlh/zemLakoyLAHSqZOQ=",
+     "keywordScore": "oXGt2nbb+DW2jHCRDBBFhz7dUZ83Lha6H5Dq6qkVBuPSgwyAcXXRFuaURcc=",
+     "semanticScore": "qQTsPXWm3tKM/Df+5Wp+Q2DVcrpOlfaDhiNtW/gPnrvV9mzZHEn7yufm2aU=",
+     "keywordScoreRaw": "TCOkWm3rCSOrUU+MPJuesc/iPDR95+H9WeIU6c6wv0QqCIxwKM4YJQeMbj8=",
+     "ratingScore": "MWu4QbmY29Y3t17fBEsx2ducA30ywblWDiu/wbk1+DqG/3M1/3wM6dnN7lI=",
+     "freshnessScore": "SP0aI3OJdkywJ2JwotvhaC+dk9Wicci5ry61WXOfIaG5s3B7yQ51cF+RhUQ=",
+     "searchHubImpressions": "FYWMa4ejCHOiF/SZ65tlK/tWuhmw5vfsk/dJ9qpqoHSUiLwFgMaVxO6799E=",
+     "searchHubClicks": "5PubGtUkh4/ExDByD4FdA5eWazabIqeTf71ENlvlhwhbXbQSgB7bWPTqyRw=",
+     "searchHubCarts": "TmbPsf3K+2fUPMSxwwE5cRGb/ieUgA4H5iulFthXB4q0Le4ms417WBVTvks=",
+     "businessRuleFactor": "7y86rgRpRxFsOgp7L0XtnLEk5neUB8hzr9QvvU68w02LFkS424tdiSaKzsw="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794717339326060,
+    "data": {
+     "ageRestriction": false,
+     "hasColors": true,
+     "awards": [],
+     "brand": {
+      "logo": "https://www.lidl.de/assets/e04092d839176694263798baaca7efe5.png",
+      "name": "PARKSIDE®",
+      "url": "/q/search?q=parkside",
+      "id": "PARK",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/parkside-herren-sicherheitsschuhe-sicherheitsstiefel-s3/p100407305",
+     "canonicalUrl": "/p/parkside-herren-sicherheitsschuhe-sicherheitsstiefel-s3/p100407305",
+     "category": "Kategorien/Mode/Arbeitsbekleidung/Schuhe",
+     "categorySecondaryPath": "0/46/4612/461214",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100407305_af928f87",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100407305_7f239897",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100407305",
+     "flashSales": false,
+     "fullTitle": "PARKSIDE® Herren Sicherheitsschuhe / Sicherheitsstiefel, S3",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 0,
+     "ians": [
+      "517522"
+     ],
+     "image": "https://www.lidl.de/assets/gcp66a414f4826f4945ae9c48233ca314eb.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcp66a414f4826f4945ae9c48233ca314eb.jpg",
+      "accessibility": "Ein Paar schwarze Sicherheitsschuhe mit gelb-schwarzen Schnürsenkeln, ein Schuh nach vorne, der andere seitlich."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcp66a414f4826f4945ae9c48233ca314eb.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcp66a414f4826f4945ae9c48233ca314eb.jpg",
+       "accessibility": "Ein Paar schwarze Sicherheitsschuhe mit gelb-schwarzen Schnürsenkeln, ein Schuh nach vorne, der andere seitlich."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Ein Paar schwarze Sicherheitsschuhe mit gelb-schwarzen Schnürsenkeln, ein Schuh nach vorne, der andere seitlich.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp65496c2a82714e028fa26fe69c94c722.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp66a414f4826f4945ae9c48233ca314eb.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Mode/Arbeitsbekleidung/Schuhe",
+      "description": "<p><strong>Herren Sicherheitsschuhe / Sicherheitsstiefel, S3</strong> bieten zuverlässigen Schutz am Arbeitsplatz durch Stahl‑Zehenkappe und durchtrittsichere Sohle für Handwerk und Industrie.</p><ul><li>Robust geschützt durch Stahl‑Zehenkappe und durchtrittsichere Sohle</li><li>Obermaterial aus Leder und Textil für lange Lebensdauer</li><li>Profilierte PU‑Laufsohle für sicheren Halt auf nassem Untergrund</li><li>Reflektierende 3M‑Elemente erhöhen Sichtbarkeit bei Dämmerung</li><li>Erfüllt Sicherheitsklasse S3 nach EN ISO 20345:2024</li></ul>",
+      "fullTitle": "PARKSIDE® Herren Sicherheitsschuhe / Sicherheitsstiefel, S3",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p><strong>Farbe</strong>: schwarz<br /> <strong>Merkmal</strong>: aus Leder<br /> <strong>Besonderheit</strong>: Sicherheitsklasse S3</p>",
+      "title": "Herren Sicherheitsschuhe / Sicherheitsstiefel, S3",
+      "wonCategoryPrimary": "Bedürfniswelten/Baumarkt & Garten/Arbeitsbekleidung",
+      "wonCategoryPrimaryPath": "0/12/1216"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "endDate": "2026-11-21T22:59:59Z",
+      "endDateExclusive": "2026-11-21T23:00Z",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {},
+      "price": 29.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2026-10-09T10:35:53.951Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100407305,
+     "productType": "HEAD_VARIANT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": false,
+     "ratings": {
+      "average": 4.7,
+      "count": 188,
+      "recommendedNo": 5,
+      "recommendedYes": 168,
+      "sizeType": "FITS_PERFECTLY",
+      "sizePercentage": 91,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1794717338,
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale von 26.11. - 28.11.",
+         "type": "ALSO_IN_STORE_FROM_FUTURE_DATE_RANGE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale von 26.11. - 28.11.",
+          "type": "ALSO_IN_STORE_FROM_FUTURE_DATE_RANGE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ],
+        "validFrom": 1795647600,
+        "validUntil": 1795906799
+       },
+       {
+        "badges": [
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": false,
+     "storeStartDate": 1795647600,
+     "storeEndDate": 1795906799,
+     "title": "Herren Sicherheitsschuhe / Sicherheitsstiefel, S3",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "endDate": "2026-11-21T22:59:59Z",
+        "endDateExclusive": "2026-11-21T23:00Z",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {},
+        "price": 29.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2026-10-09T10:35:53.951Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "someFreeOfDeliveryCharges": false,
+        "someHaveDifferentAbsoluteCharges": false,
+        "someHaveDifferentZoneSurcharges": false,
+        "someHaveDifferentAdditiveCharges": false,
+        "someHaveDifferentAdditionalCharges": false,
+        "someHaveDifferentDefaultCharges": false,
+        "someHaveDifferentHomeDeliveryCharges": false,
+        "someHaveDifferentParcelShopCharges": false,
+        "someHaveDifferentParcelLockerCharges": false,
+        "someHaveDifferentparcelLockerLidlParkingLotDeliveryCharges": false,
+        "someHaveDifferentParcelLockerLidlParkingLotLidlPlusDeliveryCharge": false,
+        "homeDeliveryCharge": 5.95,
+        "parcelShopDeliveryCharge": 5.95,
+        "parcelLockerDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100407305,
+    "meta": {
+     "sapProductCategory": {
+      "code": "461214",
+      "name": "Schuhe",
+      "pathCode": "0/46/4612/461214",
+      "pathName": "Kategorien/Mode/Arbeitsbekleidung/Schuhe"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10101184",
+        "name": "Herbst Garten: Warm & sicher bei der Gartenarbeit",
+        "url": "/c/asc/herbst-garten-warm-sicher-bei-der-gartenarbeit/a10101184"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10101256",
+        "name": "Gartenschnitt & Herbstpflege",
+        "url": "/c/asc/gartenschnitt-herbstpflege/a10101256"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10106599",
+        "name": "Werkstatt, ab 16.11.",
+        "url": "/c/asc/werkstatt-ab-16-11/a10106599"
+       }
+      ]
+     ],
+     "fullTitle": "PARKSIDE® Herren Sicherheitsschuhe / Sicherheitsstiefel, S3",
+     "gs1": {
+      "segment": {
+       "code": "63000000",
+       "label": "Schuhe",
+       "family": {
+        "code": "63010000",
+        "label": "Schuhe",
+        "clazz": {
+         "code": "63010500",
+         "label": "Sicherheitsschuhe",
+         "brick": {
+          "code": "10001082",
+          "label": "Sicherheitsschuhe",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "461214",
+        "name": "Schuhe",
+        "parent": "4612",
+        "superCategories": {
+         "category": [
+          {
+           "code": "4612",
+           "name": "Arbeitsbekleidung",
+           "parent": "46"
+          },
+          {
+           "code": "46",
+           "name": "Mode",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067761",
+        "name": "Baumarkt & Garten",
+        "url": "/c/baumarkt-garten/s10067761"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067537",
+        "name": "Arbeitsbekleidung",
+        "url": "/h/arbeitsbekleidung/h10067537"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067761",
+        "name": "Baumarkt & Garten",
+        "url": "/c/baumarkt-garten/s10067761"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067537",
+        "name": "Arbeitsbekleidung",
+        "url": "/h/arbeitsbekleidung/h10067537"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10006402",
+        "name": "Arbeitsschuhe ",
+        "url": "/h/arbeits-sicherheitsschuhe/h10006402"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "1216",
+       "isMain": true,
+       "name": "Arbeitsbekleidung",
+       "parent": "12",
+       "superCategories": [
+        {
+         "code": "12",
+         "name": "Baumarkt & Garten",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100407305"
+   },
+   "tracking": {
+    "position": 6,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100407305",
+     "searchTrackingTitle": "Herren+Sicherheitsschuhe+%2F+Sicherheitsstiefel%2C+S3",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100407305",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 6,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Mode/Arbeitsbekleidung/Schuhe"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100411767",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "Xi0oViVYrNsOtdJkGE7YCsix81/lPPTquxIosiGfjnSn71u5GmmZ2lJvOvU=",
+     "keywordScore": "x9SkrDamI+svxXiVCHXmUt4V5h79+xIjdT0belb2CAUzvnrYjRBZuKmH4cA=",
+     "semanticScore": "qDj+bNLi31OlDPoMn9pk/FP3Td3Pz+K4it9N2HhmDpn0htIoFsPmms1g1yg=",
+     "keywordScoreRaw": "t1bfbXQHnnLRRyBQLOLgIyOJvABVuQzKi0x5Eq7HkwvSqe5okIm1ESR1Mxg=",
+     "ratingScore": "WhItD6JGZobEKfTTW/p3a12+fsNG5fVT+xITEoZRqKJetEqEqCYDe6ZW8gE=",
+     "freshnessScore": "NtyeBXRhVAwJMxovj0ADFDIcnpHI999Sio/MczuuC7BkBl0OlsHvapRfwkw=",
+     "searchHubImpressions": "KKkEZSaR8V8tf6njMtB99UnYRYIwdYwY3jmhixg1xWbURmeHVDWnJul6sas=",
+     "searchHubClicks": "Sg5zMROhvVs4Hr6R+VU77QloRM9Sj2+qpebzmO2FC256G2o4wpFBcYFtp6E=",
+     "searchHubCarts": "fo5xwLk9XG7LJTkocmTCgX44IF8DBJi+S8sAJ7b1sNtKkgIxc97cj8RVJoQ=",
+     "businessRuleFactor": "6BvLezmAmf7sWwrFI7bXWZpmbWb7QVpPUbV9OtWyonEJQYJPftF8Smo+UZw="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794590711240601,
+    "data": {
+     "ageRestriction": false,
+     "hasColors": false,
+     "awards": [],
+     "brand": {
+      "logo": "https://www.lidl.de/assets/gcp9bbfcd9666b740e89b0e8554c33892d9.jpeg",
+      "name": "SODASTREAM",
+      "url": "https://www.lidl.de/q/brand/sodastream/b9812",
+      "id": "SODA",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/sodastream-wassersprudler-crystal-titan-inkl-0-7-l-glaskaraffe-und-zylinder/p100411767",
+     "canonicalUrl": "/p/sodastream-wassersprudler-crystal-titan-inkl-0-7-l-glaskaraffe-und-zylinder/p100411767",
+     "category": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Sonstige Elektro-Küchengeräte",
+     "categorySecondaryPath": "0/20/2010/201036",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100411767_add3dcb2",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100411767_6c10cd05",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100411767",
+     "flashSales": false,
+     "fullTitle": "SODASTREAM Wassersprudler »Crystal« titan, inkl. 0,7 L Glaskaraffe und Zylinder",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 0,
+     "ians": [
+      "537861"
+     ],
+     "image": "https://www.lidl.de/assets/gcpa91683e6f3a042be88cd1fa962f1eb66.png",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcpa91683e6f3a042be88cd1fa962f1eb66.png",
+      "accessibility": "Schwarz-silberner Sprudler mit einer rosa Gasflasche und einer Glaswasserflasche."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcpa91683e6f3a042be88cd1fa962f1eb66.png",
+      "https://www.lidl.de/assets/gcp7071f564714a4089a5205793e9ccdd3f.png",
+      "https://www.lidl.de/assets/gcp0c3c9034d5334d319a5bdbad87c24133.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcpa91683e6f3a042be88cd1fa962f1eb66.png",
+       "accessibility": "Schwarz-silberner Sprudler mit einer rosa Gasflasche und einer Glaswasserflasche."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp7071f564714a4089a5205793e9ccdd3f.png",
+       "accessibility": "Schwarzer Sprudelwasserbereiter mit einer Flasche und einem Glas rotem Getränk auf einer roten Theke."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp0c3c9034d5334d319a5bdbad87c24133.jpg",
+       "accessibility": "SodaStream Crystal Wassersprudler in Schwarz mit Abmessungen: Höhe 54 cm, Breite 16 cm, Tiefe 26 cm."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Schwarz-silberner Sprudler mit einer rosa Gasflasche und einer Glaswasserflasche.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp2609a000e8064ea29122da74ae9d6c33.png",
+          "smallUrl": "https://www.lidl.de/assets/gcpa91683e6f3a042be88cd1fa962f1eb66.png"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Schwarzer Sprudelwasserbereiter mit einer Flasche und einem Glas rotem Getränk auf einer roten Theke.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpfad2638dc4594821a1b46bafcd6c4d80.png",
+          "smallUrl": "https://www.lidl.de/assets/gcp7071f564714a4089a5205793e9ccdd3f.png"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "SodaStream Crystal Wassersprudler in Schwarz mit Abmessungen: Höhe 54 cm, Breite 16 cm, Tiefe 26 cm.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpaa0566f7af8a4fe1aa94026bd831b48f.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp0c3c9034d5334d319a5bdbad87c24133.jpg"
+         }
+        },
+        {
+         "ratio": "3:4",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpc990460606c541f6976ad9b16677506f.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcpde2d4098ff334daa9818ec9f5dfaa8a0.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Sonstige Elektro-Küchengeräte",
+      "fullTitle": "SODASTREAM Wassersprudler »Crystal« titan, inkl. 0,7 L Glaskaraffe und Zylinder",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p><strong>Fassungsverm&ouml;gen</strong>: 0,7 L<br /> <strong>Material</strong>: Edelstahl &amp; Kunststoff<br /> <strong>Merkmal</strong>: funktioniert ohne Strom</p>",
+      "title": "Wassersprudler »Crystal« titan, inkl. 0,7 L Glaskaraffe und Zylinder",
+      "wonCategoryPrimary": "Bedürfniswelten/Küche & Haushalt/Küchengeräte",
+      "wonCategoryPrimaryPath": "0/11/1111"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "discount": {
+       "absoluteDiscount": 5.0,
+       "deletedPrice": 89.99,
+       "discountHasStar": false,
+       "fromNormalPriceForLidlPlus": false,
+       "fromRecommendedPrice": true,
+       "hideBargainHint": false,
+       "bargainHintEnabled": false,
+       "bargainHintText": "Mega Schnäppchen",
+       "percentageDiscount": 5,
+       "showDiscount": true,
+       "showFrom": false,
+       "showPercentage": false,
+       "showUpTo": false
+      },
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {},
+      "price": 84.99,
+      "recommendedPrice": 89.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2026-11-11T10:14:36.729Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100411767,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": false,
+     "ratings": {
+      "average": 4.8,
+      "count": 53,
+      "recommendedNo": 1,
+      "recommendedYes": 50,
+      "sizePercentage": 0,
+      "topRated": true,
+      "text": "Top Kundenbewertungen"
+     },
+     "regionsPrices": {},
+     "ribbons": [
+      {
+       "type": "TOP_RATED",
+       "text": "Top Kundenbewertungen",
+       "theme": "top-rated",
+       "icon": "star-10"
+      }
+     ],
+     "renderedTs": 1794590711,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [
+         {
+          "key": "campaignTags",
+          "value": "testerES1bw-wonhuk"
+         }
+        ],
+        "text": [],
+        "flag": [],
+        "list": [],
+        "id": 132001,
+        "name": "campaignTags_DE",
+        "version": "1"
+       }
+      ]
+     },
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale von 23.11. - 28.11.",
+         "type": "ALSO_IN_STORE_FROM_FUTURE_DATE_RANGE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale von 23.11. - 28.11.",
+          "type": "ALSO_IN_STORE_FROM_FUTURE_DATE_RANGE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ],
+        "validFrom": 1795388400,
+        "validUntil": 1795906799
+       },
+       {
+        "badges": [
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": false,
+     "storeStartDate": 1795388400,
+     "storeEndDate": 1795906799,
+     "title": "Wassersprudler »Crystal« titan, inkl. 0,7 L Glaskaraffe und Zylinder",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "discount": {
+         "absoluteDiscount": 5.0,
+         "deletedPrice": 89.99,
+         "discountHasStar": false,
+         "fromNormalPriceForLidlPlus": false,
+         "fromRecommendedPrice": true,
+         "hideBargainHint": false,
+         "bargainHintEnabled": false,
+         "bargainHintText": "Mega Schnäppchen",
+         "percentageDiscount": 5,
+         "showDiscount": true,
+         "showFrom": false,
+         "showPercentage": false,
+         "showUpTo": false
+        },
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {},
+        "price": 84.99,
+        "recommendedPrice": 89.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2026-11-11T10:14:36.729Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95,
+        "parcelShopDeliveryCharge": 5.95,
+        "parcelLockerDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100411767,
+    "meta": {
+     "sapProductCategory": {
+      "code": "201036",
+      "name": "Sonstige Elektro-Küchengeräte",
+      "pathCode": "0/20/2010/201036",
+      "pathName": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Sonstige Elektro-Küchengeräte"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10097668",
+        "name": "Sommertage: Coole Erfrischung & Eiszeit",
+        "url": "/c/asc/sommertage-coole-erfrischung-eiszeit/a10097668"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10098691",
+        "name": "Sunday-Brunch: Barista-Bar & Vitamin-Kick",
+        "url": "/c/asc/sunday-brunch-barista-bar-vitamin-kick/a10098691"
+       }
+      ]
+     ],
+     "fullTitle": "SODASTREAM Wassersprudler »Crystal« titan, inkl. 0,7 L Glaskaraffe und Zylinder",
+     "ean": "7290119793891",
+     "gs1": {
+      "segment": {
+       "code": "72000000",
+       "label": "Haushaltsgeräte",
+       "family": {
+        "code": "72020000",
+        "label": "Haushaltskleingeräte",
+        "clazz": {
+         "code": "72020200",
+         "label": "Geräte zur Essens- / Getränkezubereitung",
+         "brick": {
+          "code": "10002016",
+          "label": "Wassersprudler",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "201036",
+        "name": "Sonstige Elektro-Küchengeräte",
+        "parent": "2010",
+        "superCategories": {
+         "category": [
+          {
+           "code": "2010",
+           "name": "Kleingeräte Küche",
+           "parent": "20"
+          },
+          {
+           "code": "20",
+           "name": "Haushalt & Küche",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067764",
+        "name": "Küche & Haushalt",
+        "url": "/c/kueche-haushalt/s10067764"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067522",
+        "name": "Küchengeräte",
+        "url": "/h/kuechengeraete/h10067522"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067764",
+        "name": "Küche & Haushalt",
+        "url": "/c/kueche-haushalt/s10067764"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067522",
+        "name": "Küchengeräte",
+        "url": "/h/kuechengeraete/h10067522"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10006302",
+        "name": "Wassersprudler",
+        "url": "/h/wassersprudler/h10006302"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067764",
+        "name": "Küche & Haushalt",
+        "url": "/c/kueche-haushalt/s10067764"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10067522",
+        "name": "Küchengeräte",
+        "url": "/h/kuechengeraete/h10067522"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10006304",
+        "name": "Sonstige Küchengeräte",
+        "url": "/h/sonstige-kuechengeraete/h10006304"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "1111",
+       "isMain": true,
+       "name": "Küchengeräte",
+       "parent": "11",
+       "superCategories": [
+        {
+         "code": "11",
+         "name": "Küche & Haushalt",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100411767"
+   },
+   "tracking": {
+    "position": 7,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100411767",
+     "searchTrackingTitle": "Wassersprudler+%C2%BBCrystal%C2%AB+titan%2C+inkl.+0%2C7+L+Glaskaraffe+und+Zylinder",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100411767",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 7,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Haushalt & Küche/Kleingeräte Küche/Sonstige Elektro-Küchengeräte"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100206999",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "YafVAabpa97qab+qgG3yHiw8q27blNe3wm3TQ5gk8fX0uWUx0yOelAAVXqg=",
+     "keywordScore": "IOwSrA5D8E643ZnsBw51VTRR9t+6hJUySudtqRR3HYYqzn1Fpr5nwHwujzs=",
+     "semanticScore": "Ks6S9aWa4lMT4I3fzeB44LkXxJLvXvaW2dQlS0Wgu8aKQmtowk5IUQv6X1A=",
+     "keywordScoreRaw": "GF6hRXh/wnMh2KMNTSkTQbXQbCDb46GUA2L8FK6R8d5qwOEsf6npq9T8qNg=",
+     "ratingScore": "tFDrhvbOtSGXFoiGc9Uc5mAUCjK1zk8Gseqhke2hcPwdErVFH2IyfaFBQdo=",
+     "freshnessScore": "AD8PLQo/FKmTQOuXWleIipBgCTdfSTddcCPNttao0ekE93c/38oPK14XB58=",
+     "searchHubImpressions": "J3j7jA7HxqNPrRlekZ0Q6UtXq1gty9AY/bR2sEW+8vmH5gFfcO3r9CQSxcE=",
+     "searchHubClicks": "uEM6GuRbEzpn2XwFHk0flzGTBMCypjc7W3CqT+fXmgymiu7RBX+KufWzj3Y=",
+     "searchHubCarts": "sjBvJt5z47uDYru0IQ5M+3SsN2sI0tO7dAIrKVyb7YeJRrVENLiCmW//tdQ=",
+     "businessRuleFactor": "cuD3UuB0cjrzj+XgkdaUtc0meOx8EFI9wm9nsfc8To65Z4ypeNeN0jWuBV8="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794697308650109,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "canonicalPath": "/p/schwarzwald-distilled-dry-gin-43-vol/p100206999",
+     "canonicalUrl": "/p/schwarzwald-distilled-dry-gin-43-vol/p100206999",
+     "category": "Kategorien/Spirituosen/Gin",
+     "categorySecondaryPath": "0/91/9110",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100206999_e7aa9de8",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100206999_81d43fc9",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100206999_d3d40a1d",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100206999",
+     "flashSales": false,
+     "fullTitle": "Schwarzwald Distilled Dry Gin 43% Vol",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 2,
+     "ians": [
+      "162663"
+     ],
+     "image": "https://www.lidl.de/assets/gcp5090371befe24adebc4030f8bd9a4349.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcp5090371befe24adebc4030f8bd9a4349.jpg",
+      "accessibility": "Flasche Schwarzwald Dry Gin, Schwarzwald-Stil."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcp5090371befe24adebc4030f8bd9a4349.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcp5090371befe24adebc4030f8bd9a4349.jpg",
+       "accessibility": "Flasche Schwarzwald Dry Gin, Schwarzwald-Stil."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Flasche Schwarzwald Dry Gin, Schwarzwald-Stil.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpcb4ceec504f44e008367a1e47798dc4a.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp5090371befe24adebc4030f8bd9a4349.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Spirituosen/Gin",
+      "description": "<p><strong>Schwarzwald Distilled Dry Gin 43% Vol</strong> — Klarer Dry Gin aus Deutschland mit wacholderbetonter Basis und feiner Fichtennote</p><ul><li>Dry Gin mit 43 % Vol in 0,5‑l‑Flasche</li><li>Wacholderdominant mit floralen Lavendeltönen</li><li>Single‑Batch‑Destillation für selektierten Geschmack</li><li>11 sorgfältig ausgewählte Botanicals für Komplexität</li><li>IWSC Silber 2023 prämiert</li></ul>",
+      "fullTitle": "Schwarzwald Distilled Dry Gin 43% Vol",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p> <img alt=\"Eisdrink mit Lippen.\" class=\"c-10\" src=\"/assets/gcpfbcd211498f643aabb111176aa9ba7bf.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 14px; margin-right: 9px;\"/> floral &amp; wacholderbetont <br/> <img alt=\"Whiskeyglas mit Eis und Cocktailshaker.\" class=\"c-10\" src=\"/assets/gcpc7c868a4d1b842469f87f22931be3f3c.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Dry Gin <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Deutschland </p>",
+      "title": "Schwarzwald Distilled Dry Gin 43% Vol",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Spirituosen/Gin",
+      "wonCategoryPrimaryPath": "0/10/1011/101112"
+     },
+     "lidlPlus": [],
+     "multipack": true,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.5,
+       "price": 16.98,
+       "text": "1 l = 16.98",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "multipackDisplayedCurrency": "€",
+      "packaging": {
+       "amount": 0.5,
+       "unit": "l"
+      },
+      "price": 8.49,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2024-10-01T09:07:47.232Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100206999,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.8,
+      "count": 241,
+      "recommendedNo": 3,
+      "recommendedYes": 72,
+      "sizePercentage": 0,
+      "topRated": true,
+      "text": "Top Kundenbewertungen"
+     },
+     "regionsPrices": {},
+     "ribbons": [
+      {
+       "type": "TOP_RATED",
+       "text": "Top Kundenbewertungen",
+       "theme": "top-rated",
+       "icon": "star-10"
+      }
+     ],
+     "renderedTs": 1794697308,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [],
+        "text": [],
+        "flag": [
+         {
+          "key": "HideWineQuantityHint",
+          "value": "true"
+         }
+        ],
+        "list": [],
+        "id": 223001,
+        "name": "Hide Quantity Hint for Wines",
+        "version": "4"
+       }
+      ]
+     },
+     "seals": [
+      {
+       "altText": "Meininger International Spirits Award: ISW, Silber, 2023",
+       "image": "https://www.lidl.de/assets/gcp4e7106d61cd64bb189f883f7ae3d1227.png"
+      },
+      {
+       "altText": "IWSC Est. 1969, Silber 2023, iwsc.net",
+       "image": "https://www.lidl.de/assets/gcp6a24213d469c458aac5b91da21f8901d.png"
+      }
+     ],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 3,
+      "backInStockNotification": false,
+      "backInStockNotificationSoldOut": false
+     },
+     "store": true,
+     "title": "Schwarzwald Distilled Dry Gin 43% Vol",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.5,
+         "price": 16.98,
+         "text": "1 l = 16.98",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "multipackDisplayedCurrency": "€",
+        "packaging": {
+         "amount": 0.5,
+         "unit": "l"
+        },
+        "price": 8.49,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2024-10-01T09:07:47.232Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100206999,
+    "meta": {
+     "sapProductCategory": {
+      "code": "9110",
+      "name": "Gin",
+      "pathCode": "0/91/9110",
+      "pathName": "Kategorien/Spirituosen/Gin"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10069455",
+        "name": "WS ISW Ausgezeichnete Spirituosen",
+        "url": "/c/ws-isw-ausgezeichnete-spirituosen/a10069455"
+       }
+      ]
+     ],
+     "fullTitle": "Schwarzwald Distilled Dry Gin 43% Vol",
+     "ean": "20830731",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000263",
+          "label": "Spirituosen",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "9110",
+        "name": "Gin",
+        "parent": "91",
+        "superCategories": {
+         "category": [
+          {
+           "code": "91",
+           "name": "Spirituosen",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068341",
+        "name": "Spirituosen",
+        "url": "/c/spirituosen/s10068341"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071511",
+        "name": "Gin",
+        "url": "/h/gin/h10071511"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10068374",
+        "name": "Essen & Trinken",
+        "url": "/c/essen-trinken/s10068374"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096268",
+        "name": "Wein, Bier & Spirituosen",
+        "url": "/h/wein-bier-spirituosen/h10096268"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096274",
+        "name": "Spirituosen",
+        "url": "/h/spirituosen/h10096274"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101112",
+       "isMain": true,
+       "name": "Gin",
+       "parent": "1011",
+       "superCategories": [
+        {
+         "code": "1011",
+         "name": "Spirituosen",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100206999"
+   },
+   "tracking": {
+    "position": 8,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100206999",
+     "searchTrackingTitle": "Schwarzwald+Distilled+Dry+Gin+43%25+Vol",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100206999",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 8,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Spirituosen/Gin"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100245506",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "6cCJPU1/nDojRQMZKlldghvjIiuEtosR7J2I1IZwJRBd4kphXZyHaAnOgBE=",
+     "keywordScore": "Z5CfB0iF1slon6VAnShOO8KTEoCV7v4uKgoRZgs/HszktVkviJuwE5UvcSQ=",
+     "semanticScore": "qxBarmY3NKbfb9u4tdzOfRZo9MWS0xb2x8SIRb2JgbMoe5taqV7Kf/cqoAc=",
+     "keywordScoreRaw": "Z0YgeFPHLu2vSP7qFqIQ2ibKpu1HqAi45sEUdT9wvlmhlHyzd+KHxZVl4Ws=",
+     "ratingScore": "VKXTTjTu0cMr7RR2etWMl0i8F1pUwEzySwHnxW7cQUuwC8BPe8acuZmEK8k=",
+     "freshnessScore": "xytU/QL0mub5pRuM4aQ8OagoaXz2gqubtmF4i+VE+wn/gGBo8TRdxzXQ3hQ=",
+     "searchHubImpressions": "UebalQlWNz8TJVM1j221Mis0rKThgUNLqOv22Mmjag8Cq82GirEsb6l53lo=",
+     "searchHubClicks": "Ejhi42arQKVfyC3nMVUnjAGdGn18wTyDf8egknqTswMDHTH1C5QBkPrDpuU=",
+     "searchHubCarts": "/sdWuU3q/mLi6FC3+nnzdf8I5kLMhik1qmdWwScdxlY4dccWEW0gBJfAbsw=",
+     "businessRuleFactor": "yjNPmXlTiQwgiJHoHyBqPsb4AOaYu9SDZlcNTsYQ4Td95/TynrVnaEpDmE0="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1793905950045830,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "canonicalPath": "/p/echter-nordhaeuser-doppelkorn-38-vol/p100245506",
+     "canonicalUrl": "/p/echter-nordhaeuser-doppelkorn-38-vol/p100245506",
+     "category": "Kategorien/Spirituosen/Korn",
+     "categorySecondaryPath": "0/91/9116",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100245506_010a3ec0",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100245506_a7bc6b48",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100245506_81061ba8",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100245506",
+     "flashSales": false,
+     "fullTitle": "Echter Nordhäuser Doppelkorn 38% Vol",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 0,
+     "ians": [
+      "7704556"
+     ],
+     "image": "https://www.lidl.de/assets/f1b08bd00a90cfbd9680702c4e4fc06c.jpeg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/f1b08bd00a90cfbd9680702c4e4fc06c.jpeg",
+      "accessibility": "Eine Flasche Echter Nordhäuser Doppelkorn, ein deutscher Kornbrand."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/f1b08bd00a90cfbd9680702c4e4fc06c.jpeg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/f1b08bd00a90cfbd9680702c4e4fc06c.jpeg",
+       "accessibility": "Eine Flasche Echter Nordhäuser Doppelkorn, ein deutscher Kornbrand."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Eine Flasche Echter Nordhäuser Doppelkorn, ein deutscher Kornbrand.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/852a8325c2659ae662f22d50ce95ed27.jpeg",
+          "smallUrl": "https://www.lidl.de/assets/f1b08bd00a90cfbd9680702c4e4fc06c.jpeg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Spirituosen/Korn",
+      "description": "<p><strong>Echter Nordhäuser Doppelkorn 38% Vol</strong> — Klassischer Kornbrand aus Nordhausen mit kräftigem Roggenaroma für Purgenuss und Mixgetränke</p><ul><li>Traditionelle Rezeptur seit 1507</li><li>Hergestellt aus Roggen und Malz</li><li>Lagerung über Eichenholz veredelt Geschmack</li><li>0,7‑l‑Flasche, 38 % vol Alkoholgehalt</li></ul>",
+      "fullTitle": "Echter Nordhäuser Doppelkorn 38% Vol",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p><img class=\"c-10\" src=\"/assets/gcpfbcd211498f643aabb111176aa9ba7bf.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 14px; margin-right: 9px;\" /> klar &amp; kr&auml;ftig<br /> <img class=\"c-10\" src=\"/assets/gcpc7c868a4d1b842469f87f22931be3f3c.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\" />Kornbrand<br /> <img class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\" /> Schottland, Speyside</p>",
+      "title": "Echter Nordhäuser Doppelkorn 38% Vol",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Spirituosen/Schnäpse & Co.",
+      "wonCategoryPrimaryPath": "0/10/1011/101114"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.7,
+       "price": 11.41,
+       "text": "1 l = 11.41",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {
+       "amount": 0.7,
+       "unit": "l"
+      },
+      "price": 7.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2025-08-04T07:50:18.713Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100245506,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.9,
+      "count": 29,
+      "recommendedNo": 1,
+      "recommendedYes": 19,
+      "sizePercentage": 0,
+      "topRated": true,
+      "text": "Top Kundenbewertungen"
+     },
+     "regionsPrices": {},
+     "ribbons": [
+      {
+       "type": "TOP_RATED",
+       "text": "Top Kundenbewertungen",
+       "theme": "top-rated",
+       "icon": "star-10"
+      }
+     ],
+     "renderedTs": 1793905949,
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": false,
+      "backInStockNotificationSoldOut": false
+     },
+     "store": true,
+     "title": "Echter Nordhäuser Doppelkorn 38% Vol",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.7,
+         "price": 11.41,
+         "text": "1 l = 11.41",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {
+         "amount": 0.7,
+         "unit": "l"
+        },
+        "price": 7.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2025-08-04T07:50:18.713Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100245506,
+    "meta": {
+     "sapProductCategory": {
+      "code": "9116",
+      "name": "Korn",
+      "pathCode": "0/91/9116",
+      "pathName": "Kategorien/Spirituosen/Korn"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [],
+     "fullTitle": "Echter Nordhäuser Doppelkorn 38% Vol",
+     "ean": "4400065467101",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000263",
+          "label": "Spirituosen",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "9116",
+        "name": "Korn",
+        "parent": "91",
+        "superCategories": {
+         "category": [
+          {
+           "code": "91",
+           "name": "Spirituosen",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068341",
+        "name": "Spirituosen",
+        "url": "/c/spirituosen/s10068341"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071539",
+        "name": "Schnäpse & Co.",
+        "url": "/h/schnaepse-co/h10071539"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10068374",
+        "name": "Essen & Trinken",
+        "url": "/c/essen-trinken/s10068374"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096268",
+        "name": "Wein, Bier & Spirituosen",
+        "url": "/h/wein-bier-spirituosen/h10096268"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096274",
+        "name": "Spirituosen",
+        "url": "/h/spirituosen/h10096274"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101114",
+       "isMain": true,
+       "name": "Schnäpse & Co.",
+       "parent": "1011",
+       "superCategories": [
+        {
+         "code": "1011",
+         "name": "Spirituosen",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100245506"
+   },
+   "tracking": {
+    "position": 9,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100245506",
+     "searchTrackingTitle": "Echter+Nordh%C3%A4user+Doppelkorn+38%25+Vol",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100245506",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 9,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Spirituosen/Korn"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100336259",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "8H+NyhTrfuPDvxSJrvoyuB7oMJGtLL8mV3dCSX9nSWXwd3efQyzF48wEVlc=",
+     "keywordScore": "3aPBbrEa0TgnInjpUF8vcE4K1Nvzkc69nKkG6zBkqD3U0gYrjd69xqTFppM=",
+     "semanticScore": "0IgBm4Ri9G0qf9cFIZepNsd/EMe3KXlnxJUERfJpzcffCSXXYV8pW9AxmmY=",
+     "keywordScoreRaw": "LKeCikfVaNeU68o8lfpw8wAeD08uE5jar5yZnJJSODtBB9YuUmbZJ+sIpG0=",
+     "ratingScore": "1H45JIecy8uoU9Dut1yTa705nWCGKJlM6UrdydZtydlb0iqtDVYotObwG/g=",
+     "freshnessScore": "k/YJBMhKhfggOUFGbsGOVAshU+Ur9ENzy4/sZDWC4mIFMS7/33DcUErQpkU=",
+     "searchHubImpressions": "aH97wP15xPjvOJZhcXPUr+/s3oGxL/jDu26WlgMtHyFASQuvRMWzuI1aVpY=",
+     "searchHubClicks": "kUjFzAVZ20OpTAWvN9uQa+sp6Jng5KqlPMgjSSeKIE/XSeF3Oul99QS56uA=",
+     "searchHubCarts": "3H1ZVLnggWQjKwOQeAuI5LD6SDVxyoRnj/Xn0kHg59/Ktqqf1H/BshQp/7Y=",
+     "businessRuleFactor": "Hs9ZKtEBj6iFTiRLV3uQtAqEKuRejnVgiDgPIAoU+Ds94XxcCPMk0JC/hEI="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794469327872039,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "canonicalPath": "/p/vino-rosado-tempranillo-3-l-bag-in-box-trocken-rosewein-2025/p100336259",
+     "canonicalUrl": "/p/vino-rosado-tempranillo-3-l-bag-in-box-trocken-rosewein-2025/p100336259",
+     "category": "Kategorien/Weinwelt/Weinart/Roséwein",
+     "categorySecondaryPath": "0/50/5010/501012",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100336259_47ce4b71",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100336259_325cf461",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100336259_cb9e0c4b",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100336259",
+     "flashSales": false,
+     "fullTitle": "Vino Rosado Tempranillo 3-l-Bag-in-Box trocken, Roséwein 2025",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 0,
+     "ians": [
+      "115462"
+     ],
+     "image": "https://www.lidl.de/assets/gcp6a4634698da44808aa95b4a5c0b4f2e0.jpeg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcp6a4634698da44808aa95b4a5c0b4f2e0.jpeg",
+      "accessibility": "Spanischer Roséwein aus Tempranillo Trauben, 3 Liter Flasche"
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcp6a4634698da44808aa95b4a5c0b4f2e0.jpeg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcp6a4634698da44808aa95b4a5c0b4f2e0.jpeg",
+       "accessibility": "Spanischer Roséwein aus Tempranillo Trauben, 3 Liter Flasche"
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Spanischer Roséwein aus Tempranillo Trauben, 3 Liter Flasche",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp8b7325c1181c4690b186974e76515646.jpeg",
+          "smallUrl": "https://www.lidl.de/assets/gcp6a4634698da44808aa95b4a5c0b4f2e0.jpeg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Weinwelt/Weinart/Roséwein",
+      "description": "<p><strong>Vino Rosado Tempranillo 3-l-Bag-in-Box trocken, Roséwein 2025</strong> Ein fruchtiger Rosé im praktischen Bag-in-Box-Format für unkomplizierten Genuss bei Treffen und Alltag.</p><ul><li>Fruchtig-intensives Aroma mit Tempranillo-Charakter</li><li>Praktische 3‑l‑Bag‑in‑Box für mehrere Abende</li><li>Alkoholgehalt 10,5 % vol für leichten Trinkfluss</li><li>Serviertemperatur 8–10 °C bringt Frische hervor</li></ul>",
+      "fullTitle": "Vino Rosado Tempranillo 3-l-Bag-in-Box trocken, Roséwein 2025",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<img alt=\"Blaues Weinglas-Symbol.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Geschmack_2.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 4px; max-width: 6px; margin-right: 14px;\"/> fruchtig &amp; intensiv <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Spanien <br/> <img alt=\"Illustration von Trauben.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Rebsorte_2.png\" style=\"float: left; padding-top: 2pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 11px; margin-right: 10px;\"/> Tempranillo, trocken <br/>",
+      "title": "Vino Rosado Tempranillo 3-l-Bag-in-Box trocken, Roséwein 2025",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Wein/Roséwein",
+      "wonCategoryPrimaryPath": "0/10/1010/101012"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 3.0,
+       "price": 1.66,
+       "text": "1 l = 1.66",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {
+       "amount": 3.0,
+       "unit": "l"
+      },
+      "price": 4.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2025-05-26T15:51:10.752Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100336259,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.4,
+      "count": 45,
+      "recommendedNo": 4,
+      "recommendedYes": 39,
+      "sizePercentage": 0,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1794469327,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [],
+        "text": [],
+        "flag": [
+         {
+          "key": "HideWineQuantityHint",
+          "value": "true"
+         }
+        ],
+        "list": [],
+        "id": 223001,
+        "name": "Hide Quantity Hint for Wines",
+        "version": "4"
+       }
+      ]
+     },
+     "seals": [],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": true,
+     "title": "Vino Rosado Tempranillo 3-l-Bag-in-Box trocken, Roséwein 2025",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 3.0,
+         "price": 1.66,
+         "text": "1 l = 1.66",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {
+         "amount": 3.0,
+         "unit": "l"
+        },
+        "price": 4.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2025-05-26T15:51:10.752Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100336259,
+    "meta": {
+     "sapProductCategory": {
+      "code": "501012",
+      "name": "Roséwein",
+      "pathCode": "0/50/5010/501012",
+      "pathName": "Kategorien/Weinwelt/Weinart/Roséwein"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10011459",
+        "name": "Weine aus Portugal & Spanien",
+        "url": "/c/weinwelt-sol-mar/a10011459"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10069470",
+        "name": "WS XXL",
+        "url": "/c/ws-xxl/a10069470"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10071466",
+        "name": "Weinbegleitung zu deinem Grillgericht",
+        "url": "/c/weinbegleitung-zu-deinem-grillgericht/a10071466"
+       }
+      ]
+     ],
+     "fullTitle": "Vino Rosado Tempranillo 3-l-Bag-in-Box trocken, Roséwein 2025",
+     "ean": "4056489249238",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000276",
+          "label": "Weine - ohne Kohlensäure",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "501012",
+        "name": "Roséwein",
+        "parent": "5010",
+        "superCategories": {
+         "category": [
+          {
+           "code": "5010",
+           "name": "Weinart",
+           "parent": "50"
+          },
+          {
+           "code": "50",
+           "name": "Weinwelt",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068342",
+        "name": "Wein",
+        "url": "/c/wein/s10068342"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071459",
+        "name": "Roséwein",
+        "url": "/h/rosewein/h10071459"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10068374",
+        "name": "Essen & Trinken",
+        "url": "/c/essen-trinken/s10068374"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096268",
+        "name": "Wein, Bier & Spirituosen",
+        "url": "/h/wein-bier-spirituosen/h10096268"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096271",
+        "name": "Roséwein",
+        "url": "/h/rosewein/h10096271"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101012",
+       "isMain": true,
+       "name": "Roséwein",
+       "parent": "1010",
+       "superCategories": [
+        {
+         "code": "1010",
+         "name": "Wein",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100336259"
+   },
+   "tracking": {
+    "position": 10,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100336259",
+     "searchTrackingTitle": "Vino+Rosado+Tempranillo+3-l-Bag-in-Box+trocken%2C+Ros%C3%A9wein+2025",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100336259",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 10,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Weinwelt/Weinart/Roséwein"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100359092",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "8VWzR/UM1ML8YhlTKT4w/m1kxYUFG4DvcAfqpmNd8MNHZ4Cebr507Mxv9FM=",
+     "keywordScore": "keYv/8aW5/cmHXg1ovbsVyoRwkqaddj4oh550u/KMR1jp1BramiTgesDG6E=",
+     "semanticScore": "c2bx4xNEs76QUqmpcPe1ynleRaxJPWdbWqPRQsfpnnPxbXXTOPpBjdiAmDw=",
+     "keywordScoreRaw": "9I7H3N0b3KlJv7nQemHD+AF58EdV760vw1CyEMYdTnVM33IZ916okYchTdo=",
+     "ratingScore": "WMdnSru+hv7lglfS75kHIhngdo5hHAId5gC8V/xSdBZVN0YlwU4r525dP1I=",
+     "freshnessScore": "V/HlbFHBtf2WUTtsGqV9uYJO5/ByZ9vezGiwP6U7WHhFTWJeEdKaoH7FGIQ=",
+     "searchHubImpressions": "9ra/UPUSe0z/kFbLg/xeGoZzXknOOhLmJX52kDcRxRa7WShgBoqsms1f5TM=",
+     "searchHubClicks": "V2SVVi60PnVq+Dp7wIo8sISvBnh1ed1TDVYUb+a2KKfobMSl53Y9OfCpwmY=",
+     "searchHubCarts": "TPT3SowC1XKumt6Q6zwxIf5Jz6OI3hPLT+HQAOcyJAwZAE6ZoFmUTOJRTbQ=",
+     "businessRuleFactor": "cryGjuQgTKQTX/77nHyFPy7s7WAX81+h1KMOEYsH5qZTZ34GJknAQWfmoq8="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1794210030844859,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "brand": {
+      "name": "RACHMANINOFF",
+      "url": "/q/search?q=rachmaninoff",
+      "id": "RACH",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/rachmaninoff-vodka-5-fach-destilliert-40-vol/p100359092",
+     "canonicalUrl": "/p/rachmaninoff-vodka-5-fach-destilliert-40-vol/p100359092",
+     "category": "Kategorien/Spirituosen/Wodka",
+     "categorySecondaryPath": "0/91/9112",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100359092_0fcdf39e",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100359092_3bc08f9b",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100359092_5113b59b",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100359092",
+     "flashSales": false,
+     "fullTitle": "RACHMANINOFF Vodka 5-fach destilliert 40% Vol",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 3,
+     "ians": [
+      "161867"
+     ],
+     "image": "https://www.lidl.de/assets/gcp7b88ce09fc8943ed8537b60090c5781a.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcp7b88ce09fc8943ed8537b60090c5781a.jpg",
+      "accessibility": "Flasche Rachmaninoff Wodka, 5-fach destilliert, 40% vol."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcp7b88ce09fc8943ed8537b60090c5781a.jpg",
+      "https://www.lidl.de/assets/gcp1b71583ecf354108a556596092e9c06f.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcp7b88ce09fc8943ed8537b60090c5781a.jpg",
+       "accessibility": "Flasche Rachmaninoff Wodka, 5-fach destilliert, 40% vol."
+      },
+      {
+       "image": "https://www.lidl.de/assets/gcp1b71583ecf354108a556596092e9c06f.jpg",
+       "accessibility": "Rachmaninoff Wodka, 5-fach destilliert, 40% vol, rein, sanft, klassisch, Qualität seit 1890"
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Flasche Rachmaninoff Wodka, 5-fach destilliert, 40% vol.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp58aa892868124cb197966105e85609ed.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp7b88ce09fc8943ed8537b60090c5781a.jpg"
+         }
+        }
+       ]
+      },
+      {
+       "accessibility": "Rachmaninoff Wodka, 5-fach destilliert, 40% vol, rein, sanft, klassisch, Qualität seit 1890",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcpbd823bbcaec9432d974d12554cbbf02f.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp1b71583ecf354108a556596092e9c06f.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Spirituosen/Wodka",
+      "description": "<p><strong>RACHMANINOFF Vodka 5-fach destilliert 40% Vol</strong>: Klarer Wodka mit fünffacher Destillation für puren Genuss und vielseitige Cocktailkreationen.</p><ul><li>Fünffach destilliert für spürbare Milde</li><li>Mehrfache Filtration für klare Reinheit</li><li>40,0 % Vol Alkoholgehalt, klassisches Format 0,7‑l‑Flasche</li><li>Ideal pur, auf Eis oder als Basis für Cocktails</li><li>Aus Deutschland, mehrfach ausgezeichnet</li></ul>",
+      "fullTitle": "RACHMANINOFF Vodka 5-fach destilliert 40% Vol",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p><img alt=\"Whiskeyglas mit Eis und Cocktailshaker.\" class=\"c-10\" src=\"/assets/gcpc7c868a4d1b842469f87f22931be3f3c.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\" /> Vodka<br /> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\" /> Deutschland</p> <p>&nbsp;</p>",
+      "title": "Vodka 5-fach destilliert 40% Vol",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Spirituosen/Vodka",
+      "wonCategoryPrimaryPath": "0/10/1011/101115"
+     },
+     "lidlPlus": [],
+     "multipack": false,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.7,
+       "price": 10.7,
+       "text": "1 l = 10.70",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "packaging": {
+       "amount": 0.7,
+       "unit": "l"
+      },
+      "price": 7.49,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2025-08-04T07:41:44.019Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100359092,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.7,
+      "count": 31,
+      "recommendedNo": 0,
+      "recommendedYes": 31,
+      "sizePercentage": 0,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1794210030,
+     "seals": [
+      {
+       "altText": "Schwarzes rundes Siegel mit Goldrand: 90 Punkte, Verkostung 2025.",
+       "image": "https://www.lidl.de/assets/gcp1b3274cba0a44bd59a58f83228cc7552.jpeg"
+      },
+      {
+       "altText": "Meininger's International Spirits Award: ISW Gold 2024",
+       "image": "https://www.lidl.de/assets/gcpdcea77a9324e42d1bf7d7f25f9fa4075.png"
+      }
+     ],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 1,
+      "backInStockNotification": true,
+      "backInStockNotificationSoldOut": true
+     },
+     "store": true,
+     "title": "Vodka 5-fach destilliert 40% Vol",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.7,
+         "price": 10.7,
+         "text": "1 l = 10.70",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "packaging": {
+         "amount": 0.7,
+         "unit": "l"
+        },
+        "price": 7.49,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2025-08-04T07:41:44.019Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100359092,
+    "meta": {
+     "sapProductCategory": {
+      "code": "9112",
+      "name": "Wodka",
+      "pathCode": "0/91/9112",
+      "pathName": "Kategorien/Spirituosen/Wodka"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10069455",
+        "name": "WS ISW Ausgezeichnete Spirituosen",
+        "url": "/c/ws-isw-ausgezeichnete-spirituosen/a10069455"
+       }
+      ]
+     ],
+     "fullTitle": "RACHMANINOFF Vodka 5-fach destilliert 40% Vol",
+     "ean": "4056489425090",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000263",
+          "label": "Spirituosen",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "9112",
+        "name": "Wodka",
+        "parent": "91",
+        "superCategories": {
+         "category": [
+          {
+           "code": "91",
+           "name": "Spirituosen",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068341",
+        "name": "Spirituosen",
+        "url": "/c/spirituosen/s10068341"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071541",
+        "name": "Vodka",
+        "url": "/h/vodka/h10071541"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10068374",
+        "name": "Essen & Trinken",
+        "url": "/c/essen-trinken/s10068374"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096268",
+        "name": "Wein, Bier & Spirituosen",
+        "url": "/h/wein-bier-spirituosen/h10096268"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096274",
+        "name": "Spirituosen",
+        "url": "/h/spirituosen/h10096274"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101115",
+       "isMain": true,
+       "name": "Vodka",
+       "parent": "1011",
+       "superCategories": [
+        {
+         "code": "1011",
+         "name": "Spirituosen",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100359092"
+   },
+   "tracking": {
+    "position": 11,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100359092",
+     "searchTrackingTitle": "Vodka+5-fach+destilliert+40%25+Vol",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100359092",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 11,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Spirituosen/Wodka"
+    }
+   }
+  },
+  {
+   "resultClass": "product",
+   "type": "product",
+   "code": "100186903",
+   "label": "",
+   "url": "",
+   "xPayload": {
+    "metaData": {
+     "relevancyScore": "q4XjdV5IpIfKXSKfLAIqpDPq9H5jGodIQROEFSK+M7pPxkRMUfcCkQ/eBcY=",
+     "keywordScore": "g9OwsBN3vSYpPVXVOQzzaxtWlrVicLOV/xnO5wORGraU5BOxUSocD6//GwU=",
+     "semanticScore": "D4zLEud46Yu6V07mfv/iSfBRWms6S7vlBu7y5bnYXk/pnmF1qyvagbeRPpk=",
+     "keywordScoreRaw": "/UBnjzKTd+eWxEkhFkGCAzQb5PWxI5d3FkzyjZ/hDb85JQSDY+h4AYg5Apc=",
+     "ratingScore": "fFjq8mBMhluN5gMdICqLu9rTXjW4QFpRqQP3n4CwnkhZ2pKBbXZ0os7AcBw=",
+     "freshnessScore": "82n5SzCITC0sIck0b2b11yzeYbwhtZLxMAwW8vRjoB0nuhkLW4Gnb+5Gm3U=",
+     "searchHubImpressions": "URKGmR5wUNq9kUzUXpl9VP4lGttcbGB1HUUzYXEl4KT0b53h3UDyirbkl7E=",
+     "searchHubClicks": "F+ZSDC8eWkjS22VvQ6D1zCDv+oHDqkeZCqXnhsXbL21SP/AJXl4QbR/tb8k=",
+     "searchHubCarts": "HBECHr2yOpoyZYLguszuW0r7lradDMIV6uBHzKj1Uj5hT4JwUgoh5aD0cwE=",
+     "businessRuleFactor": "EqNatRjRWr2vSIGabV+pDEVXZQHRlxnmKZUlYpV244wqQr87AwyGnc3vwNk="
+    }
+   },
+   "gridbox": {
+    "country": "DE",
+    "sequence": 1793808718193062,
+    "data": {
+     "ageRestriction": false,
+     "alcoholicDetails": "Wichtige Produktinformationen",
+     "hasColors": false,
+     "awards": [],
+     "brand": {
+      "name": "ZACHOS",
+      "url": "/q/search?q=zachos",
+      "id": "ZACH",
+      "showBrand": true
+     },
+     "canonicalPath": "/p/zachos-ouzo-38-vol/p100186903",
+     "canonicalUrl": "/p/zachos-ouzo-38-vol/p100186903",
+     "category": "Kategorien/Spirituosen/Obstbrand",
+     "categorySecondaryPath": "0/91/9115",
+     "cutoutimageV2": [],
+     "dealOfDay": {
+      "active": false
+     },
+     "designTheme": "default",
+     "disclaimers": [
+      {
+       "id": "code_100186903_56f66e82",
+       "type": "CODE",
+       "value": "Basic"
+      },
+      {
+       "id": "code_100186903_b35b9997",
+       "type": "CODE",
+       "value": "Alcohol"
+      },
+      {
+       "id": "code_100186903_b8d41390",
+       "type": "CODE",
+       "value": "Price"
+      }
+     ],
+     "displayFreeDelivery": false,
+     "energyLabels": [],
+     "erpNumber": "100186903",
+     "flashSales": false,
+     "fullTitle": "ZACHOS Ouzo 38% Vol",
+     "gs1Attributes": [],
+     "guaranteeLabels": [],
+     "havingPrice": true,
+     "havingThreesixty": false,
+     "havingVideos": false,
+     "highlightedSeals": 3,
+     "ians": [
+      "21979"
+     ],
+     "image": "https://www.lidl.de/assets/gcp017a1650519b4e40bacf4a7e6f855b25.jpg",
+     "image_V1": {
+      "image": "https://www.lidl.de/assets/gcp017a1650519b4e40bacf4a7e6f855b25.jpg",
+      "accessibility": "Zachos Ouzo 38% Vol in der 0,7-l-Flasche."
+     },
+     "isLidlGiftCard": false,
+     "isUsedProduct": false,
+     "imageList": [
+      "https://www.lidl.de/assets/gcp017a1650519b4e40bacf4a7e6f855b25.jpg"
+     ],
+     "imageList_V1": [
+      {
+       "image": "https://www.lidl.de/assets/gcp017a1650519b4e40bacf4a7e6f855b25.jpg",
+       "accessibility": "Zachos Ouzo 38% Vol in der 0,7-l-Flasche."
+      }
+     ],
+     "imageList_V2": [
+      {
+       "accessibility": "Zachos Ouzo 38% Vol in der 0,7-l-Flasche.",
+       "variants": [
+        {
+         "ratio": "4:3",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp58fb62c804784c1aa0ea323557820625.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp017a1650519b4e40bacf4a7e6f855b25.jpg"
+         }
+        },
+        {
+         "ratio": "3:4",
+         "sizes": {
+          "mediumUrl": "https://www.lidl.de/assets/gcp8a88bc141d7e4214bd7c304bf565d80a.jpg",
+          "smallUrl": "https://www.lidl.de/assets/gcp882048220351469ca0e1751c49e341cb.jpg"
+         }
+        }
+       ]
+      }
+     ],
+     "keyfacts": {
+      "analyticsCategory": "Kategorien/Spirituosen/Obstbrand",
+      "description": "<p><strong>ZACHOS Ouzo 38% Vol</strong> – Griechischer Anis-Aperitif, harmonisch und charaktervoll für Genussmomente</p><ul><li>Harmonisch anisbetont mit feiner Kräuternote</li><li>Klassische 0,7‑l‑Flasche ideal für Geselligkeit</li><li>38 % vol für intensiven Geschmack ohne Schwere</li><li>Aus Thrakien: traditionelle Brennkunst aus dem Norden Griechenlands</li><li>IWSC Gold 2024 und 88 Punkte Falstaff 2025 als Qualitätsnachweis</li></ul>",
+      "fullTitle": "ZACHOS Ouzo 38% Vol",
+      "moreDetails": "Weitere Produktdetails",
+      "supplementalDescription": "<p> <img alt=\"Eisdrink mit Lippen.\" class=\"c-10\" src=\"/assets/gcpfbcd211498f643aabb111176aa9ba7bf.png\" style=\"float: left; padding-top: 4px; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 14px; margin-right: 9px;\"/> harmonisch&nbsp;&amp; anisbetont <br/> <img alt=\"Whiskeyglas mit Eis und Cocktailshaker.\" class=\"c-10\" src=\"/assets/gcpc7c868a4d1b842469f87f22931be3f3c.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Ouzo <br/> <img alt=\"Weltkarte Globus.\" class=\"c-10\" src=\"/de/asset/other/Pikto_Wein_Erde.png\" style=\"float: left; padding-top: 3pt; padding-bottom: 0px; display: block; margin-left: 2px; max-width: 12px; margin-right: 9px;\"/> Griechenland </p>",
+      "title": "Ouzo 38% Vol",
+      "wonCategoryPrimary": "Bedürfniswelten/Wein, Bier und Spirituosen/Spirituosen/Schnäpse & Co.",
+      "wonCategoryPrimaryPath": "0/10/1011/101114"
+     },
+     "lidlPlus": [],
+     "multipack": true,
+     "online": true,
+     "preventSelling": false,
+     "price": {
+      "basePrice": {
+       "amount": 0.7,
+       "price": 9.99,
+       "text": "1 l = 9.99",
+       "unit": "l"
+      },
+      "currencyCode": "EUR",
+      "currencyCodeSecond": "",
+      "currencySymbol": "€",
+      "currencySymbolSecond": "",
+      "hasStar": true,
+      "hasVat": true,
+      "hasZeroVat": false,
+      "multipackDisplayedCurrency": "€",
+      "packaging": {
+       "amount": 0.7,
+       "unit": "l"
+      },
+      "price": 6.99,
+      "showEndDate": false,
+      "specialTaxes": [],
+      "startDate": "2024-07-10T10:51:17.327Z",
+      "superscript": "",
+      "tax": "19",
+      "variantsHaveDifferentPrices": false
+     },
+     "productId": 100186903,
+     "productType": "FLAT",
+     "productOrigin": "progress_event",
+     "quickAddToCart": true,
+     "ratings": {
+      "average": 4.6,
+      "count": 64,
+      "recommendedNo": 1,
+      "recommendedYes": 7,
+      "sizePercentage": 0,
+      "topRated": false
+     },
+     "regionsPrices": {},
+     "ribbons": [],
+     "renderedTs": 1793808718,
+     "salesAttributes": {
+      "template": [
+       {
+        "date": [],
+        "label": [],
+        "text": [],
+        "flag": [
+         {
+          "key": "HideWineQuantityHint",
+          "value": "true"
+         }
+        ],
+        "list": [],
+        "id": 223001,
+        "name": "Hide Quantity Hint for Wines",
+        "version": "4"
+       }
+      ]
+     },
+     "seals": [
+      {
+       "altText": "IWSC Gold 2024, Est. 1969, iwsc.net",
+       "image": "https://www.lidl.de/assets/gcp875dd64f427148c68539e57bd9cc2f81.png"
+      },
+      {
+       "altText": "Siegel mit 88 Punkten und der Aufschrift „Tasting 2025“.",
+       "image": "https://www.lidl.de/assets/gcp5b4d8ad9f8c344df97da661647a8385b.jpeg"
+      }
+     ],
+     "stockAvailability": {
+      "availabilityIndicator": 3,
+      "badgeInfo": {
+       "badges": [
+        {
+         "text": "auch in der Filiale",
+         "type": "ALSO_IN_STORE"
+        },
+        {
+         "text": "lieferbar",
+         "type": "AVAILABLE_ONLINE"
+        }
+       ]
+      },
+      "badgeInfoV2": [
+       {
+        "badges": [
+         {
+          "text": "auch in der Filiale",
+          "type": "ALSO_IN_STORE"
+         },
+         {
+          "text": "lieferbar",
+          "type": "AVAILABLE_ONLINE"
+         }
+        ]
+       }
+      ],
+      "onlineAvailable": true,
+      "minOrderableQuantity": 3,
+      "backInStockNotification": false,
+      "backInStockNotificationSoldOut": false
+     },
+     "store": true,
+     "title": "Ouzo 38% Vol",
+     "timezoneId": "Europe/Berlin",
+     "zones": {
+      "DE1": {
+       "currentPrice": {
+        "basePrice": {
+         "amount": 0.7,
+         "price": 9.99,
+         "text": "1 l = 9.99",
+         "unit": "l"
+        },
+        "currencyCode": "EUR",
+        "currencyCodeSecond": "",
+        "currencySymbol": "€",
+        "currencySymbolSecond": "",
+        "hasStar": true,
+        "hasVat": true,
+        "hasZeroVat": false,
+        "multipackDisplayedCurrency": "€",
+        "packaging": {
+         "amount": 0.7,
+         "unit": "l"
+        },
+        "price": 6.99,
+        "showEndDate": false,
+        "specialTaxes": [],
+        "startDate": "2024-07-10T10:51:17.327Z",
+        "superscript": "",
+        "tax": "19",
+        "variantsHaveDifferentPrices": false
+       },
+       "dealOfDay": {
+        "active": false
+       },
+       "deliveryCharges": {
+        "absoluteDeliveryCharge": 0,
+        "additiveDeliveryCharge": 0,
+        "defaultDeliveryCharge": 5.95,
+        "freeDelivery": false,
+        "homeDeliveryCharge": 5.95
+       },
+       "id": "DE1",
+       "isDefault": true,
+       "margin": {},
+       "statusDisplayStorefront": "DISPLAY",
+       "statusOnlineActual": "ONLINE",
+       "zone": "DE National"
+      }
+     }
+    },
+    "productId": 100186903,
+    "meta": {
+     "sapProductCategory": {
+      "code": "9115",
+      "name": "Obstbrand",
+      "pathCode": "0/91/9115",
+      "pathName": "Kategorien/Spirituosen/Obstbrand"
+     },
+     "categoryPaths": [],
+     "campaignPaths": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10010990",
+        "name": "Großer Griechenland-Sale!",
+        "url": "/c/weinwelt-so-schmeckt-die-welt-griechenland/a10010990"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10059921",
+        "name": "Weinwelt Du hast die Wahl",
+        "url": "/c/weinwelt-du-hast-die-wahl/a10059921"
+       }
+      ]
+     ],
+     "fullTitle": "ZACHOS Ouzo 38% Vol",
+     "ean": "20141356",
+     "gs1": {
+      "segment": {
+       "code": "50000000",
+       "label": "Lebensmittel / Getränke / Tabakwaren",
+       "family": {
+        "code": "50200000",
+        "label": "Getränke",
+        "clazz": {
+         "code": "50202200",
+         "label": "Alkoholische Getränke (inklusive der alkoholfreien Varianten)",
+         "brick": {
+          "code": "10000263",
+          "label": "Spirituosen",
+          "attributeGS1": []
+         }
+        }
+       }
+      }
+     },
+     "shopCategories": {
+      "shopCategory": [
+       {
+        "code": "9115",
+        "name": "Obstbrand",
+        "parent": "91",
+        "superCategories": {
+         "category": [
+          {
+           "code": "91",
+           "name": "Spirituosen",
+           "parent": "0"
+          },
+          {
+           "code": "0",
+           "name": "Kategorien",
+           "parent": ""
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "wonCategoryBreadcrumbs": [
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10067766",
+        "name": "Wein & Spirituosen",
+        "url": "/c/wein-spirituosen/s10067766"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10068341",
+        "name": "Spirituosen",
+        "url": "/c/spirituosen/s10068341"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10071539",
+        "name": "Schnäpse & Co.",
+        "url": "/h/schnaepse-co/h10071539"
+       }
+      ],
+      [
+       {
+        "hiddenCategory": false,
+        "id": "10068374",
+        "name": "Essen & Trinken",
+        "url": "/c/essen-trinken/s10068374"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096268",
+        "name": "Wein, Bier & Spirituosen",
+        "url": "/h/wein-bier-spirituosen/h10096268"
+       },
+       {
+        "hiddenCategory": false,
+        "id": "10096274",
+        "name": "Spirituosen",
+        "url": "/h/spirituosen/h10096274"
+       }
+      ]
+     ],
+     "worldOfNeeds": [
+      {
+       "code": "101114",
+       "isMain": true,
+       "name": "Schnäpse & Co.",
+       "parent": "1011",
+       "superCategories": [
+        {
+         "code": "1011",
+         "name": "Spirituosen",
+         "parent": "10"
+        },
+        {
+         "code": "10",
+         "name": "Wein, Bier und Spirituosen",
+         "parent": "0"
+        },
+        {
+         "code": "0",
+         "name": "Bedürfniswelten",
+         "parent": ""
+        }
+       ]
+      }
+     ],
+     "preview": false
+    },
+    "action": "UPDATE",
+    "language": "de",
+    "eventType": "GRIDBOX",
+    "id": "100186903"
+   },
+   "tracking": {
+    "position": 12,
+    "xPayload": {
+     "searchTrackingMasterId": "Product.100186903",
+     "searchTrackingTitle": "Ouzo+38%25+Vol",
+     "searchTrackingPageSize": 60,
+     "searchTrackingPage": 1,
+     "searchTrackingEvent": "click",
+     "list": "search",
+     "searchTrackingId": "Product.100186903",
+     "searchTrackingOrigPos": 1,
+     "searchTrackingPos": 12,
+     "searchTrackingOrigPageSize": 60,
+     "searchTrackingChannel": "DE",
+     "category": "Kategorien/Spirituosen/Obstbrand"
+    }
+   }
+  }
+ ],
+ "breadcrumbs": [
+  {
+   "code": "query",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0",
+   "link": {
+    "type": "search",
+    "filter": {}
+   }
+  },
+  {
+   "code": "store",
+   "label": "[1]",
+   "url": "/q/api/search?assortment=DE&locale=de_DE&version=v2.0.0&store=1",
+   "link": {
+    "type": "search",
+    "filter": {
+     "store": [
+      "1"
+     ]
+    }
+   }
+  }
+ ],
+ "details": {},
+ "teasers": {
+  "above search result": [
+   {
+    "id": "40fe980a-e036-4dc1-81b3-d8b5fa86f21d",
+    "name": "2026_KW47 OS Black Month",
+    "link": "https://www.lidl.de/c/black-week/s10080642",
+    "image": "/static/assets/dt_2647_Black-Weeks_Search_Desktop-2568930.jpg",
+    "mobile_image": "/static/assets/dt_2647_Black-Weeks_Search_Mobile-2568929.jpg",
+    "alt_image": "Jetzt bis zu 75% Rabatt sichern in unserem Black Month ",
+    "open_in_a_new_tab": false
+   }
+  ]
+ },
+ "advisors": []
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261115-0106-index-grocery-offer-valid-to" author="benedikt">
+        <comment>Supermarkt-Angebote: Index fuer das Ersetzen des Bestands (valid_to >= heute).</comment>
+        <createIndex tableName="grocery_offer" indexName="idx_grocery_offer_valid_to">
+            <column name="valid_to"/>
+        </createIndex>
+        <rollback><dropIndex tableName="grocery_offer" indexName="idx_grocery_offer_valid_to"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

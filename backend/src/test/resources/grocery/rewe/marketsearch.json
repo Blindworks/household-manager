@@ -1,0 +1,527 @@
+{
+ "markets": [
+  {
+   "wwIdent": "240405",
+   "name": "REWE Kaffenberger - Heilsberg",
+   "companyName": "REWE Bernd Kaffenberger oHG",
+   "street": "Alte Frankfurter Straße 26",
+   "zipCode": "61118",
+   "city": "Bad Vilbel / Heilsberg",
+   "location": {
+    "latitude": 50.16816,
+    "longitude": 8.7272
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240767",
+   "name": "REWE Kaffenberger - Am Südbahnhof",
+   "companyName": "REWE Bernd Kaffenberger oHG",
+   "street": "Am Südbahnhof 2-10",
+   "zipCode": "61118",
+   "city": "Bad Vilbel",
+   "location": {
+    "latitude": 50.17863,
+    "longitude": 8.73443
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "562417",
+   "name": "REWE Kaffenberger - Trinkkultur",
+   "companyName": "REWE Bernd Kaffenberger oHG",
+   "street": "Friedberger Straße 124",
+   "zipCode": "61118",
+   "city": "Bad Vilbel",
+   "location": {
+    "latitude": 50.19271,
+    "longitude": 8.74351
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 08:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "08:00 - 20:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE Getränkemarkt",
+    "template": "GM",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "1464175",
+   "name": "REWE Kaffenberger - Rodheimer Straße",
+   "companyName": "REWE Bernd Kaffenberger oHG",
+   "street": "Rodheimer Straße 15",
+   "zipCode": "61118",
+   "city": "Bad Vilbel",
+   "location": {
+    "latitude": 50.18897,
+    "longitude": 8.73375
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "1461489",
+   "name": "Nahkauf",
+   "companyName": "Markt&Service GmbH Petterweil",
+   "street": "Drosselweg 1-5",
+   "zipCode": "61130",
+   "city": "Nidderau / Ostheim",
+   "location": {
+    "latitude": 50.22119,
+    "longitude": 8.9077
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 20:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "Nahkauf",
+    "template": "NK",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "230487",
+   "name": "REWE Center",
+   "companyName": "REWE Markt GmbH",
+   "street": "Gehrener Ring 1",
+   "zipCode": "61130",
+   "city": "Nidderau / Heldenbergen",
+   "location": {
+    "latitude": 50.2278,
+    "longitude": 8.8728
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE Center",
+    "template": "RC",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240171",
+   "name": "REWE",
+   "companyName": "REWE Markt GmbH",
+   "street": "Uferstraße 1-5",
+   "zipCode": "61137",
+   "city": "Schöneck / Kilianstädten",
+   "location": {
+    "latitude": 50.20196,
+    "longitude": 8.83946
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240190",
+   "name": "REWE",
+   "companyName": "REWE Markt GmbH",
+   "street": "Im Krämer 7",
+   "zipCode": "61169",
+   "city": "Friedberg",
+   "location": {
+    "latitude": 50.32745,
+    "longitude": 8.75111
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240298",
+   "name": "REWE Center",
+   "companyName": "REWE Markt GmbH",
+   "street": "Am Warthweg 1-5",
+   "zipCode": "61184",
+   "city": "Karben",
+   "location": {
+    "latitude": 50.23754,
+    "longitude": 8.74911
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 08:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "08:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE Center",
+    "template": "RC",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "1464161",
+   "name": "REWE",
+   "companyName": "REWE-Markt Fuchs oHG",
+   "street": "Luisenthaler Straße 2b",
+   "zipCode": "61184",
+   "city": "Karben / Kloppenheim",
+   "location": {
+    "latitude": 50.23388,
+    "longitude": 8.75917
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "1464130",
+   "name": "REWE",
+   "companyName": "REWE-Markt Fuchs oHG",
+   "street": "Rendeler Straße 76",
+   "zipCode": "61184",
+   "city": "Karben",
+   "location": {
+    "latitude": 50.22157,
+    "longitude": 8.77723
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "1461528",
+   "name": "Nahkauf",
+   "companyName": "Markt&Service GmbH Petterweil",
+   "street": "Vilbeler Straße 5",
+   "zipCode": "61184",
+   "city": "Karben / Petterweil",
+   "location": {
+    "latitude": 50.24104,
+    "longitude": 8.71813
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 08:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Fr",
+     "hours": "08:00 - 20:00 Uhr",
+     "openingType": "REGULAR"
+    },
+    {
+     "days": "Sa",
+     "hours": "08:00 - 18:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "Nahkauf",
+    "template": "NK",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240231",
+   "name": "REWE",
+   "companyName": "REWE Markt GmbH",
+   "street": "Bei den Junkergärten 1",
+   "zipCode": "61191",
+   "city": "Rosbach vor der Höhe",
+   "location": {
+    "latitude": 50.30079,
+    "longitude": 8.6942
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240313",
+   "name": "REWE",
+   "companyName": "REWE Markt GmbH",
+   "street": "Im Seelhof 1",
+   "zipCode": "61191",
+   "city": "Rosbach v. d. H. / Rodheim",
+   "location": {
+    "latitude": 50.26766,
+    "longitude": 8.69747
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "240156",
+   "name": "REWE",
+   "companyName": "REWE Markt GmbH",
+   "street": "Geschwister-Scholl-Straße 24",
+   "zipCode": "61194",
+   "city": "Niddatal / Assenheim",
+   "location": {
+    "latitude": 50.29357,
+    "longitude": 8.80986
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  },
+  {
+   "wwIdent": "1465256",
+   "name": "REWE Hedro Masso oHG",
+   "companyName": "REWE Hedro Masso oHG",
+   "street": "Willy-Brandt-Straße 12",
+   "zipCode": "61197",
+   "city": "Florstadt / Nieder-Florstadt",
+   "location": {
+    "latitude": 50.31814,
+    "longitude": 8.85872
+   },
+   "openingStatus": {
+    "infoText": "bis Mo. 07:00 Uhr",
+    "openState": "CLOSED",
+    "statusText": "Geschlossen"
+   },
+   "openingInfo": [
+    {
+     "days": "Mo-Sa",
+     "hours": "07:00 - 22:00 Uhr",
+     "openingType": "REGULAR"
+    }
+   ],
+   "category": {
+    "isWarehouse": false,
+    "marketTypeDisplayName": "REWE",
+    "template": "RN",
+    "type": "MARKET"
+   },
+   "distance": null,
+   "distanceRaw": null
+  }
+ ],
+ "paging": {
+  "objectsPerPage": 20,
+  "currentPage": 1,
+  "pageCount": 1,
+  "objectCount": 16
+ }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261115-0103-create-grocery-match" author="benedikt">
+        <comment>Supermarkt-Angebote: Urteil je Produkt und Angebots-Fingerabdruck.</comment>
+        <sql>
+            CREATE TABLE grocery_match (
+                id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+                product_id BIGINT NOT NULL,
+                fingerprint CHAR(64) NOT NULL,
+                verdict VARCHAR(10) NOT NULL,
+                reason_kind VARCHAR(20) NULL,
+                reason VARCHAR(200) NULL,
+                decided_by VARCHAR(10) NOT NULL,
+                decided_at DATETIME NOT NULL,
+                CONSTRAINT uq_grocery_match_product_fingerprint UNIQUE (product_id, fingerprint),
+                CONSTRAINT fk_grocery_match_product FOREIGN KEY (product_id) REFERENCES grocery_product (id) ON DELETE CASCADE
+            )
+        </sql>
+        <rollback><dropTable tableName="grocery_match"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

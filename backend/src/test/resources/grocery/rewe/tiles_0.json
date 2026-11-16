@@ -1,0 +1,145 @@
+[
+ {
+  "id": "8302417",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Illy Kaffeekapseln Classico\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/8302417/29230494-7_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/8302417/29230494-7_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/8302417/29230494-7_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Illy Kaffeekapseln Classico, Aktionspreis 3,69 €\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"8302417\" data-offer-title=\"Illy Kaffeekapseln Classico\" data-testid=\"offer-title-link\">Illy Kaffeekapseln Classico</a></h3><span class=\"cor-offer-information__additional\">versch. Sorten</span><span class=\"cor-offer-information__additional\">, je 57-g-Pckg.</span><span class=\"cor-offer-information__additional\">, (1 kg = 64,74 €)</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">3,69 €</div></div></div></div></article>"
+ },
+ {
+  "id": "504997",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Bio Romana Salatherzen\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/0504997/21868328-11_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/0504997/21868328-11_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/0504997/21868328-11_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Bio Romana Salatherzen, Aktionspreis 1,59 €\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"504997\" data-offer-title=\"Bio Romana Salatherzen\" data-testid=\"offer-title-link\">Bio Romana Salatherzen</a></h3><span class=\"cor-offer-information__additional\">Kl. II</span><span class=\"cor-offer-information__additional\">, je 2 St.-Pckg.</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">1,59 €</div></div></div></div></article>"
+ },
+ {
+  "id": "7982031",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Passionsfrucht\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/7982031/50597422-20_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/7982031/50597422-20_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/7982031/50597422-20_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Passionsfrucht, Aktionspreis 0,59 €\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"7982031\" data-offer-title=\"Passionsfrucht\" data-testid=\"offer-title-link\">Passionsfrucht</a></h3><span class=\"cor-offer-information__additional\">je St.</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">0,59 €</div></div></div></div></article>"
+ },
+ {
+  "id": "1903482",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-loyalty-badge\" data-testid=\"cor-loyalty-badge\" aria-hidden=\"true\"><img src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/loyalty-icon.svg\" width=\"24\" height=\"24\" alt=\"REWE Bonus Logo\">\n0,10 €</div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Granini Die Limo\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/1903482/20984838-50_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/1903482/20984838-50_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/1903482/20984838-50_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Granini Die Limo, Aktionspreis 1,29 € +0,10 € REWE Bonus Guthaben\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"1903482\" data-offer-title=\"Granini Die Limo\" data-testid=\"offer-title-link\">Granini Die Limo</a></h3><span class=\"cor-offer-information__additional\">versch. Sorten</span><span class=\"cor-offer-information__additional\">, je 1-l-Fl.</span><span class=\"cor-offer-information__additional\">, zzgl. 0,25 € Pfand</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">1,29 €</div></div></div></div></article>"
+ },
+ {
+  "id": "427365",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-badges\"><div class=\"cor-badge-item\"><div class=\"cor-badge-item__text\">Bedientheke</div></div></div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Casa Modena Salame Gran Magro\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/0427365/22258291-3_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/0427365/22258291-3_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/0427365/22258291-3_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Casa Modena Salame Gran Magro, Knallerpreis 1,99 €\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"427365\" data-offer-title=\"Casa Modena Salame Gran Magro\" data-testid=\"offer-title-link\">Casa Modena Salame Gran Magro</a></h3><span class=\"cor-offer-information__additional\">feine Salamispezialität</span><span class=\"cor-offer-information__additional\">, je 100 g</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Knaller</div><div class=\"cor-offer-price__tag-price\">1,99 €</div></div></div></div></article>"
+ },
+ {
+  "id": "8931513",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-loyalty-badge\" data-testid=\"cor-loyalty-badge\" aria-hidden=\"true\"><img src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/loyalty-icon.svg\" width=\"24\" height=\"24\" alt=\"REWE Bonus Logo\">\n0,60 €</div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Pepero Sticks\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/8931513/56959564-11_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/8931513/56959564-11_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/8931513/56959564-11_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Pepero Sticks, +0,60 € REWE Bonus Guthaben\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"8931513\" data-offer-title=\"Pepero Sticks\" data-testid=\"offer-title-link\">Pepero Sticks</a></h3><span class=\"cor-offer-information__additional\">je 47-g-Pckg.</span></div></div><div class=\"cor-offer-renderer-tile__footer\"></div></article>"
+ },
+ {
+  "id": "8842339",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-badges\"><div class=\"cor-badge-item\"><div class=\"cor-badge-item__text\">Bedientheke</div></div></div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"El Pozo Spanische Truthahn-Mortadella\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/8842339/25505534-6_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/8842339/25505534-6_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/8842339/25505534-6_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"El Pozo Spanische Truthahn-Mortadella, Aktionspreis 1,29 €\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"8842339\" data-offer-title=\"El Pozo Spanische Truthahn-Mortadella\" data-testid=\"offer-title-link\">El Pozo Spanische Truthahn-Mortadella</a></h3><span class=\"cor-offer-information__additional\">versch. Sorten</span><span class=\"cor-offer-information__additional\">, je 100 g</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">1,29 €</div></div></div></div></article>"
+ },
+ {
+  "id": "8070288",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Landliebe Butter\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/8070288/7704790-64_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/8070288/7704790-64_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/8070288/7704790-64_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Landliebe Butter, Aktionspreis 1,29 €\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"8070288\" data-offer-title=\"Landliebe Butter\" data-testid=\"offer-title-link\">Landliebe Butter</a></h3><span class=\"cor-offer-information__additional\">je 250-g-Pckg.</span><span class=\"cor-offer-information__additional\">, (1 kg = 5,16 €)</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">1,29 €</div></div></div></div></article>"
+ },
+ {
+  "id": "475455",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-loyalty-badge\" data-testid=\"cor-loyalty-badge\" aria-hidden=\"true\"><img src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/loyalty-icon.svg\" width=\"24\" height=\"24\" alt=\"REWE Bonus Logo\">\n0,10 €</div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Adelholzener Active O2\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/0475455/37265185-5_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/0475455/37265185-5_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/0475455/37265185-5_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Adelholzener Active O2, Aktionspreis 0,99 € +0,10 € REWE Bonus Guthaben\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"475455\" data-offer-title=\"Adelholzener Active O2\" data-testid=\"offer-title-link\">Adelholzener Active O2</a></h3><span class=\"cor-offer-information__additional\">versch. Sorten</span><span class=\"cor-offer-information__additional\">, je 0,75-l-Fl.</span><span class=\"cor-offer-information__additional\">, (1 l = 1,32 €)</span><span class=\"cor-offer-information__additional\">, zzgl. 0,25 € Pfand</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">0,99 €</div></div></div></div></article>"
+ },
+ {
+  "id": "7571068",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-loyalty-badge\" data-testid=\"cor-loyalty-badge\" aria-hidden=\"true\"><img src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/loyalty-icon.svg\" width=\"24\" height=\"24\" alt=\"REWE Bonus Logo\">\n0,60 €</div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Pepero Sticks\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/7571068/56950599-7_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/7571068/56950599-7_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/7571068/56950599-7_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Pepero Sticks, +0,60 € REWE Bonus Guthaben\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"7571068\" data-offer-title=\"Pepero Sticks\" data-testid=\"offer-title-link\">Pepero Sticks</a></h3><span class=\"cor-offer-information__additional\">je 32-g-Pckg.</span></div></div><div class=\"cor-offer-renderer-tile__footer\"></div></article>"
+ },
+ {
+  "id": "26109",
+  "styles": [
+   "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.css"
+  ],
+  "scripts": [
+   {
+    "src": "https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/offer-renderer.js",
+    "extraAttributes": ""
+   }
+  ],
+  "content": "<article lang=\"de\" class=\"cor-offer-renderer-tile cor-link\"><div class=\"cor-offer-renderer-tile__header\"><div class=\"cor-loyalty-badge\" data-testid=\"cor-loyalty-badge\" aria-hidden=\"true\"><img src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/loyalty-icon.svg\" width=\"24\" height=\"24\" alt=\"REWE Bonus Logo\">\n0,10 €</div></div><div class=\"cor-offer-renderer-tile__content\"><div aria-hidden=\"true\" class=\"cor-offer-image\"><div class=\"tkr-placeholder\" data-src=\"https://shop.rewe-static.de/content-offer-renderer/5a4ebac05458bdf6939c22f97012e19fcb9def1c/img/offer-image-placeholder.svg\" data-fit=\"contain\"><img class=\"tkr-lazy\" loading=\"lazy\" width=\"200\" height=\"200\" alt=\"Coca-Cola\" data-srcset=\"https://img.rewe-static.de/Rewe47_2026/0026109/29087985-40_digital-image.png?impolicy=s-offers&imwidth=200 1x,\n                              https://img.rewe-static.de/Rewe47_2026/0026109/29087985-40_digital-image.png?impolicy=s-offers&imwidth=400 2x\" data-src=\"https://img.rewe-static.de/Rewe47_2026/0026109/29087985-40_digital-image.png?impolicy=s-offers&imwidth=200\" data-testid=\"offer-image\"></div></div><div class=\"cor-offer-information\"><h3 class=\"cor-offer-information__title\"><a class=\"cor-offer-information__title-link\" aria-label=\"Coca-Cola, Aktionspreis 1,19 € +0,10 € REWE Bonus Guthaben\" href=\"javascript:;\" data-offer-go-detail-link data-offer-deeplink=\"true\" data-offer-wwident=\"240767\" data-offer-week=\"2026/47\" data-offer-nan=\"26109\" data-offer-title=\"Coca-Cola\" data-testid=\"offer-title-link\">Coca-Cola</a></h3><span class=\"cor-offer-information__additional\">versch. Sorten, teilw. koffeinhaltig</span><span class=\"cor-offer-information__additional\">, je 1,25-l-Fl.</span><span class=\"cor-offer-information__additional\">, (1 l = 0,95 €)</span><span class=\"cor-offer-information__additional\">, zzgl. 0,25 € Pfand</span></div></div><div class=\"cor-offer-renderer-tile__footer\"><div class=\"cor-offer-price\"><div class=\"cor-offer-price__tag\"><div class=\"cor-offer-price__tag-label\">Aktion</div><div class=\"cor-offer-price__tag-price\">1,19 €</div></div></div></div></article>"
+ }
+]
