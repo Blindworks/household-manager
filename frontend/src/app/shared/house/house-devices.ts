@@ -157,7 +157,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
 
   // Treppenhaus
   roomClimate('treppenhaus', 'sensor.dirigera_bffb9dee1dbc4670964f8a1ef8d11b5c'),
-  motion('treppenhaus', 'binary_sensor.zigbee_motion_treppenhaus_occupancy'),
+  motion('treppenhaus', 'binary_sensor.dirigera_545526627da34993b17c488b8dd1b5e0_occupancy'),
   button('treppenhaus', [
     'event.dirigera_4ab740b2efb543018bf563c702722938_1_action',
     'event.dirigera_4ab740b2efb543018bf563c702722938_2_action',

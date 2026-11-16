@@ -20,7 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Ein Sensor am IKEA-Dirigera-Hub: Thermometer (TIMMERFLOTTE) oder Fenster-/Tuerkontakt, siehe
+ * Ein Sensor am IKEA-Dirigera-Hub: Thermometer (TIMMERFLOTTE), Fenster-/Tuerkontakt oder Bewegungsmelder, siehe
  * {@link DirigeraSensorKind}. Die Zeile haengt an der Geraete-Id des
  * Hubs (relationId); verschwindet das Geraet dort, bleibt sie mit knownToHub = false stehen,
  * damit die Historie nicht verloren geht.
@@ -63,6 +63,14 @@ public class DirigeraSensor {
     /** Nur bei Kontakten gesetzt; null = Zustand unbekannt. */
     @Column(name = "last_open")
     private Boolean lastOpen;
+
+    /** Nur bei Bewegungsmeldern gesetzt; null = Zustand unbekannt. */
+    @Column(name = "last_detected")
+    private Boolean lastDetected;
+
+    /** Helligkeit in Lux, nur bei Bewegungsmeldern mit Lichtfuehler. */
+    @Column(name = "last_illuminance")
+    private Integer lastIlluminance;
 
     @Column(name = "battery_percent")
     private Integer batteryPercent;

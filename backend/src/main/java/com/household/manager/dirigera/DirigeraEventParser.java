@@ -14,7 +14,8 @@ import java.util.Optional;
  * (Fixture {@code remote-press-event.json}): ein Tastendruck ist
  * {@code {"type":"remotePressEvent","time":…,"data":{"id":"<geraet>_1","clickPattern":"singlePress"}}};
  * Zustandsmeldungen ({@code deviceStateChanged}) tragen nur die geaenderten Attribute; ausgewertet
- * wird davon nur {@code isOpen} der Fenster-/Tuerkontakte, alles andere liefert weiter der Poll.
+ * werden davon {@code isOpen} der Fenster-/Tuerkontakte sowie {@code isDetected}/{@code illuminance}
+ * der Bewegungsmelder (aufgezeichnet 2026-11-16), alles andere liefert weiter der Poll.
  * Wirft nie.
  */
 @Component
@@ -23,6 +24,8 @@ public class DirigeraEventParser {
     private static final String REMOTE_PRESS = "remotePressEvent";
     private static final String STATE_CHANGED = "deviceStateChanged";
     private static final String CONTACT_TYPE = "openCloseSensor";
+    private static final String OCCUPANCY_TYPE = "occupancySensor";
+    private static final String LIGHT_TYPE = "lightSensor";
 
     private final ObjectMapper mapper;
 
@@ -58,16 +61,50 @@ public class DirigeraEventParser {
         if (!CONTACT_TYPE.equals(data.path("deviceType").asText()) || !isOpen.isBoolean()) {
             return Optional.empty();
         }
-        String key = nonBlank(data.path("relationId"));
-        if (key == null) {
-            key = nonBlank(data.path("id"));
-        }
+        String key = key(data);
         if (key == null) {
             return Optional.empty();
         }
-        JsonNode reachable = data.path("isReachable");
         return Optional.of(new DirigeraContactChange(key, isOpen.asBoolean(), instant(data.path("lastSeen")),
-                reachable.isBoolean() ? reachable.asBoolean() : null));
+                reachable(data)));
+    }
+
+    /**
+     * Bewegungsmelder: {@code deviceStateChanged} des {@code occupancySensor} mit {@code isDetected}
+     * oder des {@code lightSensor} mit {@code illuminance}. Leer, wenn keiner der beiden Werte dabei ist.
+     */
+    public Optional<DirigeraMotionChange> parseMotionChange(String json) {
+        JsonNode root = read(json, STATE_CHANGED);
+        if (root == null) {
+            return Optional.empty();
+        }
+        JsonNode data = root.path("data");
+        String type = data.path("deviceType").asText();
+        JsonNode attributes = data.path("attributes");
+        Boolean detected = null;
+        Integer illuminance = null;
+        if (OCCUPANCY_TYPE.equals(type) && attributes.path("isDetected").isBoolean()) {
+            detected = attributes.path("isDetected").asBoolean();
+        } else if (LIGHT_TYPE.equals(type) && attributes.path("illuminance").isNumber()) {
+            illuminance = DirigeraIlluminance.toLux(attributes.path("illuminance").asInt());
+        }
+        String key = key(data);
+        if ((detected == null && illuminance == null) || key == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new DirigeraMotionChange(key, detected, illuminance, instant(data.path("lastSeen")),
+                reachable(data)));
+    }
+
+    /** Schluessel wie im Parser der Geraeteliste: {@code relationId}, sonst die Geraete-Id. */
+    private static String key(JsonNode data) {
+        String key = nonBlank(data.path("relationId"));
+        return key != null ? key : nonBlank(data.path("id"));
+    }
+
+    private static Boolean reachable(JsonNode data) {
+        JsonNode reachable = data.path("isReachable");
+        return reachable.isBoolean() ? reachable.asBoolean() : null;
     }
 
     private JsonNode read(String json, String type) {

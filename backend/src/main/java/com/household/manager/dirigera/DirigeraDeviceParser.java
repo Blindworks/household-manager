@@ -21,6 +21,8 @@ import java.util.Optional;
  * Feld, nicht das Suffix der Id. Fenster-/Tuerkontakte ({@code openCloseSensor}) werden ebenso
  * gruppiert; fehlt ihnen die {@code relationId}, gilt die Geraete-Id. Taster ({@code genericSwitch})
  * werden je Taste gelistet, nicht gruppiert: jede Taste meldet ihre Druecke unter der eigenen Id.
+ * Bewegungsmelder (MYGGSPRAY) erscheinen als {@code occupancySensor} ({@code isDetected}) plus
+ * {@code lightSensor} ({@code illuminance}) mit gleicher {@code relationId} (aufgezeichnet 2026-11-16).
  */
 @Component
 public class DirigeraDeviceParser {
@@ -29,6 +31,8 @@ public class DirigeraDeviceParser {
     private static final String CONTACT_TYPE = "openCloseSensor";
     private static final String GATEWAY_TYPE = "gateway";
     private static final String BUTTON_TYPE = "genericSwitch";
+    private static final String OCCUPANCY_TYPE = "occupancySensor";
+    private static final String LIGHT_TYPE = "lightSensor";
     private static final int VALUE_SCALE = 2;
 
     private final ObjectMapper mapper;
@@ -42,6 +46,7 @@ public class DirigeraDeviceParser {
         String gatewayId = null;
         Map<String, List<JsonNode>> sensorParts = new LinkedHashMap<>();
         Map<String, List<JsonNode>> contactParts = new LinkedHashMap<>();
+        Map<String, List<JsonNode>> motionParts = new LinkedHashMap<>();
         List<DirigeraButton> buttons = new ArrayList<>();
         for (JsonNode device : root) {
             String type = device.path("deviceType").asText("");
@@ -53,11 +58,9 @@ public class DirigeraDeviceParser {
                     sensorParts.computeIfAbsent(relationId, k -> new ArrayList<>()).add(device);
                 }
             } else if (CONTACT_TYPE.equals(type)) {
-                String relationId = textOrNull(device.get("relationId"));
-                String key = relationId != null ? relationId : textOrNull(device.get("id"));
-                if (key != null) {
-                    contactParts.computeIfAbsent(key, k -> new ArrayList<>()).add(device);
-                }
+                addByKey(contactParts, device);
+            } else if (OCCUPANCY_TYPE.equals(type) || LIGHT_TYPE.equals(type)) {
+                addByKey(motionParts, device);
             } else if (BUTTON_TYPE.equals(type)) {
                 button(device).ifPresent(buttons::add);
             }
@@ -65,7 +68,17 @@ public class DirigeraDeviceParser {
         List<DirigeraSensorSnapshot> sensors = new ArrayList<>();
         sensorParts.forEach((relationId, parts) -> sensors.add(merge(relationId, DirigeraSensorKind.ENVIRONMENT, parts)));
         contactParts.forEach((relationId, parts) -> sensors.add(merge(relationId, DirigeraSensorKind.CONTACT, parts)));
+        motionParts.forEach((relationId, parts) -> sensors.add(merge(relationId, DirigeraSensorKind.MOTION, parts)));
         return new DirigeraDevices(gatewayId, sensors, buttons);
+    }
+
+    /** Schluessel ist die relationId, fehlt sie, die Geraete-Id. */
+    private static void addByKey(Map<String, List<JsonNode>> parts, JsonNode device) {
+        String relationId = textOrNull(device.get("relationId"));
+        String key = relationId != null ? relationId : textOrNull(device.get("id"));
+        if (key != null) {
+            parts.computeIfAbsent(key, k -> new ArrayList<>()).add(device);
+        }
     }
 
     private JsonNode readRoot(String json) {
@@ -85,6 +98,8 @@ public class DirigeraDeviceParser {
         BigDecimal temperature = null;
         BigDecimal humidity = null;
         Boolean open = null;
+        Boolean detected = null;
+        Integer illuminance = null;
         Integer battery = null;
         Instant lastSeen = null;
         String name = null;
@@ -102,6 +117,14 @@ public class DirigeraDeviceParser {
             JsonNode openNode = attributes.get("isOpen");
             if (open == null && openNode != null && openNode.isBoolean()) {
                 open = openNode.asBoolean();
+            }
+            JsonNode detectedNode = attributes.get("isDetected");
+            if (detected == null && detectedNode != null && detectedNode.isBoolean()) {
+                detected = detectedNode.asBoolean();
+            }
+            JsonNode illuminanceNode = attributes.get("illuminance");
+            if (illuminance == null && illuminanceNode != null && illuminanceNode.isNumber()) {
+                illuminance = DirigeraIlluminance.toLux(illuminanceNode.asInt());
             }
             JsonNode batteryNode = attributes.get("batteryPercentage");
             if (batteryNode != null && batteryNode.isNumber()) {
@@ -126,7 +149,7 @@ public class DirigeraDeviceParser {
             }
         }
         return new DirigeraSensorSnapshot(relationId, kind, name != null ? name : model, room, model,
-                temperature, humidity, open, battery, reachable, lastSeen);
+                temperature, humidity, open, detected, illuminance, battery, reachable, lastSeen);
     }
 
     private static Optional<DirigeraButton> button(JsonNode device) {

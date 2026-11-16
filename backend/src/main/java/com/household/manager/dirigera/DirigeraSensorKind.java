@@ -1,7 +1,11 @@
 package com.household.manager.dirigera;
 
-/** Art eines Dirigera-Sensors: Thermometer (TIMMERFLOTTE) oder Fenster-/Tuerkontakt (z. B. PARASOLL). */
+/**
+ * Art eines Dirigera-Sensors: Thermometer (TIMMERFLOTTE), Fenster-/Tuerkontakt (z. B. MYGGBETT)
+ * oder Bewegungsmelder mit Helligkeitsfuehler (MYGGSPRAY).
+ */
 public enum DirigeraSensorKind {
     ENVIRONMENT,
-    CONTACT
+    CONTACT,
+    MOTION
 }

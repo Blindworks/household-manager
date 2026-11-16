@@ -19,8 +19,8 @@ export interface DirigeraPairingStatus {
   error: string | null;
 }
 
-/** ENVIRONMENT = Thermometer (TIMMERFLOTTE), CONTACT = Fenster-/Türkontakt. */
-export type DirigeraSensorKind = 'ENVIRONMENT' | 'CONTACT';
+/** ENVIRONMENT = Thermometer (TIMMERFLOTTE), CONTACT = Fenster-/Türkontakt, MOTION = Bewegungsmelder (MYGGSPRAY). */
+export type DirigeraSensorKind = 'ENVIRONMENT' | 'CONTACT' | 'MOTION';
 
 export interface DirigeraSensor {
   id: number;
@@ -32,6 +32,10 @@ export interface DirigeraSensor {
   humidity: number | null;
   /** nur bei Kontakten; null = Zustand unbekannt */
   open: boolean | null;
+  /** nur bei Bewegungsmeldern; null = Zustand unbekannt */
+  detected: boolean | null;
+  /** Helligkeit in Lux, nur bei Bewegungsmeldern */
+  illuminance: number | null;
   batteryPercent: number | null;
   reachable: boolean;
   knownToHub: boolean;

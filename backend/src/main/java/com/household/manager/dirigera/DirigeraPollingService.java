@@ -23,12 +23,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Fragt den Dirigera-Hub minuetlich ab und spiegelt die Sensoren in DB, Verlauf und Entity-State-Layer.
  * Ein Hubfehler macht alle Sensor-Entitaeten unavailable (einmalig, mit erhaltenen Attributen);
- * die Scheduled-Methode wirft nie. Fenster-/Tuerkontakte kommen zusaetzlich sofort ueber den
- * Ereignisstrom ({@link #applyContactChange}); der Poll ist dafuer nur noch der Abgleich.
+ * die Scheduled-Methode wirft nie. Fenster-/Tuerkontakte und Bewegungsmelder kommen zusaetzlich sofort
+ * ueber den Ereignisstrom ({@link #applyContactChange}, {@link #applyMotionChange}); der Poll ist
+ * dafuer nur noch der Abgleich.
  */
 @Service
 @Slf4j
@@ -56,11 +58,15 @@ public class DirigeraPollingService {
     // Nur im Speicher, fuer die Admin-Seite
     private volatile PollStatus status = new PollStatus(null, null);
     /**
-     * Zeitpunkt des letzten Kontakt-Ereignisses je Sensor. Ein Poll, dessen Abruf vor diesem
-     * Zeitpunkt begann, traegt einen aelteren Stand und darf {@code lastOpen} nicht ueberschreiben —
-     * sonst flackerte der Kontakt auf → zu → auf und Flows feuerten doppelt.
+     * Zeitpunkt des letzten Kontakt- bzw. Bewegungs-Ereignisses je Sensor. Ein Poll, dessen Abruf vor
+     * diesem Zeitpunkt begann, traegt einen aelteren Stand und darf {@code lastOpen}/{@code lastDetected}
+     * nicht ueberschreiben — sonst flackerte der Zustand auf → zu → auf und Flows feuerten doppelt.
      */
     private final Map<String, Instant> contactEventAt = new ConcurrentHashMap<>();
+    /** Wie {@link #contactEventAt}, fuer die Helligkeit der Bewegungsmelder. */
+    private final Map<String, Instant> illuminanceEventAt = new ConcurrentHashMap<>();
+    /** Endung der Teilgeraete-Id ({@code <relationId>_2}); Ereignisse tragen nur diese Id. */
+    private static final Pattern PART_SUFFIX = Pattern.compile("_\\d+$");
 
     public DirigeraPollingService(DirigeraSettingsService settingsService,
                                   DirigeraHttpClient httpClient,
@@ -197,6 +203,57 @@ public class DirigeraPollingService {
         }
     }
 
+    /**
+     * Bewegung oder Helligkeit aus dem Ereignisstrom: sofort in Zeile und Entitaeten. Ereignisse
+     * tragen keine relationId, nur die Teilgeraete-Id ({@code <relationId>_2}); gesucht wird deshalb
+     * erst mit dem Schluessel selbst, dann ohne die Endung. Ein dem Poll unbekannter Sensor wird
+     * ignoriert. Wirft nie.
+     */
+    public synchronized void applyMotionChange(DirigeraMotionChange change) {
+        try {
+            Optional<DirigeraSensor> found = findMotionSensor(change.key());
+            if (found.isEmpty()) {
+                log.debug("Dirigera-Bewegungsmelder {} noch unbekannt, wartet auf den Poll", change.key());
+                return;
+            }
+            DirigeraSensor row = found.get();
+            Instant now = Instant.now(clock);
+            if (change.detected() != null) {
+                contactEventAt.put(row.getRelationId(), now);
+                row.setLastDetected(change.detected());
+            }
+            if (change.illuminance() != null) {
+                illuminanceEventAt.put(row.getRelationId(), now);
+                row.setLastIlluminance(change.illuminance());
+            }
+            if (change.lastSeen() != null) {
+                row.setLastSeenAt(LocalDateTime.ofInstant(change.lastSeen(), clock.getZone()));
+            }
+            if (change.reachable() != null) {
+                row.setReachable(change.reachable());
+            }
+            DirigeraSensor saved = repository.save(row);
+            DirigeraSensor current = saved != null ? saved : row;
+            if (current.isKnownToHub() && isFresh(current)) {
+                mapper.updates(current).forEach(entityStateService::reportState);
+            }
+        } catch (Exception e) {
+            log.warn("Dirigera-Bewegungsmelder {} nicht aus dem Ereignis uebernommen: {}", change.key(), e.getMessage());
+        }
+    }
+
+    private Optional<DirigeraSensor> findMotionSensor(String key) {
+        Optional<DirigeraSensor> exact = repository.findByRelationId(key)
+                .filter(row -> row.getKind() == DirigeraSensorKind.MOTION);
+        if (exact.isPresent()) {
+            return exact;
+        }
+        String stripped = PART_SUFFIX.matcher(key).replaceFirst("");
+        return stripped.equals(key)
+                ? Optional.empty()
+                : repository.findByRelationId(stripped).filter(row -> row.getKind() == DirigeraSensorKind.MOTION);
+    }
+
     private synchronized void apply(DirigeraDevices devices, Instant fetchStartedAt) {
         Set<String> seen = new HashSet<>();
         for (DirigeraSensorSnapshot snapshot : devices.sensors()) {
@@ -229,6 +286,11 @@ public class DirigeraPollingService {
         Instant eventAt = contactEventAt.get(s.relationId());
         if (eventAt == null || eventAt.isBefore(fetchStartedAt)) {
             row.setLastOpen(s.open());
+            row.setLastDetected(s.detected());
+        }
+        Instant illuminanceAt = illuminanceEventAt.get(s.relationId());
+        if (illuminanceAt == null || illuminanceAt.isBefore(fetchStartedAt)) {
+            row.setLastIlluminance(s.illuminance());
         }
         row.setName(truncate(s.name()));
         row.setRoom(truncate(s.room()));
@@ -257,13 +319,14 @@ public class DirigeraPollingService {
      * Thermometer melden laufend, bei ihnen ist ein altes {@code lastSeen} ein Ausfall. Kontakte
      * (MYGGBETT) aktualisieren {@code lastSeen} am Hub nur bei einem Auf/Zu — ein ruhendes Fenster
      * waere sonst nach {@code stale-after-minutes} {@code unavailable} (real 2026-11-04). Fuer sie
-     * zaehlt deshalb allein die Erreichbarkeit, die der Hub selbst meldet.
+     * zaehlt deshalb allein die Erreichbarkeit, die der Hub selbst meldet. Bewegungsmelder (MYGGSPRAY)
+     * ebenso: in einem ruhigen Treppenhaus meldet sich nachts stundenlang nichts.
      */
     private boolean isFresh(DirigeraSensor row) {
         if (!row.isReachable()) {
             return false;
         }
-        if (row.getKind() == DirigeraSensorKind.CONTACT) {
+        if (row.getKind() == DirigeraSensorKind.CONTACT || row.getKind() == DirigeraSensorKind.MOTION) {
             return true;
         }
         if (row.getLastSeenAt() == null) {

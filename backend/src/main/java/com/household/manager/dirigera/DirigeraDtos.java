@@ -29,13 +29,15 @@ public final class DirigeraDtos {
     }
 
     public record SensorView(Long id, DirigeraSensorKind kind, String name, String room, String model,
-                             BigDecimal temperature, BigDecimal humidity, Boolean open, Integer batteryPercent,
+                             BigDecimal temperature, BigDecimal humidity, Boolean open, Boolean detected,
+                             Integer illuminance, Integer batteryPercent,
                              boolean reachable, boolean knownToHub, LocalDateTime lastSeenAt) {
 
         static SensorView from(DirigeraSensor sensor) {
             return new SensorView(sensor.getId(), sensor.getKind(), sensor.getName(), sensor.getRoom(),
                     sensor.getModel(), sensor.getLastTemperature(), sensor.getLastHumidity(), sensor.getLastOpen(),
-                    sensor.getBatteryPercent(), sensor.isReachable(), sensor.isKnownToHub(), sensor.getLastSeenAt());
+                    sensor.getLastDetected(), sensor.getLastIlluminance(), sensor.getBatteryPercent(),
+                    sensor.isReachable(), sensor.isKnownToHub(), sensor.getLastSeenAt());
         }
     }
 }

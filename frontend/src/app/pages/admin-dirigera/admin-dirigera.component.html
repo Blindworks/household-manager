@@ -79,6 +79,8 @@
               <td>{{ sensor.room ?? '–' }}</td>
               @if (sensor.kind === 'CONTACT') {
                 <td colspan="2">{{ contactLabel(sensor) }}</td>
+              } @else if (sensor.kind === 'MOTION') {
+                <td colspan="2">{{ motionLabel(sensor) }}</td>
               } @else {
                 <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
                 <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>

@@ -102,6 +102,11 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     return sensor.open ? 'Offen' : 'Geschlossen';
   }
 
+  motionLabel(sensor: DirigeraSensor): string {
+    const state = sensor.detected === null ? 'Zustand unbekannt' : (sensor.detected ? 'Bewegung' : 'Keine Bewegung');
+    return sensor.illuminance === null ? state : `${state} · ${sensor.illuminance} lx`;
+  }
+
   /** Tastendrücke zeigen sich erst nach dem Neuladen (die Liste aktualisiert sich nicht selbst). */
   reloadButtons(): void {
     this.loadButtons();

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Ein DDL je Changeset: MariaDB committet DDL implizit -->
+    <changeSet id="20261116-0107-add-dirigera-sensor-last-detected" author="claude">
+        <comment>Letzter Bewegungszustand eines Dirigera-Bewegungsmelders (NULL = unbekannt oder andere Art).</comment>
+        <addColumn tableName="dirigera_sensor">
+            <column name="last_detected" type="BOOLEAN"/>
+        </addColumn>
+        <rollback><dropColumn tableName="dirigera_sensor" columnName="last_detected"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

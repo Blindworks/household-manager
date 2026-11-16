@@ -20,7 +20,8 @@ import java.util.Map;
  * Letztwerten der {@link DirigeraSensor}-Zeile. Die Id haengt an der relationId des Hubs, nie am
  * Namen (Umbenennen ist fuer Flows gefahrlos). Thermometer bewusst ohne deviceClass (projektweit
  * nur fuer door und power ausgewertet); Kontakte tragen dagegen {@code door} wie die
- * Zigbee-Kontakte, damit der Fenster-Check vor Abwesend/Toni allein sie mitzaehlt.
+ * Zigbee-Kontakte, damit der Fenster-Check vor Abwesend/Toni allein sie mitzaehlt. Bewegungsmelder
+ * tragen wie die Zigbee-Melder {@code motion} (Belegung) und eine eigene Helligkeits-Entitaet.
  */
 @Component
 public class DirigeraEntityMapper {
@@ -29,6 +30,12 @@ public class DirigeraEntityMapper {
     private static final String CONTACT_SUFFIX = "contact";
     private static final String CONTACT_LABEL = "Kontakt";
     private static final String CONTACT_DEVICE_CLASS = "door";
+    private static final String OCCUPANCY_SUFFIX = "occupancy";
+    private static final String OCCUPANCY_LABEL = "Bewegung";
+    private static final String MOTION_DEVICE_CLASS = "motion";
+    private static final String ILLUMINANCE_SUFFIX = "illuminance";
+    private static final String ILLUMINANCE_LABEL = "Helligkeit";
+    private static final String ILLUMINANCE_UNIT = "lx";
     private static final String BUTTON_SUFFIX = "action";
     private static final String BUTTON_DEVICE_CLASS = "button";
     /** Klickmuster des Hubs auf das Vokabular der Zigbee-Taster, damit Flows gleich aussehen. */
@@ -75,6 +82,15 @@ public class DirigeraEntityMapper {
 
     public static String contactEntityId(String relationId) {
         return EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.DIRIGERA, entityRef(relationId), CONTACT_SUFFIX);
+    }
+
+    /** Belegung eines Bewegungsmelders, {@code on} = Bewegung erkannt (Nachlaufzeit stellt das Geraet). */
+    public static String occupancyEntityId(String relationId) {
+        return EntityIds.build(EntityDomain.BINARY_SENSOR, EntitySource.DIRIGERA, entityRef(relationId), OCCUPANCY_SUFFIX);
+    }
+
+    public static String illuminanceEntityId(String relationId) {
+        return EntityIds.build(EntityDomain.SENSOR, EntitySource.DIRIGERA, entityRef(relationId), ILLUMINANCE_SUFFIX);
     }
 
     /**
@@ -135,6 +151,9 @@ public class DirigeraEntityMapper {
         if (sensor.getKind() == DirigeraSensorKind.CONTACT) {
             return List.of(contactEntityId(sensor.getRelationId()));
         }
+        if (sensor.getKind() == DirigeraSensorKind.MOTION) {
+            return List.of(occupancyEntityId(sensor.getRelationId()), illuminanceEntityId(sensor.getRelationId()));
+        }
         return Arrays.stream(Measurement.values())
                 .map(measurement -> entityId(sensor.getRelationId(), measurement))
                 .toList();
@@ -146,6 +165,17 @@ public class DirigeraEntityMapper {
             return sensor.getLastOpen() == null
                     ? List.of()
                     : List.of(contactUpdate(sensor, sensor.getLastOpen() ? "on" : "off"));
+        }
+        if (sensor.getKind() == DirigeraSensorKind.MOTION) {
+            // ohne bekannten Wert nichts melden, nie ein geratenes "keine Bewegung"
+            List<EntityStateUpdate> motion = new ArrayList<>(2);
+            if (sensor.getLastDetected() != null) {
+                motion.add(occupancyUpdate(sensor, sensor.getLastDetected() ? "on" : "off"));
+            }
+            if (sensor.getLastIlluminance() != null) {
+                motion.add(illuminanceUpdate(sensor, String.valueOf(sensor.getLastIlluminance())));
+            }
+            return motion;
         }
         List<EntityStateUpdate> result = new ArrayList<>(2);
         if (sensor.getLastTemperature() != null) {
@@ -161,6 +191,9 @@ public class DirigeraEntityMapper {
     public List<EntityStateUpdate> unavailable(DirigeraSensor sensor) {
         if (sensor.getKind() == DirigeraSensorKind.CONTACT) {
             return List.of(contactUpdate(sensor, STATE_UNAVAILABLE));
+        }
+        if (sensor.getKind() == DirigeraSensorKind.MOTION) {
+            return List.of(occupancyUpdate(sensor, STATE_UNAVAILABLE), illuminanceUpdate(sensor, STATE_UNAVAILABLE));
         }
         return List.of(
                 update(sensor, Measurement.TEMPERATURE, STATE_UNAVAILABLE),
@@ -189,6 +222,37 @@ public class DirigeraEntityMapper {
                 .source(EntitySource.DIRIGERA)
                 .sourceRef(entityRef(sensor.getRelationId()))
                 .friendlyName(displayName(sensor) + " " + CONTACT_LABEL)
+                .state(state)
+                .attributes(attrs)
+                .build();
+    }
+
+    private EntityStateUpdate occupancyUpdate(DirigeraSensor sensor, String state) {
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        attrs.put("deviceClass", MOTION_DEVICE_CLASS);
+        attrs.putAll(commonAttributes(sensor));
+        return EntityStateUpdate.builder()
+                .entityId(occupancyEntityId(sensor.getRelationId()))
+                .domain(EntityDomain.BINARY_SENSOR)
+                .source(EntitySource.DIRIGERA)
+                .sourceRef(entityRef(sensor.getRelationId()))
+                .friendlyName(displayName(sensor) + " " + OCCUPANCY_LABEL)
+                .state(state)
+                .attributes(attrs)
+                .build();
+    }
+
+    /** Bewusst ohne deviceClass (wie die Thermometer). */
+    private EntityStateUpdate illuminanceUpdate(DirigeraSensor sensor, String state) {
+        Map<String, Object> attrs = new LinkedHashMap<>();
+        attrs.put("unit", ILLUMINANCE_UNIT);
+        attrs.putAll(commonAttributes(sensor));
+        return EntityStateUpdate.builder()
+                .entityId(illuminanceEntityId(sensor.getRelationId()))
+                .domain(EntityDomain.SENSOR)
+                .source(EntitySource.DIRIGERA)
+                .sourceRef(entityRef(sensor.getRelationId()))
+                .friendlyName(displayName(sensor) + " " + ILLUMINANCE_LABEL)
                 .state(state)
                 .attributes(attrs)
                 .build();

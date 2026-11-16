@@ -25,7 +25,7 @@ const BOTTOM: DirigeraButton = {
 const IDLE: DirigeraPairingStatus = { state: 'IDLE', expiresAt: null, error: null };
 const SENSOR: DirigeraSensor = {
   id: 1, kind: 'ENVIRONMENT', name: 'Wohnzimmer', room: 'Wohnzimmer', model: 'TIMMERFLOTTE', temperature: 21.5,
-  humidity: 48, open: null, batteryPercent: 90, reachable: true, knownToHub: true, lastSeenAt: '2026-10-30T10:00:00'
+  humidity: 48, open: null, detected: null, illuminance: null, batteryPercent: 90, reachable: true, knownToHub: true, lastSeenAt: '2026-10-30T10:00:00'
 };
 const GONE: DirigeraSensor = { ...SENSOR, id: 2, name: 'Alt', knownToHub: false };
 const CONTACT: DirigeraSensor = {
@@ -127,6 +127,21 @@ describe('AdminDirigeraComponent', () => {
     expect(rows[0].textContent).not.toContain('°C');
     expect(rows[1].textContent).toContain('Geschlossen');
     expect(rows[2].textContent).toContain('Zustand unbekannt');
+  });
+
+  it('bewegungsmelderZeigtBewegungUndHelligkeitStattTemperatur', () => {
+    const motion: DirigeraSensor = {
+      ...SENSOR, id: 6, kind: 'MOTION', name: 'Treppenhaus', model: 'MYGGSPRAY', temperature: null, humidity: null,
+      detected: true, illuminance: 33
+    };
+    initWith([motion, { ...motion, id: 7, detected: false, illuminance: null }, { ...motion, id: 8, detected: null }]);
+
+    const rows = Array.from(el.querySelectorAll('.admin-dirigera__table tbody tr'));
+    expect(rows[0].textContent).toContain('Bewegung · 33 lx');
+    expect(rows[0].textContent).not.toContain('°C');
+    expect(rows[1].textContent).toContain('Keine Bewegung');
+    expect(rows[1].textContent).not.toContain('lx');
+    expect(rows[2].textContent).toContain('Zustand unbekannt · 33 lx');
   });
 
   it('thermometerZeigtWeiterTemperaturUndFeuchte', () => {

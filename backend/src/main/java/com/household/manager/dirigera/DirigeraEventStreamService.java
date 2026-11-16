@@ -161,6 +161,7 @@ public class DirigeraEventStreamService {
             parser.parseRemotePress(json).ifPresent(press -> entityStateService.reportEvent(
                     mapper.buttonEvent(press, buttons.find(press.deviceId()).orElse(null))));
             parser.parseContactChange(json).ifPresent(pollingService::applyContactChange);
+            parser.parseMotionChange(json).ifPresent(pollingService::applyMotionChange);
         } catch (Exception e) {
             log.warn("Dirigera-Ereignis nicht verarbeitet: {}", describe(e));
         }

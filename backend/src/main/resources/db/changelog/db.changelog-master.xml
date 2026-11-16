@@ -217,5 +217,7 @@
     <include file="db/changelog/changes/20261115-0104-create-grocery-price-observation.xml"/>
     <include file="db/changelog/changes/20261115-0105-create-grocery-source-run.xml"/>
     <include file="db/changelog/changes/20261115-0106-index-grocery-offer-valid-to.xml"/>
+    <include file="db/changelog/changes/20261116-0107-add-dirigera-sensor-last-detected.xml"/>
+    <include file="db/changelog/changes/20261116-0108-add-dirigera-sensor-last-illuminance.xml"/>
 
 </databaseChangeLog>
