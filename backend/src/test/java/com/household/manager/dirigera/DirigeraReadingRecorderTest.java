@@ -79,6 +79,31 @@ class DirigeraReadingRecorderTest {
     }
 
     @Test
+    void helligkeitsaenderungIstEineAenderungUndWirdMitgespeichert() {
+        DirigeraSensor motion = DirigeraSensor.builder().id(7L).relationId("rel").lastIlluminance(12).build();
+        when(repository.findTopBySensorIdOrderByMeasuredAtDesc(7L)).thenReturn(Optional.of(
+                DirigeraSensorReading.builder().sensorId(7L).illuminance(8).measuredAt(T0).build()));
+
+        recorder.record(motion, T0.plusMinutes(1));
+
+        ArgumentCaptor<DirigeraSensorReading> captor = ArgumentCaptor.forClass(DirigeraSensorReading.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getIlluminance()).isEqualTo(12);
+        assertThat(captor.getValue().getTemperature()).isNull();
+    }
+
+    @Test
+    void gleicheHelligkeitInnerhalbFuenfMinutenNicht() {
+        DirigeraSensor motion = DirigeraSensor.builder().id(7L).relationId("rel").lastIlluminance(0).build();
+        when(repository.findTopBySensorIdOrderByMeasuredAtDesc(7L)).thenReturn(Optional.of(
+                DirigeraSensorReading.builder().sensorId(7L).illuminance(0).measuredAt(T0).build()));
+
+        recorder.record(motion, T0.plusMinutes(4));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void repositoryFehlerWirdGeschluckt() {
         when(repository.findTopBySensorIdOrderByMeasuredAtDesc(7L)).thenThrow(new RuntimeException("db weg"));
 

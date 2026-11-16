@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
- * Schreibt einen Verlaufspunkt nur bei Aenderung von Temperatur oder Feuchte oder wenn seit
+ * Schreibt einen Verlaufspunkt nur bei Aenderung von Temperatur, Feuchte oder Helligkeit
+ * (Bewegungsmelder) oder wenn seit
  * {@value #HEARTBEAT_MINUTES} Minuten keiner entstand. Wirft nie (Muster BleSensorReadingRecorder):
  * derselbe Poll versorgt die Entitaeten.
  */
@@ -36,6 +38,7 @@ public class DirigeraReadingRecorder {
                     .measuredAt(measuredAt)
                     .temperature(sensor.getLastTemperature())
                     .humidity(sensor.getLastHumidity())
+                    .illuminance(sensor.getLastIlluminance())
                     .build());
         } catch (Exception ex) {
             log.warn("Dirigera-Verlauf fuer {} nicht gespeichert: {}", sensor.getRelationId(), ex.getMessage());
@@ -44,7 +47,8 @@ public class DirigeraReadingRecorder {
 
     private boolean isDue(DirigeraSensorReading last, DirigeraSensor sensor, LocalDateTime now) {
         boolean changed = !sameValue(last.getTemperature(), sensor.getLastTemperature())
-                || !sameValue(last.getHumidity(), sensor.getLastHumidity());
+                || !sameValue(last.getHumidity(), sensor.getLastHumidity())
+                || !Objects.equals(last.getIlluminance(), sensor.getLastIlluminance());
         boolean heartbeatDue = !Duration.between(last.getMeasuredAt(), now).minusMinutes(HEARTBEAT_MINUTES).isNegative();
         return changed || heartbeatDue;
     }

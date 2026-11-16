@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,6 +48,7 @@ class DirigeraMotionSensorTest {
     private DirigeraHttpClient http;
     private DirigeraSensorRepository repository;
     private EntityStateService entityStates;
+    private DirigeraReadingRecorder recorder;
     private DirigeraPollingService service;
 
     @BeforeEach
@@ -56,8 +58,9 @@ class DirigeraMotionSensorTest {
         parser = spy(new DirigeraDeviceParser(json));
         repository = mock(DirigeraSensorRepository.class);
         entityStates = mock(EntityStateService.class);
+        recorder = mock(DirigeraReadingRecorder.class);
         service = new DirigeraPollingService(settings, http, parser, repository, new DirigeraEntityMapper(),
-                mock(DirigeraReadingRecorder.class), new DirigeraButtonRegistry(), entityStates,
+                recorder, new DirigeraButtonRegistry(), entityStates,
                 mock(SystemJobMonitor.class), clock, true, 60);
         when(settings.get()).thenReturn(PAIRED);
         when(repository.findByRelationId(anyString())).thenAnswer(inv -> stored.stream()
@@ -207,6 +210,27 @@ class DirigeraMotionSensorTest {
 
         assertThat(stored.get(0).getLastDetected()).isTrue();
         assertThat(stored.get(0).getLastIlluminance()).isEqualTo(40);
+    }
+
+    @Test
+    void pollSchreibtHelligkeitsverlaufMitPollzeit() throws IOException {
+        when(http.getDevices(anyString(), anyString(), anyString())).thenReturn(fixture("myggspray-devices.json"));
+
+        service.poll();
+
+        verify(recorder).record(stored.get(0), LocalDateTime.of(2026, 11, 16, 18, 40));
+    }
+
+    @Test
+    void helligkeitsereignisSchreibtVerlaufNurBeiAenderung() {
+        stored.add(motionRow(true, 5));
+
+        service.applyMotionChange(new DirigeraMotionChange(RELATION + "_1", null, 5, null, null));
+        service.applyMotionChange(new DirigeraMotionChange(RELATION + "_2", false, null, null, null));
+        verify(recorder, never()).record(any(), any());
+
+        service.applyMotionChange(new DirigeraMotionChange(RELATION + "_1", null, 33, null, null));
+        verify(recorder).record(stored.get(0), LocalDateTime.of(2026, 11, 16, 18, 40));
     }
 
     @Test

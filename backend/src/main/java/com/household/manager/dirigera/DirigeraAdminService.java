@@ -3,12 +3,14 @@ package com.household.manager.dirigera;
 import com.household.manager.audit.AuditService;
 import com.household.manager.dirigera.DirigeraDtos.ButtonView;
 import com.household.manager.dirigera.DirigeraDtos.HubView;
+import com.household.manager.dirigera.DirigeraDtos.IlluminancePoint;
 import com.household.manager.dirigera.DirigeraDtos.SensorView;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.exception.ResourceNotFoundException;
 import com.household.manager.model.entity.DirigeraSensor;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.EntityTileVisibility;
+import com.household.manager.repository.DirigeraSensorReadingRepository;
 import com.household.manager.repository.DirigeraSensorRepository;
 import com.household.manager.repository.EntityTileVisibilityRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +46,10 @@ public class DirigeraAdminService {
     private final EntityTileVisibilityRepository tileVisibilityRepository;
     private final EntityStateService entityStateService;
     private final AuditService auditService;
+    private final DirigeraSensorReadingRepository readingRepository;
+    private final Clock clock;
+
+    static final int MAX_HISTORY_HOURS = 24 * 14;
 
     private static final Map<String, Integer> POSITION_ORDER = Map.of("top", 0, "bottom", 1);
 
@@ -82,6 +90,28 @@ public class DirigeraAdminService {
                 .sorted(Comparator.comparing(DirigeraSensor::getName,
                         Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .map(SensorView::from)
+                .toList();
+    }
+
+    /**
+     * Helligkeitsverlauf eines Bewegungsmelders der letzten {@code hours} Stunden (1 bis 14 Tage),
+     * aelteste zuerst. Grundlage fuer die Helligkeitsschwelle der Licht-Flows.
+     */
+    @Transactional(readOnly = true)
+    public List<IlluminancePoint> illuminanceHistory(Long id, int hours) {
+        if (hours < 1 || hours > MAX_HISTORY_HOURS) {
+            throw new IllegalArgumentException("hours muss zwischen 1 und " + MAX_HISTORY_HOURS + " liegen.");
+        }
+        DirigeraSensor sensor = sensorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Dirigera-Sensor", "id", id));
+        if (sensor.getKind() != DirigeraSensorKind.MOTION) {
+            throw new IllegalArgumentException("Der Sensor ist kein Bewegungsmelder.");
+        }
+        LocalDateTime to = LocalDateTime.now(clock);
+        return readingRepository.findBySensorIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(id, to.minusHours(hours), to)
+                .stream()
+                .filter(reading -> reading.getIlluminance() != null)
+                .map(reading -> new IlluminancePoint(reading.getMeasuredAt(), reading.getIlluminance()))
                 .toList();
     }
 

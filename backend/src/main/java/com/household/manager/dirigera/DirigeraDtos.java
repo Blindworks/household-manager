@@ -28,6 +28,10 @@ public final class DirigeraDtos {
     public record HostRequest(String host) {
     }
 
+    /** Ein Punkt des Helligkeitsverlaufs eines Bewegungsmelders (lokale Haushaltszeit, Lux). */
+    public record IlluminancePoint(LocalDateTime measuredAt, Integer illuminance) {
+    }
+
     public record SensorView(Long id, DirigeraSensorKind kind, String name, String room, String model,
                              BigDecimal temperature, BigDecimal humidity, Boolean open, Boolean detected,
                              Integer illuminance, Integer batteryPercent,

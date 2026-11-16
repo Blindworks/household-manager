@@ -80,7 +80,12 @@
               @if (sensor.kind === 'CONTACT') {
                 <td colspan="2">{{ contactLabel(sensor) }}</td>
               } @else if (sensor.kind === 'MOTION') {
-                <td colspan="2">{{ motionLabel(sensor) }}</td>
+                <td colspan="2">
+                  {{ motionLabel(sensor) }}
+                  <button type="button" class="ghost admin-dirigera__history-toggle" (click)="toggleIlluminance(sensor)">
+                    {{ illuminanceSensor()?.id === sensor.id ? 'Verlauf schließen' : 'Helligkeitsverlauf' }}
+                  </button>
+                </td>
               } @else {
                 <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
                 <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>
@@ -97,6 +102,28 @@
           }
         </tbody>
       </table>
+    }
+    @if (illuminanceSensor(); as sensor) {
+      <div class="admin-dirigera__illuminance">
+        <div class="admin-dirigera__heading">
+          <h3>Helligkeit {{ sensor.name ?? '' }}</h3>
+          <div class="admin-dirigera__ranges">
+            @for (range of ranges; track range.hours) {
+              <button type="button" [class.ghost]="illuminanceHours() !== range.hours"
+                      (click)="setIlluminanceHours(range.hours)">{{ range.label }}</button>
+            }
+          </div>
+        </div>
+        @if (illuminanceError(); as error) {
+          <p class="admin-dirigera__hint-error" role="alert">{{ error }}</p>
+        } @else if (illuminancePoints() === null) {
+          <p>Lade Verlauf …</p>
+        } @else if (illuminanceChart) {
+          <div class="admin-dirigera__chart" echarts [options]="illuminanceChart"></div>
+        } @else {
+          <p>Noch keine Messwerte in diesem Zeitraum. Der Verlauf beginnt mit dem Deploy dieser Funktion.</p>
+        }
+      </div>
     }
   </section>
 

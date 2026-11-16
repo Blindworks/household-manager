@@ -6,8 +6,10 @@ import com.household.manager.dirigera.DirigeraDtos.HubView;
 import com.household.manager.dirigera.DirigeraEntityMapper.Measurement;
 import com.household.manager.entitystate.EntityStateService;
 import com.household.manager.model.entity.DirigeraSensor;
+import com.household.manager.model.entity.DirigeraSensorReading;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.EntityTileVisibility;
+import com.household.manager.repository.DirigeraSensorReadingRepository;
 import com.household.manager.repository.DirigeraSensorRepository;
 import com.household.manager.repository.EntityTileVisibilityRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +46,8 @@ class DirigeraAdminServiceTest {
     private DirigeraEventStreamService eventStream;
     private DirigeraSettingsService settingsService;
     private DirigeraPollingService pollingService;
+    private DirigeraSensorReadingRepository readingRepository;
+    private final Clock clock = Clock.fixed(Instant.parse("2026-11-16T18:00:00Z"), ZoneId.of("Europe/Berlin"));
     private DirigeraAdminService service;
 
     @BeforeEach
@@ -52,9 +60,10 @@ class DirigeraAdminServiceTest {
         eventStream = mock(DirigeraEventStreamService.class);
         settingsService = mock(DirigeraSettingsService.class);
         pollingService = mock(DirigeraPollingService.class);
+        readingRepository = mock(DirigeraSensorReadingRepository.class);
         service = new DirigeraAdminService(settingsService, mock(DirigeraPairingService.class),
                 pollingService, eventStream, buttons, sensorRepository, tileRepository, entityStateService,
-                auditService);
+                auditService, readingRepository, clock);
     }
 
     @Test
@@ -156,6 +165,33 @@ class DirigeraAdminServiceTest {
             assertThat(view.kind()).isEqualTo(DirigeraSensorKind.CONTACT);
             assertThat(view.open()).isTrue();
         });
+    }
+
+    @Test
+    void helligkeitsverlaufLiefertNurPunkteMitHelligkeitImZeitfenster() {
+        DirigeraSensor motion = sensor(true);
+        motion.setKind(DirigeraSensorKind.MOTION);
+        when(sensorRepository.findById(1L)).thenReturn(Optional.of(motion));
+        LocalDateTime now = LocalDateTime.of(2026, 11, 16, 19, 0);
+        when(readingRepository.findBySensorIdAndMeasuredAtBetweenOrderByMeasuredAtAsc(1L, now.minusHours(48), now))
+                .thenReturn(List.of(
+                        DirigeraSensorReading.builder().sensorId(1L).measuredAt(now.minusHours(2)).illuminance(33).build(),
+                        DirigeraSensorReading.builder().sensorId(1L).measuredAt(now.minusHours(1))
+                                .temperature(new BigDecimal("20")).build(),
+                        DirigeraSensorReading.builder().sensorId(1L).measuredAt(now).illuminance(0).build()));
+
+        assertThat(service.illuminanceHistory(1L, 48))
+                .extracting(DirigeraDtos.IlluminancePoint::illuminance).containsExactly(33, 0);
+    }
+
+    @Test
+    void helligkeitsverlaufNurFuerBewegungsmelderUndInnerhalbDerGrenzen() {
+        when(sensorRepository.findById(1L)).thenReturn(Optional.of(sensor(true)));
+
+        assertThatThrownBy(() -> service.illuminanceHistory(1L, 24)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.illuminanceHistory(1L, 0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.illuminanceHistory(1L, 24 * 14 + 1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

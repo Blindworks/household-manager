@@ -144,6 +144,39 @@ describe('AdminDirigeraComponent', () => {
     expect(rows[2].textContent).toContain('Zustand unbekannt · 33 lx');
   });
 
+  it('helligkeitsverlaufLaedtJeZeitraumUndVerwirftAlteAntworten', () => {
+    const motion: DirigeraSensor = {
+      ...SENSOR, id: 6, kind: 'MOTION', name: 'Treppenhaus', model: 'MYGGSPRAY', temperature: null, humidity: null,
+      detected: false, illuminance: 0
+    };
+    initWith([motion]);
+
+    (el.querySelector('.admin-dirigera__history-toggle') as HTMLButtonElement).click();
+    const first = httpMock.expectOne(r => r.url === `${BASE}/sensors/6/illuminance` && r.params.get('hours') === '72');
+    fixture.componentInstance.setIlluminanceHours(24);
+    expect(first.cancelled).toBeTrue();
+    httpMock.expectOne(r => r.url === `${BASE}/sensors/6/illuminance` && r.params.get('hours') === '24')
+      .flush([{ measuredAt: '2026-11-16T16:00:00', illuminance: 40 }, { measuredAt: '2026-11-16T17:00:00', illuminance: 0 }]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.illuminanceChart).not.toBeNull();
+    expect(el.querySelector('.admin-dirigera__chart')).not.toBeNull();
+  });
+
+  it('helligkeitsverlaufOhnePunkteZeigtHinweisStattDiagramm', () => {
+    const motion: DirigeraSensor = {
+      ...SENSOR, id: 6, kind: 'MOTION', name: 'Treppenhaus', temperature: null, humidity: null, detected: null
+    };
+    initWith([motion]);
+
+    fixture.componentInstance.toggleIlluminance(motion);
+    httpMock.expectOne(r => r.url === `${BASE}/sensors/6/illuminance`).flush([]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-dirigera__chart')).toBeNull();
+    expect(el.textContent).toContain('Noch keine Messwerte');
+  });
+
   it('thermometerZeigtWeiterTemperaturUndFeuchte', () => {
     initWith([SENSOR]);
 

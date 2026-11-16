@@ -2,12 +2,29 @@ import { Component, NgZone, OnDestroy, OnInit, inject, signal } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+import type { EChartsCoreOption } from 'echarts/core';
 import { DirigeraService } from '../../services/dirigera.service';
-import { DirigeraButton, DirigeraHub, DirigeraPairingStatus, DirigeraSensor } from '../../models/dirigera.model';
+import {
+  DirigeraButton, DirigeraHub, DirigeraIlluminancePoint, DirigeraPairingStatus, DirigeraSensor
+} from '../../models/dirigera.model';
+
+echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 const POLL_MS = 2000;
 const COUNTDOWN_MS = 1000;
+
+/** Zeitraeume des Helligkeitsverlaufs in Stunden (Backend erlaubt bis 14 Tage). */
+export const ILLUMINANCE_RANGES = [
+  { hours: 24, label: '24 h' },
+  { hours: 72, label: '3 Tage' },
+  { hours: 168, label: '7 Tage' }
+] as const;
 
 type SensorStatus = 'active' | 'unreachable' | 'gone';
 
@@ -21,7 +38,8 @@ const ACTION_LABELS: Record<string, string> = { single: 'Einfach', double: 'Dopp
 @Component({
   selector: 'app-admin-dirigera',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NgxEchartsDirective],
+  providers: [provideEchartsCore({ echarts })],
   templateUrl: './admin-dirigera.component.html',
   styleUrl: './admin-dirigera.component.scss'
 })
@@ -36,11 +54,20 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   readonly secondsLeft = signal(0);
   readonly busy = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  /** Bewegungsmelder, dessen Helligkeitsverlauf gerade offen ist (null = keiner). */
+  readonly illuminanceSensor = signal<DirigeraSensor | null>(null);
+  readonly illuminanceHours = signal(72);
+  readonly illuminancePoints = signal<DirigeraIlluminancePoint[] | null>(null);
+  readonly illuminanceError = signal<string | null>(null);
+  readonly ranges = ILLUMINANCE_RANGES;
+  /** Feld statt Methodenaufruf im Template, sonst zeichnete ngx-echarts bei jeder Change Detection neu. */
+  illuminanceChart: EChartsCoreOption | null = null;
 
   hostInput = '';
 
   private pollTimer?: ReturnType<typeof setInterval>;
   private countdownTimer?: ReturnType<typeof setInterval>;
+  private illuminanceRequest?: Subscription;
 
   ngOnInit(): void {
     this.loadHub(true);
@@ -54,6 +81,7 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.illuminanceRequest?.unsubscribe();
   }
 
   saveHost(): void {
@@ -105,6 +133,40 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   motionLabel(sensor: DirigeraSensor): string {
     const state = sensor.detected === null ? 'Zustand unbekannt' : (sensor.detected ? 'Bewegung' : 'Keine Bewegung');
     return sensor.illuminance === null ? state : `${state} · ${sensor.illuminance} lx`;
+  }
+
+  /** Öffnet den Helligkeitsverlauf; ein zweiter Klick auf denselben Melder schließt ihn. */
+  toggleIlluminance(sensor: DirigeraSensor): void {
+    if (this.illuminanceSensor()?.id === sensor.id) {
+      this.illuminanceRequest?.unsubscribe();
+      this.illuminanceSensor.set(null);
+      return;
+    }
+    this.illuminanceSensor.set(sensor);
+    this.loadIlluminance();
+  }
+
+  setIlluminanceHours(hours: number): void {
+    this.illuminanceHours.set(hours);
+    this.loadIlluminance();
+  }
+
+  private loadIlluminance(): void {
+    const sensor = this.illuminanceSensor();
+    if (!sensor) { return; }
+    // ein spaeter eintreffender alter Abruf darf den neuen Zeitraum nicht ueberschreiben
+    this.illuminanceRequest?.unsubscribe();
+    this.illuminancePoints.set(null);
+    this.illuminanceError.set(null);
+    this.illuminanceChart = null;
+    this.illuminanceRequest = this.api.getIlluminance(sensor.id, this.illuminanceHours()).subscribe({
+      next: points => {
+        this.illuminancePoints.set(points);
+        this.illuminanceChart = points.length > 0 ? illuminanceChartOptions(points) : null;
+      },
+      error: (err: HttpErrorResponse) =>
+        this.illuminanceError.set(err.error?.message ?? 'Verlauf konnte nicht geladen werden.')
+    });
   }
 
   /** Tastendrücke zeigen sich erst nach dem Neuladen (die Liste aktualisiert sich nicht selbst). */
@@ -209,4 +271,23 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   private messageOf(err: HttpErrorResponse): string {
     return err.error?.message ?? 'Die Aktion ist fehlgeschlagen.';
   }
+}
+
+/**
+ * Stufenlinie, weil der Melder nur bei Aenderung meldet: der Wert gilt bis zum naechsten Punkt.
+ * Die y-Achse ist logarithmisch nicht sinnvoll (0 lx = zu dunkel), deshalb linear.
+ */
+export function illuminanceChartOptions(points: DirigeraIlluminancePoint[]): EChartsCoreOption {
+  return {
+    grid: { left: 48, right: 16, top: 16, bottom: 32 },
+    tooltip: { trigger: 'axis', valueFormatter: (value: unknown) => `${value} lx` },
+    xAxis: { type: 'time' },
+    yAxis: { type: 'value', name: 'lx', minInterval: 1 },
+    series: [{
+      type: 'line',
+      step: 'end',
+      showSymbol: false,
+      data: points.map(p => [p.measuredAt, p.illuminance])
+    }]
+  };
 }

@@ -41,4 +41,7 @@ public class DirigeraSensorReading {
 
     @Column(precision = 5, scale = 2)
     private BigDecimal humidity;
+
+    /** Helligkeit in Lux, nur bei Bewegungsmeldern. */
+    private Integer illuminance;
 }

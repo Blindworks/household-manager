@@ -43,6 +43,14 @@ export interface DirigeraSensor {
   lastSeenAt: string | null;
 }
 
+/** Ein Punkt des Helligkeitsverlaufs eines Bewegungsmelders. */
+export interface DirigeraIlluminancePoint {
+  /** lokale Haushaltszeit, ISO ohne Zone */
+  measuredAt: string;
+  /** Lux */
+  illuminance: number;
+}
+
 /** Eine Taste eines Tasters (BILRESA): eine Zeile je Taste, nicht je Gerät. */
 export interface DirigeraButton {
   deviceId: string;

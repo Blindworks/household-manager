@@ -222,6 +222,8 @@ public class DirigeraPollingService {
                 contactEventAt.put(row.getRelationId(), now);
                 row.setLastDetected(change.detected());
             }
+            boolean illuminanceChanged = change.illuminance() != null
+                    && !change.illuminance().equals(row.getLastIlluminance());
             if (change.illuminance() != null) {
                 illuminanceEventAt.put(row.getRelationId(), now);
                 row.setLastIlluminance(change.illuminance());
@@ -234,6 +236,9 @@ public class DirigeraPollingService {
             }
             DirigeraSensor saved = repository.save(row);
             DirigeraSensor current = saved != null ? saved : row;
+            if (illuminanceChanged) {
+                recorder.record(current, LocalDateTime.ofInstant(now, clock.getZone()));
+            }
             if (current.isKnownToHub() && isFresh(current)) {
                 mapper.updates(current).forEach(entityStateService::reportState);
             }
@@ -305,9 +310,13 @@ public class DirigeraPollingService {
         DirigeraSensor current = saved != null ? saved : row;
 
         if (isFresh(current)) {
-            // Verlauf nur fuer Thermometer; Kontakte haben keine Messwertreihe
+            // Verlauf fuer Thermometer und die Helligkeit der Bewegungsmelder; Kontakte haben keine
+            // Messwertreihe. Bewegungsmelder aktualisieren lastSeen nur bei Aenderungen, ihr Punkt
+            // traegt deshalb die Pollzeit (sonst entstuende in ruhigen Stunden kein Herzschlag-Punkt).
             if (current.getKind() == DirigeraSensorKind.ENVIRONMENT) {
                 recorder.record(current, current.getLastSeenAt());
+            } else if (current.getKind() == DirigeraSensorKind.MOTION && current.getLastIlluminance() != null) {
+                recorder.record(current, LocalDateTime.now(clock));
             }
             mapper.updates(current).forEach(entityStateService::reportState);
         } else {

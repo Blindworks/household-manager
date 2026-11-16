@@ -3,6 +3,7 @@ package com.household.manager.dirigera;
 import com.household.manager.dirigera.DirigeraDtos.ButtonView;
 import com.household.manager.dirigera.DirigeraDtos.HostRequest;
 import com.household.manager.dirigera.DirigeraDtos.HubView;
+import com.household.manager.dirigera.DirigeraDtos.IlluminancePoint;
 import com.household.manager.dirigera.DirigeraDtos.SensorView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,6 +63,12 @@ public class DirigeraController {
     @GetMapping("/buttons")
     public List<ButtonView> buttons() {
         return adminService.buttons();
+    }
+
+    @GetMapping("/sensors/{id}/illuminance")
+    public List<IlluminancePoint> illuminance(@PathVariable Long id,
+                                              @RequestParam(defaultValue = "72") int hours) {
+        return adminService.illuminanceHistory(id, hours);
     }
 
     @DeleteMapping("/sensors/{id}")

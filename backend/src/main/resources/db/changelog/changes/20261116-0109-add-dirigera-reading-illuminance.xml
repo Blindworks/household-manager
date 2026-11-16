@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Ein DDL je Changeset: MariaDB committet DDL implizit -->
+    <changeSet id="20261116-0109-add-dirigera-reading-illuminance" author="claude">
+        <comment>Helligkeitsverlauf (Lux) der Dirigera-Bewegungsmelder; NULL bei Thermometern.</comment>
+        <addColumn tableName="dirigera_sensor_reading">
+            <column name="illuminance" type="INT"/>
+        </addColumn>
+        <rollback><dropColumn tableName="dirigera_sensor_reading" columnName="illuminance"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>
