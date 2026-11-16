@@ -68,6 +68,7 @@ services:
       CHARGING_ENBW_API_KEY: ${CHARGING_ENBW_API_KEY:-}
       GROCERY_ENABLED: ${GROCERY_ENABLED:-true}
       GROCERY_AI_MODEL: ${GROCERY_AI_MODEL:-claude-haiku-4-5-20251001}
+      GROCERY_SOURCE_REWE: ${GROCERY_SOURCE_REWE:-false}
 
       # Blink-Gesichtserkennung (blink-vision-Sidecar)
       VISION_SIDECAR_URL: http://blink-vision:8090

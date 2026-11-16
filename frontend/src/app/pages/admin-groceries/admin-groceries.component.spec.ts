@@ -78,6 +78,22 @@ describe('AdminGroceriesComponent', () => {
     expect(rows[1].textContent).toContain('Fehler: HTTP 500');
   });
 
+  it('disabledSourceWithOldErrorIsNotShownAsFailed', () => {
+    httpMock.expectOne(`${BASE}/settings`).flush({ zip: '60311', lat: 50.1, lng: 8.6, dealThresholdPercent: 10 });
+    httpMock.expectOne(`${BASE}/markets`).flush([MARKET]);
+    httpMock.expectOne(`${BASE}/chains`).flush([]);
+    httpMock.expectOne(`${BASE}/sources`).flush([
+      { source: 'REWE', enabled: false, lastRunAt: '2026-11-16T07:51:00', offerCount: 0, ok: false,
+        reason: 'Zugriff gesperrt (HTTP 403)' }
+    ]);
+    httpMock.expectOne(`${BASE}/runs/status`).flush(status());
+    fixture.detectChanges();
+
+    const row = el.querySelector('.admin-groceries__source') as HTMLElement;
+    expect(row.textContent).toContain('Deaktiviert');
+    expect(row.classList).not.toContain('admin-groceries__source--failed');
+  });
+
   it('selectingMarketCallsPut', () => {
     flushInitial();
     const checkbox = el.querySelector('.admin-groceries__market input') as HTMLInputElement;
