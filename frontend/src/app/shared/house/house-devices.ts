@@ -122,7 +122,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   // Flur
   roomClimate('flur', 'sensor.dirigera_f2af71e53e924b0895cec17793205733'),
   thermostat('flur', 6),
-  motion('flur', 'binary_sensor.zigbee_motion_flur_occupancy'),
+  motion('flur', 'binary_sensor.dirigera_1a27de53bc4f4938b39a23fd6c3b4481_occupancy'),
   asLamp(plug('flur', 'Licht', 'tapo', '80232e39ed1bbdd537ab39cac50eede2216b55c7')),
 
   // Laufband-Raum

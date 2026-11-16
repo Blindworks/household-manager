@@ -82,7 +82,7 @@ describe('house-bubbles.util', () => {
         .toContain('window_open');
       expect(buildRoomBubble('wohnzimmer', mapOf(entity('binary_sensor.thermostat_8_heating', 'on')), NOW).flags)
         .toContain('heating');
-      expect(buildRoomBubble('flur', mapOf(entity('binary_sensor.zigbee_motion_flur_occupancy', 'on')), NOW).flags)
+      expect(buildRoomBubble('flur', mapOf(entity('binary_sensor.dirigera_1a27de53bc4f4938b39a23fd6c3b4481_occupancy', 'on')), NOW).flags)
         .toContain('motion');
       expect(buildRoomBubble('waschkeller', mapOf(entity('input_boolean.manual_waschmaschine_laeuft', 'on')), NOW).flags)
         .toContain('appliance_running');
