@@ -54,78 +54,139 @@
     </div>
   </section>
 
-  <section class="admin-dirigera__card">
-    <h2>Sensoren</h2>
-    @if (sensors().length === 0) {
+  <ng-template #commonHead>
+    <th scope="col">Batterie</th>
+    <th scope="col">Zuletzt gesehen</th>
+    <th scope="col">Status</th>
+    <th scope="col"><span class="admin-dirigera__sr-only">Aktionen</span></th>
+  </ng-template>
+
+  <ng-template #commonCells let-sensor>
+    <td>{{ sensor.batteryPercent === null ? '–' : sensor.batteryPercent + ' %' }}</td>
+    <td>{{ sensor.lastSeenAt ? (sensor.lastSeenAt | date:'dd.MM. HH:mm:ss') : '–' }}</td>
+    <td><span class="admin-dirigera__badge admin-dirigera__badge--{{ status(sensor) }}">{{ statusLabel(sensor) }}</span></td>
+    <td>
+      @if (!sensor.knownToHub) {
+        <button type="button" class="danger" (click)="remove(sensor)" [disabled]="busy()">Löschen</button>
+      }
+    </td>
+  </ng-template>
+
+  @if (sensors().length === 0) {
+    <section class="admin-dirigera__card">
+      <h2>Sensoren</h2>
       <p>Noch keine Sensoren bekannt.</p>
-    } @else {
-      <table class="admin-dirigera__table">
+    </section>
+  }
+
+  @if (thermometers().length > 0) {
+    <section class="admin-dirigera__card">
+      <h2>Thermometer</h2>
+      <table class="admin-dirigera__table admin-dirigera__table--environment">
         <thead>
           <tr>
             <th scope="col">Name</th>
             <th scope="col">Raum</th>
             <th scope="col">Temperatur</th>
             <th scope="col">Feuchte</th>
-            <th scope="col">Batterie</th>
-            <th scope="col">Zuletzt gesehen</th>
-            <th scope="col">Status</th>
-            <th scope="col"><span class="admin-dirigera__sr-only">Aktionen</span></th>
+            <ng-container [ngTemplateOutlet]="commonHead" />
           </tr>
         </thead>
         <tbody>
-          @for (sensor of sensors(); track sensor.id) {
+          @for (sensor of thermometers(); track sensor.id) {
             <tr>
               <td>{{ sensor.name ?? '–' }}</td>
               <td>{{ sensor.room ?? '–' }}</td>
-              @if (sensor.kind === 'CONTACT') {
-                <td colspan="2">{{ contactLabel(sensor) }}</td>
-              } @else if (sensor.kind === 'MOTION') {
-                <td colspan="2">
-                  {{ motionLabel(sensor) }}
-                  <button type="button" class="ghost admin-dirigera__history-toggle" (click)="toggleIlluminance(sensor)">
-                    {{ illuminanceSensor()?.id === sensor.id ? 'Verlauf schließen' : 'Helligkeitsverlauf' }}
-                  </button>
-                </td>
-              } @else {
-                <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
-                <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>
-              }
-              <td>{{ sensor.batteryPercent === null ? '–' : sensor.batteryPercent + ' %' }}</td>
-              <td>{{ sensor.lastSeenAt ? (sensor.lastSeenAt | date:'dd.MM. HH:mm:ss') : '–' }}</td>
-              <td><span class="admin-dirigera__badge admin-dirigera__badge--{{ status(sensor) }}">{{ statusLabel(sensor) }}</span></td>
-              <td>
-                @if (!sensor.knownToHub) {
-                  <button type="button" class="danger" (click)="remove(sensor)" [disabled]="busy()">Löschen</button>
-                }
-              </td>
+              <td>{{ sensor.temperature === null ? '–' : (sensor.temperature | number:'1.1-1':'de') + ' °C' }}</td>
+              <td>{{ sensor.humidity === null ? '–' : (sensor.humidity | number:'1.0-0':'de') + ' %' }}</td>
+              <ng-container [ngTemplateOutlet]="commonCells" [ngTemplateOutletContext]="{ $implicit: sensor }" />
             </tr>
           }
         </tbody>
       </table>
-    }
-    @if (illuminanceSensor(); as sensor) {
-      <div class="admin-dirigera__illuminance">
-        <div class="admin-dirigera__heading">
-          <h3>Helligkeit {{ sensor.name ?? '' }}</h3>
-          <div class="admin-dirigera__ranges">
-            @for (range of ranges; track range.hours) {
-              <button type="button" [class.ghost]="illuminanceHours() !== range.hours"
-                      (click)="setIlluminanceHours(range.hours)">{{ range.label }}</button>
-            }
+    </section>
+  }
+
+  @if (contacts().length > 0) {
+    <section class="admin-dirigera__card">
+      <h2>Fenster- und Türkontakte</h2>
+      <table class="admin-dirigera__table admin-dirigera__table--contact">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Raum</th>
+            <th scope="col">Zustand</th>
+            <ng-container [ngTemplateOutlet]="commonHead" />
+          </tr>
+        </thead>
+        <tbody>
+          @for (sensor of contacts(); track sensor.id) {
+            <tr>
+              <td>{{ sensor.name ?? '–' }}</td>
+              <td>{{ sensor.room ?? '–' }}</td>
+              <td>{{ contactLabel(sensor) }}</td>
+              <ng-container [ngTemplateOutlet]="commonCells" [ngTemplateOutletContext]="{ $implicit: sensor }" />
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
+  @if (motionSensors().length > 0) {
+    <section class="admin-dirigera__card">
+      <h2>Bewegungsmelder</h2>
+      <table class="admin-dirigera__table admin-dirigera__table--motion">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Raum</th>
+            <th scope="col">Bewegung</th>
+            <th scope="col">Helligkeit</th>
+            <ng-container [ngTemplateOutlet]="commonHead" />
+          </tr>
+        </thead>
+        <tbody>
+          @for (sensor of motionSensors(); track sensor.id) {
+            <tr>
+              <td>{{ sensor.name ?? '–' }}</td>
+              <td>{{ sensor.room ?? '–' }}</td>
+              <td>{{ motionLabel(sensor) }}</td>
+              <td>
+                {{ illuminanceLabel(sensor) }}
+                <button type="button" class="ghost admin-dirigera__history-toggle" (click)="toggleIlluminance(sensor)">
+                  {{ illuminanceSensor()?.id === sensor.id ? 'Verlauf schließen' : 'Verlauf' }}
+                </button>
+              </td>
+              <ng-container [ngTemplateOutlet]="commonCells" [ngTemplateOutletContext]="{ $implicit: sensor }" />
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (illuminanceSensor(); as sensor) {
+        <div class="admin-dirigera__illuminance">
+          <div class="admin-dirigera__heading">
+            <h3>Helligkeit {{ sensor.name ?? '' }}</h3>
+            <div class="admin-dirigera__ranges">
+              @for (range of ranges; track range.hours) {
+                <button type="button" [class.ghost]="illuminanceHours() !== range.hours"
+                        (click)="setIlluminanceHours(range.hours)">{{ range.label }}</button>
+              }
+            </div>
           </div>
+          @if (illuminanceError(); as error) {
+            <p class="admin-dirigera__hint-error" role="alert">{{ error }}</p>
+          } @else if (illuminancePoints() === null) {
+            <p>Lade Verlauf …</p>
+          } @else if (illuminanceChart) {
+            <div class="admin-dirigera__chart" echarts [options]="illuminanceChart"></div>
+          } @else {
+            <p>Noch keine Messwerte in diesem Zeitraum. Der Verlauf beginnt mit dem Deploy dieser Funktion.</p>
+          }
         </div>
-        @if (illuminanceError(); as error) {
-          <p class="admin-dirigera__hint-error" role="alert">{{ error }}</p>
-        } @else if (illuminancePoints() === null) {
-          <p>Lade Verlauf …</p>
-        } @else if (illuminanceChart) {
-          <div class="admin-dirigera__chart" echarts [options]="illuminanceChart"></div>
-        } @else {
-          <p>Noch keine Messwerte in diesem Zeitraum. Der Verlauf beginnt mit dem Deploy dieser Funktion.</p>
-        }
-      </div>
-    }
-  </section>
+      }
+    </section>
+  }
 
   <section class="admin-dirigera__card">
     <div class="admin-dirigera__heading">

@@ -137,11 +137,12 @@ describe('AdminDirigeraComponent', () => {
     initWith([motion, { ...motion, id: 7, detected: false, illuminance: null }, { ...motion, id: 8, detected: null }]);
 
     const rows = Array.from(el.querySelectorAll('.admin-dirigera__table tbody tr'));
-    expect(rows[0].textContent).toContain('Bewegung · 33 lx');
+    expect(rows[0].textContent).toContain('Bewegung');
+    expect(rows[0].textContent).toContain('33 lx');
     expect(rows[0].textContent).not.toContain('°C');
     expect(rows[1].textContent).toContain('Keine Bewegung');
     expect(rows[1].textContent).not.toContain('lx');
-    expect(rows[2].textContent).toContain('Zustand unbekannt · 33 lx');
+    expect(rows[2].textContent).toContain('Zustand unbekannt');
   });
 
   it('helligkeitsverlaufLaedtJeZeitraumUndVerwirftAlteAntworten', () => {
@@ -183,6 +184,30 @@ describe('AdminDirigeraComponent', () => {
     const row = el.querySelector('.admin-dirigera__table tbody tr')!;
     expect(row.textContent).toContain('21,5 °C');
     expect(row.textContent).toContain('48 %');
+  });
+
+  it('teiltSensorenJeArtInEigeneTabellenMitPassendenSpalten', () => {
+    const motion: DirigeraSensor = {
+      ...SENSOR, id: 6, kind: 'MOTION', name: 'Treppenhaus', temperature: null, humidity: null, detected: true, illuminance: 12
+    };
+    initWith([SENSOR, CONTACT, motion]);
+
+    const headers = (kind: string) => Array.from(el.querySelectorAll(`.admin-dirigera__table--${kind} thead th`))
+      .map(th => th.textContent!.trim());
+    const rowCount = (kind: string) => el.querySelectorAll(`.admin-dirigera__table--${kind} tbody tr`).length;
+
+    const common = ['Batterie', 'Zuletzt gesehen', 'Status', 'Aktionen'];
+    expect(headers('environment')).toEqual(['Name', 'Raum', 'Temperatur', 'Feuchte', ...common]);
+    expect(headers('contact')).toEqual(['Name', 'Raum', 'Zustand', ...common]);
+    expect(headers('motion')).toEqual(['Name', 'Raum', 'Bewegung', 'Helligkeit', ...common]);
+    expect([rowCount('environment'), rowCount('contact'), rowCount('motion')]).toEqual([1, 1, 1]);
+  });
+
+  it('artOhneGeraeteBekommtKeineTabelle', () => {
+    initWith([SENSOR]);
+
+    expect(el.querySelector('.admin-dirigera__table--contact')).toBeNull();
+    expect(el.querySelector('.admin-dirigera__table--motion')).toBeNull();
   });
 
   it('tasterZeigtJeTasteStellungLetztenDruckUndEntitaet', () => {

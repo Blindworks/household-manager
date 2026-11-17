@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -51,6 +51,10 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   readonly pairing = signal<DirigeraPairingStatus | null>(null);
   readonly sensors = signal<DirigeraSensor[]>([]);
   readonly buttons = signal<DirigeraButton[]>([]);
+  /** Je Geräteart eine eigene Tabelle, damit Spalten und Überschriften zur Art passen. */
+  readonly thermometers = computed(() => this.sensors().filter(s => s.kind === 'ENVIRONMENT'));
+  readonly contacts = computed(() => this.sensors().filter(s => s.kind === 'CONTACT'));
+  readonly motionSensors = computed(() => this.sensors().filter(s => s.kind === 'MOTION'));
   readonly secondsLeft = signal(0);
   readonly busy = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -131,8 +135,12 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   }
 
   motionLabel(sensor: DirigeraSensor): string {
-    const state = sensor.detected === null ? 'Zustand unbekannt' : (sensor.detected ? 'Bewegung' : 'Keine Bewegung');
-    return sensor.illuminance === null ? state : `${state} · ${sensor.illuminance} lx`;
+    if (sensor.detected === null) { return 'Zustand unbekannt'; }
+    return sensor.detected ? 'Bewegung' : 'Keine Bewegung';
+  }
+
+  illuminanceLabel(sensor: DirigeraSensor): string {
+    return sensor.illuminance === null ? '–' : `${sensor.illuminance} lx`;
   }
 
   /** Öffnet den Helligkeitsverlauf; ein zweiter Klick auf denselben Melder schließt ihn. */
