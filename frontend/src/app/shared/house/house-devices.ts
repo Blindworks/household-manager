@@ -104,16 +104,19 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   { kind: 'switch', id: 'wohnzimmer-meross-couch', area: 'wohnzimmer', label: 'Couch-Lichterkette',
     entityId: 'switch.meross_24041984068833510d06c4e7ae039150', lamp: true },
   contact('wohnzimmer', 'Terrassentür', 'binary_sensor.dirigera_9defac3086c54acaabc8d1930d87e533_1_contact'),
+  contact('wohnzimmer', 'Fenster', 'binary_sensor.dirigera_0e4cbff631fd4d9888367ba37980bd88_1_contact'),
 
   // Esszimmer
   roomClimate('esszimmer', 'sensor.dirigera_dcc8d385781d4071adf85f403b0cb997'),
   thermostat('esszimmer', 2),
   asLamp(plug('esszimmer', 'Lampe', 'kasa', '8012e05a14a26399f80f21e4fbff42ac1cdf5b50')),
+  contact('esszimmer', 'Fenster', 'binary_sensor.dirigera_f31ebd037c364b288388ce38c006c7ea_1_contact'),
 
   // Kueche
   roomClimate('kueche', 'sensor.dirigera_4a8044b0974e4885b2f60967af2201e1'),
   thermostat('kueche', 4),
   motion('kueche', 'binary_sensor.dirigera_b4345013c6d1495d80cb9772517894df_occupancy'),
+  contact('kueche', 'Fenster', 'binary_sensor.dirigera_14c284777ea94d3fbcf1a319464cb5c9_1_contact'),
   withBody(meross('kueche', 'Kaffeemaschine', '2112150005305590863548e1e98183b3'), 'coffee'),
   withBody(meross('kueche', 'Kühlschrank', '2112155672709990863548e1e98181eb'), 'fridge'),
   meross('kueche', 'Küchenzeile', '2205069806156351080148e1e991d1f0'),

@@ -140,6 +140,9 @@ describe('linkableDevices', () => {
     expect(labels).toContain('schlafzimmer:Balkontür');
     expect(labels).toContain('laufband:Fenster');
     expect(labels).toContain('gaeste_wc:Fenster');
+    expect(labels).toContain('wohnzimmer:Fenster');
+    expect(labels).toContain('esszimmer:Fenster');
+    expect(labels).toContain('kueche:Fenster');
     expect(labels).toContain('front:Haustür');
     expect(labels).not.toContain('waschkeller:Gaszähler');
   });

@@ -72,6 +72,14 @@ describe('HOUSE_DEVICES', () => {
     expect(window?.label).toBe('Fenster');
   });
 
+  it('Fenster in Wohnzimmer, Esszimmer und Küche sind Kontakte ihres Raums', () => {
+    const area = (entityId: string) =>
+      HOUSE_DEVICES.find(d => d.kind === 'contact' && d.entityId === entityId)?.area;
+    expect(area('binary_sensor.dirigera_0e4cbff631fd4d9888367ba37980bd88_1_contact')).toBe('wohnzimmer');
+    expect(area('binary_sensor.dirigera_f31ebd037c364b288388ce38c006c7ea_1_contact')).toBe('esszimmer');
+    expect(area('binary_sensor.dirigera_14c284777ea94d3fbcf1a319464cb5c9_1_contact')).toBe('kueche');
+  });
+
   it('Haustür-Kamera und Feinstaub sind in v1 nicht Teil der 3D-Ansicht', () => {
     const all = HOUSE_DEVICES.flatMap(entityIdsOf);
     expect(all).not.toContain('binary_sensor.blink_214942_armed');
