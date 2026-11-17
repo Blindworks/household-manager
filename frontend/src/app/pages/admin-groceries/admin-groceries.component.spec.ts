@@ -5,6 +5,7 @@ import { AdminGroceriesComponent } from './admin-groceries.component';
 import { GroceryMarket, GroceryRunResult, GroceryRunStatus } from '../../models/grocery.model';
 
 const BASE = '/api/v1/admin/groceries';
+const RUNS = '/api/v1/groceries/runs';
 
 const MARKET: GroceryMarket = {
   id: 7, chain: 'REWE', externalId: '1', name: 'REWE Musterstraße', address: 'Musterstraße 1, 60311 Frankfurt',
@@ -33,7 +34,7 @@ describe('AdminGroceriesComponent', () => {
       { source: 'MARKTGURU', enabled: true, lastRunAt: '2026-11-15T03:00:00', offerCount: 120, ok: true, reason: null },
       { source: 'REWE', enabled: true, lastRunAt: '2026-11-15T03:00:00', offerCount: 0, ok: false, reason: 'HTTP 500' }
     ]);
-    const statusRequest = httpMock.expectOne(`${BASE}/runs/status`);
+    const statusRequest = httpMock.expectOne(`${RUNS}/status`);
     if (runStatus === 'fail') {
       statusRequest.flush({ message: 'kaputt' }, { status: 500, statusText: 'Server Error' });
     } else {
@@ -44,7 +45,7 @@ describe('AdminGroceriesComponent', () => {
 
   function clickRun(): void {
     (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
-    httpMock.expectOne(`${BASE}/runs`).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+    httpMock.expectOne(RUNS).flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
     fixture.detectChanges();
   }
 
@@ -86,7 +87,7 @@ describe('AdminGroceriesComponent', () => {
       { source: 'REWE', enabled: false, lastRunAt: '2026-11-16T07:51:00', offerCount: 0, ok: false,
         reason: 'Zugriff gesperrt (HTTP 403)' }
     ]);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status());
+    httpMock.expectOne(`${RUNS}/status`).flush(status());
     fixture.detectChanges();
 
     const row = el.querySelector('.admin-groceries__source') as HTMLElement;
@@ -126,7 +127,7 @@ describe('AdminGroceriesComponent', () => {
     flushInitial();
     (el.querySelector('.admin-groceries__run') as HTMLButtonElement).click();
 
-    httpMock.expectOne(`${BASE}/runs`).flush({ message: 'Bitte 10 Minuten warten.' },
+    httpMock.expectOne(RUNS).flush({ message: 'Bitte 10 Minuten warten.' },
       { status: 429, statusText: 'Too Many Requests' });
     fixture.detectChanges();
 
@@ -141,18 +142,18 @@ describe('AdminGroceriesComponent', () => {
 
     // erste Quelle ist fertig, der Lauf aber nicht: das darf nicht als fertig gelten
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ running: true, startedAt: '2026-11-16T20:30:00' }));
+    httpMock.expectOne(`${RUNS}/status`).flush(status({ running: true, startedAt: '2026-11-16T20:30:00' }));
     fixture.detectChanges();
     expect(message()).toContain('Suche läuft');
 
     // alter Stand ohne laufenden Lauf (noch der Nachtlauf) gilt ebenfalls nicht
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status());
+    httpMock.expectOne(`${RUNS}/status`).flush(status());
     fixture.detectChanges();
     expect(message()).toContain('Suche läuft');
 
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T20:34:00',
+    httpMock.expectOne(`${RUNS}/status`).flush(status({ finishedAt: '2026-11-16T20:34:00',
       lastResult: { ...RESULT, offers: 640, deals: 5 } }));
     httpMock.expectOne(`${BASE}/sources`).flush([]);
     fixture.detectChanges();
@@ -163,7 +164,7 @@ describe('AdminGroceriesComponent', () => {
     expect(message()).toContain('REWE (HTTP 500)');
     expect(runButton().disabled).toBeFalse();
     tick(30000);
-    httpMock.expectNone(`${BASE}/runs/status`);
+    httpMock.expectNone(`${RUNS}/status`);
   }));
 
   it('showsTheErrorOfAFailedRun', fakeAsync(() => {
@@ -171,7 +172,7 @@ describe('AdminGroceriesComponent', () => {
     clickRun();
 
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T20:34:00', lastResult: null,
+    httpMock.expectOne(`${RUNS}/status`).flush(status({ finishedAt: '2026-11-16T20:34:00', lastResult: null,
       lastError: 'DB weg' }));
     httpMock.expectOne(`${BASE}/sources`).flush([]);
     fixture.detectChanges();
@@ -185,7 +186,7 @@ describe('AdminGroceriesComponent', () => {
     expect(runButton().disabled).toBeTrue();
 
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T04:06:00' }));
+    httpMock.expectOne(`${RUNS}/status`).flush(status({ finishedAt: '2026-11-16T04:06:00' }));
     httpMock.expectOne(`${BASE}/sources`).flush([]);
     fixture.detectChanges();
 
@@ -199,16 +200,16 @@ describe('AdminGroceriesComponent', () => {
     clickRun();
 
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush({ message: 'weg' }, { status: 502, statusText: 'Bad Gateway' });
+    httpMock.expectOne(`${RUNS}/status`).flush({ message: 'weg' }, { status: 502, statusText: 'Bad Gateway' });
     tick(10000);
     // ohne bekannten Ausgangsstand zählt ein altes Ende nicht, erst nach gesehenem Lauf
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status());
+    httpMock.expectOne(`${RUNS}/status`).flush(status());
     fixture.detectChanges();
     expect(message()).toContain('Suche läuft');
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ running: true }));
+    httpMock.expectOne(`${RUNS}/status`).flush(status({ running: true }));
     tick(10000);
-    httpMock.expectOne(`${BASE}/runs/status`).flush(status({ finishedAt: '2026-11-16T20:40:00' }));
+    httpMock.expectOne(`${RUNS}/status`).flush(status({ finishedAt: '2026-11-16T20:40:00' }));
     httpMock.expectOne(`${BASE}/sources`).flush([]);
     fixture.detectChanges();
 
@@ -222,7 +223,7 @@ describe('AdminGroceriesComponent', () => {
     fixture.destroy();
     tick(30000);
 
-    httpMock.expectNone(`${BASE}/runs/status`);
+    httpMock.expectNone(`${RUNS}/status`);
     discardPeriodicTasks();
   }));
 

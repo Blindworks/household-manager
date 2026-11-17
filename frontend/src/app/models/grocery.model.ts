@@ -137,7 +137,7 @@ export interface GroceryRunResult {
   sourceFailures: Record<string, string>;
 }
 
-/** Laufstand (GET /v1/admin/groceries/runs/status); Zeiten sind Serverzeit ohne Zone. */
+/** Laufstand (GET /v1/groceries/runs/status); Zeiten sind Serverzeit ohne Zone. */
 export interface GroceryRunStatus {
   running: boolean;
   startedAt: string | null;

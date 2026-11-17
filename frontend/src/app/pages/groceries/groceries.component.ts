@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
@@ -10,6 +11,7 @@ import { EChartsCoreOption } from 'echarts/core';
 import { GroceryService } from '../../services/grocery.service';
 import { HouseholdUserService } from '../../services/household-user.service';
 import { AuthService } from '../../services/auth.service';
+import { GroceryRunTracker } from '../../services/grocery-run-tracker.service';
 import {
   GroceryBaseUnit, GroceryDeal, GroceryOwner, GroceryPriceObservation, GroceryProduct, GroceryProductRequest
 } from '../../models/grocery.model';
@@ -53,7 +55,7 @@ interface ProductDetail {
   selector: 'app-groceries',
   standalone: true,
   imports: [CommonModule, FormsModule, NgxEchartsDirective],
-  providers: [provideEchartsCore({ echarts })],
+  providers: [provideEchartsCore({ echarts }), GroceryRunTracker],
   templateUrl: './groceries.component.html',
   styleUrl: './groceries.component.scss'
 })
@@ -61,6 +63,11 @@ export class GroceriesComponent implements OnInit {
   private readonly groceryService = inject(GroceryService);
   private readonly userService = inject(HouseholdUserService);
   private readonly authService = inject(AuthService);
+  private readonly runTracker = inject(GroceryRunTracker);
+
+  /** „Jetzt suchen“: voller Lauf über alle Quellen statt auf den Nachtlauf zu warten. */
+  readonly searching = this.runTracker.running;
+  readonly searchMessage = this.runTracker.message;
 
   readonly unitOptions = GROCERY_UNIT_OPTIONS;
 
@@ -85,6 +92,10 @@ export class GroceriesComponent implements OnInit {
 
   private readonly ownUserId = computed(() => this.authService.currentUser()?.id ?? null);
 
+  constructor() {
+    this.runTracker.finished.pipe(takeUntilDestroyed()).subscribe(() => this.reload());
+  }
+
   ngOnInit(): void {
     const own = this.ownUserId();
     this.selectedOwner = own === null ? 'all' : String(own);
@@ -93,6 +104,11 @@ export class GroceriesComponent implements OnInit {
       error: () => this.users = []
     });
     this.reload();
+    this.runTracker.init();
+  }
+
+  searchNow(): void {
+    this.runTracker.start();
   }
 
   get ownerOptions(): OwnerOption[] {

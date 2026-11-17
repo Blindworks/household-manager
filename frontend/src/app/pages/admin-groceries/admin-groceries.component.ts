@@ -1,11 +1,12 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Subscription, catchError, of, switchMap, take, timer } from 'rxjs';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GroceryService } from '../../services/grocery.service';
 import {
-  GroceryChainStatus, GroceryMarket, GroceryRunStatus, GrocerySourceStatus
+  GroceryChainStatus, GroceryMarket, GrocerySourceStatus
 } from '../../models/grocery.model';
+import { GroceryRunTracker } from '../../services/grocery-run-tracker.service';
 
 /** Kettenreihenfolge und Anzeigename der Ketten mit Marktauswahl (Chain.hasMarkets im Backend). */
 const MARKET_CHAINS: { chain: string; name: string }[] = [
@@ -25,10 +26,6 @@ const SOURCE_NAMES: Record<string, string> = {
 export const THRESHOLD_MIN = 1;
 export const THRESHOLD_MAX = 50;
 
-/** „Jetzt suchen“ läuft im Hintergrund: Quellenstatus alle 10 s, höchstens 15 Minuten lang. */
-const RUN_POLL_MS = 10_000;
-const RUN_MAX_POLLS = 90;
-
 interface Message {
   text: string;
   type: 'success' | 'error';
@@ -39,11 +36,13 @@ interface Message {
   selector: 'app-admin-groceries',
   standalone: true,
   imports: [FormsModule, DatePipe],
+  providers: [GroceryRunTracker],
   templateUrl: './admin-groceries.component.html',
   styleUrl: './admin-groceries.component.scss'
 })
-export class AdminGroceriesComponent implements OnInit, OnDestroy {
+export class AdminGroceriesComponent implements OnInit {
   private readonly api = inject(GroceryService);
+  private readonly runTracker = inject(GroceryRunTracker);
 
   readonly thresholdMin = THRESHOLD_MIN;
   readonly thresholdMax = THRESHOLD_MAX;
@@ -54,18 +53,19 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
   readonly failedChains = signal<string[]>([]);
   readonly errorMessage = signal<string | null>(null);
   readonly settingsMessage = signal<Message | null>(null);
-  readonly runMessage = signal<Message | null>(null);
+  readonly runMessage = this.runTracker.message;
   readonly refreshingMarkets = signal(false);
-  readonly running = signal(false);
+  readonly running = this.runTracker.running;
   readonly savingSettings = signal(false);
 
   zip = '';
   threshold: number | null = null;
   private lat: number | null = null;
   private lng: number | null = null;
-  private runPoll: Subscription | null = null;
-  /** `finishedAt` des Laufstands, zuletzt vom Server gelesen; undefined = nie gelesen. */
-  private knownFinishedAt: string | null | undefined = undefined;
+
+  constructor() {
+    this.runTracker.finished.pipe(takeUntilDestroyed()).subscribe(() => this.loadSources());
+  }
 
   readonly marketGroups = computed(() => MARKET_CHAINS.map(({ chain, name }) => ({
     chain, name, markets: this.markets().filter(m => m.chain === chain)
@@ -84,7 +84,7 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
     this.loadMarkets();
     this.loadChains();
     this.loadSources();
-    this.loadRunStatus();
+    this.runTracker.init();
   }
 
   get thresholdValid(): boolean {
@@ -159,79 +159,8 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    this.runPoll?.unsubscribe();
-  }
-
-  /**
-   * Startet den Lauf (202) und fragt danach den Laufstand ab, bis der Server `running: false` mit einem anderen
-   * `finishedAt` meldet als vor dem Klick. Verglichen wird der Serverstand als Text, nie die Browseruhr.
-   */
   runNow(): void {
-    if (this.running()) {
-      return;
-    }
-    this.running.set(true);
-    this.runMessage.set(null);
-    const baseline = this.knownFinishedAt;
-    this.api.runNow().subscribe({
-      next: () => {
-        this.runMessage.set({ text: 'Suche läuft …', type: 'success' });
-        this.pollRunStatus(baseline);
-      },
-      error: error => {
-        this.running.set(false);
-        this.runMessage.set({ text: error.message, type: 'error' });
-      }
-    });
-  }
-
-  /** Beim Laden: läuft gerade ein Lauf (Nachtlauf oder anderer Tab), wird er wie nach einem Klick verfolgt. */
-  private loadRunStatus(): void {
-    this.api.getRunStatus().subscribe({
-      next: status => {
-        this.knownFinishedAt = status.finishedAt;
-        if (status.running && !this.running()) {
-          this.running.set(true);
-          this.runMessage.set({ text: 'Suche läuft …', type: 'success' });
-          this.pollRunStatus(status.finishedAt);
-        }
-      },
-      error: () => {
-        // Ohne Laufstand bleibt der Knopf bedienbar; ein Klick verfolgt den Lauf trotzdem
-      }
-    });
-  }
-
-  /** `baseline` undefined = unbekannt (Laufstand nie gelesen): dann zählt erst ein Ende nach gesehenem Lauf. */
-  private pollRunStatus(baseline: string | null | undefined): void {
-    this.runPoll?.unsubscribe();
-    let seenRunning = false;
-    this.runPoll = timer(RUN_POLL_MS, RUN_POLL_MS).pipe(
-      take(RUN_MAX_POLLS),
-      switchMap(() => this.api.getRunStatus().pipe(catchError(() => of(null))))
-    ).subscribe({
-      next: status => {
-        if (status === null) {
-          return;
-        }
-        seenRunning = seenRunning || status.running;
-        if (!isRunFinished(status, baseline, seenRunning)) {
-          return;
-        }
-        this.knownFinishedAt = status.finishedAt;
-        this.running.set(false);
-        this.runMessage.set(runOutcome(status));
-        this.loadSources();
-        this.runPoll?.unsubscribe();
-      },
-      complete: () => {
-        if (this.running()) {
-          this.running.set(false);
-          this.runMessage.set({ text: 'Die Suche läuft noch – den Stand später hier prüfen.', type: 'success' });
-        }
-      }
-    });
+    this.runTracker.start();
   }
 
   private loadMarkets(): void {
@@ -254,27 +183,4 @@ export class AdminGroceriesComponent implements OnInit, OnDestroy {
       error: error => this.errorMessage.set(error.message)
     });
   }
-}
-
-function isRunFinished(status: GroceryRunStatus, baseline: string | null | undefined, seenRunning: boolean): boolean {
-  if (status.running || status.finishedAt === null) {
-    return false;
-  }
-  return baseline === undefined ? seenRunning : status.finishedAt !== baseline;
-}
-
-function runOutcome(status: GroceryRunStatus): Message {
-  if (status.lastError !== null || status.lastResult === null) {
-    return { text: `Suche fehlgeschlagen: ${status.lastError ?? 'unbekannter Fehler'}`, type: 'error' };
-  }
-  const result = status.lastResult;
-  const parts = [`Suche fertig: ${result.offers} Angebote`, `${result.deals} Schnäppchen`];
-  if (result.aiFailures > 0) {
-    parts.push(`${result.aiFailures} Claude-Bewertungen fehlgeschlagen`);
-  }
-  const failures = Object.entries(result.sourceFailures);
-  if (failures.length > 0) {
-    parts.push(`gestört: ${failures.map(([source, reason]) => `${source} (${reason})`).join(', ')}`);
-  }
-  return { text: parts.join(', ') + '.', type: failures.length > 0 || result.aiFailures > 0 ? 'error' : 'success' };
 }

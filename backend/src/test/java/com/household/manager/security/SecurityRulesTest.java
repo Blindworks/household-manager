@@ -102,7 +102,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ZigbeeManagementController.class, AgentController.class, BleSensorController.class,
         com.household.manager.dirigera.DirigeraController.class,
         com.household.manager.systemlog.SystemLogController.class,
-        com.household.manager.grocery.GroceryAdminController.class},
+        com.household.manager.grocery.GroceryAdminController.class,
+        com.household.manager.grocery.GroceryRunController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
@@ -478,21 +479,17 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "MEMBER")
-    void groceriesRunsPostIstFuerMemberVerboten() throws Exception {
-        mockMvc.perform(post("/v1/admin/groceries/runs").with(csrf())).andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(roles = "MEMBER")
-    void groceriesRunStatusIstFuerMemberVerboten() throws Exception {
-        mockMvc.perform(get("/v1/admin/groceries/runs/status")).andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void groceriesRunsPostIstFuerAdminErlaubt() throws Exception {
+    void groceriesRunsSindFuerMemberErlaubt() throws Exception {
         when(groceryProperties.isEnabled()).thenReturn(true);
-        mockMvc.perform(post("/v1/admin/groceries/runs").with(csrf())).andExpect(status().isAccepted());
+        mockMvc.perform(post("/v1/groceries/runs").with(csrf())).andExpect(status().isAccepted());
+        mockMvc.perform(get("/v1/groceries/runs/status")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void groceriesRunsSindFuerKioskVerboten() throws Exception {
+        mockMvc.perform(post("/v1/groceries/runs").with(csrf())).andExpect(status().isForbidden());
+        mockMvc.perform(get("/v1/groceries/runs/status")).andExpect(status().isForbidden());
     }
 
     // Kein GroceryController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst.

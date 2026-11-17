@@ -7,16 +7,12 @@ import com.household.manager.grocery.dto.GrocerySettingsDto;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
 import com.household.manager.grocery.dto.MarketSelectionDto;
-import com.household.manager.grocery.dto.RunStartedDto;
-import com.household.manager.grocery.dto.RunStatusDto;
 import com.household.manager.grocery.dto.SourceStatusDto;
 import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.SourceKey;
 import com.household.manager.repository.GrocerySourceRunRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -105,22 +101,6 @@ public class GroceryAdminController {
         } catch (RuntimeException e) {
             log.warn("Schnäppchen nach Einstellungsänderung nicht neu berechnet: {}", e.getMessage());
         }
-    }
-
-    /** „Jetzt suchen“: startet den Lauf im Hintergrund (202), höchstens alle 10 Minuten (sonst 429). */
-    @PostMapping("/runs")
-    public ResponseEntity<RunStartedDto> runNow() {
-        if (!properties.isEnabled()) {
-            throw new IllegalStateException("Supermarkt-Angebote sind deaktiviert");
-        }
-        runService.runManually();
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RunStartedDto("gestartet"));
-    }
-
-    /** Laufstand für das Polling der Admin-Seite (ADMIN über den methodenlosen Matcher). */
-    @GetMapping("/runs/status")
-    public RunStatusDto runStatus() {
-        return runService.runStatus();
     }
 
     @GetMapping("/sources")

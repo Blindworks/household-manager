@@ -98,12 +98,12 @@ export class GroceryService {
   }
 
   getRunStatus(): Observable<GroceryRunStatus> {
-    return this.http.get<GroceryRunStatus>(`${this.adminUrl}/runs/status`).pipe(catchError(this.handleError));
+    return this.http.get<GroceryRunStatus>(`${this.baseUrl}/runs/status`).pipe(catchError(this.handleError));
   }
 
-  /** Startet den Lauf im Hintergrund (202); das Ergebnis zeigt danach der Quellenstatus. */
+  /** Startet den vollen Lauf im Hintergrund (202, MEMBER); höchstens alle 10 Minuten, sonst 429. */
   runNow(): Observable<GroceryRunStarted> {
-    return this.http.post<GroceryRunStarted>(`${this.adminUrl}/runs`, {}).pipe(
+    return this.http.post<GroceryRunStarted>(`${this.baseUrl}/runs`, {}).pipe(
       catchError((error: HttpErrorResponse) => error.status === 429
         ? throwError(() => new Error(error.error?.message || 'Bitte 10 Minuten warten.'))
         : this.handleError(error)));

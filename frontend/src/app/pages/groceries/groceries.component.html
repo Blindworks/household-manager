@@ -7,13 +7,22 @@
         <span *ngIf="collectedAt"> · Stand {{ collectedAt | date:'dd.MM. HH:mm' }}</span>
       </p>
     </div>
-    <label class="groceries__owner">
-      Anzeigen für
-      <select [ngModel]="selectedOwner" (ngModelChange)="onOwnerChange($event)" name="owner">
-        <option *ngFor="let option of ownerOptions" [value]="option.value">{{ option.label }}</option>
-      </select>
-    </label>
+    <div class="groceries__actions">
+      <label class="groceries__owner">
+        Anzeigen für
+        <select [ngModel]="selectedOwner" (ngModelChange)="onOwnerChange($event)" name="owner">
+          <option *ngFor="let option of ownerOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn--primary" data-test="search-now"
+              [disabled]="searching()" [attr.aria-busy]="searching()" (click)="searchNow()">
+        {{ searching() ? 'Suche läuft …' : 'Jetzt suchen' }}
+      </button>
+    </div>
   </header>
+
+  <p class="groceries__search-message" data-test="search-message" *ngIf="searchMessage() as message"
+     [class.groceries__error]="message.type === 'error'">{{ message.text }}</p>
 
   <p class="groceries__error" *ngIf="error">{{ error }}</p>
   <p class="groceries__error" *ngIf="actionError">{{ actionError }}</p>

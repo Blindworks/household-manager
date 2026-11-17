@@ -1,10 +1,14 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController, TestRequest } from '@angular/common/http/testing';
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import { GroceriesComponent } from './groceries.component';
-import { GroceryDeal, GroceryProduct } from '../../models/grocery.model';
+import { GroceryDeal, GroceryProduct, GroceryRunStatus } from '../../models/grocery.model';
+
+const RUNS = '/api/v1/groceries/runs';
+const NIGHT_RUN: GroceryRunStatus = { running: false, startedAt: '2026-11-17T04:00:00',
+  finishedAt: '2026-11-17T04:06:00', lastResult: null, lastError: null };
 
 registerLocaleData(localeDe);
 
@@ -47,6 +51,7 @@ describe('GroceriesComponent', () => {
     httpMock.expectOne('/api/v1/users').flush([]);
     flushDeals(deals);
     httpMock.expectOne(r => r.url === '/api/v1/groceries/products').flush(products);
+    httpMock.expectOne(`${RUNS}/status`).flush(NIGHT_RUN);
     fixture.detectChanges();
   }
 
@@ -135,6 +140,43 @@ describe('GroceriesComponent', () => {
     const products = httpMock.expectOne(r => r.url === '/api/v1/groceries/products');
     expect(products.request.params.get('owner')).toBe('household');
     products.flush([]);
+  });
+
+  it('searchNowStartsRunAndReloadsWhenItFinished', fakeAsync(() => {
+    start([], []);
+    const el = fixture.nativeElement as HTMLElement;
+    const button = () => el.querySelector('[data-test="search-now"]') as HTMLButtonElement;
+
+    button().click();
+    const post = httpMock.expectOne(RUNS);
+    expect(post.request.method).toBe('POST');
+    post.flush({ status: 'gestartet' }, { status: 202, statusText: 'Accepted' });
+    fixture.detectChanges();
+    expect(button().disabled).toBeTrue();
+    expect(button().textContent).toContain('Suche läuft');
+
+    tick(10000);
+    httpMock.expectOne(`${RUNS}/status`).flush({ ...NIGHT_RUN, finishedAt: '2026-11-17T20:15:00',
+      lastResult: { offers: 640, aiCalls: 3, deferred: 0, deals: 2, aiFailures: 0, sourceFailures: {} } });
+    flushDeals([deal({})]);
+    httpMock.expectOne(r => r.url === '/api/v1/groceries/products').flush([product({})]);
+    fixture.detectChanges();
+
+    expect(button().disabled).toBeFalse();
+    expect(el.querySelector('[data-test="search-message"]')?.textContent).toContain('Suche fertig: 640 Angebote');
+    expect(el.querySelectorAll('[data-test="deal"]').length).toBe(1);
+  }));
+
+  it('searchNowShowsCooldownMessage', () => {
+    start([], []);
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('[data-test="search-now"]') as HTMLButtonElement).click();
+    httpMock.expectOne(RUNS).flush({ message: 'Bitte 10 Minuten warten.' },
+      { status: 429, statusText: 'Too Many Requests' });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-test="search-message"]')?.textContent).toContain('Bitte 10 Minuten warten.');
+    expect((el.querySelector('[data-test="search-now"]') as HTMLButtonElement).disabled).toBeFalse();
   });
 
   it('updatesProductWithEmptySearchWordsForServerSuggestion', () => {
