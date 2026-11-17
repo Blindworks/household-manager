@@ -835,6 +835,46 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
     discardPeriodicTasks();
   }));
 
+  it('oeffnet beim Antippen des Regenradars den Dialog mit Vorhersage', fakeAsync(() => {
+    const local = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-`
+      + `${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:`
+      + `${String(d.getMinutes()).padStart(2, '0')}:00`;
+    const measuredAt = local(new Date(Date.now() - 60000));
+    entityStateServiceSpy.getEntities.and.callFake((domain?: string, source?: string) =>
+      source === 'RAIN_RADAR'
+        ? of([{
+          ...doorContact('sensor.rain_radar_intensity', '0'),
+          domain: 'SENSOR', source: 'RAIN_RADAR',
+          attributes: { measuredAt, thresholdMmPerHour: 0.3 }
+        } as EntityState])
+        : of([]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    (element.querySelector('.lumina__rain') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.lumina__dialog--rain')?.textContent).toContain('Lade Radardaten');
+
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne('/api/v1/rain-radar/forecast').flush({
+      measuredAt, mmPerHour: 0, raining: false, expectedRainAt: null, peakNextHourMmPerHour: 0,
+      thresholdMmPerHour: 0.3, source: 'DWD-Radar via Bright Sky',
+      frames: [{ time: measuredAt, mmPerHour: 0, forecast: false }]
+    });
+    fixture.detectChanges();
+
+    const dialog = element.querySelector('.lumina__dialog--rain');
+    expect(dialog?.textContent).toContain('Kein Regen in den nächsten zwei Stunden erwartet.');
+    expect(dialog?.querySelectorAll('.lumina__sensor-metric').length).toBe(3);
+
+    (dialog?.querySelector('.lumina__dialog-close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.lumina__dialog--rain')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
   it('leert die Tuer-Meldungen bei einem API-Fehler, statt das Dashboard zu stoeren', fakeAsync(() => {
     entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
     const fixture = TestBed.createComponent(DashboardComponent);

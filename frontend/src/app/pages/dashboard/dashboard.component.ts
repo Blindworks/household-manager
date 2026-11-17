@@ -44,6 +44,8 @@ import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
 import { buildRainRadarView, RainRadarView } from '../../shared/rain-radar-view.util';
+import { buildRainRadarDetail, RainRadarDetail } from '../../shared/rain-radar-detail.util';
+import { RainRadarService } from '../../services/rain-radar.service';
 import { buildLockBatteryInsight, buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
 import { buildDoorInsights, buildWindowInsights } from '../../shared/door-insight.util';
 import {
@@ -146,6 +148,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly tractiveService = inject(TractiveService);
   private readonly zigbeeService = inject(ZigbeeService);
   private readonly entityStateService = inject(EntityStateService);
+  private readonly rainRadarService = inject(RainRadarService);
   private readonly petSupplyService = inject(PetSupplyService);
   private readonly presenceService = inject(PresenceService);
   private readonly agentService = inject(AgentService);
@@ -175,6 +178,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private temperatureSubscription?: Subscription;
   private ventilationSubscription?: Subscription;
   private rainRadarSubscription?: Subscription;
+  private rainRadarDetailSubscription?: Subscription;
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
@@ -269,6 +273,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   climate: ClimateView = { outdoor: [], weatherLabel: '--', rows: [] };
   /** Regenradar in der Kopfzeile; null = keine Aussage (Entität fehlt oder unavailable). */
   rainRadar: RainRadarView | null = null;
+  /** Regenradar-Dialog offen; der Inhalt kommt nach, `rainRadarDetail` bleibt bis dahin `null`. */
+  rainRadarDialogOpen = false;
+  rainRadarDetail: RainRadarDetail | null = null;
+  rainRadarDetailError: string | null = null;
 
   /** Zuletzt geladene Rohmesswerte; Quelle des Sensor-Detaildialogs. */
   private currentTemperatures: CurrentTemperatureReading[] = [];
@@ -511,6 +519,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.temperatureSubscription?.unsubscribe();
     this.ventilationSubscription?.unsubscribe();
     this.rainRadarSubscription?.unsubscribe();
+    this.rainRadarDetailSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
     this.switchFollowUpSubscription?.unsubscribe();
@@ -1585,7 +1594,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (entities) {
           this.rainRadar = buildRainRadarView(entities, Date.now());
         }
+        if (this.rainRadarDialogOpen) {
+          this.loadRainRadarDetail();
+        }
       });
+  }
+
+  /** Oeffnet den Regenradar-Dialog mit Verlauf und 2-h-Vorhersage; laedt bei jedem Takt nach, solange er offen ist. */
+  openRainRadarDialog(): void {
+    this.rainRadarDialogOpen = true;
+    this.rainRadarDetail = null;
+    this.rainRadarDetailError = null;
+    this.loadRainRadarDetail();
+  }
+
+  closeRainRadarDialog(): void {
+    this.rainRadarDialogOpen = false;
+    this.rainRadarDetailSubscription?.unsubscribe();
+  }
+
+  /** Ein Fehler beim Nachladen behaelt den gezeigten Stand; nur ohne jeden Stand erscheint die Meldung. */
+  private loadRainRadarDetail(): void {
+    this.rainRadarDetailSubscription?.unsubscribe();
+    this.rainRadarDetailSubscription = this.rainRadarService.getForecast().subscribe({
+      next: forecast => {
+        if (this.rainRadarDialogOpen) {
+          this.rainRadarDetail = buildRainRadarDetail(forecast, Date.now());
+          this.rainRadarDetailError = null;
+        }
+      },
+      error: () => {
+        if (this.rainRadarDialogOpen && !this.rainRadarDetail) {
+          this.rainRadarDetailError = 'Radardaten konnten nicht geladen werden.';
+        }
+      }
+    });
   }
 
   private startVentilationRefresh(): void {

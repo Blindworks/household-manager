@@ -272,6 +272,18 @@
 // gleich/jetzt kraeftig mit Icon in Akzentfarbe.
 .lumina__rain {
   padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(var(--tint-rgb), 0.06);
+  }
 
   &--dry .lumina__weather-icon,
   &--later .lumina__weather-icon {
@@ -1987,6 +1999,7 @@
   }
 
   .lumina__dialog,
+  .lumina__dialog--rain,
   .lumina__dialog--history,
   .lumina__dialog--walks,
   .lumina__dialog--sensor {
@@ -2229,6 +2242,26 @@
 
 .lumina__dialog--walks {
   width: min(560px, 92vw);
+}
+
+// ---- Regenradar-Dialog -----------------------------------------------------
+.lumina__dialog--rain {
+  width: min(620px, 92vw);
+}
+
+.lumina__rain-summary {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.lumina__rain-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.lumina__rain-chart {
+  height: 260px;
 }
 
 // ---- Sensor-Detaildialog (Temperatur + Luftfeuchte) ----------------------

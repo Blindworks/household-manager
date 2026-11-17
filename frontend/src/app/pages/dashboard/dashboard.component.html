@@ -55,18 +55,21 @@
           <!-- Regenradar (DWD-Radar ueber Bright Sky) fuer das Pixel ueber dem Haus -->
           <ng-container *ngIf="rainRadar as rain">
             <div class="lumina__divider"></div>
-            <div
+            <button
+              type="button"
               class="lumina__weather lumina__rain"
               [ngClass]="'lumina__rain--' + rain.tone"
               [class.lumina__rain--stale]="rain.stale"
               [title]="rain.title"
+              aria-label="Regenradar anzeigen"
+              (click)="openRainRadarDialog()"
             >
               <span class="material-symbols-outlined lumina__weather-icon">{{ rain.icon }}</span>
               <div class="lumina__weather-text">
                 <span class="lumina__weather-temp">{{ rain.value }}</span>
                 <span class="lumina__label">{{ rain.label }}</span>
               </div>
-            </div>
+            </button>
           </ng-container>
           <!-- Anwesenheit: nur Personen, die `/v1/presence/status` liefert
                (das sind bereits nur die mit erfasstem Geraet). Der Name steht
@@ -756,6 +759,58 @@
           class="lumina__history-chart"
           [options]="sensorHistoryOptions"
         ></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regenradar: Messung der letzten 20 Min. und 2-h-Vorhersage fuer das Pixel ueber dem Haus -->
+  <div
+    *ngIf="rainRadarDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeRainRadarDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--rain"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Regenradar"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">Regenradar</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeRainRadarDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <p *ngIf="rainRadarDetailError" class="lumina__history-message">{{ rainRadarDetailError }}</p>
+        <p *ngIf="!rainRadarDetail && !rainRadarDetailError" class="lumina__history-message">Lade Radardaten …</p>
+        <ng-container *ngIf="rainRadarDetail as detail">
+          <p class="lumina__rain-summary">{{ detail.summary }}</p>
+          <div *ngIf="detail.metrics.length" class="lumina__sensor-metrics lumina__rain-metrics">
+            <div *ngFor="let metric of detail.metrics" class="lumina__sensor-metric">
+              <span class="material-symbols-outlined lumina__sensor-metric-icon">{{ metric.icon }}</span>
+              <span class="lumina__sensor-metric-label">{{ metric.label }}</span>
+              <span class="lumina__sensor-metric-value">{{ metric.value }}</span>
+              <span class="lumina__sensor-metric-label">{{ metric.hint }}</span>
+            </div>
+          </div>
+          <div
+            *ngIf="detail.chartOptions"
+            echarts
+            class="lumina__history-chart lumina__rain-chart"
+            [options]="detail.chartOptions"
+          ></div>
+          <p class="lumina__sensor-meta">
+            <span>{{ detail.measuredLabel }}</span>
+            <span>{{ detail.source }} · Vorhersage 2 h</span>
+          </p>
+        </ng-container>
       </div>
     </div>
   </div>

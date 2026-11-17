@@ -166,4 +166,38 @@ class RainRadarPollingServiceTest {
         verify(client, never()).fetch(anyDouble(), anyDouble(), any());
         verify(jobMonitor).reportInactive(eq("Regenradar deaktiviert"));
     }
+    @Test
+    void forecastLiefertDieBilderDesLetztenAbrufsInLokalzeit() throws Exception {
+        when(client.fetch(50.05, 8.6, CLOCK.instant())).thenReturn(raining(MEASURED));
+
+        service.poll();
+        RainRadarForecastResponse forecast = service.forecast();
+
+        assertThat(forecast.measuredAt()).isEqualTo("2026-11-17T14:25:00");
+        assertThat(forecast.raining()).isTrue();
+        assertThat(forecast.thresholdMmPerHour()).isEqualTo(0.3);
+        assertThat(forecast.frames()).containsExactly(
+                new RainRadarForecastResponse.Frame("2026-11-17T14:25:00", 2.04, false),
+                new RainRadarForecastResponse.Frame("2026-11-17T14:30:00", 1.0, true));
+    }
+
+    @Test
+    void forecastBehaeltDenLetztenStandBeiFehlabruf() throws Exception {
+        when(client.fetch(anyDouble(), anyDouble(), any()))
+                .thenReturn(raining(MEASURED))
+                .thenThrow(new IOException("weg"));
+
+        service.poll();
+        service.poll();
+
+        assertThat(service.forecast().frames()).hasSize(2);
+    }
+
+    @Test
+    void forecastOhneAbrufIstLeer() {
+        RainRadarForecastResponse forecast = service.forecast();
+
+        assertThat(forecast.frames()).isEmpty();
+        assertThat(forecast.measuredAt()).isNull();
+    }
 }

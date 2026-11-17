@@ -1418,6 +1418,12 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenRegenradarVerlaufLesen() throws Exception {
+        mockMvc.perform(get("/v1/rain-radar/forecast")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
     void kioskDarfDenLadesaeulenAbrufErzwingen() throws Exception {
         mockMvc.perform(post("/v1/charging/refresh").with(csrf())).andExpect(status().isNotFound());
     }

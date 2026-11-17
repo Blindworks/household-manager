@@ -47,6 +47,7 @@ public class RainRadarPollingService {
     private static final List<String> ENTITY_IDS = List.of(RAINING_ENTITY_ID, SOON_ENTITY_ID, INTENSITY_ENTITY_ID);
     private static final String STATE_UNAVAILABLE = "unavailable";
     private static final String SOURCE_REF = "home";
+    private static final String SOURCE_LABEL = "DWD-Radar via Bright Sky";
     private static final DateTimeFormatter ISO_LOCAL_SECONDS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private final RainRadarClient client;
@@ -58,6 +59,8 @@ public class RainRadarPollingService {
     private final Clock clock;
 
     private int consecutiveFailures;
+    /** Letzter erfolgreicher Abruf fuer den Detaildialog; bleibt bei Fehlabrufen stehen (das Alter steht in {@code measuredAt}). */
+    private volatile RainRadarSnapshot latest;
 
     public RainRadarPollingService(RainRadarClient client, RainRadarProperties properties,
                                    TractiveHomeSettingsService homeSettings, EntityStateService entityStateService,
@@ -85,18 +88,21 @@ public class RainRadarPollingService {
     private void pollNow() {
         if (!properties.isEnabled()) {
             jobMonitor.reportInactive("Regenradar deaktiviert");
+            latest = null;
             return;
         }
         Optional<TractiveHomeSettings> home = configuredHome();
         if (home.isEmpty()) {
             jobMonitor.reportInactive("Kein Zuhause hinterlegt (Admin → Hundetracker-Zuhause)");
+            latest = null;
             markUnavailable();
             return;
         }
         Instant now = clock.instant();
         Optional<RainRadarReading> reading;
+        List<RainRadarFrame> frames;
         try {
-            List<RainRadarFrame> frames = client.fetch(home.get().homeLatitude(), home.get().homeLongitude(), now);
+            frames = client.fetch(home.get().homeLatitude(), home.get().homeLongitude(), now);
             reading = RainRadarEvaluator.evaluate(frames, now,
                     properties.getThresholdMmPerHour(), properties.getSoonMinutes());
         } catch (InterruptedException ex) {
@@ -116,7 +122,26 @@ public class RainRadarPollingService {
             return;
         }
         consecutiveFailures = 0;
+        latest = new RainRadarSnapshot(frames, reading.get());
         report(reading.get());
+    }
+
+    /** Verlauf des letzten erfolgreichen Abrufs fuer den Dashboard-Dialog; ohne Abruf leer. */
+    public RainRadarForecastResponse forecast() {
+        RainRadarSnapshot snapshot = latest;
+        double threshold = properties.getThresholdMmPerHour();
+        if (snapshot == null) {
+            return new RainRadarForecastResponse(null, null, false, null, null, threshold, SOURCE_LABEL, List.of());
+        }
+        RainRadarReading reading = snapshot.reading();
+        List<RainRadarForecastResponse.Frame> frames = snapshot.frames().stream()
+                .map(frame -> new RainRadarForecastResponse.Frame(localTime(frame.time()),
+                        round(frame.mmPerHour()), frame.forecast()))
+                .toList();
+        return new RainRadarForecastResponse(localTime(reading.measuredAt()), round(reading.mmPerHour()),
+                reading.raining(),
+                reading.expectedRainAt() == null ? null : localTime(reading.expectedRainAt()),
+                round(reading.peakNextHourMmPerHour()), threshold, SOURCE_LABEL, frames);
     }
 
     private void recordFailure(String reason) {
@@ -148,7 +173,7 @@ public class RainRadarPollingService {
             attributes.put("minutesUntilRain", reading.minutesUntilRain());
         }
         attributes.put("thresholdMmPerHour", properties.getThresholdMmPerHour());
-        attributes.put("source", "DWD-Radar via Bright Sky");
+        attributes.put("source", SOURCE_LABEL);
 
         reportState(RAINING_ENTITY_ID, EntityDomain.BINARY_SENSOR, "Regen am Haus",
                 reading.raining() ? "on" : "off", attributes);
