@@ -137,6 +137,21 @@ describe('GroceriesComponent', () => {
     products.flush([]);
   });
 
+  it('updatesProductWithEmptySearchWordsForServerSuggestion', () => {
+    start([], [product({})]);
+    const component = fixture.componentInstance;
+    component.openEdit(product({}));
+    component.form!.searchWords = '  ';
+
+    component.saveForm();
+    const req = httpMock.expectOne('/api/v1/groceries/products/1');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body.searchWords).toBeNull();
+    req.flush(product({}));
+    flushDeals([]);
+    httpMock.expectOne(r => r.url === '/api/v1/groceries/products').flush([]);
+  });
+
   it('createsProductWithEmptySearchWordsForServerSuggestion', () => {
     start([], []);
     const component = fixture.componentInstance;

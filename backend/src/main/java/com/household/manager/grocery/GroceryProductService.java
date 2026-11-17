@@ -83,9 +83,7 @@ public class GroceryProductService {
                 baseUnit = suggestion.baseUnit();
             }
         }
-        if (searchWords.isEmpty()) {
-            throw new IllegalArgumentException("Bitte Suchwörter angeben.");
-        }
+        requireSearchWords(searchWords);
         GroceryProduct product = new GroceryProduct();
         product.setOwnerUserId(Boolean.TRUE.equals(request.household()) ? null : me);
         product.setActive(request.active() == null || request.active());
@@ -103,8 +101,10 @@ public class GroceryProductService {
         String name = validName(request.name());
         List<String> searchWords = normalized(request.searchWords());
         if (searchWords.isEmpty()) {
-            throw new IllegalArgumentException("Mindestens ein Suchwort ist nötig");
+            // wie beim Anlegen: leere Suchwörter schlägt der Server vor; die Einheit bleibt die gewählte
+            searchWords = normalized(suggester.suggest(name).searchWords());
         }
+        requireSearchWords(searchWords);
         BaseUnit baseUnit = request.baseUnit() != null ? request.baseUnit() : product.getBaseUnit();
         if (request.household() != null) {
             product.setOwnerUserId(request.household() ? null : owners.requireUserId());
@@ -163,6 +163,12 @@ public class GroceryProductService {
         product.setExcludeWords(joined(normalized(request.excludeWords()), "Ausschluss-Wörter"));
         product.setNormalPricePerUnit(validNormalPrice(request.normalPricePerUnit()));
         product.setUpdatedAt(LocalDateTime.now(clock));
+    }
+
+    private static void requireSearchWords(List<String> searchWords) {
+        if (searchWords.isEmpty()) {
+            throw new IllegalArgumentException("Bitte Suchwörter angeben.");
+        }
     }
 
     private static String validName(String raw) {

@@ -232,8 +232,8 @@ export class GroceriesComponent implements OnInit {
     const searchWords = parseWordList(form.searchWords);
     const request: GroceryProductRequest = {
       name: form.name.trim(),
-      // Beim Anlegen schlaegt der Server leere Suchwoerter (und die Einheit dazu) selbst vor.
-      searchWords: creating && searchWords.length === 0 ? null : searchWords,
+      // Leere Suchwoerter schlaegt der Server selbst vor (beim Anlegen auch die Einheit).
+      searchWords: searchWords.length === 0 ? null : searchWords,
       baseUnit: form.baseUnit,
       mustWords: parseWordList(form.mustWords),
       excludeWords: parseWordList(form.excludeWords),

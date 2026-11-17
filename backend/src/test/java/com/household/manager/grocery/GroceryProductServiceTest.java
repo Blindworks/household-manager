@@ -204,4 +204,27 @@ class GroceryProductServiceTest {
         assertThatThrownBy(() -> service.verdict(1L, new VerdictRequest("fp", true)))
                 .isInstanceOf(GroceryConflictException.class);
     }
+
+    @Test
+    void updateWithEmptySearchWordsUsesSuggestionAndKeepsChosenUnit() {
+        GroceryProduct product = stored(5L, 3L);
+        when(suggester.suggest("Kaffee ganze Bohnen 1kg"))
+                .thenReturn(new Suggestion(List.of("kaffee", "bohnen"), BaseUnit.PIECE));
+
+        service.update(5L, new ProductRequest("Kaffee ganze Bohnen 1kg", null, BaseUnit.KILOGRAM, null,
+                List.of(), List.of(), null, null));
+
+        assertThat(product.getSearchWords()).isEqualTo("kaffee,bohnen");
+        assertThat(product.getBaseUnit()).isEqualTo(BaseUnit.KILOGRAM);
+    }
+
+    @Test
+    void updateFailsWhenNeitherInputNorSuggestionHasSearchWords() {
+        stored(6L, 3L);
+        when(suggester.suggest("7")).thenReturn(new Suggestion(List.of(), BaseUnit.PIECE));
+
+        assertThatThrownBy(() -> service.update(6L, request("7", List.of())))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("Bitte Suchwörter angeben.");
+        verify(products, never()).save(any());
+    }
 }
