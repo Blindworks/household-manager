@@ -130,6 +130,9 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   withBody(plug('laufband', 'Laufband', 'tapo', '802238b61a02b19027d329013d5647a9243f6e59', true), 'treadmill'),
   contact('laufband', 'Fenster', 'binary_sensor.dirigera_20ed655e1732408c84d477b09bbe5c8e_1_contact'),
 
+  // Gäste-WC
+  contact('gaeste_wc', 'Fenster', 'binary_sensor.dirigera_2ca0ac0399774ad689356da1240eb6f0_1_contact'),
+
   // Schlafzimmer
   roomClimate('schlafzimmer', 'sensor.alexa_gaj230043055005a'),
   thermostat('schlafzimmer', 5),

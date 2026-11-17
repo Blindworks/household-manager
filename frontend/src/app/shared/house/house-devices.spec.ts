@@ -65,6 +65,13 @@ describe('HOUSE_DEVICES', () => {
     expect(window?.label).toBe('Fenster');
   });
 
+  it('Toilettenfenster ist ein Kontakt im Gäste-WC', () => {
+    const window = HOUSE_DEVICES.find(d => d.kind === 'contact'
+      && d.entityId === 'binary_sensor.dirigera_2ca0ac0399774ad689356da1240eb6f0_1_contact');
+    expect(window?.area).toBe('gaeste_wc');
+    expect(window?.label).toBe('Fenster');
+  });
+
   it('Haustür-Kamera und Feinstaub sind in v1 nicht Teil der 3D-Ansicht', () => {
     const all = HOUSE_DEVICES.flatMap(entityIdsOf);
     expect(all).not.toContain('binary_sensor.blink_214942_armed');
