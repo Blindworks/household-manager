@@ -51,5 +51,7 @@ public enum EntitySource {
     /** Waeschetrocknung im Keller (berechnet aus Feuchte und Waschmaschine, keine externe Quelle). */
     LAUNDRY,
     /** Supermarkt-Angebote (berechnet aus Prospekten, je Person ein Schnäppchen-Zähler). */
-    GROCERY
+    GROCERY,
+    /** Regenradar am Haus (Bright Sky, DWD-Radarkomposit RV mit 2-h-Nowcast). */
+    RAIN_RADAR
 }
