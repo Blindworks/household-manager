@@ -53,3 +53,29 @@ export function heatmapLevel(value: number | null): HeatmapLevel {
   }
   return 'full';
 }
+
+export const FORECAST_HORIZONS_MIN = [15, 30, 60];
+
+export type ProbabilityTone = 'good' | 'warn' | 'bad';
+
+/** Ampelfarbe einer Frei-Wahrscheinlichkeit (Prozent 0–100). */
+export function probabilityTone(percent: number): ProbabilityTone {
+  if (percent >= 75) {
+    return 'good';
+  }
+  return percent >= 40 ? 'warn' : 'bad';
+}
+
+/** Klartext zur Frei-Wahrscheinlichkeit, damit die Zahl ohne Nachdenken lesbar ist. */
+export function probabilityWord(percent: number): string {
+  if (percent >= 90) {
+    return 'fast sicher frei';
+  }
+  if (percent >= 75) {
+    return 'wahrscheinlich frei';
+  }
+  if (percent >= 40) {
+    return 'unsicher';
+  }
+  return percent >= 15 ? 'eher belegt' : 'kaum Chance';
+}

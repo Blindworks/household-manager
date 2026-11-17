@@ -594,7 +594,14 @@ describe('TabletChargingComponent', () => {
       fixture.detectChanges();
       const text = host().querySelector('.tablet-charging__detail')?.textContent ?? '';
       expect(text).toContain('frei ca. 12:30, meist bis 13:10');
-      expect(text).toContain('Frei in 15 / 30 / 60 min: 10 % / 40 % / 80 %');
+      const probs = Array.from(host().querySelectorAll('.tablet-charging__prob'));
+      expect(probs.map(p => p.querySelector('.tablet-charging__prob-value')?.textContent?.trim()))
+        .toEqual(['10 %', '40 %', '80 %']);
+      expect(probs.map(p => p.querySelector('.tablet-charging__prob-horizon')?.textContent?.trim()))
+        .toEqual(['in 15 min', 'in 30 min', 'in 60 min']);
+      expect(probs.map(p => p.getAttribute('data-tone'))).toEqual(['bad', 'warn', 'good']);
+      expect(probs.map(p => p.querySelector('.tablet-charging__prob-fill')?.getAttribute('stroke-dasharray')))
+        .toEqual(['10 100', '40 100', '80 100']);
     });
 
     it('refreshFehlerBehaeltVorhersage', () => {

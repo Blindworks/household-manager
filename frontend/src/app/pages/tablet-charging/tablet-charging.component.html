@@ -53,7 +53,23 @@
                     }
                   }
                 </ul>
-                <p class="tablet-charging__detail-probs">Frei in 15 / 30 / 60 min: {{ probability(15) }} / {{ probability(30) }} / {{ probability(60) }}</p>
+                <div class="tablet-charging__probs">
+                  <p class="tablet-charging__probs-caption">Chance auf einen freien Ladepunkt</p>
+                  <div class="tablet-charging__probs-row">
+                    @for (minutes of horizons; track minutes) {
+                      <div class="tablet-charging__prob" [attr.data-tone]="probabilityTone(minutes)">
+                        <svg class="tablet-charging__prob-ring" viewBox="0 0 120 120" aria-hidden="true">
+                          <circle class="tablet-charging__prob-track" cx="60" cy="60" r="50" pathLength="100"></circle>
+                          <circle class="tablet-charging__prob-fill" cx="60" cy="60" r="50" pathLength="100"
+                                  [attr.stroke-dasharray]="(probabilityValue(minutes) ?? 0) + ' 100'"></circle>
+                        </svg>
+                        <span class="tablet-charging__prob-value">{{ probability(minutes) }}</span>
+                        <span class="tablet-charging__prob-horizon">in {{ minutes }} min</span>
+                        <span class="tablet-charging__prob-word">{{ probabilityWord(minutes) }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
               }
               <div class="tablet-charging__heat">
                 <span class="tablet-charging__heat-corner"></span>

@@ -181,7 +181,81 @@
     color: rgba(var(--on-surface-rgb), 0.85);
   }
 
-  &__detail-probs { margin: 0; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  // Drei Ringe (15/30/60 min): Fuellung = Wahrscheinlichkeit, Farbe = Ampel.
+  &__probs { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  &__probs-caption {
+    margin: 0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(var(--on-surface-rgb), 0.6);
+  }
+
+  &__probs-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  &__prob {
+    --prob-rgb: var(--tint-rgb);
+    position: relative;
+    display: grid;
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    padding: 0.6rem 0.4rem 0.7rem;
+    border-radius: 0.9rem;
+    background: rgba(var(--prob-rgb), 0.08);
+    border: 1px solid rgba(var(--prob-rgb), 0.25);
+
+    &[data-tone='good'] { --prob-rgb: var(--success-rgb); }
+    &[data-tone='warn'] { --prob-rgb: var(--warning-rgb); }
+    &[data-tone='bad'] { --prob-rgb: var(--error-rgb); }
+  }
+
+  &__prob-ring {
+    width: min(7.5rem, 100%);
+    aspect-ratio: 1;
+    transform: rotate(-90deg);
+  }
+
+  &__prob-track, &__prob-fill {
+    fill: none;
+    stroke-width: 12;
+  }
+
+  &__prob-track { stroke: rgba(var(--tint-rgb), 0.1); }
+
+  &__prob-fill {
+    stroke: rgb(var(--prob-rgb));
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.6s ease;
+  }
+
+  // Zahl mittig im Ring (gleiche Zelle des Gitters wie das SVG).
+  &__prob-value {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: center;
+    font-size: 1.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--on-surface);
+  }
+
+  &__prob-ring { grid-row: 1; grid-column: 1; }
+
+  &__prob-horizon {
+    margin-top: 0.35rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  &__prob-word {
+    font-size: 0.8rem;
+    color: rgb(var(--prob-rgb));
+  }
 
   &__forecast {
     margin: 0.15rem 0 0 1.6rem;

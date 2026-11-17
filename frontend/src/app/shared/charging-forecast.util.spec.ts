@@ -1,5 +1,7 @@
 import { ChargingForecastSummary } from '../models/charging.model';
-import { HEATMAP_DAY_LABELS, forecastLine, freeWindow, heatmapLevel, occupiedSinceText } from './charging-forecast.util';
+import {
+  HEATMAP_DAY_LABELS, forecastLine, freeWindow, heatmapLevel, occupiedSinceText, probabilityTone, probabilityWord
+} from './charging-forecast.util';
 
 describe('charging-forecast.util', () => {
   describe('forecastLine', () => {
@@ -76,5 +78,26 @@ describe('charging-forecast.util', () => {
 
   it('hat sieben Tageslabels', () => {
     expect(HEATMAP_DAY_LABELS).toEqual(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So/Ft']);
+  });
+
+  describe('probabilityTone', () => {
+    it('faerbt nach Ampel: ab 75 gruen, ab 40 gelb, darunter rot', () => {
+      expect(probabilityTone(100)).toBe('good');
+      expect(probabilityTone(75)).toBe('good');
+      expect(probabilityTone(74)).toBe('warn');
+      expect(probabilityTone(40)).toBe('warn');
+      expect(probabilityTone(39)).toBe('bad');
+      expect(probabilityTone(0)).toBe('bad');
+    });
+  });
+
+  describe('probabilityWord', () => {
+    it('beschreibt die Wahrscheinlichkeit in Worten', () => {
+      expect(probabilityWord(92)).toBe('fast sicher frei');
+      expect(probabilityWord(77)).toBe('wahrscheinlich frei');
+      expect(probabilityWord(48)).toBe('unsicher');
+      expect(probabilityWord(20)).toBe('eher belegt');
+      expect(probabilityWord(5)).toBe('kaum Chance');
+    });
   });
 });

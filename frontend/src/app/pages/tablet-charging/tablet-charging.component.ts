@@ -16,7 +16,8 @@ import {
 } from '../../shared/charging-status.util';
 import { ViewModeService } from '../../services/view-mode.service';
 import {
-  HEATMAP_DAY_LABELS, HeatmapLevel, forecastLine, freeWindow, heatmapLevel, occupiedSinceText
+  FORECAST_HORIZONS_MIN, HEATMAP_DAY_LABELS, HeatmapLevel, ProbabilityTone, forecastLine, freeWindow, heatmapLevel,
+  occupiedSinceText, probabilityTone, probabilityWord
 } from '../../shared/charging-forecast.util';
 import { homeIcon, initialViewRadiusMeters, stationIcon, stationPopupText } from '../../shared/charging-map.util';
 import { useLocalLeafletIcons } from '../../shared/leaflet-icons.util';
@@ -358,9 +359,26 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     return known ? this.power(known.maxPowerKw) : point.chargePointId;
   }
 
+  readonly horizons = FORECAST_HORIZONS_MIN;
+
+  /** Frei-Wahrscheinlichkeit in Prozent fuer den Horizont, undefined ohne Wert. */
+  probabilityValue(minutes: number): number | undefined {
+    return this.forecast?.freeProbabilityPercent?.[String(minutes)];
+  }
+
   probability(minutes: number): string {
-    const value = this.forecast?.freeProbabilityPercent?.[String(minutes)];
+    const value = this.probabilityValue(minutes);
     return value === undefined ? '–' : `${value} %`;
+  }
+
+  probabilityTone(minutes: number): ProbabilityTone | null {
+    const value = this.probabilityValue(minutes);
+    return value === undefined ? null : probabilityTone(value);
+  }
+
+  probabilityWord(minutes: number): string {
+    const value = this.probabilityValue(minutes);
+    return value === undefined ? 'keine Angabe' : probabilityWord(value);
   }
 
   level(value: number | null): HeatmapLevel {
