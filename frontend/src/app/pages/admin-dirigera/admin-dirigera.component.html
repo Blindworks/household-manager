@@ -1,5 +1,15 @@
 <div class="admin-dirigera">
-  <h1>IKEA Dirigera</h1>
+  <div class="admin-dirigera__heading">
+    <h1>IKEA Dirigera</h1>
+    <div class="admin-dirigera__refresh">
+      <span class="admin-dirigera__refreshed-at">
+        Stand: {{ lastRefreshAt() ? (lastRefreshAt() | date:'dd.MM.yyyy HH:mm:ss') : '–' }}
+      </span>
+      <button type="button" class="ghost" (click)="refresh()" [disabled]="refreshing()">
+        {{ refreshing() ? 'Lädt …' : 'Status neu laden' }}
+      </button>
+    </div>
+  </div>
 
   @if (errorMessage()) {
     <div class="admin-dirigera__error" role="alert">{{ errorMessage() }}</div>
@@ -189,10 +199,7 @@
   }
 
   <section class="admin-dirigera__card">
-    <div class="admin-dirigera__heading">
-      <h2>Taster</h2>
-      <button type="button" class="ghost" (click)="reloadButtons()">Neu laden</button>
-    </div>
+    <h2>Taster</h2>
     @if (buttons().length === 0) {
       <p>Noch keine Taster bekannt. Nach einem Backend-Neustart erscheinen sie mit der ersten Hub-Abfrage (bis zu einer Minute).</p>
     } @else {

@@ -2,7 +2,7 @@ import { Component, NgZone, OnDestroy, OnInit, computed, inject, signal } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, forkJoin } from 'rxjs';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
@@ -57,6 +57,10 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   readonly motionSensors = computed(() => this.sensors().filter(s => s.kind === 'MOTION'));
   readonly secondsLeft = signal(0);
   readonly busy = signal(false);
+  /** Läuft gerade „Status neu laden“ (Hub, Sensoren, Taster)? */
+  readonly refreshing = signal(false);
+  /** Zeitpunkt des letzten vollständig geladenen Stands (Uhr dieses Browsers), null = noch keiner. */
+  readonly lastRefreshAt = signal<Date | null>(null);
   readonly errorMessage = signal<string | null>(null);
   /** Bewegungsmelder, dessen Helligkeitsverlauf gerade offen ist (null = keiner). */
   readonly illuminanceSensor = signal<DirigeraSensor | null>(null);
@@ -72,10 +76,10 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   private pollTimer?: ReturnType<typeof setInterval>;
   private countdownTimer?: ReturnType<typeof setInterval>;
   private illuminanceRequest?: Subscription;
+  private refreshRequest?: Subscription;
 
   ngOnInit(): void {
-    this.loadHub(true);
-    this.loadDevices();
+    this.refresh();
     // Eine laufende Kopplung (Seite neu geladen) wird wieder aufgenommen.
     this.api.getPairing().subscribe({
       next: status => this.applyPairing(status),
@@ -86,6 +90,34 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.stopPolling();
     this.illuminanceRequest?.unsubscribe();
+    this.refreshRequest?.unsubscribe();
+  }
+
+  /**
+   * Lädt Hub, Sensoren und Taster gemeinsam neu. Der Zeitstempel rückt nur vor, wenn alle drei
+   * Abrufe gelangen — ein halb geladener Stand soll nicht als frisch erscheinen.
+   */
+  refresh(): void {
+    // ein spaet eintreffender alter Abruf darf den neuen Stand nicht ueberschreiben
+    this.refreshRequest?.unsubscribe();
+    this.refreshing.set(true);
+    this.refreshRequest = forkJoin({
+      hub: this.api.getHub(),
+      sensors: this.api.getSensors(),
+      buttons: this.api.getButtons()
+    }).subscribe({
+      next: ({ hub, sensors, buttons }) => {
+        this.applyHub(hub);
+        this.sensors.set(sensors);
+        this.buttons.set(buttons);
+        this.lastRefreshAt.set(new Date());
+        this.refreshing.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.refreshing.set(false);
+        this.errorMessage.set(this.messageOf(err));
+      }
+    });
   }
 
   saveHost(): void {
@@ -102,7 +134,7 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     if (!confirm('Die Kopplung mit dem Dirigera-Hub wirklich aufheben?')) { return; }
     this.run(this.api.unpair(), () => {
       this.pairing.set(null);
-      this.loadHub(false);
+      this.refresh();
     });
   }
 
@@ -177,11 +209,6 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Tastendrücke zeigen sich erst nach dem Neuladen (die Liste aktualisiert sich nicht selbst). */
-  reloadButtons(): void {
-    this.loadButtons();
-  }
-
   positionLabel(button: DirigeraButton): string {
     if (!button.position) { return '–'; }
     return POSITION_LABELS[button.position] ?? button.position;
@@ -202,8 +229,7 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     const wasPolling = this.pollTimer !== undefined;
     this.stopPolling();
     if (wasPolling) {
-      this.loadHub(false);
-      this.loadDevices();
+      this.refresh();
     }
   }
 
@@ -238,33 +264,10 @@ export class AdminDirigeraComponent implements OnInit, OnDestroy {
     this.secondsLeft.set(Number.isNaN(end) ? 0 : Math.max(0, Math.ceil((end - Date.now()) / 1000)));
   }
 
-  private loadHub(initial: boolean): void {
-    this.api.getHub().subscribe({
-      next: hub => {
-        this.hub.set(hub);
-        if (initial || !this.hostInput) { this.hostInput = hub.host ?? ''; }
-      },
-      error: err => this.errorMessage.set(this.messageOf(err))
-    });
-  }
-
-  private loadDevices(): void {
-    this.loadSensors();
-    this.loadButtons();
-  }
-
-  private loadButtons(): void {
-    this.api.getButtons().subscribe({
-      next: list => this.buttons.set(list),
-      error: err => this.errorMessage.set(this.messageOf(err))
-    });
-  }
-
-  private loadSensors(): void {
-    this.api.getSensors().subscribe({
-      next: list => this.sensors.set(list),
-      error: err => this.errorMessage.set(this.messageOf(err))
-    });
+  private applyHub(hub: DirigeraHub): void {
+    this.hub.set(hub);
+    // eine angefangene Eingabe im IP-Feld wird beim Neuladen nicht ueberschrieben
+    if (!this.hostInput) { this.hostInput = hub.host ?? ''; }
   }
 
   private run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {

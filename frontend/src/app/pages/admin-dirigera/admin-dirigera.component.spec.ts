@@ -231,16 +231,56 @@ describe('AdminDirigeraComponent', () => {
     expect(el.querySelector('.admin-dirigera__buttons')).toBeNull();
   });
 
-  it('neuLadenHoltDieTasterErneut', () => {
-    initWith([], IDLE, HUB, [BOTTOM]);
-    const reload = Array.from(el.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('Neu laden')) as HTMLButtonElement;
+  function reloadButton(): HTMLButtonElement {
+    return Array.from(el.querySelectorAll('button'))
+      .find(b => b.textContent?.includes('Status neu laden') || b.textContent?.includes('Lädt')) as HTMLButtonElement;
+  }
 
-    reload.click();
+  it('statusNeuLadenHoltHubSensorenUndTasterUndZeigtDenZeitpunkt', () => {
+    initWith([SENSOR], IDLE, HUB, [BOTTOM]);
+    expect(el.querySelector('.admin-dirigera__refreshed-at')!.textContent).not.toContain('–');
+
+    reloadButton().click();
+    fixture.detectChanges();
+    expect(reloadButton().disabled).toBeTrue();
+
+    httpMock.expectOne(`${BASE}/hub`).flush({ ...HUB, paired: true, eventStreamConnected: true });
+    httpMock.expectOne(`${BASE}/sensors`).flush([{ ...SENSOR, temperature: 19.0 }]);
     httpMock.expectOne(`${BASE}/buttons`).flush([{ ...BOTTOM, lastAction: 'hold', lastPressedAt: '2026-11-03T19:00:00' }]);
     fixture.detectChanges();
 
+    expect(reloadButton().disabled).toBeFalse();
     expect(el.querySelector('.admin-dirigera__buttons tbody tr')!.textContent).toContain('Lang');
+    expect(el.textContent).toContain('19,0 °C');
+    expect(el.textContent).toContain('Gekoppelt');
+  });
+
+  it('fehlgeschlagenesNeuLadenBehaeltStandUndZeitpunkt', () => {
+    initWith([SENSOR]);
+    const before = el.querySelector('.admin-dirigera__refreshed-at')!.textContent;
+
+    reloadButton().click();
+    httpMock.expectOne(`${BASE}/hub`).flush(HUB);
+    httpMock.expectOne(`${BASE}/sensors`).flush({ message: 'Hub weg' }, { status: 502, statusText: 'Bad Gateway' });
+    httpMock.match(`${BASE}/buttons`).forEach(r => { if (!r.cancelled) { r.flush([]); } });
+    fixture.detectChanges();
+
+    expect(el.querySelector('.admin-dirigera__refreshed-at')!.textContent).toBe(before);
+    expect(el.textContent).toContain('Hub weg');
+    expect(el.textContent).toContain('21,5 °C');
+    expect(reloadButton().disabled).toBeFalse();
+  });
+
+  it('neuLadenUeberschreibtDieAngefangeneIpEingabeNicht', () => {
+    initWith([]);
+    fixture.componentInstance.hostInput = '192.168.1.77';
+
+    reloadButton().click();
+    httpMock.expectOne(`${BASE}/hub`).flush(HUB);
+    httpMock.expectOne(`${BASE}/sensors`).flush([]);
+    httpMock.expectOne(`${BASE}/buttons`).flush([]);
+
+    expect(fixture.componentInstance.hostInput).toBe('192.168.1.77');
   });
 
   it('unbekanntesMusterWirdRohAngezeigt', () => {
