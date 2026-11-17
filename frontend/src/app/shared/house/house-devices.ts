@@ -128,6 +128,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   // Laufband-Raum
   roomClimate('laufband', 'sensor.zigbee_temperatur_aqara_laufband'),
   withBody(plug('laufband', 'Laufband', 'tapo', '802238b61a02b19027d329013d5647a9243f6e59', true), 'treadmill'),
+  contact('laufband', 'Fenster', 'binary_sensor.dirigera_20ed655e1732408c84d477b09bbe5c8e_1_contact'),
 
   // Schlafzimmer
   roomClimate('schlafzimmer', 'sensor.alexa_gaj230043055005a'),

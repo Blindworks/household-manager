@@ -58,6 +58,13 @@ describe('HOUSE_DEVICES', () => {
     expect(balcony?.label).toBe('Balkontür');
   });
 
+  it('Laufband-Fenster ist ein Kontakt im Laufband-Raum', () => {
+    const window = HOUSE_DEVICES.find(d => d.kind === 'contact'
+      && d.entityId === 'binary_sensor.dirigera_20ed655e1732408c84d477b09bbe5c8e_1_contact');
+    expect(window?.area).toBe('laufband');
+    expect(window?.label).toBe('Fenster');
+  });
+
   it('Haustür-Kamera und Feinstaub sind in v1 nicht Teil der 3D-Ansicht', () => {
     const all = HOUSE_DEVICES.flatMap(entityIdsOf);
     expect(all).not.toContain('binary_sensor.blink_214942_armed');
