@@ -811,6 +811,30 @@ describe('DashboardComponent (Tuer-offen-Hinweise im Intelligence Hub)', () => {
     discardPeriodicTasks();
   }));
 
+  it('zeigt das Regenradar in der Kopfzeile', fakeAsync(() => {
+    const measuredAt = new Date(Date.now() - 60000);
+    const local = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-`
+      + `${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:`
+      + `${String(d.getMinutes()).padStart(2, '0')}:00`;
+    entityStateServiceSpy.getEntities.and.callFake((domain?: string, source?: string) =>
+      source === 'RAIN_RADAR'
+        ? of([{
+          ...doorContact('sensor.rain_radar_intensity', '1.2'),
+          domain: 'SENSOR', source: 'RAIN_RADAR',
+          attributes: { measuredAt: local(measuredAt), thresholdMmPerHour: 0.3 }
+        } as EntityState])
+        : of([]));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const chip = (fixture.nativeElement as HTMLElement).querySelector('.lumina__rain');
+    expect(entityStateServiceSpy.getEntities).toHaveBeenCalledWith('SENSOR', 'RAIN_RADAR');
+    expect(chip?.classList).toContain('lumina__rain--raining');
+    expect(chip?.textContent).toContain('1,2 mm/h');
+
+    discardPeriodicTasks();
+  }));
+
   it('leert die Tuer-Meldungen bei einem API-Fehler, statt das Dashboard zu stoeren', fakeAsync(() => {
     entityStateServiceSpy.getEntities.and.returnValue(throwError(() => new Error('kaputt')));
     const fixture = TestBed.createComponent(DashboardComponent);

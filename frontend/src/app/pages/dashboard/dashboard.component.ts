@@ -43,6 +43,7 @@ import { CalendarService } from '../../services/calendar.service';
 import { buildCalendarInsights } from '../../shared/calendar-insight.util';
 import { InsightService } from '../../services/insight.service';
 import { buildVentilationInsight } from '../../shared/ventilation-insight.util';
+import { buildRainRadarView, RainRadarView } from '../../shared/rain-radar-view.util';
 import { buildLockBatteryInsight, buildTrackerBatteryInsight } from '../../shared/battery-insight.util';
 import { buildDoorInsights, buildWindowInsights } from '../../shared/door-insight.util';
 import {
@@ -173,6 +174,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private statusSubscription?: Subscription;
   private temperatureSubscription?: Subscription;
   private ventilationSubscription?: Subscription;
+  private rainRadarSubscription?: Subscription;
   private ankerSubscription?: Subscription;
   private switchSubscription?: Subscription;
   private modeSubscription?: Subscription;
@@ -265,6 +267,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   flowDialogOpen = false;
 
   climate: ClimateView = { outdoor: [], weatherLabel: '--', rows: [] };
+  /** Regenradar in der Kopfzeile; null = keine Aussage (Entität fehlt oder unavailable). */
+  rainRadar: RainRadarView | null = null;
 
   /** Zuletzt geladene Rohmesswerte; Quelle des Sensor-Detaildialogs. */
   private currentTemperatures: CurrentTemperatureReading[] = [];
@@ -483,6 +487,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startWasteRefresh();
     this.startCalendarRefresh();
     this.startVentilationRefresh();
+    this.startRainRadarRefresh();
     this.startNukiRefresh();
     this.startPetRefresh();
     this.startZigbeeHealthRefresh();
@@ -505,6 +510,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription?.unsubscribe();
     this.temperatureSubscription?.unsubscribe();
     this.ventilationSubscription?.unsubscribe();
+    this.rainRadarSubscription?.unsubscribe();
     this.switchSubscription?.unsubscribe();
     this.modeSubscription?.unsubscribe();
     this.switchFollowUpSubscription?.unsubscribe();
@@ -1563,6 +1569,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /** Haelt die Lueftungs-Karte im Hub aktuell (gleicher Takt wie die Messwerte). */
+  /**
+   * Regenradar in der Kopfzeile, gleicher Takt wie die Klimawerte (das Backend pollt alle 5 Min.).
+   * Ein Fehlabruf behaelt den letzten Stand; die Minuten bis zum Regen rechnet jeder Takt neu.
+   */
+  private startRainRadarRefresh(): void {
+    this.rainRadarSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.entityStateService.getEntities('SENSOR', 'RAIN_RADAR').pipe(
+          catchError(() => of<EntityState[] | null>(null))
+        ))
+      )
+      .subscribe(entities => {
+        if (entities) {
+          this.rainRadar = buildRainRadarView(entities, Date.now());
+        }
+      });
+  }
+
   private startVentilationRefresh(): void {
     this.ventilationSubscription = interval(DashboardComponent.CLIMATE_REFRESH_MS)
       .pipe(startWith(0), switchMap(() => this.loadVentilationInsight()))

@@ -52,6 +52,22 @@
               </div>
             </button>
           </ng-container>
+          <!-- Regenradar (DWD-Radar ueber Bright Sky) fuer das Pixel ueber dem Haus -->
+          <ng-container *ngIf="rainRadar as rain">
+            <div class="lumina__divider"></div>
+            <div
+              class="lumina__weather lumina__rain"
+              [ngClass]="'lumina__rain--' + rain.tone"
+              [class.lumina__rain--stale]="rain.stale"
+              [title]="rain.title"
+            >
+              <span class="material-symbols-outlined lumina__weather-icon">{{ rain.icon }}</span>
+              <div class="lumina__weather-text">
+                <span class="lumina__weather-temp">{{ rain.value }}</span>
+                <span class="lumina__label">{{ rain.label }}</span>
+              </div>
+            </div>
+          </ng-container>
           <!-- Anwesenheit: nur Personen, die `/v1/presence/status` liefert
                (das sind bereits nur die mit erfasstem Geraet). Der Name steht
                sichtbar unter dem Kreis (das Wandtablet hat weder Zeiger noch

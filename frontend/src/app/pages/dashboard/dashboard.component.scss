@@ -268,6 +268,31 @@
   }
 }
 
+// Regenradar in der Kopfzeile: trocken unauffaellig, erwarteter Regen blau,
+// gleich/jetzt kraeftig mit Icon in Akzentfarbe.
+.lumina__rain {
+  padding: 2px 6px;
+
+  &--dry .lumina__weather-icon,
+  &--later .lumina__weather-icon {
+    color: var(--on-surface-variant);
+  }
+
+  &--soon,
+  &--raining {
+    border-radius: var(--radius-sm, 8px);
+    background: rgba(var(--heat-cool-rgb), 0.14);
+
+    .lumina__weather-icon {
+      color: var(--heat-cool);
+    }
+  }
+
+  &--stale {
+    opacity: 0.45;
+  }
+}
+
 // Anwesenheit als Personenkreise im Kopf (Variante "Aura", 2026-08-26: getoente
 // Flaeche + weicher Schein statt hartem Ring; 2026-08-26 Nachbesserung:
 // Status-Icon statt Initiale). Zustand bleibt tristate (siehe
