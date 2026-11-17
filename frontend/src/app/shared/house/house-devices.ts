@@ -113,7 +113,7 @@ export const HOUSE_DEVICES: readonly HouseDevice[] = [
   // Kueche
   roomClimate('kueche', 'sensor.dirigera_4a8044b0974e4885b2f60967af2201e1'),
   thermostat('kueche', 4),
-  motion('kueche', 'binary_sensor.zigbee_motion_kueche_occupancy'),
+  motion('kueche', 'binary_sensor.dirigera_b4345013c6d1495d80cb9772517894df_occupancy'),
   withBody(meross('kueche', 'Kaffeemaschine', '2112150005305590863548e1e98183b3'), 'coffee'),
   withBody(meross('kueche', 'Kühlschrank', '2112155672709990863548e1e98181eb'), 'fridge'),
   meross('kueche', 'Küchenzeile', '2205069806156351080148e1e991d1f0'),
