@@ -96,7 +96,7 @@
           <option *ngFor="let unit of unitOptions" [value]="unit.value">{{ unit.label }}</option>
         </select>
       </label>
-      <label>Normalpreis je Einheit in € (optional)
+      <label>Eigener Normalpreis je Einheit in € (leer = Claude schätzt)
         <input type="number" name="normalPrice" step="0.01" min="0" [(ngModel)]="form.normalPrice">
       </label>
       <label class="product-form__check">
@@ -121,6 +121,7 @@
           <span class="product__owner"> · {{ ownerLabel(product) }}</span>
           <span class="product__owner" *ngIf="!product.active"> · inaktiv</span>
           <div class="product__words">{{ product.searchWords.join(', ') }}</div>
+          <div class="product__words" data-test="normal-price">{{ normalPriceText(product) }}</div>
         </div>
         <div class="product__buttons">
           <button type="button" class="btn" data-test="details" (click)="toggleDetails(product)">

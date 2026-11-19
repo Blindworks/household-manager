@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Ein DDL je Changeset: MariaDB committet DDL implizit -->
+    <changeSet id="20261117-0111-add-grocery-product-estimated-at" author="claude">
+        <comment>Zeitpunkt der Normalpreis-Schätzung; nach 30 Tagen wird neu geschätzt.</comment>
+        <addColumn tableName="grocery_product">
+            <column name="estimated_at" type="DATETIME"/>
+        </addColumn>
+        <rollback><dropColumn tableName="grocery_product" columnName="estimated_at"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

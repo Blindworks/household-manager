@@ -59,6 +59,16 @@ class BasePriceParserTest {
     }
 
     @Test
+    void dotWithThreeDigitsBeforeGramsIsAThousandsSeparator() {
+        // Penny: "je 1.000 g" ergab 12990 €/kg statt 12,99 €/kg
+        assertThat(BasePriceParser.fromPackaging("je 1.000 g", new BigDecimal("12.99")))
+                .contains(bp("12.990", BaseUnit.KILOGRAM));
+        assertThat(BasePriceParser.fromText("1.000 g = 12,99")).contains(bp("12.990", BaseUnit.KILOGRAM));
+        assertThat(BasePriceParser.fromPackaging("je 1.5 l", new BigDecimal("1.50")))
+                .contains(bp("1.000", BaseUnit.LITER));
+    }
+
+    @Test
     void depositIsNeverAddedToThePrice() {
         assertThat(BasePriceParser.fromPackaging("je 6 x 1 l", new BigDecimal("6.00")))
                 .isEqualTo(BasePriceParser.fromPackaging("je 6 x 1 l zzgl. 3,30 € Pfand", new BigDecimal("6.00")));

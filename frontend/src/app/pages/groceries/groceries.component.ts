@@ -17,7 +17,8 @@ import {
 } from '../../models/grocery.model';
 import { HouseholdUser } from '../../models/household-user.model';
 import {
-  GROCERY_UNIT_OPTIONS, formatBasePrice, formatReference, formatSaving, formatValidity, parseWordList
+  GROCERY_UNIT_OPTIONS, formatBasePrice, formatNormalPrice, formatReference, formatSaving, formatValidity,
+  parseWordList
 } from '../../shared/grocery-format.util';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -191,6 +192,10 @@ export class GroceriesComponent implements OnInit {
 
   basePriceText(value: number | null, unit: GroceryBaseUnit | null): string {
     return value === null || unit === null ? '' : formatBasePrice(value, unit);
+  }
+
+  normalPriceText(product: GroceryProduct): string {
+    return formatNormalPrice(product);
   }
 
   referenceText(deal: GroceryDeal): string {

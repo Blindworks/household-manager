@@ -220,5 +220,7 @@
     <include file="db/changelog/changes/20261116-0107-add-dirigera-sensor-last-detected.xml"/>
     <include file="db/changelog/changes/20261116-0108-add-dirigera-sensor-last-illuminance.xml"/>
     <include file="db/changelog/changes/20261116-0109-add-dirigera-reading-illuminance.xml"/>
+    <include file="db/changelog/changes/20261117-0110-add-grocery-product-estimated-price.xml"/>
+    <include file="db/changelog/changes/20261117-0111-add-grocery-product-estimated-at.xml"/>
 
 </databaseChangeLog>

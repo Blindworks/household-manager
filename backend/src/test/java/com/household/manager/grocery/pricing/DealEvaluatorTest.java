@@ -83,7 +83,7 @@ class DealEvaluatorTest {
                 List.of(match(offer("0.86", "1.43"), Verdict.MATCH)), WARMING, 10);
         assertThat(own).hasSize(1);
         assertThat(own.get(0).referenceKind()).isEqualTo(ReferenceKind.OWN_NORMAL_PRICE);
-        assertThat(own.get(0).warmingUp()).isTrue();
+        assertThat(own.get(0).warmingUp()).isFalse();
 
         GroceryOffer o = offer("0.80", "1.43");
         o.setLowestPrice30d(new BigDecimal("1.00"));
@@ -92,6 +92,35 @@ class DealEvaluatorTest {
         assertThat(lowest).hasSize(1);
         assertThat(lowest.get(0).referenceKind()).isEqualTo(ReferenceKind.LOWEST_30_DAYS);
         assertThat(lowest.get(0).reference()).isEqualByComparingTo("1.788");
+    }
+
+    @Test
+    void ownNormalPriceBeatsEstimateAndEstimateBeatsHistory() {
+        GroceryProduct estimated = product(null);
+        estimated.setEstimatedPricePerUnit(new BigDecimal("2.000"));
+        // Historie (1.85) würde 1.70 nicht als Schnäppchen werten, die Schätzung (2.00) schon: 1.70 <= 1.80
+        List<Deal> byEstimate = evaluator.evaluate(estimated,
+                List.of(match(offer("1.00", "1.70"), Verdict.MATCH)), USUAL, 10);
+        assertThat(byEstimate).hasSize(1);
+        assertThat(byEstimate.get(0).referenceKind()).isEqualTo(ReferenceKind.ESTIMATED_NORMAL_PRICE);
+        assertThat(byEstimate.get(0).savingPercent()).isEqualTo(15);
+        assertThat(byEstimate.get(0).warmingUp()).isFalse();
+
+        GroceryProduct both = product("1.500");
+        both.setEstimatedPricePerUnit(new BigDecimal("2.000"));
+        assertThat(evaluator.evaluate(both, List.of(match(offer("1.00", "1.70"), Verdict.MATCH)), USUAL, 10))
+                .isEmpty();
+    }
+
+    @Test
+    void estimateWorksWithoutAnyHistory() {
+        // Kaffee: 13 €/kg gegen geschätzte 19 €/kg
+        GroceryProduct coffee = product(null);
+        coffee.setEstimatedPricePerUnit(new BigDecimal("19.00"));
+        List<Deal> deals = evaluator.evaluate(coffee,
+                List.of(match(offer("12.99", "12.99"), Verdict.MAYBE)), WARMING, 10);
+        assertThat(deals).hasSize(1);
+        assertThat(deals.get(0).savingPercent()).isEqualTo(32);
     }
 
     @Test

@@ -50,6 +50,13 @@ public class GroceryProduct {
     @Column(name = "normal_price_per_unit", precision = 8, scale = 3)
     private BigDecimal normalPricePerUnit;
 
+    /** Von Claude geschätzter regulärer Ladenpreis je Bezugseinheit; nur über die Repository-Abfrage geschrieben. */
+    @Column(name = "estimated_price_per_unit", precision = 8, scale = 3)
+    private BigDecimal estimatedPricePerUnit;
+
+    @Column(name = "estimated_at")
+    private LocalDateTime estimatedAt;
+
     @Column(nullable = false)
     private boolean active = true;
 

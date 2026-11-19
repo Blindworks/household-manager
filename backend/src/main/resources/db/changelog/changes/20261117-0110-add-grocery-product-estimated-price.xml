@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Ein DDL je Changeset: MariaDB committet DDL implizit -->
+    <changeSet id="20261117-0110-add-grocery-product-estimated-price" author="claude">
+        <comment>Von Claude geschätzter regulärer Ladenpreis je Bezugseinheit; NULL = noch nicht geschätzt.</comment>
+        <addColumn tableName="grocery_product">
+            <column name="estimated_price_per_unit" type="DECIMAL(8,3)"/>
+        </addColumn>
+        <rollback><dropColumn tableName="grocery_product" columnName="estimated_price_per_unit"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

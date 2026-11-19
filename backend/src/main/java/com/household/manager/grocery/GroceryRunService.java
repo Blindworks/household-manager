@@ -57,7 +57,7 @@ public class GroceryRunService {
                            LocalDateTime collectedAt) {
     }
 
-    private record Computation(MatchingResult matching, Map<Long, List<Deal>> deals) {
+    private record Computation(MatchingResult matching, Map<Long, List<Deal>> deals, int estimateCalls) {
     }
 
     private final OfferCollectionService collector;
@@ -67,6 +67,7 @@ public class GroceryRunService {
     private final PriceObservationRecorder recorder;
     private final UsualPriceCalculator usualPrices;
     private final DealEvaluator evaluator;
+    private final NormalPriceEstimates estimates;
     private final GrocerySettingsService settings;
     private final GroceryProperties properties;
     private final GroceryEntityReporter reporter;
@@ -83,9 +84,11 @@ public class GroceryRunService {
     public GroceryRunService(OfferCollectionService collector, GroceryProductRepository products,
                              GroceryOfferRepository offers, MatchingService matching,
                              PriceObservationRecorder recorder, UsualPriceCalculator usualPrices,
-                             DealEvaluator evaluator, GrocerySettingsService settings, GroceryProperties properties,
+                             DealEvaluator evaluator, NormalPriceEstimates estimates, GrocerySettingsService settings,
+                             GroceryProperties properties,
                              GroceryEntityReporter reporter, Clock clock) {
-        this(collector, products, offers, matching, recorder, usualPrices, evaluator, settings, properties, reporter,
+        this(collector, products, offers, matching, recorder, usualPrices, evaluator, estimates, settings, properties,
+                reporter,
                 clock, Executors.newSingleThreadExecutor(runnable -> {
                     Thread thread = new Thread(runnable, MANUAL_RUN_THREAD);
                     thread.setDaemon(true);
@@ -96,7 +99,8 @@ public class GroceryRunService {
     GroceryRunService(OfferCollectionService collector, GroceryProductRepository products,
                       GroceryOfferRepository offers, MatchingService matching,
                       PriceObservationRecorder recorder, UsualPriceCalculator usualPrices,
-                      DealEvaluator evaluator, GrocerySettingsService settings, GroceryProperties properties,
+                      DealEvaluator evaluator, NormalPriceEstimates estimates, GrocerySettingsService settings,
+                             GroceryProperties properties,
                       GroceryEntityReporter reporter, Clock clock, Executor manualRunExecutor) {
         this.manualRunExecutor = manualRunExecutor;
         this.collector = collector;
@@ -106,6 +110,7 @@ public class GroceryRunService {
         this.recorder = recorder;
         this.usualPrices = usualPrices;
         this.evaluator = evaluator;
+        this.estimates = estimates;
         this.settings = settings;
         this.properties = properties;
         this.reporter = reporter;
@@ -231,7 +236,8 @@ public class GroceryRunService {
                 collection.failures().size());
         Map<String, String> failures = new LinkedHashMap<>();
         collection.failures().forEach((key, reason) -> failures.put(key.name(), reason));
-        return new RunResultDto(collection.offerCount(), result.aiCallsUsed(), result.productsDeferred(), dealCount,
+        return new RunResultDto(collection.offerCount(), result.aiCallsUsed() + computation.estimateCalls(),
+                result.productsDeferred(), dealCount,
                 result.aiFailures(), failures);
     }
 
@@ -306,6 +312,8 @@ public class GroceryRunService {
     private Computation compute(List<GroceryProduct> productList, List<GroceryOffer> currentOffers, int aiBudget,
                                 boolean recordObservations) {
         MatchingResult result = matching.matchAll(productList, currentOffers, aiBudget);
+        // Nur im vollen Lauf (mit Claude-Budget): Normalpreis schätzen, bevor Schnäppchen bewertet werden
+        int estimateCalls = aiBudget > 0 ? estimates.refreshDue(productList, result.matches()) : 0;
         LocalDate today = LocalDate.now(clock);
         int threshold = settings.dealThresholdPercent();
         Map<Long, List<Deal>> deals = new LinkedHashMap<>();
@@ -322,7 +330,7 @@ public class GroceryRunService {
                 deals.put(product.getId(), List.of());
             }
         }
-        return new Computation(result, deals);
+        return new Computation(result, deals, estimateCalls);
     }
 
     private void storeSnapshot(Snapshot next) {

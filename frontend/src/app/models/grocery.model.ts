@@ -3,7 +3,7 @@
 export type GroceryBaseUnit = 'LITER' | 'KILOGRAM' | 'PIECE';
 export type GroceryVerdict = 'MATCH' | 'MAYBE' | 'NO';
 export type GroceryReasonKind = 'SORT_UNCLEAR' | 'PACKAGING_DIFFERS' | 'OTHER';
-export type GroceryReferenceKind = 'USUAL' | 'OWN_NORMAL_PRICE' | 'LOWEST_30_DAYS';
+export type GroceryReferenceKind = 'USUAL' | 'OWN_NORMAL_PRICE' | 'ESTIMATED_NORMAL_PRICE' | 'LOWEST_30_DAYS';
 
 /** Filter der Personenauswahl: Nutzer-Id, "household" oder "all". */
 export type GroceryOwner = string;
@@ -18,6 +18,8 @@ export interface GroceryProduct {
   mustWords: string[];
   excludeWords: string[];
   normalPricePerUnit: number | null;
+  /** Von Claude geschätzter regulärer Ladenpreis; null = noch nicht geschätzt. */
+  estimatedPricePerUnit: number | null;
   active: boolean;
   editable: boolean;
 }

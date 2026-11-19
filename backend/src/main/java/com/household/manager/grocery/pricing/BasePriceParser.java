@@ -28,6 +28,7 @@ public final class BasePriceParser {
             "(?:\\d+\\s*(?:er(?:-?pack)?|fl\\.?|flaschen|dosen|stk\\.?|st\\.?)|à|\\ba)\\s*$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
+    private static final Pattern THOUSANDS = Pattern.compile("\\d{1,3}\\.\\d{3}");
     private static final BigDecimal THOUSAND = new BigDecimal("1000");
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
@@ -40,7 +41,7 @@ public final class BasePriceParser {
         }
         Matcher unit = UNIT_PRICE.matcher(basePriceText);
         if (unit.find()) {
-            return perQuantity(number(unit.group(1)), unit.group(2), number(unit.group(3)));
+            return perQuantity(quantity(unit.group(1), unit.group(2)), unit.group(2), number(unit.group(3)));
         }
         Matcher piece = PIECE_PRICE.matcher(basePriceText);
         if (piece.find()) {
@@ -77,8 +78,8 @@ public final class BasePriceParser {
             return Optional.empty();
         }
         BigDecimal count = matcher.group(1) == null ? BigDecimal.ONE : new BigDecimal(matcher.group(1));
-        BigDecimal total = count.multiply(number(matcher.group(2)));
         String unit = matcher.group(3);
+        BigDecimal total = count.multiply(quantity(matcher.group(2), unit));
         if (matcher.find()) {
             // mehrere Mengenangaben im Text: nicht sicher zuordenbar
             return Optional.empty();
@@ -118,6 +119,19 @@ public final class BasePriceParser {
 
     private static boolean positive(BigDecimal value) {
         return value != null && value.signum() > 0;
+    }
+
+    /**
+     * Mengenangabe: bei g, ml und cl ist ein Punkt mit genau drei Ziffern dahinter ein Tausenderpunkt
+     * („je 1.000 g“ = 1000 g, nicht 1 g); sonst wie {@link #number(String)}.
+     */
+    private static BigDecimal quantity(String text, String unit) {
+        String lower = unit.toLowerCase(Locale.ROOT);
+        boolean small = lower.equals("g") || lower.equals("ml") || lower.equals("cl");
+        if (small && THOUSANDS.matcher(text).matches()) {
+            return new BigDecimal(text.replace(".", ""));
+        }
+        return number(text);
     }
 
     private static BigDecimal number(String text) {

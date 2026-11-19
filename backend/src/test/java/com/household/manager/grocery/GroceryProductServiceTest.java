@@ -227,4 +227,19 @@ class GroceryProductServiceTest {
                 .isInstanceOf(IllegalArgumentException.class).hasMessage("Bitte Suchwörter angeben.");
         verify(products, never()).save(any());
     }
+
+    @Test
+    void changingNameOrUnitDropsTheEstimateButOtherEditsKeepIt() {
+        GroceryProduct product = stored(7L, 3L);
+        product.setEstimatedPricePerUnit(new BigDecimal("2.10"));
+        product.setEstimatedAt(java.time.LocalDateTime.of(2026, 11, 10, 4, 0));
+
+        service.update(7L, new ProductRequest("Cola", null, BaseUnit.LITER, List.of("cola", "coca"), List.of(),
+                List.of(), null, null));
+        assertThat(product.getEstimatedPricePerUnit()).isEqualByComparingTo("2.10");
+
+        service.update(7L, request("Cola Zero", List.of("cola")));
+        assertThat(product.getEstimatedPricePerUnit()).isNull();
+        assertThat(product.getEstimatedAt()).isNull();
+    }
 }

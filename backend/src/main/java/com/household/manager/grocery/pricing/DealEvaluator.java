@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Entscheidet, welche zugeordneten Angebote echte Schnäppchen sind. Ein Streichpreis ist nie Maßstab.
+ * Entscheidet, welche zugeordneten Angebote echte Schnäppchen sind. Ein Streichpreis ist nie direkter Maßstab.
  * Ein Angebot ohne Enddatum ({@code validTo == null}) gilt als aktuell.
  */
 @Component
@@ -72,12 +72,20 @@ public class DealEvaluator {
         return Optional.empty();
     }
 
+    /**
+     * Maßstab ist der reguläre Ladenpreis: eigener Normalpreis vor Claudes Schätzung. Ohne beide der übliche
+     * Angebotspreis aus der Historie und zuletzt der 30-Tage-Tiefstpreis der Quelle.
+     */
     private Optional<Reference> reference(GroceryProduct product, GroceryOffer offer, UsualPrice usual) {
-        if (!usual.warmingUp() && usual.median() != null) {
-            return Optional.of(new Reference(usual.median(), ReferenceKind.USUAL));
-        }
         if (product.getNormalPricePerUnit() != null) {
             return Optional.of(new Reference(product.getNormalPricePerUnit(), ReferenceKind.OWN_NORMAL_PRICE));
+        }
+        if (product.getEstimatedPricePerUnit() != null) {
+            return Optional.of(new Reference(product.getEstimatedPricePerUnit(),
+                    ReferenceKind.ESTIMATED_NORMAL_PRICE));
+        }
+        if (!usual.warmingUp() && usual.median() != null) {
+            return Optional.of(new Reference(usual.median(), ReferenceKind.USUAL));
         }
         return scale(offer, offer.getLowestPrice30d())
                 .map(v -> new Reference(v, ReferenceKind.LOWEST_30_DAYS));
@@ -103,6 +111,8 @@ public class DealEvaluator {
                       BigDecimal appBasePrice) {
         int saving = ref.value().subtract(basePrice).multiply(HUNDRED)
                 .divide(ref.value(), 0, RoundingMode.HALF_UP).intValue();
-        return new Deal(match, basePrice, ref.value(), ref.kind(), saving, appOnly, usual.warmingUp(), appBasePrice);
+        // „noch wenig Vergleichsdaten“ nur beim Notbehelf 30-Tage-Tiefstpreis; ein Normalpreis braucht keine Historie
+        boolean warmingUp = ref.kind() == ReferenceKind.LOWEST_30_DAYS && usual.warmingUp();
+        return new Deal(match, basePrice, ref.value(), ref.kind(), saving, appOnly, warmingUp, appBasePrice);
     }
 }

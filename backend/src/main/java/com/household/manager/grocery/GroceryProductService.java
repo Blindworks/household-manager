@@ -112,6 +112,11 @@ public class GroceryProductService {
         if (request.active() != null) {
             product.setActive(request.active());
         }
+        if (!name.equals(product.getName()) || baseUnit != product.getBaseUnit()) {
+            // anderes Produkt oder andere Einheit: die alte Schätzung passt nicht mehr, der nächste Lauf schätzt neu
+            product.setEstimatedPricePerUnit(null);
+            product.setEstimatedAt(null);
+        }
         apply(product, name, baseUnit, searchWords, request);
         GroceryProduct saved = products.save(product);
         audit.record("grocery.product.update", describe(saved));
@@ -217,6 +222,7 @@ public class GroceryProductService {
         return new ProductDto(p.getId(), p.getOwnerUserId(), GroceryOwners.ownerName(p.getOwnerUserId(), names),
                 p.getName(), p.getBaseUnit(), ProductWords.split(p.getSearchWords()),
                 ProductWords.split(p.getMustWords()), ProductWords.split(p.getExcludeWords()),
-                p.getNormalPricePerUnit(), p.isActive(), GroceryOwners.isEditable(p.getOwnerUserId(), me));
+                p.getNormalPricePerUnit(), p.getEstimatedPricePerUnit(), p.isActive(),
+                GroceryOwners.isEditable(p.getOwnerUserId(), me));
     }
 }

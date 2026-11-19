@@ -1,4 +1,4 @@
-import { GroceryBaseUnit, GroceryDeal, GroceryReferenceKind } from '../models/grocery.model';
+import { GroceryBaseUnit, GroceryDeal, GroceryProduct, GroceryReferenceKind } from '../models/grocery.model';
 
 const UNIT_LABEL: Record<GroceryBaseUnit, string> = { LITER: 'l', KILOGRAM: 'kg', PIECE: 'Stück' };
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -40,9 +40,23 @@ export function formatReference(deal: Pick<GroceryDeal, 'reference' | 'reference
   const prefix: Record<GroceryReferenceKind, string> = {
     USUAL: 'üblich',
     OWN_NORMAL_PRICE: 'dein Normalpreis',
+    ESTIMATED_NORMAL_PRICE: 'normal ca.',
     LOWEST_30_DAYS: '30-Tage-Tiefstpreis'
   };
   return `${prefix[deal.referenceKind]} ${formatBasePrice(deal.reference, deal.baseUnit)}`;
+}
+
+/** Maßstab eines Produkts: eigener Normalpreis vor Claudes Schätzung. */
+export function formatNormalPrice(
+  product: Pick<GroceryProduct, 'normalPricePerUnit' | 'estimatedPricePerUnit' | 'baseUnit'>
+): string {
+  if (product.normalPricePerUnit !== null) {
+    return `Normalpreis ${formatBasePrice(product.normalPricePerUnit, product.baseUnit)} (eigener)`;
+  }
+  if (product.estimatedPricePerUnit !== null) {
+    return `Normalpreis ca. ${formatBasePrice(product.estimatedPricePerUnit, product.baseUnit)} (geschätzt)`;
+  }
+  return 'Normalpreis wird beim nächsten Suchlauf geschätzt';
 }
 
 /** Komma-getrennte Wortliste -> Liste ohne Leereintraege. */

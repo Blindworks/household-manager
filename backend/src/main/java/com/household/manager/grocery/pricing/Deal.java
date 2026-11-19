@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 public record Deal(MatchedOffer match, BigDecimal basePrice, BigDecimal reference, ReferenceKind referenceKind,
                    int savingPercent, boolean appOnly, boolean warmingUp, BigDecimal appBasePrice) {
 
-    public enum ReferenceKind { USUAL, OWN_NORMAL_PRICE, LOWEST_30_DAYS }
+    public enum ReferenceKind { USUAL, OWN_NORMAL_PRICE, ESTIMATED_NORMAL_PRICE, LOWEST_30_DAYS }
 
     /** Einzige Regel für „sicheres Schnäppchen“: Urteil MATCH (auch vom Nutzer bestätigt), nie MAYBE. */
     public boolean isSure() {

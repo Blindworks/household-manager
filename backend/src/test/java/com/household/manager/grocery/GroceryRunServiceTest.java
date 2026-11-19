@@ -90,6 +90,7 @@ class GroceryRunServiceTest {
     private final GrocerySettingsService settings = mock(GrocerySettingsService.class);
     private final GroceryProperties properties = new GroceryProperties();
     private final GroceryEntityReporter reporter = mock(GroceryEntityReporter.class);
+    private final NormalPriceEstimates estimates = mock(NormalPriceEstimates.class);
 
     @BeforeEach
     void setUp() {
@@ -107,7 +108,7 @@ class GroceryRunServiceTest {
     private GroceryRunService service(MatchingService matchingService, DealEvaluator dealEvaluator,
                                       java.util.concurrent.Executor manualExecutor) {
         return new GroceryRunService(collector, products, offers, matchingService, recorder, usualPrices,
-                dealEvaluator, settings, properties, reporter, clock, manualExecutor);
+                dealEvaluator, estimates, settings, properties, reporter, clock, manualExecutor);
     }
 
     private static GroceryProduct product(long id, String search) {
@@ -176,6 +177,20 @@ class GroceryRunServiceTest {
 
         assertThat(result.sourceFailures()).containsEntry("REWE", "Zugriff gesperrt (HTTP 403)");
         assertThat(service.snapshot().deals()).containsKey(2L);
+    }
+
+    @Test
+    void fullRunEstimatesNormalPricesAndCountsTheCalls() {
+        GroceryProduct coffee = product(3L, "kaffee");
+        when(products.findByActiveTrue()).thenReturn(List.of(coffee));
+        when(matching.matchAll(anyList(), anyList(), anyInt()))
+                .thenReturn(new MatchingResult(Map.of(), 2, 0, 0, 0, 0));
+        when(estimates.refreshDue(eq(List.of(coffee)), any())).thenReturn(1);
+
+        RunResultDto result = service(matching, evaluator).run();
+
+        verify(estimates).refreshDue(eq(List.of(coffee)), any());
+        assertThat(result.aiCalls()).isEqualTo(3);
     }
 
     @Test
@@ -352,6 +367,7 @@ class GroceryRunServiceTest {
 
         verify(matching).matchAll(List.of(cola), List.of(), 0);
         verify(recorder, never()).record(any(), anyList());
+        verify(estimates, never()).refreshDue(anyList(), any());
         assertThat(service.snapshot().deals()).containsKey(1L);
 
         when(products.findById(1L)).thenReturn(java.util.Optional.empty());

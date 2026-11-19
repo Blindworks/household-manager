@@ -1,4 +1,4 @@
-import { formatBasePrice, formatReference, formatSaving, formatValidity, parseWordList } from './grocery-format.util';
+import { formatBasePrice, formatNormalPrice, formatReference, formatSaving, formatValidity, parseWordList } from './grocery-format.util';
 
 describe('grocery-format.util', () => {
   it('formatiert den Grundpreis mit Bezugseinheit', () => {
@@ -34,5 +34,19 @@ describe('grocery-format.util', () => {
   it('zerlegt Wortlisten ohne Leereintraege', () => {
     expect(parseWordList(' Cola, Coca Cola ,, ')).toEqual(['Cola', 'Coca Cola']);
     expect(parseWordList('')).toEqual([]);
+  });
+
+  it('zeigt eigenen Normalpreis vor der Schaetzung', () => {
+    expect(formatNormalPrice({ normalPricePerUnit: 19, estimatedPricePerUnit: 18.5, baseUnit: 'KILOGRAM' }))
+      .toContain('(eigener)');
+    expect(formatNormalPrice({ normalPricePerUnit: null, estimatedPricePerUnit: 18.5, baseUnit: 'KILOGRAM' }))
+      .toBe(`Normalpreis ca. ${formatBasePrice(18.5, 'KILOGRAM')} (geschätzt)`);
+    expect(formatNormalPrice({ normalPricePerUnit: null, estimatedPricePerUnit: null, baseUnit: 'KILOGRAM' }))
+      .toBe('Normalpreis wird beim nächsten Suchlauf geschätzt');
+  });
+
+  it('beschriftet die Schaetzung als Massstab', () => {
+    expect(formatReference({ reference: 19, referenceKind: 'ESTIMATED_NORMAL_PRICE', baseUnit: 'KILOGRAM' }))
+      .toBe(`normal ca. ${formatBasePrice(19, 'KILOGRAM')}`);
   });
 });

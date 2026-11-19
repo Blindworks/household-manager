@@ -85,7 +85,7 @@ class GroceryControllerTest {
     @Test
     void createReturnsProduct() throws Exception {
         when(productService.create(any())).thenReturn(new ProductDto(42L, 3L, "Benedikt", "Cola", BaseUnit.LITER,
-                List.of("cola"), List.of(), List.of(), null, true, true));
+                List.of("cola"), List.of(), List.of(), null, null, true, true));
 
         mockMvc.perform(post("/v1/groceries/products").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isOk())

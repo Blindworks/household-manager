@@ -26,7 +26,8 @@ function deal(overrides: Partial<GroceryDeal>): GroceryDeal {
 function product(overrides: Partial<GroceryProduct>): GroceryProduct {
   return {
     id: 1, ownerUserId: 5, ownerName: 'Ben', name: 'Cola', baseUnit: 'LITER', searchWords: ['cola'],
-    mustWords: [], excludeWords: [], normalPricePerUnit: null, active: true, editable: true, ...overrides
+    mustWords: [], excludeWords: [], normalPricePerUnit: null, estimatedPricePerUnit: null, active: true,
+    editable: true, ...overrides
   };
 }
 
