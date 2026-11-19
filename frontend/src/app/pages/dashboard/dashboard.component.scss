@@ -2255,9 +2255,20 @@
   color: #0f172a;
 }
 
-.lumina__rain-metrics {
+// Doppelte Klasse: die allgemeine Zwei-Spalten-Regel steht weiter unten und gewaenne sonst.
+.lumina__sensor-metrics.lumina__rain-metrics {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-bottom: 16px;
+
+  .lumina__sensor-metric {
+    padding: 14px 6px;
+  }
+
+  .lumina__sensor-metric-value {
+    font-size: 1.25rem;
+    white-space: nowrap;
+  }
 }
 
 .lumina__rain-chart {
