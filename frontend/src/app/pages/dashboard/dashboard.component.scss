@@ -290,12 +290,11 @@
     color: var(--on-surface-variant);
   }
 
+  // Ohne Flaeche: nur Icon und Wert in Akzentfarbe, damit es sich ruhig in die Kopfzeile fuegt.
   &--soon,
   &--raining {
-    border-radius: var(--radius-sm, 8px);
-    background: rgba(var(--heat-cool-rgb), 0.14);
-
-    .lumina__weather-icon {
+    .lumina__weather-icon,
+    .lumina__weather-temp {
       color: var(--heat-cool);
     }
   }
