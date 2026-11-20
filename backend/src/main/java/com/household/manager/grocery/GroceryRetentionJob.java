@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Nächtliche Aufräumrunde (03:35): Angebote 28 Tage nach Ablauf (ohne Enddatum 28 Tage nach dem Sammeln),
  * Preisbeobachtungen und Claude-Urteile nach
- * 365 Tagen. Nutzerurteile bleiben. Jede Tabelle isoliert; wirft nie.
+ * 365 Tagen, Laufprotokolle nach 90 Tagen. Nutzerurteile bleiben. Jede Tabelle isoliert; wirft nie.
  */
 @Slf4j
 @Component
@@ -27,16 +27,20 @@ public class GroceryRetentionJob {
     static final int OFFER_DAYS_AFTER_EXPIRY = 28;
     static final int OBSERVATION_DAYS = 365;
     static final int CLAUDE_VERDICT_DAYS = 365;
+    static final int RUN_LOG_DAYS = 90;
 
     private final GroceryOfferRepository offers;
     private final GroceryPriceObservationRepository observations;
     private final GroceryMatchRepository matches;
+    private final GroceryRunLogService runLog;
     private final SystemJobMonitor jobMonitor;
     private final Clock clock;
 
     public GroceryRetentionJob(GroceryOfferRepository offers, GroceryPriceObservationRepository observations,
-                               GroceryMatchRepository matches, SystemJobMonitor jobMonitor, Clock clock) {
+                               GroceryMatchRepository matches, GroceryRunLogService runLog,
+                               SystemJobMonitor jobMonitor, Clock clock) {
         this.offers = offers;
+        this.runLog = runLog;
         this.observations = observations;
         this.matches = matches;
         this.jobMonitor = jobMonitor;
@@ -56,6 +60,7 @@ public class GroceryRetentionJob {
                 () -> observations.deleteObservedBefore(now.minusDays(OBSERVATION_DAYS)));
         attempt("Claude-Urteile", failures, () -> matches.deleteDecidedBefore(GroceryMatch.DecidedBy.CLAUDE,
                 now.minusDays(CLAUDE_VERDICT_DAYS)));
+        attempt("Laufprotokolle", failures, () -> runLog.deleteStartedBefore(now.minusDays(RUN_LOG_DAYS)));
         if (!failures.isEmpty()) {
             jobMonitor.reportFailure("Aufräumen fehlgeschlagen: " + String.join(", ", failures));
         }

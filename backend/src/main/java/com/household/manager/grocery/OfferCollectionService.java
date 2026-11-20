@@ -47,7 +47,16 @@ public class OfferCollectionService {
     private static final int MAX_REASON_LENGTH = 300;
     private static final String EMPTY_REASON = "Keine Angebote geliefert";
 
-    public record CollectionResult(int offerCount, Map<SourceKey, String> failures) {
+    /**
+     * {@code delivered}: Zahl der gültigen Angebote je erfolgreicher Quelle; {@code rawCount}: Rohangebote vor dem
+     * Zusammenführen (inklusive des Bestands ausgefallener Quellen).
+     */
+    public record CollectionResult(int offerCount, Map<SourceKey, String> failures, Map<SourceKey, Integer> delivered,
+                                   int rawCount) {
+
+        public CollectionResult(int offerCount, Map<SourceKey, String> failures) {
+            this(offerCount, failures, Map.of(), 0);
+        }
     }
 
     private final List<OfferSource> sources;
@@ -96,6 +105,7 @@ public class OfferCollectionService {
         List<GroceryMarket> marketList = markets.findAll();
         List<RawOffer> collected = new ArrayList<>();
         Map<SourceKey, String> failures = new EnumMap<>(SourceKey.class);
+        Map<SourceKey, Integer> delivered = new EnumMap<>(SourceKey.class);
         boolean anySourceDelivered = false;
 
         for (OfferSource source : sources) {
@@ -105,16 +115,17 @@ public class OfferCollectionService {
                 continue;
             }
             try {
-                List<RawOffer> delivered = source.fetch(context).stream()
+                List<RawOffer> fetched = source.fetch(context).stream()
                         .filter(o -> o.validTo() == null || !o.validTo().isBefore(today))
                         .toList();
-                if (delivered.isEmpty() && stockContains(stock, key)) {
+                if (fetched.isEmpty() && stockContains(stock, key)) {
                     fail(key, EMPTY_REASON, failures, null);
                     continue;
                 }
-                collected.addAll(delivered);
-                anySourceDelivered |= !delivered.isEmpty();
-                recordRun(key, delivered.size(), true, null);
+                collected.addAll(fetched);
+                anySourceDelivered |= !fetched.isEmpty();
+                delivered.put(key, fetched.size());
+                recordRun(key, fetched.size(), true, null);
             } catch (SourceFetchException e) {
                 fail(key, e.getMessage(), failures, e);
             } catch (RuntimeException e) {
@@ -124,7 +135,7 @@ public class OfferCollectionService {
 
         if (!anySourceDelivered) {
             log.warn("Keine Angebotsquelle hat Angebote geliefert - der bisherige Bestand bleibt erhalten");
-            return new CollectionResult(0, failures);
+            return new CollectionResult(0, failures, delivered, collected.size());
         }
         Map<Long, String> externalIds = marketList.stream()
                 .collect(Collectors.toMap(GroceryMarket::getId, GroceryMarket::getExternalId, (a, b) -> a));
@@ -139,7 +150,7 @@ public class OfferCollectionService {
         });
         log.info("Angebotsbestand ersetzt: {} Angebote aus {} Rohangeboten, {} Quelle(n) fehlgeschlagen",
                 merged.size(), collected.size(), failures.size());
-        return new CollectionResult(merged.size(), failures);
+        return new CollectionResult(merged.size(), failures, delivered, collected.size());
     }
 
     private static boolean stockContains(List<GroceryOffer> stock, SourceKey key) {

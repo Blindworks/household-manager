@@ -7,6 +7,8 @@ import com.household.manager.grocery.dto.GrocerySettingsDto;
 import com.household.manager.grocery.dto.MarketDto;
 import com.household.manager.grocery.dto.MarketRefreshDto;
 import com.household.manager.grocery.dto.MarketSelectionDto;
+import com.household.manager.grocery.dto.RunLogDetailDto;
+import com.household.manager.grocery.dto.RunLogSummaryDto;
 import com.household.manager.grocery.dto.SourceStatusDto;
 import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.SourceKey;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
@@ -28,7 +31,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Admin-API der Supermarkt-Angebote (Einstellungen, Märkte, Quellenstatus). */
+/** Admin-API der Supermarkt-Angebote (Einstellungen, Märkte, Quellenstatus, Laufprotokoll). */
 @Slf4j
 @RestController
 @RequestMapping("/v1/admin/groceries")
@@ -41,6 +44,7 @@ public class GroceryAdminController {
     private final GroceryProperties properties;
     private final AuditService auditService;
     private final GroceryRunService runService;
+    private final GroceryRunLogService runLog;
 
     @GetMapping("/settings")
     public GrocerySettingsDto getSettings() {
@@ -116,5 +120,17 @@ public class GroceryAdminController {
             return new SourceStatusDto(key, enabled, run.getLastRunAt(), run.getOfferCount(),
                     run.isOk(), run.getReason());
         }).toList();
+    }
+
+    /** Protokollierte Läufe, neueste zuerst (höchstens 100). */
+    @GetMapping("/runs")
+    public List<RunLogSummaryDto> getRuns(@RequestParam(defaultValue = "30") int limit) {
+        return runLog.list(limit);
+    }
+
+    /** Ein Lauf mit Quellen, Produkten und den in diesem Lauf getroffenen Claude-Urteilen. */
+    @GetMapping("/runs/{id}")
+    public RunLogDetailDto getRun(@PathVariable long id) {
+        return runLog.detail(id);
     }
 }

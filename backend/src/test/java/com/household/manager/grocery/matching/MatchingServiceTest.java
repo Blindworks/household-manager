@@ -115,6 +115,31 @@ class MatchingServiceTest {
     }
 
     @Test
+    void statsCountCandidatesUnjudgedAndNewJudgementsPerProduct() {
+        when(matchRepo.findByProductId(1L)).thenReturn(
+                List.of(stored(1, "fpKnown", GroceryMatch.Verdict.MATCH, GroceryMatch.DecidedBy.CLAUDE)));
+        when(judge.judge(any(), anyList(), anyList())).thenReturn(judged(
+                new Judgement("fpA", Verdict.MATCH, null, null), new Judgement("fpB", Verdict.NO, null, "Sahne")));
+
+        MatchingResult result = service.matchAll(List.of(product(1, "butter", "")), List.of(
+                offer("Butter bekannt", "fpKnown"), offer("Butter A", "fpA"), offer("Butter B", "fpB")), 5);
+
+        assertThat(result.stats().get(1L)).isEqualTo(
+                new MatchingService.ProductStats(3, 2, 2, 1, 0, false, null));
+    }
+
+    @Test
+    void statsMarkFailedAndDeferredProducts() {
+        when(judge.judge(any(), anyList(), anyList())).thenReturn(Optional.empty());
+
+        MatchingResult result = service.matchAll(List.of(product(1, "butter", ""), product(2, "butter", "")),
+                List.of(offer("Butter", "fp1")), 1);
+
+        assertThat(result.stats().get(1L)).isEqualTo(new MatchingService.ProductStats(1, 1, 0, 1, 1, false, null));
+        assertThat(result.stats().get(2L)).isEqualTo(new MatchingService.ProductStats(1, 1, 0, 0, 0, true, null));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void userNoIsPermanent() {
         when(matchRepo.findByProductId(1L)).thenReturn(

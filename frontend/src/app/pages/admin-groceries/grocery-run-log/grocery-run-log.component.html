@@ -1,0 +1,188 @@
+<p class="run-log__hint">
+  Jeder Lauf (nachts um 4 Uhr oder „Jetzt suchen“) sammelt die Angebote, lässt Claude neue Kandidaten je Produkt
+  beurteilen und bewertet danach die Schnäppchen. Lauf antippen für Details. Protokolle bleiben 90 Tage.
+</p>
+
+@if (listError()) {
+  <p class="run-log__error" role="alert">{{ listError() }}</p>
+}
+
+@if (loading()) {
+  <p class="run-log__hint">Lade Läufe …</p>
+} @else if (runs().length === 0 && !listError()) {
+  <p class="run-log__hint">Noch kein Lauf protokolliert.</p>
+} @else {
+  <div class="run-log__scroll">
+    <table class="run-log__table">
+      <thead>
+        <tr>
+          <th>Start</th><th>Art</th><th>Dauer</th><th>Angebote</th><th>Produkte</th>
+          <th>Claude</th><th>Neue Urteile</th><th>Schnäppchen</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (run of runs(); track run.id) {
+          <tr class="run-log__run" [class.run-log__run--selected]="selectedId() === run.id"
+              tabindex="0" role="button" [attr.aria-expanded]="selectedId() === run.id"
+              (click)="toggle(run)" (keydown.enter)="toggle(run)">
+            <td>{{ run.startedAt | date: 'EEE dd.MM. HH:mm' }}</td>
+            <td>{{ trigger(run) }}</td>
+            <td>{{ duration(run) }}</td>
+            <td>{{ run.offers }}</td>
+            <td>{{ run.products }}</td>
+            <td [title]="tokens(run.inputTokens) + ' Eingabe- / ' + tokens(run.outputTokens) + ' Ausgabe-Tokens'">
+              {{ run.aiCalls }}@if (run.estimateCalls > 0) { + {{ run.estimateCalls }} Schätz.}
+              <span class="run-log__sub">{{ tokens(run.inputTokens + run.outputTokens) }} Tokens</span>
+            </td>
+            <td>{{ run.newJudgements }}</td>
+            <td>{{ run.deals }}</td>
+            <td>
+              <span [class]="'run-log__badge run-log__badge--' + status(run).tone">
+                {{ status(run).text }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (selectedId() !== null) {
+  <div class="run-log__detail">
+    <div class="run-log__detail-head">
+      <h3>Lauf vom {{ selectedRun()?.startedAt | date: 'dd.MM.yyyy HH:mm' }}</h3>
+      <button type="button" class="ghost" (click)="close()">Schließen</button>
+    </div>
+
+    @if (detailLoading()) {
+      <p class="run-log__hint">Lade Details …</p>
+    }
+    @if (detailError()) {
+      <p class="run-log__error" role="alert">{{ detailError() }}</p>
+    }
+
+    @if (detail(); as d) {
+      <dl class="run-log__facts">
+        <div><dt>Rohangebote</dt><dd>{{ d.run.rawOffers }}</dd></div>
+        <div><dt>Nach Zusammenführen</dt><dd>{{ d.run.offers }}</dd></div>
+        <div><dt>Claude-Aufrufe (Zuordnung)</dt><dd>{{ d.run.aiCalls }}</dd></div>
+        <div><dt>Normalpreis-Schätzungen</dt><dd>{{ d.run.estimateCalls }}</dd></div>
+        <div><dt>Tokens Ein/Aus</dt><dd>{{ tokens(d.run.inputTokens) }} / {{ tokens(d.run.outputTokens) }}</dd></div>
+        <div><dt>Dauer</dt><dd>{{ duration(d.run) }}</dd></div>
+      </dl>
+      @if (!d.run.ok) {
+        <p class="run-log__error">Der Lauf brach ab: {{ d.run.error }}</p>
+      }
+
+      @if (d.sources.length > 0) {
+        <h4>Quellen</h4>
+        <div class="run-log__scroll">
+          <table class="run-log__table run-log__table--compact">
+            <thead><tr><th>Quelle</th><th>Angebote</th><th>Status</th></tr></thead>
+            <tbody>
+              @for (source of d.sources; track source.source) {
+                <tr [class.run-log__row--failed]="!source.ok">
+                  <td>{{ sourceName(source.source) }}</td>
+                  <td>{{ source.offers ?? '–' }}</td>
+                  <td>{{ source.ok ? 'OK' : 'Fehler: ' + source.reason }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (d.products.length > 0) {
+        <h4>Produkte</h4>
+        <p class="run-log__hint">
+          Kandidaten = Angebote nach dem Wortvorfilter; „ohne Urteil“ ging an Claude, bekannte Angebote nutzen das
+          gespeicherte Urteil. Zeile antippen filtert die Urteile unten.
+        </p>
+        <div class="run-log__scroll">
+          <table class="run-log__table run-log__table--compact">
+            <thead>
+              <tr>
+                <th>Produkt</th><th>Kandidaten</th><th>ohne Urteil</th><th>neu beurteilt</th>
+                <th>Passt</th><th>Unsicher</th><th>Schnäppchen</th><th>Normalpreis</th><th>Hinweis</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (product of d.products; track product.productId) {
+                <tr class="run-log__product" [class.run-log__run--selected]="productFilter() === product.productId"
+                    [class.run-log__row--failed]="!!product.error || product.aiFailures > 0"
+                    tabindex="0" (click)="showProduct(product)" (keydown.enter)="showProduct(product)">
+                  <td>{{ product.name }}</td>
+                  <td>{{ product.candidates }}</td>
+                  <td>{{ product.unjudged }}</td>
+                  <td>{{ product.newJudgements }}</td>
+                  <td>{{ product.matches }}</td>
+                  <td>{{ product.maybes }}</td>
+                  <td>{{ product.deals }}</td>
+                  <td>{{ normalPrice(product) }}</td>
+                  <td>{{ note(product) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <h4>Claude-Urteile in diesem Lauf</h4>
+      @if (d.judgements.length === 0) {
+        <p class="run-log__hint">
+          Claude hat in diesem Lauf nichts neu beurteilt – alle Kandidaten hatten schon ein Urteil.
+        </p>
+      } @else {
+        <div class="run-log__filters">
+          <div class="run-log__chips" role="group" aria-label="Urteil">
+            @for (option of verdictOptions; track option.value) {
+              <button type="button" class="ghost run-log__chip"
+                      [class.run-log__chip--active]="verdictFilter() === option.value"
+                      [attr.aria-pressed]="verdictFilter() === option.value"
+                      (click)="verdictFilter.set(option.value)">
+                {{ option.label }} ({{ verdictCount(option.value) }})
+              </button>
+            }
+          </div>
+          <label class="run-log__select">
+            <span>Produkt</span>
+            <select [ngModel]="productFilter() ?? ''" (ngModelChange)="setProductFilter($event)">
+              <option value="">Alle Produkte</option>
+              @for (p of judgedProducts(); track p.id) {
+                <option [value]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        @if (d.judgementsTruncated) {
+          <p class="run-log__hint">Es werden nur die ersten 500 Urteile gezeigt.</p>
+        }
+        <ul class="run-log__judgements">
+          @for (j of visibleJudgements(); track trackJudgement($index, j)) {
+            <li class="run-log__judgement">
+              <span [class]="'run-log__verdict run-log__verdict--' + j.verdict">
+                {{ verdictLabel(j.verdict) }}
+              </span>
+              <div class="run-log__judgement-body">
+                <div><strong>{{ j.productName }}</strong> ← {{ j.offerTitle ?? '(Angebot abgelaufen)' }}</div>
+                <div class="run-log__sub">{{ offerMeta(j) }}</div>
+                @if (j.reason || j.reasonKind) {
+                  <div class="run-log__reason">
+                    @if (reasonKind(j.reasonKind); as kind) { <em>{{ kind }}:</em> }
+                    {{ j.reason }}
+                  </div>
+                }
+              </div>
+            </li>
+          } @empty {
+            <li class="run-log__hint">Keine Urteile für diesen Filter.</li>
+          }
+        </ul>
+        <p class="run-log__hint">
+          Ein später von Hand geändertes Urteil („passt“/„passt nicht“) fehlt hier, weil es dann als Nutzerurteil gilt.
+        </p>
+      }
+    }
+  </div>
+}

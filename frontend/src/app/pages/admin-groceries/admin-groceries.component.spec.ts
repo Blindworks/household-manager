@@ -68,7 +68,11 @@ describe('AdminGroceriesComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    // Das Laufprotokoll (Kindkomponente) lädt selbst; hier nur abräumen, getestet wird es in seiner eigenen Spec
+    httpMock.match(r => r.url === `${BASE}/runs`).forEach(r => r.flush([]));
+    httpMock.verify();
+  });
 
   it('showsSourceStatusWithReason', () => {
     flushInitial();

@@ -91,6 +91,7 @@ class GroceryRunServiceTest {
     private final GroceryProperties properties = new GroceryProperties();
     private final GroceryEntityReporter reporter = mock(GroceryEntityReporter.class);
     private final NormalPriceEstimates estimates = mock(NormalPriceEstimates.class);
+    private final GroceryRunLogService runLog = mock(GroceryRunLogService.class);
 
     @BeforeEach
     void setUp() {
@@ -108,7 +109,7 @@ class GroceryRunServiceTest {
     private GroceryRunService service(MatchingService matchingService, DealEvaluator dealEvaluator,
                                       java.util.concurrent.Executor manualExecutor) {
         return new GroceryRunService(collector, products, offers, matchingService, recorder, usualPrices,
-                dealEvaluator, estimates, settings, properties, reporter, clock, manualExecutor);
+                dealEvaluator, estimates, settings, properties, reporter, clock, runLog, manualExecutor);
     }
 
     private static GroceryProduct product(long id, String search) {
@@ -177,6 +178,34 @@ class GroceryRunServiceTest {
 
         assertThat(result.sourceFailures()).containsEntry("REWE", "Zugriff gesperrt (HTTP 403)");
         assertThat(service.snapshot().deals()).containsKey(2L);
+    }
+
+    @Test
+    void nightlyRunIsLoggedWithItsOutcome() {
+        GroceryProduct b = product(2L, "milch");
+        when(products.findByActiveTrue()).thenReturn(List.of(b));
+        GroceryRunService service = service(matching, evaluator);
+
+        service.run();
+
+        org.mockito.ArgumentCaptor<GroceryRunLogService.RunOutcome> outcome =
+                org.mockito.ArgumentCaptor.forClass(GroceryRunLogService.RunOutcome.class);
+        verify(runLog).record(eq(com.household.manager.grocery.entity.GroceryRunLog.Trigger.NIGHTLY),
+                eq(LocalDateTime.of(2026, 11, 15, 11, 0)), eq(LocalDateTime.of(2026, 11, 15, 11, 0)),
+                outcome.capture(), eq(null));
+        assertThat(outcome.getValue().products()).containsExactly(b);
+        assertThat(outcome.getValue().collection().offerCount()).isEqualTo(5);
+    }
+
+    @Test
+    void failedManualRunIsLoggedWithItsError() {
+        when(collector.collect()).thenThrow(new RuntimeException("Netz weg"));
+        GroceryRunService service = service(matching, evaluator);
+
+        service.runManually();
+
+        verify(runLog).record(eq(com.household.manager.grocery.entity.GroceryRunLog.Trigger.MANUAL), any(), any(),
+                eq(null), eq("Netz weg"));
     }
 
     @Test

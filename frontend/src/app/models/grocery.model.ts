@@ -160,3 +160,73 @@ export interface GroceryChainStatus {
   name: string;
   enabled: boolean;
 }
+
+/** Laufprotokoll (GET /v1/admin/groceries/runs); Zeiten sind Serverzeit ohne Zone. */
+export type GroceryRunTrigger = 'NIGHTLY' | 'MANUAL';
+
+export interface GroceryRunLogSummary {
+  id: number;
+  trigger: GroceryRunTrigger;
+  startedAt: string;
+  finishedAt: string;
+  ok: boolean;
+  error: string | null;
+  offers: number;
+  rawOffers: number;
+  products: number;
+  aiCalls: number;
+  estimateCalls: number;
+  inputTokens: number;
+  outputTokens: number;
+  aiFailures: number;
+  deferred: number;
+  newJudgements: number;
+  deals: number;
+  sourceFailures: number;
+}
+
+export interface GroceryRunSourceLine {
+  source: string;
+  ok: boolean;
+  offers: number | null;
+  reason: string | null;
+}
+
+export interface GroceryRunProductLine {
+  productId: number;
+  name: string;
+  candidates: number;
+  unjudged: number;
+  newJudgements: number;
+  aiCalls: number;
+  aiFailures: number;
+  deferred: boolean;
+  error: string | null;
+  matches: number;
+  maybes: number;
+  deals: number;
+  normalPrice: number | null;
+  estimatedPrice: number | null;
+  baseUnit: GroceryBaseUnit | null;
+}
+
+export interface GroceryRunJudgementLine {
+  productId: number;
+  productName: string;
+  verdict: GroceryVerdict;
+  reasonKind: string | null;
+  reason: string | null;
+  offerTitle: string | null;
+  chain: string | null;
+  price: number | null;
+  basePrice: number | null;
+  baseUnit: GroceryBaseUnit | null;
+}
+
+export interface GroceryRunLogDetail {
+  run: GroceryRunLogSummary;
+  sources: GroceryRunSourceLine[];
+  products: GroceryRunProductLine[];
+  judgements: GroceryRunJudgementLine[];
+  judgementsTruncated: boolean;
+}

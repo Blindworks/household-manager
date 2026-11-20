@@ -30,7 +30,21 @@ public class MatchingService {
 
     /** {@code aiFailures}: Claude-Aufrufe ohne verwertbare Antwort (Claude nicht erreichbar oder Antwort unlesbar). */
     public record MatchingResult(Map<Long, List<MatchedOffer>> matches, int aiCallsUsed, int productsDeferred,
-                                 int inputTokens, int outputTokens, int aiFailures) {
+                                 int inputTokens, int outputTokens, int aiFailures, Map<Long, ProductStats> stats) {
+
+        public MatchingResult(Map<Long, List<MatchedOffer>> matches, int aiCallsUsed, int productsDeferred,
+                              int inputTokens, int outputTokens, int aiFailures) {
+            this(matches, aiCallsUsed, productsDeferred, inputTokens, outputTokens, aiFailures, Map.of());
+        }
+    }
+
+    /**
+     * Zähler je Produkt für das Laufprotokoll: {@code candidates} Angebote nach dem Vorfilter, {@code unjudged} davon
+     * ohne gespeichertes Urteil (verschiedene Fingerabdrücke), {@code newJudgements} in diesem Lauf von Claude
+     * gespeichert, {@code error} wenn die Zuordnung des Produkts abbrach.
+     */
+    public record ProductStats(int candidates, int unjudged, int newJudgements, int aiCalls, int aiFailures,
+                               boolean deferred, String error) {
     }
 
     static final String USER_REJECTED_REASON = "vom Nutzer abgelehnt";
@@ -60,28 +74,31 @@ public class MatchingService {
         int failures;
     }
 
-    private record ProductOutcome(List<MatchedOffer> matched, boolean deferred) {
+    private record ProductOutcome(List<MatchedOffer> matched, boolean deferred, ProductStats stats) {
     }
 
     public MatchingResult matchAll(List<GroceryProduct> productList, List<GroceryOffer> offers, int aiCallBudget) {
         Run run = new Run();
         run.budget = aiCallBudget;
         Map<Long, List<MatchedOffer>> result = new LinkedHashMap<>();
+        Map<Long, ProductStats> stats = new LinkedHashMap<>();
         int deferred = 0;
         for (GroceryProduct product : productList) {
             try {
                 ProductOutcome outcome = matchProduct(product, offers, run);
                 result.put(product.getId(), outcome.matched());
+                stats.put(product.getId(), outcome.stats());
                 if (outcome.deferred()) {
                     deferred++;
                 }
             } catch (RuntimeException ex) {
                 log.warn("Zuordnung für Produkt {} fehlgeschlagen: {}", product.getId(), ex.getMessage());
                 result.putIfAbsent(product.getId(), List.of());
+                stats.putIfAbsent(product.getId(), new ProductStats(0, 0, 0, 0, 0, true, ex.getMessage()));
                 deferred++;
             }
         }
-        return new MatchingResult(result, run.calls, deferred, run.inputTokens, run.outputTokens, run.failures);
+        return new MatchingResult(result, run.calls, deferred, run.inputTokens, run.outputTokens, run.failures, stats);
     }
 
     private ProductOutcome matchProduct(GroceryProduct product, List<GroceryOffer> offers, Run run) {
@@ -99,6 +116,9 @@ public class MatchingService {
         }
 
         boolean deferred = false;
+        int callsBefore = run.calls;
+        int failuresBefore = run.failures;
+        int storedBefore = stored.size();
         if (!unknown.isEmpty()) {
             List<String> rejected = rejectedExamples(stored, offers);
             List<GroceryOffer> pending = new ArrayList<>(unknown.values());
@@ -117,7 +137,9 @@ public class MatchingService {
                 }, () -> run.failures++);
             }
         }
-        return new ProductOutcome(collect(product, candidates, stored), deferred);
+        ProductStats productStats = new ProductStats(candidates.size(), unknown.size(), stored.size() - storedBefore,
+                run.calls - callsBefore, run.failures - failuresBefore, deferred, null);
+        return new ProductOutcome(collect(product, candidates, stored), deferred, productStats);
     }
 
     /** Texte aktuell vorhandener Angebote, die der Nutzer für dieses Produkt abgelehnt hat. */

@@ -222,5 +222,7 @@
     <include file="db/changelog/changes/20261116-0109-add-dirigera-reading-illuminance.xml"/>
     <include file="db/changelog/changes/20261117-0110-add-grocery-product-estimated-price.xml"/>
     <include file="db/changelog/changes/20261117-0111-add-grocery-product-estimated-at.xml"/>
+    <include file="db/changelog/changes/20261120-0112-create-grocery-run-log.xml"/>
+    <include file="db/changelog/changes/20261120-0113-index-grocery-run-log-started-at.xml"/>
 
 </databaseChangeLog>

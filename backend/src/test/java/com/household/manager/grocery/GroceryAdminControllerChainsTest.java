@@ -17,7 +17,7 @@ class GroceryAdminControllerChainsTest {
         GroceryMarketService marketService = mock(GroceryMarketService.class);
         when(marketService.enabledChains()).thenReturn(EnumSet.of(Chain.REWE, Chain.LIDL));
         GroceryAdminController controller = new GroceryAdminController(
-                null, marketService, null, null, null, null);
+                null, marketService, null, null, null, null, null);
 
         List<ChainStatusDto> chains = controller.getChains();
 

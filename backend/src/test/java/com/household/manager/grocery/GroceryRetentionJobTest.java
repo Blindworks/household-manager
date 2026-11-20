@@ -24,8 +24,10 @@ class GroceryRetentionJobTest {
     private final GroceryPriceObservationRepository observations = mock(GroceryPriceObservationRepository.class);
     private final GroceryMatchRepository matches = mock(GroceryMatchRepository.class);
     private final SystemJobMonitor monitor = mock(SystemJobMonitor.class);
+    private final GroceryRunLogService runLog = mock(GroceryRunLogService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-15T02:35:00Z"), ZoneId.of("Europe/Berlin"));
-    private final GroceryRetentionJob job = new GroceryRetentionJob(offers, observations, matches, monitor, clock);
+    private final GroceryRetentionJob job = new GroceryRetentionJob(offers, observations, matches, runLog,
+            monitor, clock);
 
     @Test
     void deletesWithCutoffsAndKeepsUserVerdicts() {
@@ -35,6 +37,7 @@ class GroceryRetentionJobTest {
         verify(offers).deleteUndatedCollectedBefore(LocalDateTime.of(2026, 10, 18, 3, 35));
         verify(observations).deleteObservedBefore(LocalDateTime.of(2025, 11, 15, 3, 35));
         verify(matches).deleteDecidedBefore(GroceryMatch.DecidedBy.CLAUDE, LocalDateTime.of(2025, 11, 15, 3, 35));
+        verify(runLog).deleteStartedBefore(LocalDateTime.of(2026, 8, 17, 3, 35));
     }
 
     @Test

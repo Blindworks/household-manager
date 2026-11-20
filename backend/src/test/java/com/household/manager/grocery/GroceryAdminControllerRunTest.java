@@ -22,7 +22,7 @@ class GroceryAdminControllerRunTest {
     private final GroceryMarketService marketService = mock(GroceryMarketService.class);
     private final AuditService audit = mock(AuditService.class);
     private final GroceryAdminController controller =
-            new GroceryAdminController(settings, marketService, null, properties, audit, runService);
+            new GroceryAdminController(settings, marketService, null, properties, audit, runService, null);
 
     @Test
     void thresholdChangeRecomputesDealsWithoutClaude() {

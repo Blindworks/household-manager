@@ -15,6 +15,11 @@ public interface GroceryMatchRepository extends JpaRepository<GroceryMatch, Long
 
     List<GroceryMatch> findByProductId(Long productId);
 
+    /** Urteile eines Urhebers im Zeitfenster (Protokoll: was Claude in einem Lauf entschieden hat). */
+    List<GroceryMatch> findByDecidedByAndDecidedAtBetweenOrderByProductIdAscIdAsc(GroceryMatch.DecidedBy decidedBy,
+                                                                                   LocalDateTime from,
+                                                                                   LocalDateTime to);
+
     Optional<GroceryMatch> findByProductIdAndFingerprint(Long productId, String fingerprint);
 
     /** Retention: Urteile eines Urhebers vor {@code cutoff}. Eigene Transaktion. */

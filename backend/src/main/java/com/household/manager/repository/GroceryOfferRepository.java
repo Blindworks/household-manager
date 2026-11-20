@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long> {
@@ -20,6 +21,9 @@ public interface GroceryOfferRepository extends JpaRepository<GroceryOffer, Long
 
     @Query("select o from GroceryOffer o where o.validTo is null or o.validTo >= :today")
     List<GroceryOffer> findActiveFrom(@Param("today") LocalDate today);
+
+    /** Angebote zu Fingerabdrücken (Laufprotokoll: Titel und Preis zu einem Claude-Urteil). */
+    List<GroceryOffer> findByFingerprintIn(Collection<String> fingerprints);
 
     /** Retention: Angebote, deren Gültigkeit vor {@code cutoff} endete. Eigene Transaktion. */
     @Transactional

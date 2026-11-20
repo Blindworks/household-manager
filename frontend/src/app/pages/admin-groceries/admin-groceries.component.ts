@@ -7,6 +7,7 @@ import {
   GroceryChainStatus, GroceryMarket, GrocerySourceStatus
 } from '../../models/grocery.model';
 import { GroceryRunTracker } from '../../services/grocery-run-tracker.service';
+import { GroceryRunLogComponent } from './grocery-run-log/grocery-run-log.component';
 
 /** Kettenreihenfolge und Anzeigename der Ketten mit Marktauswahl (Chain.hasMarkets im Backend). */
 const MARKET_CHAINS: { chain: string; name: string }[] = [
@@ -31,11 +32,11 @@ interface Message {
   type: 'success' | 'error';
 }
 
-/** Admin-Seite der Supermarkt-Angebote: Standort, Schwelle, Märkte, Ketten, Quellenstatus. */
+/** Admin-Seite der Supermarkt-Angebote: Standort, Schwelle, Märkte, Ketten, Quellenstatus, Laufprotokoll. */
 @Component({
   selector: 'app-admin-groceries',
   standalone: true,
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, GroceryRunLogComponent],
   providers: [GroceryRunTracker],
   templateUrl: './admin-groceries.component.html',
   styleUrl: './admin-groceries.component.scss'

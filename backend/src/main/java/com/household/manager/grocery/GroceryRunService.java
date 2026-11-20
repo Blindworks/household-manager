@@ -5,7 +5,9 @@ import com.household.manager.grocery.OfferCollectionService.CollectionResult;
 import com.household.manager.grocery.dto.RunResultDto;
 import com.household.manager.grocery.dto.RunStatusDto;
 import com.household.manager.grocery.entity.GroceryOffer;
+import com.household.manager.grocery.GroceryRunLogService.RunOutcome;
 import com.household.manager.grocery.entity.GroceryProduct;
+import com.household.manager.grocery.entity.GroceryRunLog;
 import com.household.manager.grocery.matching.MatchingService;
 import com.household.manager.grocery.matching.MatchingService.MatchedOffer;
 import com.household.manager.grocery.matching.MatchingService.MatchingResult;
@@ -73,6 +75,7 @@ public class GroceryRunService {
     private final GroceryEntityReporter reporter;
     private final Clock clock;
     private final Executor manualRunExecutor;
+    private final GroceryRunLogService runLog;
 
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicReference<Instant> lastManualRun = new AtomicReference<>();
@@ -86,10 +89,10 @@ public class GroceryRunService {
                              PriceObservationRecorder recorder, UsualPriceCalculator usualPrices,
                              DealEvaluator evaluator, NormalPriceEstimates estimates, GrocerySettingsService settings,
                              GroceryProperties properties,
-                             GroceryEntityReporter reporter, Clock clock) {
+                             GroceryEntityReporter reporter, Clock clock, GroceryRunLogService runLog) {
         this(collector, products, offers, matching, recorder, usualPrices, evaluator, estimates, settings, properties,
                 reporter,
-                clock, Executors.newSingleThreadExecutor(runnable -> {
+                clock, runLog, Executors.newSingleThreadExecutor(runnable -> {
                     Thread thread = new Thread(runnable, MANUAL_RUN_THREAD);
                     thread.setDaemon(true);
                     return thread;
@@ -101,8 +104,10 @@ public class GroceryRunService {
                       PriceObservationRecorder recorder, UsualPriceCalculator usualPrices,
                       DealEvaluator evaluator, NormalPriceEstimates estimates, GrocerySettingsService settings,
                              GroceryProperties properties,
-                      GroceryEntityReporter reporter, Clock clock, Executor manualRunExecutor) {
+                      GroceryEntityReporter reporter, Clock clock, GroceryRunLogService runLog,
+                      Executor manualRunExecutor) {
         this.manualRunExecutor = manualRunExecutor;
+        this.runLog = runLog;
         this.collector = collector;
         this.products = products;
         this.offers = offers;
@@ -128,7 +133,7 @@ public class GroceryRunService {
         }
         try {
             markStarted();
-            return runTracked();
+            return runTracked(GroceryRunLog.Trigger.NIGHTLY);
         } finally {
             running.set(false);
         }
@@ -171,7 +176,7 @@ public class GroceryRunService {
 
     private void runManualInBackground() {
         try {
-            runTracked();
+            runTracked(GroceryRunLog.Trigger.MANUAL);
         } catch (RuntimeException e) {
             log.warn("Manueller Supermarkt-Lauf fehlgeschlagen: {}", e.getMessage(), e);
         } finally {
@@ -192,16 +197,21 @@ public class GroceryRunService {
                 previous.lastError()));
     }
 
-    /** Führt den Lauf aus und hält Ergebnis oder Fehler im Laufstand fest. */
-    private RunResultDto runTracked() {
+    /** Führt den Lauf aus und hält Ergebnis oder Fehler im Laufstand und im Laufprotokoll fest. */
+    private RunResultDto runTracked(GroceryRunLog.Trigger trigger) {
         LocalDateTime startedAt = status.get().startedAt();
         try {
-            RunResultDto result = runExclusive();
-            status.set(new RunStatusDto(false, startedAt, LocalDateTime.now(clock), result, null));
+            RunOutcome outcome = runExclusive();
+            RunResultDto result = toResult(outcome);
+            LocalDateTime finishedAt = LocalDateTime.now(clock);
+            status.set(new RunStatusDto(false, startedAt, finishedAt, result, null));
+            runLog.record(trigger, startedAt, finishedAt, outcome, null);
             return result;
         } catch (RuntimeException e) {
             String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-            status.set(new RunStatusDto(false, startedAt, LocalDateTime.now(clock), null, message));
+            LocalDateTime finishedAt = LocalDateTime.now(clock);
+            status.set(new RunStatusDto(false, startedAt, finishedAt, null, message));
+            runLog.record(trigger, startedAt, finishedAt, null, message);
             throw e;
         }
     }
@@ -220,7 +230,7 @@ public class GroceryRunService {
         }
     }
 
-    private RunResultDto runExclusive() {
+    private RunOutcome runExclusive() {
         CollectionResult collection = collector.collect();
         List<GroceryProduct> active = products.findByActiveTrue();
         List<GroceryOffer> current = offers.findActiveFrom(LocalDate.now(clock));
@@ -229,16 +239,23 @@ public class GroceryRunService {
         reportEntities();
         MatchingResult result = computation.matching();
         int dealCount = computation.deals().values().stream().mapToInt(List::size).sum();
+        RunOutcome outcome = new RunOutcome(collection, result, computation.deals(), active,
+                computation.estimateCalls());
         log.info("Supermarkt-Lauf: {} Angebote, {} Produkte, {} Claude-Aufrufe ({} Eingabe-/{} Ausgabe-Tokens), "
                         + "{} fehlgeschlagen, {} verschoben, {} Schnäppchen, {} Quelle(n) gestört",
                 collection.offerCount(), active.size(), result.aiCallsUsed(), result.inputTokens(),
                 result.outputTokens(), result.aiFailures(), result.productsDeferred(), dealCount,
                 collection.failures().size());
+        return outcome;
+    }
+
+    private static RunResultDto toResult(RunOutcome outcome) {
+        MatchingResult result = outcome.matching();
         Map<String, String> failures = new LinkedHashMap<>();
-        collection.failures().forEach((key, reason) -> failures.put(key.name(), reason));
-        return new RunResultDto(collection.offerCount(), result.aiCallsUsed() + computation.estimateCalls(),
-                result.productsDeferred(), dealCount,
-                result.aiFailures(), failures);
+        outcome.collection().failures().forEach((key, reason) -> failures.put(key.name(), reason));
+        int dealCount = outcome.deals().values().stream().mapToInt(List::size).sum();
+        return new RunResultDto(outcome.collection().offerCount(), result.aiCallsUsed() + outcome.estimateCalls(),
+                result.productsDeferred(), dealCount, result.aiFailures(), failures);
     }
 
     /** Nach dem Start: Schnäppchen aus gespeicherten Angeboten und Urteilen, ohne Claude. Wirft nie. */

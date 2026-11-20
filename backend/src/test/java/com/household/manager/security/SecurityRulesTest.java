@@ -173,6 +173,8 @@ class SecurityRulesTest {
     @MockitoBean
     private com.household.manager.grocery.GroceryRunService groceryRunService;
     @MockitoBean
+    private com.household.manager.grocery.GroceryRunLogService groceryRunLogService;
+    @MockitoBean
     private SystemRebootService systemRebootService;
     @MockitoBean
     private AppUserService appUserService;
@@ -475,6 +477,25 @@ class SecurityRulesTest {
     @WithMockUser(roles = "KIOSK")
     void groceriesMarketsGetIstFuerKioskVerboten() throws Exception {
         mockMvc.perform(get("/v1/admin/groceries/markets")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void groceriesRunLogIstFuerAdminErlaubt() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/runs")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void groceriesRunLogIstFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/runs")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/v1/admin/groceries/runs/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void groceriesRunLogIstFuerKioskVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/groceries/runs")).andExpect(status().isForbidden());
     }
 
     @Test
