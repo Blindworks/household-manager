@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,9 +20,12 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.never;
@@ -50,6 +54,8 @@ class ChargingPollingServiceTest {
     private ChargingHistoryRecorder historyRecorder;
     @Mock
     private ChargingForecastService forecastService;
+    @Mock
+    private ChargingStationMigrator stationMigrator;
 
     private ChargingProperties properties;
     private ChargingSnapshot snapshot;
@@ -69,7 +75,7 @@ class ChargingPollingServiceTest {
         snapshot = new ChargingSnapshot();
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
                 snapshot, new ChargingEntityMapper(Clock.fixed(NOW, ZoneOffset.UTC)), entityStateService,
-                Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder, forecastService);
+                Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder, forecastService, stationMigrator);
         // lenient: nicht jeder Test (z. B. die reinen Favoriten-Tests) fragt settingsService ab.
         org.mockito.Mockito.lenient().when(settingsService.getSettings())
                 .thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
@@ -148,7 +154,7 @@ class ChargingPollingServiceTest {
         };
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
                 snapshot, new ChargingEntityMapper(movable), entityStateService, movable, jobMonitor,
-                historyRecorder, forecastService);
+                historyRecorder, forecastService, stationMigrator);
         when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
         when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
         when(tracker.occupancyFor("S1")).thenReturn(Map.of());
@@ -349,5 +355,66 @@ class ChargingPollingServiceTest {
         verify(entityStateService).reportState(captor.capture());
         assertThat(captor.getValue().state()).isEqualTo("1");
         assertThat(captor.getValue().attributes()).doesNotContainKey("forecastStatus");
+    }
+
+    @Test
+    void favoritMit404FragtDenMigratorUndMeldetUnavailable() {
+        ChargingFavorite fav = favorite("ALT");
+        when(favoriteService.list()).thenReturn(List.of(fav));
+        when(source.stationDetails("ALT")).thenThrow(new ChargingStationNotFoundException("404"));
+        when(stationMigrator.stationNotFound(fav, Set.of("ALT"))).thenReturn(Optional.empty());
+
+        service.pollFavorites();
+
+        verify(stationMigrator).stationNotFound(fav, Set.of("ALT"));
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService).reportState(captor.capture());
+        assertThat(captor.getValue().state()).isEqualTo("unavailable");
+    }
+
+    @Test
+    void andererQuellenfehlerFragtDenMigratorNicht() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenThrow(new ChargingSourceException("EnBW antwortet HTTP 500"));
+
+        service.pollFavorites();
+
+        verify(stationMigrator, never()).stationNotFound(any(), any());
+    }
+
+    @Test
+    void erfolgreicherAbrufBeendetEineLaufendeWartezeit() {
+        when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
+        when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
+        when(tracker.occupancyFor("S1")).thenReturn(Map.of());
+
+        service.pollFavorites();
+
+        verify(stationMigrator).stationFound("S1");
+    }
+
+    @Test
+    void nachDemUmzugWirdDieAlteEntitaetImNaechstenLaufEinmalUnavailable() {
+        ChargingFavorite alt = favorite("ALT");
+        when(favoriteService.list()).thenReturn(List.of(alt));
+        when(source.stationDetails("ALT")).thenReturn(details("ALT", ChargePointStatus.FREE));
+        when(tracker.occupancyFor(any())).thenReturn(Map.of());
+        service.pollFavorites();
+
+        when(source.stationDetails("ALT")).thenThrow(new ChargingStationNotFoundException("404"));
+        when(stationMigrator.stationNotFound(alt, Set.of("ALT"))).thenReturn(Optional.of("NEU"));
+        service.pollFavorites();
+
+        when(favoriteService.list()).thenReturn(List.of(favorite("NEU")));
+        when(source.stationDetails("NEU")).thenReturn(details("NEU", ChargePointStatus.FREE));
+        Mockito.clearInvocations(entityStateService);
+        service.pollFavorites();
+
+        ArgumentCaptor<EntityStateUpdate> captor = ArgumentCaptor.forClass(EntityStateUpdate.class);
+        verify(entityStateService, times(2)).reportState(captor.capture());
+        assertThat(captor.getAllValues()).extracting(EntityStateUpdate::entityId, EntityStateUpdate::state)
+                .containsExactlyInAnyOrder(
+                        tuple("sensor.charging_alt_free", "unavailable"),
+                        tuple("sensor.charging_neu_free", "1"));
     }
 }

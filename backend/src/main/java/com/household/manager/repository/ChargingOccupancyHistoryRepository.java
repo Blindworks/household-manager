@@ -15,6 +15,12 @@ public interface ChargingOccupancyHistoryRepository extends JpaRepository<Chargi
 
     List<ChargingOccupancyRecord> findByStationIdAndStartedAtGreaterThanEqual(String stationId, Instant from);
 
+    /** Haengt die Belegungshistorie einer Station an eine neue Id (Stationsumzug). */
+    @Transactional
+    @Modifying
+    @Query("update ChargingOccupancyRecord r set r.stationId = :newStationId where r.stationId = :oldStationId")
+    int reassignStation(String oldStationId, String newStationId);
+
     /** Bulk-Delete mit eigener Transaktion (abgeleitete deleteBy-Methoden braechten keine mit). */
     @Transactional
     @Modifying

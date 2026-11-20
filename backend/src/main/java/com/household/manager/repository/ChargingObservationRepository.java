@@ -21,6 +21,14 @@ public interface ChargingObservationRepository extends JpaRepository<ChargingObs
     @Query("select coalesce(sum(o.observedSeconds), 0) from ChargingObservation o where o.stationId = :stationId")
     long sumObservedSeconds(String stationId);
 
+    boolean existsByStationId(String stationId);
+
+    /** Haengt die Beobachtungszeit einer Station an eine neue Id (Stationsumzug, siehe ChargingStationMigrationService). */
+    @Transactional
+    @Modifying
+    @Query("update ChargingObservation o set o.stationId = :newStationId where o.stationId = :oldStationId")
+    int reassignStation(String oldStationId, String newStationId);
+
     /** Bulk-Delete mit eigener Transaktion (abgeleitete deleteBy-Methoden braechten keine mit). */
     @Transactional
     @Modifying
