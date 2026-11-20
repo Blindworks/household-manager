@@ -44,6 +44,11 @@ public class ChargingSnapshot {
         return Optional.ofNullable(favoriteDetails.get(stationId));
     }
 
+    /** Letzter erfolgreicher Umkreis-Poll; null, solange nie einer gelang. */
+    public Instant lastAreaPolledAt() {
+        return lastAreaPolledAt;
+    }
+
     /** Juengster erfolgreicher Poll beider Pfade; null, solange nie einer gelang. */
     public Instant lastPolledAt() {
         Instant a = lastAreaPolledAt;

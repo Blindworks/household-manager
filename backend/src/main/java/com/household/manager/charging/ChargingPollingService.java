@@ -47,6 +47,7 @@ public class ChargingPollingService {
     private final SystemJobMonitor jobMonitor;
     private final ChargingHistoryRecorder historyRecorder;
     private final ChargingForecastService forecastService;
+    private final ChargingStationMigrator stationMigrator;
 
     /** Zuletzt erfolgreich gemeldete Updates je Station; Basis fuer unavailable mit erhaltenen Attributen. */
     private final Map<String, EntityStateUpdate> lastReported = new HashMap<>();
@@ -63,7 +64,8 @@ public class ChargingPollingService {
                                   ChargingOccupancyTracker tracker, ChargingSnapshot snapshot,
                                   ChargingEntityMapper mapper, EntityStateService entityStateService, Clock clock,
                                   SystemJobMonitor jobMonitor, ChargingHistoryRecorder historyRecorder,
-                                  ChargingForecastService forecastService) {
+                                  ChargingForecastService forecastService,
+                                  ChargingStationMigrator stationMigrator) {
         this.properties = properties;
         this.source = source;
         this.settingsService = settingsService;
@@ -76,6 +78,7 @@ public class ChargingPollingService {
         this.jobMonitor = jobMonitor;
         this.historyRecorder = historyRecorder;
         this.forecastService = forecastService;
+        this.stationMigrator = stationMigrator;
     }
 
     @Scheduled(fixedDelayString = "#{${charging.area-poll-seconds:300} * 1000}",
@@ -156,6 +159,7 @@ public class ChargingPollingService {
             String stationId = favorite.getStationId();
             try {
                 ChargingStationDetails stationDetails = source.stationDetails(stationId);
+                stationMigrator.stationFound(stationId);
                 tracker.record(stationDetails);
                 recordObservation(stationId, stationDetails);
                 details.put(stationId, stationDetails);
@@ -169,6 +173,13 @@ public class ChargingPollingService {
                 reportUnavailable(favorite);
                 rateLimited = true;
                 break;
+            } catch (ChargingStationNotFoundException ex) {
+                log.warn("Ladesaeulen-Favorit {} nicht lesbar: {}", stationId, ex.getMessage());
+                reportUnavailable(favorite);
+                // Umgezogen: die alte Entitaet meldet der naechste Lauf einmal unavailable (Favorit fehlt dann),
+                // die neue Id wird ab dem naechsten Lauf abgefragt
+                stationMigrator.stationNotFound(favorite, current.keySet())
+                        .ifPresent(newId -> lastObservedAt.remove(stationId));
             } catch (Exception ex) {
                 log.warn("Ladesaeulen-Favorit {} nicht lesbar: {}", stationId, ex.getMessage());
                 reportUnavailable(favorite);

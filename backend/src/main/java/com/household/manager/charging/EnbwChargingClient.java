@@ -309,6 +309,9 @@ public class EnbwChargingClient implements ChargingStationSource {
             if (response.statusCode() == 429) {
                 throw new ChargingRateLimitException("EnBW hat das Rate-Limit gemeldet (429).");
             }
+            if (response.statusCode() == 404) {
+                throw new ChargingStationNotFoundException("EnBW kennt " + pathAndQuery + " nicht (404).");
+            }
             if (response.statusCode() / 100 != 2) {
                 throw new ChargingSourceException("EnBW antwortet HTTP " + response.statusCode()
                         + " fuer " + pathAndQuery);
