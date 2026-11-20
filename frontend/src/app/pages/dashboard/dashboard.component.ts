@@ -62,8 +62,9 @@ import { AgentService } from '../../services/agent.service';
 import { AgentSummary } from '../../models/agent.model';
 import { buildAgentInsight } from '../../shared/agent-insight.util';
 import { GroceryService } from '../../services/grocery.service';
-import { GrocerySummary } from '../../models/grocery.model';
-import { buildGroceryInsight } from '../../shared/grocery-insight.util';
+import { GrocerySummary, GrocerySummaryItem } from '../../models/grocery.model';
+import { buildGroceryInsight, visibleGroceryItems } from '../../shared/grocery-insight.util';
+import { formatBasePrice, formatReference, formatValidity } from '../../shared/grocery-format.util';
 import { AuthService } from '../../services/auth.service';
 import { SwitchService } from '../../services/switch.service';
 import { SwitchEntity } from '../../models/switch.model';
@@ -126,7 +127,7 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
   templateUrl: './dashboard.component.html',
   // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro
   // Datei, und dashboard.component.scss steht kurz vor der Fehlergrenze.
-  styleUrls: ['./dashboard.component.scss', './dashboard-pet-supply-dialog.scss']
+  styleUrls: ['./dashboard.component.scss', './dashboard-pet-supply-dialog.scss', './dashboard-grocery-dialog.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
@@ -356,6 +357,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Karte "Hausverstand"; null = keine offenen Vorschlaege. */
   agentInsight: HubInsight | null = null;
   groceryInsight: HubInsight | null = null;
+  /** Schnaeppchen der Hub-Karte; der Dialog zeigt genau diese Liste (auch nach einem Refresh). */
+  groceryItems: GrocerySummaryItem[] = [];
+  groceryDialogOpen = false;
   /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
   private calendarInsights: HubInsight[] = [];
   /** Zuletzt gebaute Lueftungs-Karte; null = keine Empfehlung. */
@@ -564,6 +568,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Schliesst die geoeffneten Dialoge per Escape-Taste. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.groceryDialogOpen) {
+      this.closeGroceryDialog();
+      return;
+    }
     if (this.petSupplyDialogKey !== null) {
       this.closePetSupplyDialog();
       return;
@@ -1812,7 +1820,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.markLaundryRemoved();
     } else if (item.tapAction === 'laundry-hide') {
       this.hideLaundryDrying();
+    } else if (item.tapAction === 'grocery-deals') {
+      this.groceryDialogOpen = true;
     }
+  }
+
+  /** Symbol rechts an einer antippbaren Hub-Karte. */
+  insightTapIcon(item: HubInsight): string {
+    if (item.tapAction === 'grocery-deals') {
+      return 'chevron_right';
+    }
+    return item.tapAction === 'laundry-hide' ? 'close' : 'done';
+  }
+
+  /** Bildschirmleser-Text einer antippbaren Hub-Karte. */
+  insightAriaLabel(item: HubInsight): string | null {
+    if (item.dismissEntityId) {
+      return item.title + ' als erledigt markieren';
+    }
+    switch (item.tapAction) {
+      case 'laundry-hide': return item.title + ' ausblenden';
+      case 'laundry-removed': return item.title + ' als abgenommen markieren';
+      case 'grocery-deals': return item.title + ' anzeigen';
+      default: return null;
+    }
+  }
+
+  closeGroceryDialog(): void {
+    this.groceryDialogOpen = false;
+  }
+
+  trackGroceryItem(_index: number, item: GrocerySummaryItem): string {
+    return item.deal?.fingerprint ?? `${item.productName}|${item.chain}|${item.basePrice}`;
+  }
+
+  groceryBasePrice(item: GrocerySummaryItem): string {
+    return formatBasePrice(item.basePrice, item.baseUnit);
+  }
+
+  groceryReference(item: GrocerySummaryItem): string {
+    return item.deal ? formatReference(item.deal) : '';
+  }
+
+  groceryValidity(item: GrocerySummaryItem): string {
+    return item.deal ? formatValidity(item.deal.validFrom, item.deal.validTo) : '';
   }
 
   /**
@@ -2283,9 +2334,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
           .pipe(catchError(() => of<GrocerySummary | null>(null))))
       )
       .subscribe(summary => {
-        this.groceryInsight = summary
-          ? buildGroceryInsight(summary, this.authService.currentUser()?.id ?? null, this.viewMode.isTabletView())
-          : null;
+        const viewerId = this.authService.currentUser()?.id ?? null;
+        const tabletMode = this.viewMode.isTabletView();
+        this.groceryInsight = summary ? buildGroceryInsight(summary, viewerId, tabletMode) : null;
+        this.groceryItems = summary ? visibleGroceryItems(summary, viewerId, tabletMode) : [];
+        if (this.groceryItems.length === 0) {
+          this.groceryDialogOpen = false;
+        }
         this.rebuildInsights();
       });
   }

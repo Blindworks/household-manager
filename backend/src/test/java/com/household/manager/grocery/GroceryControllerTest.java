@@ -106,7 +106,7 @@ class GroceryControllerTest {
     @Test
     void summaryListsItems() throws Exception {
         when(dealQueryService.summary()).thenReturn(new GrocerySummaryDto(List.of(new SummaryItem("Cola Zero", null,
-                "Haushalt", Chain.PENNY, "Penny", new BigDecimal("1.430"), BaseUnit.LITER, 23, true, false))));
+                "Haushalt", Chain.PENNY, "Penny", new BigDecimal("1.430"), BaseUnit.LITER, 23, true, false, null))));
 
         mockMvc.perform(get("/v1/groceries/summary"))
                 .andExpect(status().isOk())

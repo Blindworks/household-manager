@@ -91,6 +91,8 @@ export interface GrocerySummaryItem {
   appOnly: boolean;
   /** Noch wenig Vergleichsdaten für den üblichen Preis. */
   warmingUp: boolean;
+  /** Angebotsdetails für den Dialog der Hub-Karte; fehlt bei einem älteren Backend. */
+  deal?: GroceryDeal | null;
 }
 
 export interface GrocerySummary {

@@ -1,5 +1,5 @@
 import { GrocerySummary, GrocerySummaryItem } from '../models/grocery.model';
-import { buildGroceryInsight } from './grocery-insight.util';
+import { buildGroceryInsight, visibleGroceryItems } from './grocery-insight.util';
 
 function item(over: Partial<GrocerySummaryItem> = {}): GrocerySummaryItem {
   return {
@@ -26,7 +26,8 @@ describe('buildGroceryInsight', () => {
     expect(insight.text).toBe('Cola Zero bei Penny 1,43 €/l (−23 %) · Butter bei Lidl 7,20 €/kg (−15 %)');
     expect(insight.icon).toBe('shopping_cart');
     expect(insight.tone).toBe('secondary');
-    expect(insight.link).toBe('/groceries');
+    expect(insight.tapAction).toBe('grocery-deals');
+    expect(insight.link).toBeUndefined();
   });
 
   it('marksAppOnlyAndWarmingUpItems', () => {
@@ -47,10 +48,16 @@ describe('buildGroceryInsight', () => {
     expect(insight.text).not.toContain('Fremd');
   });
 
-  it('tabletShowsAllWithoutLink', () => {
+  it('tabletShowsAllAndOpensDialog', () => {
     const summary: GrocerySummary = { items: [item({ ownerUserId: 9 }), item({ ownerUserId: 1 })] };
     const insight = buildGroceryInsight(summary, null, true)!;
     expect(insight.title).toBe('2 Schnäppchen');
-    expect(insight.link).toBeUndefined();
+    expect(insight.tapAction).toBe('grocery-deals');
+  });
+
+  it('visibleItemsFollowTheSameRule', () => {
+    const summary: GrocerySummary = { items: [item({ ownerUserId: 9 }), item({ ownerUserId: 1 }), item()] };
+    expect(visibleGroceryItems(summary, 1, false).length).toBe(2);
+    expect(visibleGroceryItems(summary, null, true).length).toBe(3);
   });
 });

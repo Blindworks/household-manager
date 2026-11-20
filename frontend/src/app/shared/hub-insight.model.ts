@@ -18,8 +18,8 @@ export interface HubInsight {
   /** Interne Route, auf die ein Antippen der Karte fuehrt (nur in der Website-Ansicht). */
   readonly link?: string;
   /**
-   * Aktion, die ein Antippen der Karte ausloest: Waesche als abgenommen melden oder
-   * die Trocknungskarte nur ausblenden.
+   * Aktion, die ein Antippen der Karte ausloest: Waesche als abgenommen melden,
+   * die Trocknungskarte nur ausblenden oder die Schnaeppchen im Dialog zeigen.
    */
-  readonly tapAction?: 'laundry-removed' | 'laundry-hide';
+  readonly tapAction?: 'laundry-removed' | 'laundry-hide' | 'grocery-deals';
 }

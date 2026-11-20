@@ -191,7 +191,7 @@
             [routerLink]="item.link && !viewMode.isTabletView() ? item.link : null"
             [attr.role]="item.dismissEntityId || item.tapAction ? 'button' : null"
             [attr.tabindex]="item.dismissEntityId || item.tapAction ? 0 : null"
-            [attr.aria-label]="item.dismissEntityId ? item.title + ' als erledigt markieren' : (item.tapAction === 'laundry-hide' ? item.title + ' ausblenden' : (item.tapAction ? item.title + ' als abgenommen markieren' : null))"
+            [attr.aria-label]="insightAriaLabel(item)"
             (click)="activateInsight(item)"
             (keydown.enter)="activateInsight(item)"
             (keydown.space)="$event.preventDefault(); activateInsight(item)"
@@ -205,7 +205,7 @@
               *ngIf="item.dismissEntityId || item.tapAction"
               class="material-symbols-outlined lumina__insight-dismiss"
               aria-hidden="true"
-            >{{ item.tapAction === 'laundry-hide' ? 'close' : 'done' }}</span>
+            >{{ insightTapIcon(item) }}</span>
           </div>
         </div>
       </div>
@@ -1035,6 +1035,68 @@
             </div>
           </div>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schnaeppchen-Dialog (oeffnet sich beim Antippen der Schnaeppchen-Karte im Hub).
+       Styles in dashboard-grocery-dialog.scss (eigene styleUrl der Komponente). -->
+  <div
+    *ngIf="groceryDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeGroceryDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--grocery"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Schnäppchen"
+      data-test="grocery-dialog"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">
+          {{ groceryItems.length === 1 ? '1 Schnäppchen' : groceryItems.length + ' Schnäppchen' }}
+        </h2>
+        <button type="button" class="lumina__dialog-close" (click)="closeGroceryDialog()" aria-label="Schließen">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="lumina__dialog-body">
+        <ul class="lumina__grocery-list">
+          <li *ngFor="let g of groceryItems; trackBy: trackGroceryItem" class="lumina__grocery-item" data-test="grocery-dialog-item">
+            <img *ngIf="g.deal?.imageUrl" class="lumina__grocery-image" [src]="g.deal!.imageUrl" alt="" loading="lazy">
+            <div class="lumina__grocery-main">
+              <div class="lumina__grocery-head">
+                <strong>{{ g.productName }}</strong>
+                <span class="lumina__grocery-saving">−{{ g.savingPercent }} %</span>
+              </div>
+              <p *ngIf="g.deal" class="lumina__grocery-title">
+                {{ g.deal.title }}<span *ngIf="g.deal.packaging"> · {{ g.deal.packaging }}</span>
+              </p>
+              <p class="lumina__grocery-where">
+                {{ g.chainName }}<span *ngIf="g.deal?.marketName"> · {{ g.deal!.marketName }}</span>
+                <span *ngIf="groceryValidity(g)"> · {{ groceryValidity(g) }}</span>
+              </p>
+              <p class="lumina__grocery-price">
+                <span *ngIf="g.deal" class="lumina__grocery-price-main">{{ g.deal.price | number:'1.2-2':'de' }} € · </span>{{ groceryBasePrice(g) }}<span *ngIf="g.appOnly"> mit App</span>
+                <span *ngIf="groceryReference(g)" class="lumina__grocery-reference"> · {{ groceryReference(g) }}</span>
+              </p>
+              <p class="lumina__grocery-hints" *ngIf="g.appOnly || g.warmingUp || (viewMode.isTabletView() && g.ownerName)">
+                <span *ngIf="g.appOnly" class="lumina__grocery-hint">nur mit App</span>
+                <span *ngIf="g.warmingUp" class="lumina__grocery-hint">noch wenig Vergleichsdaten</span>
+                <span *ngIf="viewMode.isTabletView() && g.ownerName" class="lumina__grocery-hint">{{ g.ownerName }}</span>
+              </p>
+            </div>
+          </li>
+        </ul>
+        <a
+          *ngIf="!viewMode.isTabletView()"
+          class="lumina__grocery-all"
+          routerLink="/groceries"
+          (click)="closeGroceryDialog()"
+        >Alle Angebote<span class="material-symbols-outlined">arrow_forward</span></a>
       </div>
     </div>
   </div>

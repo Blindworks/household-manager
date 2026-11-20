@@ -5,17 +5,26 @@ import { HubInsight } from './hub-insight.model';
 const SHOWN_ITEMS = 2;
 
 /**
- * Hub-Karte fuer sichere Schnaeppchen. Website: eigene Eintraege und die des Haushalts;
- * Wandtablet: alle Personen zusammen (ohne Link, dort gibt es keinen Zurueck-Knopf).
+ * Einzige Regel, welche Schnaeppchen Hub-Karte und Dialog zeigen. Website: eigene Eintraege
+ * und die des Haushalts; Wandtablet: alle Personen zusammen.
  */
+export function visibleGroceryItems(
+  summary: GrocerySummary,
+  viewerUserId: number | null,
+  tabletMode: boolean
+): GrocerySummaryItem[] {
+  return tabletMode
+    ? summary.items
+    : summary.items.filter(item => item.ownerUserId === null || item.ownerUserId === viewerUserId);
+}
+
+/** Hub-Karte fuer sichere Schnaeppchen; ein Antippen zeigt sie im Dialog. */
 export function buildGroceryInsight(
   summary: GrocerySummary,
   viewerUserId: number | null,
   tabletMode: boolean
 ): HubInsight | null {
-  const items = tabletMode
-    ? summary.items
-    : summary.items.filter(item => item.ownerUserId === null || item.ownerUserId === viewerUserId);
+  const items = visibleGroceryItems(summary, viewerUserId, tabletMode);
   if (items.length === 0) {
     return null;
   }
@@ -24,7 +33,7 @@ export function buildGroceryInsight(
     tone: 'secondary',
     title: items.length === 1 ? '1 Schnäppchen' : `${items.length} Schnäppchen`,
     text: items.slice(0, SHOWN_ITEMS).map(describeItem).join(' · '),
-    ...(tabletMode ? {} : { link: '/groceries' })
+    tapAction: 'grocery-deals'
   };
 }
 

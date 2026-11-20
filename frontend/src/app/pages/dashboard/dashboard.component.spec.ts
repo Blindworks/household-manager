@@ -35,6 +35,8 @@ import { PetSupplyService } from '../../services/pet-supply.service';
 import { PetSupply } from '../../models/pet-supply.model';
 import { LaundryService } from '../../services/laundry.service';
 import { LaundryState } from '../../models/laundry.model';
+import { GroceryService } from '../../services/grocery.service';
+import { GroceryDeal, GrocerySummaryItem } from '../../models/grocery.model';
 
 // `presenceLabel` formatiert die Abwesenheitszeit ueber `formatDate(..., 'de')`.
 // Karma laedt `main.ts` nicht, das Locale muss hier also selbst registriert
@@ -3873,6 +3875,94 @@ describe('DashboardComponent (Waesche im Intelligence Hub)', () => {
     fixture.detectChanges();
 
     expect(insightTexts(fixture)).toContain('Wäsche trocknet');
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('DashboardComponent (Schnaeppchen-Dialog)', () => {
+  let grocerySpy: jasmine.SpyObj<GroceryService>;
+
+  const deal = (over: Partial<GroceryDeal> = {}): GroceryDeal => ({
+    productId: 1, productName: 'Kaffee', ownerUserId: null, chain: 'LIDL', chainName: 'Lidl',
+    marketName: 'Lidl Bad Vilbel', title: 'Barissimo Crema 1 kg', packaging: '1 kg', price: 12.99, basePrice: 12.99,
+    baseUnit: 'KILOGRAM', reference: 19.5, referenceKind: 'ESTIMATED_NORMAL_PRICE', savingPercent: 33,
+    appPrice: null, appBasePrice: null, appOnly: false, verdict: 'MATCH', reasonKind: null, reason: null,
+    userDecided: false, warmingUp: false, deal: true, validFrom: null, validTo: null, imageUrl: null,
+    fingerprint: 'fp-kaffee', ...over
+  });
+
+  const item = (over: Partial<GrocerySummaryItem> = {}): GrocerySummaryItem => ({
+    productName: 'Kaffee', ownerUserId: null, ownerName: 'Haushalt', chain: 'LIDL', chainName: 'Lidl',
+    basePrice: 12.99, baseUnit: 'KILOGRAM', savingPercent: 33, appOnly: false, warmingUp: false, deal: deal(), ...over
+  });
+
+  beforeEach(async () => {
+    grocerySpy = jasmine.createSpyObj('GroceryService', ['getSummary']);
+    const switchSpy = jasmine.createSpyObj('SwitchService', ['getSwitches', 'toggle']);
+    switchSpy.getSwitches.and.returnValue(of([]));
+    const weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
+    weatherSpy.getOverview.and.returnValue(of(null));
+    const energySpy = jasmine.createSpyObj('EnergyLiveService', ['getLiveStream', 'getStatusStream', 'disconnect']);
+    energySpy.getLiveStream.and.returnValue(of(null));
+    energySpy.getStatusStream.and.returnValue(of('connected'));
+    const ankerSpy = jasmine.createSpyObj('AnkerSolixService', ['getLiveStream', 'disconnectLive']);
+    ankerSpy.getLiveStream.and.returnValue(of(null));
+    const temperatureSpy = jasmine.createSpyObj('TemperatureService', ['getCurrent', 'getSensorSeries']);
+    temperatureSpy.getCurrent.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: GroceryService, useValue: grocerySpy },
+        { provide: SwitchService, useValue: switchSpy },
+        { provide: WeatherService, useValue: weatherSpy },
+        { provide: EnergyLiveService, useValue: energySpy },
+        { provide: AnkerSolixService, useValue: ankerSpy },
+        { provide: TemperatureService, useValue: temperatureSpy }
+      ]
+    }).compileComponents();
+  });
+
+  const card = (fixture: ComponentFixture<DashboardComponent>): HTMLElement =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.lumina__insight'))
+      .find(el => el.textContent?.includes('Schnäppchen'))!;
+
+  it('oeffnet beim Antippen der Karte den Dialog mit den Angebotsdetails', fakeAsync(() => {
+    grocerySpy.getSummary.and.returnValue(of({ items: [item(), item({ productName: 'Butter', deal: null })] }));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    card(fixture).click();
+    fixture.detectChanges();
+
+    const dialog = (fixture.nativeElement as HTMLElement).querySelector('[data-test="grocery-dialog"]')!;
+    expect(dialog).toBeTruthy();
+    expect(dialog.querySelectorAll('[data-test="grocery-dialog-item"]').length).toBe(2);
+    const text = dialog.textContent ?? '';
+    expect(text).toContain('Barissimo Crema 1 kg');
+    expect(text).toContain('Lidl Bad Vilbel');
+    expect(text).toContain('12,99 €');
+    expect(text).toContain('normal ca. 19,50 €/kg');
+    expect(text).toContain('Butter');
+
+    discardPeriodicTasks();
+  }));
+
+  it('schliesst den Dialog per Escape', fakeAsync(() => {
+    grocerySpy.getSummary.and.returnValue(of({ items: [item()] }));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    card(fixture).click();
+    fixture.detectChanges();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-test="grocery-dialog"]')).toBeNull();
 
     discardPeriodicTasks();
   }));

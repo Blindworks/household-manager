@@ -1,0 +1,119 @@
+// Schnäppchen-Dialog der Hub-Karte.
+//
+// Eigene Datei wie dashboard-pet-supply-dialog.scss: das anyComponentStyle-Budget gilt
+// pro Datei. Farbwelt des HELLEN Dialogs (.lumina__dialog ist in beiden Designs weiß),
+// Töne ausgeschrieben statt color-mix() (Android-WebView des Wandtablets).
+
+$grocery-ink: #0f172a;
+$grocery-muted: #475569;
+$grocery-line: rgba(15, 23, 42, 0.1);
+$grocery-panel: rgba(15, 23, 42, 0.04);
+$grocery-saving: #15803d;
+
+.lumina__dialog--grocery {
+  width: min(640px, 100%);
+}
+
+.lumina__grocery-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lumina__grocery-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid $grocery-line;
+  border-radius: 12px;
+  color: $grocery-ink;
+}
+
+.lumina__grocery-image {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: $grocery-panel;
+}
+
+.lumina__grocery-main {
+  min-width: 0;
+  flex: 1;
+
+  p {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    color: $grocery-muted;
+  }
+}
+
+.lumina__grocery-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 1.05rem;
+}
+
+.lumina__grocery-saving {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.12);
+  color: $grocery-saving;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.lumina__grocery-title {
+  overflow-wrap: anywhere;
+}
+
+.lumina__grocery-price {
+  color: $grocery-ink !important;
+}
+
+.lumina__grocery-price-main {
+  font-weight: 700;
+}
+
+.lumina__grocery-reference {
+  color: $grocery-muted;
+}
+
+.lumina__grocery-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lumina__grocery-hint {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: $grocery-panel;
+  font-size: 0.8rem;
+  color: $grocery-muted;
+}
+
+.lumina__grocery-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  color: $grocery-ink;
+  font-weight: 600;
+  text-decoration: none;
+
+  .material-symbols-outlined {
+    font-size: 20px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

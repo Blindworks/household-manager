@@ -108,6 +108,7 @@ public class GroceryDealQueryService {
     public GrocerySummaryDto summary() {
         Snapshot snapshot = runService.snapshot();
         Map<Long, String> names = owners.displayNames();
+        Map<Long, String> marketNames = marketNames();
         List<SummaryItem> items = new ArrayList<>();
         for (GroceryProduct product : products.findAll()) {
             for (Deal deal : snapshot.deals().getOrDefault(product.getId(), List.of())) {
@@ -116,7 +117,8 @@ public class GroceryDealQueryService {
                     items.add(new SummaryItem(product.getName(), product.getOwnerUserId(),
                             GroceryOwners.ownerName(product.getOwnerUserId(), names), offer.getChain(),
                             offer.getChain().displayName(), deal.basePrice(), offer.getBaseUnit(),
-                            deal.savingPercent(), deal.appOnly(), deal.warmingUp()));
+                            deal.savingPercent(), deal.appOnly(), deal.warmingUp(),
+                            toDto(product, deal.match(), deal, marketNames)));
                 }
             }
         }

@@ -11,10 +11,11 @@ public record GrocerySummaryDto(List<SummaryItem> items) {
 
     /**
      * {@code ownerUserId} null = Haushalt; {@code basePrice} ist der bewertete Grundpreis (bei appOnly der App-Preis);
-     * {@code warmingUp}: noch wenig Vergleichsdaten.
+     * {@code warmingUp}: noch wenig Vergleichsdaten; {@code deal} trägt die Angebotsdetails für den Dialog
+     * der Hub-Karte (Titel, Markt, Preis, Maßstab, Gültigkeit, Bild).
      */
     public record SummaryItem(String productName, Long ownerUserId, String ownerName, Chain chain, String chainName,
                               BigDecimal basePrice, BaseUnit baseUnit, int savingPercent, boolean appOnly,
-                              boolean warmingUp) {
+                              boolean warmingUp, DealDto deal) {
     }
 }
