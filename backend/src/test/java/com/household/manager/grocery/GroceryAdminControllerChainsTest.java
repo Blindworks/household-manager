@@ -22,7 +22,8 @@ class GroceryAdminControllerChainsTest {
         List<ChainStatusDto> chains = controller.getChains();
 
         assertThat(chains).extracting(ChainStatusDto::chain)
-                .containsExactly(Chain.LIDL, Chain.ALDI_SUED, Chain.NETTO_MD, Chain.NORMA);
+                .containsExactly(Chain.LIDL, Chain.ALDI_SUED, Chain.NETTO_MD, Chain.NORMA, Chain.LOGO, Chain.TRINKGUT,
+                        Chain.ALLDRINK);
         assertThat(chains.get(0).enabled()).isTrue();
         assertThat(chains.get(1).enabled()).isFalse();
         assertThat(chains.get(0).name()).isEqualTo("Lidl");

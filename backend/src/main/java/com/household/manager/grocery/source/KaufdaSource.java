@@ -204,6 +204,10 @@ public class KaufdaSource implements OfferSource, MarketSearch {
             return Optional.of(Chain.ALDI_SUED);
         } else if (key.equals("netto") || key.startsWith("nettomarken")) {
             return Optional.of(Chain.NETTO_MD);
+        } else if (key.startsWith("trinkgut")) {
+            return Optional.of(Chain.TRINKGUT);
+        } else if (key.startsWith("alldrink")) {
+            return Optional.of(Chain.ALLDRINK);
         }
         return Optional.empty();
     }

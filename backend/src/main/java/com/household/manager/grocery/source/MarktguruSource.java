@@ -120,6 +120,8 @@ public class MarktguruSource implements OfferSource {
             case "lidl" -> Optional.of(Chain.LIDL);
             case "aldi-sued" -> Optional.of(Chain.ALDI_SUED);
             case "netto-marken-discount" -> Optional.of(Chain.NETTO_MD);
+            case "trinkgut" -> Optional.of(Chain.TRINKGUT);
+            case "alldrink" -> Optional.of(Chain.ALLDRINK);
             default -> Optional.empty();
         };
     }

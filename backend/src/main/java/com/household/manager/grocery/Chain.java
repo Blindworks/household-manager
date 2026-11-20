@@ -1,6 +1,6 @@
 package com.household.manager.grocery;
 
-/** Supermarktketten, deren Angebote beobachtet werden. */
+/** Supermarktketten und Getränkemärkte, deren Angebote beobachtet werden. */
 public enum Chain {
     REWE("REWE", true),
     PENNY("Penny", true),
@@ -9,7 +9,10 @@ public enum Chain {
     LIDL("Lidl", false),
     ALDI_SUED("Aldi Süd", false),
     NETTO_MD("Netto", false),
-    NORMA("Norma", false);
+    NORMA("Norma", false),
+    LOGO("logo Getränke", false),
+    TRINKGUT("trinkgut", false),
+    ALLDRINK("alldrink", false);
 
     private final String displayName;
     private final boolean hasMarkets;

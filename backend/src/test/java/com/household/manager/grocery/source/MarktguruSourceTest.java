@@ -69,6 +69,10 @@ class MarktguruSourceTest {
         assertThat(MarktguruSource.chainOf("netto-marken-discount")).contains(Chain.NETTO_MD);
         assertThat(MarktguruSource.chainOf("edeka")).contains(Chain.EDEKA);
         assertThat(MarktguruSource.chainOf("e-center")).contains(Chain.EDEKA);
+        assertThat(MarktguruSource.chainOf("trinkgut")).contains(Chain.TRINKGUT);
+        assertThat(MarktguruSource.chainOf("alldrink")).contains(Chain.ALLDRINK);
+        // nur veraltete Angebote bei marktguru, logo kommt direkt von logo-getraenke.de
+        assertThat(MarktguruSource.chainOf("logo-getraenkemarkt")).isEmpty();
         assertThat(MarktguruSource.chainOf("nahkauf")).isEmpty();
     }
 

@@ -111,6 +111,14 @@ class KaufdaSourceTest {
     }
 
     @Test
+    void beverageStoresMapToTheirChains() {
+        assertThat(KaufdaSource.chainOf("Trinkgut")).contains(Chain.TRINKGUT);
+        assertThat(KaufdaSource.chainOf("alldrink")).contains(Chain.ALLDRINK);
+        // weiter entfernter Partnermarkt, bewusst nicht zugeordnet
+        assertThat(KaufdaSource.chainOf("Profi Getränke - Alldrink")).isEmpty();
+    }
+
+    @Test
     void parseShelfReadsTheRealFixture() throws IOException {
         List<KaufdaSource.Brochure> brochures = source(new FakeHttpTransport()).parseShelf(fixture("shelf_api.json"));
 

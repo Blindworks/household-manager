@@ -19,7 +19,7 @@ const CHAIN_NAMES = new Map(MARKET_CHAINS.map(c => [c.chain, c.name]));
 
 const SOURCE_NAMES: Record<string, string> = {
   MARKTGURU: 'Marktguru', KAUFDA: 'Kaufda', REWE: 'REWE', PENNY: 'Penny',
-  KAUFLAND: 'Kaufland', NORMA: 'Norma', LIDL: 'Lidl'
+  KAUFLAND: 'Kaufland', NORMA: 'Norma', LIDL: 'Lidl', LOGO: 'logo Getränke'
 };
 
 /** Schwelle für „Bestpreis“-Hinweise; verbindlich im Backend (GrocerySettingsService), hier nur Bedienhilfe. */

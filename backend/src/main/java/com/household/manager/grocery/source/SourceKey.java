@@ -8,7 +8,8 @@ public enum SourceKey {
     PENNY(false),
     KAUFLAND(false),
     NORMA(false),
-    LIDL(false);
+    LIDL(false),
+    LOGO(false);
 
     private final boolean aggregator;
 
