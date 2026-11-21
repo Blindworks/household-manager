@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const AlexaRemote = require('alexa-remote2');
-const { extractAirQualityMonitors, mapDeviceStates } = require('./smarthome');
+const { extractAirQualityMonitors, mapDeviceStates, describeStateFailure } = require('./smarthome');
 
 // ---------------------------------------------------------------------------
 // Configuration (all via env, with sane defaults)
@@ -386,6 +386,11 @@ app.get('/smarthome/air-quality-monitors/state', (req, res) => {
       if (queryErr) {
         log('air-quality state (query) failed:', queryErr.message);
         return res.status(500).json({ error: queryErr.message });
+      }
+      const failure = describeStateFailure(stateResponse, monitors);
+      if (failure) {
+        log('air-quality state (query) failed:', failure);
+        return res.status(502).json({ error: failure });
       }
       try {
         res.status(200).json(mapDeviceStates(stateResponse, monitors));

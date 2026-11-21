@@ -56,8 +56,8 @@ public class AlexaAirQualityPollingService {
         taskScheduler.schedule(this::safePoll, Instant.now());
     }
 
-    // fixedRate statt fixedDelay: haengt eine Abfrage bis zum 30-s-Timeout des Sidecar-Clients,
-    // startet die naechste trotzdem im Minutentakt statt erst eine volle Minute danach.
+    // fixedRate statt fixedDelay: haengt eine Abfrage (Amazon-Drosselung, bis ~100 s), startet die
+    // naechste trotzdem im festen Takt statt erst ein volles Intervall danach.
     // Laeufe ueberlappen nie (Spring startet den naechsten erst nach Ende des vorigen).
     @Scheduled(
             fixedRateString = "${alexa.air-quality.polling.interval-ms:60000}",

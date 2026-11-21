@@ -26,6 +26,10 @@ import java.util.List;
 public class AlexaSidecarClient {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    // Wird Amazon gedrosselt, wartet alexa-remote2 im Sidecar 30-63 s und versucht es einmal neu
+    // (15 s Request-Timeout je Versuch). Mit 30 s braeche das Backend davor ab, der Sidecar fragte
+    // trotzdem weiter bei Amazon an, und dessen Fehlertext ("Rate exceeded") kaeme nie an.
+    private static final Duration AIR_QUALITY_STATE_TIMEOUT = Duration.ofSeconds(100);
 
     private final AlexaProperties properties;
     private final ObjectMapper mapper;
@@ -94,7 +98,7 @@ public class AlexaSidecarClient {
     }
 
     public List<SidecarAirQualityState> getAirQualityStates() {
-        JsonNode root = get("/smarthome/air-quality-monitors/state");
+        JsonNode root = send("GET", "/smarthome/air-quality-monitors/state", null, AIR_QUALITY_STATE_TIMEOUT);
         try {
             return mapper.convertValue(root, new TypeReference<>() {});
         } catch (IllegalArgumentException ex) {
@@ -128,10 +132,14 @@ public class AlexaSidecarClient {
     }
 
     private JsonNode send(String method, String path, JsonNode body) {
+        return send(method, path, body, TIMEOUT);
+    }
+
+    private JsonNode send(String method, String path, JsonNode body, Duration timeout) {
         String url = properties.getSidecar().getBaseUrl() + path;
         try {
             HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(TIMEOUT)
+                    .timeout(timeout)
                     .header("Accept", "application/json");
             if ("GET".equals(method)) {
                 req.GET();

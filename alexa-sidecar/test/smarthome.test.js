@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const { extractAirQualityMonitors, mapDeviceStates } = require('../smarthome');
+const { extractAirQualityMonitors, mapDeviceStates, describeStateFailure } = require('../smarthome');
 
 function fixture(name) {
   return JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8'));
@@ -90,4 +90,35 @@ test('mapDeviceStates tolerates missing sensors and unknown devices', () => {
   assert.equal(states.length, 2, 'unknown device is skipped');
   assert.equal(states[0].pm25, null);
   assert.equal(states[0].iaq, 80.0);
+});
+
+test('describeStateFailure accepts a normal state response', () => {
+  const monitors = extractAirQualityMonitors(fixture('smarthome-entities.json'));
+  assert.equal(describeStateFailure(fixture('smarthome-state.json'), monitors), null);
+});
+
+test('describeStateFailure reports a throttled response instead of an empty result', () => {
+  const monitors = extractAirQualityMonitors(fixture('smarthome-entities.json'));
+  const message = describeStateFailure({ message: 'Rate exceeded' }, monitors);
+  assert.match(message, /Rate exceeded/);
+});
+
+test('describeStateFailure reports Amazon errors when no monitor has a state', () => {
+  const monitors = extractAirQualityMonitors(fixture('smarthome-entities.json'));
+  const response = {
+    deviceStates: [],
+    errors: [{ entity: { entityId: monitors[0].entityId }, code: 'TargetApplianceUnreachable' }]
+  };
+  assert.match(describeStateFailure(response, monitors), /TargetApplianceUnreachable/);
+});
+
+test('describeStateFailure keeps the message short', () => {
+  const monitors = extractAirQualityMonitors(fixture('smarthome-entities.json'));
+  const message = describeStateFailure({ message: 'x'.repeat(5000) }, monitors);
+  assert.ok(message.length <= 400);
+});
+
+test('describeStateFailure handles a missing response', () => {
+  const monitors = extractAirQualityMonitors(fixture('smarthome-entities.json'));
+  assert.match(describeStateFailure(null, monitors), /keine Antwort/);
 });

@@ -132,4 +132,26 @@ function mapDeviceStates(stateResponse, monitors) {
   return results;
 }
 
-module.exports = { extractAirQualityMonitors, mapDeviceStates, RANGE_INSTANCE_SENSORS };
+const MAX_FAILURE_LENGTH = 300;
+
+/**
+ * Returns null when the state response carries a state for at least one monitor,
+ * otherwise a short description of what Amazon sent instead.
+ *
+ * alexa-remote2 hands error bodies (e.g. `{"message":"Rate exceeded"}` after its
+ * single throttling retry, or `errors` for unreachable endpoints) to the callback as
+ * a SUCCESSFUL result. Without this check they were mapped to an empty list and the
+ * backend saw "no monitors" instead of the real cause.
+ */
+function describeStateFailure(stateResponse, monitors) {
+  if (!stateResponse) return 'Amazon lieferte keine Antwort auf die Zustandsabfrage';
+  const known = new Set(monitors.map((m) => m.entityId));
+  const deviceStates = Array.isArray(stateResponse.deviceStates) ? stateResponse.deviceStates : [];
+  if (deviceStates.some((ds) => known.has(ds.entity && ds.entity.entityId))) return null;
+
+  const raw = JSON.stringify(stateResponse);
+  const excerpt = raw.length > MAX_FAILURE_LENGTH ? raw.slice(0, MAX_FAILURE_LENGTH) + '…' : raw;
+  return 'Amazon lieferte keine Zustaende: ' + excerpt;
+}
+
+module.exports = { extractAirQualityMonitors, mapDeviceStates, describeStateFailure, RANGE_INSTANCE_SENSORS };
