@@ -22,6 +22,7 @@ const path = require('path');
 const express = require('express');
 const AlexaRemote = require('alexa-remote2');
 const { extractAirQualityMonitors, mapDeviceStates, describeStateFailure } = require('./smarthome');
+const { ThrottleCooldown, isThrottleMessage } = require('./throttle');
 
 // ---------------------------------------------------------------------------
 // Configuration (all via env, with sane defaults)
@@ -369,14 +370,36 @@ app.get('/smarthome/air-quality-monitors', (req, res) => {
   });
 });
 
+const aqmCooldown = new ThrottleCooldown();
+
+function pausedUntilText(untilMs) {
+  return new Date(untilMs).toLocaleTimeString('de-DE', {
+    timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+// Records a throttling answer and returns the pause message, or null if it wasn't one.
+function handleThrottle(...texts) {
+  if (!texts.some((t) => isThrottleMessage(typeof t === 'string' ? t : JSON.stringify(t)))) return null;
+  aqmCooldown.recordThrottle();
+  const message = 'Amazon drosselt (Too many requests) - Pause bis ' + pausedUntilText(aqmCooldown.blockedUntil());
+  log('air-quality state:', message);
+  return message;
+}
+
 app.get('/smarthome/air-quality-monitors/state', (req, res) => {
   if (!isLoggedIn()) {
     return res.status(409).json({ error: 'not logged in' });
   }
+  const pausedUntil = aqmCooldown.blockedUntil();
+  if (pausedUntil !== null) {
+    return res.status(503).json({ error: 'Amazon drosselt - Pause bis ' + pausedUntilText(pausedUntil) });
+  }
   getAirQualityMonitors((err, monitors) => {
     if (err) {
       log('air-quality state (discovery) failed:', err.message);
-      return res.status(500).json({ error: err.message });
+      const throttled = handleThrottle(err.message);
+      return res.status(throttled ? 503 : 500).json({ error: throttled || err.message });
     }
     if (monitors.length === 0) {
       return res.status(200).json([]);
@@ -385,13 +408,16 @@ app.get('/smarthome/air-quality-monitors/state', (req, res) => {
     alexa.querySmarthomeDevices(ids, 'ENTITY', (queryErr, stateResponse) => {
       if (queryErr) {
         log('air-quality state (query) failed:', queryErr.message);
-        return res.status(500).json({ error: queryErr.message });
+        const throttled = handleThrottle(queryErr.message, stateResponse);
+        return res.status(throttled ? 503 : 500).json({ error: throttled || queryErr.message });
       }
       const failure = describeStateFailure(stateResponse, monitors);
       if (failure) {
         log('air-quality state (query) failed:', failure);
-        return res.status(502).json({ error: failure });
+        const throttled = handleThrottle(failure);
+        return res.status(throttled ? 503 : 502).json({ error: throttled || failure });
       }
+      aqmCooldown.recordSuccess();
       try {
         res.status(200).json(mapDeviceStates(stateResponse, monitors));
       } catch (mapErr) {
