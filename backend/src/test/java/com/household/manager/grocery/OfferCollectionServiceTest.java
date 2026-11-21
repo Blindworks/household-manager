@@ -4,6 +4,7 @@ import com.household.manager.grocery.entity.GroceryMarket;
 import com.household.manager.grocery.entity.GroceryOffer;
 import com.household.manager.grocery.entity.GrocerySourceRun;
 import com.household.manager.grocery.source.FetchContext;
+import com.household.manager.grocery.source.MarketCandidate;
 import com.household.manager.grocery.source.OfferSource;
 import com.household.manager.grocery.source.RawOffer;
 import com.household.manager.grocery.source.SourceFetchException;
@@ -130,6 +131,9 @@ class OfferCollectionServiceTest {
         market.setChain(Chain.REWE);
         market.setExternalId("240767");
         when(markets.findAll()).thenReturn(List.of(market));
+        when(contextProvider.current()).thenReturn(new FetchContext("60311", 50.1, 8.6,
+                List.of(new MarketCandidate(Chain.REWE, "240767", "REWE", "", null, null, null)),
+                Set.of(Chain.values())));
         when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Alter Schnaeppchen", "REWE", "REWE:r9", 7L)));
 
         OfferCollectionService.CollectionResult result = service(
@@ -168,6 +172,34 @@ class OfferCollectionServiceTest {
         GrocerySourceRun rewe = savedRuns.stream().filter(r -> r.getSourceKey() == SourceKey.REWE).findFirst().orElseThrow();
         assertThat(rewe.isOk()).isFalse();
         assertThat(savedOffers()).extracting(GroceryOffer::getTitle).containsExactlyInAnyOrder("Cola", "Butter");
+    }
+
+    @Test
+    void deselectedMarketIsNoFailureAndItsOffersAreDropped() {
+        GroceryMarket market = new GroceryMarket();
+        market.setId(3L);
+        market.setChain(Chain.REWE);
+        market.setExternalId("DE2553");
+        when(markets.findAll()).thenReturn(List.of(market));
+        when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Cola", "REWE", "REWE:r1", 3L)));
+
+        OfferCollectionService.CollectionResult result = service(
+                new FakeSource(SourceKey.REWE, true, List::of), source(SourceKey.PENNY, Chain.PENNY, "Butter")).collect();
+
+        assertThat(result.failures()).isEmpty();
+        assertThat(savedOffers()).extracting(GroceryOffer::getTitle).containsExactly("Butter");
+    }
+
+    @Test
+    void disabledChainIsNoFailure() {
+        when(contextProvider.current()).thenReturn(
+                new FetchContext("60311", 50.1, 8.6, List.of(), Set.of(Chain.PENNY)));
+        when(offers.findActiveFrom(TODAY)).thenReturn(List.of(stored("Cola", "REWE", "REWE:r1", null)));
+
+        OfferCollectionService.CollectionResult result = service(
+                new FakeSource(SourceKey.REWE, true, List::of), source(SourceKey.PENNY, Chain.PENNY, "Butter")).collect();
+
+        assertThat(result.failures()).isEmpty();
     }
 
     @Test

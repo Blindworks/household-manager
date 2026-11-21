@@ -101,8 +101,8 @@ public class OfferCollectionService {
     private CollectionResult runCollection() {
         FetchContext context = contextProvider.current();
         LocalDate today = LocalDate.now(clock);
-        List<GroceryOffer> stock = offers.findActiveFrom(today);
         List<GroceryMarket> marketList = markets.findAll();
+        List<GroceryOffer> stock = inScope(offers.findActiveFrom(today), context, marketList);
         List<RawOffer> collected = new ArrayList<>();
         Map<SourceKey, String> failures = new EnumMap<>(SourceKey.class);
         Map<SourceKey, Integer> delivered = new EnumMap<>(SourceKey.class);
@@ -151,6 +151,24 @@ public class OfferCollectionService {
         log.info("Angebotsbestand ersetzt: {} Angebote aus {} Rohangeboten, {} Quelle(n) fehlgeschlagen",
                 merged.size(), collected.size(), failures.size());
         return new CollectionResult(merged.size(), failures, delivered, collected.size());
+    }
+
+    /**
+     * Nur Bestand, den die aktuelle Auswahl noch verlangt: Kette eingeschaltet und – bei marktgenauen Angeboten –
+     * Markt gewählt. Sonst gälte eine Quelle nach dem Abwählen ihres Markts als ausgefallen („Keine Angebote
+     * geliefert“) und ihre alten Angebote würden bis zum Ablauf weiter wiederbelebt.
+     */
+    private static List<GroceryOffer> inScope(List<GroceryOffer> stock, FetchContext context,
+                                              List<GroceryMarket> marketList) {
+        java.util.Set<String> selected = context.selectedMarkets().stream()
+                .map(m -> m.chain().name() + "|" + m.externalId())
+                .collect(Collectors.toSet());
+        Map<Long, String> marketKeys = marketList.stream().collect(Collectors.toMap(GroceryMarket::getId,
+                m -> m.getChain().name() + "|" + m.getExternalId(), (a, b) -> a));
+        return stock.stream()
+                .filter(o -> context.enabledChains().contains(o.getChain()))
+                .filter(o -> o.getMarketId() == null || selected.contains(marketKeys.get(o.getMarketId())))
+                .toList();
     }
 
     private static boolean stockContains(List<GroceryOffer> stock, SourceKey key) {
