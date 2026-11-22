@@ -33,6 +33,10 @@ const PROXY_PORT = parseInt(process.env.PROXY_PORT || '3457', 10);
 const PROXY_BIND = '0.0.0.0';
 const AMAZON_PAGE = process.env.AMAZON_PAGE || 'amazon.de';
 const ALEXA_SERVICE_HOST = 'alexa.' + AMAZON_PAGE;
+// alexa-remote2 appends "AlexaRemote/<version>" to the API User-Agent unless told otherwise.
+// Since 2026-11-18 Amazon answers /api/phoenix/state with 429 across Europe; openHAB traced
+// that to a blocked User-Agent (openhab-addons#22394). Empty by default = the plain app UA.
+const API_USER_AGENT_POSTFIX = process.env.ALEXA_API_USER_AGENT_POSTFIX || '';
 const COOKIE_PATH = process.env.COOKIE_PATH || path.join('.', 'data', 'alexa-cookie.json');
 
 const PROXY_URL = `http://${PROXY_HOST}:${PROXY_PORT}/`;
@@ -94,6 +98,7 @@ function baseOptions() {
   return {
     amazonPage: AMAZON_PAGE,
     alexaServiceHost: ALEXA_SERVICE_HOST,
+    apiUserAgentPostfix: API_USER_AGENT_POSTFIX,
     useWsMqtt: false,
     // refresh cookie every 4 days; keeps the session alive across restarts
     cookieRefreshInterval: 4 * 24 * 60 * 60 * 1000,
