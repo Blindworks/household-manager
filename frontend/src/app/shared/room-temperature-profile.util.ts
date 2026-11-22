@@ -35,6 +35,8 @@ const ROOM_PROFILE_OVERRIDES: Readonly<Record<string, RoomTemperatureProfileId>>
   bad: 'bath',
   gaeste_wc: 'bath',
   schlafzimmer: 'bedroom',
+  // Beim Training heizt sich der Raum von selbst auf - deshalb kuehl wie das Schlafzimmer.
+  laufband: 'bedroom',
   flur: 'hallway',
   treppenhaus: 'hallway'
 };

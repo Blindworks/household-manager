@@ -21,6 +21,7 @@ describe('room-temperature-profile.util', () => {
     expect(profileForRoom('bad')).toBe(bath);
     expect(profileForRoom('gaeste_wc')).toBe(bath);
     expect(profileForRoom('schlafzimmer')).toBe(bedroom);
+    expect(profileForRoom('laufband')).toBe(bedroom);
     expect(profileForRoom('treppenhaus')).toBe(hallway);
     expect(profileForRoom('wohnzimmer')).toBe(living);
     expect(profileForRoom('paincave')).toBe(basement);
