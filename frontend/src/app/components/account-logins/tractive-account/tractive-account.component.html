@@ -1,0 +1,51 @@
+<section class="account-login">
+  <h2>Tractive-Konto</h2>
+  <p class="account-login__hint">Für den Hundetracker.</p>
+
+  <ng-container *ngIf="connectionChecked()">
+    <ng-container *ngIf="connected(); else loginForm">
+      <p class="account-login__state account-login__state--ok">
+        Verbunden<ng-container *ngIf="connectedEmail()"> als {{ connectedEmail() }}</ng-container>.
+        <span *ngIf="tokenExpiresAt()" class="account-login__hint">
+          Token gültig bis {{ tokenExpiresAt() | date:'short' }}.
+        </span>
+      </p>
+      <p class="account-login__hint">
+        Tractive gibt kein Erneuerungs-Token aus – nach Ablauf ist eine erneute Anmeldung
+        nötig. Bis dahin melden die Entitäten „unavailable“ und die Hundetracker-Seite zeigt
+        keine Position.
+      </p>
+      <div class="account-login__actions">
+        <button type="button" class="ghost" (click)="logout()" [disabled]="authBusy()">Abmelden</button>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <ng-template #loginForm>
+    <p class="account-login__warning">
+      Keine Verbindung zu Tractive. Ohne sie gibt es keine Positionsdaten – die
+      Hundetracker-Seite bleibt leer, und weder Badge noch Dashboard-Kachel erscheinen.
+    </p>
+    <p class="account-login__hint">
+      Die Zugangsdaten werden nur zur Anmeldung verwendet und nie gespeichert – abgelegt wird
+      ausschließlich das Token.
+    </p>
+    <form (ngSubmit)="login()" class="account-login__form">
+      <label>
+        E-Mail
+        <input type="email" name="email" [(ngModel)]="email" required autocomplete="username">
+      </label>
+      <label>
+        Passwort
+        <input type="password" name="password" [(ngModel)]="password" required autocomplete="current-password">
+      </label>
+      <div class="account-login__actions">
+        <button type="submit" [disabled]="!email || !password || authBusy()">
+          {{ authBusy() ? 'Meldet an …' : 'Anmelden' }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+
+  <p class="account-login__error" *ngIf="authError()">{{ authError() }}</p>
+</section>

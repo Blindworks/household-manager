@@ -8,31 +8,16 @@
     <h2>Amazon-Konto</h2>
 
     <ng-container *ngIf="authStatus() as status">
-      <div *ngIf="status.loggedIn; else loginForm">
-        <p>Angemeldet als <strong>{{ status.accountName || 'Amazon-Konto' }}</strong>.</p>
-        <p class="announcements__warn" *ngIf="status.reauthRequired">
-          Sitzung abgelaufen &mdash; bitte neu anmelden.
-        </p>
-        <button type="button" (click)="logout()">Abmelden</button>
-      </div>
+      <p *ngIf="status.loggedIn">Angemeldet als <strong>{{ status.accountName || 'Amazon-Konto' }}</strong>.</p>
+      <p class="announcements__warn" *ngIf="status.reauthRequired">
+        Sitzung abgelaufen &mdash; bitte neu anmelden.
+      </p>
+      <p class="announcements__login-hint" *ngIf="!status.loggedIn || status.reauthRequired">
+        Die Anmeldung beim Amazon-Konto erfolgt unter
+        <a *ngIf="auth.isAdmin(); else adminText" routerLink="/admin" [queryParams]="{ tab: 'konten' }">Admin → Konten</a>.
+        <ng-template #adminText><strong>Admin → Konten</strong> (nur Administratoren)</ng-template>
+      </p>
     </ng-container>
-
-    <ng-template #loginForm>
-      <div *ngIf="!loginWaiting()">
-        <p>Die Anmeldung laeuft ueber ein echtes Browser-Fenster direkt bei Amazon
-          (inkl. Passwort und MFA). Es werden keine Zugangsdaten gespeichert.</p>
-        <button type="button" (click)="startLogin()">Login starten</button>
-      </div>
-
-      <div *ngIf="loginWaiting()" class="login-wait">
-        <p><strong>Schritt 1:</strong> Diesen Link im Browser oeffnen und bei Amazon anmelden:</p>
-        <p><a [href]="proxyUrl()" target="_blank" rel="noopener">{{ proxyUrl() }}</a></p>
-        <p><strong>Schritt 2:</strong> Nach erfolgreicher Anmeldung erkennt der Household Manager
-          das automatisch (wird alle paar Sekunden geprueft).</p>
-        <p class="hint">Warte auf Abschluss der Anmeldung&hellip;</p>
-        <button type="button" (click)="cancelLogin()">Abbrechen</button>
-      </div>
-    </ng-template>
   </section>
 
   <!-- Durchsage -->

@@ -1,28 +1,27 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 import { AlexaService } from '../../services/alexa.service';
 import { AlexaAuthStatus, AlexaDevice, AlexaTtsMode } from '../../models/alexa.model';
 
-/** Seite fuer Alexa-Durchsagen: Konto und manuelle Durchsage. */
+/** Seite fuer Alexa-Durchsagen; die Anmeldung liegt unter Admin → Konten. */
 @Component({
   selector: 'app-announcements',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './announcements.component.html',
   styleUrl: './announcements.component.scss'
 })
-export class AnnouncementsComponent implements OnInit, OnDestroy {
+export class AnnouncementsComponent implements OnInit {
   private readonly alexa = inject(AlexaService);
+  /** Public: der Hinweis auf die Anmeldung verlinkt nur für Administratoren. */
+  readonly auth = inject(AuthService);
 
   readonly authStatus = signal<AlexaAuthStatus | null>(null);
   readonly devices = signal<AlexaDevice[]>([]);
   readonly message = signal<string>('');
-
-  // Browser-Login
-  readonly proxyUrl = signal<string | null>(null);
-  readonly loginWaiting = signal<boolean>(false);
-  private pollHandle: ReturnType<typeof setInterval> | null = null;
 
   // Durchsage-Formular
   announceText = '';
@@ -31,10 +30,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.refreshStatus();
-  }
-
-  ngOnDestroy(): void {
-    this.clearPolling();
   }
 
   refreshStatus(): void {
@@ -47,60 +42,6 @@ export class AnnouncementsComponent implements OnInit, OnDestroy {
       },
       error: e => this.message.set(e.message)
     });
-  }
-
-  /** Startet den Browser-Login: holt die Proxy-URL und pollt anschliessend den Status. */
-  startLogin(): void {
-    this.message.set('');
-    this.alexa.startProxyLogin().subscribe({
-      next: r => {
-        this.proxyUrl.set(r.proxyUrl);
-        this.loginWaiting.set(true);
-        this.startPolling();
-      },
-      error: e => this.message.set(e.message)
-    });
-  }
-
-  cancelLogin(): void {
-    this.clearPolling();
-    this.loginWaiting.set(false);
-    this.proxyUrl.set(null);
-  }
-
-  private startPolling(): void {
-    this.clearPolling();
-    this.pollHandle = setInterval(() => {
-      this.alexa.getAuthStatus().subscribe({
-        next: s => {
-          this.authStatus.set(s);
-          if (s.loggedIn) {
-            this.finishLogin();
-            this.loadDevices(false);
-          } else if (s.loginError) {
-            this.finishLogin();
-            this.message.set('Anmeldung fehlgeschlagen: ' + s.loginError);
-          }
-        }
-      });
-    }, 3000);
-  }
-
-  private finishLogin(): void {
-    this.clearPolling();
-    this.loginWaiting.set(false);
-    this.proxyUrl.set(null);
-  }
-
-  private clearPolling(): void {
-    if (this.pollHandle !== null) {
-      clearInterval(this.pollHandle);
-      this.pollHandle = null;
-    }
-  }
-
-  logout(): void {
-    this.alexa.logout().subscribe({ next: () => this.refreshStatus() });
   }
 
   loadDevices(rescan: boolean): void {

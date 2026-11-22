@@ -10,16 +10,10 @@
         Angemeldet — Kamera: {{ status.cameraName ?? 'keine gefunden' }}
         <span *ngIf="status.lastPollAt">(letzter Abruf: {{ status.lastPollAt | date:'short' }})</span>
       </p>
-      <div *ngIf="!status.loggedIn" class="vision__login">
-        <p>Nicht angemeldet. Anmeldung mit dem Amazon-/Blink-Konto (nur das Sitzungs-Token wird gespeichert):</p>
-        <input type="email" placeholder="E-Mail" [(ngModel)]="loginUsername">
-        <input type="password" placeholder="Passwort" [(ngModel)]="loginPassword">
-        <button type="button" (click)="login()">Anmelden</button>
-        <div *ngIf="loginPending" class="vision__verify">
-          <input type="text" placeholder="2FA-PIN" [(ngModel)]="verifyCode">
-          <button type="button" (click)="verify()">Bestätigen</button>
-        </div>
-      </div>
+      <p *ngIf="!status.loggedIn" class="vision__login-hint">
+        Nicht bei Blink angemeldet. Die Anmeldung erfolgt unter
+        <a routerLink="/admin" [queryParams]="{ tab: 'konten' }">Admin → Konten</a>.
+      </p>
     </ng-container>
     <ng-template #statusUnavailable>
       <p class="vision__status vision__status--error">blink-vision-Dienst nicht erreichbar.</p>

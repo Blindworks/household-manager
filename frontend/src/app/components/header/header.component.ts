@@ -78,7 +78,7 @@ export class HeaderComponent {
         { path: '/admin/audit-log', label: 'Audit-Log', minRole: 'ADMIN' },
         { path: '/admin/system-log', label: 'Systemprotokoll', minRole: 'ADMIN' },
         { path: '/admin/calendar-categories', label: 'Kalender-Kategorien', minRole: 'ADMIN' },
-        { path: '/admin/tractive', label: 'Hundetracker-Einstellungen', minRole: 'ADMIN' },
+        { path: '/admin/tractive', label: 'Hundetracker-Zuhause', minRole: 'ADMIN' },
         { path: '/admin/network-devices', label: 'Netzwerk-Geräte', minRole: 'ADMIN' },
         { path: '/admin/charging', label: 'Ladesäulen', minRole: 'ADMIN' },
         { path: '/admin/heating', label: 'Heizung', minRole: 'ADMIN' },

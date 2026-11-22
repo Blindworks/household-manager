@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { VisionComponent } from './vision.component';
 
 describe('VisionComponent', () => {
@@ -10,7 +11,7 @@ describe('VisionComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [VisionComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
     }).compileComponents();
     fixture = TestBed.createComponent(VisionComponent);
     httpMock = TestBed.inject(HttpTestingController);
@@ -35,10 +36,12 @@ describe('VisionComponent', () => {
     expect(text).toContain('3');
   });
 
-  it('zeigt das Login-Formular, wenn nicht angemeldet', () => {
+  it('verweist auf Admin → Konten, wenn nicht angemeldet', () => {
     flushInitialRequests(false);
-    const form = (fixture.nativeElement as HTMLElement).querySelector('.vision__login');
-    expect(form).toBeTruthy();
+    const el = fixture.nativeElement as HTMLElement;
+    const hint = el.querySelector('.vision__login-hint a') as HTMLAnchorElement;
+    expect(hint.getAttribute('href')).toBe('/admin?tab=konten');
+    expect(el.querySelector('input[type="password"]')).toBeFalsy();
   });
 
   it('benennt eine Person ueber die Inline-Bearbeitung um', () => {

@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TasmotaPollingService } from '../../services/tasmota-polling.service';
 import { TasmotaLiveService } from '../../services/tasmota-live.service';
@@ -11,8 +12,17 @@ import { UtilityPricesComponent } from '../utility-prices/utility-prices.compone
 import { SmartDeviceListComponent } from '../../components/smart-device-list/smart-device-list.component';
 import { AppearanceService } from '../../services/appearance.service';
 import { DashboardTheme } from '../../models/appearance.model';
+import { AlexaAccountComponent } from '../../components/account-logins/alexa-account/alexa-account.component';
+import { BlinkAccountComponent } from '../../components/account-logins/blink-account/blink-account.component';
+import { TractiveAccountComponent } from '../../components/account-logins/tractive-account/tractive-account.component';
 
-type AdminTab = 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' | 'versorgerpreise' | 'darstellung';
+const ADMIN_TABS = ['konten', 'airrohr-config', 'stromverbrauch', 'smart-plugs', 'wetter', 'versorgerpreise', 'darstellung'] as const;
+type AdminTab = typeof ADMIN_TABS[number];
+
+/** Liest den Reiter aus `?tab=…` (z. B. `/admin?tab=konten`); Unbekanntes fällt auf den Standard zurück. */
+function tabFromQuery(value: string | null): AdminTab | null {
+  return ADMIN_TABS.find(tab => tab === value) ?? null;
+}
 
 /**
  * Admin page for controlling the Tasmota polling service.
@@ -20,7 +30,10 @@ type AdminTab = 'airrohr-config' | 'stromverbrauch' | 'smart-plugs' | 'wetter' |
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, UtilityPricesComponent, SmartDeviceListComponent],
+  imports: [
+    CommonModule, RouterLink, UtilityPricesComponent, SmartDeviceListComponent,
+    AlexaAccountComponent, BlinkAccountComponent, TractiveAccountComponent
+  ],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })
@@ -29,6 +42,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly liveService = inject(TasmotaLiveService);
   private readonly weatherPollingService = inject(WeatherPollingService);
   private readonly appearanceService = inject(AppearanceService);
+  private readonly route = inject(ActivatedRoute);
   private liveSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -47,7 +61,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   isWeatherTriggering = false;
   weatherErrorMessage: string | null = null;
   weatherSuccessMessage: string | null = null;
-  activeTab: AdminTab = 'airrohr-config';
+  activeTab: AdminTab = 'konten';
 
   readonly themeOptions: ReadonlyArray<{ value: DashboardTheme; label: string }> = [
     { value: 'DARK', label: 'Dunkel' },
@@ -60,6 +74,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   themeErrorMessage: string | null = null;
 
   ngOnInit(): void {
+    const requestedTab = tabFromQuery(this.route.snapshot.queryParamMap.get('tab'));
+    if (requestedTab) {
+      this.setActiveTab(requestedTab);
+    }
     this.loadStatus();
     this.loadWeatherStatus();
     this.startLiveStream();

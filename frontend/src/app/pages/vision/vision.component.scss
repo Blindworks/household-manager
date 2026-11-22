@@ -17,12 +17,9 @@
     &--error { color: #c0392b; }
   }
 
-  &__login,
   &__new-person {
     input { margin-right: .5rem; }
   }
-
-  &__verify { margin-top: .75rem; }
 
   &__person {
     border-bottom: 1px solid #eee;

@@ -1,0 +1,49 @@
+<section class="account-login">
+  <h2>Amazon-Konto (Alexa)</h2>
+  <p class="account-login__hint">Für Ansagen und die Amazon-Luftmonitore.</p>
+
+  <p class="account-login__state account-login__state--error" *ngIf="statusFailed()">
+    Der Alexa-Dienst ist nicht erreichbar.
+  </p>
+
+  <ng-container *ngIf="authStatus() as status">
+    <ng-container *ngIf="status.loggedIn; else loginForm">
+      <p class="account-login__state account-login__state--ok">
+        Angemeldet als {{ status.accountName || 'Amazon-Konto' }}.
+      </p>
+      <p class="account-login__warning" *ngIf="status.reauthRequired">
+        Sitzung abgelaufen – bitte neu anmelden.
+      </p>
+      <div class="account-login__actions">
+        <button type="button" class="ghost" (click)="logout()">Abmelden</button>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <ng-template #loginForm>
+    <ng-container *ngIf="!loginWaiting(); else waiting">
+      <p>
+        Die Anmeldung läuft über ein echtes Browser-Fenster direkt bei Amazon (inkl. Passwort
+        und MFA). Es werden keine Zugangsdaten gespeichert.
+      </p>
+      <div class="account-login__actions">
+        <button type="button" (click)="startLogin()">Login starten</button>
+      </div>
+    </ng-container>
+  </ng-template>
+
+  <ng-template #waiting>
+    <p><strong>Schritt 1:</strong> Diesen Link im Browser öffnen und bei Amazon anmelden:</p>
+    <p><a [href]="proxyUrl()" target="_blank" rel="noopener">{{ proxyUrl() }}</a></p>
+    <p>
+      <strong>Schritt 2:</strong> Nach erfolgreicher Anmeldung erkennt der Household Manager das
+      automatisch (wird alle paar Sekunden geprüft).
+    </p>
+    <p class="account-login__hint">Warte auf Abschluss der Anmeldung …</p>
+    <div class="account-login__actions">
+      <button type="button" class="ghost" (click)="cancelLogin()">Abbrechen</button>
+    </div>
+  </ng-template>
+
+  <p class="account-login__error" *ngIf="message()">{{ message() }}</p>
+</section>

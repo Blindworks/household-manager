@@ -5,7 +5,7 @@
     <div class="error-banner">
       {{ error }}
       @if (notLoggedIn) {
-        <a routerLink="/vision">Zur Blink-Anmeldung (Gesichtserkennung)</a>
+        <a routerLink="/admin" [queryParams]="{ tab: 'konten' }">Zur Blink-Anmeldung (Admin → Konten)</a>
       }
     </div>
   }

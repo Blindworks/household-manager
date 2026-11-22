@@ -1,14 +1,15 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { VisionService } from '../../services/vision.service';
 import { VisionPerson, VisionPhoto, VisionRecognition, VisionStatus } from '../../models/vision.model';
 
-/** Seite "Gesichtserkennung": Blink-Konto, Personenverwaltung, Erkennungshistorie. */
+/** Seite "Gesichtserkennung": Blink-Status, Personenverwaltung, Erkennungshistorie (Anmeldung unter Admin → Konten). */
 @Component({
   selector: 'app-vision',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './vision.component.html',
   styleUrl: './vision.component.scss'
 })
@@ -24,10 +25,6 @@ export class VisionComponent implements OnInit {
 
   newPersonName = '';
   editName = '';
-  loginUsername = '';
-  loginPassword = '';
-  verifyCode = '';
-  loginPending = false;
   /** Rueckmeldung zu einer vom Nutzer ausgeloesten Aktion (Banner oben). */
   errorMessage = '';
   /** Fehler der Hintergrund-Ladevorgaenge - bewusst je Abschnitt statt im Banner. */
@@ -42,16 +39,7 @@ export class VisionComponent implements OnInit {
 
   reloadStatus(): void {
     this.visionService.getStatus().subscribe({
-      next: status => {
-        this.status = status;
-        // Sobald das Backend eine erfolgreiche Anmeldung bestaetigt, ist ein
-        // eventuell noch offener 2FA-Schritt hinfaellig -> Zustand zuruecksetzen,
-        // damit das Formular nicht in einen widerspruechlichen Zustand geraet.
-        if (status.loggedIn) {
-          this.loginPending = false;
-          this.verifyCode = '';
-        }
-      },
+      next: status => this.status = status,
       error: () => this.status = null
     });
   }
@@ -67,28 +55,6 @@ export class VisionComponent implements OnInit {
     this.visionService.getRecognitions().subscribe({
       next: recognitions => { this.recognitions = recognitions; this.recognitionsLoadError = ''; },
       error: err => this.recognitionsLoadError = err.message
-    });
-  }
-
-  login(): void {
-    this.errorMessage = '';
-    // Passwort sofort aus dem Komponenten-State entfernen (nicht erst im
-    // Erfolgsfall) - es soll weder bei einem Fehler noch laenger als noetig
-    // im Speicher verbleiben.
-    const password = this.loginPassword;
-    this.loginPassword = '';
-    this.loginPending = true;
-    this.visionService.login(this.loginUsername, password).subscribe({
-      next: () => this.reloadStatus(),
-      error: err => { this.loginPending = false; this.errorMessage = err.message; }
-    });
-  }
-
-  verify(): void {
-    this.errorMessage = '';
-    this.visionService.verify(this.verifyCode).subscribe({
-      next: () => { this.loginPending = false; this.verifyCode = ''; this.reloadStatus(); },
-      error: err => this.errorMessage = err.message
     });
   }
 

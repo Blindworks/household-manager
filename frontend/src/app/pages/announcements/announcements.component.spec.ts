@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { AnnouncementsComponent } from './announcements.component';
 
 describe('AnnouncementsComponent', () => {
@@ -8,7 +9,8 @@ describe('AnnouncementsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AnnouncementsComponent, HttpClientTestingModule]
+      imports: [AnnouncementsComponent, HttpClientTestingModule],
+      providers: [provideRouter([])]
     }).compileComponents();
     fixture = TestBed.createComponent(AnnouncementsComponent);
     httpMock = TestBed.inject(HttpTestingController);

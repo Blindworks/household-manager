@@ -1,0 +1,68 @@
+// Gemeinsamer Stil der Konto-Karten im Admin-Reiter „Konten“ (Alexa, Blink, Tractive).
+// Knöpfe und Felder kommen aus dem Admin-Scope (.account-login in $admin-scopes, styles.scss).
+.account-login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  h2 {
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  &__state {
+    font-weight: 600;
+
+    &--ok {
+      color: #14532d;
+    }
+
+    &--error {
+      color: #b91c1c;
+    }
+  }
+
+  &__warning {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: #fef3c7;
+    color: #7c2d12;
+    font-weight: 600;
+  }
+
+  &__hint {
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+
+  &__error {
+    color: #b91c1c;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 400px;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-weight: 600;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  a {
+    word-break: break-all;
+  }
+}

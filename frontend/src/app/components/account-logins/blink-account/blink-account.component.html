@@ -1,0 +1,43 @@
+<section class="account-login">
+  <h2>Blink-Konto</h2>
+  <p class="account-login__hint">Für Gesichtserkennung und Kameras.</p>
+
+  <ng-container *ngIf="statusChecked">
+    <ng-container *ngIf="status; else unavailable">
+      <p class="account-login__state account-login__state--ok" *ngIf="status.loggedIn">
+        Angemeldet – Kamera: {{ status.cameraName ?? 'keine gefunden' }}
+        <span *ngIf="status.lastPollAt">(letzter Abruf: {{ status.lastPollAt | date:'short' }})</span>
+      </p>
+
+      <div class="account-login__form blink-account__login" *ngIf="!status.loggedIn">
+        <p>Nicht angemeldet. Anmeldung mit dem Amazon-/Blink-Konto (nur das Sitzungs-Token wird gespeichert):</p>
+        <label>
+          E-Mail
+          <input type="email" name="blinkEmail" [(ngModel)]="loginUsername" autocomplete="username">
+        </label>
+        <label>
+          Passwort
+          <input type="password" name="blinkPassword" [(ngModel)]="loginPassword" autocomplete="current-password">
+        </label>
+        <div class="account-login__actions">
+          <button type="button" (click)="login()" [disabled]="!loginUsername || !loginPassword">Anmelden</button>
+        </div>
+        <ng-container *ngIf="loginPending">
+          <label>
+            2FA-PIN
+            <input type="text" name="blinkPin" [(ngModel)]="verifyCode" autocomplete="one-time-code">
+          </label>
+          <div class="account-login__actions">
+            <button type="button" (click)="verify()" [disabled]="!verifyCode">Bestätigen</button>
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <ng-template #unavailable>
+    <p class="account-login__state account-login__state--error">blink-vision-Dienst nicht erreichbar.</p>
+  </ng-template>
+
+  <p class="account-login__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+</section>

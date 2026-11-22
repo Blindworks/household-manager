@@ -3,7 +3,7 @@
     <div>
       <p class="admin__eyebrow">Systemsteuerung</p>
       <h1>Admin</h1>
-      <p class="admin__subtitle">Verwaltung von Airrohr, Stromverbrauch, Smart Plugs, Versorgerpreisen und Darstellung</p>
+      <p class="admin__subtitle">Konten, Airrohr, Stromverbrauch, Smart Plugs, Versorgerpreise und Darstellung</p>
     </div>
     <button
       class="btn btn--ghost"
@@ -16,6 +16,14 @@
   </header>
 
   <nav class="admin__tabs" aria-label="Admin Navigation">
+    <button
+      type="button"
+      class="admin__tab"
+      [class.admin__tab--active]="activeTab === 'konten'"
+      (click)="setActiveTab('konten')"
+    >
+      Konten
+    </button>
     <button
       type="button"
       class="admin__tab"
@@ -65,6 +73,23 @@
       Darstellung
     </button>
   </nav>
+
+  <section class="admin__tab-content" *ngIf="activeTab === 'konten'">
+    <p class="muted admin__accounts-intro">
+      Alle Anmeldungen bei externen Diensten an einer Stelle. Gespeichert werden nur Sitzungs-Tokens,
+      nie Passwörter.
+    </p>
+    <section class="admin__card"><app-alexa-account></app-alexa-account></section>
+    <section class="admin__card"><app-blink-account></app-blink-account></section>
+    <section class="admin__card"><app-tractive-account></app-tractive-account></section>
+    <section class="admin__card">
+      <h2>IKEA Dirigera</h2>
+      <p class="muted">
+        Der Hub wird nicht per Passwort, sondern per Knopfdruck gekoppelt – das geschieht auf der
+        Seite <a routerLink="/admin/dirigera">IKEA Dirigera</a>, zusammen mit IP und Sensoren.
+      </p>
+    </section>
+  </section>
 
   <section class="admin__tab-content" *ngIf="activeTab === 'airrohr-config'">
     <section class="admin__card">
