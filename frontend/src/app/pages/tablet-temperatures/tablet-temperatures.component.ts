@@ -7,7 +7,8 @@ import {
   GridComponent,
   TooltipComponent,
   LegendComponent,
-  VisualMapComponent
+  VisualMapComponent,
+  MarkAreaComponent
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
@@ -19,6 +20,14 @@ import {
   temperatureColorPieces,
   temperatureLevelColor
 } from '../../shared/temperature-comfort.util';
+import {
+  RoomTemperatureProfile,
+  profileForTemperatureEntity,
+  profileTargetLabel,
+  roomTemperatureColor,
+  roomTemperatureColorPieces,
+  roomTemperatureLabel
+} from '../../shared/room-temperature-profile.util';
 
 echarts.use([
   LineChart,
@@ -26,6 +35,7 @@ echarts.use([
   TooltipComponent,
   LegendComponent,
   VisualMapComponent,
+  MarkAreaComponent,
   CanvasRenderer
 ]);
 
@@ -59,6 +69,8 @@ interface ChartTile {
   currentTemperatureColor: string;
   /** Komfortwort zum Jetzt-Wert, als Titel-Tooltip. */
   currentTemperatureStatus: string;
+  /** Zielbereich des Raums, z. B. "Ziel 22–24 °C" - null ohne Raumprofil (Aussen, unbekannt). */
+  targetLabel: string | null;
   /** Juengste Luftfeuchte, z. B. "48 %" - null, wenn nicht gewaehlt oder ohne Werte. */
   currentHumidityLabel: string | null;
 }
@@ -69,6 +81,23 @@ const AXIS_COLOR = '#94a3b8';
 /** Juengster Wert einer Messreihe; null, wenn die Reihe leer ist. */
 function latestValue(points: TimeValue[]): number | null {
   return points.length === 0 ? null : points[points.length - 1].value;
+}
+
+/** Farbe des Jetzt-Werts - dieselbe Regel wie die Linienfaerbung. */
+function temperatureColor(celsius: number | null, profile: RoomTemperatureProfile | null): string {
+  if (celsius === null) {
+    return AXIS_COLOR;
+  }
+  return profile ? roomTemperatureColor(celsius, profile) : temperatureLevelColor(celsius);
+}
+
+function temperatureStatus(celsius: number | null, profile: RoomTemperatureProfile | null): string {
+  if (celsius === null) {
+    return '';
+  }
+  return profile
+    ? `${roomTemperatureLabel(celsius, profile)} (${profileTargetLabel(profile)})`
+    : comfortRating(celsius).label;
 }
 
 function formatNumber(value: number, fractionDigits: number): string {
@@ -203,17 +232,18 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
   private toTile(series: TemperatureSensorSeries): ChartTile {
     const temperature = this.isMetricActive('temperature') ? latestValue(series.temperature) : null;
     const humidity = this.isMetricActive('humidity') ? latestValue(series.humidity) : null;
+    const profile = profileForTemperatureEntity(series.entityId);
     return {
       sensorId: series.sensorId,
       // Auf der Wand zaehlt der Raum, nicht das fuehrende "Temperatur".
       name: shortenSensorName(series.name),
       series,
-      options: this.chartOptionsFor(series),
+      options: this.chartOptionsFor(series, profile),
       empty: this.pointCount(series) === 0,
       currentTemperatureLabel: temperature === null ? null : `${formatNumber(temperature, 1)} °C`,
-      currentTemperatureColor:
-        temperature === null ? AXIS_COLOR : temperatureLevelColor(temperature),
-      currentTemperatureStatus: temperature === null ? '' : comfortRating(temperature).label,
+      currentTemperatureColor: temperatureColor(temperature, profile),
+      currentTemperatureStatus: temperatureStatus(temperature, profile),
+      targetLabel: profile && this.isMetricActive('temperature') ? profileTargetLabel(profile) : null,
       currentHumidityLabel: humidity === null ? null : `${formatNumber(humidity, 0)} %`
     };
   }
@@ -234,7 +264,10 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
    * Baut die Chart-Optionen einer Kachel. Jede gewaehlte Messgroesse mit Werten
    * bekommt eine eigene Y-Achse; fehlt eine, entfaellt sie samt Achse.
    */
-  chartOptionsFor(series: TemperatureSensorSeries): Record<string, unknown> {
+  chartOptionsFor(
+    series: TemperatureSensorSeries,
+    profile: RoomTemperatureProfile | null = profileForTemperatureEntity(series.entityId)
+  ): Record<string, unknown> {
     // Handy: kleinere Schrift, weniger Teilstriche und eine Randberechnung, die
     // die Achsenbeschriftung einrechnet. Sonst wird der lange Wert links
     // abgeschnitten und die Zeitachse beschriftet sich uebereinander. Das Tablet
@@ -263,7 +296,17 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
         yAxisIndex: 0,
         data: series.temperature.map(p => [p.time, p.value]),
         // Farbe kommt aus der visualMap; hier steht nur die Strichstaerke.
-        lineStyle: { width: 3 }
+        lineStyle: { width: 3 },
+        // Der Zielbereich des Raums liegt dezent hinter der Linie.
+        ...(profile
+          ? {
+              markArea: {
+                silent: true,
+                itemStyle: { color: 'rgba(74, 222, 128, 0.08)' },
+                data: [[{ yAxis: profile.min }, { yAxis: profile.max }]]
+              }
+            }
+          : {})
       });
     }
 
@@ -318,7 +361,9 @@ export class TabletTemperaturesComponent implements OnInit, OnDestroy {
               seriesIndex: 0,
               // Dimension 1 ist der Messwert; Dimension 0 ist die Zeit.
               dimension: 1,
-              pieces: temperatureColorPieces()
+              // Raeume faerben nach ihrem Zielbereich, Aussen- und unbekannte
+              // Fuehler weiter nach den festen Waermegrenzen.
+              pieces: profile ? roomTemperatureColorPieces(profile) : temperatureColorPieces()
             }
           }
         : {}),

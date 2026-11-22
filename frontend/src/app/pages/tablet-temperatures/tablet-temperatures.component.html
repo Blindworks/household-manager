@@ -40,7 +40,12 @@
         @for (chart of charts; track chart.sensorId) {
           <article class="tablet-temps__card">
             <h3 class="tablet-temps__card-title">
-              <span class="tablet-temps__sensor">{{ chart.name }}</span>
+              <span class="tablet-temps__sensor">
+                {{ chart.name }}
+                @if (chart.targetLabel) {
+                  <span class="tablet-temps__target">{{ chart.targetLabel }}</span>
+                }
+              </span>
               <span class="tablet-temps__current">
                 @if (chart.currentTemperatureLabel) {
                   <span

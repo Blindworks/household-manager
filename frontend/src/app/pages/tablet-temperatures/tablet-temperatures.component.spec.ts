@@ -278,4 +278,29 @@ describe('TabletTemperaturesComponent', () => {
     // sonst die Feuchtelinie nach Temperaturschwellen ein.
     expect(humidityOnly['visualMap']).toBeUndefined();
   });
+
+  it('faerbt einen Raumfuehler nach dem Zielbereich seines Raums', () => {
+    const bath: TemperatureSensorSeries = {
+      ...withoutHumidity,
+      sensorId: 'zigbee:bad', name: 'Bad', source: 'ZIGBEE',
+      entityId: 'sensor.zigbee_temperatur_aqara_badezimmer_temperature',
+      temperature: [{ time: '2026-08-21T10:00:00', value: 21 }]
+    };
+    const options = component.chartOptionsFor(bath) as Record<string, any>;
+    const greenPiece = options['visualMap'].pieces.find((p: any) => p.gte === 22 && p.lte === 24);
+    expect(greenPiece).toBeDefined();
+    expect(options['series'][0].markArea.data).toEqual([[{ yAxis: 22 }, { yAxis: 24 }]]);
+
+    serviceSpy.getSeries.and.returnValue(of([bath]));
+    component.setRange('WEEK');
+    fixture.detectChanges();
+    const target = fixture.nativeElement.querySelector('.tablet-temps__target') as HTMLElement;
+    expect(target.textContent!.trim()).toBe('Ziel 22–24 °C');
+  });
+
+  it('laesst Aussen- und unbekannte Fuehler ohne Zielbereich', () => {
+    const options = component.chartOptionsFor(withoutHumidity) as Record<string, any>;
+    expect(options['series'][0].markArea).toBeUndefined();
+    expect(fixture.nativeElement.querySelector('.tablet-temps__target')).toBeNull();
+  });
 });
