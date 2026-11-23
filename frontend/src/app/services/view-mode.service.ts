@@ -34,10 +34,22 @@ export class ViewModeService {
    */
   setWallTabletAccount(wallTablet: boolean): void {
     this.wallTabletAccount.set(wallTablet);
-    if (wallTablet && !this.hasStoredChoice()) {
+    if (this.hasStoredChoice()) {
+      this.autoTabletView = false;
+      return;
+    }
+    if (wallTablet) {
+      this.autoTabletView = this.autoTabletView || !this.isTabletView();
       this.isTabletView.set(true);
+    } else if (this.autoTabletView) {
+      // Abmelden des Wandtablet-Kontos: die nur automatisch gesetzte Ansicht zuruecknehmen
+      this.autoTabletView = false;
+      this.isTabletView.set(false);
     }
   }
+
+  /** true, solange die Tablet-Ansicht nur durch das Wandtablet-Konto (nicht per Umschalter) aktiv ist. */
+  private autoTabletView = false;
 
   /** Schaltet zwischen Website- und Tablet-Ansicht um. */
   toggle(): void {

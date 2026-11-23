@@ -58,4 +58,24 @@ describe('ViewModeService', () => {
 
     expect(service.isTabletView()).toBeFalse();
   });
+
+  it('nimmt die automatisch gesetzte Tablet-Ansicht beim Abmelden zurueck', () => {
+    const service = TestBed.inject(ViewModeService);
+    service.setWallTabletAccount(true);
+
+    service.setWallTabletAccount(false);
+
+    expect(service.isTabletView()).toBeFalse();
+  });
+
+  it('laesst eine per Umschalter gewaehlte Tablet-Ansicht beim Abmelden stehen', () => {
+    const service = TestBed.inject(ViewModeService);
+    service.setWallTabletAccount(true);
+    service.toggle();
+    service.toggle();
+
+    service.setWallTabletAccount(false);
+
+    expect(service.isTabletView()).toBeTrue();
+  });
 });
