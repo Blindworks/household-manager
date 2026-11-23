@@ -189,6 +189,9 @@ describe('TabletChargingComponent', () => {
       .find(r => r.textContent?.includes('Tesla Supercharger Pfungstadt'))!;
 
     beforeEach(() => {
+      // Ausschnitt festlegen: die Karte ist hier so hoch wie die Liste, sonst entschiede die
+      // Zeilenhoehe ueber den Startzoom und damit, ob der Supercharger gelistet wird.
+      component.mapForTest()!.setZoom(11, { animate: false });
       component.data = withSupercharger;
       fixture.detectChanges();
     });

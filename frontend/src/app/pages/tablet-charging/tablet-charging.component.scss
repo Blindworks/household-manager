@@ -352,7 +352,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    margin-top: 0.4rem;
+    // Einzug wie die Textzeilen der Karte (__sub).
+    margin: 0.5rem 0 0 1.6rem;
   }
 
   &__watch-btn,
@@ -823,6 +824,18 @@
 
     &__sub {
       flex-wrap: wrap;
+    }
+
+    // Volle Kartenbreite mit 44 px Touch-Ziel als Abschluss der Karte.
+    &__watch {
+      margin: 0.7rem 0 0;
+    }
+
+    &__watch-btn,
+    &__watch-active {
+      flex: 1 0 100%;
+      justify-content: center;
+      min-height: 44px;
     }
 
     // Ladepunkte: Leistung, Status, Preis und Dauer duerfen umbrechen.
