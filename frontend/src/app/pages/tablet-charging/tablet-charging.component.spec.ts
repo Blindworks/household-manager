@@ -136,6 +136,16 @@ describe('TabletChargingComponent', () => {
       expect(el().querySelector('.tablet-charging__dialog')?.textContent).toContain('Niemand hat Push eingeschaltet');
     });
 
+    it('behauptet nicht, niemand habe Push, wenn schon alle warten', () => {
+      component.watches = [watch];
+      chargingSpy.getWatchCandidates.and.returnValue(of([{ userId: 1, displayName: 'Benedikt' }]));
+      rowOf('Lidl Hauptstr.').querySelector<HTMLButtonElement>('.tablet-charging__watch-btn')!.click();
+      fixture.detectChanges();
+      const text = el().querySelector('.tablet-charging__dialog')?.textContent;
+      expect(text).toContain('schon benachrichtigt');
+      expect(text).not.toContain('Niemand hat Push');
+    });
+
     it('zeigt die Server-Meldung, wenn inzwischen ein Punkt frei ist', () => {
       chargingSpy.getWatchCandidates.and.returnValue(of([{ userId: 1, displayName: 'Benedikt' }]));
       chargingSpy.addWatch.and.returnValue(throwError(() => new HttpErrorResponse({

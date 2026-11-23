@@ -7,7 +7,7 @@ auf die Karte starren, sondern eine Push-Nachricht bekommen, sobald ein Ladepunk
 - Je Station in der rechten Liste ein Knopf „Benachrichtigen, wenn frei“ – **nur, wenn dort gerade kein
   Ladepunkt frei ist**, nie bei Superchargern (keine Belegungsdaten).
 - Antippen öffnet eine Auswahl **der Person** (Nutzerentscheidung B): nur Personen mit mindestens einem
-  Push-Gerät, ohne das Wandtablet-Konto. Danach zeigt die Station „🔔 Benachrichtigt: <Name>“, ein Tipp
+  Push-Gerät, ohne das Wandtablet-Konto. Danach zeigt die Station „Benachrichtigt: <Name>“, ein Tipp
   darauf hebt das Warten auf.
 - Sobald mindestens ein Ladepunkt frei ist: **genau eine** Push-Nachricht an diese Person
   („<Station>: 1 von 2 Ladepunkten frei“), danach endet das Warten.

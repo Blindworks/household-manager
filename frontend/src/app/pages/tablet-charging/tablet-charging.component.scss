@@ -363,8 +363,21 @@
     border-radius: 10px;
     padding: 0.4rem 0.8rem;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 
     &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  // Feste Breite: ohne geladene Icon-Schrift stuende sonst der lange Ligatur-Name da und
+  // verbreiterte die Zeile (Karma laedt die Google-Schrift nicht, offline das Tablet auch nicht).
+  &__watch-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+    width: 1em;
+    flex-shrink: 0;
+    overflow: hidden;
   }
 
   &__watch-btn,
@@ -406,6 +419,7 @@
 
   &__dialog-title {
     margin: 0;
+    color: var(--on-surface);
     font-size: 1.25rem;
   }
 

@@ -148,13 +148,16 @@
                               [disabled]="watchBusy"
                               [attr.aria-label]="'Benachrichtigung für ' + watch.displayName + ' aufheben'"
                               (click)="stopWatch(watch); $event.stopPropagation()">
-                        🔔 Benachrichtigt: {{ watch.displayName }} <span aria-hidden="true">✕</span>
+                        <span class="material-symbols-outlined tablet-charging__watch-icon" aria-hidden="true">notifications_active</span>
+                        Benachrichtigt: {{ watch.displayName }}
+                        <span class="material-symbols-outlined tablet-charging__watch-icon" aria-hidden="true">close</span>
                       </button>
                     }
                     @if (canWatch(station)) {
                       <button type="button" class="tablet-charging__watch-btn"
                               (click)="openWatchDialog(station); $event.stopPropagation()">
-                        🔔 Benachrichtigen, wenn frei
+                        <span class="material-symbols-outlined tablet-charging__watch-icon" aria-hidden="true">notifications</span>
+                        Benachrichtigen, wenn frei
                       </button>
                     }
                   </div>
@@ -205,6 +208,8 @@
         </p>
         @if (watchCandidates === null) {
           <p class="tablet-charging__dialog-text">Lädt…</p>
+        } @else if (watchCandidates.length > 0 && openCandidates.length === 0) {
+          <p class="tablet-charging__dialog-text">Alle Personen mit Push werden hier schon benachrichtigt.</p>
         } @else if (openCandidates.length === 0 && !watchError) {
           <p class="tablet-charging__dialog-text">
             Niemand hat Push eingeschaltet. Das geht in der App unter „Benachrichtigungen“.

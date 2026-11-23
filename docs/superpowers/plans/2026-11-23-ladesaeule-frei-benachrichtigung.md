@@ -44,6 +44,6 @@
 ### Task 3: Tablet-Oberfläche
 
 **Files:** Modify `models/charging.model.ts` (`ChargingWatch`, `WatchCandidate`), `services/charging.service.ts` (`getWatches`, `getWatchCandidates`, `addWatch`, `removeWatch`), `tablet-charging.component.{ts,html,scss,spec.ts}`.
-- Knopf „🔔 Benachrichtigen, wenn frei“ nur bei `!supercharger && free === 0 && total > 0` und ohne Auftrag; Auftrag zeigt „🔔 Benachrichtigt: Name“ (Tipp hebt auf); Auswahl-Dialog mit Kandidaten, leer ⇒ Hinweis „Niemand hat Push eingeschaltet“.
+- Knopf „Benachrichtigen, wenn frei“ nur bei `!supercharger && free === 0 && total > 0` und ohne Auftrag; Auftrag zeigt „Benachrichtigt: Name“ (Tipp hebt auf); Auswahl-Dialog mit Kandidaten, leer ⇒ Hinweis „Niemand hat Push eingeschaltet“.
 - Tests: Knopf nur bei 0 frei; Auswahl ruft `addWatch(stationId, userId)`; Tipp auf Hinweis ruft `removeWatch`.
 - [ ] Tests, Implementierung, commit; CLAUDE.md-Absatz ergänzen.
