@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Repository interface for {@link MeterReading} entity operations.
@@ -40,17 +39,6 @@ public interface MeterReadingRepository extends JpaRepository<MeterReading, Long
     List<MeterReading> findByMeterTypeOrderByReadingDateAsc(MeterType meterType);
 
     /**
-     * Find the most recent meter reading for a specific meter type.
-     * <p>
-     * Useful for retrieving the latest reading value to calculate consumption
-     * or display current meter status.
-     *
-     * @param meterType the type of meter
-     * @return optional containing the most recent reading, or empty if no readings exist
-     */
-    Optional<MeterReading> findTopByMeterTypeOrderByReadingDateDesc(MeterType meterType);
-
-    /**
      * Find meter readings for a specific meter type within a date range.
      * <p>
      * Useful for generating reports or analyzing consumption trends
@@ -66,16 +54,6 @@ public interface MeterReadingRepository extends JpaRepository<MeterReading, Long
             LocalDateTime start,
             LocalDateTime end
     );
-
-    /**
-     * Find the two most recent meter readings for a specific meter type.
-     * <p>
-     * Used to calculate consumption by comparing the two most recent readings.
-     *
-     * @param meterType the type of meter
-     * @return list containing up to two most recent readings (newest first)
-     */
-    List<MeterReading> findTop2ByMeterTypeOrderByReadingDateDesc(MeterType meterType);
 
     /**
      * Find all meter readings across all meter types, ordered by date descending.

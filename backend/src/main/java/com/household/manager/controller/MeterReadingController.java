@@ -57,6 +57,20 @@ public class MeterReadingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /** Korrigiert die aktuelle Ablesung eines Zählers (ältere: 400). */
+    @PutMapping("/{id}")
+    public ResponseEntity<MeterReadingCreateResponse> correctLatestReading(
+            @PathVariable Long id, @Valid @RequestBody MeterReadingRequest request) {
+        return ResponseEntity.ok(meterReadingService.correctLatestReading(id, request));
+    }
+
+    /** Löscht die aktuelle Ablesung eines Zählers samt abgeleiteter Schätzwerte (ältere: 400). */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteLatestReading(@PathVariable Long id) {
+        meterReadingService.deleteLatestReading(id);
+        return ResponseEntity.noContent().build();
+    }
+
     /**
      * Get all meter readings across all meter types.
      * <p>

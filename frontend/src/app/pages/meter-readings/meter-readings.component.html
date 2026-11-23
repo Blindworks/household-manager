@@ -144,6 +144,55 @@
               <span class="reading-card__date">
                 {{ reading.readingDate | date:'dd.MM.yyyy HH:mm' }}
               </span>
+
+              <div class="reading-card__actions" *ngIf="reading.latest">
+                <button type="button" class="card-btn" [disabled]="actionBusy" (click)="startCorrection(reading)">
+                  Korrigieren
+                </button>
+                <button type="button" class="card-btn card-btn--danger" [disabled]="actionBusy" (click)="startDelete(reading)">
+                  Löschen
+                </button>
+              </div>
+            </div>
+
+            <div class="reading-card__panel" *ngIf="action?.reading?.id === reading.id">
+              <form class="correction" *ngIf="action?.kind === 'correct'" (ngSubmit)="saveCorrection()">
+                <label class="correction__field">
+                  Zählerstand ({{ meterTypeUtils.getUnit(reading.meterType) }})
+                  <input type="number" name="value" min="0" step="0.01" [(ngModel)]="correction.value" />
+                </label>
+                <label class="correction__field">
+                  Ablesedatum
+                  <input type="date" name="date" [max]="today" [(ngModel)]="correction.date" />
+                </label>
+                <label class="correction__field correction__field--wide">
+                  Notizen
+                  <input type="text" name="notes" maxlength="500" [(ngModel)]="correction.notes" />
+                </label>
+                <div class="correction__buttons">
+                  <button type="submit" class="card-btn card-btn--primary" [disabled]="actionBusy || !correctionValid">
+                    Speichern
+                  </button>
+                  <button type="button" class="card-btn" [disabled]="actionBusy" (click)="cancelAction()">
+                    Abbrechen
+                  </button>
+                </div>
+              </form>
+
+              <div class="correction__buttons" *ngIf="action?.kind === 'delete'">
+                <span>
+                  Ablesung vom {{ reading.readingDate | date:'dd.MM.yyyy' }} löschen?
+                  Daraus berechnete Schätzwerte werden mit gelöscht.
+                </span>
+                <button type="button" class="card-btn card-btn--danger" [disabled]="actionBusy" (click)="confirmDelete()">
+                  Endgültig löschen
+                </button>
+                <button type="button" class="card-btn" [disabled]="actionBusy" (click)="cancelAction()">
+                  Abbrechen
+                </button>
+              </div>
+
+              <p class="correction__error" *ngIf="actionError">{{ actionError }}</p>
             </div>
           </div>
         </div>

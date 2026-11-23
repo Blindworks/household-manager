@@ -92,4 +92,9 @@ public class MeterReadingResponse {
      * Whether this reading was auto-generated as an estimate for a missed Friday.
      */
     private boolean estimated;
+
+    /**
+     * Ob dies die aktuelle Ablesung ihres Zählers ist - nur sie lässt sich korrigieren oder löschen.
+     */
+    private boolean latest;
 }

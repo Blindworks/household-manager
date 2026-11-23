@@ -71,6 +71,8 @@ public class AuditEntryDescriber {
             Map.entry("thermostat.bulk", "Heizung: alle"),
             Map.entry("agent.action.execute", "Hausverstand: Aktion"),
             Map.entry("agent.proposal.decide", "Hausverstand: Entscheidung"),
+            Map.entry("meter-reading.update", "Zählerstand korrigiert"),
+            Map.entry("meter-reading.delete", "Zählerstand gelöscht"),
             Map.entry("system.reboot", "Neustart"));
 
     private final SmartDeviceRepository deviceRepository;

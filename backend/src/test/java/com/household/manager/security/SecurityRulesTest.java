@@ -827,6 +827,18 @@ class SecurityRulesTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfKeineAblesungKorrigierenOderLoeschen() throws Exception {
+        mockMvc.perform(put("/v1/meter-readings/1")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/v1/meter-readings/1").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
     /**
      * Der Netzwerkstatus braucht bewusst keine eigene Regel: das GET faellt auf die
      * generische Regel GET /v1/** -> KIOSK. Kein NetworkController im Slice: 404 statt

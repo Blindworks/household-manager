@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { MeterReadingService } from '../../services/meter-reading.service';
 import { MeterType, MeterReadingRequest, MeterReading } from '../../models/meter-reading.model';
+import { toLocalDateString, toLocalDateTimeString } from '../../shared/local-date.util';
 import { MeterTypeUtils } from '../../utils/meter-type.utils';
 
 /**
@@ -48,7 +49,7 @@ export class MeterReadingFormComponent implements OnInit {
   autoCreatedReadings: MeterReading[] = [];
 
   /** Heutiges Datum für max-Validierung */
-  readonly today = new Date().toISOString().split('T')[0];
+  readonly today = toLocalDateString(new Date());
 
   ngOnInit(): void {
     this.initializeForm();
@@ -73,7 +74,7 @@ export class MeterReadingFormComponent implements OnInit {
    * Gibt das heutige Datum im ISO-Format zurück
    */
   getTodayDate(): string {
-    return new Date().toISOString().split('T')[0];
+    return toLocalDateString(new Date());
   }
 
   /**
@@ -149,14 +150,8 @@ export class MeterReadingFormComponent implements OnInit {
    */
   private formatDateTimeForBackend(dateString: string): string {
     // Nimmt das Datum aus dem Date-Input (YYYY-MM-DD) und fügt die aktuelle Uhrzeit hinzu
-    const date = new Date(dateString);
-    const now = new Date();
-
-    // Setze die aktuelle Uhrzeit
-    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-
-    // Formatiere als ISO-String und schneide die Millisekunden ab
-    return date.toISOString().slice(0, 19);
+    // (lokale Zeit: toISOString() wäre UTC und könnte das Datum verschieben)
+    return toLocalDateTimeString(dateString, new Date());
   }
 
   /**

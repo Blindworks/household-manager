@@ -100,6 +100,28 @@ export class MeterReadingService {
   }
 
   /**
+   * Korrigiert die aktuelle Ablesung eines Zählers.
+   */
+  correctReading(id: number, request: MeterReadingRequest): Observable<MeterReadingCreateResponse> {
+    return this.http.put<MeterReadingCreateResponse>(`${this.baseUrl}/${id}`, request).pipe(
+      map(response => ({
+        reading: this.convertDate(response.reading),
+        autoCreatedReadings: this.convertDates(response.autoCreatedReadings ?? [])
+      })),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Löscht die aktuelle Ablesung eines Zählers (samt daraus abgeleiteter Schätzwerte).
+   */
+  deleteReading(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Konvertiert ISO-Date-Strings zu Date-Objekten für ein Array
    */
   private convertDates(readings: MeterReading[]): MeterReading[] {
@@ -131,7 +153,10 @@ export class MeterReadingService {
       // Server-seitiger Fehler
       switch (error.status) {
         case 400:
-          errorMessage = 'Ungültige Daten. Bitte überprüfen Sie Ihre Eingaben.';
+          // Fachliche Ablehnungen kommen als Klartext vom Backend
+          errorMessage = typeof error.error === 'string' && error.error
+            ? error.error
+            : 'Ungültige Daten. Bitte überprüfen Sie Ihre Eingaben.';
           break;
         case 404:
           errorMessage = 'Die angeforderten Daten wurden nicht gefunden.';

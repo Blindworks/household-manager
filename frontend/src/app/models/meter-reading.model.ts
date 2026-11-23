@@ -43,6 +43,9 @@ export interface MeterReading {
 
   /** Ob diese Ablesung ein automatisch erstellter Schätzwert ist */
   estimated?: boolean;
+
+  /** Ob dies die aktuelle Ablesung ihres Zählers ist (nur sie ist korrigier- und löschbar) */
+  latest?: boolean;
 }
 
 /**

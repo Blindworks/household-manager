@@ -1,5 +1,6 @@
 package com.household.manager.service;
 
+import com.household.manager.audit.AuditService;
 import com.household.manager.dto.ConsumptionResponse;
 import com.household.manager.dto.MeterReadingCreateResponse;
 import com.household.manager.dto.MeterReadingRequest;
@@ -15,16 +16,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -44,7 +50,21 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MeterReadingService {
 
+    private static final DateTimeFormatter GERMAN_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+    /**
+     * Neueste zuerst. Verglichen wird der Kalendertag, erst danach die ID: bei zwei
+     * Ablesungen desselben Tages ist die zuletzt erfasste die aktuelle, egal welche
+     * Uhrzeit sie trägt.
+     */
+    private static final Comparator<MeterReading> NEWEST_FIRST = Comparator
+            .comparing((MeterReading reading) -> reading.getReadingDate().toLocalDate())
+            .thenComparing(MeterReading::getId)
+            .reversed();
+
     private final MeterReadingRepository meterReadingRepository;
+    private final AuditService auditService;
+    private final Clock clock;
 
     /**
      * Create a new meter reading.
@@ -56,16 +76,16 @@ public class MeterReadingService {
      *
      * @param request the meter reading request containing meter data
      * @return response containing the created reading and any auto-generated estimates
-     * @throws IllegalArgumentException if the new reading is less than the previous reading
+     * @throws IllegalArgumentException if the reading is not dated after the previous reading,
+     *                                  lies in the future, or is less than the previous reading
      */
     @Transactional
     public MeterReadingCreateResponse createMeterReading(MeterReadingRequest request) {
         log.info("Creating new meter reading for type: {}", request.getMeterType());
 
-        Optional<MeterReading> previousReadingOpt = meterReadingRepository
-                .findTopByMeterTypeOrderByReadingDateDesc(request.getMeterType());
+        Optional<MeterReading> previousReadingOpt = newestFirst(request.getMeterType()).stream().findFirst();
 
-        validateReadingValue(previousReadingOpt, request.getReadingValue());
+        validateAgainstPrevious(previousReadingOpt, request);
 
         List<MeterReadingResponse> autoCreated = previousReadingOpt
                 .map(prev -> createEstimatedReadingsForMissedFridays(prev, request))
@@ -90,6 +110,64 @@ public class MeterReadingService {
     }
 
     /**
+     * Korrigiert die aktuelle Ablesung eines Zählers. Ältere Ablesungen sind gesperrt,
+     * weil auf ihnen schon weitere Ablesungen aufbauen. Die aus der falschen Ablesung
+     * abgeleiteten Schätzwerte werden neu berechnet.
+     *
+     * @throws MeterReadingNotFoundException wenn die Ablesung nicht existiert
+     * @throws IllegalArgumentException wenn sie nicht die aktuelle ist oder die Werte ungültig sind
+     */
+    @Transactional
+    public MeterReadingCreateResponse correctLatestReading(Long id, MeterReadingRequest request) {
+        MeterReading reading = findReading(id);
+        if (reading.getMeterType() != request.getMeterType()) {
+            throw new IllegalArgumentException("Der Zählertyp einer Ablesung lässt sich nicht ändern.");
+        }
+        List<MeterReading> readings = requireLatest(reading);
+        List<MeterReading> derivedEstimates = derivedEstimates(readings);
+        Optional<MeterReading> previousReadingOpt = readings.stream()
+                .skip(1L + derivedEstimates.size())
+                .findFirst();
+
+        validateAgainstPrevious(previousReadingOpt, request);
+
+        String before = describe(reading);
+        meterReadingRepository.deleteAll(derivedEstimates);
+        List<MeterReadingResponse> autoCreated = previousReadingOpt
+                .map(prev -> createEstimatedReadingsForMissedFridays(prev, request))
+                .orElse(Collections.emptyList());
+
+        reading.setReadingValue(request.getReadingValue());
+        reading.setReadingDate(request.getReadingDate());
+        reading.setReadingWeek(resolveReadingWeek(request));
+        reading.setNotes(request.getNotes());
+        reading.setEstimated(false);
+        MeterReading saved = meterReadingRepository.save(reading);
+        auditService.record("meter-reading.update", before + " -> " + describe(saved));
+
+        return MeterReadingCreateResponse.builder()
+                .reading(convertToResponseWithConsumption(saved))
+                .autoCreatedReadings(autoCreated)
+                .build();
+    }
+
+    /**
+     * Löscht die aktuelle Ablesung eines Zählers samt der aus ihr abgeleiteten Schätzwerte.
+     *
+     * @throws MeterReadingNotFoundException wenn die Ablesung nicht existiert
+     * @throws IllegalArgumentException wenn sie nicht die aktuelle ist
+     */
+    @Transactional
+    public void deleteLatestReading(Long id) {
+        MeterReading reading = findReading(id);
+        List<MeterReading> derivedEstimates = derivedEstimates(requireLatest(reading));
+
+        meterReadingRepository.deleteAll(derivedEstimates);
+        meterReadingRepository.delete(reading);
+        auditService.record("meter-reading.delete", describe(reading));
+    }
+
+    /**
      * Get all meter readings across all meter types for the current calendar year.
      *
      * @return list of meter readings from the current year, newest first
@@ -98,10 +176,8 @@ public class MeterReadingService {
     public List<MeterReadingResponse> getAllMeterReadings() {
         log.debug("Retrieving all meter readings for current year");
         LocalDateTime[] range = currentYearRange();
-        return meterReadingRepository
-                .findAllByReadingDateBetweenOrderByReadingDateDesc(range[0], range[1]).stream()
-                .map(this::convertToResponseWithConsumption)
-                .collect(Collectors.toList());
+        return convertAll(meterReadingRepository
+                .findAllByReadingDateBetweenOrderByReadingDateDesc(range[0], range[1]));
     }
 
     /**
@@ -114,11 +190,8 @@ public class MeterReadingService {
     public List<MeterReadingResponse> getMeterReadingsByType(MeterType meterType) {
         log.debug("Retrieving meter readings for type: {}", meterType);
         LocalDateTime[] range = currentYearRange();
-        return meterReadingRepository
-                .findByMeterTypeAndReadingDateBetween(meterType, range[0], range[1]).stream()
-                .sorted((a, b) -> b.getReadingDate().compareTo(a.getReadingDate()))
-                .map(this::convertToResponseWithConsumption)
-                .collect(Collectors.toList());
+        return convertAll(meterReadingRepository
+                .findByMeterTypeAndReadingDateBetween(meterType, range[0], range[1]));
     }
 
     /**
@@ -131,7 +204,7 @@ public class MeterReadingService {
     @Transactional(readOnly = true)
     public MeterReadingResponse getLatestReading(MeterType meterType) {
         log.debug("Retrieving latest reading for type: {}", meterType);
-        MeterReading reading = meterReadingRepository.findTopByMeterTypeOrderByReadingDateDesc(meterType)
+        MeterReading reading = newestFirst(meterType).stream().findFirst()
                 .orElseThrow(() -> new MeterReadingNotFoundException(
                         "No readings found for meter type: " + meterType));
         return convertToResponseWithConsumption(reading);
@@ -148,8 +221,7 @@ public class MeterReadingService {
     public ConsumptionResponse calculateConsumption(MeterType meterType) {
         log.debug("Calculating consumption for type: {}", meterType);
 
-        List<MeterReading> lastTwoReadings = meterReadingRepository
-                .findTop2ByMeterTypeOrderByReadingDateDesc(meterType);
+        List<MeterReading> lastTwoReadings = newestFirst(meterType);
 
         if (lastTwoReadings.size() < 2) {
             throw new MeterReadingNotFoundException(
@@ -266,21 +338,78 @@ public class MeterReadingService {
     // Validation & conversion helpers
     // -------------------------------------------------------------------------
 
-    private void validateReadingValue(Optional<MeterReading> previousReadingOpt,
-                                      BigDecimal newReadingValue) {
-        previousReadingOpt.ifPresent(previousReading -> {
-            if (newReadingValue.compareTo(previousReading.getReadingValue()) < 0) {
-                log.warn("New reading value {} is less than previous reading {} for meter type {}",
-                        newReadingValue, previousReading.getReadingValue(), previousReading.getMeterType());
-                throw new IllegalArgumentException(
-                        String.format("New reading value (%s) cannot be less than previous reading (%s). " +
-                                        "If the meter was reset, please add a note explaining this.",
-                                newReadingValue, previousReading.getReadingValue()));
+    private void validateAgainstPrevious(Optional<MeterReading> previousReadingOpt,
+                                         MeterReadingRequest request) {
+        LocalDate newDate = request.getReadingDate().toLocalDate();
+        if (newDate.isAfter(LocalDate.now(clock))) {
+            throw new IllegalArgumentException("Das Ablesedatum darf nicht in der Zukunft liegen.");
+        }
+        previousReadingOpt.ifPresent(previous -> {
+            LocalDate previousDate = previous.getReadingDate().toLocalDate();
+            if (!newDate.isAfter(previousDate)) {
+                throw new IllegalArgumentException(String.format(
+                        "Das Ablesedatum muss nach der letzten Ablesung vom %s liegen.",
+                        previousDate.format(GERMAN_DATE)));
+            }
+            if (request.getReadingValue().compareTo(previous.getReadingValue()) < 0) {
+                throw new IllegalArgumentException(String.format(Locale.GERMANY,
+                        "Der Zählerstand %.2f ist kleiner als die letzte Ablesung vom %s (%.2f).",
+                        request.getReadingValue(), previousDate.format(GERMAN_DATE),
+                        previous.getReadingValue()));
             }
         });
     }
 
+    private List<MeterReading> newestFirst(MeterType meterType) {
+        return meterReadingRepository.findByMeterTypeOrderByReadingDateDesc(meterType).stream()
+                .sorted(NEWEST_FIRST)
+                .toList();
+    }
+
+    private MeterReading findReading(Long id) {
+        return meterReadingRepository.findById(id)
+                .orElseThrow(() -> new MeterReadingNotFoundException("Ablesung nicht gefunden: " + id));
+    }
+
+    /** Alle Ablesungen des Zählers, neueste zuerst; die übergebene muss die aktuelle sein. */
+    private List<MeterReading> requireLatest(MeterReading reading) {
+        List<MeterReading> readings = newestFirst(reading.getMeterType());
+        if (!readings.get(0).getId().equals(reading.getId())) {
+            throw new IllegalArgumentException(
+                    "Nur die aktuelle Ablesung eines Zählers lässt sich korrigieren oder löschen.");
+        }
+        return readings;
+    }
+
+    /** Die Schätzwerte zwischen der aktuellen und der vorherigen echten Ablesung. */
+    private List<MeterReading> derivedEstimates(List<MeterReading> newestFirst) {
+        return newestFirst.stream()
+                .skip(1)
+                .takeWhile(MeterReading::isEstimated)
+                .toList();
+    }
+
+    private String describe(MeterReading reading) {
+        return String.format("%s %s: %s", reading.getMeterType(),
+                reading.getReadingDate().toLocalDate().format(GERMAN_DATE),
+                reading.getReadingValue().toPlainString());
+    }
+
+    private List<MeterReadingResponse> convertAll(List<MeterReading> readings) {
+        Map<MeterType, List<MeterReading>> byType = new EnumMap<>(MeterType.class);
+        return readings.stream()
+                .sorted(NEWEST_FIRST)
+                .map(reading -> convertToResponse(reading,
+                        byType.computeIfAbsent(reading.getMeterType(), this::newestFirst)))
+                .collect(Collectors.toList());
+    }
+
     private MeterReadingResponse convertToResponseWithConsumption(MeterReading reading) {
+        return convertToResponse(reading, newestFirst(reading.getMeterType()));
+    }
+
+    private MeterReadingResponse convertToResponse(MeterReading reading, List<MeterReading> newestFirst) {
+        boolean latest = !newestFirst.isEmpty() && newestFirst.get(0).getId().equals(reading.getId());
         MeterReadingResponse response = MeterReadingResponse.builder()
                 .id(reading.getId())
                 .meterType(reading.getMeterType())
@@ -289,15 +418,13 @@ public class MeterReadingService {
                 .readingDate(reading.getReadingDate())
                 .notes(reading.getNotes())
                 .estimated(reading.isEstimated())
+                .latest(latest)
                 .createdAt(reading.getCreatedAt())
                 .updatedAt(reading.getUpdatedAt())
                 .build();
 
-        List<MeterReading> lastTwoReadings = meterReadingRepository
-                .findTop2ByMeterTypeOrderByReadingDateDesc(reading.getMeterType());
-
-        if (lastTwoReadings.size() == 2 && lastTwoReadings.get(0).getId().equals(reading.getId())) {
-            MeterReading previousReading = lastTwoReadings.get(1);
+        if (latest && newestFirst.size() >= 2) {
+            MeterReading previousReading = newestFirst.get(1);
             BigDecimal consumption = reading.getReadingValue()
                     .subtract(previousReading.getReadingValue());
             long daysBetween = ChronoUnit.DAYS.between(
