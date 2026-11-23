@@ -48,6 +48,7 @@ public class ChargingPollingService {
     private final ChargingHistoryRecorder historyRecorder;
     private final ChargingForecastService forecastService;
     private final ChargingStationMigrator stationMigrator;
+    private final ChargingWatchService watchService;
 
     /** Zuletzt erfolgreich gemeldete Updates je Station; Basis fuer unavailable mit erhaltenen Attributen. */
     private final Map<String, EntityStateUpdate> lastReported = new HashMap<>();
@@ -65,7 +66,8 @@ public class ChargingPollingService {
                                   ChargingEntityMapper mapper, EntityStateService entityStateService, Clock clock,
                                   SystemJobMonitor jobMonitor, ChargingHistoryRecorder historyRecorder,
                                   ChargingForecastService forecastService,
-                                  ChargingStationMigrator stationMigrator) {
+                                  ChargingStationMigrator stationMigrator,
+                                  ChargingWatchService watchService) {
         this.properties = properties;
         this.source = source;
         this.settingsService = settingsService;
@@ -79,6 +81,7 @@ public class ChargingPollingService {
         this.historyRecorder = historyRecorder;
         this.forecastService = forecastService;
         this.stationMigrator = stationMigrator;
+        this.watchService = watchService;
     }
 
     @Scheduled(fixedDelayString = "#{${charging.area-poll-seconds:300} * 1000}",
@@ -137,6 +140,7 @@ public class ChargingPollingService {
                 settings.homeLongitude(), settings.radiusKm(), settings.minPowerKw());
         snapshot.updateArea(filtered, clock.instant());
         log.debug("Ladesaeulen-Umkreis: {} von {} Stationen im Kreis", filtered.size(), raw.size());
+        watchService.checkWatches();
     }
 
     /** Ein Favoriten-Durchlauf; Fehler je Favorit isoliert, Rate-Limit bricht ab. */
@@ -202,6 +206,7 @@ public class ChargingPollingService {
         }
         Instant polledAt = (!details.isEmpty() || favorites.isEmpty()) ? clock.instant() : snapshot.lastPolledAt();
         snapshot.updateFavoriteDetails(merged, polledAt);
+        watchService.checkWatches();
     }
 
     /** Die Vorhersage ist Beiwerk: ein Fehler darf die Entität nie verhindern. */

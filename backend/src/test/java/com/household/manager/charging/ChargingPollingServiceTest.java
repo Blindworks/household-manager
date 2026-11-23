@@ -39,6 +39,8 @@ class ChargingPollingServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-19T10:00:00Z");
 
     @Mock
+    private ChargingWatchService watchService;
+    @Mock
     private SystemJobMonitor jobMonitor;
     @Mock
     private ChargingStationSource source;
@@ -75,7 +77,7 @@ class ChargingPollingServiceTest {
         snapshot = new ChargingSnapshot();
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
                 snapshot, new ChargingEntityMapper(Clock.fixed(NOW, ZoneOffset.UTC)), entityStateService,
-                Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder, forecastService, stationMigrator);
+                Clock.fixed(NOW, ZoneOffset.UTC), jobMonitor, historyRecorder, forecastService, stationMigrator, watchService);
         // lenient: nicht jeder Test (z. B. die reinen Favoriten-Tests) fragt settingsService ab.
         org.mockito.Mockito.lenient().when(settingsService.getSettings())
                 .thenReturn(new ChargingSettings(50.0, 8.0, 10.0, 50.0));
@@ -154,7 +156,7 @@ class ChargingPollingServiceTest {
         };
         service = new ChargingPollingService(properties, source, settingsService, favoriteService, tracker,
                 snapshot, new ChargingEntityMapper(movable), entityStateService, movable, jobMonitor,
-                historyRecorder, forecastService, stationMigrator);
+                historyRecorder, forecastService, stationMigrator, watchService);
         when(favoriteService.list()).thenReturn(List.of(favorite("S1")));
         when(source.stationDetails("S1")).thenReturn(details("S1", ChargePointStatus.FREE));
         when(tracker.occupancyFor("S1")).thenReturn(Map.of());

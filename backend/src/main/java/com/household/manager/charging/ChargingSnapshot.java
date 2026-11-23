@@ -44,6 +44,23 @@ public class ChargingSnapshot {
         return Optional.ofNullable(favoriteDetails.get(stationId));
     }
 
+    /**
+     * Freie und gesamte Ladepunkte einer Station: Favoriten-Details (minuetlich) vor dem Umkreis-Stand
+     * (5 min). Einzige Definition fuer den Lade-Waechter; leer, solange die Station nirgends bekannt ist.
+     */
+    public Optional<Availability> availability(String stationId) {
+        ChargingStationDetails d = favoriteDetails.get(stationId);
+        if (d != null) {
+            int free = (int) d.chargePoints().stream().filter(p -> p.status() == ChargePointStatus.FREE).count();
+            return Optional.of(new Availability(free, d.chargePoints().size()));
+        }
+        ChargingStation s = areaStations.get(stationId);
+        return s == null ? Optional.empty() : Optional.of(new Availability(s.free(), s.total()));
+    }
+
+    public record Availability(int free, int total) {
+    }
+
     /** Letzter erfolgreicher Umkreis-Poll; null, solange nie einer gelang. */
     public Instant lastAreaPolledAt() {
         return lastAreaPolledAt;

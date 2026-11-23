@@ -298,6 +298,9 @@ public class SecurityConfig {
                         // jeder vor dem Tablet darf sie aendern, die Historie bleibt beim Entfernen erhalten.
                         .requestMatchers(HttpMethod.PUT, "/v1/charging/favorites/*").hasRole("KIOSK")
                         .requestMatchers(HttpMethod.DELETE, "/v1/charging/favorites/*").hasRole("KIOSK")
+                        // "Benachrichtigen, wenn frei" am Wandtablet (Spec 2026-11-23): nur ein Push-Auftrag.
+                        .requestMatchers(HttpMethod.PUT, "/v1/charging/watches/*/*").hasRole("KIOSK")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/charging/watches/*/*").hasRole("KIOSK")
                         .requestMatchers(HttpMethod.GET, "/v1/**", "/energy/**", "/devices/**",
                                 "/kasa/**", "/tapo/**", "/meross/**", "/shelly/**").hasRole("KIOSK")
                         // Alles Uebrige (Geraete schalten, Kalender/Zaehler pflegen, Ansagen ...)
