@@ -60,6 +60,7 @@
       display: flex;
       align-items: center;
       gap: var(--spacing-lg);
+      position: relative;
       width: 100%;
       padding: var(--spacing-xs) var(--spacing-md);
       background-color: var(--color-white);
@@ -100,8 +101,8 @@
       flex: 1;
       min-width: 0;
       flex-wrap: wrap;
-      justify-content: space-between;
-      gap: var(--spacing-xs) var(--spacing-sm);
+      justify-content: flex-start;
+      gap: var(--spacing-xs) var(--spacing-md);
     }
 
     .header__nav--mobile & {
@@ -215,12 +216,66 @@
     z-index: 1100;
   }
 
+  // Das breite Admin-Menü hängt nicht am Menüpunkt, sondern rechtsbündig unter der ganzen
+  // Leiste – sonst ragt es aus dem Fenster, sobald die Leiste umbricht.
+  &__nav-item--wide {
+    position: static;
+  }
+
+  // Ab drei Abschnitten (Admin) nebeneinander statt einer überlangen Spalte.
+  &__nav-submenu--columns {
+    left: auto;
+    right: var(--spacing-md);
+    max-width: calc(100vw - 2 * var(--spacing-md));
+    overflow-x: auto;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(190px, max-content);
+    gap: 0 var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-xs);
+
+    .header__nav-section + .header__nav-section {
+      border-top: none;
+      margin-top: 0;
+      padding-top: 0;
+      border-left: 1px solid var(--color-light-gray);
+    }
+  }
+
+  &__nav-section + &__nav-section {
+    border-top: 1px solid var(--color-light-gray);
+    margin-top: var(--spacing-xs);
+    padding-top: var(--spacing-xs);
+  }
+
+  &__nav-section-title {
+    display: block;
+    padding: var(--spacing-xs) var(--spacing-md) 0;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-gray);
+    opacity: 0.75;
+
+    .header__nav--mobile & {
+      padding-left: calc(var(--spacing-md) + var(--spacing-md));
+    }
+  }
+
+  &__nav-section-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
   &__nav-sublink {
+    white-space: nowrap;
     padding-left: calc(var(--spacing-md) + var(--spacing-md)) !important;
     font-size: 0.9em;
 
     .header__nav-submenu--dropdown & {
-      padding-left: var(--spacing-md) !important;
+      padding: 0.35rem var(--spacing-md) !important;
       border-radius: 0;
     }
   }

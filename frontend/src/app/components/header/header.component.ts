@@ -3,14 +3,9 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { AuthService } from '../../services/auth.service';
-
-interface NavLink {
-  path: string;
-  label: string;
-  exact?: boolean;
-  minRole?: 'MEMBER' | 'ADMIN';
-  children?: NavLink[];
-}
+import {
+  NAV_ENTRIES, MinRole, VisibleNavEntry, VisibleNavGroup, isNavGroup, isPathInGroup, toSections
+} from './nav-entries';
 
 /**
  * Header component for the Household Manager application.
@@ -24,101 +19,28 @@ interface NavLink {
   styleUrl: './header.component.scss'
 })
 export class HeaderComponent {
-  readonly navLinks: NavLink[] = [
-    { path: '/', label: 'Home', exact: true },
-    { path: '/meter-readings', label: 'Zaehlerstaende' },
-    { path: '/consumption', label: 'Verbrauch' },
-    { path: '/calendar', label: 'Kalender' },
-    { path: '/groceries', label: 'Angebote', minRole: 'MEMBER' },
-    {
-      path: '/energy',
-      label: 'Energie',
-      children: [
-        { path: '/energy', label: 'Uebersicht', exact: true },
-        { path: '/energy/battery-control', label: 'Akku Steuerung' },
-        { path: '/energy/history', label: 'Energieverlauf' }
-      ]
-    },
-    {
-      path: '/environment',
-      label: 'Umwelt',
-      children: [
-        { path: '/air-quality', label: 'Luftqualitaet' },
-        { path: '/weather', label: 'Wetter' },
-        { path: '/temperatures', label: 'Temperaturen' },
-        { path: '/waste-collection', label: 'Muellabfuhr' }
-      ]
-    },
-    {
-      path: '/smart-home',
-      label: 'Smart Home',
-      children: [
-        { path: '/tablet/house', label: 'Haus 3D' },
-        { path: '/zigbee', label: 'Zigbee-Sensoren' },
-        { path: '/pets', label: 'Hundetracker' },
-        { path: '/pet-food', label: 'Futtervorrat' },
-        { path: '/cameras', label: 'Kameras' },
-        { path: '/charging', label: 'Ladesäulen' },
-        { path: '/notifications', label: 'Benachrichtigungen' },
-        { path: '/devices', label: 'Geraete' },
-        { path: '/entities', label: 'Entitaeten' },
-        { path: '/custom-entities', label: 'Eigene Helfer' }
-      ]
-    },
-    {
-      path: '/admin',
-      label: 'Admin',
-      children: [
-        { path: '/admin', label: 'Uebersicht', exact: true, minRole: 'ADMIN' },
-        { path: '/flows', label: 'Automatisierungen', minRole: 'ADMIN' },
-        { path: '/announcements', label: 'Ansagen', minRole: 'MEMBER' },
-        { path: '/vision', label: 'Gesichtserkennung', minRole: 'ADMIN' },
-        { path: '/admin/users', label: 'Nutzer', minRole: 'ADMIN' },
-        { path: '/admin/service-tokens', label: 'API-Tokens', minRole: 'ADMIN' },
-        { path: '/admin/audit-log', label: 'Audit-Log', minRole: 'ADMIN' },
-        { path: '/admin/system-log', label: 'Systemprotokoll', minRole: 'ADMIN' },
-        { path: '/admin/calendar-categories', label: 'Kalender-Kategorien', minRole: 'ADMIN' },
-        { path: '/admin/tractive', label: 'Hundetracker-Zuhause', minRole: 'ADMIN' },
-        { path: '/admin/network-devices', label: 'Netzwerk-Geräte', minRole: 'ADMIN' },
-        { path: '/admin/charging', label: 'Ladesäulen', minRole: 'ADMIN' },
-        { path: '/admin/heating', label: 'Heizung', minRole: 'ADMIN' },
-        { path: '/admin/groceries', label: 'Supermärkte', minRole: 'ADMIN' },
-        { path: '/admin/presence', label: 'Anwesenheit', minRole: 'ADMIN' },
-        { path: '/admin/ble-sensors', label: 'Bluetooth-Thermometer', minRole: 'ADMIN' },
-        { path: '/admin/dirigera', label: 'IKEA Dirigera', minRole: 'ADMIN' },
-        { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', minRole: 'ADMIN' },
-        { path: '/admin/house-devices', label: 'Geräteplätze', minRole: 'ADMIN' },
-        { path: '/admin/agent', label: 'Hausverstand', minRole: 'ADMIN' }
-      ]
-    },
-    {
-      path: '/finance',
-      label: 'Ausgaben',
-      minRole: 'MEMBER',
-      children: [
-        { path: '/finance', label: 'Uebersicht', exact: true },
-        { path: '/finance/category-trend', label: 'Kategorien im Verlauf' },
-        { path: '/finance/transactions', label: 'Transaktionen' },
-        { path: '/finance/recurring', label: 'Wiederkehrende' },
-        { path: '/finance/budgets', label: 'Budgets' },
-        { path: '/finance/categories', label: 'Kategorien' },
-        { path: '/finance/rules', label: 'Regeln' },
-        { path: '/finance/accounts', label: 'Konten' }
-      ]
-    },
-  ];
-
   /** Public: das Template filtert die Navigation nach der aktuellen Rolle. */
   readonly auth = inject(AuthService);
 
-  /** Navigationseintraege, gefiltert nach der aktuellen Rolle; leere Gruppen verschwinden. */
-  readonly visibleNavLinks = computed(() => this.navLinks
-    .map(link => ({
-      ...link,
-      children: link.children?.filter(child => this.allows(child.minRole ?? link.minRole))
-    }))
-    .filter(link => this.allows(link.minRole)
-      && (link.children === undefined || link.children.length > 0)));
+  /** Menüeinträge, gefiltert nach der aktuellen Rolle; leere Gruppen verschwinden. */
+  readonly visibleNavEntries = computed<VisibleNavEntry[]>(() => NAV_ENTRIES
+    .filter(entry => this.allows(entry.minRole))
+    .map((entry): VisibleNavEntry | null => {
+      if (!isNavGroup(entry)) {
+        return { kind: 'link', link: entry };
+      }
+      const children = entry.children.filter(child => this.allows(child.minRole ?? entry.minRole));
+      return children.length === 0 ? null : {
+        kind: 'group',
+        group: {
+          key: entry.key,
+          label: entry.label,
+          sections: toSections(children),
+          paths: children.map(child => child.path)
+        }
+      };
+    })
+    .filter((entry): entry is VisibleNavEntry => entry !== null));
 
   /** Signal to track mobile menu open/closed state */
   isMobileMenuOpen = signal<boolean>(false);
@@ -128,7 +50,7 @@ export class HeaderComponent {
 
   constructor(private readonly router: Router) {}
 
-  private allows(minRole?: 'MEMBER' | 'ADMIN'): boolean {
+  private allows(minRole?: MinRole): boolean {
     if (!minRole) {
       return true;
     }
@@ -140,48 +62,28 @@ export class HeaderComponent {
     this.auth.logout().subscribe(() => this.router.navigate(['/login']));
   }
 
-  /**
-   * Toggles the mobile menu visibility.
-   */
   toggleMobileMenu(): void {
     this.isMobileMenuOpen.update(value => !value);
   }
 
-  /**
-   * Closes the mobile menu (used when navigating).
-   */
   closeMobileMenu(): void {
     this.isMobileMenuOpen.set(false);
   }
 
-  /**
-   * Toggles a submenu open/closed.
-   */
-  toggleSubmenu(path: string): void {
-    this.expandedMenu.update(current => current === path ? null : path);
+  toggleSubmenu(key: string): void {
+    this.expandedMenu.update(current => current === key ? null : key);
   }
 
-  /**
-   * Collapses any expanded submenu (used when navigating via a sub-link).
-   */
   closeSubmenu(): void {
     this.expandedMenu.set(null);
   }
 
-  /**
-   * Checks if a submenu is currently expanded.
-   */
-  isSubmenuExpanded(path: string): boolean {
-    return this.expandedMenu() === path;
+  isSubmenuExpanded(key: string): boolean {
+    return this.expandedMenu() === key;
   }
 
-  /**
-   * Checks if any child route of a parent link is currently active.
-   */
-  isParentActive(link: NavLink): boolean {
-    if (!link.children) {
-      return false;
-    }
-    return this.router.url.startsWith(link.path);
+  /** Eine Gruppe gilt als aktiv, wenn die aktuelle Seite zu einem ihrer Einträge gehört. */
+  isGroupActive(group: VisibleNavGroup): boolean {
+    return isPathInGroup(this.router.url, group.paths);
   }
 }

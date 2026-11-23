@@ -990,6 +990,7 @@ docker-compose down
 
 ### Konten-Anmeldungen (Admin → Konten)
 - Seit 2026-11-22 liegen alle Logins bei externen Diensten im ersten Reiter „Konten“ der Seite `/admin` (Standardreiter, direkt verlinkbar über `/admin?tab=konten`): Amazon/Alexa (Browser-Login über den Sidecar-Proxy), Blink (E-Mail/Passwort + 2FA-PIN) und Tractive. Je Dienst eine Komponente in `components/account-logins/` mit gemeinsamem Stil `account-login.scss` (`.account-login` steht in `$admin-scopes`). Die Dirigera-Kopplung bleibt auf `admin/dirigera` (Knopfdruck statt Passwort), der Reiter verlinkt nur dorthin
+- **Hauptmenü (seit 2026-11-22):** einzige Definition `components/header/nav-entries.ts` (`NAV_ENTRIES`), sieben Bereiche: Home, Haushalt (Kalender, Angebote, Müllabfuhr, Hundetracker, Toni-Vorräte, Ansagen), Energie (inkl. Zählerstände und Verbrauch), Umwelt, Smart Home (Abschnitt „Technik“: Automatisierungen, Entitäten, Helfer), Ausgaben, Admin (Abschnitte System / Integrationen / Haus & Dashboard, nebeneinander und rechtsbündig unter der Leiste). `section` an einem Eintrag erzeugt die Zwischenüberschrift; eine Gruppe gilt als aktiv, wenn die URL auf einem ihrer Pfade liegt (`isPathInGroup`). Neue Seiten dort einsortieren, nicht als neuen Hauptpunkt
 - Die früheren Login-Orte zeigen nur noch Status und einen Link: „Ansagen“ (für MEMBER ohne Link, nur Text — `/admin` ist ADMIN), „Gesichtserkennung“, „Hundetracker-Zuhause“ (`admin/tractive`, im Menü umbenannt) und die Kameraseite. Backend und Security unverändert
 
 ### Benutzerverwaltung & API-Sicherheit

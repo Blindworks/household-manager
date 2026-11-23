@@ -27,51 +27,8 @@
 
     @if (isMobileMenuOpen()) {
       <nav class="header__nav header__nav--mobile">
-        <ul class="header__nav-list">
-          @for (link of visibleNavLinks(); track link.path) {
-            <li class="header__nav-item">
-              @if (link.children) {
-                <button
-                  class="header__nav-link header__nav-link--parent"
-                  [class.header__nav-link--active]="isParentActive(link)"
-                  (click)="toggleSubmenu(link.path)"
-                  type="button">
-                  {{ link.label }}
-                  <span class="header__nav-chevron" [class.header__nav-chevron--open]="isSubmenuExpanded(link.path)">&#9662;</span>
-                </button>
-                @if (isSubmenuExpanded(link.path)) {
-                  <ul class="header__nav-submenu">
-                    @for (child of link.children; track child.path) {
-                      <li class="header__nav-subitem">
-                        <a [routerLink]="child.path"
-                           routerLinkActive="header__nav-link--active"
-                           [routerLinkActiveOptions]="{ exact: !!child.exact }"
-                           (click)="closeSubmenu(); closeMobileMenu()"
-                           class="header__nav-link header__nav-sublink">
-                          {{ child.label }}
-                        </a>
-                      </li>
-                    }
-                  </ul>
-                }
-              } @else {
-                <a [routerLink]="link.path"
-                   routerLinkActive="header__nav-link--active"
-                   [routerLinkActiveOptions]="{ exact: !!link.exact }"
-                   (click)="closeMobileMenu()"
-                   class="header__nav-link">
-                  {{ link.label }}
-                </a>
-              }
-            </li>
-          }
-        </ul>
-        @if (auth.currentUser(); as user) {
-          <div class="header__user">
-            <span class="header__user-name">{{ user.displayName }}</span>
-            <button class="header__logout" type="button" (click)="logout()">Abmelden</button>
-          </div>
-        }
+        <ng-container *ngTemplateOutlet="navList; context: { mobile: true }"></ng-container>
+        <ng-container *ngTemplateOutlet="userBox"></ng-container>
       </nav>
     }
   </div>
@@ -84,50 +41,72 @@
         class="header__logo-image"
       />
     </a>
-    <ul class="header__nav-list">
-      @for (link of visibleNavLinks(); track link.path) {
-        <li class="header__nav-item">
-          @if (link.children) {
-            <button
-              class="header__nav-link header__nav-link--parent"
-              [class.header__nav-link--active]="isParentActive(link)"
-              (click)="toggleSubmenu(link.path)"
-              type="button">
-              {{ link.label }}
-              <span class="header__nav-chevron" [class.header__nav-chevron--open]="isSubmenuExpanded(link.path)">&#9662;</span>
-            </button>
-            @if (isSubmenuExpanded(link.path)) {
-              <ul class="header__nav-submenu header__nav-submenu--dropdown">
-                @for (child of link.children; track child.path) {
-                  <li class="header__nav-subitem">
-                    <a [routerLink]="child.path"
-                       routerLinkActive="header__nav-link--active"
-                       [routerLinkActiveOptions]="{ exact: !!child.exact }"
-                       (click)="closeSubmenu()"
-                       class="header__nav-link header__nav-sublink">
-                      {{ child.label }}
-                    </a>
-                  </li>
-                }
-              </ul>
-            }
-          } @else {
-            <a [routerLink]="link.path"
-               routerLinkActive="header__nav-link--active"
-               [routerLinkActiveOptions]="{ exact: !!link.exact }"
-               (click)="closeSubmenu()"
-               class="header__nav-link">
-              {{ link.label }}
-            </a>
-          }
-        </li>
-      }
-    </ul>
-    @if (auth.currentUser(); as user) {
-      <div class="header__user">
-        <span class="header__user-name">{{ user.displayName }}</span>
-        <button class="header__logout" type="button" (click)="logout()">Abmelden</button>
-      </div>
-    }
+    <ng-container *ngTemplateOutlet="navList; context: { mobile: false }"></ng-container>
+    <ng-container *ngTemplateOutlet="userBox"></ng-container>
   </nav>
 </header>
+
+<!-- Eine Liste für Handy und Desktop; nur das Aufklappmenü unterscheidet sich (eingerückt vs. Dropdown). -->
+<ng-template #navList let-mobile="mobile">
+  <ul class="header__nav-list">
+    @for (entry of visibleNavEntries(); track entry.kind === 'link' ? entry.link.path : entry.group.key) {
+      <li class="header__nav-item"
+          [class.header__nav-item--wide]="!mobile && entry.kind === 'group' && entry.group.sections.length > 2">
+        @if (entry.kind === 'group') {
+          <button
+            class="header__nav-link header__nav-link--parent"
+            [class.header__nav-link--active]="isGroupActive(entry.group)"
+            [attr.aria-expanded]="isSubmenuExpanded(entry.group.key)"
+            (click)="toggleSubmenu(entry.group.key)"
+            type="button">
+            {{ entry.group.label }}
+            <span class="header__nav-chevron" [class.header__nav-chevron--open]="isSubmenuExpanded(entry.group.key)">&#9662;</span>
+          </button>
+          @if (isSubmenuExpanded(entry.group.key)) {
+            <div class="header__nav-submenu"
+                 [class.header__nav-submenu--dropdown]="!mobile"
+                 [class.header__nav-submenu--columns]="!mobile && entry.group.sections.length > 2">
+              @for (section of entry.group.sections; track $index) {
+                <div class="header__nav-section">
+                  @if (section.title) {
+                    <span class="header__nav-section-title">{{ section.title }}</span>
+                  }
+                  <ul class="header__nav-section-list">
+                    @for (child of section.links; track child.path) {
+                      <li class="header__nav-subitem">
+                        <a [routerLink]="child.path"
+                           routerLinkActive="header__nav-link--active"
+                           [routerLinkActiveOptions]="{ exact: !!child.exact }"
+                           (click)="closeSubmenu(); closeMobileMenu()"
+                           class="header__nav-link header__nav-sublink">
+                          {{ child.label }}
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            </div>
+          }
+        } @else {
+          <a [routerLink]="entry.link.path"
+             routerLinkActive="header__nav-link--active"
+             [routerLinkActiveOptions]="{ exact: !!entry.link.exact }"
+             (click)="closeSubmenu(); closeMobileMenu()"
+             class="header__nav-link">
+            {{ entry.link.label }}
+          </a>
+        }
+      </li>
+    }
+  </ul>
+</ng-template>
+
+<ng-template #userBox>
+  @if (auth.currentUser(); as user) {
+    <div class="header__user">
+      <span class="header__user-name">{{ user.displayName }}</span>
+      <button class="header__logout" type="button" (click)="logout()">Abmelden</button>
+    </div>
+  }
+</ng-template>
