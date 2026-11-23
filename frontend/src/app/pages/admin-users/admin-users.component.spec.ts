@@ -105,4 +105,28 @@ describe('AdminUsersComponent', () => {
     expect(service.setPassword).not.toHaveBeenCalled();
     expect(text(fixture, '.admin-users__error')).toContain('mindestens 8 Zeichen');
   });
+
+  it('behält ungespeicherte Eingaben anderer Zeilen bei Speichern, Fehler und Anlegen', () => {
+    const bene: AppUser = { ...tablet, id: 3, username: 'benedikt', role: 'MEMBER', wallTablet: false };
+    service.getUsers.and.callFake(() => of([{ ...tablet }, { ...bene }]));
+    const fixture = TestBed.createComponent(AdminUsersComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.users[1].role = 'ADMIN';
+
+    service.updateUser.and.returnValue(of({ ...tablet, displayName: 'Vom Server' }));
+    component.save(component.users[0]);
+    expect(component.users[0].displayName).toBe('Vom Server');
+    expect(component.users[1].role).toBe('ADMIN');
+
+    service.updateUser.and.returnValue(throwError(() => new Error('Kaputt')));
+    component.save(component.users[0]);
+    expect(component.users[1].role).toBe('ADMIN');
+
+    service.createUser.and.returnValue(of({ ...tablet, id: 10, username: 'neu' }));
+    component.form = { username: 'neu', displayName: 'Neu', password: 'geheim123', role: 'MEMBER', wallTablet: false };
+    component.create();
+    expect(component.users.map(u => u.id)).toEqual([9, 3, 10]);
+    expect(component.users[1].role).toBe('ADMIN');
+  });
 });

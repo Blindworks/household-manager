@@ -50,7 +50,7 @@ export class AdminUsersComponent implements OnInit {
       next: user => {
         this.successMessage = `Benutzer „${user.username}“ wurde angelegt.`;
         this.form = { username: '', displayName: '', password: '', role: 'MEMBER', wallTablet: false };
-        this.load();
+        this.users = [...this.users, user];
       },
       error: (e: Error) => (this.errorMessage = e.message)
     });
@@ -67,11 +67,12 @@ export class AdminUsersComponent implements OnInit {
       displayName, role: user.role, enabled: user.enabled,
       wallTablet: user.wallTablet
     }).subscribe({
-      next: () => {
-        this.successMessage = `Benutzer „${user.username}“ wurde gespeichert.`;
-        this.load();
+      next: saved => {
+        this.successMessage = `Benutzer „${saved.username}“ wurde gespeichert.`;
+        // Nur diese Zeile ersetzen: ein Neuladen verwürfe ungespeicherte Eingaben der anderen.
+        this.users = this.users.map(u => (u.id === saved.id ? saved : u));
       },
-      error: (e: Error) => { this.errorMessage = e.message; this.load(); }
+      error: (e: Error) => (this.errorMessage = e.message)
     });
   }
 
