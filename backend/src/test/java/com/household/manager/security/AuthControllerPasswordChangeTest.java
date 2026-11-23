@@ -58,9 +58,10 @@ class AuthControllerPasswordChangeTest {
     @Test
     void passwortwechselErneuertSessionPrincipalUndRememberMeCookie() {
         AppUserPrincipal refreshedPrincipal = new AppUserPrincipal(AppUser.builder()
-                .username("admin").displayName("Administrator").passwordHash("$2a$neuerHash")
+                .id(4L).username("admin").displayName("Administrator").passwordHash("$2a$neuerHash")
                 .role(UserRole.ADMIN).enabled(true).mustChangePassword(false).build());
         when(appUserDetailsService.loadUserByUsername("admin")).thenReturn(refreshedPrincipal);
+        when(appUserService.isWallTablet(4L)).thenReturn(true);
 
         TokenBasedRememberMeServices rememberMeServices =
                 new TokenBasedRememberMeServices("dummy-key", appUserDetailsService);
@@ -92,6 +93,8 @@ class AuthControllerPasswordChangeTest {
         Authentication current = SecurityContextHolder.getContext().getAuthentication();
         assertThat(current.getPrincipal()).isSameAs(refreshedPrincipal);
         assertThat(result.mustChangePassword()).isFalse();
+        // Wandtablet-Merkmal geht beim Passwortwechsel nicht verloren
+        assertThat(result.wallTablet()).isTrue();
         org.mockito.Mockito.verify(securityContextRepository).saveContext(any(), any(), any());
 
         // Remember-Me-Cookie wurde mit dem frischen Principal neu ausgestellt

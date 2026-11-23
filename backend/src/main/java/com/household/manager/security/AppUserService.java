@@ -28,7 +28,8 @@ public class AppUserService {
     }
 
     @Transactional
-    public AppUser create(String username, String displayName, String password, UserRole role) {
+    public AppUser create(String username, String displayName, String password, UserRole role,
+                          boolean wallTablet) {
         if (repository.existsByUsername(username)) {
             throw new DuplicateEntityException("Benutzername bereits vergeben: " + username);
         }
@@ -37,6 +38,7 @@ public class AppUserService {
                 .displayName(displayName)
                 .passwordHash(passwordEncoder.encode(password))
                 .role(role)
+                .wallTablet(wallTablet)
                 .build());
     }
 
@@ -48,7 +50,8 @@ public class AppUserService {
      * Request ueber die neu geladene Rolle (degradiert), nicht sofort.
      */
     @Transactional
-    public AppUser update(Long id, String displayName, UserRole role, boolean enabled) {
+    public AppUser update(Long id, String displayName, UserRole role, boolean enabled,
+                          boolean wallTablet) {
         AppUser user = getOrThrow(id);
         boolean losesAdmin = user.getRole() == UserRole.ADMIN && (role != UserRole.ADMIN || !enabled);
         if (losesAdmin && countOtherActiveAdmins(user) == 0) {
@@ -57,6 +60,7 @@ public class AppUserService {
         user.setDisplayName(displayName);
         user.setRole(role);
         user.setEnabled(enabled);
+        user.setWallTablet(wallTablet);
         return repository.save(user);
     }
 
@@ -101,6 +105,18 @@ public class AppUserService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setMustChangePassword(false);
         repository.save(user);
+    }
+
+    /**
+     * Frisch aus der DB, damit ein im Admin gesetztes Merkmal ohne
+     * Neuanmeldung greift; unbekannte Nutzer und null sind kein Wandtablet.
+     */
+    @Transactional(readOnly = true)
+    public boolean isWallTablet(Long id) {
+        if (id == null) {
+            return false;
+        }
+        return repository.findById(id).map(AppUser::isWallTablet).orElse(false);
     }
 
     private AppUser getOrThrow(Long id) {

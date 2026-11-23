@@ -42,7 +42,7 @@ class AppUserServiceTest {
     void createHashtDasPasswortMitBcrypt() {
         when(repository.existsByUsername("mia")).thenReturn(false);
 
-        AppUser user = service.create("mia", "Mia", "geheim123", UserRole.MEMBER);
+        AppUser user = service.create("mia", "Mia", "geheim123", UserRole.MEMBER, false);
 
         assertThat(user.getPasswordHash()).startsWith("$2").isNotEqualTo("geheim123");
         assertThat(new BCryptPasswordEncoder().matches("geheim123", user.getPasswordHash())).isTrue();
@@ -52,7 +52,7 @@ class AppUserServiceTest {
     void createMitVergebenemNamenWirftDuplicate() {
         when(repository.existsByUsername("mia")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create("mia", "Mia", "x", UserRole.MEMBER))
+        assertThatThrownBy(() -> service.create("mia", "Mia", "x", UserRole.MEMBER, false))
                 .isInstanceOf(DuplicateEntityException.class);
     }
 
@@ -63,9 +63,9 @@ class AppUserServiceTest {
         when(repository.findById(1L)).thenReturn(Optional.of(admin));
         when(repository.findAll()).thenReturn(List.of(admin));
 
-        assertThatThrownBy(() -> service.update(1L, "Admin", UserRole.MEMBER, true))
+        assertThatThrownBy(() -> service.update(1L, "Admin", UserRole.MEMBER, true, false))
                 .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> service.update(1L, "Admin", UserRole.ADMIN, false))
+        assertThatThrownBy(() -> service.update(1L, "Admin", UserRole.ADMIN, false, false))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -118,5 +118,33 @@ class AppUserServiceTest {
         assertThat(user.isMustChangePassword()).isFalse();
         assertThat(encoder.matches("neuesPasswort1", user.getPasswordHash())).isTrue();
         verify(repository).save(user);
+    }
+
+    @Test
+    void updateSetztWandtabletMerkmal() {
+        AppUser user = AppUser.builder().id(3L).username("tablet").displayName("Tablet")
+                .passwordHash("x").role(UserRole.MEMBER).enabled(true).build();
+        when(repository.findById(3L)).thenReturn(Optional.of(user));
+
+        AppUser updated = service.update(3L, "Wandtablet", UserRole.MEMBER, true, true);
+
+        assertThat(updated.isWallTablet()).isTrue();
+    }
+
+    @Test
+    void isWallTabletLiestFrischAusDerDatenbank() {
+        when(repository.findById(3L)).thenReturn(Optional.of(AppUser.builder().id(3L)
+                .username("tablet").displayName("Tablet").passwordHash("x")
+                .role(UserRole.MEMBER).wallTablet(true).build()));
+
+        assertThat(service.isWallTablet(3L)).isTrue();
+    }
+
+    @Test
+    void isWallTabletOhneNutzerIstFalse() {
+        when(repository.findById(8L)).thenReturn(Optional.empty());
+
+        assertThat(service.isWallTablet(8L)).isFalse();
+        assertThat(service.isWallTablet(null)).isFalse();
     }
 }

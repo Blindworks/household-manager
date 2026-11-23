@@ -16,22 +16,24 @@ public final class UserAdminDtos {
     }
 
     public record UserResponse(Long id, String username, String displayName, UserRole role,
-                               boolean enabled, LocalDateTime createdAt) {
+                               boolean enabled, boolean wallTablet, LocalDateTime createdAt) {
         public static UserResponse from(AppUser user) {
             return new UserResponse(user.getId(), user.getUsername(), user.getDisplayName(),
-                    user.getRole(), user.isEnabled(), user.getCreatedAt());
+                    user.getRole(), user.isEnabled(), user.isWallTablet(), user.getCreatedAt());
         }
     }
 
     public record CreateUserRequest(@NotBlank @Size(max = 100) String username,
                                     @NotBlank @Size(max = 200) String displayName,
                                     @NotBlank @Size(min = 8) String password,
-                                    @NotNull UserRole role) {
+                                    @NotNull UserRole role,
+                                    boolean wallTablet) {
     }
 
     public record UpdateUserRequest(@NotBlank @Size(max = 200) String displayName,
                                     @NotNull UserRole role,
-                                    boolean enabled) {
+                                    boolean enabled,
+                                    boolean wallTablet) {
     }
 
     public record PasswordRequest(@NotBlank @Size(min = 8) String password) {

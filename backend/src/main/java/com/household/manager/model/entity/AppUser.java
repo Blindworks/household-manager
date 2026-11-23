@@ -42,6 +42,14 @@ public class AppUser {
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword = false;
 
+    /**
+     * true = Konto des Wandtablets: nur dort erscheinen Waesche-Dialog und
+     * Toni-allein-Screen. Steuert keine Rechte (das Konto ist MEMBER).
+     */
+    @Builder.Default
+    @Column(name = "wall_tablet", nullable = false)
+    private boolean wallTablet = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -53,7 +53,7 @@ public class AuthController {
             securityContextRepository.saveContext(context, request, response);
             rememberMeServices.loginSuccess(request, response, authentication);
             auditService.record(AuditActor.user(authentication.getName()), "auth.login", null);
-            return CurrentUserResponse.from(authentication);
+            return respond(authentication);
         } catch (AuthenticationException ex) {
             auditService.record(AuditActor.user(loginRequest.username()), "auth.login-failed", null);
             throw ex;
@@ -73,7 +73,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public CurrentUserResponse me(Authentication authentication) {
-        return CurrentUserResponse.from(authentication);
+        return respond(authentication);
     }
 
     /**
@@ -90,7 +90,14 @@ public class AuthController {
                 changeRequest.currentPassword(), changeRequest.newPassword());
         Authentication refreshed = refreshAuthentication(authentication.getName(), request, response);
         auditService.record("auth.change-password", null);
-        return CurrentUserResponse.from(refreshed);
+        return respond(refreshed);
+    }
+
+    /** Wandtablet-Merkmal frisch aus der DB: ein im Admin gesetztes Haekchen greift ohne Neuanmeldung. */
+    private CurrentUserResponse respond(Authentication authentication) {
+        Long id = authentication.getPrincipal() instanceof AppUserPrincipal principal
+                ? principal.getId() : null;
+        return CurrentUserResponse.from(authentication, appUserService.isWallTablet(id));
     }
 
     private Authentication refreshAuthentication(String username, HttpServletRequest request,

@@ -19,7 +19,7 @@ class CurrentUserResponseTest {
         var auth = UsernamePasswordAuthenticationToken.authenticated(
                 principal, null, principal.getAuthorities());
 
-        CurrentUserResponse response = CurrentUserResponse.from(auth);
+        CurrentUserResponse response = CurrentUserResponse.from(auth, false);
 
         assertThat(response.username()).isEqualTo("bene");
         assertThat(response.displayName()).isEqualTo("Benedikt");
@@ -35,7 +35,7 @@ class CurrentUserResponseTest {
         var auth = UsernamePasswordAuthenticationToken.authenticated(
                 principal, null, principal.getAuthorities());
 
-        assertThat(CurrentUserResponse.from(auth).id()).isEqualTo(5L);
+        assertThat(CurrentUserResponse.from(auth, false).id()).isEqualTo(5L);
     }
 
     @Test
@@ -43,7 +43,7 @@ class CurrentUserResponseTest {
         var auth = UsernamePasswordAuthenticationToken.authenticated(
                 "tablet", null, AuthorityUtils.createAuthorityList("ROLE_KIOSK", "SERVICE"));
 
-        assertThat(CurrentUserResponse.from(auth).id()).isNull();
+        assertThat(CurrentUserResponse.from(auth, false).id()).isNull();
     }
 
     @Test
@@ -54,7 +54,7 @@ class CurrentUserResponseTest {
         var auth = UsernamePasswordAuthenticationToken.authenticated(
                 principal, null, principal.getAuthorities());
 
-        assertThat(CurrentUserResponse.from(auth).mustChangePassword()).isTrue();
+        assertThat(CurrentUserResponse.from(auth, false).mustChangePassword()).isTrue();
     }
 
     @Test
@@ -62,11 +62,30 @@ class CurrentUserResponseTest {
         var auth = UsernamePasswordAuthenticationToken.authenticated(
                 "tablet", null, AuthorityUtils.createAuthorityList("ROLE_KIOSK", "SERVICE"));
 
-        CurrentUserResponse response = CurrentUserResponse.from(auth);
+        CurrentUserResponse response = CurrentUserResponse.from(auth, false);
 
         assertThat(response.username()).isEqualTo("tablet");
         assertThat(response.displayName()).isEqualTo("tablet");
         assertThat(response.role()).isEqualTo("KIOSK");
         assertThat(response.mustChangePassword()).isFalse();
+    }
+
+    @Test
+    void nutzerUebernimmtWandtabletMerkmal() {
+        AppUserPrincipal principal = new AppUserPrincipal(AppUser.builder()
+                .id(9L).username("tablet").displayName("Wandtablet").passwordHash("x")
+                .role(UserRole.MEMBER).enabled(true).build());
+        var auth = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+
+        assertThat(CurrentUserResponse.from(auth, true).wallTablet()).isTrue();
+    }
+
+    @Test
+    void serviceTokenIstNieWandtablet() {
+        var auth = UsernamePasswordAuthenticationToken.authenticated(
+                "tablet", null, AuthorityUtils.createAuthorityList("ROLE_KIOSK", "SERVICE"));
+
+        assertThat(CurrentUserResponse.from(auth, true).wallTablet()).isFalse();
     }
 }

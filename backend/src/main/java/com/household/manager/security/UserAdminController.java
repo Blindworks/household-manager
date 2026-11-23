@@ -28,16 +28,18 @@ public class UserAdminController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
         AppUser user = appUserService.create(request.username(), request.displayName(),
-                request.password(), request.role());
-        auditService.record("user.create", user.getUsername() + " (" + user.getRole() + ")");
+                request.password(), request.role(), request.wallTablet());
+        auditService.record("user.create", user.getUsername() + " (" + user.getRole()
+                + wallTabletSuffix(user) + ")");
         return UserResponse.from(user);
     }
 
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
-        AppUser user = appUserService.update(id, request.displayName(), request.role(), request.enabled());
+        AppUser user = appUserService.update(id, request.displayName(), request.role(), request.enabled(),
+                request.wallTablet());
         auditService.record("user.update", user.getUsername() + " (" + user.getRole()
-                + (user.isEnabled() ? ", aktiv" : ", deaktiviert") + ")");
+                + (user.isEnabled() ? ", aktiv" : ", deaktiviert") + wallTabletSuffix(user) + ")");
         return UserResponse.from(user);
     }
 
@@ -46,5 +48,9 @@ public class UserAdminController {
     public void setPassword(@PathVariable Long id, @Valid @RequestBody PasswordRequest request) {
         appUserService.setPassword(id, request.password());
         auditService.record("user.set-password", "Nutzer-Id " + id);
+    }
+
+    private static String wallTabletSuffix(AppUser user) {
+        return user.isWallTablet() ? ", Wandtablet" : "";
     }
 }
