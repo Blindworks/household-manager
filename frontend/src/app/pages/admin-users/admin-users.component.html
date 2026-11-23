@@ -4,6 +4,9 @@
   @if (errorMessage) {
     <div class="admin-users__error" role="alert">{{ errorMessage }}</div>
   }
+  @if (successMessage) {
+    <div class="admin-users__success" role="status">{{ successMessage }}</div>
+  }
 
   <form class="admin-users__form" (ngSubmit)="create()">
     <input name="username" placeholder="Benutzername" [(ngModel)]="form.username">
