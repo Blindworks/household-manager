@@ -53,6 +53,35 @@ describe('HeaderComponent', () => {
       .toEqual(['System', 'Integrationen', 'Haus & Dashboard']);
   });
 
+  it('zeigt oben rechts Avatar und Namen, das Menü erst nach dem Antippen', () => {
+    const el = loginAs('ADMIN');
+    const desktop = el.querySelector('.header__nav--desktop')!;
+    expect(desktop.querySelector('.header__avatar')!.textContent!.trim()).toBe('B');
+    expect(desktop.querySelector('.header__user-menu')).toBeNull();
+
+    (desktop.querySelector('.header__user-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const menu = desktop.querySelector('.header__user-menu')!;
+    expect(menu.textContent).toContain('Administrator · bene');
+    expect(Array.from(menu.querySelectorAll('.header__user-item')).map(i => i.textContent!.replace(/key|tablet|logout/, '').trim()))
+      .toEqual(['Passwort ändern', 'Tablet-Ansicht', 'Abmelden']);
+  });
+
+  it('schließt offene Menüs bei einem Klick außerhalb des Headers', () => {
+    loginAs('ADMIN');
+    component.toggleSubmenu(component.USER_MENU);
+    document.body.click();
+    expect(component.expandedMenu()).toBeNull();
+  });
+
+  it('öffnet nie Nutzer- und Bereichsmenü gleichzeitig', () => {
+    loginAs('ADMIN');
+    component.toggleSubmenu(component.USER_MENU);
+    component.toggleSubmenu('admin');
+    expect(component.isSubmenuExpanded(component.USER_MENU)).toBeFalse();
+  });
+
   it('blendet Admin und Ausgaben für das Wandtablet aus', () => {
     const el = loginAs('KIOSK');
     expect(topLabels(el)).toEqual(['Home', 'Haushalt', 'Energie', 'Umwelt', 'Smart Home']);

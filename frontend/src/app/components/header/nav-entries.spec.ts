@@ -1,4 +1,4 @@
-import { NAV_ENTRIES, NavLink, isNavGroup, isPathInGroup, toSections } from './nav-entries';
+import { NAV_ENTRIES, NavLink, isNavGroup, isPathInGroup, toSections, userInitials } from './nav-entries';
 
 describe('nav-entries', () => {
   it('fasst aufeinanderfolgende Einträge gleichen Abschnitts zusammen', () => {
@@ -24,6 +24,13 @@ describe('nav-entries', () => {
   it('führt jeden Pfad genau einmal', () => {
     const paths = NAV_ENTRIES.flatMap(entry => isNavGroup(entry) ? entry.children.map(c => c.path) : [entry.path]);
     expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  it('bildet Initialen aus erstem und letztem Wort', () => {
+    expect(userInitials('Benedikt Lind')).toBe('BL');
+    expect(userInitials('Anna Maria Schmidt')).toBe('AS');
+    expect(userInitials('administrator')).toBe('A');
+    expect(userInitials('  ')).toBe('?');
   });
 
   it('hält die Hauptleiste kurz', () => {

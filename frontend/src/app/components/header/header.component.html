@@ -105,8 +105,37 @@
 <ng-template #userBox>
   @if (auth.currentUser(); as user) {
     <div class="header__user">
-      <span class="header__user-name">{{ user.displayName }}</span>
-      <button class="header__logout" type="button" (click)="logout()">Abmelden</button>
+      <button
+        class="header__user-toggle"
+        type="button"
+        [attr.aria-expanded]="isSubmenuExpanded(USER_MENU)"
+        aria-haspopup="menu"
+        (click)="toggleSubmenu(USER_MENU)">
+        <span class="header__avatar" aria-hidden="true">{{ initials(user.displayName) }}</span>
+        <span class="header__user-name">{{ user.displayName }}</span>
+        <span class="header__nav-chevron" [class.header__nav-chevron--open]="isSubmenuExpanded(USER_MENU)">&#9662;</span>
+      </button>
+      @if (isSubmenuExpanded(USER_MENU)) {
+        <div class="header__user-menu" role="menu">
+          <div class="header__user-info">
+            <span class="header__user-info-name">{{ user.displayName }}</span>
+            <span class="header__user-info-role">{{ roleLabel(user.role) }} · {{ user.username }}</span>
+          </div>
+          <a routerLink="/change-password" role="menuitem" class="header__user-item"
+             (click)="closeSubmenu(); closeMobileMenu()">
+            <span class="material-symbols-outlined" aria-hidden="true">key</span>
+            Passwort ändern
+          </a>
+          <button type="button" role="menuitem" class="header__user-item" (click)="switchToTabletView()">
+            <span class="material-symbols-outlined" aria-hidden="true">tablet</span>
+            Tablet-Ansicht
+          </button>
+          <button type="button" role="menuitem" class="header__user-item header__user-item--logout" (click)="logout()">
+            <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+            Abmelden
+          </button>
+        </div>
+      }
     </div>
   }
 </ng-template>

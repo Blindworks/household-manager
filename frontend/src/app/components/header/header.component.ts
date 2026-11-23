@@ -1,10 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { AuthService } from '../../services/auth.service';
+import { ViewModeService } from '../../services/view-mode.service';
+import { UserRole } from '../../models/auth.model';
 import {
-  NAV_ENTRIES, MinRole, VisibleNavEntry, VisibleNavGroup, isNavGroup, isPathInGroup, toSections
+  NAV_ENTRIES, MinRole, ROLE_LABELS, VisibleNavEntry, VisibleNavGroup,
+  isNavGroup, isPathInGroup, toSections, userInitials
 } from './nav-entries';
 
 /**
@@ -48,6 +51,9 @@ export class HeaderComponent {
   /** Signal to track which submenu is expanded */
   expandedMenu = signal<string | null>(null);
 
+  private readonly viewMode = inject(ViewModeService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   constructor(private readonly router: Router) {}
 
   private allows(minRole?: MinRole): boolean {
@@ -80,6 +86,35 @@ export class HeaderComponent {
 
   isSubmenuExpanded(key: string): boolean {
     return this.expandedMenu() === key;
+  }
+
+  /** Schlüssel des Nutzermenüs; teilt sich `expandedMenu` mit den Gruppen, damit immer nur eins offen ist. */
+  readonly USER_MENU = 'user';
+
+  initials(displayName: string): string {
+    return userInitials(displayName);
+  }
+
+  roleLabel(role: UserRole): string {
+    return ROLE_LABELS[role];
+  }
+
+  /** Der Header ist in der Tablet-Ansicht ausgeblendet; zurück geht es über den Umschalter im Dashboard. */
+  switchToTabletView(): void {
+    this.closeSubmenu();
+    this.closeMobileMenu();
+    if (!this.viewMode.isTabletView()) {
+      this.viewMode.toggle();
+    }
+    this.router.navigateByUrl('/');
+  }
+
+  /** Ein Klick außerhalb des Headers schließt offene Aufklappmenüs. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.expandedMenu() !== null && !this.host.nativeElement.contains(event.target as Node)) {
+      this.closeSubmenu();
+    }
   }
 
   /** Eine Gruppe gilt als aktiv, wenn die aktuelle Seite zu einem ihrer Einträge gehört. */

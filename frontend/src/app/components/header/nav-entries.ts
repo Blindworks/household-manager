@@ -1,4 +1,19 @@
+import { UserRole } from '../../models/auth.model';
+
 export type MinRole = 'MEMBER' | 'ADMIN';
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrator',
+  MEMBER: 'Mitglied',
+  KIOSK: 'Wandtablet'
+};
+
+/** Bis zu zwei Initialen aus dem Anzeigenamen („Benedikt Lind“ ⇒ „BL“, „Administrator“ ⇒ „A“). */
+export function userInitials(displayName: string): string {
+  const letters = displayName.trim().split(/\s+/).filter(Boolean).map(word => word[0]);
+  const picked = letters.length > 1 ? [letters[0], letters[letters.length - 1]] : letters;
+  return picked.join('').toUpperCase() || '?';
+}
 
 export interface NavLink {
   path: string;
