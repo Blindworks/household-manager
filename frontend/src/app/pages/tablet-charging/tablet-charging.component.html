@@ -141,6 +141,24 @@
                     <p class="tablet-charging__forecast">{{ line }}</p>
                   }
                 }
+                @if (watchesFor(station).length > 0 || canWatch(station)) {
+                  <div class="tablet-charging__watch">
+                    @for (watch of watchesFor(station); track watch.userId) {
+                      <button type="button" class="tablet-charging__watch-active"
+                              [disabled]="watchBusy"
+                              [attr.aria-label]="'Benachrichtigung für ' + watch.displayName + ' aufheben'"
+                              (click)="stopWatch(watch); $event.stopPropagation()">
+                        🔔 Benachrichtigt: {{ watch.displayName }} <span aria-hidden="true">✕</span>
+                      </button>
+                    }
+                    @if (canWatch(station)) {
+                      <button type="button" class="tablet-charging__watch-btn"
+                              (click)="openWatchDialog(station); $event.stopPropagation()">
+                        🔔 Benachrichtigen, wenn frei
+                      </button>
+                    }
+                  </div>
+                }
                 @if (station.operator || station.pricePerKwh !== undefined || station.teslaOnly) {
                   <p class="tablet-charging__sub">
                     @if (station.operator) { <span class="tablet-charging__operator">{{ station.operator }}</span> }
@@ -176,4 +194,34 @@
       </div>
     }
   </section>
+
+  @if (watchDialogStation; as station) {
+    <div class="tablet-charging__dialog-backdrop" (click)="closeWatchDialog()">
+      <div class="tablet-charging__dialog" role="dialog" aria-modal="true"
+           aria-labelledby="watch-dialog-title" (click)="$event.stopPropagation()">
+        <h2 id="watch-dialog-title" class="tablet-charging__dialog-title">Wer will laden?</h2>
+        <p class="tablet-charging__dialog-text">
+          Push-Nachricht, sobald an „{{ station.name }}“ ein Ladepunkt frei ist (höchstens 4 Stunden).
+        </p>
+        @if (watchCandidates === null) {
+          <p class="tablet-charging__dialog-text">Lädt…</p>
+        } @else if (openCandidates.length === 0 && !watchError) {
+          <p class="tablet-charging__dialog-text">
+            Niemand hat Push eingeschaltet. Das geht in der App unter „Benachrichtigungen“.
+          </p>
+        } @else {
+          <div class="tablet-charging__dialog-people">
+            @for (candidate of openCandidates; track candidate.userId) {
+              <button type="button" class="tablet-charging__dialog-person" [disabled]="watchBusy"
+                      (click)="startWatch(candidate)">{{ candidate.displayName }}</button>
+            }
+          </div>
+        }
+        @if (watchError) {
+          <p class="tablet-charging__error">{{ watchError }}</p>
+        }
+        <button type="button" class="tablet-charging__refresh" (click)="closeWatchDialog()">Abbrechen</button>
+      </div>
+    </div>
+  }
 </app-tablet-shell>

@@ -57,8 +57,10 @@ describe('TabletChargingComponent', () => {
 
   beforeEach(async () => {
     chargingSpy = jasmine.createSpyObj('ChargingService',
-      ['getStations', 'refresh', 'getChargePoints', 'getForecast', 'addFavorite', 'removeFavorite', 'search']);
+      ['getStations', 'refresh', 'getChargePoints', 'getForecast', 'addFavorite', 'removeFavorite', 'search',
+        'getWatches', 'getWatchCandidates', 'addWatch', 'removeWatch']);
     chargingSpy.getChargePoints.and.returnValue(of([]));
+    chargingSpy.getWatches.and.returnValue(of([]));
     chargingSpy.getStations.and.returnValue(of(forecastResponse));
     chargingSpy.getForecast.and.returnValue(of(forecast));
     weatherSpy = jasmine.createSpyObj('WeatherService', ['getOverview']);
@@ -98,6 +100,67 @@ describe('TabletChargingComponent', () => {
     expect(points.length).toBe(2);
     expect(points[0].textContent).toContain('seit');
     expect(points[1].textContent).toContain('seit mind.');
+  });
+
+  describe('Benachrichtigen, wenn frei', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const rowOf = (name: string) =>
+      [...el().querySelectorAll<HTMLElement>('.tablet-charging__row')].find(r => r.textContent?.includes(name))!;
+    const watch = { stationId: 'fav', stationName: 'Lidl Hauptstr.', userId: 1, displayName: 'Benedikt',
+      createdAt: '2026-09-19T12:00:00Z' };
+
+    it('zeigt den Knopf nur an Stationen ohne freien Ladepunkt', () => {
+      expect(rowOf('Lidl Hauptstr.').querySelector('.tablet-charging__watch-btn')).not.toBeNull();
+      expect(rowOf('EnBW Rastplatz').querySelector('.tablet-charging__watch-btn')).toBeNull();
+    });
+
+    it('legt nach Auswahl der Person den Auftrag an und zeigt ihn an der Station', () => {
+      chargingSpy.getWatchCandidates.and.returnValue(of([{ userId: 1, displayName: 'Benedikt' }]));
+      chargingSpy.addWatch.and.returnValue(of([watch]));
+
+      rowOf('Lidl Hauptstr.').querySelector<HTMLButtonElement>('.tablet-charging__watch-btn')!.click();
+      fixture.detectChanges();
+      el().querySelector<HTMLButtonElement>('.tablet-charging__dialog-person')!.click();
+      fixture.detectChanges();
+
+      expect(chargingSpy.addWatch).toHaveBeenCalledWith('fav', 1);
+      expect(el().querySelector('.tablet-charging__dialog')).toBeNull();
+      expect(rowOf('Lidl Hauptstr.').querySelector('.tablet-charging__watch-active')?.textContent)
+        .toContain('Benachrichtigt: Benedikt');
+    });
+
+    it('nennt im Dialog, wenn niemand Push eingeschaltet hat', () => {
+      chargingSpy.getWatchCandidates.and.returnValue(of([]));
+      rowOf('Lidl Hauptstr.').querySelector<HTMLButtonElement>('.tablet-charging__watch-btn')!.click();
+      fixture.detectChanges();
+      expect(el().querySelector('.tablet-charging__dialog')?.textContent).toContain('Niemand hat Push eingeschaltet');
+    });
+
+    it('zeigt die Server-Meldung, wenn inzwischen ein Punkt frei ist', () => {
+      chargingSpy.getWatchCandidates.and.returnValue(of([{ userId: 1, displayName: 'Benedikt' }]));
+      chargingSpy.addWatch.and.returnValue(throwError(() => new HttpErrorResponse({
+        status: 409, error: { message: 'Es ist bereits ein Ladepunkt frei.' } })));
+      rowOf('Lidl Hauptstr.').querySelector<HTMLButtonElement>('.tablet-charging__watch-btn')!.click();
+      fixture.detectChanges();
+      el().querySelector<HTMLButtonElement>('.tablet-charging__dialog-person')!.click();
+      fixture.detectChanges();
+      expect(el().querySelector('.tablet-charging__dialog')?.textContent).toContain('bereits ein Ladepunkt frei');
+    });
+
+    it('hebt einen Auftrag per Tipp auf, ohne die Zeile auszuwaehlen', () => {
+      chargingSpy.getWatches.and.returnValue(of([watch]));
+      chargingSpy.removeWatch.and.returnValue(of([]));
+      component.reload();
+      fixture.detectChanges();
+      chargingSpy.getForecast.calls.reset();
+
+      rowOf('Lidl Hauptstr.').querySelector<HTMLButtonElement>('.tablet-charging__watch-active')!.click();
+      fixture.detectChanges();
+
+      expect(chargingSpy.removeWatch).toHaveBeenCalledWith('fav', 1);
+      expect(chargingSpy.getForecast).not.toHaveBeenCalled();
+      expect(rowOf('Lidl Hauptstr.').querySelector('.tablet-charging__watch-active')).toBeNull();
+    });
   });
 
   describe('Supercharger', () => {

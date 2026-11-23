@@ -348,6 +348,83 @@
     &:disabled { opacity: 0.5; cursor: default; }
   }
 
+  &__watch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+
+  &__watch-btn,
+  &__watch-active,
+  &__dialog-person {
+    font: inherit;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__watch-btn,
+  &__dialog-person {
+    border: 1px solid rgba(var(--primary-rgb), 0.35);
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--primary);
+  }
+
+  &__watch-active {
+    border: 1px solid rgba(var(--tint-rgb), 0.18);
+    background: rgba(var(--tint-rgb), 0.08);
+    color: var(--on-surface);
+  }
+
+  &__dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  &__dialog {
+    width: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    border-radius: 16px;
+    background: var(--surface-overlay);
+    color: var(--on-surface);
+    border: 1px solid rgba(var(--tint-rgb), 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+  }
+
+  &__dialog-title {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  &__dialog-text {
+    margin: 0;
+    color: rgba(var(--on-surface-rgb), 0.75);
+  }
+
+  &__dialog-people {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__dialog-person {
+    font-size: 1.05rem;
+    padding: 0.7rem 1.2rem;
+  }
+
   &__meta {
     font-size: 0.9rem;
     color: rgba(var(--on-surface-rgb), 0.75);

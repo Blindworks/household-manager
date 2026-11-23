@@ -8,7 +8,8 @@ import * as L from 'leaflet';
 import { TabletShellComponent } from '../../components/tablet-shell/tablet-shell.component';
 import { ChargingService } from '../../services/charging.service';
 import {
-  ChargePoint, ChargingForecast, ChargingPointForecast, ChargingStation, ChargingStationsResponse
+  ChargePoint, ChargingForecast, ChargingPointForecast, ChargingStation, ChargingStationsResponse,
+  ChargingWatch, ChargingWatchCandidate
 } from '../../models/charging.model';
 import {
   formatDirectPrice, formatDistance, formatOccupiedDuration, formatPower, formatPrice, sortStations, stationTone,
@@ -98,6 +99,15 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
   readonly hours = Array.from({ length: 24 }, (_, hour) => hour);
   private forecastRequest: Subscription | null = null;
 
+  /** Laufende Auftraege "Benachrichtigen, wenn frei"; kommen mit jedem Refresh frisch vom Server. */
+  watches: ChargingWatch[] = [];
+  /** Station, fuer die gerade die Personenauswahl offen ist. */
+  watchDialogStation: ChargingStation | null = null;
+  watchCandidates: ChargingWatchCandidate[] | null = null;
+  watchError: string | null = null;
+  watchBusy = false;
+  private watchesRequest: Subscription | null = null;
+
   ngOnInit(): void {
     this.load(false);
     this.refreshTimer = window.setInterval(() => this.reload(), TabletChargingComponent.REFRESH_INTERVAL_MS);
@@ -119,6 +129,7 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     this.pendingRequest?.unsubscribe();
     this.searchRequest?.unsubscribe();
     this.forecastRequest?.unsubscribe();
+    this.watchesRequest?.unsubscribe();
     this.map?.remove();
     this.map = undefined;
   }
@@ -503,6 +514,81 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
+  /** Wartende Personen einer Station. */
+  watchesFor(station: ChargingStation): ChargingWatch[] {
+    return this.watches.filter(w => w.stationId === station.stationId);
+  }
+
+  /** Knopf nur, wenn wirklich kein Ladepunkt frei ist - sonst ist Warten sinnlos (Spec 2026-11-23). */
+  canWatch(station: ChargingStation): boolean {
+    return !station.supercharger && station.total > 0 && station.free === 0;
+  }
+
+  /** Oeffnet die Personenauswahl; die Kandidaten kommen frisch (wer hat gerade Push eingeschaltet). */
+  openWatchDialog(station: ChargingStation): void {
+    this.watchDialogStation = station;
+    this.watchCandidates = null;
+    this.watchError = null;
+    this.chargingService.getWatchCandidates().subscribe({
+      next: candidates => { this.watchCandidates = candidates; },
+      error: () => {
+        this.watchCandidates = [];
+        this.watchError = 'Personen konnten nicht geladen werden.';
+      }
+    });
+  }
+
+  closeWatchDialog(): void {
+    this.watchDialogStation = null;
+    this.watchCandidates = null;
+    this.watchError = null;
+  }
+
+  /** Personen, die an dieser Station noch nicht warten. */
+  get openCandidates(): ChargingWatchCandidate[] {
+    const stationId = this.watchDialogStation?.stationId;
+    const waiting = new Set(this.watches.filter(w => w.stationId === stationId).map(w => w.userId));
+    return (this.watchCandidates ?? []).filter(c => !waiting.has(c.userId));
+  }
+
+  startWatch(candidate: ChargingWatchCandidate): void {
+    const station = this.watchDialogStation;
+    if (!station || this.watchBusy) {
+      return;
+    }
+    this.watchBusy = true;
+    this.watchError = null;
+    this.chargingService.addWatch(station.stationId, candidate.userId).subscribe({
+      next: watches => {
+        this.watchBusy = false;
+        this.watches = watches;
+        this.closeWatchDialog();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.watchBusy = false;
+        this.watchError = err.error?.message ?? 'Konnte nicht gespeichert werden.';
+      }
+    });
+  }
+
+  stopWatch(watch: ChargingWatch): void {
+    if (this.watchBusy) {
+      return;
+    }
+    this.watchBusy = true;
+    this.refreshError = null;
+    this.chargingService.removeWatch(watch.stationId, watch.userId).subscribe({
+      next: watches => {
+        this.watchBusy = false;
+        this.watches = watches;
+      },
+      error: (err: HttpErrorResponse) => {
+        this.watchBusy = false;
+        this.refreshError = err.error?.message ?? 'Benachrichtigung konnte nicht aufgehoben werden.';
+      }
+    });
+  }
+
   /** Nur fuer Tests: Zugriff auf die Karte, um Ausschnitt-Erhalt zu pruefen. */
   mapForTest(): L.Map | undefined {
     return this.map;
@@ -524,7 +610,17 @@ export class TabletChargingComponent implements OnInit, AfterViewInit, OnDestroy
     });
   }
 
+  private loadWatches(): void {
+    this.watchesRequest?.unsubscribe();
+    // Ein Fehler behaelt still den letzten Stand (Muster der uebrigen Tablet-Kacheln).
+    this.watchesRequest = this.chargingService.getWatches().subscribe({
+      next: watches => { this.watches = watches; },
+      error: (err: HttpErrorResponse) => console.error('Lade-Auftraege konnten nicht geladen werden:', err)
+    });
+  }
+
   private apply(response: ChargingStationsResponse): void {
+    this.loadWatches();
     this.data = response;
     this.error = null;
     this.now = new Date();

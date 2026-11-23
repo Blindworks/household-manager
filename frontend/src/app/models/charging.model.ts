@@ -71,6 +71,21 @@ export interface ChargingStation {
   teslaOnly?: boolean;
 }
 
+/** Laufender Auftrag "Benachrichtigen, wenn frei" (nur im Speicher des Backends, 4 h gueltig). */
+export interface ChargingWatch {
+  stationId: string;
+  stationName: string;
+  userId: number;
+  displayName: string;
+  createdAt: string;
+}
+
+/** Person, die eine Push-Nachricht bekommen kann (mindestens ein Push-Geraet, kein Wandtablet-Konto). */
+export interface ChargingWatchCandidate {
+  userId: number;
+  displayName: string;
+}
+
 export interface ChargingStationsResponse {
   configured: boolean;
   home?: { lat: number; lon: number };

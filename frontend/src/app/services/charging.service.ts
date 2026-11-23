@@ -2,7 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  ChargePoint, ChargingForecast, ChargingSearchResponse, ChargingSettings, ChargingStationsResponse
+  ChargePoint, ChargingForecast, ChargingSearchResponse, ChargingSettings, ChargingStationsResponse,
+  ChargingWatch, ChargingWatchCandidate
 } from '../models/charging.model';
 import { SearchBox } from '../shared/charging-search.util';
 
@@ -52,6 +53,28 @@ export class ChargingService {
   setDirectPrice(stationId: string, pricePerKwh: number | null, note: string | null): Observable<ChargingStationsResponse> {
     return this.http.put<ChargingStationsResponse>(
       `${this.baseUrl}/favorites/${encodeURIComponent(stationId)}/price`, { pricePerKwh, note });
+  }
+
+  /** Laufende Auftraege "Benachrichtigen, wenn frei". */
+  getWatches(): Observable<ChargingWatch[]> {
+    return this.http.get<ChargingWatch[]>(`${this.baseUrl}/watches`);
+  }
+
+  getWatchCandidates(): Observable<ChargingWatchCandidate[]> {
+    return this.http.get<ChargingWatchCandidate[]>(`${this.baseUrl}/watch-candidates`);
+  }
+
+  /** 409, wenn inzwischen ein Ladepunkt frei ist; 400 ohne Push-Geraet der Person. */
+  addWatch(stationId: string, userId: number): Observable<ChargingWatch[]> {
+    return this.http.put<ChargingWatch[]>(`${this.watchUrl(stationId, userId)}`, {});
+  }
+
+  removeWatch(stationId: string, userId: number): Observable<ChargingWatch[]> {
+    return this.http.delete<ChargingWatch[]>(`${this.watchUrl(stationId, userId)}`);
+  }
+
+  private watchUrl(stationId: string, userId: number): string {
+    return `${this.baseUrl}/watches/${encodeURIComponent(stationId)}/${userId}`;
   }
 
   getSettings(): Observable<ChargingSettings> {
