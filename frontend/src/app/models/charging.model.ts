@@ -71,7 +71,7 @@ export interface ChargingStation {
   teslaOnly?: boolean;
 }
 
-/** Laufender Auftrag "Benachrichtigen, wenn frei" (nur im Speicher des Backends, 4 h gueltig). */
+/** Laufender Auftrag "Benachrichtigen, wenn frei" (4 h gueltig). */
 export interface ChargingWatch {
   stationId: string;
   stationName: string;

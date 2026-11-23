@@ -13,7 +13,8 @@ auf die Karte starren, sondern eine Push-Nachricht bekommen, sobald ein Ladepunk
   („<Station>: 1 von 2 Ladepunkten frei“), danach endet das Warten.
 - Favoriten werden jede Minute geprüft, andere Stationen über den 5-Minuten-Umkreis-Poll.
 - Nach **4 Stunden** ohne freien Punkt verfällt das Warten still.
-- Aufträge liegen **nur im Speicher**; ein Backend-Neustart (Deploy) verwirft sie (akzeptiert).
+- Aufträge liegen in der Tabelle `charging_watch` und überleben einen Deploy (Revision nach dem ersten
+  Einsatz; die erste Fassung hielt sie nur im Speicher).
 
 ## Ansätze
 1. **Backend-Wächter in den bestehenden Polls (gewählt):** prüft nach jedem Favoriten- und Umkreis-Poll
@@ -32,4 +33,4 @@ auf die Karte starren, sondern eine Push-Nachricht bekommen, sobald ein Ladepunk
   Push-Gerät ⇒ 400, Supercharger ⇒ 400. `PUT`/`DELETE` KIOSK (Muster Favoriten-Stern), Lesen KIOSK über
   die generische GET-Regel. `GET /v1/charging/watches` liefert die laufenden Aufträge (Station, Person, Name);
   `PUT`/`DELETE` antworten mit derselben Liste. Bewusst nicht an `StationResponse` gehängt (eigener Abruf je Refresh).
-- Kein Audit (wie der Favoriten-Stern), keine Entität, keine DB-Tabelle. Website `/charging` bleibt unverändert.
+- Kein Audit (wie der Favoriten-Stern), keine Entität. Website `/charging` bleibt unverändert.

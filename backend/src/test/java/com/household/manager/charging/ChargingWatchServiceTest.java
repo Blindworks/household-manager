@@ -2,9 +2,11 @@ package com.household.manager.charging;
 
 import com.household.manager.common.DeliveryResult;
 import com.household.manager.model.entity.AppUser;
+import com.household.manager.model.entity.ChargingWatchEntry;
 import com.household.manager.model.entity.PushSubscription;
 import com.household.manager.push.PushNotificationService;
 import com.household.manager.repository.AppUserRepository;
+import com.household.manager.repository.ChargingWatchRepository;
 import com.household.manager.repository.PushSubscriptionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -47,6 +51,11 @@ class ChargingWatchServiceTest {
     private PushSubscriptionRepository subscriptionRepository;
     @Mock
     private AppUserRepository userRepository;
+    @Mock
+    private ChargingWatchRepository watchRepository;
+
+    /** Ersatz fuer die Tabelle; ueberlebt einen neuen Service wie die DB einen Neustart. */
+    private final Map<ChargingWatchEntry.Key, ChargingWatchEntry> table = new LinkedHashMap<>();
 
     private final ChargingSnapshot snapshot = new ChargingSnapshot();
     private final MutableClock clock = new MutableClock(NOW);
@@ -54,8 +63,15 @@ class ChargingWatchServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ChargingWatchService(snapshot, favoriteService, pushService, subscriptionRepository,
-                userRepository, clock);
+        lenient().when(watchRepository.save(any())).thenAnswer(i -> {
+            ChargingWatchEntry e = i.getArgument(0);
+            table.put(new ChargingWatchEntry.Key(e.getStationId(), e.getUserId()), e);
+            return e;
+        });
+        lenient().when(watchRepository.findAllByOrderByCreatedAtAsc()).thenAnswer(i -> List.copyOf(table.values()));
+        lenient().when(watchRepository.claim(anyString(), anyLong())).thenAnswer(i ->
+                table.remove(new ChargingWatchEntry.Key(i.getArgument(0), i.getArgument(1))) == null ? 0 : 1);
+        service = newService();
         lenient().when(subscriptionRepository.findAll()).thenReturn(List.of(subscription(1L), subscription(1L),
                 subscription(3L)));
         lenient().when(userRepository.findAllById(any())).thenReturn(List.of(
@@ -172,6 +188,49 @@ class ChargingWatchServiceTest {
         assertThat(service.candidates()).extracting(ChargingWatchService.WatchCandidate::displayName)
                 .containsExactly("Anna", "benedikt");
         verify(userRepository).findAllById(eq(java.util.Set.of(1L, 3L)));
+    }
+
+    @Test
+    void auftragUeberlebtEinenNeustart() {
+        service.add("S1", 1L);
+        area("S1", 1, 2);
+
+        newService().checkWatches();
+
+        verify(pushService).sendToUser(1L, "Ladesäule frei", "Am Südbahnhof S1: 1 von 2 Ladepunkten frei");
+    }
+
+    @Test
+    void sendetNichtWennDerAuftragInzwischenAbbestelltWurde() {
+        service.add("S1", 1L);
+        area("S1", 1, 2);
+        doReturn(0).when(watchRepository).claim("S1", 1L);
+        service.checkWatches();
+        verify(pushService, never()).sendToUser(anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void einFehlerStoertDieAnderenAuftraegeNicht() {
+        when(userRepository.findAllById(any())).thenReturn(List.of(
+                user(1L, "Benedikt", true, false), user(2L, "Anna", true, false)));
+        service.add("S1", 1L);
+        service.add("S1", 2L);
+        area("S1", 1, 2);
+        when(pushService.sendToUser(eq(1L), anyString(), anyString())).thenThrow(new RuntimeException("kaputt"));
+        service.checkWatches();
+        verify(pushService).sendToUser(eq(2L), anyString(), anyString());
+    }
+
+    @Test
+    void checkWatchesWirftNichtBeiDatenbankfehler() {
+        when(watchRepository.findAllByOrderByCreatedAtAsc()).thenThrow(new RuntimeException("DB weg"));
+        service.checkWatches();
+        verify(pushService, never()).sendToUser(anyLong(), anyString(), anyString());
+    }
+
+    private ChargingWatchService newService() {
+        return new ChargingWatchService(snapshot, favoriteService, pushService, subscriptionRepository,
+                userRepository, watchRepository, clock);
     }
 
     private void area(String id, int free, int total) {

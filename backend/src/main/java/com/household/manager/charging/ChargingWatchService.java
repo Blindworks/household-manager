@@ -3,9 +3,11 @@ package com.household.manager.charging;
 import com.household.manager.common.DeliveryResult;
 import com.household.manager.model.entity.AppUser;
 import com.household.manager.model.entity.ChargingFavorite;
+import com.household.manager.model.entity.ChargingWatchEntry;
 import com.household.manager.model.entity.PushSubscription;
 import com.household.manager.push.PushNotificationService;
 import com.household.manager.repository.AppUserRepository;
+import com.household.manager.repository.ChargingWatchRepository;
 import com.household.manager.repository.PushSubscriptionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,9 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,9 +26,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * „Benachrichtigen, wenn frei“ (Spec 2026-11-23): Warteauftraege je Station und Person, nur im Speicher.
+ * „Benachrichtigen, wenn frei“ (Spec 2026-11-23): Warteauftraege je Station und Person, in der Datenbank.
  * Die Polls rufen {@link #checkWatches()}; ist ein Ladepunkt frei, geht genau ein Push an die Person
- * und der Auftrag endet. Nach {@link #MAX_AGE} verfaellt er still. Ein Neustart verwirft alle Auftraege.
+ * und der Auftrag endet. Nach {@link #MAX_AGE} verfaellt er still. Ein Neustart behaelt sie; bis zum
+ * ersten Poll ist der Stand unbekannt und es passiert nichts.
  */
 @Service
 @Slf4j
@@ -41,20 +43,20 @@ public class ChargingWatchService {
     private final PushNotificationService pushService;
     private final PushSubscriptionRepository subscriptionRepository;
     private final AppUserRepository userRepository;
+    private final ChargingWatchRepository watchRepository;
     private final Clock clock;
-
-    /** Schluessel: stationId + "|" + userId. */
-    private final Map<String, ChargingWatch> watches = new LinkedHashMap<>();
 
     public ChargingWatchService(ChargingSnapshot snapshot, ChargingFavoriteService favoriteService,
                                 PushNotificationService pushService,
                                 PushSubscriptionRepository subscriptionRepository,
-                                AppUserRepository userRepository, Clock clock) {
+                                AppUserRepository userRepository,
+                                ChargingWatchRepository watchRepository, Clock clock) {
         this.snapshot = snapshot;
         this.favoriteService = favoriteService;
         this.pushService = pushService;
         this.subscriptionRepository = subscriptionRepository;
         this.userRepository = userRepository;
+        this.watchRepository = watchRepository;
         this.clock = clock;
     }
 
@@ -65,8 +67,15 @@ public class ChargingWatchService {
     public record WatchCandidate(Long userId, String displayName) {
     }
 
-    public synchronized List<ChargingWatch> list() {
-        return List.copyOf(watches.values());
+    public List<ChargingWatch> list() {
+        List<ChargingWatchEntry> entries = watchRepository.findAllByOrderByCreatedAtAsc();
+        Map<Long, String> names = userRepository
+                .findAllById(entries.stream().map(ChargingWatchEntry::getUserId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(AppUser::getId, AppUser::getDisplayName));
+        return entries.stream()
+                .map(e -> new ChargingWatch(e.getStationId(), e.getStationName(), e.getUserId(),
+                        names.getOrDefault(e.getUserId(), "Unbekannt"), e.getCreatedAt()))
+                .toList();
     }
 
     /** Aktive Personen mit mindestens einem Push-Geraet, ohne Wandtablet-Konto, nach Namen sortiert. */
@@ -81,7 +90,7 @@ public class ChargingWatchService {
                 .toList();
     }
 
-    public synchronized void add(String stationId, Long userId) {
+    public void add(String stationId, Long userId) {
         if (stationId.startsWith(ChargingQueryService.SUPERCHARGER_ID_PREFIX)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Supercharger haben keine Belegungsdaten");
         }
@@ -93,53 +102,61 @@ public class ChargingWatchService {
         if (availability.free() > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Es ist bereits ein Ladepunkt frei.");
         }
-        watches.put(key(stationId, userId), new ChargingWatch(stationId, stationName(stationId), userId,
-                person.displayName(), clock.instant()));
+        // DATETIME kennt keine Bruchsekunden, MariaDB rundete sonst.
+        watchRepository.save(new ChargingWatchEntry(stationId, userId, stationName(stationId),
+                clock.instant().truncatedTo(ChronoUnit.SECONDS)));
         log.info("Lade-Waechter: {} wartet auf {}", person.displayName(), stationId);
     }
 
-    public synchronized void remove(String stationId, Long userId) {
-        watches.remove(key(stationId, userId));
+    public void remove(String stationId, Long userId) {
+        watchRepository.claim(stationId, userId);
     }
 
     /** Aufgerufen am Ende jedes Polls; wirft nie, der Poll darf daran nicht scheitern. */
     public void checkWatches() {
         try {
-            for (ChargingWatch watch : due()) {
-                notify(watch);
+            Instant now = clock.instant();
+            for (ChargingWatchEntry watch : watchRepository.findAllByOrderByCreatedAtAsc()) {
+                checkSafely(watch, now);
             }
         } catch (RuntimeException ex) {
             log.warn("Lade-Waechter fehlgeschlagen: {}", ex.getMessage());
         }
     }
 
-    /** Entfernt verfallene und faellige Auftraege unter der Sperre; versendet wird danach ohne Sperre. */
-    private synchronized List<ChargingWatch> due() {
-        Instant now = clock.instant();
-        List<ChargingWatch> due = new ArrayList<>();
-        watches.values().removeIf(watch -> {
-            if (!now.isBefore(watch.createdAt().plus(MAX_AGE))) {
-                log.info("Lade-Waechter fuer {} ({}) nach {} h verfallen", watch.stationId(),
-                        watch.displayName(), MAX_AGE.toHours());
-                return true;
-            }
-            Optional<ChargingSnapshot.Availability> availability = snapshot.availability(watch.stationId());
-            if (availability.isPresent() && availability.get().free() > 0) {
-                due.add(watch);
-                return true;
-            }
-            return false;
-        });
-        return due;
+    /** Ein Fehler bei einem Auftrag stoert die anderen nicht. */
+    private void checkSafely(ChargingWatchEntry watch, Instant now) {
+        try {
+            check(watch, now);
+        } catch (RuntimeException ex) {
+            log.warn("Lade-Waechter fuer {} (Nutzer {}) fehlgeschlagen: {}", watch.getStationId(),
+                    watch.getUserId(), ex.getMessage());
+        }
     }
 
-    private void notify(ChargingWatch watch) {
-        ChargingSnapshot.Availability a = snapshot.availability(watch.stationId())
-                .orElse(new ChargingSnapshot.Availability(1, 0));
-        DeliveryResult result = pushService.sendToUser(watch.userId(), PUSH_TITLE, message(watch.stationName(), a));
+    private void check(ChargingWatchEntry watch, Instant now) {
+        if (!now.isBefore(watch.getCreatedAt().plus(MAX_AGE))) {
+            watchRepository.claim(watch.getStationId(), watch.getUserId());
+            log.info("Lade-Waechter fuer {} (Nutzer {}) nach {} h verfallen", watch.getStationId(),
+                    watch.getUserId(), MAX_AGE.toHours());
+            return;
+        }
+        Optional<ChargingSnapshot.Availability> availability = snapshot.availability(watch.getStationId());
+        if (availability.isEmpty() || availability.get().free() <= 0) {
+            return;
+        }
+        // Erst entfernen, dann senden: beide Polls duerfen nicht doppelt melden, ein Abbestellen gewinnt.
+        if (watchRepository.claim(watch.getStationId(), watch.getUserId()) == 1) {
+            send(watch, availability.get());
+        }
+    }
+
+    private void send(ChargingWatchEntry watch, ChargingSnapshot.Availability availability) {
+        DeliveryResult result = pushService.sendToUser(watch.getUserId(), PUSH_TITLE,
+                message(watch.getStationName(), availability));
         if (!result.delivered()) {
-            log.warn("Lade-Waechter: Push an {} fuer {} fehlgeschlagen: {}", watch.displayName(),
-                    watch.stationId(), result.failure());
+            log.warn("Lade-Waechter: Push an Nutzer {} fuer {} fehlgeschlagen: {}", watch.getUserId(),
+                    watch.getStationId(), result.failure());
         }
     }
 
@@ -156,9 +173,5 @@ public class ChargingWatchService {
                 .or(() -> favoriteService.list().stream().filter(f -> f.getStationId().equals(stationId))
                         .map(ChargingFavorite::getDisplayName).findFirst())
                 .orElse(stationId);
-    }
-
-    private static String key(String stationId, Long userId) {
-        return stationId + "|" + userId;
     }
 }
