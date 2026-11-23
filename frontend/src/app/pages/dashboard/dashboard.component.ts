@@ -877,7 +877,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Dog-Mode-Screen (Muster Tesla): nur am Wandtablet und nur solange „Toni allein" an ist. */
   get dogModeVisible(): boolean {
-    return this.viewMode.isTabletView() && isDogModeActive(this.modes);
+    return this.viewMode.showWallTabletOverlays() && isDogModeActive(this.modes);
   }
 
   get dogModeBusy(): boolean {

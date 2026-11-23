@@ -3491,7 +3491,7 @@ describe('DashboardComponent (Footer-Kacheln: Hoehe und Klappen)', () => {
 });
 
 /**
- * Dog-Mode-Screen: nur Tablet-Ansicht UND „Toni allein" an. `viewMode` wird wie in der
+ * Dog-Mode-Screen: nur Wandtablet-Konto UND Tablet-Ansicht UND „Toni allein" an. `viewMode` wird wie in der
  * Schnellzugriff-Suite nicht gemockt — der Schluessel im localStorage wird vor jedem
  * Test entfernt und die Tablet-Ansicht per toggle() eingeschaltet.
  */
@@ -3547,11 +3547,12 @@ describe('DashboardComponent (Dog-Mode-Screen)', () => {
 
   afterAll(() => localStorage.removeItem('household-manager-view-mode'));
 
-  function createFixture(tablet: boolean): ComponentFixture<DashboardComponent> {
+  function createFixture(tablet: boolean, wallTablet = true): ComponentFixture<DashboardComponent> {
     const fixture = TestBed.createComponent(DashboardComponent);
     if (tablet) {
       fixture.componentInstance.viewMode.toggle();
     }
+    fixture.componentInstance.viewMode.setWallTabletAccount(wallTablet);
     fixture.detectChanges();
     return fixture;
   }
@@ -3567,7 +3568,17 @@ describe('DashboardComponent (Dog-Mode-Screen)', () => {
     discardPeriodicTasks();
   }));
 
+  it('zeigt den Screen nicht ohne Wandtablet-Konto, auch in der Tablet-Ansicht', fakeAsync(() => {
+    const fixture = createFixture(true, false);
+
+    expect(screen(fixture)).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
   it('zeigt den Screen nicht in der Website-Ansicht', fakeAsync(() => {
+    // Bewusst gewählte Website-Ansicht: sonst startet das Wandtablet-Konto in der Tablet-Ansicht
+    localStorage.setItem('household-manager-view-mode', 'website');
     const fixture = createFixture(false);
 
     expect(screen(fixture)).toBeNull();

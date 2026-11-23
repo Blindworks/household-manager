@@ -24,6 +24,12 @@
     }
   }
 
+  &__check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+  }
+
   &__table {
     width: 100%;
     border-collapse: collapse;

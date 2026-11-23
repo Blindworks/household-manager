@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 import { CurrentUser } from '../models/auth.model';
+import { ViewModeService } from './view-mode.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -106,5 +107,27 @@ describe('AuthService', () => {
     service.logout().subscribe();
     httpMock.expectOne('/api/v1/auth/logout').flush(null);
     expect(service.currentUser()).toBeNull();
+  });
+
+  it('meldet das Wandtablet-Merkmal an die Ansicht und loescht es beim Abmelden', () => {
+    const viewMode = TestBed.inject(ViewModeService);
+    viewMode.isTabletView.set(true);
+    service.login({ username: 'tablet', password: 'pw' }).subscribe();
+    httpMock.expectOne('/api/v1/auth/login').flush({ ...user, role: 'MEMBER', wallTablet: true });
+
+    expect(service.isWallTablet()).toBeTrue();
+    expect(viewMode.showWallTabletOverlays()).toBeTrue();
+
+    service.logout().subscribe();
+    httpMock.expectOne('/api/v1/auth/logout').flush(null);
+    expect(service.isWallTablet()).toBeFalse();
+    expect(viewMode.showWallTabletOverlays()).toBeFalse();
+  });
+
+  it('ohne Merkmal in der Antwort ist das Konto kein Wandtablet', () => {
+    service.ensureLoaded().subscribe();
+    httpMock.expectOne('/api/v1/auth/me').flush(user);
+
+    expect(service.isWallTablet()).toBeFalse();
   });
 });

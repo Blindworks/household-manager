@@ -1234,8 +1234,8 @@
     </div>
   </div>
 
-  <!-- Dog-Mode-Screen (Muster Tesla): Vollbild, solange „Toni allein" an ist, nur Tablet-Ansicht -->
-  @if (viewMode.isTabletView()) {
+  <!-- Wäsche-Frage und Dog-Mode-Screen nur beim Wandtablet-Konto in der Tablet-Ansicht -->
+  @if (viewMode.showWallTabletOverlays()) {
     <app-laundry-prompt (answered)="applyLaundryState($event)"></app-laundry-prompt>
   }
   @if (dogModeVisible) {

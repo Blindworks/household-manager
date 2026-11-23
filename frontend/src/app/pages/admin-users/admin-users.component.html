@@ -14,12 +14,15 @@
         <option [value]="role">{{ role }}</option>
       }
     </select>
+    <label class="admin-users__check">
+      <input type="checkbox" name="wallTablet" [(ngModel)]="form.wallTablet"> Wandtablet
+    </label>
     <button type="submit">Anlegen</button>
   </form>
 
   <table class="admin-users__table">
     <thead>
-      <tr><th>Benutzername</th><th>Anzeigename</th><th>Rolle</th><th>Aktiv</th><th></th></tr>
+      <tr><th>Benutzername</th><th>Anzeigename</th><th>Rolle</th><th>Aktiv</th><th title="Nur dieses Konto zeigt Wäsche-Dialog und Toni-allein-Screen">Wandtablet</th><th></th></tr>
     </thead>
     <tbody>
       @for (user of users; track user.id) {
@@ -34,6 +37,7 @@
             </select>
           </td>
           <td><input type="checkbox" [name]="'en-' + user.id" [(ngModel)]="user.enabled"></td>
+          <td><input type="checkbox" [name]="'wt-' + user.id" [(ngModel)]="user.wallTablet"></td>
           <td>
             <button type="button" (click)="save(user)">Speichern</button>
             <button type="button" class="ghost" (click)="changePassword(user)">Passwort</button>

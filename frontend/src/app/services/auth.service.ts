@@ -3,11 +3,13 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { CurrentUser, LoginRequest } from '../models/auth.model';
+import { ViewModeService } from './view-mode.service';
 
 /** Session-Login und aktueller Nutzer (Cookie-basiert, Spring Security). */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly viewMode = inject(ViewModeService);
   private readonly baseUrl = '/api/v1/auth';
 
   /** undefined = noch nicht geladen, null = nicht angemeldet */
@@ -16,6 +18,8 @@ export class AuthService {
   readonly currentUser = computed(() => this.user() ?? null);
   readonly isAdmin = computed(() => this.user()?.role === 'ADMIN');
   readonly isMember = computed(() => this.user()?.role === 'ADMIN' || this.user()?.role === 'MEMBER');
+  /** Konto des Wandtablets (Merkmal am Benutzer, keine Rolle). */
+  readonly isWallTablet = computed(() => this.user()?.wallTablet === true);
 
   /** Laedt den Nutzer genau einmal; 401 wird zu null (nicht angemeldet). */
   ensureLoaded(): Observable<CurrentUser | null> {
@@ -35,10 +39,10 @@ export class AuthService {
 
   private fetchCurrentUser(): Observable<CurrentUser | null> {
     return this.http.get<CurrentUser>(`${this.baseUrl}/me`).pipe(
-      tap(user => this.user.set(user)),
+      tap(user => this.setUser(user)),
       map((user): CurrentUser | null => user),
       catchError(() => {
-        this.user.set(null);
+        this.setUser(null);
         return of(null);
       })
     );
@@ -46,7 +50,7 @@ export class AuthService {
 
   login(request: LoginRequest): Observable<CurrentUser> {
     return this.http.post<CurrentUser>(`${this.baseUrl}/login`, request).pipe(
-      tap(user => this.user.set(user)),
+      tap(user => this.setUser(user)),
       catchError((error: HttpErrorResponse) => throwError(() => new Error(
         error.status === 401 ? 'Benutzername oder Passwort falsch.' : 'Anmeldung fehlgeschlagen.')))
     );
@@ -55,7 +59,7 @@ export class AuthService {
   /** Selbst-Passwortwechsel; das Backend liefert den aktualisierten Nutzer (Flag geloescht). */
   changePassword(currentPassword: string, newPassword: string): Observable<CurrentUser> {
     return this.http.post<CurrentUser>(`${this.baseUrl}/password`, { currentPassword, newPassword }).pipe(
-      tap(user => this.user.set(user)),
+      tap(user => this.setUser(user)),
       catchError((error: HttpErrorResponse) => throwError(() => new Error(
         error.error?.message ?? 'Passwortwechsel fehlgeschlagen.')))
     );
@@ -63,12 +67,17 @@ export class AuthService {
 
   logout(): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/logout`, {}).pipe(
-      tap(() => this.user.set(null))
+      tap(() => this.setUser(null))
     );
+  }
+
+  private setUser(user: CurrentUser | null): void {
+    this.user.set(user);
+    this.viewMode.setWallTabletAccount(user?.wallTablet === true);
   }
 
   /** Vom Interceptor nach einem 401 aufgerufen. */
   clearUser(): void {
-    this.user.set(null);
+    this.setUser(null);
   }
 }

@@ -137,7 +137,7 @@ describe('TabletHouseComponent', () => {
         { provide: HouseDevicePositionService, useValue: positionService },
         { provide: HouseOpeningService, useValue: openingService },
         { provide: LaundryService, useValue: { getState: () => of({ status: 'idle', prompt: 'NONE', startedAt: null, predictedDryAt: null, estimatePaused: false, requiredLoad: 0 }) } },
-        { provide: ViewModeService, useValue: { isTabletView: tabletView } },
+        { provide: ViewModeService, useValue: { isTabletView: tabletView, showWallTabletOverlays: () => false } },
         {
           provide: HOUSE_RENDERER_FACTORY,
           useValue: (host: HTMLElement) => {

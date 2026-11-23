@@ -8,6 +8,8 @@ export interface CurrentUser {
   role: UserRole;
   /** true = Passwortwechsel erzwungen (z. B. Bootstrap-Admin mit "changeit") */
   mustChangePassword: boolean;
+  /** true = Konto des Wandtablets (nur dort Wäsche-Dialog und Toni-Screen); fehlt bei älteren Antworten. */
+  wallTablet?: boolean;
 }
 
 export interface LoginRequest {
@@ -21,6 +23,7 @@ export interface AppUser {
   displayName: string;
   role: UserRole;
   enabled: boolean;
+  wallTablet: boolean;
   createdAt: string;
 }
 

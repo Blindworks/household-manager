@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 
 /**
  * Verwaltet den globalen Ansichtsmodus der Anwendung.
@@ -14,6 +14,31 @@ export class ViewModeService {
   /** True, wenn die menuelose Tablet-Ansicht aktiv ist. */
   readonly isTabletView = signal<boolean>(this.loadTabletView());
 
+  /**
+   * Einzige Regel fuer Waesche-Dialog und Toni-allein-Screen: nur beim
+   * Wandtablet-Konto UND in der Tablet-Ansicht — ein Handy mit
+   * eingeschalteter Tablet-Ansicht sieht beides nie.
+   */
+  readonly showWallTabletOverlays = computed(() => this.wallTabletAccount() && this.isTabletView());
+
+  /**
+   * Wandtablet-Merkmal des angemeldeten Kontos. Gesetzt vom AuthService
+   * (diese Richtung, damit der Ansichtsmodus ohne HttpClient auskommt).
+   */
+  private readonly wallTabletAccount = signal(false);
+
+  /**
+   * Uebernimmt das Merkmal. Ein Wandtablet-Konto startet in der
+   * Tablet-Ansicht, solange der Browser keine eigene Wahl gespeichert hat —
+   * bewusst nicht persistiert, eine spaetere Wahl ueber den Umschalter gewinnt.
+   */
+  setWallTabletAccount(wallTablet: boolean): void {
+    this.wallTabletAccount.set(wallTablet);
+    if (wallTablet && !this.hasStoredChoice()) {
+      this.isTabletView.set(true);
+    }
+  }
+
   /** Schaltet zwischen Website- und Tablet-Ansicht um. */
   toggle(): void {
     this.isTabletView.update(value => {
@@ -21,6 +46,14 @@ export class ViewModeService {
       this.persist(next);
       return next;
     });
+  }
+
+  private hasStoredChoice(): boolean {
+    try {
+      return localStorage.getItem(ViewModeService.STORAGE_KEY) !== null;
+    } catch {
+      return false;
+    }
   }
 
   private loadTabletView(): boolean {

@@ -9,12 +9,14 @@ export interface CreateUserRequest {
   displayName: string;
   password: string;
   role: UserRole;
+  wallTablet: boolean;
 }
 
 export interface UpdateUserRequest {
   displayName: string;
   role: UserRole;
   enabled: boolean;
+  wallTablet: boolean;
 }
 
 /** Admin-API der Nutzerverwaltung. */

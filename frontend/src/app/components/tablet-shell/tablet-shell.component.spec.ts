@@ -127,11 +127,13 @@ describe('TabletShellComponent', () => {
   describe('Waesche-Frage', () => {
     const asking = { status: 'asking', prompt: 'HUNG', startedAt: null, predictedDryAt: null, estimatePaused: false, requiredLoad: 0 };
 
-    function render(tablet: boolean): HTMLElement {
+    function render(tablet: boolean, wallTablet = true): HTMLElement {
       const laundry = jasmine.createSpyObj('LaundryService', ['getState']);
       laundry.getState.and.returnValue(of(asking));
       TestBed.overrideProvider(LaundryService, { useValue: laundry });
-      TestBed.inject(ViewModeService).isTabletView.set(tablet);
+      const viewMode = TestBed.inject(ViewModeService);
+      viewMode.setWallTabletAccount(wallTablet);
+      viewMode.isTabletView.set(tablet);
       const fixture = TestBed.createComponent(HostComponent);
       fixture.detectChanges();
       return fixture.nativeElement as HTMLElement;
@@ -139,6 +141,10 @@ describe('TabletShellComponent', () => {
 
     it('promptNurImTabletModus', () => {
       expect(render(true).querySelector('app-laundry-prompt .laundry-prompt')).not.toBeNull();
+    });
+
+    it('promptNichtOhneWandtabletKontoAuchImTabletModus', () => {
+      expect(render(true, false).querySelector('app-laundry-prompt')).toBeNull();
     });
 
     it('promptNichtImWebsiteModus', () => {

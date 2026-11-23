@@ -16,7 +16,7 @@ export class AdminUsersComponent implements OnInit {
 
   readonly roles: UserRole[] = ['ADMIN', 'MEMBER', 'KIOSK'];
   users: AppUser[] = [];
-  form: CreateUserRequest = { username: '', displayName: '', password: '', role: 'MEMBER' };
+  form: CreateUserRequest = { username: '', displayName: '', password: '', role: 'MEMBER', wallTablet: false };
   errorMessage: string | null = null;
 
   ngOnInit(): void {
@@ -36,7 +36,7 @@ export class AdminUsersComponent implements OnInit {
     }
     this.userAdminService.createUser(this.form).subscribe({
       next: () => {
-        this.form = { username: '', displayName: '', password: '', role: 'MEMBER' };
+        this.form = { username: '', displayName: '', password: '', role: 'MEMBER', wallTablet: false };
         this.load();
       },
       error: (e: Error) => (this.errorMessage = e.message)
@@ -45,7 +45,8 @@ export class AdminUsersComponent implements OnInit {
 
   save(user: AppUser): void {
     this.userAdminService.updateUser(user.id, {
-      displayName: user.displayName, role: user.role, enabled: user.enabled
+      displayName: user.displayName, role: user.role, enabled: user.enabled,
+      wallTablet: user.wallTablet
     }).subscribe({
       next: () => this.load(),
       error: (e: Error) => { this.errorMessage = e.message; this.load(); }

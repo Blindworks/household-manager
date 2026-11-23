@@ -9,7 +9,7 @@ describe('UserAdminService', () => {
   let httpMock: HttpTestingController;
 
   const user: AppUser = {
-    id: 1, username: 'mia', displayName: 'Mia', role: 'MEMBER', enabled: true,
+    id: 1, username: 'mia', displayName: 'Mia', role: 'MEMBER', enabled: true, wallTablet: false,
     createdAt: '2026-07-25T10:00:00'
   };
 
@@ -31,7 +31,7 @@ describe('UserAdminService', () => {
   });
 
   it('legt einen Nutzer an', () => {
-    service.createUser({ username: 'mia', displayName: 'Mia', password: 'geheim123', role: 'MEMBER' })
+    service.createUser({ username: 'mia', displayName: 'Mia', password: 'geheim123', role: 'MEMBER', wallTablet: false })
       .subscribe(result => expect(result).toEqual(user));
     const req = httpMock.expectOne('/api/v1/admin/users');
     expect(req.request.method).toBe('POST');
