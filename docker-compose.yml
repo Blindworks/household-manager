@@ -70,7 +70,7 @@ services:
       GROCERY_AI_MODEL: ${GROCERY_AI_MODEL:-claude-haiku-4-5-20251001}
       GROCERY_SOURCE_REWE: ${GROCERY_SOURCE_REWE:-false}
       COMMUNICATOR_ENABLED: ${COMMUNICATOR_ENABLED:-true}
-      COMMUNICATOR_MODEL: ${COMMUNICATOR_MODEL:-claude-haiku-4-5-20251001}
+      COMMUNICATOR_MODEL: ${COMMUNICATOR_MODEL:-claude-sonnet-4-5}
       # Spracherkennung: der whisper-Dienst unten. Das Modell laedt das Backend beim Start selbst nach.
       COMMUNICATOR_STT_BASE_URL: ${COMMUNICATOR_STT_BASE_URL:-http://whisper:8000}
       COMMUNICATOR_STT_API_KEY: ${COMMUNICATOR_STT_API_KEY:-}

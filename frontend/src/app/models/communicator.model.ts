@@ -1,43 +1,52 @@
-/** Vertrag der Sprach-App „Communicator“ (`/api/v1/communicator`). */
+/** Vertrag der Sprach-App „Communicator“ (`/api/v1/communicator`): Karten aus allgemeinen Bausteinen. */
 
-export type CommunicatorCardType = 'climate' | 'switch' | 'mode' | 'lock' | 'info';
-
-export type CommunicatorSuggestionKind = 'thermostat-target' | 'switch' | 'mode' | 'ask';
-
-/** Vorgeschlagener naechster Schritt als Knopf unter einer Karte. */
-export interface CommunicatorSuggestion {
+/** Eine Änderung, die erst der Tipp des Nutzers ausführt; `"$value"` im Body ersetzt der Regler. */
+export interface CommunicatorAction {
   label: string;
-  kind: CommunicatorSuggestionKind;
-  thermostatId?: number;
-  value?: number;
-  entityId?: string;
-  state?: 'on' | 'off';
-  question?: string;
+  method: 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  /** Pfad ohne `/api`. */
+  path: string;
+  query?: Record<string, string>;
+  body?: unknown;
 }
 
-/**
- * Eine Karte der Antwort. Welche Felder gesetzt sind, haengt an `type`; fehlende Werte
- * fehlen im JSON (nie `null`). Alle Werte stammen aus dem Live-Zustand des Servers.
- */
+export interface CommunicatorItem {
+  title?: string;
+  subtitle?: string;
+  value?: string;
+  unit?: string;
+}
+
+export interface CommunicatorPoint {
+  label: string;
+  value: number;
+}
+
+/** Welche Felder gesetzt sind, hängt an `type`; fehlende Werte fehlen im JSON. */
+export interface CommunicatorBlock {
+  type: 'text' | 'value' | 'list' | 'chart' | 'slider';
+  label?: string;
+  text?: string;
+  value?: string;
+  unit?: string;
+  tone?: 'good' | 'warn' | 'bad';
+  items?: CommunicatorItem[];
+  points?: CommunicatorPoint[];
+  number?: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  action?: CommunicatorAction;
+}
+
 export interface CommunicatorCard {
-  type: CommunicatorCardType;
   title: string;
   /** Material-Symbols-Name. */
-  icon?: string;
-  text?: string;
-  temperature?: number;
-  humidity?: number;
-  stale?: boolean;
-  thermostatId?: number;
-  targetTemp?: number;
-  heating?: boolean;
-  thermostatMode?: string;
-  entityId?: string;
-  state?: string;
-  powerWatts?: number;
-  smartlockId?: number;
-  doorState?: string;
-  suggestions?: CommunicatorSuggestion[];
+  icon: string;
+  blocks: CommunicatorBlock[];
+  actions: CommunicatorAction[];
+  /** Folgefragen als Knöpfe. */
+  questions: string[];
 }
 
 export interface CommunicatorAnswer {
