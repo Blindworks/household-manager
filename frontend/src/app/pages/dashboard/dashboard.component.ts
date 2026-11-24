@@ -65,6 +65,7 @@ import { buildAgentInsight } from '../../shared/agent-insight.util';
 import { GroceryService } from '../../services/grocery.service';
 import { GrocerySummary, GrocerySummaryItem } from '../../models/grocery.model';
 import { buildGroceryInsight, visibleGroceryItems } from '../../shared/grocery-insight.util';
+import { groceryItemKey, HiddenGroceryDeals, loadHiddenGroceryDeals, saveHiddenGroceryDeals } from '../../shared/grocery-hidden.util';
 import { formatBasePrice, formatReference, formatValidity } from '../../shared/grocery-format.util';
 import { AuthService } from '../../services/auth.service';
 import { SwitchService } from '../../services/switch.service';
@@ -363,7 +364,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   groceryInsight: HubInsight | null = null;
   /** Schnaeppchen der Hub-Karte; der Dialog zeigt genau diese Liste (auch nach einem Refresh). */
   groceryItems: GrocerySummaryItem[] = [];
+  /** Davon auf diesem Geraet ausgeblendete, noch laufende Angebote. */
+  hiddenGroceryItems: GrocerySummaryItem[] = [];
   groceryDialogOpen = false;
+  private grocerySummary: GrocerySummary | null = null;
+  private hiddenGroceryDeals: HiddenGroceryDeals = loadHiddenGroceryDeals();
   /** Zuletzt gebaute Kalender-Eintraege (max. 3). */
   private calendarInsights: HubInsight[] = [];
   /** Zuletzt gebaute Lueftungs-Karte; null = keine Empfehlung. */
@@ -1866,6 +1871,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.groceryDialogOpen = false;
   }
 
+  /**
+   * Blendet ein Angebot auf diesem Geraet aus. Der Dialog bleibt auch nach dem letzten
+   * offen, damit sich ein Versehen sofort zuruecknehmen laesst.
+   */
+  hideGroceryItem(item: GrocerySummaryItem): void {
+    this.setHiddenGroceryDeals({ ...this.hiddenGroceryDeals, [groceryItemKey(item)]: Date.now() });
+  }
+
+  /** Holt alle ausgeblendeten Angebote zurueck. */
+  restoreGroceryItems(): void {
+    this.setHiddenGroceryDeals({});
+  }
+
+  private setHiddenGroceryDeals(hidden: HiddenGroceryDeals): void {
+    this.hiddenGroceryDeals = hidden;
+    saveHiddenGroceryDeals(hidden);
+    this.applyGroceryItems();
+  }
+
   trackGroceryItem(_index: number, item: GrocerySummaryItem): string {
     return item.deal?.fingerprint ?? `${item.productName}|${item.chain}|${item.basePrice}`;
   }
@@ -2350,15 +2374,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
           .pipe(catchError(() => of<GrocerySummary | null>(null))))
       )
       .subscribe(summary => {
-        const viewerId = this.authService.currentUser()?.id ?? null;
-        const tabletMode = this.viewMode.isTabletView();
-        this.groceryInsight = summary ? buildGroceryInsight(summary, viewerId, tabletMode) : null;
-        this.groceryItems = summary ? visibleGroceryItems(summary, viewerId, tabletMode) : [];
-        if (this.groceryItems.length === 0) {
+        this.grocerySummary = summary;
+        this.applyGroceryItems();
+        if (this.groceryItems.length === 0 && this.hiddenGroceryItems.length === 0) {
           this.groceryDialogOpen = false;
         }
-        this.rebuildInsights();
       });
+  }
+
+  /** Baut Hub-Karte und Dialogliste aus dem letzten Stand, ohne die ausgeblendeten Angebote. */
+  private applyGroceryItems(): void {
+    const viewerId = this.authService.currentUser()?.id ?? null;
+    const tabletMode = this.viewMode.isTabletView();
+    const items = this.grocerySummary ? visibleGroceryItems(this.grocerySummary, viewerId, tabletMode) : [];
+    const isHidden = (item: GrocerySummaryItem) => groceryItemKey(item) in this.hiddenGroceryDeals;
+    this.groceryItems = items.filter(item => !isHidden(item));
+    this.hiddenGroceryItems = items.filter(isHidden);
+    this.groceryInsight = buildGroceryInsight({ items: this.groceryItems }, viewerId, tabletMode);
+    this.rebuildInsights();
   }
 
   private startPresenceRefresh(): void {

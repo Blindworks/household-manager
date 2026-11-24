@@ -3925,6 +3925,8 @@ describe('DashboardComponent (Waesche im Intelligence Hub)', () => {
 describe('DashboardComponent (Schnaeppchen-Dialog)', () => {
   let grocerySpy: jasmine.SpyObj<GroceryService>;
 
+  afterEach(() => localStorage.removeItem('grocery.hiddenDeals'));
+
   const deal = (over: Partial<GroceryDeal> = {}): GroceryDeal => ({
     productId: 1, productName: 'Kaffee', ownerUserId: null, chain: 'LIDL', chainName: 'Lidl',
     marketName: 'Lidl Bad Vilbel', title: 'Barissimo Crema 1 kg', packaging: '1 kg', price: 12.99, basePrice: 12.99,
@@ -3990,6 +3992,39 @@ describe('DashboardComponent (Schnaeppchen-Dialog)', () => {
     expect(text).toContain('12,99 €');
     expect(text).toContain('normal ca. 19,50 €/kg');
     expect(text).toContain('Butter');
+
+    discardPeriodicTasks();
+  }));
+
+  it('blendet einzelne Angebote aus, merkt sich das und holt sie zurueck', fakeAsync(() => {
+    grocerySpy.getSummary.and.returnValue(of({ items: [item(), item({ productName: 'Butter', deal: null })] }));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    card(fixture).click();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const click = (test: string) => {
+      host.querySelector<HTMLElement>(`[data-test="${test}"]`)!.click();
+      fixture.detectChanges();
+    };
+
+    click('grocery-hide');
+    expect(host.querySelectorAll('[data-test="grocery-dialog-item"]').length).toBe(1);
+    expect(card(fixture).textContent).toContain('1 Schnäppchen');
+    expect(card(fixture).textContent).not.toContain('Kaffee');
+
+    click('grocery-hide');
+    expect(card(fixture)).toBeUndefined();
+    expect(host.querySelector('[data-test="grocery-dialog"]')).not.toBeNull();
+
+    const reloaded = TestBed.createComponent(DashboardComponent);
+    reloaded.detectChanges();
+    expect(card(reloaded)).toBeUndefined();
+
+    click('grocery-restore');
+    expect(host.querySelectorAll('[data-test="grocery-dialog-item"]').length).toBe(2);
+    expect(card(fixture).textContent).toContain('2 Schnäppchen');
+    expect(host.querySelector('[data-test="grocery-restore"]')).toBeNull();
 
     discardPeriodicTasks();
   }));

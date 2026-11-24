@@ -1163,9 +1163,24 @@
                 <span *ngIf="g.warmingUp" class="lumina__grocery-hint">noch wenig Vergleichsdaten</span>
                 <span *ngIf="viewMode.isTabletView() && g.ownerName" class="lumina__grocery-hint">{{ g.ownerName }}</span>
               </p>
+              <button
+                type="button"
+                class="lumina__grocery-hide"
+                data-test="grocery-hide"
+                [attr.aria-label]="g.productName + ' bei ' + g.chainName + ' ausblenden'"
+                (click)="hideGroceryItem(g)"
+              ><span class="material-symbols-outlined">visibility_off</span>Ausblenden</button>
             </div>
           </li>
         </ul>
+        <p *ngIf="groceryItems.length === 0" class="lumina__grocery-empty">Alle Schnäppchen sind ausgeblendet.</p>
+        <button
+          *ngIf="hiddenGroceryItems.length > 0"
+          type="button"
+          class="lumina__grocery-hide lumina__grocery-restore"
+          data-test="grocery-restore"
+          (click)="restoreGroceryItems()"
+        ><span class="material-symbols-outlined">visibility</span>{{ hiddenGroceryItems.length }} ausgeblendet – wieder anzeigen</button>
         <a
           *ngIf="!viewMode.isTabletView()"
           class="lumina__grocery-all"
