@@ -88,6 +88,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     key: 'household',
     label: 'Haushalt',
     children: [
+      { path: '/communicator', label: 'Communicator', minRole: 'MEMBER' },
       { path: '/calendar', label: 'Kalender' },
       { path: '/groceries', label: 'Angebote', minRole: 'MEMBER' },
       { path: '/waste-collection', label: 'Müllabfuhr' },

@@ -1,0 +1,59 @@
+<div class="communicator" [class.communicator--answered]="cards().length > 0">
+  <header class="communicator__bar">
+    <a routerLink="/" class="communicator__bar-button" aria-label="Zum Dashboard">
+      <span class="material-symbols-outlined">home</span>
+    </a>
+    <button type="button" class="communicator__bar-button" (click)="toggleKeyboard()"
+            [attr.aria-pressed]="keyboardOpen()" aria-label="Frage tippen">
+      <span class="material-symbols-outlined">keyboard</span>
+    </button>
+  </header>
+
+  <main class="communicator__stage">
+    @if (transcript()) {
+      <p class="communicator__transcript">„{{ transcript() }}“</p>
+    }
+
+    @for (shown of cards(); track shown.key) {
+      <app-communicator-card [card]="shown.card" (ask)="askQuestion($event)"></app-communicator-card>
+    }
+
+    @if (error()) {
+      <p class="communicator__error" role="alert">{{ error() }}</p>
+    }
+  </main>
+
+  <footer class="communicator__dock">
+    @if (keyboardOpen()) {
+      <form class="communicator__form" (ngSubmit)="submitText()">
+        <input type="text" name="question" class="communicator__input" [(ngModel)]="text" maxlength="500"
+               placeholder="Frage eintippen" autocomplete="off" enterkeyhint="send" />
+        <button type="submit" class="communicator__send" [disabled]="phase() !== 'idle' || !text.trim()"
+                aria-label="Senden">
+          <span class="material-symbols-outlined">arrow_upward</span>
+        </button>
+      </form>
+    }
+
+    @if (speechAvailable() !== false) {
+      <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
+              [disabled]="phase() === 'thinking'"
+              [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
+        <span class="material-symbols-outlined">
+          {{ phase() === 'recording' ? 'stop' : phase() === 'thinking' ? 'more_horiz' : 'mic' }}
+        </span>
+      </button>
+      <p class="communicator__hint">
+        @switch (phase()) {
+          @case ('recording') { Ich höre zu – zum Senden tippen }
+          @case ('thinking') { Einen Moment … }
+          @default { Tippen und sprechen }
+        }
+      </p>
+    } @else {
+      <p class="communicator__hint">
+        @if (phase() === 'thinking') { Einen Moment … } @else { Spracherkennung nicht verfügbar – bitte tippen }
+      </p>
+    }
+  </footer>
+</div>

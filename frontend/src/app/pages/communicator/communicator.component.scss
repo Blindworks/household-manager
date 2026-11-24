@@ -1,0 +1,223 @@
+// Vollbild ueber der App: der Header der Website (z-index bis 1100) liegt darunter.
+// Die --com-*-Farben erben die Karten-Komponenten ueber CSS-Vererbung.
+
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: block;
+
+  --com-bg: #0b0f14;
+  --com-surface: #141a22;
+  --com-inset: #0e1319;
+  --com-control: #1e2631;
+  --com-line: rgba(255, 255, 255, 0.09);
+  --com-text: #f3f5f7;
+  --com-muted: #8b97a5;
+  --com-accent: #ffb454;
+  --com-on-accent: #1c1305;
+  --com-glow: rgba(255, 180, 84, 0.35);
+  --com-warm: #ff9d5c;
+  --com-warn: #f5c451;
+  --com-danger: #ff7b72;
+}
+
+.communicator {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background:
+    radial-gradient(120% 60% at 50% 100%, rgba(255, 180, 84, 0.08), transparent 70%),
+    var(--com-bg);
+  color: var(--com-text);
+  font-family: var(--font-family);
+  -webkit-tap-highlight-color: transparent;
+
+  &__bar {
+    display: flex;
+    justify-content: space-between;
+    flex: none;
+    padding: calc(env(safe-area-inset-top) + 0.5rem) 0.75rem 0;
+  }
+
+  &__bar-button {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--com-muted);
+    text-decoration: none;
+
+    &[aria-pressed='true'] {
+      background: var(--com-control);
+      color: var(--com-text);
+    }
+  }
+
+  &__stage {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    width: 100%;
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 0.5rem 1rem 1rem;
+    box-sizing: border-box;
+  }
+
+  &__transcript {
+    margin: 0;
+    color: var(--com-muted);
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  &__error {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border-radius: 18px;
+    background: rgba(255, 123, 114, 0.12);
+    color: var(--com-danger);
+    text-align: center;
+  }
+
+  &__dock {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem calc(env(safe-area-inset-bottom) + 1rem);
+  }
+
+  // Ohne Antwort gehoert die Buehne dem Knopf: er rueckt in die Mitte und wird gross.
+  &:not(.communicator--answered) .communicator__stage {
+    flex: none;
+  }
+
+  &:not(.communicator--answered) .communicator__dock {
+    flex: 1;
+    justify-content: center;
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--com-muted);
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  &__form {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 28rem;
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid var(--com-line);
+    border-radius: 999px;
+    background: var(--com-surface);
+    color: var(--com-text);
+    // 16px verhindert, dass iOS beim Fokussieren in die Seite zoomt.
+    font: inherit;
+    font-size: 16px;
+
+    &::placeholder {
+      color: var(--com-muted);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--com-accent);
+    }
+  }
+
+  &__send {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    flex: none;
+    border: none;
+    border-radius: 50%;
+    background: var(--com-accent);
+    color: var(--com-on-accent);
+
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
+}
+
+.mic {
+  display: grid;
+  place-items: center;
+  width: 12rem;
+  height: 12rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--com-accent);
+  color: var(--com-on-accent);
+  box-shadow: 0 0 0 0 var(--com-glow), 0 18px 60px rgba(255, 180, 84, 0.25);
+  touch-action: manipulation;
+  transition: width 0.25s, height 0.25s, background 0.2s;
+
+  .material-symbols-outlined {
+    font-size: 5rem;
+    transition: font-size 0.25s;
+  }
+
+  .communicator--answered & {
+    width: 5.5rem;
+    height: 5.5rem;
+
+    .material-symbols-outlined {
+      font-size: 2.4rem;
+    }
+  }
+
+  &--recording {
+    background: var(--com-danger);
+    color: #fff;
+    animation: mic-pulse 1.4s ease-out infinite;
+  }
+
+  &--thinking {
+    background: var(--com-control);
+    color: var(--com-muted);
+    animation: mic-breathe 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes mic-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 123, 114, 0.55);
+  }
+
+  100% {
+    box-shadow: 0 0 0 2.2rem rgba(255, 123, 114, 0);
+  }
+}
+
+@keyframes mic-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic {
+    animation: none;
+    transition: none;
+  }
+}

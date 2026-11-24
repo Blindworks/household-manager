@@ -69,6 +69,13 @@ services:
       GROCERY_ENABLED: ${GROCERY_ENABLED:-true}
       GROCERY_AI_MODEL: ${GROCERY_AI_MODEL:-claude-haiku-4-5-20251001}
       GROCERY_SOURCE_REWE: ${GROCERY_SOURCE_REWE:-false}
+      COMMUNICATOR_ENABLED: ${COMMUNICATOR_ENABLED:-true}
+      COMMUNICATOR_MODEL: ${COMMUNICATOR_MODEL:-claude-haiku-4-5-20251001}
+      # Spracherkennung: der whisper-Dienst unten. Das Modell laedt das Backend beim Start selbst nach.
+      COMMUNICATOR_STT_BASE_URL: ${COMMUNICATOR_STT_BASE_URL:-http://whisper:8000}
+      COMMUNICATOR_STT_API_KEY: ${COMMUNICATOR_STT_API_KEY:-}
+      COMMUNICATOR_STT_MODEL: ${COMMUNICATOR_STT_MODEL:-Systran/faster-whisper-small}
+      COMMUNICATOR_STT_AUTO_INSTALL_MODEL: ${COMMUNICATOR_STT_AUTO_INSTALL_MODEL:-true}
 
       # Blink-Gesichtserkennung (blink-vision-Sidecar)
       VISION_SIDECAR_URL: http://blink-vision:8090
@@ -164,6 +171,24 @@ services:
     networks:
       - app_net
 
+  # Spracherkennung fuer den Communicator (speaches = faster-whisper mit OpenAI-kompatibler API).
+  # Das Image bringt KEIN Modell mit und laedt auch keines von selbst: ohne installiertes Modell
+  # antwortet /v1/audio/transcriptions mit 404. Das Backend stoesst den Download beim Start an
+  # (communicator.stt.auto-install-model); das Modell (small, rund 500 MB) liegt danach im Volume.
+  # Bewusst KEIN Port-Mapping: der Dienst hat keine Authentifizierung (wie blink-vision).
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu
+    restart: unless-stopped
+    environment:
+      WHISPER__COMPUTE_TYPE: int8
+      # -1 = Modell nie entladen; sonst kostet die erste Frage nach 5 Minuten Pause das Neuladen.
+      WHISPER__TTL: "-1"
+      ENABLE_UI: "false"
+    volumes:
+      - whisper_models:/home/ubuntu/.cache/huggingface/hub
+    networks:
+      - app_net
+
   rebooter:
     build:
       context: ./rebooter
@@ -249,3 +274,4 @@ volumes:
   zigbee2mqtt_data:
   alexa_sidecar_data:
   blink_vision_data:
+  whisper_models:
