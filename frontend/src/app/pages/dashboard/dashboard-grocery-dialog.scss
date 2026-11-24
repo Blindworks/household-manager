@@ -100,6 +100,41 @@ $grocery-saving: #15803d;
   color: $grocery-muted;
 }
 
+.lumina__grocery-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border: 1px solid $grocery-line;
+  border-radius: 999px;
+  background: #fff;
+  color: $grocery-muted;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: $grocery-panel;
+  }
+}
+
+.lumina__grocery-restore {
+  display: flex;
+  margin-top: 16px;
+}
+
+.lumina__grocery-empty {
+  margin: 0;
+  color: $grocery-muted;
+}
+
 .lumina__grocery-all {
   display: inline-flex;
   align-items: center;
