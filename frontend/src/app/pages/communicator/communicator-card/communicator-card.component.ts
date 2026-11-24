@@ -1,286 +1,113 @@
-import { Component, EventEmitter, Input, OnDestroy, Output, inject, signal } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
-import { Observable } from 'rxjs';
-import { CommunicatorCard, CommunicatorSuggestion } from '../../../models/communicator.model';
-import { ModeService } from '../../../services/mode.service';
-import { NukiService } from '../../../services/nuki.service';
-import { SwitchService } from '../../../services/switch.service';
-import { ThermostatService } from '../../../services/thermostat.service';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import {
+  CommunicatorAction,
+  CommunicatorBlock,
+  CommunicatorCard,
+  CommunicatorPoint
+} from '../../../models/communicator.model';
+import { CommunicatorService } from '../../../services/communicator.service';
 
-const MIN_TARGET = 5;
-const MAX_TARGET = 30;
-const TARGET_STEP = 0.5;
-/** Mehrere Tipps auf +/− werden gesammelt und als EIN Sollwert geschrieben. */
-const TARGET_DEBOUNCE_MS = 600;
-const DEFAULT_TARGET = 20;
-
-interface Switchable {
-  entityId: string;
-  displayName: string;
-  state: string;
-  confirmRequired?: boolean;
-}
+const VALUE_PLACEHOLDER = '$value';
 
 /**
- * Eine Antwort-Karte des Communicators samt ihrer Bedienung. Die Karte zeigt, was der Server
- * geliefert hat; geschaltet wird ueber die normalen Endpunkte (Thermostat, Schalter, Modus, Schloss),
- * damit Rechte und Audit dieselben sind wie ueberall sonst.
+ * Zeigt eine Karte aus allgemeinen Bausteinen und führt deren Aktionen aus, aber nur auf Tipp des Nutzers.
+ * Kennt bewusst kein einzelnes Feature (Heizung, Licht, …): alles Nötige steht in der Karte.
  */
 @Component({
   selector: 'app-communicator-card',
   standalone: true,
-  imports: [NgTemplateOutlet],
   templateUrl: './communicator-card.component.html',
   styleUrl: './communicator-card.component.scss'
 })
-export class CommunicatorCardComponent implements OnDestroy {
-  private readonly thermostats = inject(ThermostatService);
-  private readonly switches = inject(SwitchService);
-  private readonly modes = inject(ModeService);
-  private readonly nuki = inject(NukiService);
+export class CommunicatorCardComponent {
+  private readonly service = inject(CommunicatorService);
 
-  /** Lokale Kopie: Aktionen aktualisieren die Anzeige, ohne die Antwort der Seite zu veraendern. */
-  readonly view = signal<CommunicatorCard>({ type: 'info', title: '' });
   readonly busy = signal(false);
+  /** Ausgeführte Aktionen bleiben gesperrt: ein zweiter Tipp auf einen Umschalter kehrte sie um. */
+  readonly done = signal<ReadonlySet<CommunicatorAction>>(new Set());
   readonly notice = signal<string | null>(null);
   readonly error = signal<string | null>(null);
-  /** Geraet mit Ausschalt-Bestaetigung: der erste Tipp fragt, erst der zweite schaltet. */
-  readonly confirmingOff = signal(false);
+  readonly sliderValues = signal<Record<number, number>>({});
 
-  /** Folgefrage eines Vorschlags; die Seite stellt sie wie eine gesprochene Frage. */
+  /** Folgefrage; die Seite stellt sie wie eine gesprochene Frage. */
   @Output() readonly ask = new EventEmitter<string>();
 
-  private targetTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Letzter vom Server bestaetigter Sollwert, fuer das Zurueckspringen nach einem Fehler. */
-  private confirmedTarget: number | undefined;
+  @Input({ required: true }) card!: CommunicatorCard;
 
-  @Input({ required: true }) set card(card: CommunicatorCard) {
-    this.view.set({ ...card });
-    this.confirmedTarget = card.targetTemp;
+  run(action: CommunicatorAction): void {
+    this.execute(action, action.body, action.label, () =>
+      this.done.update(done => new Set(done).add(action))
+    );
   }
 
-  ngOnDestroy(): void {
-    if (this.targetTimer) {
-      clearTimeout(this.targetTimer);
+  applySlider(block: CommunicatorBlock, index: number): void {
+    if (block.action) {
+      const value = this.sliderValue(block, index);
+      this.execute(block.action, this.fill(block.action.body, value), `${block.action.label}: ${this.number(value)} ${block.unit ?? ''}`.trim());
     }
   }
 
-  // --- Anzeige ---------------------------------------------------------------------------
-
-  degrees(value: number | undefined): string {
-    return value == null
-      ? '–'
-      : value.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  sliderValue(block: CommunicatorBlock, index: number): number {
+    return this.sliderValues()[index] ?? block.number ?? 0;
   }
 
-  isOn(): boolean {
-    return this.view().state === 'on';
+  changeSlider(block: CommunicatorBlock, index: number, direction: 1 | -1): void {
+    const step = block.step ?? 1;
+    const min = block.min ?? 0;
+    const raw = this.sliderValue(block, index) + direction * step;
+    // Aufs Raster ab min runden, sonst sammeln sich Rundungsfehler (0,1 + 0,2).
+    const snapped = Number((min + Math.round((raw - min) / step) * step).toFixed(3));
+    const value = Math.min(block.max ?? snapped, Math.max(min, snapped));
+    this.sliderValues.update(values => ({ ...values, [index]: value }));
   }
 
-  /** Alles ausser on/off (unavailable, unknown) ist nicht schaltbar — nie als „aus“ behandeln. */
-  isSwitchable(): boolean {
-    const state = this.view().state;
-    return state === 'on' || state === 'off';
+  number(value: number): string {
+    return value.toLocaleString('de-DE', { maximumFractionDigits: 2 });
   }
 
-  stateLabel(): string {
-    const state = this.view().state;
-    return state === 'on' ? 'An' : state === 'off' ? 'Aus' : 'Nicht erreichbar';
+  /** Linienzug im 100×40-Feld. */
+  chartPath(points: CommunicatorPoint[]): string {
+    const { min, max } = this.range(points);
+    const span = max - min || 1;
+    return points
+      .map((point, i) => `${(i / (points.length - 1)) * 100},${38 - ((point.value - min) / span) * 36}`)
+      .join(' ');
   }
 
-  lockLabel(): string {
-    switch (this.view().state) {
-      case 'locked': return 'Verriegelt';
-      case 'unlocked': return 'Entriegelt';
-      case 'unlatched': return 'Falle gezogen';
-      case 'locking': return 'Verriegelt gerade …';
-      case 'unlocking': return 'Entriegelt gerade …';
-      default: return 'Zustand unbekannt';
-    }
+  range(points: CommunicatorPoint[]): { min: number; max: number } {
+    const values = points.map(point => point.value);
+    return { min: Math.min(...values), max: Math.max(...values) };
   }
 
-  doorLabel(): string | null {
-    const door = this.view().doorState;
-    return door === 'on' ? 'Tür offen' : door === 'off' ? 'Tür geschlossen' : null;
-  }
-
-  canLock(): boolean {
-    return this.view().state !== 'locked' && this.view().state !== 'locking';
-  }
-
-  // --- Thermostat ------------------------------------------------------------------------
-
-  adjustTarget(delta: number): void {
-    const current = this.view().targetTemp ?? DEFAULT_TARGET;
-    this.scheduleTarget(current + delta);
-  }
-
-  private scheduleTarget(value: number): void {
-    const thermostatId = this.view().thermostatId;
-    if (thermostatId == null) {
+  private execute(action: CommunicatorAction, body: unknown, label: string, onSuccess?: () => void): void {
+    if (this.busy()) {
       return;
     }
-    const target = this.snapTarget(value);
-    this.view.update(card => ({ ...card, targetTemp: target }));
+    this.busy.set(true);
+    this.notice.set(null);
     this.error.set(null);
-    if (this.targetTimer) {
-      clearTimeout(this.targetTimer);
-    }
-    this.targetTimer = setTimeout(() => this.writeTarget(thermostatId, target), TARGET_DEBOUNCE_MS);
-  }
-
-  private snapTarget(value: number): number {
-    const snapped = Math.round(value / TARGET_STEP) * TARGET_STEP;
-    return Math.min(MAX_TARGET, Math.max(MIN_TARGET, snapped));
-  }
-
-  private writeTarget(thermostatId: number, target: number): void {
-    this.targetTimer = null;
-    this.thermostats.setTarget(thermostatId, target).subscribe({
+    this.service.execute(action, body).subscribe({
       next: () => {
-        if (this.view().thermostatId === thermostatId) {
-          this.confirmedTarget = target;
-        }
-        this.notice.set(`Sollwert ${this.degrees(target)} °C gesetzt`);
+        this.busy.set(false);
+        this.notice.set(`Erledigt: ${label}`);
+        onSuccess?.();
       },
-      error: () => {
-        if (this.view().thermostatId === thermostatId) {
-          this.view.update(card => ({ ...card, targetTemp: this.confirmedTarget }));
-        }
-        this.fail('Der Sollwert konnte nicht gesetzt werden.');
+      error: (error: { error?: { message?: string } }) => {
+        this.busy.set(false);
+        this.error.set(error.error?.message ?? 'Das hat nicht geklappt.');
       }
     });
   }
 
-  // --- Schalter, Modus, Schloss ----------------------------------------------------------
-
-  toggleOwn(): void {
-    const card = this.view();
-    if (!card.entityId || this.busy()) {
-      return;
+  private fill(body: unknown, value: number): unknown {
+    if (body === VALUE_PLACEHOLDER) {
+      return value;
     }
-    const desired = this.isOn() ? 'off' : 'on';
-    this.setState(card.type === 'mode' ? 'mode' : 'switch', card.entityId, desired, this.confirmingOff());
-  }
-
-  lock(): void {
-    const smartlockId = this.view().smartlockId;
-    if (smartlockId == null || this.busy()) {
-      return;
+    if (Array.isArray(body)) {
+      return body.map(entry => this.fill(entry, value));
     }
-    this.begin();
-    this.nuki.sendAction(smartlockId, 'LOCK').subscribe({
-      next: () => {
-        this.view.update(card => ({ ...card, state: 'locking' }));
-        this.finish('Die Tür wird verriegelt');
-      },
-      error: () => this.fail('Verriegeln hat nicht geklappt.')
-    });
-  }
-
-  runSuggestion(suggestion: CommunicatorSuggestion): void {
-    if (this.busy()) {
-      return;
-    }
-    switch (suggestion.kind) {
-      case 'ask':
-        if (suggestion.question) {
-          this.ask.emit(suggestion.question);
-        }
-        break;
-      case 'thermostat-target':
-        if (suggestion.thermostatId != null && suggestion.value != null) {
-          this.runTargetSuggestion(suggestion.thermostatId, suggestion.value);
-        }
-        break;
-      case 'switch':
-      case 'mode':
-        if (suggestion.entityId && suggestion.state) {
-          this.setState(suggestion.kind, suggestion.entityId, suggestion.state, false);
-        }
-        break;
-    }
-  }
-
-  private runTargetSuggestion(thermostatId: number, value: number): void {
-    if (this.view().thermostatId === thermostatId) {
-      this.scheduleTarget(value);
-      return;
-    }
-    this.begin();
-    this.thermostats.setTarget(thermostatId, this.snapTarget(value)).subscribe({
-      next: updated => this.finish(`${updated.name}: Sollwert ${this.degrees(value)} °C`),
-      error: () => this.fail('Der Sollwert konnte nicht gesetzt werden.')
-    });
-  }
-
-  /**
-   * Schaltet gezielt auf `desired`. Die Endpunkte koennen nur umschalten, deshalb wird der Zustand
-   * vorher FRISCH gelesen: die Karte kann Minuten alt sein, und ein Toggle auf einem veralteten
-   * Stand schaltete in die falsche Richtung.
-   */
-  private setState(kind: 'switch' | 'mode', entityId: string, desired: 'on' | 'off', confirmed: boolean): void {
-    this.begin();
-    const list$: Observable<Switchable[]> =
-      kind === 'mode' ? this.modes.getModes() : this.switches.getSwitches(undefined, 'all');
-    list$.subscribe({
-      next: list => {
-        const current = list.find(entry => entry.entityId === entityId);
-        if (!current || (current.state !== 'on' && current.state !== 'off')) {
-          this.fail('Das Gerät ist gerade nicht erreichbar.');
-          return;
-        }
-        if (current.state === desired) {
-          this.applyState(entityId, desired);
-          this.finish(`${current.displayName} ist bereits ${desired === 'on' ? 'an' : 'aus'}`);
-          return;
-        }
-        if (desired === 'off' && current.confirmRequired && !confirmed) {
-          this.applyState(entityId, current.state);
-          this.busy.set(false);
-          this.confirmingOff.set(true);
-          return;
-        }
-        const toggle$: Observable<Switchable> =
-          kind === 'mode' ? this.modes.toggle(entityId) : this.switches.toggle(entityId);
-        toggle$.subscribe({
-          next: updated => {
-            this.applyState(entityId, updated.state);
-            this.finish(`${updated.displayName} ist jetzt ${updated.state === 'on' ? 'an' : 'aus'}`);
-          },
-          error: () => this.fail('Schalten hat nicht geklappt.')
-        });
-      },
-      error: () => this.fail('Der Zustand konnte nicht gelesen werden.')
-    });
-  }
-
-  cancelConfirm(): void {
-    this.confirmingOff.set(false);
-  }
-
-  private applyState(entityId: string, state: string): void {
-    if (this.view().entityId === entityId) {
-      this.view.update(card => ({ ...card, state }));
-    }
-  }
-
-  private begin(): void {
-    this.busy.set(true);
-    this.error.set(null);
-    this.notice.set(null);
-  }
-
-  private finish(notice: string): void {
-    this.busy.set(false);
-    this.confirmingOff.set(false);
-    this.notice.set(notice);
-  }
-
-  private fail(message: string): void {
-    this.busy.set(false);
-    this.confirmingOff.set(false);
-    this.notice.set(null);
-    this.error.set(message);
+    return body && typeof body === 'object'
+      ? Object.fromEntries(Object.entries(body).map(([key, entry]) => [key, this.fill(entry, value)]))
+      : body;
   }
 }

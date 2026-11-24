@@ -6,6 +6,7 @@ import com.household.manager.communicator.CommunicatorDtos.AskTextRequest;
 import com.household.manager.communicator.CommunicatorDtos.StatusResponse;
 import com.household.manager.communicator.SpeechToTextClient.SpeechModelMissingException;
 import com.household.manager.communicator.SpeechToTextClient.SpeechToTextException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class CommunicatorController {
     }
 
     @PostMapping(path = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public AskResponse ask(@RequestParam("audio") MultipartFile audio) throws IOException {
+    public AskResponse ask(@RequestParam("audio") MultipartFile audio, HttpServletRequest request) throws IOException {
         if (audio.isEmpty()) {
             throw new IllegalArgumentException("Die Aufnahme ist leer.");
         }
@@ -62,23 +63,27 @@ public class CommunicatorController {
         } catch (SpeechModelMissingException ex) {
             modelInstaller.requestInstall();
             return new AskResponse(null,
-                    List.of(CommunicatorCardFactory.infoCard("downloading", "Spracherkennung", ex.getMessage())));
+                    List.of(CardBuilder.message("downloading", "Spracherkennung", ex.getMessage())));
         } catch (SpeechToTextException ex) {
             log.warn("Spracherkennung fehlgeschlagen: {}", ex.getMessage(), ex.getCause());
             return new AskResponse(null,
-                    List.of(CommunicatorCardFactory.infoCard("mic_off", "Spracherkennung", ex.getMessage())));
+                    List.of(CardBuilder.message("mic_off", "Spracherkennung", ex.getMessage())));
         }
         if (transcript.isBlank()) {
             return new AskResponse(null,
-                    List.of(CommunicatorCardFactory.infoCard("hearing_disabled", "Nichts verstanden",
+                    List.of(CardBuilder.message("hearing_disabled", "Nichts verstanden",
                             NOT_UNDERSTOOD_TEXT)));
         }
-        return new AskResponse(transcript, agentService.ask(transcript));
+        return new AskResponse(transcript, agentService.ask(transcript, caller(request)));
     }
 
     @PostMapping("/ask-text")
-    public AskResponse askText(@Valid @RequestBody AskTextRequest request) {
-        String text = request.text().trim();
-        return new AskResponse(text, agentService.ask(text));
+    public AskResponse askText(@Valid @RequestBody AskTextRequest body, HttpServletRequest request) {
+        String text = body.text().trim();
+        return new AskResponse(text, agentService.ask(text, caller(request)));
+    }
+
+    private static ApiGateway.Caller caller(HttpServletRequest request) {
+        return new ApiGateway.Caller(request.getHeader("Cookie"), request.getHeader("X-API-Token"));
     }
 }

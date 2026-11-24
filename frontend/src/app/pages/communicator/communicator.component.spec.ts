@@ -3,10 +3,6 @@ import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { CommunicatorAnswer, CommunicatorStatus } from '../../models/communicator.model';
 import { CommunicatorService } from '../../services/communicator.service';
-import { ModeService } from '../../services/mode.service';
-import { NukiService } from '../../services/nuki.service';
-import { SwitchService } from '../../services/switch.service';
-import { ThermostatService } from '../../services/thermostat.service';
 import { CommunicatorComponent } from './communicator.component';
 
 describe('CommunicatorComponent', () => {
@@ -16,7 +12,7 @@ describe('CommunicatorComponent', () => {
 
   const climateAnswer: CommunicatorAnswer = {
     transcript: 'Wie warm ist es im Wohnzimmer?',
-    cards: [{ type: 'climate', title: 'Wohnzimmer', temperature: 20.4, humidity: 48, thermostatId: 3, targetTemp: 21 }]
+    cards: [{ title: 'Wohnzimmer', icon: 'home', blocks: [{ type: 'value', value: '20,4', unit: '°C' }], actions: [], questions: [] }]
   };
 
   function setup(status: CommunicatorStatus = { enabled: true, aiConfigured: true, speechConfigured: true }): void {
@@ -26,11 +22,7 @@ describe('CommunicatorComponent', () => {
       imports: [CommunicatorComponent],
       providers: [
         provideRouter([]),
-        { provide: CommunicatorService, useValue: service },
-        { provide: ThermostatService, useValue: {} },
-        { provide: SwitchService, useValue: {} },
-        { provide: ModeService, useValue: {} },
-        { provide: NukiService, useValue: {} }
+        { provide: CommunicatorService, useValue: service }
       ]
     });
     fixture = TestBed.createComponent(CommunicatorComponent);
@@ -51,7 +43,7 @@ describe('CommunicatorComponent', () => {
     expect(service.askText).toHaveBeenCalledOnceWith('Wie warm ist es im Wohnzimmer?');
     expect(el().querySelector('.communicator__transcript')?.textContent).toContain('Wie warm ist es im Wohnzimmer?');
     expect(el().querySelectorAll('app-communicator-card').length).toBe(1);
-    expect(el().querySelector('.card__value')?.textContent).toContain('20,4');
+    expect(el().querySelector('.value__main')?.textContent).toContain('20,4');
     expect(el().querySelector('.communicator')?.classList).toContain('communicator--answered');
   });
 
@@ -105,8 +97,7 @@ describe('CommunicatorComponent', () => {
     setup();
     service.askText.and.returnValue(of({
       transcript: 'Hallo',
-      cards: [{ type: 'info', title: 'Hinweis', text: 'Text',
-        suggestions: [{ label: 'Wetter', kind: 'ask', question: 'Wie wird das Wetter?' }] }]
+      cards: [{ title: 'Hinweis', icon: 'info', blocks: [{ type: 'text', text: 'Text' }], actions: [], questions: ['Wie wird das Wetter?'] }]
     }));
     component.askQuestion('Hallo');
     fixture.detectChanges();

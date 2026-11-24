@@ -15,10 +15,10 @@ import org.springframework.context.annotation.Configuration;
 public class CommunicatorProperties {
 
     private boolean enabled = true;
-    private String model = "claude-haiku-4-5-20251001";
-    private int maxTokens = 1024;
+    private String model = "claude-sonnet-4-5";
+    private int maxTokens = 2048;
     /** Obergrenze der Tool-Runden je Frage (Endlosschleifen-Schutz und Antwortzeit). */
-    private int maxToolIterations = 5;
+    private int maxToolIterations = 8;
     private Stt stt = new Stt();
 
     /** Spracherkennung ueber einen OpenAI-kompatiblen Dienst ({@code POST /v1/audio/transcriptions}). */

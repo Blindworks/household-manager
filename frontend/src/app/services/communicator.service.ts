@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CommunicatorAnswer, CommunicatorStatus } from '../models/communicator.model';
+import { CommunicatorAction, CommunicatorAnswer, CommunicatorStatus } from '../models/communicator.model';
 
 /** REST-Service der Sprach-App: Aufnahme oder Text hinein, Karten heraus. */
 @Injectable({ providedIn: 'root' })
@@ -22,5 +22,10 @@ export class CommunicatorService {
 
   askText(text: string): Observable<CommunicatorAnswer> {
     return this.http.post<CommunicatorAnswer>(`${this.baseUrl}/ask-text`, { text });
+  }
+
+  /** Führt eine vom Server geprüfte Aktion mit der Anmeldung des Nutzers aus; nur auf Tipp aufrufen. */
+  execute(action: CommunicatorAction, body: unknown): Observable<unknown> {
+    return this.http.request(action.method, `/api${action.path}`, { body, params: action.query });
   }
 }

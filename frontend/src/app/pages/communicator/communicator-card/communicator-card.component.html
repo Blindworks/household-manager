@@ -1,99 +1,86 @@
-<article class="card" [class]="'card card--' + view().type" [class.card--on]="isOn()">
+<article class="card">
   <header class="card__head">
-    <span class="material-symbols-outlined card__icon">{{ view().icon || 'info' }}</span>
-    <h2 class="card__title">{{ view().title }}</h2>
+    <span class="material-symbols-outlined card__icon">{{ card.icon }}</span>
+    <h2 class="card__title">{{ card.title }}</h2>
   </header>
 
-  @switch (view().type) {
-    @case ('climate') {
-      <div class="card__hero" [class.card__hero--stale]="view().stale">
-        <span class="card__value">{{ degrees(view().temperature) }}</span>
-        <span class="card__unit">°C</span>
-      </div>
-      <p class="card__sub">
-        @if (view().humidity != null) {
-          <span>{{ view().humidity!.toFixed(0) }} % Luftfeuchte</span>
+  @for (block of card.blocks; track $index; let i = $index) {
+    @switch (block.type) {
+      @case ('value') {
+        <div class="value" [class.value--small]="i > 0" [class.value--long]="(block.value?.length ?? 0) > 8"
+             [class]="block.tone ? 'value--' + block.tone : ''">
+          <p class="value__main"><span>{{ block.value }}</span><small>{{ block.unit }}</small></p>
+          @if (block.label) { <p class="card__sub">{{ block.label }}</p> }
+        </div>
+      }
+      @case ('list') {
+        @if (block.label) { <p class="card__sub">{{ block.label }}</p> }
+        <ul class="list">
+          @for (item of block.items; track $index) {
+            <li class="list__item">
+              <span class="list__text">
+                <strong>{{ item.title }}</strong>
+                @if (item.subtitle) { <small>{{ item.subtitle }}</small> }
+              </span>
+              @if (item.value) { <span class="list__value">{{ item.value }} {{ item.unit }}</span> }
+            </li>
+          } @empty {
+            <li class="list__item">Keine Einträge</li>
+          }
+        </ul>
+      }
+      @case ('chart') {
+        @if (block.label) { <p class="card__sub">{{ block.label }}</p> }
+        @if (block.points; as points) {
+          <svg class="chart" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <polyline [attr.points]="chartPath(points)" />
+          </svg>
+          <p class="chart__axis">
+            <span>{{ points[0].label }}</span>
+            <span>{{ number(range(points).min) }} bis {{ number(range(points).max) }} {{ block.unit }}</span>
+            <span>{{ points[points.length - 1].label }}</span>
+          </p>
         }
-        @if (view().stale) {
-          <span class="card__warn">Messwert veraltet</span>
-        }
-      </p>
-      @if (view().thermostatId != null) {
+      }
+      @case ('slider') {
         <div class="target">
-          <button type="button" class="target__step" (click)="adjustTarget(-0.5)" aria-label="Kälter">
+          <button type="button" class="target__step" (click)="changeSlider(block, i, -1)" aria-label="Weniger">
             <span class="material-symbols-outlined">remove</span>
           </button>
           <div class="target__value">
-            <span class="target__label">Soll</span>
-            <span class="target__number">{{ degrees(view().targetTemp) }}°</span>
-            @if (view().heating) {
-              <span class="target__heating">
-                <span class="material-symbols-outlined">local_fire_department</span> heizt
-              </span>
-            }
+            <span class="target__label">{{ block.label }}</span>
+            <span class="target__number">{{ number(sliderValue(block, i)) }} {{ block.unit }}</span>
           </div>
-          <button type="button" class="target__step" (click)="adjustTarget(0.5)" aria-label="Wärmer">
+          <button type="button" class="target__step" (click)="changeSlider(block, i, 1)" aria-label="Mehr">
             <span class="material-symbols-outlined">add</span>
           </button>
         </div>
+        @if (sliderValue(block, i) !== block.number) {
+          <button type="button" class="action" [disabled]="busy()" (click)="applySlider(block, i)">
+            {{ block.action?.label }}
+          </button>
+        }
       }
-    }
-    @case ('switch') {
-      <ng-container [ngTemplateOutlet]="toggle"></ng-container>
-      @if (isOn() && view().powerWatts != null) {
-        <p class="card__sub"><span>{{ view().powerWatts!.toFixed(0) }} W</span></p>
-      }
-    }
-    @case ('mode') {
-      <ng-container [ngTemplateOutlet]="toggle"></ng-container>
-    }
-    @case ('lock') {
-      <div class="card__hero card__hero--text">
-        <span class="card__state">{{ lockLabel() }}</span>
-      </div>
-      @if (doorLabel()) {
-        <p class="card__sub"><span>{{ doorLabel() }}</span></p>
-      }
-      @if (canLock()) {
-        <button type="button" class="action" [disabled]="busy()" (click)="lock()">
-          <span class="material-symbols-outlined">lock</span> Verriegeln
-        </button>
-      }
-    }
-    @default {
-      <p class="card__text">{{ view().text }}</p>
+      @default { <p class="card__text">{{ block.text }}</p> }
     }
   }
 
-  @if (notice()) {
-    <p class="card__notice" role="status">{{ notice() }}</p>
-  }
-  @if (error()) {
-    <p class="card__error" role="alert">{{ error() }}</p>
+  @for (action of card.actions; track $index) {
+    <button type="button" class="action" [class.action--danger]="action.method === 'DELETE'"
+            [disabled]="busy() || done().has(action)" (click)="run(action)">
+      {{ action.label }}
+    </button>
+    <p class="action__target">{{ action.method }} {{ action.path }}</p>
   }
 
-  @if (view().suggestions?.length) {
+  @if (notice()) { <p class="card__notice" role="status">{{ notice() }}</p> }
+  @if (error()) { <p class="card__error" role="alert">{{ error() }}</p> }
+
+  @if (card.questions.length) {
     <div class="suggestions">
-      @for (suggestion of view().suggestions; track $index) {
-        <button type="button" class="suggestions__chip" [disabled]="busy()" (click)="runSuggestion(suggestion)">
-          {{ suggestion.label }}
-        </button>
+      @for (question of card.questions; track $index) {
+        <button type="button" class="suggestions__chip" (click)="ask.emit(question)">{{ question }}</button>
       }
     </div>
   }
 </article>
-
-<ng-template #toggle>
-  <button type="button" class="power" [class.power--on]="isOn()" [disabled]="busy() || !isSwitchable()"
-          (click)="toggleOwn()" [attr.aria-pressed]="isOn()">
-    <span class="material-symbols-outlined">power_settings_new</span>
-  </button>
-  @if (confirmingOff()) {
-    <p class="card__confirm">
-      Wirklich ausschalten? Noch einmal tippen.
-      <button type="button" class="card__cancel" (click)="cancelConfirm()">Abbrechen</button>
-    </p>
-  } @else {
-    <p class="card__state card__state--center">{{ stateLabel() }}</p>
-  }
-</ng-template>
