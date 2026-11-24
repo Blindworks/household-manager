@@ -16,6 +16,16 @@ export interface WeatherForecastHour {
   icon: number | null;
 }
 
+export interface WeatherForecastDay {
+  /** Kalendertag, `yyyy-MM-dd`. */
+  date: string;
+  temperatureMin: number | null;
+  temperatureMax: number | null;
+  precipitation: number | null;
+  windGust: number | null;
+  icon: number | null;
+}
+
 export interface WeatherWarning {
   warnId: number | null;
   event: string | null;
@@ -31,6 +41,7 @@ export interface WeatherOverview {
   stationId: string;
   current: WeatherConditions | null;
   hourlyForecast: WeatherForecastHour[];
+  dailyForecast?: WeatherForecastDay[];
   warnings: WeatherWarning[];
   nextRain: string | null;
 }

@@ -106,6 +106,37 @@ describe('DashboardComponent (Schalter)', () => {
     }).compileComponents();
   });
 
+  it('oeffnet den Wetterbericht ueber den DWD-Block und laedt frisch nach', fakeAsync(() => {
+    const weatherService = TestBed.inject(WeatherService) as jasmine.SpyObj<WeatherService>;
+    weatherService.getOverview.and.returnValue(of({
+      stationId: '10637',
+      current: {
+        time: '2026-11-24T06:00:00', temperature: -3, precipitation: 0, windSpeed: 9.3,
+        windDirection: 63, humidity: 90, pressure: 1020, icon: 2
+      },
+      hourlyForecast: [],
+      dailyForecast: [],
+      warnings: [],
+      nextRain: null
+    }));
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    weatherService.getOverview.calls.reset();
+    const root = fixture.nativeElement as HTMLElement;
+
+    root.querySelector<HTMLButtonElement>('.lumina__weather-report-button')!.click();
+    fixture.detectChanges();
+
+    expect(weatherService.getOverview).toHaveBeenCalledTimes(1);
+    expect(root.querySelector('.lumina__dialog--weather')!.textContent).toContain('-3,0 °C');
+
+    root.querySelector<HTMLButtonElement>('.lumina__dialog--weather .lumina__dialog-close')!.click();
+    fixture.detectChanges();
+    expect(root.querySelector('.lumina__dialog--weather')).toBeNull();
+
+    discardPeriodicTasks();
+  }));
+
   it('laedt die meistgenutzten Schalter fuer die Kachel', fakeAsync(() => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();

@@ -19,6 +19,7 @@ public class WeatherOverviewResponse {
     private String stationId;
     private WeatherConditions current;
     private List<WeatherForecastHour> hourlyForecast;
+    private List<WeatherForecastDay> dailyForecast;
     private List<WeatherWarning> warnings;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

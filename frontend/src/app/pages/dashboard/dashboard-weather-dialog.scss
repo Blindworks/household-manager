@@ -1,0 +1,117 @@
+// Wetterbericht-Dialog der Kopfzeile.
+//
+// Eigene Datei wie dashboard-grocery-dialog.scss: das anyComponentStyle-Budget gilt
+// pro Datei. Farbwelt des HELLEN Dialogs (.lumina__dialog ist in beiden Designs weiß).
+
+$report-ink: #0f172a;
+$report-muted: #475569;
+$report-line: rgba(15, 23, 42, 0.1);
+
+.lumina__dialog--weather {
+  width: min(680px, 100%);
+}
+
+.lumina__report-summary {
+  margin: 0 0 16px;
+  color: $report-ink;
+}
+
+.lumina__sensor-metrics.lumina__report-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+
+  .lumina__sensor-metric {
+    padding: 14px 6px;
+  }
+
+  .lumina__sensor-metric-value {
+    font-size: 1.25rem;
+    white-space: nowrap;
+  }
+}
+
+.lumina__report-heading {
+  margin: 20px 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $report-ink;
+}
+
+.lumina__report-chart {
+  width: 100%;
+  height: 220px;
+}
+
+.lumina__report-days {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lumina__report-day {
+  display: grid;
+  grid-template-columns: 6.5rem 28px minmax(0, 1fr) auto 5.5rem;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid $report-line;
+  color: $report-ink;
+}
+
+.lumina__report-day-label,
+.lumina__report-day-rain {
+  color: $report-muted;
+  font-size: 0.9rem;
+}
+
+.lumina__report-day-temp {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+
+  > span {
+    margin-right: 8px;
+    color: $report-muted;
+  }
+}
+
+.lumina__report-warning {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-left: 4px solid #eab308;
+  border-radius: 8px;
+  background: rgba(234, 179, 8, 0.12);
+  color: $report-ink;
+
+  p {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+  }
+
+  &--moderate {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.12);
+  }
+
+  &--severe,
+  &--extreme {
+    border-color: #dc2626;
+    background: rgba(220, 38, 38, 0.12);
+  }
+}
+
+.lumina__report-period {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: $report-muted;
+}
+
+@media (max-width: 600px) {
+  .lumina__report-day {
+    grid-template-columns: minmax(0, 1fr) 28px auto 5rem;
+  }
+
+  .lumina__report-day-label {
+    display: none;
+  }
+}

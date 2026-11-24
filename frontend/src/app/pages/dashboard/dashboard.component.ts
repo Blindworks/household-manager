@@ -7,7 +7,7 @@ import { EMPTY, Observable, Subscription, forkJoin, interval, merge, of, startWi
 import { catchError, finalize, map } from 'rxjs/operators';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
-import { LineChart } from 'echarts/charts';
+import { LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { WeatherService } from '../../services/weather.service';
@@ -20,6 +20,7 @@ import { AnkerSolixLive } from '../../models/ankersolix.model';
 import { WeatherOverview } from '../../models/weather.model';
 import { CurrentTemperatureReading, TemperatureSensorSeries, TimeRange } from '../../models/temperature.model';
 import { weatherSymbol, weatherMaterialSymbol } from '../../shared/weather-icon.util';
+import { buildWeatherReport, WeatherReport } from '../../shared/weather-report.util';
 import { TABLET_VIEWS } from '../../shared/tablet-views';
 import {
   ClimateView,
@@ -107,7 +108,7 @@ import {
 } from '../../shared/mode-activation-check.util';
 
 // LegendComponent: ohne Legende ist bei zwei Linien nicht erkennbar, welche welche ist.
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 /**
  * Dashboard component - "Lumina" Wand-Dashboard.
@@ -127,7 +128,7 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, Canvas
   templateUrl: './dashboard.component.html',
   // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro
   // Datei, und dashboard.component.scss steht kurz vor der Fehlergrenze.
-  styleUrls: ['./dashboard.component.scss', './dashboard-pet-supply-dialog.scss', './dashboard-grocery-dialog.scss']
+  styleUrls: ['./dashboard.component.scss', './dashboard-pet-supply-dialog.scss', './dashboard-grocery-dialog.scss', './dashboard-weather-dialog.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly weatherService = inject(WeatherService);
@@ -261,6 +262,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   now = new Date();
 
   weather: WeatherOverview | null = null;
+  weatherDialogOpen = false;
+  /** Inhalt des Wetterberichts; `null`, solange noch nie Wetterdaten ankamen. */
+  weatherReport: WeatherReport | null = null;
   weatherError = false;
 
   energyLive: EnergyLive | null = null;
@@ -1540,11 +1544,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(() => (this.now = new Date()));
   }
 
+  /** Oeffnet den Wetterbericht mit dem letzten Stand und laedt ihn frisch nach (auch die Kopfzeile). */
+  openWeatherDialog(): void {
+    this.weatherDialogOpen = true;
+    this.loadWeather();
+  }
+
+  closeWeatherDialog(): void {
+    this.weatherDialogOpen = false;
+  }
+
   private loadWeather(): void {
+    this.weatherSubscription?.unsubscribe();
     this.weatherError = false;
     this.weatherSubscription = this.weatherService.getOverview().subscribe({
       next: overview => {
         this.weather = overview;
+        this.weatherReport = overview ? buildWeatherReport(overview, new Date()) : null;
         this.weatherError = false;
       },
       error: () => {

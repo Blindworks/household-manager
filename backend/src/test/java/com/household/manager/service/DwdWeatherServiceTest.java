@@ -62,6 +62,28 @@ class DwdWeatherServiceTest {
     }
 
     @Test
+    void parsesDailyForecastFromTodayOn() {
+        String days = "\"days\":["
+                + "{\"dayDate\":\"2026-06-20\",\"temperatureMin\":100,\"temperatureMax\":200},"
+                + "{\"dayDate\":\"2026-06-21\",\"temperatureMin\":-35,\"temperatureMax\":17,"
+                + "\"precipitation\":4,\"windGust\":241,\"icon\":2},"
+                + "{\"dayDate\":\"2026-06-22\",\"temperatureMin\":32767,\"temperatureMax\":32767},"
+                + "{\"dayDate\":\"2026-06-23\",\"temperatureMin\":10,\"temperatureMax\":32767}]";
+        String json = sampleJson().replace("\"days\":[{\"windSpeed\":93,\"windDirection\":380}]", days);
+
+        var daily = service.parseOverview(json, "10637", AT_START).getDailyForecast();
+
+        assertThat(daily).hasSize(2);
+        assertThat(daily.get(0).getDate()).isEqualTo("2026-06-21");
+        assertThat(daily.get(0).getTemperatureMin()).isEqualByComparingTo("-3.5");
+        assertThat(daily.get(0).getTemperatureMax()).isEqualByComparingTo("1.7");
+        assertThat(daily.get(0).getPrecipitation()).isEqualByComparingTo("0.4");
+        assertThat(daily.get(0).getWindGust()).isEqualByComparingTo("24.1");
+        assertThat(daily.get(0).getIcon()).isEqualTo(2);
+        assertThat(daily.get(1).getTemperatureMax()).isNull();
+    }
+
+    @Test
     void currentConditionsUseTheHourMatchingNow() {
         WeatherOverviewResponse result =
                 service.parseOverview(sampleJson(), "10637", TWO_AND_A_HALF_HOURS_LATER);

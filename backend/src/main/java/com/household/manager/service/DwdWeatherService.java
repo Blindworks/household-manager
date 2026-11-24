@@ -3,6 +3,7 @@ package com.household.manager.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.dto.WeatherConditions;
+import com.household.manager.dto.WeatherForecastDay;
 import com.household.manager.dto.WeatherForecastHour;
 import com.household.manager.dto.WeatherOverviewResponse;
 import com.household.manager.dto.WeatherWarning;
@@ -16,8 +17,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +35,9 @@ public class DwdWeatherService {
 
     private static final ZoneId ZONE = ZoneId.of("Europe/Berlin");
     private static final int FORECAST_HOURS = 24;
+    private static final int FORECAST_DAYS = 7;
+    /** Der DWD kennzeichnet fehlende Messwerte mit diesem Wert. */
+    private static final int MISSING_VALUE = 32767;
     private static final BigDecimal TENTH = BigDecimal.valueOf(10);
 
     private final RestTemplate restTemplate;
@@ -96,6 +102,7 @@ public class DwdWeatherService {
                     .stationId(station)
                     .current(current)
                     .hourlyForecast(hours)
+                    .dailyForecast(buildDaily(stationNode.path("days"), LocalDate.ofInstant(now, ZONE)))
                     .warnings(warnings)
                     .nextRain(nextRain)
                     .build();
@@ -131,6 +138,43 @@ public class DwdWeatherService {
                     .build());
         }
         return hours;
+    }
+
+    /** Tage ab heute; ein Tag ohne lesbares Datum oder ohne Temperaturen entfällt. */
+    private List<WeatherForecastDay> buildDaily(JsonNode days, LocalDate today) {
+        List<WeatherForecastDay> result = new ArrayList<>();
+        for (JsonNode day : days) {
+            LocalDate date = dateOrNull(day.path("dayDate"));
+            BigDecimal min = dailyTenth(day.path("temperatureMin"));
+            BigDecimal max = dailyTenth(day.path("temperatureMax"));
+            if (date == null || date.isBefore(today) || (min == null && max == null)) {
+                continue;
+            }
+            result.add(WeatherForecastDay.builder()
+                    .date(date)
+                    .temperatureMin(min)
+                    .temperatureMax(max)
+                    .precipitation(dailyTenth(day.path("precipitation")))
+                    .windGust(dailyTenth(day.path("windGust")))
+                    .icon(intOrNull(day.path("icon")))
+                    .build());
+            if (result.size() == FORECAST_DAYS) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private BigDecimal dailyTenth(JsonNode node) {
+        return node.isNumber() && node.asInt() != MISSING_VALUE ? scaleTenth(node) : null;
+    }
+
+    private LocalDate dateOrNull(JsonNode node) {
+        try {
+            return node.isTextual() ? LocalDate.parse(node.asText()) : null;
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
     }
 
     private WeatherConditions toCurrent(JsonNode forecast1, JsonNode days, WeatherForecastHour first,

@@ -603,6 +603,9 @@ docker-compose down
 - Job-Tafel: abgeschaltet (`RAIN_RADAR_ENABLED=false`) oder ohne Zuhause ⇒ `reportInactive`, Fehlabruf ⇒ `reportFailure`
 - **Rollout:** Deploy → nach dem ersten Poll Flow #3 („Badfenster oder Balkontür offen bei Regen“) von `sensor.weather_dwd_precipitation` auf die Radar-Entitäten umstellen (vorher existieren sie nicht). Die 0,3 mm/h sind eine Startschätzung — bei Fehlalarmen durch Niesel anheben
 
+### Wetterbericht (Dashboard-Kopfzeile)
+- Antippen des DWD-Blocks öffnet den Wetterbericht-Dialog (Warnungen, aktuelle Werte, 24-h-Diagramm, 7 Tage) und lädt `GET /v1/weather/overview` frisch nach, ein Fehler behält den letzten Stand. `shared/weather-report.util.ts` ist die einzige Aufbereitung, Styles in `dashboard-weather-dialog.scss`. Die Tage (`dailyForecast`) kommen aus `days` derselben DWD-Antwort; 32767 gilt als fehlend
+
 ### Wandtablet (Präsenzerkennung)
 - Eigene Android-Kiosk-App in `tablet-app/` (Kotlin, minSdk 29): Dashboard im Vollbild-WebView, Anwesenheitserkennung per Frontkamera (CameraX: Bewegung weckt, ML-Kit-Gesicht hält wach), Soft-Off via schwarzem Overlay + Helligkeit 0
 - Präsenz-Meldung an `POST /v1/tablet-presence/{tabletId}`; Spiegelung als `binary_sensor.tablet_<id>_presence` (`EntitySource.TABLET`) im Entity-State-Layer, nutzbar als Flow-Trigger; ausbleibender Heartbeat → `unavailable`

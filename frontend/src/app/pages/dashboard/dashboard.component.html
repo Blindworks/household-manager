@@ -26,13 +26,18 @@
             <span class="lumina__date-value">{{ calendarDate }}</span>
           </div>
           <div class="lumina__divider"></div>
-          <div class="lumina__weather">
+          <button
+            type="button"
+            class="lumina__weather lumina__outdoor lumina__weather-report-button"
+            aria-label="Wetterbericht anzeigen"
+            (click)="openWeatherDialog()"
+          >
             <span class="material-symbols-outlined lumina__weather-icon">{{ weatherIcon }}</span>
             <div class="lumina__weather-text">
               <span class="lumina__weather-temp">{{ temperature }}°C</span>
               <span class="lumina__label">DWD · {{ weatherLabel }}</span>
             </div>
-          </div>
+          </button>
           <!-- Reale Aussenfuehler neben der DWD-Vorhersage; die Beschriftung
                macht sichtbar, welcher Wert woher kommt. -->
           <ng-container *ngFor="let outdoor of climate.outdoor">
@@ -759,6 +764,76 @@
           class="lumina__history-chart"
           [options]="sensorHistoryOptions"
         ></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wetterbericht (DWD): Warnungen, aktuelle Werte, 24 Stunden und die naechsten Tage -->
+  <div
+    *ngIf="weatherDialogOpen"
+    class="lumina__dialog-backdrop"
+    (click)="closeWeatherDialog()"
+  >
+    <div
+      class="lumina__dialog lumina__dialog--weather"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Wetterbericht"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="lumina__dialog-head">
+        <h2 class="lumina__dialog-title">Wetterbericht</h2>
+        <button
+          type="button"
+          class="lumina__dialog-close"
+          (click)="closeWeatherDialog()"
+          aria-label="Schließen"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="lumina__dialog-body">
+        <p *ngIf="weatherError" class="lumina__history-message">
+          {{ weatherReport ? 'Aktualisieren fehlgeschlagen, es steht der letzte Stand da.' : 'Wetterdaten konnten nicht geladen werden.' }}
+        </p>
+        <p *ngIf="!weatherReport && !weatherError" class="lumina__history-message">Lade Wetterdaten …</p>
+        <ng-container *ngIf="weatherReport as report">
+          <div
+            *ngFor="let warning of report.warnings"
+            class="lumina__report-warning"
+            [ngClass]="'lumina__report-warning--' + warning.severity"
+          >
+            <strong>{{ warning.title }}</strong>
+            <span *ngIf="warning.period" class="lumina__report-period">{{ warning.period }}</span>
+            <p *ngIf="warning.text">{{ warning.text }}</p>
+            <p *ngIf="warning.instruction">{{ warning.instruction }}</p>
+          </div>
+          <p class="lumina__report-summary">{{ report.summary }}</p>
+          <div *ngIf="report.metrics.length" class="lumina__sensor-metrics lumina__report-metrics">
+            <div *ngFor="let metric of report.metrics" class="lumina__sensor-metric">
+              <span class="material-symbols-outlined lumina__sensor-metric-icon">{{ metric.icon }}</span>
+              <span class="lumina__sensor-metric-label">{{ metric.label }}</span>
+              <span class="lumina__sensor-metric-value">{{ metric.value }}</span>
+            </div>
+          </div>
+          <ng-container *ngIf="report.chartOptions">
+            <h3 class="lumina__report-heading">Nächste 24 Stunden</h3>
+            <div echarts class="lumina__report-chart" [options]="report.chartOptions"></div>
+          </ng-container>
+          <ng-container *ngIf="report.days.length">
+            <h3 class="lumina__report-heading">Nächste Tage</h3>
+            <ul class="lumina__report-days">
+              <li *ngFor="let day of report.days" class="lumina__report-day">
+                <span class="lumina__report-day-name">{{ day.name }}</span>
+                <span class="material-symbols-outlined" aria-hidden="true">{{ day.icon }}</span>
+                <span class="lumina__report-day-label">{{ day.label }}</span>
+                <span class="lumina__report-day-rain">{{ day.precipitation }}</span>
+                <span class="lumina__report-day-temp"><span>{{ day.min }}</span><strong>{{ day.max }}</strong></span>
+              </li>
+            </ul>
+          </ng-container>
+          <p class="lumina__sensor-meta"><span>Deutscher Wetterdienst · Station {{ report.stationId }}</span></p>
+        </ng-container>
       </div>
     </div>
   </div>
