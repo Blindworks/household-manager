@@ -1,0 +1,99 @@
+<article class="card" [class]="'card card--' + view().type" [class.card--on]="isOn()">
+  <header class="card__head">
+    <span class="material-symbols-outlined card__icon">{{ view().icon || 'info' }}</span>
+    <h2 class="card__title">{{ view().title }}</h2>
+  </header>
+
+  @switch (view().type) {
+    @case ('climate') {
+      <div class="card__hero" [class.card__hero--stale]="view().stale">
+        <span class="card__value">{{ degrees(view().temperature) }}</span>
+        <span class="card__unit">°C</span>
+      </div>
+      <p class="card__sub">
+        @if (view().humidity != null) {
+          <span>{{ view().humidity!.toFixed(0) }} % Luftfeuchte</span>
+        }
+        @if (view().stale) {
+          <span class="card__warn">Messwert veraltet</span>
+        }
+      </p>
+      @if (view().thermostatId != null) {
+        <div class="target">
+          <button type="button" class="target__step" (click)="adjustTarget(-0.5)" aria-label="Kälter">
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <div class="target__value">
+            <span class="target__label">Soll</span>
+            <span class="target__number">{{ degrees(view().targetTemp) }}°</span>
+            @if (view().heating) {
+              <span class="target__heating">
+                <span class="material-symbols-outlined">local_fire_department</span> heizt
+              </span>
+            }
+          </div>
+          <button type="button" class="target__step" (click)="adjustTarget(0.5)" aria-label="Wärmer">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        </div>
+      }
+    }
+    @case ('switch') {
+      <ng-container [ngTemplateOutlet]="toggle"></ng-container>
+      @if (isOn() && view().powerWatts != null) {
+        <p class="card__sub"><span>{{ view().powerWatts!.toFixed(0) }} W</span></p>
+      }
+    }
+    @case ('mode') {
+      <ng-container [ngTemplateOutlet]="toggle"></ng-container>
+    }
+    @case ('lock') {
+      <div class="card__hero card__hero--text">
+        <span class="card__state">{{ lockLabel() }}</span>
+      </div>
+      @if (doorLabel()) {
+        <p class="card__sub"><span>{{ doorLabel() }}</span></p>
+      }
+      @if (canLock()) {
+        <button type="button" class="action" [disabled]="busy()" (click)="lock()">
+          <span class="material-symbols-outlined">lock</span> Verriegeln
+        </button>
+      }
+    }
+    @default {
+      <p class="card__text">{{ view().text }}</p>
+    }
+  }
+
+  @if (notice()) {
+    <p class="card__notice" role="status">{{ notice() }}</p>
+  }
+  @if (error()) {
+    <p class="card__error" role="alert">{{ error() }}</p>
+  }
+
+  @if (view().suggestions?.length) {
+    <div class="suggestions">
+      @for (suggestion of view().suggestions; track $index) {
+        <button type="button" class="suggestions__chip" [disabled]="busy()" (click)="runSuggestion(suggestion)">
+          {{ suggestion.label }}
+        </button>
+      }
+    </div>
+  }
+</article>
+
+<ng-template #toggle>
+  <button type="button" class="power" [class.power--on]="isOn()" [disabled]="busy() || !isSwitchable()"
+          (click)="toggleOwn()" [attr.aria-pressed]="isOn()">
+    <span class="material-symbols-outlined">power_settings_new</span>
+  </button>
+  @if (confirmingOff()) {
+    <p class="card__confirm">
+      Wirklich ausschalten? Noch einmal tippen.
+      <button type="button" class="card__cancel" (click)="cancelConfirm()">Abbrechen</button>
+    </p>
+  } @else {
+    <p class="card__state card__state--center">{{ stateLabel() }}</p>
+  }
+</ng-template>

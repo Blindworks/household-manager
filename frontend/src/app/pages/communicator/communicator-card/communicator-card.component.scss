@@ -1,0 +1,272 @@
+// Die Farben kommen als Custom Properties von der Communicator-Seite (CSS-Vererbung
+// reicht durch die Stil-Kapselung); die Karte definiert selbst keine.
+
+:host {
+  display: block;
+}
+
+.card {
+  background: var(--com-surface);
+  border: 1px solid var(--com-line);
+  border-radius: 28px;
+  padding: 1.25rem 1.25rem 1.4rem;
+  color: var(--com-text);
+  text-align: center;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--com-muted);
+  }
+
+  &__icon {
+    font-size: 1.5rem;
+  }
+
+  &__title {
+    margin: 0;
+    // Ausdruecklich setzen: die globale h2-Regel der Website braechte sonst ihre dunkle Farbe mit.
+    color: var(--com-muted);
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  &__hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    margin-top: 0.4rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+
+    &--stale {
+      opacity: 0.45;
+    }
+
+    &--text {
+      margin: 1.4rem 0 0.6rem;
+    }
+  }
+
+  &__value {
+    font-size: clamp(5rem, 28vw, 8.5rem);
+    font-weight: 300;
+    letter-spacing: -0.04em;
+  }
+
+  &__unit {
+    margin-top: 0.9rem;
+    font-size: 1.6rem;
+    color: var(--com-muted);
+  }
+
+  &__sub {
+    display: flex;
+    justify-content: center;
+    gap: 0.9rem;
+    min-height: 1.3rem;
+    margin: 0.3rem 0 0;
+    color: var(--com-muted);
+    font-size: 0.95rem;
+  }
+
+  &__warn {
+    color: var(--com-warn);
+  }
+
+  // Farbe ausdruecklich: globale p-Regeln der Website wuerden sonst abdunkeln.
+  &__state {
+    color: var(--com-text);
+    font-size: 2rem;
+    font-weight: 600;
+
+    &--center {
+      margin: 0.9rem 0 0;
+    }
+  }
+
+  &__text {
+    color: var(--com-text);
+    margin: 1.1rem 0 0.2rem;
+    font-size: 1.35rem;
+    line-height: 1.4;
+  }
+
+  &__notice,
+  &__error,
+  &__confirm {
+    margin: 0.9rem 0 0;
+    font-size: 0.95rem;
+  }
+
+  &__notice {
+    color: var(--com-accent);
+  }
+
+  &__error {
+    color: var(--com-danger);
+  }
+
+  &__confirm {
+    color: var(--com-warn);
+  }
+
+  &__cancel {
+    margin-left: 0.5rem;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--com-line);
+    border-radius: 999px;
+    background: none;
+    color: var(--com-text);
+    font: inherit;
+  }
+
+  &--info &__icon {
+    color: var(--com-accent);
+  }
+}
+
+.target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+  padding: 0.6rem;
+  border-radius: 999px;
+  background: var(--com-inset);
+
+  &__step {
+    display: grid;
+    place-items: center;
+    width: 4.25rem;
+    height: 4.25rem;
+    flex: none;
+    border: none;
+    border-radius: 50%;
+    background: var(--com-control);
+    color: var(--com-text);
+    touch-action: manipulation;
+
+    .material-symbols-outlined {
+      font-size: 2.2rem;
+    }
+
+    &:active {
+      background: var(--com-accent);
+      color: var(--com-on-accent);
+    }
+  }
+
+  &__value {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--com-muted);
+  }
+
+  &__number {
+    font-size: 2.1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__heating {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    font-size: 0.8rem;
+    color: var(--com-warm);
+
+    .material-symbols-outlined {
+      font-size: 1rem;
+    }
+  }
+}
+
+.power {
+  display: grid;
+  place-items: center;
+  width: 9.5rem;
+  height: 9.5rem;
+  margin: 1.2rem auto 0;
+  border: 2px solid var(--com-line);
+  border-radius: 50%;
+  background: var(--com-inset);
+  color: var(--com-muted);
+  touch-action: manipulation;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+
+  .material-symbols-outlined {
+    font-size: 4.5rem;
+  }
+
+  &--on {
+    border-color: transparent;
+    background: var(--com-accent);
+    color: var(--com-on-accent);
+    box-shadow: 0 0 48px var(--com-glow);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.95rem 1.8rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--com-accent);
+  color: var(--com-on-accent);
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  touch-action: manipulation;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+
+  &__chip {
+    padding: 0.8rem 1.15rem;
+    border: 1px solid var(--com-line);
+    border-radius: 999px;
+    background: var(--com-control);
+    color: var(--com-text);
+    font: inherit;
+    font-size: 1.02rem;
+    font-weight: 500;
+    touch-action: manipulation;
+
+    &:active {
+      border-color: var(--com-accent);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+}

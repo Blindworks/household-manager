@@ -1621,4 +1621,21 @@ class SecurityRulesTest {
     void kioskDarfWaescheZustandLesen() throws Exception {
         mockMvc.perform(get("/v1/laundry/state")).andExpect(status().isNotFound());
     }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void kioskDarfDenCommunicatorNichtFragen() throws Exception {
+        mockMvc.perform(post("/v1/communicator/ask-text").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"hallo\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfDenCommunicatorFragen() throws Exception {
+        // Kein CommunicatorController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst
+        mockMvc.perform(post("/v1/communicator/ask-text").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"hallo\"}"))
+                .andExpect(status().isNotFound());
+    }
 }
