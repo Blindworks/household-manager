@@ -71,6 +71,32 @@ describe('CommunicatorCardComponent', () => {
     expect(service.execute).toHaveBeenCalledOnceWith(action, { t: 21.5, n: 'a' });
   });
 
+  it('verlangt bei einer heiklen Aktion einen zweiten Tipp und zeigt die gesendeten Werte', () => {
+    const open: CommunicatorAction = { label: 'Licht an', method: 'POST', path: '/v1/lock', body: { action: 'UNLATCH' }, confirm: true };
+    const el = show({ actions: [open] });
+    expect(el.querySelector('.action__target')?.textContent).toContain('{"action":"UNLATCH"}');
+    button('.action').click();
+    fixture.detectChanges();
+    expect(service.execute).not.toHaveBeenCalled();
+    expect(button('.action').textContent).toContain('Wirklich?');
+    button('.action').click();
+    expect(service.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('ein geänderter Reglerwert hebt die Bestätigung auf', () => {
+    const action: CommunicatorAction = { label: 'Setzen', method: 'PUT', path: '/v1/x', body: { t: '$value' }, confirm: true };
+    const el = show({ blocks: [{ type: 'slider', number: 20, min: 5, max: 30, step: 1, action }] });
+    const plus = el.querySelectorAll('.target__step')[1] as HTMLButtonElement;
+    plus.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.action__target')?.textContent).toContain('{"t":21}');
+    button('.action').click();
+    plus.click();
+    fixture.detectChanges();
+    button('.action').click();
+    expect(service.execute).not.toHaveBeenCalled();
+  });
+
   it('gibt eine Folgefrage weiter', () => {
     const asked: string[] = [];
     fixture.componentInstance.ask.subscribe(question => asked.push(question));

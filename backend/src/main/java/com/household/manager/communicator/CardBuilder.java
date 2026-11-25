@@ -44,6 +44,7 @@ public class CardBuilder {
 
     private final ApiCatalog catalog;
     private final Clock clock;
+    private final ActionConfirmation confirmation;
 
     /** @throws IllegalArgumentException mit einer Meldung, aus der das Modell den Fehler beheben kann */
     public Card build(JsonNode input, Map<String, JsonNode> results) {
@@ -148,15 +149,17 @@ public class CardBuilder {
     private Action action(JsonNode action) {
         String method = action.path("method").asText().toUpperCase(Locale.ROOT);
         String path = action.path("path").asText();
-        if ("GET".equals(method) || catalog.find(method, path).isEmpty()) {
+        ApiCatalog.Endpoint endpoint = "GET".equals(method) ? null : catalog.find(method, path).orElse(null);
+        if (endpoint == null) {
             throw new IllegalArgumentException("Unbekannte Aktion: " + method + " " + path);
         }
         Map<String, String> query = new HashMap<>();
         action.path("query").fields().forEachRemaining(e -> query.put(e.getKey(), e.getValue().asText()));
-        JsonNode body = action.path("body");
+        JsonNode rawBody = action.path("body");
+        JsonNode body = rawBody.isMissingNode() || rawBody.isNull() ? null : rawBody;
         String label = optional(action, "label");
         return new Action(cut(label == null ? "Übernehmen" : label, 40), method, path,
-                query.isEmpty() ? null : query, body.isMissingNode() || body.isNull() ? null : body);
+                query.isEmpty() ? null : query, body, confirmation.required(endpoint, path, body));
     }
 
     // --- Werte ------------------------------------------------------------------------------

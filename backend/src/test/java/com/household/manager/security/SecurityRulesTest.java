@@ -1638,4 +1638,25 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"hallo\"}"))
                 .andExpect(status().isNotFound());
     }
+
+    @Autowired
+    private org.springframework.security.web.access.WebInvocationPrivilegeEvaluator privilegeEvaluator;
+
+    /** Der Communicator leitet daraus ab, welche Aktion einen zweiten Tipp braucht. */
+    @Test
+    void rechtePruefungOhneAnfrageFolgtDenRegeln() {
+        var member = org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(
+                "m", null, org.springframework.security.core.authority.AuthorityUtils
+                        .createAuthorityList("ROLE_MEMBER"));
+        for (String context : List.of("", "/api")) {
+            org.assertj.core.api.Assertions.assertThat(privilegeEvaluator.isAllowed(
+                    context, "/v1/flows/1", "PUT", member)).isFalse();
+            org.assertj.core.api.Assertions.assertThat(privilegeEvaluator.isAllowed(
+                    context, "/v1/appearance", "PUT", member)).isFalse();
+            org.assertj.core.api.Assertions.assertThat(privilegeEvaluator.isAllowed(
+                    context, "/v1/switches/switch.flur/toggle", "POST", member)).isTrue();
+            org.assertj.core.api.Assertions.assertThat(privilegeEvaluator.isAllowed(
+                    context, "/v1/calendar/events", "POST", member)).isTrue();
+        }
+    }
 }

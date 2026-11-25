@@ -66,7 +66,7 @@ public class ApiGateway {
         if (catalog.find("GET", path).isEmpty()) {
             throw new IllegalArgumentException("Kein lesbarer Endpunkt: " + path);
         }
-        return shorten(filtered(parse(send(uri(path, query), caller)), filter));
+        return shorten(filtered(SecretFields.strip(parse(send(uri(path, query), caller))), filter));
     }
 
     URI uri(String path, Map<String, String> query) {

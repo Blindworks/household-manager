@@ -71,8 +71,10 @@ public final class CommunicatorDtos {
     /**
      * Eine Aenderung, die erst der Tipp des Nutzers im Browser ausfuehrt (mit seiner Anmeldung). Der Server
      * hat geprueft, dass es den Endpunkt gibt. Bei einem Regler steht im Body {@code "$value"} als Platzhalter.
+     * {@code confirm}: braucht einen zweiten Tipp.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Action(String label, String method, String path, Map<String, String> query, JsonNode body) {
+    public record Action(String label, String method, String path, Map<String, String> query, JsonNode body,
+                         boolean confirm) {
     }
 }

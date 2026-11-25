@@ -43,6 +43,8 @@ class CommunicatorAgentServiceTest {
     private ApiCatalog catalog;
     @Mock
     private ApiGateway gateway;
+    @Mock
+    private ActionConfirmation confirmation;
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final AiProperties ai = new AiProperties();
@@ -53,7 +55,7 @@ class CommunicatorAgentServiceTest {
         ai.setAnthropicApiKey("key");
         Clock clock = Clock.fixed(Instant.parse("2026-11-24T18:50:00Z"), ZoneId.of("Europe/Berlin"));
         service = new CommunicatorAgentService(new CommunicatorProperties(), ai, client, catalog, gateway,
-                new CardBuilder(catalog, clock), mapper, clock);
+                new CardBuilder(catalog, clock, confirmation), mapper, clock);
         lenient().when(catalog.index()).thenReturn("VERZEICHNIS");
     }
 
