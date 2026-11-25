@@ -1,10 +1,12 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { CommunicatorAnswer, CommunicatorCard } from '../../models/communicator.model';
+import { AuthService } from '../../services/auth.service';
 import { CommunicatorService } from '../../services/communicator.service';
 import { CommunicatorCardComponent } from './communicator-card/communicator-card.component';
+import { QUICK_QUESTIONS, formatDayLine, greetingFor } from './greeting';
 import { SignalTones } from './signal-tones';
 import { ThinkingHouseComponent } from './thinking-house/thinking-house.component';
 import { VoiceRecorder } from './voice-recorder';
@@ -36,6 +38,8 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
   private readonly service = inject(CommunicatorService);
   private readonly recorder = new VoiceRecorder();
   private readonly tones = new SignalTones();
+  private readonly auth = inject(AuthService);
+  private readonly zone = inject(NgZone);
 
   readonly phase = signal<Phase>('idle');
   readonly cards = signal<ShownCard[]>([]);
@@ -46,11 +50,22 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
   readonly speechAvailable = signal<boolean | null>(null);
   text = '';
 
+  readonly quickQuestions = QUICK_QUESTIONS;
+  private readonly now = signal(new Date());
+  readonly greeting = computed(() => greetingFor(this.now(), this.auth.currentUser()?.displayName));
+  readonly dayLine = computed(() => formatDayLine(this.now()));
+  readonly clock = computed(() => this.now().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+
   private answerCount = 0;
   private recordingSince = 0;
   private autoStop: ReturnType<typeof setTimeout> | null = null;
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
+    // Ausserhalb der Zone, sonst wird die Seite nie „stabil“ (Tests, Hydration); Signale aktualisieren trotzdem.
+    this.zone.runOutsideAngular(() => {
+      this.clockTimer = setInterval(() => this.now.set(new Date()), 15_000);
+    });
     const recordable = VoiceRecorder.isSupported();
     this.service.getStatus().subscribe({
       next: status => {
@@ -66,6 +81,9 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+    }
     this.clearAutoStop();
     this.recorder.cancel();
     this.tones.close();

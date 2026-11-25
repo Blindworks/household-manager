@@ -24,6 +24,9 @@
 }
 
 .communicator {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -171,10 +174,18 @@
   width: 12rem;
   height: 12rem;
   border: none;
+  position: relative;
+  z-index: 1;
   border-radius: 50%;
-  background: var(--com-accent);
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 42%),
+    radial-gradient(circle at 70% 80%, #ff8a3d, transparent 65%),
+    var(--com-accent);
   color: var(--com-on-accent);
-  box-shadow: 0 0 0 0 var(--com-glow), 0 18px 60px rgba(255, 180, 84, 0.25);
+  box-shadow:
+    inset 0 -10px 30px rgba(156, 72, 0, 0.35),
+    0 0 0 0 var(--com-glow),
+    0 18px 60px rgba(255, 180, 84, 0.3);
   touch-action: manipulation;
   transition: width 0.25s, height 0.25s, background 0.2s;
 
@@ -193,7 +204,9 @@
   }
 
   &--recording {
-    background: var(--com-danger);
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.4), transparent 42%),
+      var(--com-danger);
     color: #fff;
     animation: mic-pulse 1.4s ease-out infinite;
   }
@@ -220,9 +233,276 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mic {
+// Lebendiger Hintergrund: drei weiche Farbflaechen, die langsam wandern.
+.aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(60px);
+  opacity: 0.55;
+  transition: opacity 0.6s;
+
+  &__blob {
+    position: absolute;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+
+    &--a {
+      width: 70vmax;
+      height: 70vmax;
+      left: -25vmax;
+      top: -30vmax;
+      background: radial-gradient(circle, rgba(255, 157, 92, 0.32), transparent 65%);
+      animation: drift-a 22s ease-in-out infinite alternate;
+    }
+
+    &--b {
+      width: 60vmax;
+      height: 60vmax;
+      right: -25vmax;
+      top: 15vh;
+      background: radial-gradient(circle, rgba(94, 129, 255, 0.22), transparent 65%);
+      animation: drift-b 28s ease-in-out infinite alternate;
+    }
+
+    &--c {
+      width: 65vmax;
+      height: 65vmax;
+      left: -10vmax;
+      bottom: -35vmax;
+      background: radial-gradient(circle, rgba(255, 180, 84, 0.28), transparent 65%);
+      animation: drift-c 25s ease-in-out infinite alternate;
+    }
+  }
+
+  .communicator[data-phase='recording'] & {
+    opacity: 0.8;
+
+    .aurora__blob--b {
+      background: radial-gradient(circle, rgba(255, 123, 114, 0.3), transparent 65%);
+    }
+  }
+
+  .communicator--answered & {
+    opacity: 0.3;
+  }
+}
+
+@keyframes drift-a {
+  to {
+    transform: translate(18vw, 12vh) scale(1.15);
+  }
+}
+
+@keyframes drift-b {
+  to {
+    transform: translate(-20vw, 18vh) scale(0.9);
+  }
+}
+
+@keyframes drift-c {
+  to {
+    transform: translate(15vw, -14vh) scale(1.1);
+  }
+}
+
+// Begruessung vor der ersten Frage
+.intro {
+  margin-top: clamp(0.5rem, 6vh, 3.5rem);
+  text-align: center;
+  animation: rise 0.6s ease-out both;
+
+  &__clock {
+    margin: 0;
+    color: var(--com-text);
+    font-size: clamp(3.2rem, 15vw, 4.5rem);
+    font-weight: 200;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__greeting {
+    margin: 0.6rem 0 0;
+    font-size: 1.6rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, #ffd29a, var(--com-accent), #ff8a3d);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  &__day {
+    margin: 0.35rem 0 0;
+    color: var(--com-muted);
+    font-size: 0.95rem;
+  }
+}
+
+// Knopf mit atmenden Ringen
+.mic-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 1.5rem 0 1rem;
+
+  .communicator--answered & {
+    margin: 0;
+  }
+
+  &__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 180, 84, 0.35);
+    pointer-events: none;
+    animation: breathe 4.5s ease-in-out infinite;
+
+    &--2 {
+      animation-delay: 1.5s;
+    }
+
+    &--3 {
+      animation-delay: 3s;
+    }
+  }
+
+  .communicator[data-phase='recording'] &__ring {
+    border-color: rgba(255, 123, 114, 0.6);
+    animation: ripple 1.6s ease-out infinite;
+
+    &--2 {
+      animation-delay: 0.53s;
+    }
+
+    &--3 {
+      animation-delay: 1.06s;
+    }
+  }
+
+  .communicator[data-phase='thinking'] &__ring,
+  .communicator[data-phase='starting'] &__ring,
+  .communicator--answered &__ring {
     animation: none;
+    opacity: 0;
+  }
+}
+
+@keyframes breathe {
+  0% {
+    transform: scale(1);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+// Leichte Schwebebewegung des Knopfs im Ruhezustand
+.communicator[data-phase='idle']:not(.communicator--answered) .mic {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+// Pegel-Andeutung waehrend der Aufnahme
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 1.8rem;
+
+  &__bar {
+    width: 5px;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--com-danger);
+    transform: scaleY(0.25);
+    animation: wave 0.9s ease-in-out infinite;
+  }
+}
+
+@keyframes wave {
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+// Schnellfragen unter dem Knopf
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 28rem;
+  margin-top: 1.2rem;
+  animation: rise 0.6s 0.15s ease-out both;
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--com-line);
+    border-radius: 999px;
+    background: rgba(20, 26, 34, 0.7);
+    backdrop-filter: blur(8px);
+    color: var(--com-text);
+    font: inherit;
+    font-size: 0.85rem;
+    touch-action: manipulation;
+    transition: border-color 0.2s, background 0.2s;
+
+    .material-symbols-outlined {
+      font-size: 1.15rem;
+      color: var(--com-accent);
+    }
+
+    &:active {
+      border-color: var(--com-accent);
+      background: var(--com-control);
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic,
+  .mic-wrap__ring,
+  .aurora__blob,
+  .wave__bar,
+  .intro,
+  .quick {
+    animation: none !important;
     transition: none;
   }
 }

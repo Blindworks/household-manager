@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { CommunicatorAnswer, CommunicatorStatus } from '../../models/communicator.model';
+import { AuthService } from '../../services/auth.service';
 import { CommunicatorService } from '../../services/communicator.service';
 import { CommunicatorComponent } from './communicator.component';
 
@@ -22,7 +24,8 @@ describe('CommunicatorComponent', () => {
       imports: [CommunicatorComponent],
       providers: [
         provideRouter([]),
-        { provide: CommunicatorService, useValue: service }
+        { provide: CommunicatorService, useValue: service },
+        { provide: AuthService, useValue: { currentUser: signal({ displayName: 'Benedikt Lind' }) } }
       ]
     });
     fixture = TestBed.createComponent(CommunicatorComponent);
@@ -141,5 +144,19 @@ describe('CommunicatorComponent', () => {
     (el().querySelector('.suggestions__chip') as HTMLButtonElement).click();
 
     expect(service.askText.calls.mostRecent().args[0]).toBe('Wie wird das Wetter?');
+  });
+
+  it('begruesst vor der ersten Frage und stellt eine Schnellfrage per Tipp', () => {
+    setup();
+    service.askText.and.returnValue(of(climateAnswer));
+
+    expect(el().querySelector('.intro__greeting')?.textContent).toContain('Benedikt');
+    const chip = el().querySelector('.quick__chip') as HTMLButtonElement;
+    chip.click();
+    fixture.detectChanges();
+
+    expect(service.askText).toHaveBeenCalledOnceWith('Wie warm ist es im Haus?');
+    expect(el().querySelector('.intro')).toBeNull();
+    expect(el().querySelector('.quick')).toBeNull();
   });
 });
