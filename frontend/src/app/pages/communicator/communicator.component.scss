@@ -28,7 +28,6 @@
   flex-direction: column;
   height: 100%;
   background:
-    radial-gradient(90% 45% at 50% 62%, rgba(255, 180, 84, 0.1), transparent 70%),
     radial-gradient(120% 50% at 50% 0%, rgba(110, 140, 190, 0.08), transparent 70%),
     var(--com-bg);
   color: var(--com-text);
@@ -252,114 +251,55 @@
   }
 }
 
-// Ringe um den Knopf: ruhig im Leerlauf, im Aufnahmezustand laufen sie nach aussen.
-.mic-halo {
-  position: relative;
-  display: grid;
-  place-items: center;
-
-  // Platz fuer die Ringe, damit Hinweis und Zeitanzeige sie nicht schneiden.
-  .communicator:not(.communicator--answered) & {
-    margin: 2.4rem 0 1.6rem;
-  }
-
-  &__ring {
-    position: absolute;
-    inset: -1.1rem;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 180, 84, 0.18);
-    pointer-events: none;
-
-    &--outer {
-      inset: -2.4rem;
-      border-color: rgba(255, 180, 84, 0.08);
-    }
-  }
-
-  .communicator--answered &__ring {
-    inset: -0.5rem;
-
-    &--outer {
-      display: none;
-    }
-  }
-
-  &--idle &__ring {
-    animation: halo-breathe 3.2s ease-in-out infinite;
-
-    &--outer {
-      animation-delay: 0.6s;
-    }
-  }
-
-  &--recording &__ring {
-    border-color: rgba(255, 123, 114, 0.5);
-    animation: halo-ripple 1.6s ease-out infinite;
-
-    &--outer {
-      animation-delay: 0.8s;
-    }
-  }
-
-  &--thinking &__ring,
-  &--starting &__ring {
-    opacity: 0.4;
-  }
-}
-
 .mic {
   position: relative;
   display: grid;
   place-items: center;
-  width: 12rem;
-  height: 12rem;
-  border: none;
+  width: 9.5rem;
+  height: 9.5rem;
+  border: 2px solid var(--com-accent);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffd08a, var(--com-accent) 55%, #f39a3a);
-  color: var(--com-on-accent);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -6px 18px rgba(160, 80, 0, 0.25),
-    0 18px 60px rgba(255, 180, 84, 0.28);
+  background: var(--com-surface);
+  color: var(--com-accent);
   touch-action: manipulation;
-  transition: width 0.25s, height 0.25s, background 0.2s, transform 0.15s;
+  transition: width 0.25s, height 0.25s, border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+
+  .communicator:not(.communicator--answered) & {
+    margin: 1rem 0 0.6rem;
+  }
 
   &:active:not(:disabled) {
     transform: scale(0.96);
+    background: var(--com-control);
   }
 
   .material-symbols-outlined {
-    font-size: 4.5rem;
-    font-variation-settings: 'FILL' 1;
+    font-size: 3.6rem;
     transition: font-size 0.25s;
   }
 
   .communicator--answered & {
-    width: 5.5rem;
-    height: 5.5rem;
+    width: 5rem;
+    height: 5rem;
 
     .material-symbols-outlined {
-      font-size: 2.4rem;
+      font-size: 2.2rem;
     }
   }
 
   &--recording {
-    background: radial-gradient(circle at 35% 30%, #ff9f97, var(--com-danger) 60%, #e5534b);
-    color: #fff;
-    box-shadow:
-      inset 0 2px 0 rgba(255, 255, 255, 0.3),
-      0 18px 60px rgba(255, 123, 114, 0.3);
-    animation: mic-pulse 1.4s ease-out infinite;
+    border-color: var(--com-danger);
+    color: var(--com-danger);
+    animation: mic-pulse 1.6s ease-out infinite;
   }
 
   &--starting {
-    opacity: 0.85;
+    opacity: 0.7;
   }
 
   &--thinking {
     padding: 0;
-    background: var(--com-surface);
-    box-shadow: 0 0 0 1px var(--com-line);
+    border-color: var(--com-line);
   }
 
   &__house {
@@ -370,35 +310,11 @@
 
 @keyframes mic-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 123, 114, 0.55);
+    box-shadow: 0 0 0 0 rgba(255, 123, 114, 0.35);
   }
 
   100% {
-    box-shadow: 0 0 0 2.2rem rgba(255, 123, 114, 0);
-  }
-}
-
-@keyframes halo-breathe {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  50% {
-    transform: scale(1.04);
-    opacity: 0.55;
-  }
-}
-
-@keyframes halo-ripple {
-  0% {
-    transform: scale(0.85);
-    opacity: 1;
-  }
-
-  100% {
-    transform: scale(1.25);
-    opacity: 0;
+    box-shadow: 0 0 0 1.4rem rgba(255, 123, 114, 0);
   }
 }
 
@@ -422,7 +338,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mic,
-  .mic-halo__ring,
   .welcome,
   .communicator__rec-dot {
     animation: none;
