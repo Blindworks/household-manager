@@ -6,6 +6,7 @@ import { CommunicatorAnswer, CommunicatorCard } from '../../models/communicator.
 import { CommunicatorService } from '../../services/communicator.service';
 import { CommunicatorCardComponent } from './communicator-card/communicator-card.component';
 import { SignalTones } from './signal-tones';
+import { ThinkingHouseComponent } from './thinking-house/thinking-house.component';
 import { VoiceRecorder } from './voice-recorder';
 
 type Phase = 'idle' | 'starting' | 'recording' | 'thinking';
@@ -27,7 +28,7 @@ interface ShownCard {
 @Component({
   selector: 'app-communicator',
   standalone: true,
-  imports: [FormsModule, RouterLink, CommunicatorCardComponent],
+  imports: [FormsModule, RouterLink, CommunicatorCardComponent, ThinkingHouseComponent],
   templateUrl: './communicator.component.html',
   styleUrl: './communicator.component.scss'
 })
