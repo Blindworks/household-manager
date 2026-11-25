@@ -51,19 +51,15 @@
     }
 
     @if (speechAvailable() !== false) {
-      <div class="mic-halo" [class]="'mic-halo mic-halo--' + phase()">
-        <span class="mic-halo__ring" aria-hidden="true"></span>
-        <span class="mic-halo__ring mic-halo__ring--outer" aria-hidden="true"></span>
-        <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
-                [disabled]="phase() === 'thinking' || phase() === 'starting'"
-                [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
-          @if (phase() === 'thinking') {
-            <app-thinking-house class="mic__house"></app-thinking-house>
-          } @else {
-            <span class="material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
-          }
-        </button>
-      </div>
+      <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
+              [disabled]="phase() === 'thinking' || phase() === 'starting'"
+              [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
+        @if (phase() === 'thinking') {
+          <app-thinking-house class="mic__house"></app-thinking-house>
+        } @else {
+          <span class="material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
+        }
+      </button>
       @if (phase() === 'recording') {
         <p class="communicator__timer" aria-live="off">
           <span class="communicator__rec-dot" aria-hidden="true"></span>
