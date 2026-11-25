@@ -12,6 +12,7 @@ export class VoiceRecorder {
   private recorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
   private chunks: Blob[] = [];
+  private cancelled = false;
 
   static isSupported(): boolean {
     return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
@@ -21,9 +22,21 @@ export class VoiceRecorder {
     return this.recorder?.state === 'recording';
   }
 
-  /** Fragt beim ersten Mal die Mikrofon-Berechtigung an; ein Nein kommt als abgelehntes Promise. */
-  async start(): Promise<void> {
+  /**
+   * Fragt beim ersten Mal die Mikrofon-Berechtigung an; ein Nein kommt als abgelehntes Promise.
+   * `ready` läuft, sobald das Mikrofon bereit ist, und vor der Aufnahme: der Signalton soll nicht mit aufs Band.
+   *
+   * @returns false, wenn inzwischen abgebrochen wurde
+   */
+  async start(ready: () => Promise<void> = () => Promise.resolve()): Promise<boolean> {
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!this.cancelled) {
+      await ready();
+    }
+    if (this.cancelled) {
+      this.release();
+      return false;
+    }
     const mimeType = VoiceRecorder.MIME_TYPES.find(type => MediaRecorder.isTypeSupported(type));
     this.chunks = [];
     this.recorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : undefined);
@@ -33,6 +46,7 @@ export class VoiceRecorder {
       }
     };
     this.recorder.start();
+    return true;
   }
 
   /** Beendet die Aufnahme und gibt das Mikrofon frei; `null`, wenn nichts aufgenommen wurde. */
@@ -56,6 +70,7 @@ export class VoiceRecorder {
 
   /** Verwirft eine laufende Aufnahme (Seite wird verlassen). */
   cancel(): void {
+    this.cancelled = true;
     if (this.recorder && this.recorder.state !== 'inactive') {
       this.recorder.onstop = null;
       this.recorder.stop();

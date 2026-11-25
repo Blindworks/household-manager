@@ -93,6 +93,42 @@ describe('CommunicatorComponent', () => {
     expect(el().querySelector('.communicator__input')).not.toBeNull();
   });
 
+  it('spielt den Startton vor der Aufnahme und den Endton nach dem Stoppen', async () => {
+    setup();
+    const order: string[] = [];
+    const parts = component as unknown as {
+      recorder: { start: (ready: () => Promise<void>) => Promise<boolean>; stop: () => Promise<Blob | null>; cancel: () => void };
+      tones: { unlock: () => void; start: () => Promise<void>; stop: () => Promise<void> };
+    };
+    spyOn(parts.tones, 'unlock');
+    spyOn(parts.tones, 'start').and.callFake(async () => { order.push('startton'); });
+    spyOn(parts.tones, 'stop').and.callFake(async () => { order.push('endton'); });
+    spyOn(parts.recorder, 'start').and.callFake(async ready => { await ready(); order.push('aufnahme'); return true; });
+    spyOn(parts.recorder, 'stop').and.callFake(async () => { order.push('stopp'); return new Blob(['x']); });
+    service.askAudio.and.returnValue(of(climateAnswer));
+
+    component.onMicTap();
+    component.onMicTap();
+    await fixture.whenStable();
+    expect(component.phase()).toBe('recording');
+    expect(parts.recorder.start).toHaveBeenCalledTimes(1);
+    component.onMicTap();
+    await fixture.whenStable();
+
+    expect(order).toEqual(['startton', 'aufnahme', 'stopp', 'endton']);
+    expect(service.askAudio).toHaveBeenCalledTimes(1);
+  });
+
+  it('gibt den Knopf frei, wenn das Mikrofon verweigert wird', async () => {
+    setup();
+    const recorder = (component as unknown as { recorder: { start: () => Promise<boolean> } }).recorder;
+    spyOn(recorder, 'start').and.rejectWith(new Error('nein'));
+    component.onMicTap();
+    await fixture.whenStable();
+    expect(component.phase()).toBe('idle');
+    expect(component.error()).toContain('Mikrofon');
+  });
+
   it('stellt die Folgefrage eines Vorschlags', () => {
     setup();
     service.askText.and.returnValue(of({

@@ -37,7 +37,7 @@
 
     @if (speechAvailable() !== false) {
       <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
-              [disabled]="phase() === 'thinking'"
+              [disabled]="phase() === 'thinking' || phase() === 'starting'"
               [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
         <span class="material-symbols-outlined">
           {{ phase() === 'recording' ? 'stop' : phase() === 'thinking' ? 'more_horiz' : 'mic' }}
@@ -46,6 +46,7 @@
       <p class="communicator__hint">
         @switch (phase()) {
           @case ('recording') { Ich höre zu – zum Senden tippen }
+          @case ('starting') { Einen Moment … }
           @case ('thinking') { Einen Moment … }
           @default { Tippen und sprechen }
         }
