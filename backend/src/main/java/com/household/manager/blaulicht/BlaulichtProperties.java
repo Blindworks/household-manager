@@ -64,7 +64,7 @@ public class BlaulichtProperties {
     @Data
     public static class Briefing {
         private LocalTime nightStart = LocalTime.of(20, 0);
-        private LocalTime nightEnd = LocalTime.of(7, 0);
+        private LocalTime nightEnd = LocalTime.of(8, 0);
         /** Ab hier zeigt der Hub zusätzlich den Nachtrag. */
         private LocalTime addendumAt = LocalTime.of(12, 0);
         /** Bis hier zeigt der Hub die Karte (danach beginnt die nächste Nacht). */

@@ -16,17 +16,17 @@ class NightWindowTest {
         NightWindow night = NightWindow.endingOn(LocalDate.of(2026, 11, 25), briefing);
 
         assertThat(night.start()).isEqualTo(LocalDateTime.of(2026, 11, 24, 20, 0));
-        assertThat(night.end()).isEqualTo(LocalDateTime.of(2026, 11, 25, 7, 0));
+        assertThat(night.end()).isEqualTo(LocalDateTime.of(2026, 11, 25, 8, 0));
     }
 
     @Test
     void tagsueberDieVergangeneNachtNachtsDieLaufende() {
         assertThat(NightWindow.current(LocalDateTime.of(2026, 11, 25, 14, 0), briefing).end())
-                .isEqualTo(LocalDateTime.of(2026, 11, 25, 7, 0));
+                .isEqualTo(LocalDateTime.of(2026, 11, 25, 8, 0));
         assertThat(NightWindow.current(LocalDateTime.of(2026, 11, 25, 22, 0), briefing).end())
-                .isEqualTo(LocalDateTime.of(2026, 11, 26, 7, 0));
+                .isEqualTo(LocalDateTime.of(2026, 11, 26, 8, 0));
         assertThat(NightWindow.current(LocalDateTime.of(2026, 11, 25, 3, 0), briefing).end())
-                .isEqualTo(LocalDateTime.of(2026, 11, 25, 7, 0));
+                .isEqualTo(LocalDateTime.of(2026, 11, 25, 8, 0));
     }
 
     @Test
@@ -40,7 +40,7 @@ class NightWindowTest {
         // unscharf (über 16 h): Veröffentlichung zählt
         assertThat(night.contains(event(at(22, 18), at(24, 22), at(25, 15)))).isFalse();
         assertThat(night.contains(event(null, null, at(25, 1)))).isTrue();
-        assertThat(night.contains(event(null, null, at(25, 7)))).isFalse();
+        assertThat(night.contains(event(null, null, at(25, 8)))).isFalse();
     }
 
     static LocalDateTime at(int day, int hour) {

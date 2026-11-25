@@ -44,7 +44,7 @@ class BlaulichtQueryServiceTest {
 
     @Test
     void ruhigeNacht() {
-        BlaulichtBriefingDto briefing = serviceAt(LocalDateTime.of(2026, 11, 25, 7, 1)).briefing();
+        BlaulichtBriefingDto briefing = serviceAt(LocalDateTime.of(2026, 11, 25, 8, 1)).briefing();
 
         assertThat(briefing.text()).isEqualTo("Heute Nacht war es in Bad Vilbel ruhig.");
         assertThat(briefing.cardVisible()).isTrue();
@@ -52,12 +52,12 @@ class BlaulichtQueryServiceTest {
     }
 
     @Test
-    void morgensZaehlenNurVorSiebenVeroeffentlichteMeldungen() {
+    void morgensZaehlenNurVorAchtVeroeffentlichteMeldungen() {
         add(BlaulichtCategory.EINBRUCH, "Dortelweil", false, at(24, 23), at(25, 2));
         add(BlaulichtCategory.EINBRUCH, "Dortelweil", false, at(25, 1), at(25, 3));
         add(BlaulichtCategory.BRAND, "Karben", true, at(25, 1), at(25, 3));
 
-        BlaulichtBriefingDto morning = serviceAt(LocalDateTime.of(2026, 11, 25, 7, 30)).briefing();
+        BlaulichtBriefingDto morning = serviceAt(LocalDateTime.of(2026, 11, 25, 8, 30)).briefing();
         assertThat(morning.text()).isEqualTo("Heute Nacht: 2 Einbrüche in Dortelweil. Dazu 1 Meldung aus Nachbarorten.");
         assertThat(morning.mainCount()).isEqualTo(2);
         assertThat(morning.nearbyCount()).isEqualTo(1);
@@ -77,7 +77,7 @@ class BlaulichtQueryServiceTest {
         BlaulichtBriefingDto evening = serviceAt(LocalDateTime.of(2026, 11, 25, 20, 30)).briefing();
 
         assertThat(evening.cardVisible()).isFalse();
-        assertThat(evening.nightEnd()).isEqualTo(LocalDateTime.of(2026, 11, 26, 7, 0));
+        assertThat(evening.nightEnd()).isEqualTo(LocalDateTime.of(2026, 11, 26, 8, 0));
     }
 
     @Test
