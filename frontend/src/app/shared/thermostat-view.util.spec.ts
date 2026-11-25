@@ -8,7 +8,8 @@ import {
   roomReading,
   stepTarget,
   thermostatCaption,
-  thermostatTone
+  thermostatTone,
+  userTarget
 } from './thermostat-view.util';
 
 const base: Thermostat = {
@@ -139,6 +140,23 @@ describe('thermostat-view.util', () => {
     it('zeigt einen nicht gelisteten Fuehler als Strich', () => {
       expect(roomReading({ ...base, roomSensorId: 'ble:9' }, [reading('2026-11-05T11:58:00')], now))
         .toEqual({ sensorName: 'Raumfühler', valueText: '–', stale: true });
+    });
+  });
+
+  describe('userTarget', () => {
+    const regulated: Thermostat = { ...base, targetTemp: 25.5, roomSensorId: 'dirigera:3', roomTarget: 21 };
+
+    it('zeigt mit wirkender Raumregelung das Raum-Soll', () => {
+      expect(userTarget(regulated)).toBe(21);
+    });
+
+    it('zeigt ohne Raumfuehler oder Raum-Soll den Sollwert am Thermostat', () => {
+      expect(userTarget({ ...regulated, roomSensorId: null })).toBe(25.5);
+      expect(userTarget({ ...regulated, roomTarget: null })).toBe(25.5);
+    });
+
+    it('zeigt bei ausgeschaltetem Thermostat den Aus-Wert', () => {
+      expect(userTarget({ ...regulated, mode: 'OFF', targetTemp: 5 })).toBe(5);
     });
   });
 });

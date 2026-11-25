@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {ThermostatController.class, ThermostatHubAdminController.class})
 @AutoConfigureMockMvc(addFilters = false)
 @Import({ThermostatService.class, ThermostatHubService.class, ThermostatStateCache.class,
-        ThermostatRoomSensorService.class,
+        ThermostatRoomSensorService.class, ThermostatSetpointService.class,
         ThermostatControllerTest.FixedClock.class})
 class ThermostatControllerTest {
 
@@ -289,27 +289,5 @@ class ThermostatControllerTest {
                         .content("{\"sensorId\": null}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomSensorId").doesNotExist());
-    }
-
-    @Test
-    void setsRoomTarget() throws Exception {
-        when(repository.save(any(Thermostat.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(temperatureSeriesService.getCurrent()).thenReturn(List.of(CurrentTemperatureReading.builder()
-                .sensorId("dirigera:3").name("Temperatur Wohnzimmer").temperature(new BigDecimal("20.3"))
-                .measuredAt(LocalDateTime.of(2026, 10, 9, 18, 0)).build()));
-
-        mockMvc.perform(put("/v1/thermostats/1/room-target").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roomTarget\": 21.0}"))
-                .andExpect(status().isBadRequest());
-        mockMvc.perform(put("/v1/thermostats/1/room-sensor").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sensorId\": \"dirigera:3\"}"))
-                .andExpect(status().isOk());
-        mockMvc.perform(put("/v1/thermostats/1/room-target").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roomTarget\": 21.5}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roomTarget").value(21.5));
-        mockMvc.perform(put("/v1/thermostats/1/room-target").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roomTarget\": 21.3}"))
-                .andExpect(status().isBadRequest());
     }
 }

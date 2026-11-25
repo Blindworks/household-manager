@@ -46,12 +46,23 @@ class ThermostatSetNodeHandlerTest {
     @Mock
     private ThermostatStateCache cache;
 
+    @Mock
+    private com.household.manager.repository.ThermostatRepository repository;
+    @Mock
+    private com.household.manager.thermostat.ThermostatRoomRegulator regulator;
+    @Mock
+    private com.household.manager.audit.AuditService auditService;
+
     private ThermostatSetNodeHandler handler;
     private final MutableClock clock = new MutableClock(Instant.parse("2026-11-04T06:43:00Z"));
 
     @BeforeEach
     void setUp() {
-        handler = new ThermostatSetNodeHandler(thermostatService, cache, clock);
+        org.mockito.Mockito.lenient().when(repository.findById(anyLong())).thenAnswer(invocation -> Optional.of(
+                com.household.manager.model.entity.Thermostat.builder().id(invocation.getArgument(0)).name("Bad").build()));
+        var setpointService = new com.household.manager.thermostat.ThermostatSetpointService(
+                repository, thermostatService, regulator, auditService);
+        handler = new ThermostatSetNodeHandler(thermostatService, setpointService, cache, clock);
     }
 
     private static final class MutableClock extends Clock {

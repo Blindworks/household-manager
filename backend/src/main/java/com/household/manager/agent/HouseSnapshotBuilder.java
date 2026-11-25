@@ -246,7 +246,12 @@ public class HouseSnapshotBuilder {
         if (!t.online()) {
             return head + "offline";
         }
-        return head + "ist " + degrees(t.currentTemp()) + ", soll " + degrees(t.targetTemp()) + ", " + t.mode()
+        // Mit Raumregelung ist "soll" der nachgefuehrte Wert am Heizkoerper; eine Zieltemperatur
+        // des Hausverstands setzt das Raum-Soll.
+        String room = t.roomSensorId() != null && t.roomTarget() != null
+                ? ", Raum-Soll " + degrees(t.roomTarget()) + " (Raumregelung, Zieltemperatur setzt das Raum-Soll)"
+                : "";
+        return head + "ist " + degrees(t.currentTemp()) + ", soll " + degrees(t.targetTemp()) + room + ", " + t.mode()
                 + ", " + (t.heating() ? "heizt" : "heizt nicht")
                 + (t.batteryLow() ? ", Batterie schwach" : "")
                 + ", Stand " + (t.lastUpdated() == null ? "unbekannt" : t.lastUpdated().format(TIME));

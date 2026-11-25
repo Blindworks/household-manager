@@ -84,6 +84,40 @@ function measured(entities: EntityMap, entityId: string | undefined, nowMs: numb
 export const temperature = (e: EntityMap, id: string | undefined, now: number) => measured(e, id, now, 1, '°');
 export const humidity = (e: EntityMap, id: string | undefined, now: number) => measured(e, id, now, 0, ' %');
 
+/**
+ * Sollwert, den der Mensch gewaehlt hat: mit wirkender Raumregelung das Raum-Soll (Attribut
+ * `roomTarget`), sonst der Sollwert am Heizkoerper (State). Einzige Definition fuer Bubble und
+ * Detail-Feld.
+ */
+export function thermostatTargetValue(entities: EntityMap, entityId: string): number | null {
+  const entity = entities.get(entityId);
+  if (!isReadable(entity)) {
+    return null;
+  }
+  const roomTarget = entity.attributes?.['roomTarget'];
+  if (typeof roomTarget === 'number' && Number.isFinite(roomTarget)) {
+    return roomTarget;
+  }
+  if (entity.state.trim() === '') {
+    return null;
+  }
+  const value = Number(entity.state);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** Zeile "Soll 21°" (bzw. "–") fuer Bubble und Detail-Feld. */
+export function thermostatTargetLine(entities: EntityMap, entityId: string, nowMs: number): BubbleValue {
+  const value = thermostatTargetValue(entities, entityId);
+  if (value === null) {
+    return MISSING;
+  }
+  const text = formatNumber(String(value), 1);
+  if (text === null) {
+    return MISSING;
+  }
+  return { text: `Soll ${(text + '°').replace(',0°', '°')}`, stale: isStale(entities.get(entityId)!, nowMs) };
+}
+
 export function fresh(text: string): BubbleValue {
   return { text, stale: false };
 }
@@ -300,8 +334,7 @@ function bubbleFor(device: HouseDevice, entities: EntityMap, nowMs: number, tabl
       break;
     case 'thermostat': {
       lines.push(temperature(entities, device.temperature, nowMs));
-      const target = temperature(entities, device.target, nowMs);
-      lines.push(target.text === '–' ? target : { ...target, text: `Soll ${target.text.replace(',0°', '°')}` });
+      lines.push(thermostatTargetLine(entities, device.target, nowMs));
       highlight = isOn(entities, device.heating);
       break;
     }

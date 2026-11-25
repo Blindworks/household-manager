@@ -4,7 +4,8 @@ import { ThermostatMode } from '../../models/thermostat.model';
 import { DetailExtras, LightExtras, NO_WASTE_TEXT, cameraIdOf, lockBatteryLine, motionLine, petLines,
   smartlockIdOf, wasteLines } from './detail-extras.util';
 import { BubbleValue, EntityMap, MISSING, buttonActionText, deviceIcon, fresh, humidity, isOn, isReadable,
-  livePower, lockText, onOff, parseLocalTimestamp, temperature } from './house-bubbles.util';
+  livePower, lockText, onOff, parseLocalTimestamp, temperature, thermostatTargetLine,
+  thermostatTargetValue } from './house-bubbles.util';
 import { HouseDevice } from './house-devices';
 
 export type HistorySource =
@@ -61,15 +62,6 @@ function sinceLine(entity: EntityState | undefined): BubbleValue[] {
   }
   const p = (n: number) => String(n).padStart(2, '0');
   return [fresh(`seit ${p(changed.getHours())}:${p(changed.getMinutes())}`)];
-}
-
-function targetValue(entities: EntityMap, entityId: string): number | null {
-  const entity = entities.get(entityId);
-  if (!isReadable(entity) || entity.state.trim() === '') {
-    return null;
-  }
-  const value = Number(entity.state);
-  return Number.isFinite(value) ? value : null;
 }
 
 function switchState(entities: EntityMap, entityId: string): boolean | null {
@@ -146,19 +138,18 @@ function detailBody(device: HouseDevice, entities: EntityMap, nowMs: number, ext
     }
     case 'thermostat': {
       const thermostatId = thermostatIdOf(device.target);
-      const target = temperature(entities, device.target, nowMs);
       const heating = entities.get(device.heating);
       const room = extras.roomValue;
       return {
         headline: temperature(entities, device.temperature, nowMs),
         lines: [
-          target.text === '–' ? target : { ...target, text: `Soll ${target.text.replace(',0°', '°')}` },
+          thermostatTargetLine(entities, device.target, nowMs),
           !isReadable(heating) ? MISSING : fresh(heating.state === 'on' ? 'heizt' : 'heizt nicht'),
           ...(room ? [{ ...room, text: `Raum ${room.text}` }] : [])
         ],
         history: thermostatId === null ? null : { type: 'thermostat', thermostatId },
         control: thermostatId === null ? null : {
-          type: 'target', thermostatId, target: targetValue(entities, device.target), min: 5, max: 30, step: 0.5,
+          type: 'target', thermostatId, target: thermostatTargetValue(entities, device.target), min: 5, max: 30, step: 0.5,
           mode: extras.thermostatMode ?? null
         }
       };

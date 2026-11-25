@@ -47,7 +47,7 @@ public class ThermostatEntityMapper {
         if (!reading.online()) {
             return unavailable(thermostat, previousAttributes);
         }
-        Map<String, Object> attributes = attributes(reading);
+        Map<String, Object> attributes = attributes(thermostat, reading);
         return List.of(
                 update(thermostat, TEMPERATURE, SENSOR_NAME_TEMPERATURE, temperatureState(reading.currentTemp()),
                         withUnit(attributes)),
@@ -90,11 +90,27 @@ public class ThermostatEntityMapper {
                 .build();
     }
 
-    private Map<String, Object> attributes(ThermostatReading reading) {
+    /**
+     * {@code roomTarget} steht nur da, solange die Raumregelung wirkt (Raumfuehler, Raum-Soll,
+     * Thermostat an): dann ist es der Sollwert, den der Mensch gewaehlt hat, waehrend der State
+     * von {@code _target} der nachgefuehrte Wert am Heizkoerper ist.
+     */
+    private Map<String, Object> attributes(Thermostat thermostat, ThermostatReading reading) {
         Map<String, Object> attributes = new LinkedHashMap<>();
         attributes.put("mode", reading.mode().name());
         attributes.put("batteryLow", reading.batteryLow());
+        if (isRoomRegulated(thermostat, reading)) {
+            attributes.put("roomTarget", thermostat.getRoomTarget());
+        }
         return attributes;
+    }
+
+    private static boolean isRoomRegulated(Thermostat thermostat, ThermostatReading reading) {
+        return thermostat.getRoomSensorId() != null
+                && thermostat.getRoomTarget() != null
+                && reading.mode() == com.household.manager.tapo.hub.ThermostatMode.MANUAL
+                && reading.targetTemp() != null
+                && reading.targetTemp() > ThermostatService.OFF_TARGET_TEMP;
     }
 
     private Map<String, Object> withUnit(Map<String, Object> base) {

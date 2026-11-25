@@ -67,12 +67,6 @@ export class ThermostatService {
       : this.http.put<Thermostat>(`${this.baseUrl}/${id}/room-sensor`, { sensorId });
   }
 
-  setRoomTarget(id: number, roomTarget: number | null): Observable<Thermostat> {
-    return this.useMock
-      ? this.mock.setRoomTarget(id, roomTarget)
-      : this.http.put<Thermostat>(`${this.baseUrl}/${id}/room-target`, { roomTarget });
-  }
-
   rename(id: number, name: string): Observable<Thermostat> {
     return this.useMock
       ? this.mock.rename(id, name)

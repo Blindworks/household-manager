@@ -91,4 +91,21 @@ class ThermostatEntityMapperTest {
         assertEquals("unknown", byId(updates, "sensor.thermostat_3_temperature").state());
         assertEquals("unknown", byId(updates, "sensor.thermostat_3_target").state());
     }
+
+    @Test
+    @DisplayName("Mit wirkender Raumregelung traegt das Ziel das Raum-Soll als Attribut")
+    void roomTargetAttributeOnlyWhileRegulating() {
+        Thermostat regulated = Thermostat.builder().id(3L).childDeviceId("KE-3").hubDeviceId("HUB")
+                .name("Wohnzimmer").roomSensorId("dirigera:3").roomTarget(21.0).active(true).build();
+
+        List<EntityStateUpdate> on = mapper.map(regulated, new ThermostatReading("KE-3", "x", true, 24.0, 25.5,
+                ThermostatMode.MANUAL, true, false), id -> Map.of());
+        List<EntityStateUpdate> off = mapper.map(regulated, new ThermostatReading("KE-3", "x", true, 24.0, 5.0,
+                ThermostatMode.OFF, false, false), id -> Map.of());
+
+        assertEquals(21.0, byId(on, "sensor.thermostat_3_target").attributes().get("roomTarget"));
+        assertEquals("25.5", byId(on, "sensor.thermostat_3_target").state());
+        org.junit.jupiter.api.Assertions.assertFalse(
+                byId(off, "sensor.thermostat_3_target").attributes().containsKey("roomTarget"));
+    }
 }

@@ -16,6 +16,7 @@ import com.household.manager.tapo.hub.ThermostatMode;
 import com.household.manager.telegram.TelegramNotificationService;
 import com.household.manager.thermostat.ThermostatDto;
 import com.household.manager.thermostat.ThermostatService;
+import com.household.manager.thermostat.ThermostatSetpointService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class AgentActionExecutor {
     static final String PUSH_TITLE = "Hausverstand";
 
     private final ThermostatService thermostatService;
+    private final ThermostatSetpointService setpointService;
     private final SwitchQueryService switchQueryService;
     private final SwitchCommandService switchCommandService;
     private final HouseModeQueryService houseModeQueryService;
@@ -88,7 +90,9 @@ public class AgentActionExecutor {
 
     private boolean targetSatisfied(AgentAction action, ThermostatDto current) {
         Double target = action.doubleParam("targetTemp");
-        return target == null || (current.targetTemp() != null && Math.abs(current.targetTemp() - target) < TOLERANCE);
+        // Mit Raumregelung ist der gewaehlte Wert das Raum-Soll, nicht der Sollwert am Heizkoerper.
+        Double actual = current.roomSensorId() != null ? current.roomTarget() : current.targetTemp();
+        return target == null || (actual != null && Math.abs(actual - target) < TOLERANCE);
     }
 
     private boolean modeSatisfied(AgentAction action, ThermostatDto current) {
@@ -111,10 +115,10 @@ public class AgentActionExecutor {
             return new ActionOutcome(true, current.name() + " steht bereits so.");
         }
         if (!modeOk) {
-            thermostatService.setMode(current.id(), ThermostatMode.valueOf(action.stringParam("mode")));
+            setpointService.setMode(current.id(), ThermostatMode.valueOf(action.stringParam("mode")));
         }
         if (!targetOk) {
-            thermostatService.setTarget(current.id(), action.doubleParam("targetTemp"));
+            setpointService.setTarget(current.id(), action.doubleParam("targetTemp"));
         }
         return new ActionOutcome(false, current.name() + ": " + action.describe());
     }

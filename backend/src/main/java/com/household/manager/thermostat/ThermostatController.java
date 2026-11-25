@@ -20,7 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Heizungs-API fuer die Tablet-Ansicht. Bewusst duenn: Validierung, Hub-Zugriff und Audit
+ * Heizungs-API fuer die Tablet-Ansicht. Bewusst duenn: Sollwerte laufen ueber
+ * {@link ThermostatSetpointService} (Raum-Soll bei Raumfuehler), Hub-Zugriff und Audit
  * leben in {@link ThermostatService}. Hub nicht erreichbar wird vom {@code GlobalExceptionHandler}
  * als 502 abgebildet, nie als 401.
  */
@@ -30,6 +31,7 @@ import java.util.List;
 public class ThermostatController {
 
     private final ThermostatService thermostatService;
+    private final ThermostatSetpointService setpointService;
     private final ThermostatHistoryService historyService;
 
     @GetMapping
@@ -39,17 +41,17 @@ public class ThermostatController {
 
     @PutMapping("/{id}/target")
     public ResponseEntity<ThermostatDto> setTarget(@PathVariable Long id, @Valid @RequestBody TargetRequest request) {
-        return ResponseEntity.ok(thermostatService.setTarget(id, request.targetTemp()));
+        return ResponseEntity.ok(setpointService.setTarget(id, request.targetTemp()));
     }
 
     @PutMapping("/{id}/mode")
     public ResponseEntity<ThermostatDto> setMode(@PathVariable Long id, @Valid @RequestBody ModeRequest request) {
-        return ResponseEntity.ok(thermostatService.setMode(id, request.mode()));
+        return ResponseEntity.ok(setpointService.setMode(id, request.mode()));
     }
 
     @PostMapping("/bulk")
     public ResponseEntity<List<ThermostatDto>> bulk(@Valid @RequestBody BulkRequest request) {
-        return ResponseEntity.ok(thermostatService.bulk(request.ids(), request.targetTemp()));
+        return ResponseEntity.ok(setpointService.bulk(request.ids(), request.targetTemp()));
     }
 
     @GetMapping("/{id}/history")
