@@ -53,8 +53,8 @@ public class CommunicatorLogService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    /** Eine gescheiterte Protokollzeile darf die Antwort nicht verhindern. */
-    void record(CommunicatorTrace trace) {
+    /** Eine gescheiterte Protokollzeile darf die Antwort nicht verhindern. Public, weil der Scheduled-Aspekt proxyt. */
+    public void record(CommunicatorTrace trace) {
         try {
             repository.save(toEntity(trace));
         } catch (Exception ex) {
