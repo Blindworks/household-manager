@@ -35,6 +35,13 @@ public class LaundryController {
         return service.currentState();
     }
 
+    /** Waesche jetzt im Keller aufgehaengt — ohne offene Frage startet das Trocknen direkt. */
+    @PostMapping("/hung")
+    public LaundryStateView reportLaundryHungUp() {
+        service.reportHung();
+        return service.currentState();
+    }
+
     @PostMapping("/answers/dry")
     public LaundryStateView answerDry(@RequestBody LaundryAnswerRequest request) {
         service.answerDry(request.yes());

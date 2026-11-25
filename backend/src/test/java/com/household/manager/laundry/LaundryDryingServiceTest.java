@@ -126,6 +126,63 @@ class LaundryDryingServiceTest {
         verify(auditService).record("laundry.answer.hung", "ja");
     }
 
+    // ---------- Von Hand gemeldet ----------
+
+    @Test
+    void handmeldungOhneFrageStartetTrocknenDirekt() {
+        service.reportHung();
+
+        assertThat(store).hasSize(1);
+        LaundryDryingSession session = store.get(0);
+        assertThat(session.getStatus()).isEqualTo(LaundrySessionStatus.DRYING);
+        assertThat(session.getTrigger()).isEqualTo(LaundryTrigger.MANUAL);
+        assertThat(session.getStartedAt()).isEqualTo(clock.now());
+        assertThat(session.getBaselineHumidity()).isNull();
+        assertThat(service.currentState().status()).isEqualTo("drying");
+        verify(auditService).record("laundry.hung.manual", "ohne Frage");
+    }
+
+    @Test
+    void handmeldungBeantwortetOffeneFrage() {
+        service.ask(LaundryTrigger.SWITCH_OFF, 58.9);
+        service.reportHung();
+
+        assertThat(store).hasSize(1);
+        assertThat(store.get(0).getStatus()).isEqualTo(LaundrySessionStatus.DRYING);
+        assertThat(store.get(0).getBaselineHumidity()).isEqualTo(58.9);
+        verify(auditService).record("laundry.answer.hung", "ja");
+    }
+
+    @Test
+    void handmeldungTrotzFrueheremNein() {
+        service.ask(LaundryTrigger.SWITCH_OFF, 58.9);
+        service.answerHung(false);
+        clock.advance(Duration.ofHours(1));
+
+        service.reportHung();
+
+        assertThat(store).hasSize(2);
+        assertThat(service.currentState().status()).isEqualTo("drying");
+    }
+
+    @Test
+    void handmeldungWaehrendTrocknenIstKonflikt() {
+        service.reportHung();
+
+        assertThatThrownBy(service::reportHung).isInstanceOf(LaundryConflictException.class);
+        assertThat(store).hasSize(1);
+    }
+
+    @Test
+    void handmeldungOhneGrundfeuchteWirdNurUeberKTrocken() {
+        service.reportHung();
+        // Feuchte steigt und faellt wie beim Kurvenkriterium: ohne Grundfeuchte darf das nichts ausloesen
+        runHours(2, 16, 75);
+        runHours(6, 16, 60);
+
+        assertThat(store.get(0).getCurveCriterionAt()).isNull();
+    }
+
     // ---------- Schaetzung ----------
 
     @Test

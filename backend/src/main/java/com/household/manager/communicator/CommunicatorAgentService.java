@@ -65,6 +65,7 @@ public class CommunicatorAgentService {
             widerspricht und on oder off ist. Ist der Wunsch schon erfuellt, sag es ohne Aktion.
             - Sieh dir Bodys mit api_describe an. PUT ersetzt meist alles: lies zuerst und sende alle Felder mit.
             - Der Knopftext sagt genau, was mit welchem Ziel passiert, z. B. "Flur ausschalten".
+            - Erzaehlt der Nutzer, was er gerade getan hat ("habe Waesche aufgehaengt", "Futter gekauft"), ist das die Bitte, es im System zu vermerken: such den passenden Endpunkt und biete ihn als Aktion an. Erklaere keine Systeminterna (offene Rueckfragen, Status, Ablaeufe), statt zu handeln; nur wenn wirklich kein Endpunkt passt, sag das in einem Satz.
 
             Antworten:
             - Immer mit show_card, ohne Text daneben. Meist eine Karte, hoechstens 3. Beantworte die Frage zuerst \

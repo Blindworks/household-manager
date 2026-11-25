@@ -1627,6 +1627,18 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
+    void kioskDarfWaescheNichtVonHandAlsAufgehaengtMelden() throws Exception {
+        mockMvc.perform(post("/v1/laundry/hung").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void memberDarfWaescheVonHandAlsAufgehaengtMelden() throws Exception {
+        mockMvc.perform(post("/v1/laundry/hung").with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
     void kioskDarfWaescheZustandLesen() throws Exception {
         mockMvc.perform(get("/v1/laundry/state")).andExpect(status().isNotFound());
     }

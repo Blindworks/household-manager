@@ -65,6 +65,36 @@ public class LaundryDryingService {
         reportCurrentState();
     }
 
+    /**
+     * Von Hand gemeldet: Waesche haengt jetzt im Keller. Eine offene Frage wird mit Ja beantwortet,
+     * sonst beginnt ein neuer Waschgang direkt im Trocknen — auch ohne erkannten Waschgang und trotz
+     * eines frueheren Neins. Ohne bekannte Feuchte vor dem Aufhaengen bleibt die Ausgangsfeuchte leer:
+     * das Kurvenkriterium greift dann nie, "koennte trocken sein" kommt allein ueber die Last K
+     * (Anti-Ziel "zu frueh"). Trocknet schon Waesche, ist das ein Konflikt.
+     */
+    public synchronized void reportHung() {
+        Optional<LaundryDryingSession> open = openSession();
+        if (open.isPresent() && open.get().getStatus() == LaundrySessionStatus.ASKING) {
+            answerHung(true);
+            return;
+        }
+        if (open.isPresent()) {
+            throw new LaundryConflictException("Es trocknet bereits Wäsche im Keller.");
+        }
+        LocalDateTime now = now();
+        LaundryDryingSession session = new LaundryDryingSession();
+        session.setStatus(LaundrySessionStatus.DRYING);
+        session.setTrigger(LaundryTrigger.MANUAL);
+        session.setAskedAt(now);
+        session.setStartedAt(now);
+        session.setLastAccumulatedAt(now);
+        session.setAccumulatedLoad(0.0);
+        session.setPeakExcess(0.0);
+        repository.save(session);
+        auditService.record("laundry.hung.manual", "ohne Frage");
+        reportCurrentState();
+    }
+
     public synchronized void answerDry(boolean dry) {
         LaundryDryingSession session = openSession()
                 .filter(s -> s.getStatus() == LaundrySessionStatus.MAYBE_DRY && s.isDryQuestionOpen())
