@@ -1,6 +1,8 @@
 package com.household.manager.blaulicht;
 
 import com.household.manager.blaulicht.dto.BlaulichtBriefingDto;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
+import com.household.manager.blaulicht.settings.BlaulichtSettingsService;
 import com.household.manager.systemlog.SystemJobMonitor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,14 +25,17 @@ public class BlaulichtBriefingJob {
     private final BlaulichtQueryService query;
     private final BlaulichtEntityReporter reporter;
     private final BlaulichtProperties properties;
+    private final BlaulichtSettingsService settings;
     private final SystemJobMonitor jobMonitor;
     private final Clock clock;
 
     public BlaulichtBriefingJob(BlaulichtQueryService query, BlaulichtEntityReporter reporter,
-                                BlaulichtProperties properties, SystemJobMonitor jobMonitor, Clock clock) {
+                                BlaulichtProperties properties, BlaulichtSettingsService settings,
+                                SystemJobMonitor jobMonitor, Clock clock) {
         this.query = query;
         this.reporter = reporter;
         this.properties = properties;
+        this.settings = settings;
         this.jobMonitor = jobMonitor;
         this.clock = clock;
     }
@@ -41,11 +46,16 @@ public class BlaulichtBriefingJob {
             jobMonitor.reportInactive("Blaulicht abgeschaltet");
             return;
         }
+        BlaulichtSettings current = settings.current();
+        if (!current.sources().presseportalEnabled() && !current.sources().ninaEnabled()) {
+            jobMonitor.reportInactive("Alle Blaulicht-Quellen abgeschaltet");
+            return;
+        }
         LocalTime minute = LocalTime.now(clock).truncatedTo(ChronoUnit.MINUTES);
-        BlaulichtProperties.Briefing config = properties.getBriefing();
-        boolean morning = minute.equals(config.getNightEnd().truncatedTo(ChronoUnit.MINUTES));
-        boolean addendum = minute.equals(config.getAddendumAt().truncatedTo(ChronoUnit.MINUTES));
-        boolean evening = minute.equals(config.getNightStart().truncatedTo(ChronoUnit.MINUTES));
+        BlaulichtSettings.Briefing config = current.briefing();
+        boolean morning = minute.equals(config.nightEnd().truncatedTo(ChronoUnit.MINUTES));
+        boolean addendum = minute.equals(config.addendumAt().truncatedTo(ChronoUnit.MINUTES));
+        boolean evening = minute.equals(config.nightStart().truncatedTo(ChronoUnit.MINUTES));
         if (!morning && !addendum && !evening) {
             return;
         }

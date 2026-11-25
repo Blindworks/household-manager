@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.blaulicht.BlaulichtCategory;
 import com.household.manager.blaulicht.BlaulichtProperties;
 import com.household.manager.blaulicht.BlaulichtSourceKey;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
+import com.household.manager.blaulicht.settings.BlaulichtSettingsService;
 import com.household.manager.repository.BlaulichtEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,15 +33,17 @@ public class NinaSource implements BlaulichtSource {
     private final BlaulichtHttp http;
     private final BlaulichtProperties properties;
     private final BlaulichtEventRepository repository;
+    private final BlaulichtSettingsService settings;
     private final ObjectMapper mapper;
     private final Clock clock;
     private final Set<String> seen = new HashSet<>();
 
     public NinaSource(BlaulichtHttp http, BlaulichtProperties properties, BlaulichtEventRepository repository,
-                      ObjectMapper mapper, Clock clock) {
+                      BlaulichtSettingsService settings, ObjectMapper mapper, Clock clock) {
         this.http = http;
         this.properties = properties;
         this.repository = repository;
+        this.settings = settings;
         this.mapper = mapper;
         this.clock = clock;
     }
@@ -51,13 +55,14 @@ public class NinaSource implements BlaulichtSource {
 
     @Override
     public boolean enabled() {
-        return properties.getNina().isEnabled();
+        return settings.current().sources().ninaEnabled();
     }
 
     @Override
     public synchronized List<RawReport> fetchNew() throws BlaulichtFetchException {
-        BlaulichtProperties.Nina nina = properties.getNina();
-        String dashboardUrl = nina.getBaseUrl() + "/dashboard/" + nina.getDashboardArs() + ".json";
+        BlaulichtSettings current = settings.current();
+        String dashboardUrl = properties.getNina().getBaseUrl() + "/dashboard/"
+                + current.sources().dashboardArs() + ".json";
         Optional<String> dashboard = http.getIfChanged(dashboardUrl);
         if (dashboard.isEmpty()) {
             return List.of();
@@ -71,7 +76,7 @@ public class NinaSource implements BlaulichtSource {
         }
         List<RawReport> reports = new ArrayList<>();
         for (NinaParser.DashboardEntry entry : entries) {
-            if (seen.contains(entry.id()) || isExcluded(entry)) {
+            if (seen.contains(entry.id()) || isExcluded(entry, current.sources().excludedProviders())) {
                 continue;
             }
             if (repository.existsBySourceAndExternalId(BlaulichtSourceKey.NINA, entry.id())) {
@@ -79,7 +84,7 @@ public class NinaSource implements BlaulichtSource {
                 continue;
             }
             try {
-                detail(entry).ifPresent(reports::add);
+                detail(entry, current).ifPresent(reports::add);
                 seen.add(entry.id());
             } catch (BlaulichtFetchException | IOException e) {
                 http.forget(dashboardUrl);
@@ -89,17 +94,17 @@ public class NinaSource implements BlaulichtSource {
         return reports;
     }
 
-    private boolean isExcluded(NinaParser.DashboardEntry entry) {
+    private static boolean isExcluded(NinaParser.DashboardEntry entry, List<String> excludedProviders) {
         return "cancel".equalsIgnoreCase(entry.type())
-                || properties.getNina().getExcludedProviders().stream()
+                || excludedProviders.stream()
                 .anyMatch(p -> entry.provider().startsWith(p.toLowerCase(Locale.ROOT)));
     }
 
-    private Optional<RawReport> detail(NinaParser.DashboardEntry entry) throws BlaulichtFetchException, IOException {
+    private Optional<RawReport> detail(NinaParser.DashboardEntry entry, BlaulichtSettings current) throws BlaulichtFetchException, IOException {
         String url = properties.getNina().getBaseUrl() + "/warnings/" + entry.id() + ".json";
         Optional<NinaParser.Warning> parsed = NinaParser.parseWarning(mapper, http.get(url), clock.getZone());
         if (parsed.isEmpty() || "cancel".equalsIgnoreCase(parsed.get().msgType())
-                || !NinaParser.affects(parsed.get(), properties.getNina().getLocalArs())) {
+                || !NinaParser.affects(parsed.get(), current.sources().localArs())) {
             return Optional.empty();
         }
         NinaParser.Warning warning = parsed.get();
@@ -117,6 +122,6 @@ public class NinaSource implements BlaulichtSource {
                 ? warning.web()
                 : "https://warnung.bund.de/meldungen/" + entry.id();
         return Optional.of(new RawReport(BlaulichtSourceKey.NINA, entry.id(), headline, paragraphs, link,
-                published, BlaulichtCategory.WARNUNG, properties.getLocalities().getMain()));
+                published, BlaulichtCategory.WARNUNG, current.localities().main()));
     }
 }

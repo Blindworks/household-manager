@@ -1,7 +1,7 @@
 package com.household.manager.blaulicht.processing;
 
 import com.household.manager.blaulicht.BlaulichtCategory;
-import com.household.manager.blaulicht.BlaulichtProperties;
+import com.household.manager.blaulicht.settings.BlaulichtSettingsService;
 import com.household.manager.blaulicht.source.RawReport;
 import org.springframework.stereotype.Component;
 
@@ -32,22 +32,22 @@ public class BlaulichtProcessor {
             BlaulichtCategory.DIEBSTAHL, 5,
             BlaulichtCategory.SONSTIGES, 0));
 
-    private final LocalityMatcher localities;
+    private final BlaulichtSettingsService settings;
     private final BlaulichtClassifier classifier;
-    private final int mainRelevance;
 
-    public BlaulichtProcessor(BlaulichtProperties properties, BlaulichtClassifier classifier) {
-        this.localities = new LocalityMatcher(properties.getLocalities());
+    public BlaulichtProcessor(BlaulichtSettingsService settings, BlaulichtClassifier classifier) {
+        this.settings = settings;
         this.classifier = classifier;
-        this.mainRelevance = properties.getLocalities().getMainRelevance();
     }
 
     public List<ProcessedCase> process(RawReport report) {
         if (report.fixedCategory() != null && report.fixedLocality() != null) {
             String body = String.join("\n\n", report.paragraphs());
             return List.of(build(report, report.guid(), report.title(), body,
-                    new LocalityMatch(report.fixedLocality(), mainRelevance, false), report.fixedCategory()));
+                    new LocalityMatch(report.fixedLocality(), LocalityMatcher.MAIN_RELEVANCE, false),
+                    report.fixedCategory()));
         }
+        LocalityMatcher localities = new LocalityMatcher(settings.current().localities());
         List<BulletinCase> cases = BulletinSplitter.split(report.title(), report.paragraphs());
         List<ProcessedCase> result = new ArrayList<>();
         for (int i = 0; i < cases.size(); i++) {

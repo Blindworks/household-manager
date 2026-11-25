@@ -103,7 +103,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         com.household.manager.dirigera.DirigeraController.class,
         com.household.manager.systemlog.SystemLogController.class,
         com.household.manager.grocery.GroceryAdminController.class,
-        com.household.manager.grocery.GroceryRunController.class},
+        com.household.manager.grocery.GroceryRunController.class,
+        com.household.manager.blaulicht.settings.BlaulichtAdminController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
@@ -164,6 +165,12 @@ class SecurityRulesTest {
     private com.household.manager.dirigera.DirigeraPairingService dirigeraPairingService;
     @MockitoBean
     private com.household.manager.grocery.GrocerySettingsService grocerySettingsService;
+
+    @MockitoBean
+    private com.household.manager.blaulicht.settings.BlaulichtSettingsService blaulichtSettingsService;
+
+    @MockitoBean
+    private com.household.manager.blaulicht.BlaulichtPollingService blaulichtPollingService;
     @MockitoBean
     private com.household.manager.grocery.GroceryMarketService groceryMarketService;
     @MockitoBean
@@ -459,6 +466,28 @@ class SecurityRulesTest {
     @WithMockUser(roles = "ADMIN")
     void dirigeraButtonsGetIstFuerAdminErlaubt() throws Exception {
         mockMvc.perform(get("/v1/dirigera/buttons")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void blaulichtEinstellungenSindFuerAdminLesbar() throws Exception {
+        org.mockito.Mockito.when(blaulichtSettingsService.current())
+                .thenReturn(com.household.manager.blaulicht.settings.BlaulichtSettings.defaults());
+        mockMvc.perform(get("/v1/admin/blaulicht/settings")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void blaulichtEinstellungenSindFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/blaulicht/settings")).andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/admin/blaulicht/settings").with(csrf())
+                .contentType("application/json").content("{}")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void blaulichtEinstellungenSindFuerKioskVerboten() throws Exception {
+        mockMvc.perform(get("/v1/admin/blaulicht/settings")).andExpect(status().isForbidden());
     }
 
     @Test

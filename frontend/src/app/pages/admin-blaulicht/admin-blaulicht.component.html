@@ -1,0 +1,114 @@
+<div class="admin-blaulicht">
+  <h1>Blaulicht Bad Vilbel</h1>
+  <p class="admin-blaulicht__hint">
+    Polizeimeldungen (Presseportal) und NINA-Warnungen für den Hauptort und seine Ortsteile. Änderungen an
+    Orten gelten für neu eingehende Meldungen, bereits gespeicherte bleiben, wie sie sind.
+  </p>
+
+  @if (loading()) {
+    <p>Lade Einstellungen …</p>
+  } @else if (loadFailed() || !form) {
+    <div class="admin-blaulicht__error" role="alert">
+      Die Einstellungen konnten nicht geladen werden.
+      <button type="button" class="ghost" (click)="load()">Neu laden</button>
+    </div>
+  } @else {
+    <form (ngSubmit)="save()">
+      <section class="admin-blaulicht__section">
+        <h2>Zeiten</h2>
+        <p class="admin-blaulicht__hint">
+          Die Nacht läuft über Mitternacht. Zum Nachtende kommt das Morgen-Briefing (Hub-Karte und Push), zum
+          Nachtrag-Zeitpunkt ein Push mit später veröffentlichten Meldungen der Nacht. Die Karte steht vom
+          Nachtende bis „Karte sichtbar bis“.
+        </p>
+        <div class="admin-blaulicht__fields">
+          <label class="admin-blaulicht__field">
+            <span>Nachtbeginn</span>
+            <input type="time" name="nightStart" [(ngModel)]="form.nightStart" required>
+          </label>
+          <label class="admin-blaulicht__field">
+            <span>Nachtende / Morgen-Briefing</span>
+            <input type="time" name="nightEnd" [(ngModel)]="form.nightEnd" required>
+          </label>
+          <label class="admin-blaulicht__field">
+            <span>Nachtrag</span>
+            <input type="time" name="addendumAt" [(ngModel)]="form.addendumAt" required>
+          </label>
+          <label class="admin-blaulicht__field">
+            <span>Karte sichtbar bis</span>
+            <input type="time" name="cardUntil" [(ngModel)]="form.cardUntil" required>
+          </label>
+        </div>
+        <p class="admin-blaulicht__hint admin-blaulicht__hint--small">
+          Die Wetterau-Sammelmeldungen erscheinen meist zwischen 13 und 16 Uhr.
+        </p>
+      </section>
+
+      <section class="admin-blaulicht__section">
+        <h2>Orte</h2>
+        <div class="admin-blaulicht__fields">
+          <label class="admin-blaulicht__field admin-blaulicht__field--wide">
+            <span>Hauptort</span>
+            <input type="text" name="mainLocality" [(ngModel)]="form.mainLocality" maxlength="100" required>
+          </label>
+        </div>
+        <div class="admin-blaulicht__fields">
+          <label class="admin-blaulicht__field admin-blaulicht__field--wide">
+            <span>Ortsteile (ein Eintrag je Zeile, zählen wie der Hauptort)</span>
+            <textarea name="districts" rows="5" [(ngModel)]="form.districts"></textarea>
+          </label>
+          <label class="admin-blaulicht__field admin-blaulicht__field--wide">
+            <span>Nachbarorte (ein Eintrag je Zeile, erscheinen als „aus Nachbarorten“)</span>
+            <textarea name="neighbors" rows="5" [(ngModel)]="form.neighbors"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="admin-blaulicht__section">
+        <h2>Quellen</h2>
+        <label class="admin-blaulicht__toggle">
+          <input type="checkbox" name="presseportalEnabled" [(ngModel)]="form.presseportalEnabled">
+          <span>Polizeimeldungen (Presseportal) abrufen</span>
+        </label>
+        <div class="admin-blaulicht__fields">
+          <label class="admin-blaulicht__field admin-blaulicht__field--wide">
+            <span>Titelfilter (nur Meldungen mit diesem Text im Titel lesen, leer = alle)</span>
+            <input type="text" name="titleFilter" [(ngModel)]="form.titleFilter" maxlength="100">
+          </label>
+        </div>
+
+        <label class="admin-blaulicht__toggle">
+          <input type="checkbox" name="ninaEnabled" [(ngModel)]="form.ninaEnabled">
+          <span>NINA-Warnungen abrufen (sofort als Push)</span>
+        </label>
+        <div class="admin-blaulicht__fields">
+          <label class="admin-blaulicht__field">
+            <span>Regionalschlüssel Kreis</span>
+            <input type="text" name="dashboardArs" [(ngModel)]="form.dashboardArs" inputmode="numeric"
+                   pattern="\d{12}" maxlength="12" required>
+          </label>
+          <label class="admin-blaulicht__field">
+            <span>Regionalschlüssel Gemeinde</span>
+            <input type="text" name="localArs" [(ngModel)]="form.localArs" inputmode="numeric"
+                   pattern="\d{12}" maxlength="12" required>
+          </label>
+          <label class="admin-blaulicht__field admin-blaulicht__field--wide">
+            <span>Ausgeschlossene Anbieter (Präfix der Warnungs-Id, z. B. „dwd“ für Wetter)</span>
+            <textarea name="excludedProviders" rows="2" [(ngModel)]="form.excludedProviders"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <div class="admin-blaulicht__actions">
+        <button type="submit" [disabled]="saving()">{{ saving() ? 'Speichert …' : 'Speichern' }}</button>
+        @if (message()) {
+          <span class="admin-blaulicht__message" role="status"
+                [class.admin-blaulicht__message--error]="messageType() === 'error'"
+                [class.admin-blaulicht__message--success]="messageType() === 'success'">
+            {{ message() }}
+          </span>
+        }
+      </div>
+    </form>
+  }
+</div>

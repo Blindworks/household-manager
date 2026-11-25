@@ -216,6 +216,13 @@ export const routes: Routes = [
     title: 'Heizung - Household Manager'
   },
   {
+    path: 'admin/blaulicht',
+    loadComponent: () => import('./pages/admin-blaulicht/admin-blaulicht.component')
+      .then(m => m.AdminBlaulichtComponent),
+    canActivate: [adminGuard],
+    title: 'Blaulicht - Household Manager'
+  },
+  {
     path: 'admin/groceries',
     loadComponent: () => import('./pages/admin-groceries/admin-groceries.component')
       .then(m => m.AdminGroceriesComponent),

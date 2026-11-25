@@ -1,5 +1,7 @@
 package com.household.manager.blaulicht.source;
 
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
+import com.household.manager.blaulicht.settings.TestBlaulichtSettings;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.household.manager.blaulicht.BlaulichtCategory;
 import com.household.manager.blaulicht.BlaulichtFixtures;
@@ -28,7 +30,7 @@ class NinaSourceTest {
     void setUp() {
         base = properties.getNina().getBaseUrl();
         source = new NinaSource(new BlaulichtHttp(transport, "test", 1000), properties,
-                mock(BlaulichtEventRepository.class), new ObjectMapper(),
+                mock(BlaulichtEventRepository.class), TestBlaulichtSettings.defaults(), new ObjectMapper(),
                 Clock.fixed(Instant.parse("2026-11-25T12:00:00Z"), ZoneId.of("Europe/Berlin")));
     }
 
@@ -39,7 +41,7 @@ class NinaSourceTest {
                     .append("\",\"type\":\"Alert\",\"startDate\":\"2026-11-03T17:04:19+01:00\",")
                     .append("\"i18nTitle\":{\"de\":\"Titel\"}}");
         }
-        transport.bodies.put(base + "/dashboard/" + properties.getNina().getDashboardArs() + ".json",
+        transport.bodies.put(base + "/dashboard/" + BlaulichtSettings.defaults().sources().dashboardArs() + ".json",
                 json.append("]").toString());
     }
 

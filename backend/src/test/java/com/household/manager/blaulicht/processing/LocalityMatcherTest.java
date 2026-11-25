@@ -1,13 +1,13 @@
 package com.household.manager.blaulicht.processing;
 
-import com.household.manager.blaulicht.BlaulichtProperties;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalityMatcherTest {
 
-    private final LocalityMatcher matcher = new LocalityMatcher(new BlaulichtProperties().getLocalities());
+    private final LocalityMatcher matcher = new LocalityMatcher(BlaulichtSettings.defaults().localities());
 
     @Test
     void hauptortMitOrtsteilImText() {
