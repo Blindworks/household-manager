@@ -2,6 +2,8 @@ package com.household.manager.blaulicht.source;
 
 import com.household.manager.blaulicht.BlaulichtProperties;
 import com.household.manager.blaulicht.BlaulichtSourceKey;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
+import com.household.manager.blaulicht.settings.BlaulichtSettingsService;
 import com.household.manager.blaulicht.processing.LocalityMatcher;
 import com.household.manager.repository.BlaulichtEventRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +39,7 @@ public class PresseportalSource implements BlaulichtSource {
     private final BlaulichtHttp http;
     private final BlaulichtProperties properties;
     private final BlaulichtEventRepository repository;
-    private final LocalityMatcher localities;
+    private final BlaulichtSettingsService settings;
     private final Clock clock;
     private final Set<String> seen = Collections.newSetFromMap(new LinkedHashMap<>() {
         @Override
@@ -47,11 +49,11 @@ public class PresseportalSource implements BlaulichtSource {
     });
 
     public PresseportalSource(BlaulichtHttp http, BlaulichtProperties properties,
-                              BlaulichtEventRepository repository, Clock clock) {
+                              BlaulichtEventRepository repository, BlaulichtSettingsService settings, Clock clock) {
         this.http = http;
         this.properties = properties;
         this.repository = repository;
-        this.localities = new LocalityMatcher(properties.getLocalities());
+        this.settings = settings;
         this.clock = clock;
     }
 
@@ -62,7 +64,7 @@ public class PresseportalSource implements BlaulichtSource {
 
     @Override
     public boolean enabled() {
-        return properties.getPresseportal().isEnabled();
+        return settings.current().sources().presseportalEnabled();
     }
 
     @Override
@@ -77,6 +79,9 @@ public class PresseportalSource implements BlaulichtSource {
             http.forget(feedUrl);
             throw new BlaulichtFetchException("Feed nicht lesbar");
         }
+        BlaulichtSettings current = settings.current();
+        LocalityMatcher localities = new LocalityMatcher(current.localities());
+        String filter = current.sources().titleFilter();
         List<RawReport> reports = new ArrayList<>();
         int budget = properties.getPresseportal().getMaxDetailFetchesPerRun();
         int failures = 0;
@@ -84,7 +89,7 @@ public class PresseportalSource implements BlaulichtSource {
             if (seen.contains(item.guid())) {
                 continue;
             }
-            if (!isCandidate(item) || repository.existsForGuid(BlaulichtSourceKey.PRESSEPORTAL, item.guid())) {
+            if (!isCandidate(item, filter, localities) || repository.existsForGuid(BlaulichtSourceKey.PRESSEPORTAL, item.guid())) {
                 seen.add(item.guid());
                 continue;
             }
@@ -108,8 +113,7 @@ public class PresseportalSource implements BlaulichtSource {
         return reports;
     }
 
-    private boolean isCandidate(PresseportalRssParser.Item item) {
-        String filter = properties.getPresseportal().getTitleFilter();
+    private static boolean isCandidate(PresseportalRssParser.Item item, String filter, LocalityMatcher localities) {
         if (filter == null || filter.isBlank()) {
             return true;
         }

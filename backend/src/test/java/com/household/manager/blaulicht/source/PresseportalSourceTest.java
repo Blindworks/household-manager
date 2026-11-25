@@ -1,5 +1,6 @@
 package com.household.manager.blaulicht.source;
 
+import com.household.manager.blaulicht.settings.TestBlaulichtSettings;
 import com.household.manager.blaulicht.BlaulichtFixtures;
 import com.household.manager.blaulicht.BlaulichtProperties;
 import com.household.manager.repository.BlaulichtEventRepository;
@@ -35,7 +36,7 @@ class PresseportalSourceTest {
             transport.bodies.put(PM + id, BlaulichtFixtures.read("presseportal-detail-" + id + ".html"));
         }
         source = new PresseportalSource(new BlaulichtHttp(transport, "test", 1000), properties, repository,
-                Clock.fixed(Instant.parse("2026-11-25T12:00:00Z"), ZoneId.of("Europe/Berlin")));
+                TestBlaulichtSettings.defaults(), Clock.fixed(Instant.parse("2026-11-25T12:00:00Z"), ZoneId.of("Europe/Berlin")));
     }
 
     @Test

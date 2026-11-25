@@ -1,6 +1,6 @@
 package com.household.manager.blaulicht.processing;
 
-import com.household.manager.blaulicht.BlaulichtProperties;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,18 +20,21 @@ import java.util.stream.Collectors;
  */
 public final class LocalityMatcher {
 
+    /** Relevanz eines Falls im Hauptort oder einem Ortsteil. */
+    public static final int MAIN_RELEVANCE = 100;
+    /** Relevanz eines Falls in einem Nachbarort. */
+    public static final int NEIGHBOR_RELEVANCE = 30;
+
     private final String main;
     private final List<String> districts;
     private final List<String> neighbors;
-    private final int mainRelevance;
-    private final int neighborRelevance;
+    private final int mainRelevance = MAIN_RELEVANCE;
+    private final int neighborRelevance = NEIGHBOR_RELEVANCE;
 
-    public LocalityMatcher(BlaulichtProperties.Localities config) {
-        this.main = config.getMain();
-        this.districts = List.copyOf(config.getDistricts());
-        this.neighbors = List.copyOf(config.getNeighbors());
-        this.mainRelevance = config.getMainRelevance();
-        this.neighborRelevance = config.getNeighborRelevance();
+    public LocalityMatcher(BlaulichtSettings.Localities config) {
+        this.main = config.main();
+        this.districts = config.districts();
+        this.neighbors = config.neighbors();
     }
 
     public Optional<LocalityMatch> match(String placeHeader, String headline, String body) {

@@ -1,5 +1,6 @@
 package com.household.manager.blaulicht;
 
+import com.household.manager.blaulicht.settings.TestBlaulichtSettings;
 import com.household.manager.blaulicht.dto.BlaulichtBriefingDto;
 import com.household.manager.repository.BlaulichtEventRepository;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class BlaulichtQueryServiceTest {
             LocalDateTime from = inv.getArgument(0);
             return stored.stream().filter(e -> !e.getPublishedAt().isBefore(from)).toList();
         }).when(repository).findByPublishedAtGreaterThanEqualOrderByPublishedAtDesc(any());
-        return new BlaulichtQueryService(repository, new BlaulichtProperties(),
+        return new BlaulichtQueryService(repository, TestBlaulichtSettings.defaults(),
                 Clock.fixed(now.atZone(BERLIN).toInstant(), BERLIN));
     }
 

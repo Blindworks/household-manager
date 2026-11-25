@@ -34,3 +34,20 @@ export interface BlaulichtBriefing {
   readonly addendumVisible: boolean;
   readonly events: BlaulichtEvent[];
 }
+
+/** Fachliche Einstellungen der Admin-Seite „Blaulicht“ (`/v1/admin/blaulicht/settings`), Uhrzeiten `HH:mm`. */
+export interface BlaulichtSettings {
+  presseportalEnabled: boolean;
+  titleFilter: string;
+  ninaEnabled: boolean;
+  dashboardArs: string;
+  localArs: string;
+  excludedProviders: string[];
+  mainLocality: string;
+  districts: string[];
+  neighbors: string[];
+  nightStart: string;
+  nightEnd: string;
+  addendumAt: string;
+  cardUntil: string;
+}

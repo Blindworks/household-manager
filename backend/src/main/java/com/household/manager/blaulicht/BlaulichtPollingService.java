@@ -77,7 +77,8 @@ public class BlaulichtPollingService {
         return List.of();
     }
 
-    private void refreshOverview() {
+    /** Rechnet Hub-Übersicht und Entität aus dem gespeicherten Stand neu; wirft nie. */
+    public void refreshOverview() {
         try {
             reporter.reportOverview(query.briefing());
         } catch (RuntimeException e) {

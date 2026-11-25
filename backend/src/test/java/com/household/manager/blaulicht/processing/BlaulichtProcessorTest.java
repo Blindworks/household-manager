@@ -2,7 +2,7 @@ package com.household.manager.blaulicht.processing;
 
 import com.household.manager.blaulicht.BlaulichtCategory;
 import com.household.manager.blaulicht.BlaulichtFixtures;
-import com.household.manager.blaulicht.BlaulichtProperties;
+import com.household.manager.blaulicht.settings.TestBlaulichtSettings;
 import com.household.manager.blaulicht.BlaulichtSourceKey;
 import com.household.manager.blaulicht.source.PresseportalDetailParser;
 import com.household.manager.blaulicht.source.RawReport;
@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.tuple;
 class BlaulichtProcessorTest {
 
     private final BlaulichtProcessor processor =
-            new BlaulichtProcessor(new BlaulichtProperties(), new KeywordBlaulichtClassifier());
+            new BlaulichtProcessor(TestBlaulichtSettings.defaults(), new KeywordBlaulichtClassifier());
 
     private List<ProcessedCase> process(String id) {
         PresseportalDetailParser.Detail detail = BlaulichtFixtures.detail(id);

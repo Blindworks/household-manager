@@ -2,6 +2,8 @@ package com.household.manager.blaulicht;
 
 import com.household.manager.blaulicht.dto.BlaulichtBriefingDto;
 import com.household.manager.blaulicht.dto.BlaulichtEventDto;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
+import com.household.manager.blaulicht.settings.BlaulichtSettingsService;
 import com.household.manager.repository.BlaulichtEventRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,12 +30,12 @@ public class BlaulichtQueryService {
             .reversed();
 
     private final BlaulichtEventRepository repository;
-    private final BlaulichtProperties properties;
+    private final BlaulichtSettingsService settings;
     private final Clock clock;
 
-    public BlaulichtQueryService(BlaulichtEventRepository repository, BlaulichtProperties properties, Clock clock) {
+    public BlaulichtQueryService(BlaulichtEventRepository repository, BlaulichtSettingsService settings, Clock clock) {
         this.repository = repository;
-        this.properties = properties;
+        this.settings = settings;
         this.clock = clock;
     }
 
@@ -62,7 +64,8 @@ public class BlaulichtQueryService {
     @Transactional(readOnly = true)
     public BlaulichtBriefingDto briefing() {
         LocalDateTime now = LocalDateTime.now(clock);
-        NightWindow night = currentNight(now);
+        BlaulichtSettings current = settings.current();
+        NightWindow night = NightWindow.current(now, current.briefing());
         List<BlaulichtEvent> candidates = candidates(night);
         List<BlaulichtEvent> inNight = candidates.stream().filter(night::contains).sorted(BY_TIME).toList();
         List<BlaulichtEvent> morning = inNight.stream().filter(e -> e.getPublishedAt().isBefore(night.end())).toList();
@@ -71,12 +74,12 @@ public class BlaulichtQueryService {
                 .filter(e -> !night.contains(e) && !e.getPublishedAt().isBefore(night.start()))
                 .filter(e -> !e.isNearby())
                 .count();
-        BlaulichtProperties.Briefing config = properties.getBriefing();
+        BlaulichtSettings.Briefing config = current.briefing();
         LocalDate today = now.toLocalDate();
         LocalTime time = now.toLocalTime();
-        boolean cardVisible = !time.isBefore(config.getNightEnd()) && time.isBefore(config.getCardUntil());
-        boolean addendumVisible = cardVisible && !time.isBefore(config.getAddendumAt()) && !addendum.isEmpty();
-        String main = properties.getLocalities().getMain();
+        boolean cardVisible = !time.isBefore(config.nightEnd()) && time.isBefore(config.cardUntil());
+        boolean addendumVisible = cardVisible && !time.isBefore(config.addendumAt()) && !addendum.isEmpty();
+        String main = current.localities().main();
         return new BlaulichtBriefingDto(night.start(), night.end(),
                 BlaulichtBriefingText.morning(morning, olderNew, main),
                 (int) morning.stream().filter(e -> !e.isNearby()).count(),
@@ -90,7 +93,7 @@ public class BlaulichtQueryService {
     }
 
     NightWindow currentNight(LocalDateTime now) {
-        return NightWindow.current(now, properties.getBriefing());
+        return NightWindow.current(now, settings.current().briefing());
     }
 
     private List<BlaulichtEvent> nightEvents(NightWindow night) {

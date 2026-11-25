@@ -1,6 +1,7 @@
 package com.household.manager.blaulicht;
 
 import com.household.manager.blaulicht.processing.Occurrence;
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,17 +17,17 @@ import java.time.LocalTime;
 public record NightWindow(LocalDateTime start, LocalDateTime end) {
 
     /** Die Nacht, die am {@code morning} um {@code nightEnd} endet. */
-    public static NightWindow endingOn(LocalDate morning, BlaulichtProperties.Briefing briefing) {
-        LocalDateTime end = morning.atTime(briefing.getNightEnd());
-        LocalTime startTime = briefing.getNightStart();
-        LocalDateTime start = startTime.isBefore(briefing.getNightEnd())
+    public static NightWindow endingOn(LocalDate morning, BlaulichtSettings.Briefing briefing) {
+        LocalDateTime end = morning.atTime(briefing.nightEnd());
+        LocalTime startTime = briefing.nightStart();
+        LocalDateTime start = startTime.isBefore(briefing.nightEnd())
                 ? morning.atTime(startTime)
                 : morning.minusDays(1).atTime(startTime);
         return new NightWindow(start, end);
     }
 
     /** Tagsüber die vergangene Nacht, nachts die laufende. */
-    public static NightWindow current(LocalDateTime now, BlaulichtProperties.Briefing briefing) {
+    public static NightWindow current(LocalDateTime now, BlaulichtSettings.Briefing briefing) {
         NightWindow today = endingOn(now.toLocalDate(), briefing);
         if (now.isBefore(today.end())) {
             return today;

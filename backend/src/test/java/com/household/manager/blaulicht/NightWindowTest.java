@@ -1,5 +1,6 @@
 package com.household.manager.blaulicht;
 
+import com.household.manager.blaulicht.settings.BlaulichtSettings;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -9,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class NightWindowTest {
 
-    private final BlaulichtProperties.Briefing briefing = new BlaulichtProperties().getBriefing();
+    private final BlaulichtSettings.Briefing briefing = BlaulichtSettings.defaults().briefing();
 
     @Test
     void nachtEndetMorgensUndBeginntAmVorabend() {
