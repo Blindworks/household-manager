@@ -10,6 +10,21 @@
   </header>
 
   <main class="communicator__stage">
+    @if (cards().length === 0 && !transcript() && !error()) {
+      <section class="welcome">
+        <h1 class="welcome__title">{{ greeting }}</h1>
+        <p class="welcome__lead">Was möchtest du über dein Zuhause wissen?</p>
+        <div class="welcome__examples">
+          @for (example of examples; track example) {
+            <button type="button" class="welcome__example" (click)="askQuestion(example)"
+                    [disabled]="phase() !== 'idle'">
+              {{ example }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+
     @if (transcript()) {
       <p class="communicator__transcript">„{{ transcript() }}“</p>
     }
@@ -36,16 +51,26 @@
     }
 
     @if (speechAvailable() !== false) {
-      <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
-              [disabled]="phase() === 'thinking' || phase() === 'starting'"
-              [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
-        @if (phase() === 'thinking') {
-          <app-thinking-house class="mic__house"></app-thinking-house>
-        } @else {
-          <span class="material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
-        }
-      </button>
-      <p class="communicator__hint">
+      <div class="mic-halo" [class]="'mic-halo mic-halo--' + phase()">
+        <span class="mic-halo__ring" aria-hidden="true"></span>
+        <span class="mic-halo__ring mic-halo__ring--outer" aria-hidden="true"></span>
+        <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
+                [disabled]="phase() === 'thinking' || phase() === 'starting'"
+                [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
+          @if (phase() === 'thinking') {
+            <app-thinking-house class="mic__house"></app-thinking-house>
+          } @else {
+            <span class="material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
+          }
+        </button>
+      </div>
+      @if (phase() === 'recording') {
+        <p class="communicator__timer" aria-live="off">
+          <span class="communicator__rec-dot" aria-hidden="true"></span>
+          {{ formatSeconds(recordingSeconds()) }} / {{ formatSeconds(maxRecordingSeconds) }}
+        </p>
+      }
+      <p class="communicator__hint" [class.communicator__hint--live]="phase() === 'recording'">
         @switch (phase()) {
           @case ('recording') { Ich höre zu – zum Senden tippen }
           @case ('starting') { Einen Moment … }

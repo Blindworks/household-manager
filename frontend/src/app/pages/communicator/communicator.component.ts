@@ -14,6 +14,28 @@ type Phase = 'idle' | 'starting' | 'recording' | 'thinking';
 /** Eine Frage ist kurz; nach dieser Zeit endet die Aufnahme von selbst. */
 export const MAX_RECORDING_MS = 30_000;
 
+/** Beispielfragen fuer den leeren Bildschirm; ein Tipp stellt sie wie eine getippte Frage. */
+export const EXAMPLE_QUESTIONS: readonly string[] = [
+  'Wie warm ist es draußen?',
+  'Was steht heute im Kalender?',
+  'Wann kommt die Müllabfuhr?',
+  'Ist die Haustür verriegelt?'
+];
+
+/** Begruessung nach Tageszeit (Uhr des Geraets). */
+export function greetingFor(hour: number): string {
+  if (hour >= 5 && hour < 11) {
+    return 'Guten Morgen';
+  }
+  if (hour >= 11 && hour < 18) {
+    return 'Hallo';
+  }
+  if (hour >= 18 && hour < 23) {
+    return 'Guten Abend';
+  }
+  return 'Gute Nacht';
+}
+
 interface ShownCard {
   /** Eindeutig je Antwort, damit eine neue Antwort neue Karten-Komponenten erzeugt (kein alter Hinweistext). */
   key: string;
@@ -44,11 +66,17 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
   readonly keyboardOpen = signal(false);
   /** Null, solange der Status nicht geladen ist — dann wird nichts behauptet. */
   readonly speechAvailable = signal<boolean | null>(null);
+  /** Sekunden seit Beginn der Aufnahme, fuer die Anzeige „0:07 / 0:30“. */
+  readonly recordingSeconds = signal(0);
+  readonly greeting = greetingFor(new Date().getHours());
+  readonly examples = EXAMPLE_QUESTIONS;
+  readonly maxRecordingSeconds = MAX_RECORDING_MS / 1000;
   text = '';
 
   private answerCount = 0;
   private recordingSince = 0;
   private autoStop: ReturnType<typeof setTimeout> | null = null;
+  private recordingTicker: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
     const recordable = VoiceRecorder.isSupported();
@@ -97,6 +125,9 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
     }
     this.phase.set('recording');
     this.recordingSince = Date.now();
+    this.recordingSeconds.set(0);
+    this.recordingTicker = setInterval(
+      () => this.recordingSeconds.set(Math.floor((Date.now() - this.recordingSince) / 1000)), 250);
     this.autoStop = setTimeout(() => void this.stopAndSend(), MAX_RECORDING_MS);
   }
 
@@ -152,10 +183,19 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** „0:07“ fuer die Aufnahmedauer. */
+  formatSeconds(seconds: number): string {
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
   private clearAutoStop(): void {
     if (this.autoStop) {
       clearTimeout(this.autoStop);
       this.autoStop = null;
+    }
+    if (this.recordingTicker) {
+      clearInterval(this.recordingTicker);
+      this.recordingTicker = null;
     }
   }
 }
