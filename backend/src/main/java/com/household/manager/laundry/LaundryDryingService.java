@@ -68,9 +68,10 @@ public class LaundryDryingService {
     /**
      * Von Hand gemeldet: Waesche haengt jetzt im Keller. Eine offene Frage wird mit Ja beantwortet,
      * sonst beginnt ein neuer Waschgang direkt im Trocknen — auch ohne erkannten Waschgang und trotz
-     * eines frueheren Neins. Ohne bekannte Feuchte vor dem Aufhaengen bleibt die Ausgangsfeuchte leer:
-     * das Kurvenkriterium greift dann nie, "koennte trocken sein" kommt allein ueber die Last K
-     * (Anti-Ziel "zu frueh"). Trocknet schon Waesche, ist das ein Konflikt.
+     * eines frueheren Neins. Ausgangsfeuchte ist die aktuelle Kellerfeuchte: direkt nach dem Aufhaengen
+     * ist sie noch nicht nennenswert gestiegen. Ohne frischen Fuehlerwert bleibt sie leer, dann greift
+     * das Kurvenkriterium nie und "koennte trocken sein" kommt allein ueber die Last K (Anti-Ziel
+     * "zu frueh"). Trocknet schon Waesche, ist das ein Konflikt.
      */
     public synchronized void reportHung() {
         Optional<LaundryDryingSession> open = openSession();
@@ -90,6 +91,7 @@ public class LaundryDryingService {
         session.setLastAccumulatedAt(now);
         session.setAccumulatedLoad(0.0);
         session.setPeakExcess(0.0);
+        session.setBaselineHumidity(climateReader.current().map(KellerClimate::humidity).orElse(null));
         repository.save(session);
         auditService.record("laundry.hung.manual", "ohne Frage");
         reportCurrentState();

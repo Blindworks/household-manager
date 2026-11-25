@@ -143,6 +143,15 @@ class LaundryDryingServiceTest {
     }
 
     @Test
+    void handmeldungNimmtAktuelleKellerfeuchteAlsGrundfeuchte() {
+        climate = Optional.of(new KellerClimate(16.0, 57.4, clock.now()));
+
+        service.reportHung();
+
+        assertThat(store.get(0).getBaselineHumidity()).isEqualTo(57.4);
+    }
+
+    @Test
     void handmeldungBeantwortetOffeneFrage() {
         service.ask(LaundryTrigger.SWITCH_OFF, 58.9);
         service.reportHung();
@@ -174,7 +183,7 @@ class LaundryDryingServiceTest {
     }
 
     @Test
-    void handmeldungOhneGrundfeuchteWirdNurUeberKTrocken() {
+    void handmeldungOhneFuehlerwertWirdNurUeberKTrocken() {
         service.reportHung();
         // Feuchte steigt und faellt wie beim Kurvenkriterium: ohne Grundfeuchte darf das nichts ausloesen
         runHours(2, 16, 75);
