@@ -1,5 +1,5 @@
 import {
-  CommunicatorHealth, CommunicatorRequestRow, CommunicatorRequestStatus, CommunicatorTokens
+  CommunicatorHealth, CommunicatorModelChoice, CommunicatorRequestRow, CommunicatorRequestStatus, CommunicatorTokens
 } from '../models/communicator-log.model';
 import { CommunicatorBlock, CommunicatorCard } from '../models/communicator.model';
 
@@ -39,6 +39,23 @@ export function formatCount(value: number): string {
 
 export function formatDecimal(value: number, digits: number): string {
   return value.toLocaleString('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+/** Unter einem Dollar in Cent („6,1 ct“), sonst „18,20 $“; ohne Preis ein Strich. */
+export function formatUsd(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return '–';
+  }
+  if (value >= 1) {
+    return `${formatDecimal(value, 2)} $`;
+  }
+  return `${formatDecimal(value * 100, value > 0 && value < 0.01 ? 2 : 1)} ct`;
+}
+
+/** „Sonnet 4.5 – 3 $ Eingabe, 15 $ Ausgabe je Mio. Tokens“. */
+export function modelOptionLabel(model: CommunicatorModelChoice): string {
+  const price = (value: number) => `${value.toLocaleString('de-DE', { maximumFractionDigits: 3 })} $`;
+  return `${model.label} – ${price(model.inputPrice)} Eingabe, ${price(model.outputPrice)} Ausgabe je Mio. Tokens`;
 }
 
 export function totalTokens(tokens: CommunicatorTokens): number {

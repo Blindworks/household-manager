@@ -46,6 +46,8 @@ class CommunicatorAgentServiceTest {
     private ApiGateway gateway;
     @Mock
     private ActionConfirmation confirmation;
+    @Mock
+    private CommunicatorSettingsService settings;
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final AiProperties ai = new AiProperties();
@@ -56,8 +58,9 @@ class CommunicatorAgentServiceTest {
     void setUp() {
         ai.setAnthropicApiKey("key");
         Clock clock = Clock.fixed(Instant.parse("2026-11-24T18:50:00Z"), ZoneId.of("Europe/Berlin"));
-        service = new CommunicatorAgentService(new CommunicatorProperties(), ai, client, catalog, gateway,
+        service = new CommunicatorAgentService(new CommunicatorProperties(), settings, ai, client, catalog, gateway,
                 new CardBuilder(catalog, clock, confirmation), mapper, clock);
+        lenient().when(settings.getModel()).thenReturn("claude-sonnet-4-5");
         lenient().when(catalog.index()).thenReturn("VERZEICHNIS");
     }
 
@@ -169,6 +172,34 @@ class CommunicatorAgentServiceTest {
         assertThat(trace.getStatus()).isEqualTo(Status.AI_ERROR);
         assertThat(trace.getError()).isEqualTo("overloaded");
         assertThat(trace.getCards()).hasSize(1);
+    }
+
+    @Test
+    void nutztDasGewaehlteModellMitUnveraendertemGespraechsanfang() throws Exception {
+        antwortet("[]");
+        when(settings.getModel()).thenReturn("claude-haiku-5-5");
+        when(client.createMessage(any())).thenReturn(tool("api_get", Map.of("path", "/v1/x")))
+                .thenReturn(new AnthropicResponse("refusal", List.of()));
+
+        assertThat(service.ask("?", CALLER, trace).get(0).title()).isEqualTo("Fehler");
+
+        var captor = org.mockito.ArgumentCaptor.forClass(AnthropicRequest.class);
+        verify(client, times(2)).createMessage(captor.capture());
+        assertThat(captor.getAllValues()).allSatisfy(request -> {
+            assertThat(request.model()).isEqualTo("claude-haiku-5-5");
+            assertThat(request.effort()).isEqualTo("low");
+        });
+        assertThat(captor.getAllValues().get(1).system()).isSameAs(captor.getAllValues().get(0).system());
+        assertThat(trace.getStatus()).isEqualTo(Status.AI_ERROR);
+    }
+
+    @Test
+    void aelteresModellBekommtKeinenDenkaufwand() {
+        when(client.createMessage(any())).thenReturn(new AnthropicResponse("end_turn", List.of()));
+        service.ask("?", CALLER, trace);
+        var captor = org.mockito.ArgumentCaptor.forClass(AnthropicRequest.class);
+        verify(client).createMessage(captor.capture());
+        assertThat(captor.getValue().effort()).isNull();
     }
 
     @Test

@@ -77,8 +77,29 @@ class CommunicatorLogServiceTest {
         assertThat(summary.days()).hasSize(1);
     }
 
+    @Test
+    void rechnetKostenUndLaesstUnbekannteModelleAus() {
+        when(repository.findRowsSince(any())).thenReturn(List.of(
+                paid(24, "claude-sonnet-4-5"), paid(25, "claude-haiku-4-5-20251001"), paid(25, "fremd")));
+
+        var cost = service.summary(7).cost();
+
+        // 2414 neu, 12009 in Cache, 12009 aus Cache, 313 Ausgabe: die erste echte Anfrage
+        assertThat(cost.totalUsd()).isCloseTo(0.0606 + 0.0202, within(0.0002));
+        assertThat(cost.todayUsd()).isCloseTo(0.0202, within(0.0001));
+        assertThat(cost.monthUsd()).isCloseTo(cost.totalUsd() / 2 * 30, within(0.0001));
+        assertThat(cost.unpriced()).isEqualTo(1);
+        assertThat(cost.models()).hasSize(3);
+    }
+
+    private static Row paid(int day, String model) {
+        return new Row(1L, LocalDateTime.of(2026, 11, day, 9, 0), "a", true, Status.OK, "q", null, model, 1, "x",
+                null, null, 1, 2, 2, 0, 2414, 313, 12009, 12009, null);
+    }
+
     private static Row row(Status status, int speechMs, String error) {
-        return new Row(1L, LocalDateTime.of(2026, 11, 25, 9, 0), "a", true, status, "q", error, "m", 1, "audio/mp4",
+        String model = "m";
+        return new Row(1L, LocalDateTime.of(2026, 11, 25, 9, 0), "a", true, status, "q", error, model, 1, "audio/mp4",
                 2000, speechMs, 5000, 1, 1, 0, 1, 1, 1, 1, "/v1/a\n/v1/a\n/v1/b");
     }
 }

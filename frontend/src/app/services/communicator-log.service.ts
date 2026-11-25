@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  CommunicatorHealth, CommunicatorLogSummary, CommunicatorRequestDetail, CommunicatorRequestPage
+  CommunicatorHealth, CommunicatorLogSummary, CommunicatorModelSettings, CommunicatorRequestDetail, CommunicatorRequestPage
 } from '../models/communicator-log.model';
 
 export interface CommunicatorLogQuery {
@@ -31,6 +31,14 @@ export class CommunicatorLogService {
 
   getRequest(id: number): Observable<CommunicatorRequestDetail> {
     return this.http.get<CommunicatorRequestDetail>(`${this.baseUrl}/requests/${id}`);
+  }
+
+  getModel(): Observable<CommunicatorModelSettings> {
+    return this.http.get<CommunicatorModelSettings>(`${this.baseUrl}/model`);
+  }
+
+  saveModel(model: string): Observable<CommunicatorModelSettings> {
+    return this.http.put<CommunicatorModelSettings>(`${this.baseUrl}/model`, { model });
   }
 
   getHealth(): Observable<CommunicatorHealth> {

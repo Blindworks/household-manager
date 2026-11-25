@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.household.manager.ai.ClaudeModels;
 import com.household.manager.model.entity.CommunicatorRequest.Status;
 
 import java.time.LocalDate;
@@ -22,6 +23,13 @@ public final class CommunicatorLogDtos {
                       Integer speechMs, int totalMs, int aiCalls, int toolCalls, int toolFailures, int inputTokens,
                       int outputTokens, int cacheReadTokens, int cacheWriteTokens,
                       @JsonIgnore String endpoints) {
+
+        /** Geschaetzt aus den heutigen Listenpreisen; null bei unbekanntem Modell. */
+        @JsonProperty
+        public Double costUsd() {
+            return ClaudeModels.find(model)
+                    .map(m -> m.cost(inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens)).orElse(null);
+        }
 
         @JsonProperty
         public boolean problem() {
@@ -49,7 +57,28 @@ public final class CommunicatorLogDtos {
     public record Tokens(long input, long output, long cacheRead, long cacheWrite) {
     }
 
-    public record Day(LocalDate date, int requests, int problems, Tokens tokens) {
+    public record Day(LocalDate date, int requests, int problems, Tokens tokens, double costUsd) {
+    }
+
+    public record ModelCost(String model, int requests, double costUsd) {
+    }
+
+    /**
+     * {@code monthUsd}: Schnitt je Kalendertag seit der ersten Anfrage im Fenster, mal 30. {@code unpriced}:
+     * Anfragen mit Tokens, aber ohne bekannten Preis; sie fehlen in der Summe.
+     */
+    public record Cost(double totalUsd, double todayUsd, Double monthUsd, Double perRequestUsd, int unpriced,
+                       List<ModelCost> models) {
+    }
+
+    public record ModelChoice(String id, String label, double inputPrice, double cacheWritePrice,
+                              double cacheReadPrice, double outputPrice) {
+    }
+
+    public record ModelSettings(String current, List<ModelChoice> models) {
+    }
+
+    public record ModelUpdate(String model) {
     }
 
     public record Count(String name, long count) {
@@ -60,7 +89,7 @@ public final class CommunicatorLogDtos {
                               Double realtimeFactor) {
     }
 
-    public record Summary(int requests, int problems, Map<Status, Long> byStatus, Tokens tokens,
+    public record Summary(int requests, int problems, Map<Status, Long> byStatus, Tokens tokens, Cost cost,
                           Integer medianTotalMs, Integer maxTotalMs, double averageAiCalls, int toolCalls,
                           int toolFailures, SpeechStats speech, List<Day> days, List<Count> endpoints,
                           List<Count> errors) {

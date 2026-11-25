@@ -3,9 +3,11 @@ package com.household.manager.communicator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.household.manager.communicator.CommunicatorLogDtos.Cost;
 import com.household.manager.communicator.CommunicatorLogDtos.Count;
 import com.household.manager.communicator.CommunicatorLogDtos.Day;
 import com.household.manager.communicator.CommunicatorLogDtos.Detail;
+import com.household.manager.communicator.CommunicatorLogDtos.ModelCost;
 import com.household.manager.communicator.CommunicatorLogDtos.Row;
 import com.household.manager.communicator.CommunicatorLogDtos.RowPage;
 import com.household.manager.communicator.CommunicatorLogDtos.SpeechStats;
@@ -25,6 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
@@ -108,7 +111,7 @@ public class CommunicatorLogService {
         List<Row> rows = repository.findRowsSince(since(days));
         Map<Status, Long> byStatus = rows.stream()
                 .collect(Collectors.groupingBy(Row::status, TreeMap::new, Collectors.counting()));
-        return new Summary(rows.size(), problems(rows), byStatus, tokens(rows),
+        return new Summary(rows.size(), problems(rows), byStatus, tokens(rows), cost(rows),
                 median(rows.stream().map(Row::totalMs).toList()),
                 rows.stream().map(Row::totalMs).max(Integer::compare).orElse(null),
                 rows.stream().mapToInt(Row::aiCalls).filter(calls -> calls > 0).average().orElse(0),
@@ -141,8 +144,33 @@ public class CommunicatorLogService {
         return rows.stream().collect(Collectors.groupingBy(r -> r.askedAt().toLocalDate(), TreeMap::new,
                         Collectors.toList()))
                 .entrySet().stream()
-                .map(e -> new Day(e.getKey(), e.getValue().size(), problems(e.getValue()), tokens(e.getValue())))
+                .map(e -> new Day(e.getKey(), e.getValue().size(), problems(e.getValue()), tokens(e.getValue()),
+                        costUsd(e.getValue())))
                 .toList();
+    }
+
+    private Cost cost(List<Row> rows) {
+        List<Row> paid = rows.stream().filter(CommunicatorLogService::usedTokens).toList();
+        List<Row> priced = paid.stream().filter(r -> r.costUsd() != null).toList();
+        double total = costUsd(priced);
+        LocalDate today = LocalDate.now(clock);
+        Double month = priced.isEmpty() ? null
+                : total / (ChronoUnit.DAYS.between(priced.getFirst().askedAt().toLocalDate(), today) + 1) * 30;
+        List<ModelCost> models = paid.stream()
+                .collect(Collectors.groupingBy(r -> r.model() == null ? "unbekannt" : r.model(), TreeMap::new,
+                        Collectors.toList()))
+                .entrySet().stream().map(e -> new ModelCost(e.getKey(), e.getValue().size(), costUsd(e.getValue())))
+                .toList();
+        return new Cost(total, costUsd(priced.stream().filter(r -> r.askedAt().toLocalDate().equals(today)).toList()),
+                month, priced.isEmpty() ? null : total / priced.size(), paid.size() - priced.size(), models);
+    }
+
+    private static boolean usedTokens(Row r) {
+        return r.inputTokens() + r.outputTokens() + r.cacheReadTokens() + r.cacheWriteTokens() > 0;
+    }
+
+    private static double costUsd(Collection<Row> rows) {
+        return rows.stream().map(Row::costUsd).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum();
     }
 
     private static SpeechStats speech(List<Row> rows) {

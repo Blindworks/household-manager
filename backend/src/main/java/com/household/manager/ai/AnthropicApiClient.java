@@ -52,6 +52,10 @@ public class AnthropicApiClient {
             body.put("tools", request.tools());
         }
 
+        if (request.effort() != null) {
+            body.put("output_config", Map.of("effort", request.effort()));
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("x-api-key", properties.getAnthropicApiKey());

@@ -3,9 +3,18 @@ package com.household.manager.ai;
 import java.util.List;
 import java.util.Map;
 
-/** Ein Aufruf der Messages-API. {@code system} sind Content-Bloecke (Prompt-Caching moeglich). */
+/**
+ * Ein Aufruf der Messages-API. {@code system} sind Content-Bloecke (Prompt-Caching moeglich).
+ * {@code effort} null = nicht senden (aeltere Modelle lehnen die Angabe ab).
+ */
 public record AnthropicRequest(String model, int maxTokens, List<Map<String, Object>> system,
-                               List<AnthropicMessage> messages, List<Map<String, Object>> tools) {
+                               List<AnthropicMessage> messages, List<Map<String, Object>> tools,
+                               String effort) {
+
+    public AnthropicRequest(String model, int maxTokens, List<Map<String, Object>> system,
+                            List<AnthropicMessage> messages, List<Map<String, Object>> tools) {
+        this(model, maxTokens, system, messages, tools, null);
+    }
 
     public static AnthropicRequest of(String model, int maxTokens, String systemText,
                                       List<AnthropicMessage> messages, List<Map<String, Object>> tools) {

@@ -16,7 +16,8 @@ public class CommunicatorProperties {
 
     private boolean enabled = true;
     private String model = "claude-sonnet-4-5";
-    private int maxTokens = 2048;
+    /** Neuere Modelle denken vor der Antwort nach; das zaehlt mit. */
+    private int maxTokens = 8000;
     /** Obergrenze der Tool-Runden je Frage (Endlosschleifen-Schutz und Antwortzeit). */
     private int maxToolIterations = 8;
     private Stt stt = new Stt();

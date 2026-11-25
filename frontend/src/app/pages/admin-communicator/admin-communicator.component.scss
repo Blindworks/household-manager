@@ -37,6 +37,19 @@
     background: #fff;
   }
 
+  &__model {
+    margin-bottom: var(--spacing-lg);
+
+    .admin-communicator__filter {
+      margin-bottom: 0;
+    }
+
+    select {
+      flex: 0 1 32rem;
+      min-width: 0;
+    }
+  }
+
   &__card p {
     margin: 0.15rem 0;
   }
