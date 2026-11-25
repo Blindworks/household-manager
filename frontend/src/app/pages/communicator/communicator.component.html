@@ -54,10 +54,16 @@
       <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
               [disabled]="phase() === 'thinking' || phase() === 'starting'"
               [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
+        <span class="orb" aria-hidden="true">
+          <span class="orb__blob orb__blob--a"></span>
+          <span class="orb__blob orb__blob--b"></span>
+          <span class="orb__blob orb__blob--c"></span>
+          <span class="orb__gloss"></span>
+        </span>
         @if (phase() === 'thinking') {
           <app-thinking-house class="mic__house"></app-thinking-house>
         } @else {
-          <span class="material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
+          <span class="mic__icon material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
         }
       </button>
       @if (phase() === 'recording') {

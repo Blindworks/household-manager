@@ -251,70 +251,205 @@
   }
 }
 
+// Leuchtende Kugel: drei weichgezeichnete Farbflecken kreisen in einem Kreis,
+// dahinter derselbe Farbschein unscharf als Aura. Aufnahme = warme Rottoene, schneller.
 .mic {
+  --orb-1: #ffb454;
+  --orb-2: #ff5fa2;
+  --orb-3: #7c6cff;
+  --orb-speed: 9s;
+
   position: relative;
   display: grid;
   place-items: center;
-  width: 9.5rem;
-  height: 9.5rem;
-  border: 2px solid var(--com-accent);
+  width: 11rem;
+  height: 11rem;
+  padding: 0;
+  border: none;
   border-radius: 50%;
-  background: var(--com-surface);
-  color: var(--com-accent);
+  background: transparent;
+  color: #fff;
   touch-action: manipulation;
-  transition: width 0.25s, height 0.25s, border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  transition: width 0.3s, height 0.3s, transform 0.2s;
 
   .communicator:not(.communicator--answered) & {
-    margin: 1rem 0 0.6rem;
+    margin: 1.5rem 0 1rem;
+  }
+
+  // Aura hinter der Kugel
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--orb-1), var(--orb-2), var(--orb-3), var(--orb-1));
+    filter: blur(32px);
+    opacity: 0.45;
+    animation: orb-spin var(--orb-speed) linear infinite;
+    transition: opacity 0.3s;
   }
 
   &:active:not(:disabled) {
-    transform: scale(0.96);
-    background: var(--com-control);
+    transform: scale(0.95);
   }
 
-  .material-symbols-outlined {
-    font-size: 3.6rem;
-    transition: font-size 0.25s;
+  &__icon {
+    position: relative;
+    font-size: 3.2rem;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    transition: font-size 0.3s;
   }
 
   .communicator--answered & {
-    width: 5rem;
-    height: 5rem;
+    width: 4.75rem;
+    height: 4.75rem;
 
-    .material-symbols-outlined {
-      font-size: 2.2rem;
+    &::before {
+      opacity: 0.3;
+    }
+
+    .mic__icon {
+      font-size: 2rem;
     }
   }
 
   &--recording {
-    border-color: var(--com-danger);
-    color: var(--com-danger);
-    animation: mic-pulse 1.6s ease-out infinite;
+    --orb-1: #ff7b72;
+    --orb-2: #ff4f8b;
+    --orb-3: #ffb454;
+    --orb-speed: 3s;
+    animation: orb-breathe 1.3s ease-in-out infinite;
+
+    &::before {
+      opacity: 0.7;
+    }
   }
 
   &--starting {
-    opacity: 0.7;
+    opacity: 0.8;
   }
 
   &--thinking {
-    padding: 0;
-    border-color: var(--com-line);
+    --orb-speed: 2.4s;
+
+    .orb {
+      opacity: 0.35;
+    }
   }
 
   &__house {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
   }
 }
 
-@keyframes mic-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 123, 114, 0.35);
+.orb {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #3b2a7a, #160f33);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), inset 0 0 24px rgba(255, 255, 255, 0.12);
+  transition: opacity 0.3s;
+
+  &__blob {
+    position: absolute;
+    width: 90%;
+    height: 90%;
+    border-radius: 50%;
+    filter: blur(10px);
+    mix-blend-mode: screen;
+    transform-origin: 50% 50%;
+
+    &--a {
+      top: -10%;
+      left: -5%;
+      background: radial-gradient(circle, var(--orb-1) 0%, var(--orb-1) 25%, transparent 70%);
+      animation: orb-drift-a var(--orb-speed) ease-in-out infinite;
+    }
+
+    &--b {
+      right: -10%;
+      top: 15%;
+      background: radial-gradient(circle, var(--orb-2) 0%, var(--orb-2) 25%, transparent 70%);
+      animation: orb-drift-b var(--orb-speed) ease-in-out infinite;
+    }
+
+    &--c {
+      bottom: -15%;
+      left: 15%;
+      background: radial-gradient(circle, var(--orb-3) 0%, var(--orb-3) 25%, transparent 70%);
+      animation: orb-drift-c var(--orb-speed) ease-in-out infinite;
+    }
   }
 
-  100% {
-    box-shadow: 0 0 0 1.4rem rgba(255, 123, 114, 0);
+  &__gloss {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(45% 28% at 36% 20%, rgba(255, 255, 255, 0.35), transparent 70%),
+      radial-gradient(90% 60% at 50% 115%, rgba(10, 5, 30, 0.35), transparent 70%);
+  }
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes orb-drift-a {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(30%, 20%) scale(1.15);
+  }
+
+  66% {
+    transform: translate(10%, 45%) scale(0.9);
+  }
+}
+
+@keyframes orb-drift-b {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(-35%, 25%) scale(0.9);
+  }
+
+  66% {
+    transform: translate(-20%, -25%) scale(1.2);
+  }
+}
+
+@keyframes orb-drift-c {
+  0%, 100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+
+  33% {
+    transform: translate(20%, -35%) scale(0.95);
+  }
+
+  66% {
+    transform: translate(-25%, -15%) scale(1.15);
   }
 }
 
@@ -338,6 +473,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mic,
+  .mic::before,
+  .orb__blob,
   .welcome,
   .communicator__rec-dot {
     animation: none;
