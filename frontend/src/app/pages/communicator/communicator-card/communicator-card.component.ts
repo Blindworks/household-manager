@@ -27,6 +27,8 @@ export class CommunicatorCardComponent {
   readonly done = signal<ReadonlySet<CommunicatorAction>>(new Set());
   readonly notice = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  /** Aktion, die nach dem ersten Tipp auf ihre Bestätigung wartet. */
+  readonly armed = signal<CommunicatorAction | null>(null);
   readonly sliderValues = signal<Record<number, number>>({});
 
   /** Folgefrage; die Seite stellt sie wie eine gesprochene Frage. */
@@ -51,7 +53,20 @@ export class CommunicatorCardComponent {
     return this.sliderValues()[index] ?? block.number ?? 0;
   }
 
+  buttonLabel(action: CommunicatorAction): string {
+    return this.armed() === action ? `Wirklich? ${action.label}` : action.label;
+  }
+
+  /** Was der Tipp wirklich sendet: die Beschriftung schreibt das Modell, diese Zeile nicht. */
+  sent(action: CommunicatorAction, value?: number): string {
+    const query = action.query ? `?${new URLSearchParams(action.query)}` : '';
+    const body = value === undefined ? action.body : this.fill(action.body, value);
+    return `${action.method} ${action.path}${query}${body == null ? '' : ' ' + JSON.stringify(body)}`;
+  }
+
   changeSlider(block: CommunicatorBlock, index: number, direction: 1 | -1): void {
+    // Ein geänderter Wert ist eine andere Aktion: die Bestätigung gilt nicht weiter.
+    this.armed.set(null);
     const step = block.step ?? 1;
     const min = block.min ?? 0;
     const raw = this.sliderValue(block, index) + direction * step;
@@ -83,6 +98,11 @@ export class CommunicatorCardComponent {
     if (this.busy()) {
       return;
     }
+    if (action.confirm && this.armed() !== action) {
+      this.armed.set(action);
+      return;
+    }
+    this.armed.set(null);
     this.busy.set(true);
     this.notice.set(null);
     this.error.set(null);

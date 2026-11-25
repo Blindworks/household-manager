@@ -8,6 +8,8 @@ export interface CommunicatorAction {
   path: string;
   query?: Record<string, string>;
   body?: unknown;
+  /** Braucht einen zweiten Tipp. */
+  confirm?: boolean;
 }
 
 export interface CommunicatorItem {

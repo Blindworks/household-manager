@@ -53,8 +53,6 @@ public class ApiCatalog {
     private static final int SCHEMA_DEPTH = 3;
     private static final Set<String> EXCLUDED_SEGMENTS = Set.of(
             "auth", "login", "logout", "password", "service-tokens", "communicator", "management");
-    private static final Pattern SECRET_FIELD = Pattern.compile(
-            "(?i).*(password|passwort|secret|token|apikey|credential).*|pin");
     /** Nur einfache Pfade: nichts, womit sich Kodierung, Query oder Verzeichniswechsel einschleusen liesse. */
     private static final Pattern SAFE_PATH = Pattern.compile("/[\\p{L}\\p{N}/_.:@ -]+");
 
@@ -192,7 +190,7 @@ public class ApiCatalog {
                 || ResponseBodyEmitter.class.isAssignableFrom(response)
                 || StreamingResponseBody.class.isAssignableFrom(response);
         return !upload && !media && !isExcludedPath(endpoint.path())
-                && endpoint.query().stream().noneMatch(p -> SECRET_FIELD.matcher(p.name()).matches())
+                && endpoint.query().stream().noneMatch(p -> SecretFields.isSecret(p.name()))
                 && (endpoint.body() == null || !containsSecret(endpoint.body(), SCHEMA_DEPTH));
     }
 
@@ -207,7 +205,7 @@ public class ApiCatalog {
         if (depth == 0 || !isOwn(type)) {
             return false;
         }
-        return properties(type).stream().anyMatch(property -> SECRET_FIELD.matcher(property.getName()).matches()
+        return properties(type).stream().anyMatch(property -> SecretFields.isSecret(property.getName())
                 || containsSecret(property.getPrimaryType(), depth - 1));
     }
 

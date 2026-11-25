@@ -57,8 +57,11 @@
         </div>
         @if (sliderValue(block, i) !== block.number) {
           <button type="button" class="action" [disabled]="busy()" (click)="applySlider(block, i)">
-            {{ block.action?.label }}
+            {{ block.action ? buttonLabel(block.action) : '' }}
           </button>
+          @if (block.action; as action) {
+            <p class="action__target">{{ sent(action, sliderValue(block, i)) }}</p>
+          }
         }
       }
       @default { <p class="card__text">{{ block.text }}</p> }
@@ -66,11 +69,11 @@
   }
 
   @for (action of card.actions; track $index) {
-    <button type="button" class="action" [class.action--danger]="action.method === 'DELETE'"
+    <button type="button" class="action" [class.action--danger]="action.confirm"
             [disabled]="busy() || done().has(action)" (click)="run(action)">
-      {{ action.label }}
+      {{ buttonLabel(action) }}
     </button>
-    <p class="action__target">{{ action.method }} {{ action.path }}</p>
+    <p class="action__target">{{ sent(action) }}</p>
   }
 
   @if (notice()) { <p class="card__notice" role="status">{{ notice() }}</p> }

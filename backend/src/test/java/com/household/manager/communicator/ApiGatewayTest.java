@@ -66,6 +66,20 @@ class ApiGatewayTest {
     }
 
     @Test
+    void entferntZugangsdatenAuchVerschachtelt() {
+        body = "[{\"name\":\"x\",\"access_token\":\"t\",\"a\":{\"apiKey\":\"k\",\"pin\":1234},\"inputTokens\":5},"
+                + "{\"key\":\"hub_token\",\"value\":\"geheim\"}]";
+        assertThat(get("").data().toString())
+                .isEqualTo("[{\"name\":\"x\",\"a\":{},\"inputTokens\":5},{\"key\":\"hub_token\"}]");
+    }
+
+    @Test
+    void filterFindetKeineEntferntenZugangsdaten() {
+        body = "[{\"name\":\"x\",\"token\":\"geheim\"}]";
+        assertThat(get("geheim").data()).isEmpty();
+    }
+
+    @Test
     void filtertListen() {
         assertThat(get("küche").data().toString()).isEqualTo("[{\"name\":\"Küche\"}]");
     }
