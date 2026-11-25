@@ -8,7 +8,7 @@
 export type NodeCategory = 'trigger' | 'logic' | 'action';
 
 /** Nicht-Trigger-Typen, die als „Aktion" gelten (Rest ist „Logik"). */
-const ACTION_TYPES = new Set(['alexa-announce', 'switch-device', 'nuki-lock-action', 'telegram-send', 'push-send', 'light-set', 'helper-set']);
+const ACTION_TYPES = new Set(['alexa-announce', 'alexa-sound', 'switch-device', 'nuki-lock-action', 'telegram-send', 'push-send', 'light-set', 'helper-set']);
 
 /** Menschenlesbare Beschriftungen je Node-Typ. */
 const LABELS: Record<string, string> = {
@@ -22,6 +22,7 @@ const LABELS: Record<string, string> = {
   'rate-limit': 'Drossel',
   'debug': 'Debug',
   'alexa-announce': 'Alexa-Ansage',
+  'alexa-sound': 'Alexa-Ton',
   'switch-device': 'Gerät schalten',
   'nuki-lock-action': 'Türschloss steuern',
   'telegram-send': 'Telegram-Nachricht',

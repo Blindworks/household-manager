@@ -284,7 +284,7 @@ export const toolDefinitions = [
     title: 'Alexa-Geräte auflisten',
     description:
       'Listet Alexa-Geräte (serialNumber, name, deviceType, ttsCapable) als Referenz für deviceSerials ' +
-      'der alexa-announce-Node. Nur ttsCapable-Geräte können Ansagen ausgeben.',
+      'der alexa-announce- und alexa-sound-Node. Nur ttsCapable-Geräte können Ansagen ausgeben.',
     inputSchema: {},
     annotations: READ_ONLY,
     handler: async (client) => ({ devices: await client.get('/v1/alexa/devices') }),

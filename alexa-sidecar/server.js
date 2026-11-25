@@ -15,6 +15,8 @@
  *   - alexa.getDevices(cb) -> cb(err, {devices:[...]})
  *   - alexa.sendSequenceCommand(serial, 'speak', text, cb)          -> single-device TTS
  *   - alexa.sendSequenceCommand([serials], 'announcement', text, cb) -> announcement w/ chime
+ *   - alexa.sendMultiSequenceCommand([serials], [{command:'sound',value,device}], 'ParallelNode', cb)
+ *                                                 -> short sound (Alexa.Sound) on several devices at once
  */
 
 const fs = require('fs');
@@ -23,6 +25,7 @@ const express = require('express');
 const AlexaRemote = require('alexa-remote2');
 const { extractAirQualityMonitors, mapDeviceStates, describeStateFailure } = require('./smarthome');
 const { ThrottleCooldown, isThrottleMessage } = require('./throttle');
+const { isValidSoundId, buildSoundCommands } = require('./sound');
 
 // ---------------------------------------------------------------------------
 // Configuration (all via env, with sane defaults)
@@ -320,6 +323,25 @@ app.post('/announce', (req, res) => {
       log('announce failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
+    res.status(204).end();
+  });
+});
+
+app.post('/sound', (req, res) => {
+  const { serialNumbers, sound } = req.body || {};
+  if (!Array.isArray(serialNumbers) || serialNumbers.length === 0 || !isValidSoundId(sound)) {
+    return res.status(400).json({ error: 'serialNumbers (non-empty array) and a valid sound id are required' });
+  }
+  if (!isLoggedIn()) {
+    return res.status(409).json({ error: 'not logged in' });
+  }
+  const startedAt = Date.now();
+  alexa.sendMultiSequenceCommand(serialNumbers, buildSoundCommands(serialNumbers, sound), 'ParallelNode', (err) => {
+    if (err) {
+      log('sound failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    log(`sound ${sound} on ${serialNumbers.length} device(s) in ${Date.now() - startedAt} ms`);
     res.status(204).end();
   });
 });

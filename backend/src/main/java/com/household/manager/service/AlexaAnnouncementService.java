@@ -48,4 +48,19 @@ public class AlexaAnnouncementService {
         }
         log.info("Alexa-Ansage ({}) an {} Geraet(e) gesendet", mode, serialNumbers.size());
     }
+
+    /**
+     * Spielt einen kurzen Ton (z. B. {@code amzn_sfx_doorbell_chime_01}) auf allen Zielgeraeten
+     * zugleich — ein einziger Aufruf an Amazon, ohne Sprachausgabe.
+     */
+    public void playSound(String soundId, List<String> serialNumbers) {
+        if (soundId == null || soundId.isBlank()) {
+            throw new AlexaException("Es wurde kein Ton angegeben.");
+        }
+        if (serialNumbers == null || serialNumbers.isEmpty()) {
+            throw new AlexaException("Es wurde kein Zielgeraet ausgewaehlt.");
+        }
+        sidecarClient.playSound(serialNumbers, soundId);
+        log.info("Alexa-Ton {} an {} Geraet(e) gesendet", soundId, serialNumbers.size());
+    }
 }

@@ -26,6 +26,8 @@ import java.util.List;
 public class AlexaSidecarClient {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    // Ein Ton ist Rueckmeldung auf einen Knopfdruck: kommt er nach 10 s nicht, ist er wertlos.
+    private static final Duration SOUND_TIMEOUT = Duration.ofSeconds(10);
     // Wird Amazon gedrosselt, wartet alexa-remote2 im Sidecar 30-63 s und versucht es einmal neu
     // (15 s Request-Timeout je Versuch). Mit 30 s braeche das Backend davor ab, der Sidecar fragte
     // trotzdem weiter bei Amazon an, und dessen Fehlertext ("Rate exceeded") kaeme nie an.
@@ -119,6 +121,15 @@ public class AlexaSidecarClient {
         serialNumbers.forEach(serials::add);
         body.put("text", text);
         post("/announce", body);
+    }
+
+    /** Spielt einen kurzen Alexa-Ton (Sound-ID) auf allen Geraeten gleichzeitig. */
+    public void playSound(List<String> serialNumbers, String soundId) {
+        ObjectNode body = mapper.createObjectNode();
+        ArrayNode serials = body.putArray("serialNumbers");
+        serialNumbers.forEach(serials::add);
+        body.put("sound", soundId);
+        send("POST", "/sound", body, SOUND_TIMEOUT);
     }
 
     // ==================== HTTP ====================
