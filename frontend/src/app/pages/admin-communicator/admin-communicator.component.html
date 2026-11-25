@@ -1,0 +1,241 @@
+<div class="admin-communicator">
+  <header class="admin-communicator__header">
+    <h1>Communicator</h1>
+    <button type="button" class="ghost" (click)="reload()" [disabled]="healthLoading || rowsLoading">Neu laden</button>
+  </header>
+
+  @if (healthError) {
+    <p class="admin-communicator__error" role="alert">{{ healthError }}</p>
+  }
+  @if (health; as h) {
+    <section class="admin-communicator__cards" aria-label="Zustand">
+      <article class="admin-communicator__card">
+        <h2>Claude</h2>
+        <p class="admin-communicator__state">
+          <span class="admin-communicator__dot"
+                [class.admin-communicator__dot--ok]="h.enabled && h.aiConfigured"
+                [class.admin-communicator__dot--error]="!h.enabled || !h.aiConfigured"></span>
+          {{ !h.enabled ? 'Abgeschaltet' : h.aiConfigured ? 'Eingerichtet' : 'Schlüssel fehlt' }}
+        </p>
+        <p class="admin-communicator__muted">{{ h.aiModel }}</p>
+        <p class="admin-communicator__muted">
+          API-Verzeichnis: {{ h.endpoints }} Endpunkte, {{ formatCount(h.catalogChars) }} Zeichen in jeder Anfrage
+        </p>
+      </article>
+
+      <article class="admin-communicator__card">
+        <h2>Whisper</h2>
+        <p class="admin-communicator__state">
+          <span class="admin-communicator__dot" [class]="'admin-communicator__dot admin-communicator__dot--' + whisperState(h.speech).tone"></span>
+          {{ whisperState(h.speech).text }}
+        </p>
+        <p class="admin-communicator__muted">
+          {{ h.speech.model }} ({{ h.speech.language }}){{ h.speech.responseMs !== null ? ', Dienst antwortet in ' + formatMs(h.speech.responseMs) : '' }}
+        </p>
+        @if (h.speech.error) {
+          <p class="admin-communicator__problem">{{ h.speech.error }}</p>
+        }
+        @if (h.speech.installError) {
+          <p class="admin-communicator__problem">Letzter Download: {{ h.speech.installError }}</p>
+        }
+      </article>
+    </section>
+  }
+
+  <div class="admin-communicator__ranges" role="group" aria-label="Zeitraum">
+    @for (range of ranges; track range.days) {
+      <button type="button" [class.ghost]="days !== range.days" [attr.aria-pressed]="days === range.days"
+              (click)="setDays(range.days)">{{ range.label }}</button>
+    }
+  </div>
+
+  @if (summaryError) {
+    <p class="admin-communicator__error" role="alert">{{ summaryError }}</p>
+  }
+  @if (summary; as s) {
+    <section class="admin-communicator__cards" aria-label="Kennzahlen">
+      <article class="admin-communicator__card">
+        <h2>Anfragen</h2>
+        <p class="admin-communicator__number">{{ s.requests }}</p>
+        <p class="admin-communicator__muted">{{ s.problems }} mit Problem</p>
+        @for (entry of statusEntries(); track entry.status) {
+          <p class="admin-communicator__muted">{{ entry.count }} × {{ statusLabel(entry.status) }}</p>
+        }
+      </article>
+
+      <article class="admin-communicator__card">
+        <h2>Tokens</h2>
+        <p class="admin-communicator__number">{{ formatCount(totalTokens(s.tokens)) }}</p>
+        <p class="admin-communicator__muted">Ø {{ formatCount(perRequest()) }} je Anfrage</p>
+        <p class="admin-communicator__muted">Eingabe neu: {{ formatCount(s.tokens.input) }}</p>
+        <p class="admin-communicator__muted">Eingabe aus Cache: {{ formatCount(s.tokens.cacheRead) }}</p>
+        <p class="admin-communicator__muted">In Cache geschrieben: {{ formatCount(s.tokens.cacheWrite) }}</p>
+        <p class="admin-communicator__muted">Ausgabe: {{ formatCount(s.tokens.output) }}</p>
+        @if (cacheShare(s.tokens) !== null) {
+          <p class="admin-communicator__muted">Cache-Anteil: {{ cacheShare(s.tokens) }} %</p>
+        }
+      </article>
+
+      <article class="admin-communicator__card">
+        <h2>Antwortzeit</h2>
+        <p class="admin-communicator__number">{{ formatMs(s.medianTotalMs) }}</p>
+        <p class="admin-communicator__muted">Median, höchstens {{ formatMs(s.maxTotalMs) }}</p>
+        <p class="admin-communicator__muted">Ø {{ formatDecimal(s.averageAiCalls, 1) }} Claude-Runden</p>
+        <p class="admin-communicator__muted">{{ s.toolCalls }} Werkzeugaufrufe, {{ s.toolFailures }} abgelehnt</p>
+      </article>
+
+      <article class="admin-communicator__card">
+        <h2>Whisper-Läufe</h2>
+        <p class="admin-communicator__number">{{ formatMs(s.speech.medianMs) }}</p>
+        <p class="admin-communicator__muted">Median, höchstens {{ formatMs(s.speech.maxMs) }}</p>
+        @if (s.speech.realtimeFactor !== null) {
+          <p class="admin-communicator__muted">
+            {{ formatDecimal(s.speech.realtimeFactor, 2) }} s Rechenzeit je Sekunde Sprache
+          </p>
+        }
+        <p class="admin-communicator__muted">
+          {{ s.speech.recordings }} Aufnahmen, {{ s.speech.notUnderstood }} nicht verstanden, {{ s.speech.failures }} Fehler
+        </p>
+      </article>
+    </section>
+
+    @if (s.days.length > 0) {
+      <section>
+        <h2>Tokens je Tag</h2>
+        <div class="admin-communicator__bars">
+          @for (day of s.days; track day.date) {
+            <div class="admin-communicator__bar-column">
+              <span class="admin-communicator__bar-value">{{ formatCount(totalTokens(day.tokens)) }}</span>
+              <div class="admin-communicator__bar-track">
+                <div class="admin-communicator__bar" [style.height.%]="barHeight(totalTokens(day.tokens))"></div>
+              </div>
+              <span>{{ day.date | date: 'dd.MM.' }}</span>
+              <span class="admin-communicator__muted">{{ day.requests }} Anfr.</span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="admin-communicator__cards">
+      @if (s.endpoints.length > 0) {
+        <article class="admin-communicator__card">
+          <h2>Meistgelesene Endpunkte</h2>
+          @for (entry of s.endpoints; track entry.name) {
+            <p class="admin-communicator__count"><code>{{ entry.name }}</code><span>{{ entry.count }}</span></p>
+          }
+        </article>
+      }
+      @if (s.errors.length > 0) {
+        <article class="admin-communicator__card">
+          <h2>Häufigste Probleme</h2>
+          @for (entry of s.errors; track entry.name) {
+            <p class="admin-communicator__count"><span>{{ entry.name }}</span><span>{{ entry.count }}</span></p>
+          }
+        </article>
+      }
+    </section>
+  }
+
+  <h2>Anfragen</h2>
+  <form class="admin-communicator__filter" (ngSubmit)="apply()">
+    <input type="search" name="q" [(ngModel)]="search" placeholder="Frage, Problem oder Endpunkt" aria-label="Suche">
+    <button type="submit" class="ghost">Suchen</button>
+    <label>
+      <input type="checkbox" name="problems" [(ngModel)]="problemsOnly" (ngModelChange)="apply()"> Nur Probleme
+    </label>
+  </form>
+  @if (rowsError) {
+    <p class="admin-communicator__error" role="alert">{{ rowsError }}</p>
+  }
+
+  <ul class="admin-communicator__list">
+    @for (row of rows; track row.id) {
+      <li>
+        <button type="button" class="admin-communicator__row" (click)="toggle(row)"
+                [attr.aria-expanded]="expandedId === row.id">
+          <span class="admin-communicator__dot" [class]="'admin-communicator__dot admin-communicator__dot--' + toneOf(row)"></span>
+          <span class="admin-communicator__question">{{ row.question || 'Kein Text erkannt' }}</span>
+          <span class="admin-communicator__meta">
+            {{ row.askedAt | date: 'dd.MM. HH:mm:ss' }} · {{ row.actor || '–' }} · {{ row.voice ? 'Sprache' : 'Text' }}
+            · {{ statusLabel(row.status) }} · {{ formatMs(row.totalMs) }}
+            · {{ formatCount(totalTokens(rowTokens(row))) }} Tokens
+          </span>
+          @if (row.error) {
+            <span class="admin-communicator__problem">{{ row.error }}</span>
+          }
+        </button>
+
+        @if (expandedId === row.id) {
+          <div class="admin-communicator__detail">
+            @if (detailError) {
+              <p class="admin-communicator__error" role="alert">{{ detailError }}</p>
+            } @else if (!detail) {
+              <p class="admin-communicator__muted">Lade Verlauf …</p>
+            } @else {
+              <ol class="admin-communicator__steps">
+                @if (row.voice) {
+                  <li>
+                    <strong>Whisper</strong>
+                    <span class="admin-communicator__muted">{{ formatMs(row.speechMs) }}</span>
+                    <p class="admin-communicator__muted">
+                      Aufnahme {{ formatMs(row.audioMs) }}, {{ formatDecimal((row.audioBytes ?? 0) / 1024, 0) }} KB, {{ row.audioType || 'Format unbekannt' }}
+                    </p>
+                    <p>{{ row.question ? '„' + row.question + '“' : 'Kein Text erkannt' }}</p>
+                  </li>
+                }
+                @for (step of detail.details?.steps ?? []; track $index) {
+                  <li [class.admin-communicator__step--failed]="!step.ok">
+                    <strong>{{ step.type === 'CLAUDE' ? 'Claude, Runde ' + step.round : step.name }}</strong>
+                    <span class="admin-communicator__muted">
+                      {{ formatMs(step.ms) }}{{ step.type === 'CLAUDE' ? ' · ' + step.name : '' }}{{ step.ok ? '' : ' · abgelehnt' }}
+                    </span>
+                    @if (step.inputTokens !== undefined) {
+                      <p class="admin-communicator__muted">
+                        {{ formatCount(step.inputTokens) }} neu, {{ formatCount(step.cacheReadTokens ?? 0) }} aus Cache,
+                        {{ formatCount(step.cacheWriteTokens ?? 0) }} in Cache, {{ formatCount(step.outputTokens ?? 0) }} Ausgabe
+                      </p>
+                    }
+                    @if (step.input) {
+                      <pre>{{ step.input }}</pre>
+                    }
+                    @if (step.output) {
+                      @if (step.ok) {
+                        <details>
+                          <summary>
+                            Antwort{{ step.outputChars !== undefined ? ' (' + formatCount(step.outputChars) + ' Zeichen)' : '' }}
+                          </summary>
+                          <pre>{{ step.output }}</pre>
+                        </details>
+                      } @else {
+                        <pre class="admin-communicator__problem">{{ step.output }}</pre>
+                      }
+                    }
+                  </li>
+                }
+              </ol>
+              <h3>Gezeigte Antwort</h3>
+              @for (card of detail.details?.cards ?? []; track $index) {
+                <div class="admin-communicator__answer">
+                  <strong>{{ card.title }}</strong>
+                  @for (line of cardLines(card); track $index) {
+                    <p>{{ line }}</p>
+                  }
+                </div>
+              } @empty {
+                <p class="admin-communicator__muted">Keine Karte gespeichert.</p>
+              }
+            }
+          </div>
+        }
+      </li>
+    } @empty {
+      @if (!rowsLoading && !rowsError) {
+        <li class="admin-communicator__muted">Keine Anfragen im gewählten Zeitraum.</li>
+      }
+    }
+  </ul>
+  @if (rows.length < total) {
+    <button type="button" class="ghost" (click)="loadMore()" [disabled]="rowsLoading">Mehr laden</button>
+  }
+</div>

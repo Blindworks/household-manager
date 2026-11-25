@@ -1,0 +1,219 @@
+.admin-communicator {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+
+  &__header,
+  &__ranges,
+  &__filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+
+  &__header {
+    justify-content: space-between;
+  }
+
+  h2 {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 1.1rem;
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  &__card {
+    min-width: 0;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-light-gray);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  &__card p {
+    margin: 0.15rem 0;
+  }
+
+  &__number {
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+
+  &__muted {
+    font-size: var(--font-size-sm);
+    opacity: 0.75;
+  }
+
+  &__problem {
+    color: var(--color-error);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+  }
+
+  &__error {
+    padding: var(--spacing-sm);
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+
+  &__state {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: 600;
+  }
+
+  &__dot {
+    flex: none;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: #9ca3af;
+
+    &--ok { background: #22c55e; }
+    &--warn { background: #f59e0b; }
+    &--error { background: #ef4444; }
+  }
+
+  &__count {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    overflow-wrap: anywhere;
+  }
+
+  &__bars {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    overflow-x: auto;
+  }
+
+  &__bar-column {
+    display: flex;
+    flex: 0 0 4rem;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.75rem;
+  }
+
+  &__bar-track {
+    display: flex;
+    align-items: flex-end;
+    width: 2rem;
+    height: 7rem;
+  }
+
+  &__bar {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 4px 4px 0 0;
+    background: #3b82f6;
+  }
+
+  &__list {
+    margin: 0 0 var(--spacing-md);
+    padding: 0;
+    list-style: none;
+
+    > li {
+      border-bottom: 1px solid var(--color-light-gray);
+    }
+  }
+
+  // Der Admin-Scope stylt jeden Knopf als Primärknopf; die Zeile ist eine Zeile.
+  &__list button.admin-communicator__row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.1rem var(--spacing-sm);
+    align-items: center;
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+    cursor: pointer;
+
+    .admin-communicator__meta,
+    .admin-communicator__problem {
+      grid-column: 2;
+    }
+  }
+
+  &__question {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__meta {
+    font-size: var(--font-size-sm);
+    opacity: 0.75;
+  }
+
+  &__detail {
+    padding: 0 var(--spacing-md) var(--spacing-md);
+  }
+
+  &__filter input[type='search'] {
+    flex: 0 1 20rem;
+  }
+
+  &__steps {
+    strong {
+      margin-right: var(--spacing-sm);
+    }
+
+    margin: 0;
+    padding-left: var(--spacing-lg);
+
+    > li {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    p {
+      margin: 0.1rem 0;
+    }
+  }
+
+  &__step--failed strong {
+    color: var(--color-error);
+  }
+
+  pre {
+    max-height: 18rem;
+    margin: 0.25rem 0;
+    padding: var(--spacing-sm);
+    overflow: auto;
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.1);
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &__answer {
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-left: 3px solid #3b82f6;
+
+    p {
+      margin: 0.1rem 0;
+    }
+  }
+}

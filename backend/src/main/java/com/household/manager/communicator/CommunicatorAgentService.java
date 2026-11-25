@@ -9,6 +9,7 @@ import com.household.manager.ai.AnthropicRequest;
 import com.household.manager.ai.AnthropicResponse;
 import com.household.manager.ai.ToolResult;
 import com.household.manager.communicator.CommunicatorDtos.Card;
+import com.household.manager.model.entity.CommunicatorRequest.Status;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -84,18 +85,32 @@ public class CommunicatorAgentService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public List<Card> ask(String question, ApiGateway.Caller caller) {
+    List<Card> ask(String question, ApiGateway.Caller caller, CommunicatorTrace trace) {
+        trace.question(question);
+        List<Card> cards = answer(question, caller, trace);
+        trace.cards(cards);
+        return cards;
+    }
+
+    private List<Card> answer(String question, ApiGateway.Caller caller, CommunicatorTrace trace) {
         if (!properties.isEnabled()) {
+            trace.problem(Status.UNAVAILABLE, DISABLED_TEXT);
             return List.of(CardBuilder.message("block", "Abgeschaltet", DISABLED_TEXT));
         }
         if (!aiProperties.isConfigured()) {
+            trace.problem(Status.UNAVAILABLE, NOT_CONFIGURED_TEXT);
             return List.of(CardBuilder.message("error", "Nicht eingerichtet", NOT_CONFIGURED_TEXT));
         }
-        Run run = new Run(caller);
+        trace.model(properties.getModel());
+        Run run = new Run(caller, trace);
         try {
             run.execute(question);
         } catch (Exception ex) {
             log.error("Communicator-Lauf fehlgeschlagen: {}", ex.getMessage(), ex);
+            trace.problem(run.cards.isEmpty() ? Status.AI_ERROR : Status.OK, String.valueOf(ex.getMessage()));
+        }
+        if (run.cards.isEmpty()) {
+            trace.problem(Status.INCOMPLETE, "Claude hat keine Karte gezeigt");
         }
         return run.cards.isEmpty() ? List.of(CardBuilder.message("error", "Fehler", ERROR_TEXT)) : run.cards;
     }
@@ -108,11 +123,13 @@ public class CommunicatorAgentService {
     /** Ein Lauf: gelesene Antworten (r1, r2, …) und gezeigte Karten. */
     private final class Run {
         private final ApiGateway.Caller caller;
+        private final CommunicatorTrace trace;
         private final Map<String, JsonNode> results = new HashMap<>();
         private final List<Card> cards = new ArrayList<>();
 
-        private Run(ApiGateway.Caller caller) {
+        private Run(ApiGateway.Caller caller, CommunicatorTrace trace) {
             this.caller = caller;
+            this.trace = trace;
         }
 
         private void execute(String question) {
@@ -120,8 +137,10 @@ public class CommunicatorAgentService {
             messages.add(AnthropicMessage.user(question));
             long deadline = System.nanoTime() + BUDGET.toNanos();
             for (int i = 0; i < properties.getMaxToolIterations() && System.nanoTime() < deadline; i++) {
-                AnthropicResponse response = anthropicApiClient.createMessage(new AnthropicRequest(
-                        properties.getModel(), properties.getMaxTokens(), system(), messages, CommunicatorTools.ALL));
+                AnthropicResponse response = askClaude(i + 1, messages);
+                if ("max_tokens".equals(response.stopReason())) {
+                    trace.problem(Status.OK, "Antwort am Token-Limit (max_tokens) abgeschnitten");
+                }
                 if (!response.wantsToolUse()) {
                     if (cards.isEmpty() && !response.text().isBlank()) {
                         cards.add(CardBuilder.message("info", "Antwort", response.text()));
@@ -132,7 +151,7 @@ public class CommunicatorAgentService {
                 boolean onlyCards = true;
                 for (Map<String, Object> block : response.toolUseBlocks()) {
                     String name = String.valueOf(block.get("name"));
-                    ToolResult result = call(name, objectMapper.valueToTree(block.get("input")));
+                    ToolResult result = call(i + 1, name, objectMapper.valueToTree(block.get("input")));
                     onlyCards &= CommunicatorTools.SHOW_CARD.equals(name) && !result.error();
                     toolResults.add(AnthropicMessage.toolResult(String.valueOf(block.get("id")), result));
                 }
@@ -143,9 +162,33 @@ public class CommunicatorAgentService {
                 messages.add(AnthropicMessage.toolResults(toolResults));
             }
             log.warn("Communicator-Lauf ohne Abschluss beendet (Runden oder Zeitbudget)");
+            trace.problem(cards.isEmpty() ? Status.INCOMPLETE : Status.OK, System.nanoTime() >= deadline
+                    ? "Zeitbudget von " + BUDGET.toSeconds() + " s aufgebraucht"
+                    : "Alle " + properties.getMaxToolIterations() + " Runden aufgebraucht");
         }
 
-        private ToolResult call(String name, JsonNode input) {
+        private AnthropicResponse askClaude(int round, List<AnthropicMessage> messages) {
+            long start = System.nanoTime();
+            try {
+                AnthropicResponse response = anthropicApiClient.createMessage(new AnthropicRequest(
+                        properties.getModel(), properties.getMaxTokens(), system(), messages, CommunicatorTools.ALL));
+                trace.claude(round, response, System.nanoTime() - start);
+                return response;
+            } catch (RuntimeException ex) {
+                trace.claudeFailed(round, String.valueOf(ex.getMessage()), System.nanoTime() - start);
+                throw ex;
+            }
+        }
+
+        private ToolResult call(int round, String name, JsonNode input) {
+            long start = System.nanoTime();
+            ToolResult result = execute(name, input);
+            trace.tool(round, name, String.valueOf(input), result.content(), !result.error(),
+                    System.nanoTime() - start);
+            return result;
+        }
+
+        private ToolResult execute(String name, JsonNode input) {
             try {
                 return ToolResult.ok(switch (name) {
                     case CommunicatorTools.API_GET -> read(input);
@@ -163,7 +206,9 @@ public class CommunicatorAgentService {
         private String read(JsonNode input) {
             Map<String, String> query = new HashMap<>();
             input.path("query").fields().forEachRemaining(e -> query.put(e.getKey(), e.getValue().asText()));
-            ApiGateway.Result result = gateway.get(input.path("path").asText(), query,
+            String path = input.path("path").asText();
+            trace.endpoint(catalog.find("GET", path).map(ApiCatalog.Endpoint::path).orElse(path));
+            ApiGateway.Result result = gateway.get(path, query,
                     input.path("filter").asText(""), caller);
             String ref = "r" + (results.size() + 1);
             results.put(ref, result.data());

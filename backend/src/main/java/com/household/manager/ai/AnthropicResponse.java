@@ -4,9 +4,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Antwort der Messages-API: stop_reason, rohe Content-Bloecke, Token-Zaehler (0, wenn unbekannt). */
+/**
+ * Antwort der Messages-API: stop_reason, rohe Content-Bloecke, Token-Zaehler (0, wenn unbekannt).
+ * {@code inputTokens} zaehlt nur den nicht zwischengespeicherten Teil.
+ */
 public record AnthropicResponse(String stopReason, List<Map<String, Object>> content,
-                                int inputTokens, int outputTokens) {
+                                int inputTokens, int outputTokens, int cacheReadTokens, int cacheWriteTokens) {
+
+    public AnthropicResponse(String stopReason, List<Map<String, Object>> content,
+                             int inputTokens, int outputTokens) {
+        this(stopReason, content, inputTokens, outputTokens, 0, 0);
+    }
 
     public AnthropicResponse(String stopReason, List<Map<String, Object>> content) {
         this(stopReason, content, 0, 0);

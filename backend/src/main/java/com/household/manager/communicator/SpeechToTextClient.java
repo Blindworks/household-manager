@@ -5,6 +5,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -32,6 +33,7 @@ public class SpeechToTextClient {
     private final CommunicatorProperties.Stt properties;
     private final RestTemplate restTemplate;
     private final RestTemplate installRestTemplate;
+    private final RestTemplate healthRestTemplate;
 
     public SpeechToTextClient(CommunicatorProperties properties, RestTemplateBuilder builder) {
         this.properties = properties.getStt();
@@ -42,6 +44,10 @@ public class SpeechToTextClient {
         this.installRestTemplate = builder
                 .connectTimeout(Duration.ofSeconds(5))
                 .readTimeout(INSTALL_TIMEOUT)
+                .build();
+        this.healthRestTemplate = builder
+                .connectTimeout(Duration.ofSeconds(3))
+                .readTimeout(Duration.ofSeconds(5))
                 .build();
     }
 
@@ -59,6 +65,33 @@ public class SpeechToTextClient {
                     null, String.class);
         } catch (RestClientException | IllegalArgumentException ex) {
             throw new SpeechToTextException("Das Sprachmodell konnte nicht geladen werden.", ex);
+        }
+    }
+
+    /**
+     * Fragt die installierten Modelle ab (OpenAI-Format {@code GET /v1/models}).
+     *
+     * @return ob das konfigurierte Modell dabei ist
+     * @throws SpeechToTextException wenn der Dienst nicht antwortet
+     */
+    public boolean isModelInstalled() {
+        HttpHeaders headers = new HttpHeaders();
+        if (properties.getApiKey() != null && !properties.getApiKey().isBlank()) {
+            headers.setBearerAuth(properties.getApiKey());
+        }
+        try {
+            JsonNode root = healthRestTemplate.exchange(stripTrailingSlash(properties.getBaseUrl()) + "/v1/models",
+                    HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class).getBody();
+            if (root != null) {
+                for (JsonNode model : root.path("data")) {
+                    if (properties.getModel().equals(model.path("id").asText())) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } catch (RestClientException | IllegalArgumentException ex) {
+            throw new SpeechToTextException("Die Spracherkennung ist nicht erreichbar: " + ex.getMessage(), ex);
         }
     }
 
@@ -144,6 +177,11 @@ public class SpeechToTextClient {
     /** Nur fuer Tests (MockRestServiceServer). */
     RestTemplate restTemplate() {
         return restTemplate;
+    }
+
+    /** Nur fuer Tests (MockRestServiceServer). */
+    RestTemplate healthRestTemplate() {
+        return healthRestTemplate;
     }
 
     /** Nur fuer Tests (MockRestServiceServer). */

@@ -257,6 +257,12 @@ export const routes: Routes = [
     title: 'Audit-Log - Household Manager'
   },
   {
+    path: 'admin/communicator',
+    loadComponent: () => import('./pages/admin-communicator/admin-communicator.component').then(m => m.AdminCommunicatorComponent),
+    canActivate: [adminGuard],
+    title: 'Communicator-Protokoll - Household Manager'
+  },
+  {
     path: 'admin/system-log',
     loadComponent: () => import('./pages/admin-system-log/admin-system-log.component').then(m => m.AdminSystemLogComponent),
     canActivate: [adminGuard],

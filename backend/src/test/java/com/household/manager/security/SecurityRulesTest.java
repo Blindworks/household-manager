@@ -1632,6 +1632,14 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "MEMBER")
+    void communicatorProtokollIstFuerMemberVerboten() throws Exception {
+        for (String path : List.of("summary", "requests", "requests/1", "health")) {
+            mockMvc.perform(get("/v1/admin/communicator/" + path)).andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
     void memberDarfDenCommunicatorFragen() throws Exception {
         // Kein CommunicatorController im Slice: 404 statt 403 belegt, dass die Regel durchlaesst
         mockMvc.perform(post("/v1/communicator/ask-text").with(csrf())
