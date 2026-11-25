@@ -277,14 +277,18 @@
   }
 
   // Aura hinter der Kugel
+  // Bewusst ohne filter: blur — Safari schneidet einen weichgezeichneten, animierten
+  // Layer an seinem Rechteck ab (sichtbare eckige Kanten). Die Maske blendet weich aus.
   &::before {
     content: '';
     position: absolute;
-    inset: -18%;
+    inset: -45%;
     border-radius: 50%;
     background: conic-gradient(from 0deg, var(--orb-1), var(--orb-2), var(--orb-3), var(--orb-1));
-    filter: blur(32px);
-    opacity: 0.45;
+    -webkit-mask-image: radial-gradient(circle closest-side, #000 30%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+    mask-image: radial-gradient(circle closest-side, #000 30%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+    pointer-events: none;
+    opacity: 0.75;
     animation: orb-spin var(--orb-speed) linear infinite;
     transition: opacity 0.3s;
   }
@@ -305,7 +309,7 @@
     height: 4.75rem;
 
     &::before {
-      opacity: 0.3;
+      opacity: 0.5;
     }
 
     .mic__icon {
@@ -321,7 +325,7 @@
     animation: orb-breathe 1.3s ease-in-out infinite;
 
     &::before {
-      opacity: 0.7;
+      opacity: 1;
     }
   }
 
@@ -359,7 +363,6 @@
     width: 90%;
     height: 90%;
     border-radius: 50%;
-    filter: blur(10px);
     mix-blend-mode: screen;
     transform-origin: 50% 50%;
 
