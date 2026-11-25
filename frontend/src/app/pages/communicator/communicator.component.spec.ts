@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { CommunicatorAnswer, CommunicatorStatus } from '../../models/communicator.model';
 import { CommunicatorService } from '../../services/communicator.service';
-import { CommunicatorComponent } from './communicator.component';
+import { CommunicatorComponent, greetingFor } from './communicator.component';
 
 describe('CommunicatorComponent', () => {
   let fixture: ComponentFixture<CommunicatorComponent>;
@@ -141,5 +141,27 @@ describe('CommunicatorComponent', () => {
     (el().querySelector('.suggestions__chip') as HTMLButtonElement).click();
 
     expect(service.askText.calls.mostRecent().args[0]).toBe('Wie wird das Wetter?');
+  });
+
+  it('zeigt im leeren Zustand Begrüßung und Beispielfragen, die wie eine getippte Frage gestellt werden', () => {
+    setup();
+    service.askText.and.returnValue(of(climateAnswer));
+
+    expect(el().querySelector('.welcome__title')?.textContent?.trim()).toBe(component.greeting);
+    const examples = el().querySelectorAll<HTMLButtonElement>('.welcome__example');
+    expect(examples.length).toBeGreaterThan(0);
+
+    examples[0].click();
+    fixture.detectChanges();
+
+    expect(service.askText).toHaveBeenCalledWith(examples[0].textContent!.trim());
+    expect(el().querySelector('.welcome')).toBeNull();
+  });
+
+  it('wählt die Begrüßung nach Tageszeit', () => {
+    expect(greetingFor(7)).toBe('Guten Morgen');
+    expect(greetingFor(14)).toBe('Hallo');
+    expect(greetingFor(20)).toBe('Guten Abend');
+    expect(greetingFor(2)).toBe('Gute Nacht');
   });
 });
