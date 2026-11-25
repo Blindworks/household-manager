@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261125-0118-create-blaulicht-event" author="claude">
+        <comment>
+            Blaulicht Bad Vilbel: ein Fall je Zeile (Sammelmeldungen ergeben mehrere). content_hash ist
+            eindeutig und faengt dieselbe Meldung unter neuer GUID. Ein DDL je Changeset (MariaDB-Autocommit).
+        </comment>
+        <createTable tableName="blaulicht_event">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_id" type="VARCHAR(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_hash" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_blaulicht_event_content_hash"/>
+            </column>
+            <column name="category" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locality" type="VARCHAR(100)"/>
+            <column name="nearby" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(300)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="summary" type="TEXT"/>
+            <column name="occurred_at" type="DATETIME"/>
+            <column name="occurred_until" type="DATETIME"/>
+            <column name="published_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="VARCHAR(500)"/>
+            <column name="relevance" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="blaulicht_event"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

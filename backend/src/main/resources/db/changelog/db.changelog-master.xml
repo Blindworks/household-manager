@@ -228,5 +228,8 @@
     <include file="db/changelog/changes/20261123-0115-create-charging-watch.xml"/>
     <include file="db/changelog/changes/20261125-0116-create-communicator-request.xml"/>
     <include file="db/changelog/changes/20261125-0117-index-communicator-request-asked-at.xml"/>
+    <include file="db/changelog/changes/20261125-0118-create-blaulicht-event.xml"/>
+    <include file="db/changelog/changes/20261125-0119-unique-blaulicht-event-external-id.xml"/>
+    <include file="db/changelog/changes/20261125-0120-index-blaulicht-event-published-at.xml"/>
 
 </databaseChangeLog>

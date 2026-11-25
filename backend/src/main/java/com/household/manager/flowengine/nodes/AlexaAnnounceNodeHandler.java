@@ -17,7 +17,7 @@ import java.util.List;
 
 /**
  * Aktions-Node: Alexa-Ansage über den bestehenden AlexaAnnouncementService.
- * Platzhalter im Text: {entityId}, {newState}, {oldState}.
+ * Platzhalter im Text: {entityId}, {newState}, {oldState}, {action} (Aktion eines Ereignis-Triggers).
  */
 @Component
 @RequiredArgsConstructor
@@ -69,7 +69,8 @@ public class AlexaAnnounceNodeHandler implements NodeHandler {
         return template
                 .replace("{entityId}", stringValue(message, "entityId"))
                 .replace("{newState}", stringValue(message, "newState"))
-                .replace("{oldState}", stringValue(message, "oldState"));
+                .replace("{oldState}", stringValue(message, "oldState"))
+                .replace("{action}", stringValue(message, "action"));
     }
 
     private String stringValue(FlowMessage message, String key) {

@@ -17,7 +17,7 @@ import java.util.List;
 
 /**
  * Aktions-Node: Telegram-Nachricht an die erlaubten Chats (oder einen
- * bestimmten Chat). Platzhalter: {entityId}, {newState}, {oldState}.
+ * bestimmten Chat). Platzhalter: {entityId}, {newState}, {oldState}, {action} (Aktion eines Ereignis-Triggers).
  * Sendefehler schluckt der NotificationService — der Flow läuft weiter, der Lauf wird aber als fehlgeschlagen markiert.
  */
 @Component
@@ -70,7 +70,8 @@ public class TelegramSendNodeHandler implements NodeHandler {
         return template
                 .replace("{entityId}", stringValue(message, "entityId"))
                 .replace("{newState}", stringValue(message, "newState"))
-                .replace("{oldState}", stringValue(message, "oldState"));
+                .replace("{oldState}", stringValue(message, "oldState"))
+                .replace("{action}", stringValue(message, "action"));
     }
 
     private String stringValue(FlowMessage message, String key) {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261125-0119-unique-blaulicht-event-external-id" author="claude">
+        <comment>Je Quelle eine Zeile je Fall (GUID bzw. GUID#n).</comment>
+        <addUniqueConstraint tableName="blaulicht_event" columnNames="source, external_id"
+                             constraintName="uk_blaulicht_event_source_external"/>
+        <rollback>
+            <dropUniqueConstraint tableName="blaulicht_event" constraintName="uk_blaulicht_event_source_external"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
