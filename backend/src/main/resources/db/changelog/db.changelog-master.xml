@@ -229,5 +229,8 @@
     <include file="db/changelog/changes/20261125-0116-create-communicator-request.xml"/>
     <include file="db/changelog/changes/20261125-0117-index-communicator-request-asked-at.xml"/>
     <include file="db/changelog/changes/20261125-0118-add-thermostat-room-target.xml"/>
+    <include file="db/changelog/changes/20261125-0119-create-blaulicht-event.xml"/>
+    <include file="db/changelog/changes/20261125-0120-unique-blaulicht-event-external-id.xml"/>
+    <include file="db/changelog/changes/20261125-0121-index-blaulicht-event-published-at.xml"/>
 
 </databaseChangeLog>

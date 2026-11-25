@@ -19,7 +19,7 @@ export interface HubInsight {
   readonly link?: string;
   /**
    * Aktion, die ein Antippen der Karte ausloest: Waesche als abgenommen melden,
-   * die Trocknungskarte nur ausblenden oder die Schnaeppchen im Dialog zeigen.
+   * die Trocknungskarte nur ausblenden, die Schnaeppchen oder die Blaulicht-Meldungen im Dialog zeigen.
    */
-  readonly tapAction?: 'laundry-removed' | 'laundry-hide' | 'grocery-deals';
+  readonly tapAction?: 'laundry-removed' | 'laundry-hide' | 'grocery-deals' | 'blaulicht';
 }

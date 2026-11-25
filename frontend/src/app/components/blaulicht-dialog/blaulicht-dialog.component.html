@@ -1,0 +1,50 @@
+<div class="bl-backdrop" (click)="closed.emit()">
+  <div class="bl-dialog" role="dialog" aria-modal="true" aria-label="Blaulicht Bad Vilbel"
+       data-test="blaulicht-dialog" (click)="$event.stopPropagation()">
+    <header class="bl-head">
+      <h2 class="bl-title">Blaulicht Bad Vilbel</h2>
+      <button type="button" class="bl-close" (click)="closed.emit()" aria-label="Schließen">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </header>
+
+    <div class="bl-body">
+      <p *ngIf="briefingText" class="bl-briefing" data-test="blaulicht-briefing">{{ briefingText }}</p>
+
+      <div class="bl-filters" role="group" aria-label="Kategorie filtern">
+        <button type="button" class="bl-chip" [class.bl-chip--active]="filter === null" (click)="filter = null">Alle</button>
+        <ng-container *ngFor="let c of categories">
+          <button *ngIf="count(c.key) > 0" type="button" class="bl-chip" data-test="blaulicht-filter"
+                  [class.bl-chip--active]="filter === c.key" (click)="setFilter(c.key)">
+            <span class="material-symbols-outlined">{{ c.icon }}</span>{{ c.label }} {{ count(c.key) }}
+          </button>
+        </ng-container>
+      </div>
+
+      <p *ngIf="loading" class="bl-hint">Lade Meldungen …</p>
+      <p *ngIf="error" class="bl-hint">Meldungen nicht abrufbar. <button type="button" class="bl-retry" (click)="load()">Erneut versuchen</button></p>
+      <p *ngIf="!loading && !error && events.length === 0" class="bl-hint">In den letzten 7 Tagen keine Meldungen.</p>
+
+      <ul class="bl-list">
+        <li *ngFor="let e of visibleEvents; trackBy: trackEvent" class="bl-item" [class.bl-item--nearby]="e.nearby"
+            [class.bl-item--warning]="e.category === 'WARNUNG'" data-test="blaulicht-item">
+          <span class="bl-icon material-symbols-outlined" [attr.aria-label]="label(e)">{{ icon(e) }}</span>
+          <div class="bl-main">
+            <div class="bl-meta">
+              <strong>{{ e.locality }}</strong>
+              <span>{{ time(e) }}</span>
+              <span *ngIf="e.newSinceEvening" class="bl-badge" data-test="blaulicht-new">neu seit gestern Abend</span>
+              <span *ngIf="e.nearby" class="bl-nearby">Nachbarort</span>
+            </div>
+            <p class="bl-item-title">{{ e.title }}</p>
+            <p *ngIf="e.summary" class="bl-summary">{{ e.summary }}</p>
+            <a *ngIf="showLinks && e.url" class="bl-link" [href]="e.url" target="_blank" rel="noopener">
+              {{ e.source === 'NINA' ? 'Warnung bei NINA' : 'Meldung der Polizei' }}<span class="material-symbols-outlined">open_in_new</span>
+            </a>
+          </div>
+        </li>
+      </ul>
+      <p class="bl-source">Quellen: Polizeipräsidium Mittelhessen (presseportal.de), NINA (BBK)</p>
+    </div>
+  </div>
+</div>

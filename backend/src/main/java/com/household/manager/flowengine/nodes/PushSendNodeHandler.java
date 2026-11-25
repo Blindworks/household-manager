@@ -17,7 +17,7 @@ import java.util.List;
 
 /**
  * Aktions-Node: Web-Push-Benachrichtigung an alle abonnierten Geraete (oder
- * nur die eines Nutzers). Platzhalter: {entityId}, {newState}, {oldState}.
+ * nur die eines Nutzers). Platzhalter: {entityId}, {newState}, {oldState}, {action} (Aktion eines Ereignis-Triggers).
  * Sendefehler schluckt der PushNotificationService — der Flow laeuft weiter, der Lauf wird aber als fehlgeschlagen markiert.
  */
 @Component
@@ -76,7 +76,8 @@ public class PushSendNodeHandler implements NodeHandler {
         return template
                 .replace("{entityId}", stringValue(message, "entityId"))
                 .replace("{newState}", stringValue(message, "newState"))
-                .replace("{oldState}", stringValue(message, "oldState"));
+                .replace("{oldState}", stringValue(message, "oldState"))
+                .replace("{action}", stringValue(message, "action"));
     }
 
     private String stringValue(FlowMessage message, String key) {

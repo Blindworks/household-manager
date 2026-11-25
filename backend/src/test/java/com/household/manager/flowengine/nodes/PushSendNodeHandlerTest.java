@@ -49,6 +49,19 @@ class PushSendNodeHandlerTest {
     }
 
     @Test
+    void actionPlaceholderCarriesTheEventState() {
+        NodeConfig cfg = new NodeConfig(Map.of("message", "{action}"));
+        FlowMessage msg = FlowMessage.of(Map.of("entityId", "event.blaulicht_morning_briefing",
+                "action", "Heute Nacht war es in Bad Vilbel ruhig."));
+        when(notificationService.sendToAll("Household Manager", "Heute Nacht war es in Bad Vilbel ruhig."))
+                .thenReturn(DeliveryResult.ok());
+
+        handler().handle(msg, cfg, ctx);
+
+        verify(notificationService).sendToAll("Household Manager", "Heute Nacht war es in Bad Vilbel ruhig.");
+    }
+
+    @Test
     void explicitUserIdSendsOnlyToThatUser() {
         NodeConfig cfg = new NodeConfig(Map.of("message", "hi", "title", "Alarm", "userId", "7"));
 

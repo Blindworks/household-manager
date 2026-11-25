@@ -1114,6 +1114,14 @@
     </div>
   </div>
 
+  <!-- Blaulicht-Dialog (Antippen der Blaulicht-Karte im Hub); eigene Komponente mit eigenen Styles. -->
+  <app-blaulicht-dialog
+    *ngIf="blaulichtDialogOpen"
+    [briefing]="blaulichtBriefing"
+    [showLinks]="!viewMode.isTabletView()"
+    (closed)="blaulichtDialogOpen = false"
+  ></app-blaulicht-dialog>
+
   <!-- Schnaeppchen-Dialog (oeffnet sich beim Antippen der Schnaeppchen-Karte im Hub).
        Styles in dashboard-grocery-dialog.scss (eigene styleUrl der Komponente). -->
   <div

@@ -1454,6 +1454,13 @@ class SecurityRulesTest {
 
     @Test
     @WithMockUser(roles = "KIOSK")
+    void kioskDarfBlaulichtMeldungenLesen() throws Exception {
+        mockMvc.perform(get("/v1/blaulicht/briefing")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/blaulicht")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
     void kioskDarfDenLadesaeulenAbrufErzwingen() throws Exception {
         mockMvc.perform(post("/v1/charging/refresh").with(csrf())).andExpect(status().isNotFound());
     }

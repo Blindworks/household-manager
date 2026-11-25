@@ -186,7 +186,7 @@ Schreibt jede Message in den Debug-Puffer.
 | `label` | nein | Beschriftung im Debug-Panel |
 
 ### `alexa-announce` — Alexa-Ansage (1 Ausgang)
-Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
+Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`, `{action}` (Aktion eines `entity-event-trigger`, z. B. der Text des Blaulicht-Briefings).
 
 | config | Pflicht | Wert |
 |--------|---------|------|
@@ -213,7 +213,7 @@ Für schnellste Rückmeldung die Node **direkt hinter den Trigger** hängen, nic
 | `action` | ja | `on` oder `off` |
 
 ### `telegram-send` — Telegram-Nachricht (1 Ausgang)
-Telegram-Nachricht an die erlaubten Chats oder einen bestimmten Chat senden. Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
+Telegram-Nachricht an die erlaubten Chats oder einen bestimmten Chat senden. Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`, `{action}` (Aktion eines `entity-event-trigger`, z. B. der Text des Blaulicht-Briefings).
 
 | config | Pflicht | Wert |
 |--------|---------|------|
@@ -221,7 +221,7 @@ Telegram-Nachricht an die erlaubten Chats oder einen bestimmten Chat senden. Pla
 | `chatId` | nein | numerische Chat-ID; leer = an alle erlaubten Chats (`TELEGRAM_ALLOWED_CHAT_IDS`) |
 
 ### `push-send` — Push-Nachricht (1 Ausgang)
-Web-Push-Benachrichtigung an die abonnierten Geraete eines Nutzers oder alle Geraete senden. Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
+Web-Push-Benachrichtigung an die abonnierten Geraete eines Nutzers oder alle Geraete senden. Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`, `{action}` (Aktion eines `entity-event-trigger`, z. B. der Text des Blaulicht-Briefings).
 
 | config | Pflicht | Wert |
 |--------|---------|------|

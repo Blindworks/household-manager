@@ -64,6 +64,10 @@ import { AgentService } from '../../services/agent.service';
 import { AgentSummary } from '../../models/agent.model';
 import { buildAgentInsight } from '../../shared/agent-insight.util';
 import { GroceryService } from '../../services/grocery.service';
+import { BlaulichtService } from '../../services/blaulicht.service';
+import { BlaulichtBriefing } from '../../models/blaulicht.model';
+import { buildBlaulichtInsight } from '../../shared/blaulicht-view.util';
+import { BlaulichtDialogComponent } from '../../components/blaulicht-dialog/blaulicht-dialog.component';
 import { GrocerySummary, GrocerySummaryItem } from '../../models/grocery.model';
 import { buildGroceryInsight, visibleGroceryItems } from '../../shared/grocery-insight.util';
 import { groceryItemKey, HiddenGroceryDeals, loadHiddenGroceryDeals, saveHiddenGroceryDeals } from '../../shared/grocery-hidden.util';
@@ -125,7 +129,7 @@ echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendCompone
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent, LaundryPromptComponent],
+  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent, LaundryPromptComponent, BlaulichtDialogComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
   // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro
@@ -157,6 +161,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly presenceService = inject(PresenceService);
   private readonly agentService = inject(AgentService);
   private readonly groceryService = inject(GroceryService);
+  private readonly blaulichtService = inject(BlaulichtService);
   private readonly authService = inject(AuthService);
 
   /**
@@ -200,6 +205,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private petSupplySubscription?: Subscription;
   private presenceSubscription?: Subscription;
   private agentSubscription?: Subscription;
+  private blaulichtSubscription?: Subscription;
   private grocerySubscription?: Subscription;
 
   /** Umfang des SVG-Rings (r = 40 -> 2*pi*40). */
@@ -257,6 +263,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private static readonly PRESENCE_REFRESH_MS = 30000;
   /** Offene Vorschlaege des Hausverstands. */
   private static readonly AGENT_REFRESH_MS = 60_000;
+  private static readonly BLAULICHT_REFRESH_MS = 300_000;
   /** Supermarkt-Schnaeppchen: die Daten aendern sich nur nach dem naechtlichen Lauf. */
   private static readonly GROCERY_REFRESH_MS = 600_000;
 
@@ -362,6 +369,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private wasteInsights: HubInsight[] = [];
   /** Karte "Hausverstand"; null = keine offenen Vorschlaege. */
   agentInsight: HubInsight | null = null;
+  blaulichtInsight: HubInsight | null = null;
+  blaulichtBriefing: BlaulichtBriefing | null = null;
+  blaulichtDialogOpen = false;
   groceryInsight: HubInsight | null = null;
   /** Schnaeppchen der Hub-Karte; der Dialog zeigt genau diese Liste (auch nach einem Refresh). */
   groceryItems: GrocerySummaryItem[] = [];
@@ -523,6 +533,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPetSupplyRefresh();
     this.startPresenceRefresh();
     this.startAgentRefresh();
+    this.startBlaulichtRefresh();
     this.startGroceryRefresh();
   }
 
@@ -554,6 +565,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.petSupplySubscription?.unsubscribe();
     this.presenceSubscription?.unsubscribe();
     this.agentSubscription?.unsubscribe();
+    this.blaulichtSubscription?.unsubscribe();
     this.grocerySubscription?.unsubscribe();
     this.rebootPollSubscription?.unsubscribe();
     this.hubReloadSubscription?.unsubscribe();
@@ -584,6 +596,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   onEscape(): void {
     if (this.groceryDialogOpen) {
       this.closeGroceryDialog();
+      return;
+    }
+    if (this.blaulichtDialogOpen) {
+      this.blaulichtDialogOpen = false;
       return;
     }
     if (this.petSupplyDialogKey !== null) {
@@ -1851,12 +1867,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.hideLaundryDrying();
     } else if (item.tapAction === 'grocery-deals') {
       this.groceryDialogOpen = true;
+    } else if (item.tapAction === 'blaulicht') {
+      this.blaulichtDialogOpen = true;
     }
   }
 
   /** Symbol rechts an einer antippbaren Hub-Karte. */
   insightTapIcon(item: HubInsight): string {
-    if (item.tapAction === 'grocery-deals') {
+    if (item.tapAction === 'grocery-deals' || item.tapAction === 'blaulicht') {
       return 'chevron_right';
     }
     return item.tapAction === 'laundry-hide' ? 'close' : 'done';
@@ -1870,7 +1888,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (item.tapAction) {
       case 'laundry-hide': return item.title + ' ausblenden';
       case 'laundry-removed': return item.title + ' als abgenommen markieren';
-      case 'grocery-deals': return item.title + ' anzeigen';
+      case 'grocery-deals':
+      case 'blaulicht': return item.title + ' anzeigen';
       default: return null;
     }
   }
@@ -2021,6 +2040,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...this.accountLoginInsights,
       ...(this.laundryInsight ? [this.laundryInsight] : []),
       ...(this.agentInsight ? [this.agentInsight] : []),
+      ...(this.blaulichtInsight ? [this.blaulichtInsight] : []),
       ...(this.groceryInsight ? [this.groceryInsight] : []),
       ...this.wasteInsights,
       ...this.calendarInsights,
@@ -2388,6 +2408,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.agentInsight = buildAgentInsight(summary);
           this.rebuildInsights();
         }
+      });
+  }
+
+  /** Blaulicht-Karte: ein Fehler laesst die Karte weg (nie ein veraltetes „ruhig“ behaupten). */
+  private startBlaulichtRefresh(): void {
+    this.blaulichtSubscription = interval(DashboardComponent.BLAULICHT_REFRESH_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.blaulichtService.getBriefing()
+          .pipe(catchError(() => of<BlaulichtBriefing | null>(null))))
+      )
+      .subscribe(briefing => {
+        this.blaulichtBriefing = briefing;
+        this.blaulichtInsight = buildBlaulichtInsight(briefing);
+        this.rebuildInsights();
       });
   }
 
