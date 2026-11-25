@@ -16,6 +16,7 @@ import {
   ThermostatTone,
   arcFraction,
   formatTemp,
+  userTarget,
   stepTarget,
   thermostatCaption,
   thermostatTone
@@ -112,7 +113,7 @@ export class ThermostatTileComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   get displayTarget(): number | null {
-    return this.pendingTarget ?? this.thermostat.targetTemp;
+    return this.pendingTarget ?? userTarget(this.thermostat);
   }
 
   get activeMode(): ThermostatMode {
@@ -179,7 +180,7 @@ export class ThermostatTileComponent implements OnInit, OnChanges, OnDestroy {
 
   private commitTarget(value: number): void {
     this.tapOutstanding = false;
-    if (value === this.thermostat.targetTemp) {
+    if (value === userTarget(this.thermostat)) {
       // Hoch und wieder runter getippt: kein Befehl noetig.
       this.pendingTarget = null;
       return;

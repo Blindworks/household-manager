@@ -10,6 +10,7 @@ import com.household.manager.flowengine.model.NodeConfig;
 import com.household.manager.tapo.hub.ThermostatMode;
 import com.household.manager.tapo.hub.ThermostatReading;
 import com.household.manager.thermostat.ThermostatService;
+import com.household.manager.thermostat.ThermostatSetpointService;
 import com.household.manager.thermostat.ThermostatStateCache;
 import com.household.manager.thermostat.ThermostatTargetValidator;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class ThermostatSetNodeHandler implements NodeHandler {
     static final Duration KEEP_AFTER_RESTORE = Duration.ofMinutes(15);
 
     private final ThermostatService thermostatService;
+    private final ThermostatSetpointService setpointService;
     private final ThermostatStateCache cache;
     private final Clock clock;
 
@@ -107,7 +109,7 @@ public class ThermostatSetNodeHandler implements NodeHandler {
         switch (config.string("action").orElseThrow()) {
             case OFF -> switchOff(id);
             case RESTORE -> restore(id);
-            case TARGET -> thermostatService.setTarget(id, targetCelsius(config).orElseThrow());
+            case TARGET -> setpointService.setTarget(id, targetCelsius(config).orElseThrow());
             default -> throw new IllegalStateException("Unbekannte action");
         }
         return NodeResult.single(message);
@@ -146,6 +148,12 @@ public class ThermostatSetNodeHandler implements NodeHandler {
         Optional<ThermostatReading> current = currentReading(id).filter(reading -> reading.targetTemp() != null);
         if (current.isPresent() && current.get().mode() != ThermostatMode.OFF) {
             log.info("Thermostat {} wurde zwischenzeitlich eingeschaltet, restore laesst es unveraendert", id);
+            rememberedTargets.remove(id);
+            return;
+        }
+        if (setpointService.hasRoomRegulation(id)) {
+            // Mit Raumregelung zaehlt das Raum-Soll, nicht der gemerkte Wert am Heizkoerper.
+            setpointService.setMode(id, ThermostatMode.MANUAL);
             rememberedTargets.remove(id);
             return;
         }

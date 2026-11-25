@@ -113,17 +113,6 @@ export class ThermostatMock {
     return of({ ...thermostat });
   }
 
-  setRoomTarget(id: number, roomTarget: number | null): Observable<Thermostat> {
-    const thermostat = this.thermostats.find(t => t.id === id);
-    if (!thermostat) {
-      return throwError(() => new HttpErrorResponse({
-        status: 404, error: { message: 'Thermostat nicht gefunden.' }
-      }));
-    }
-    thermostat.roomTarget = roomTarget;
-    return of({ ...thermostat });
-  }
-
   rename(id: number, name: string): Observable<Thermostat> {
     const thermostat = this.thermostats.find(t => t.id === id);
     if (!thermostat) {

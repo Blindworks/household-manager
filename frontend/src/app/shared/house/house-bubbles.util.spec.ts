@@ -2,7 +2,8 @@ import { EntityState } from '../../models/entity-state.model';
 import { TABLET_VIEWS } from '../tablet-views';
 import { HOUSE_DEVICES } from './house-devices';
 import {
-  bubbleTarget, buildDeviceBubbles, buildOutdoorBubbles, buildRoomBubble, parseLocalTimestamp
+  bubbleTarget, buildDeviceBubbles, buildOutdoorBubbles, buildRoomBubble, parseLocalTimestamp,
+  thermostatTargetLine, thermostatTargetValue
 } from './house-bubbles.util';
 
 const NOW = new Date(2026, 10, 5, 10, 0).getTime();
@@ -262,6 +263,27 @@ describe('house-bubbles.util', () => {
       for (const kind of ['waste', 'switch', 'contact', 'motion', 'button', 'door'] as const) {
         expect(bubbleTarget(kind, true)).toBe('/');
       }
+    });
+  });
+
+  describe('thermostatTargetValue', () => {
+    const ID = 'sensor.thermostat_3_target';
+
+    it('nimmt mit Raumregelung das Raum-Soll statt des Werts am Heizkoerper', () => {
+      const entities = mapOf(entity(ID, '25.5', 1, { roomTarget: 21 }));
+      expect(thermostatTargetValue(entities, ID)).toBe(21);
+      expect(thermostatTargetLine(entities, ID, NOW).text).toBe('Soll 21°');
+    });
+
+    it('nimmt ohne Raum-Soll den State', () => {
+      const entities = mapOf(entity(ID, '20.5'));
+      expect(thermostatTargetValue(entities, ID)).toBe(20.5);
+      expect(thermostatTargetLine(entities, ID, NOW).text).toBe('Soll 20,5°');
+    });
+
+    it('liefert ohne lesbare Entitaet nichts', () => {
+      expect(thermostatTargetValue(mapOf(entity(ID, 'unavailable')), ID)).toBeNull();
+      expect(thermostatTargetLine(mapOf(), ID, NOW).text).toBe('–');
     });
   });
 });

@@ -67,6 +67,21 @@ function isTargetReached(thermostat: Thermostat): boolean {
   return currentTemp !== null && targetTemp !== null && currentTemp >= targetTemp;
 }
 
+/**
+ * Sollwert, den der Mensch gewaehlt hat. Mit Raumfuehler und eingeschaltetem Thermostat ist das
+ * das Raum-Soll: das Backend stellt den Wert am Heizkoerper so nach, dass der Raum es erreicht
+ * (der Heizkoerper-Wert liegt dann meist hoeher und waere als Anzeige verwirrend). Sonst der
+ * Sollwert am Thermostat. Einzige Definition fuer die Kacheln.
+ */
+export function userTarget(thermostat: Thermostat): number | null {
+  const regulated = !!thermostat.roomSensorId
+    && thermostat.roomTarget != null
+    && thermostat.mode === 'MANUAL'
+    && thermostat.targetTemp !== null
+    && thermostat.targetTemp > THERMOSTAT_MIN_TARGET;
+  return regulated ? thermostat.roomTarget! : thermostat.targetTemp;
+}
+
 /** Anteil von 5 bis 30 Grad fuer den Bogen, null wenn kein Wert vorliegt. */
 export function arcFraction(target: number | null): number | null {
   if (target === null) {

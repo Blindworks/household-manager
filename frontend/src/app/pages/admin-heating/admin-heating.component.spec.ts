@@ -20,7 +20,7 @@ describe('AdminHeatingComponent', () => {
   let temperatures: jasmine.SpyObj<TemperatureService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<ThermostatService>('ThermostatService', ['list', 'setHub', 'rename', 'setRoomSensor', 'setRoomTarget']);
+    api = jasmine.createSpyObj<ThermostatService>('ThermostatService', ['list', 'setHub', 'rename', 'setRoomSensor']);
     api.list.and.returnValue(of([]));
     temperatures = jasmine.createSpyObj<TemperatureService>('TemperatureService', ['getCurrent']);
     temperatures.getCurrent.and.returnValue(of([
@@ -152,43 +152,6 @@ describe('AdminHeatingComponent', () => {
       fixture.detectChanges();
       expect(select.value).toBe('ble:9');
       expect(select.selectedOptions[0].textContent).toContain('nicht gefunden');
-    });
-  });
-
-  describe('Raum-Soll', () => {
-    function show(list: Thermostat[]): HTMLSelectElement {
-      fixture.componentInstance['show'](list);
-      fixture.detectChanges();
-      return el.querySelector('[data-test="room-target"]') as HTMLSelectElement;
-    }
-
-    it('ist ohne Raumfuehler gesperrt', () => {
-      expect(show([WOHNZIMMER]).disabled).toBeTrue();
-    });
-
-    it('speichert die Auswahl als Zahl', () => {
-      const withSensor = { ...WOHNZIMMER, roomSensorId: 'dirigera:3' };
-      api.setRoomTarget.and.returnValue(of({ ...withSensor, roomTarget: 21.5 }));
-      const select = show([withSensor]);
-      expect(select.disabled).toBeFalse();
-      select.value = '21.5';
-      select.dispatchEvent(new Event('change'));
-      expect(api.setRoomTarget).toHaveBeenCalledOnceWith(1, 21.5);
-      expect(fixture.componentInstance.thermostats()[0].roomTarget).toBe(21.5);
-    });
-
-    it('setzt die Auswahl bei einem Fehler zurueck', () => {
-      const withSensor = { ...WOHNZIMMER, roomSensorId: 'dirigera:3', roomTarget: 21 };
-      api.setRoomTarget.and.returnValue(throwError(() => new HttpErrorResponse({
-        status: 400, error: { message: 'Erst einen Raumfuehler zuordnen.' }
-      })));
-      const select = show([withSensor]);
-      fixture.detectChanges();
-      select.value = '';
-      select.dispatchEvent(new Event('change'));
-      expect(api.setRoomTarget).toHaveBeenCalledOnceWith(1, null);
-      expect(select.value).toBe('21');
-      expect(fixture.componentInstance.errorMessage()).toContain('Raumfuehler');
     });
   });
 });

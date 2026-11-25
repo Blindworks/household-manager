@@ -39,9 +39,15 @@ class AgentActionExecutorTest {
     @Mock TelegramNotificationService telegramNotificationService;
     @Mock PushNotificationService pushNotificationService;
     @Mock AuditService auditService;
+    @Mock com.household.manager.repository.ThermostatRepository thermostatRepository;
+    @Mock com.household.manager.thermostat.ThermostatRoomRegulator roomRegulator;
 
     AgentActionExecutor executor() {
-        return new AgentActionExecutor(thermostatService, switchQueryService, switchCommandService,
+        lenient().when(thermostatRepository.findById(anyLong())).thenAnswer(invocation -> java.util.Optional.of(
+                com.household.manager.model.entity.Thermostat.builder().id(invocation.getArgument(0)).name("T").build()));
+        var setpointService = new com.household.manager.thermostat.ThermostatSetpointService(
+                thermostatRepository, thermostatService, roomRegulator, auditService);
+        return new AgentActionExecutor(thermostatService, setpointService, switchQueryService, switchCommandService,
                 houseModeQueryService, manualEntityService, nukiLockService, telegramNotificationService,
                 pushNotificationService, auditService);
     }
@@ -131,5 +137,12 @@ class AgentActionExecutorTest {
     @Test void isSatisfiedFalseForNotify() {
         assertFalse(executor().isSatisfied(new AgentAction(ActionClass.NOTIFY, "push", Map.of("channel", "push", "message", "x"), "r", false)));
         verifyNoInteractions(pushNotificationService);
+    }
+
+    @Test void heatingWithRoomSensorComparesTheRoomTarget() {
+        when(thermostatService.list()).thenReturn(List.of(new ThermostatDto(3L, "Wohnzimmer", true, 24.0, 25.5, ThermostatMode.MANUAL, false, false, null, "dirigera:3", 21.0)));
+        ActionOutcome out = executor().execute(new AgentAction(ActionClass.HEATING, "3", Map.of("targetTemp", 21.0), "kalt", false));
+        assertTrue(out.alreadySatisfied());
+        verify(thermostatService, never()).setTarget(anyLong(), anyDouble());
     }
 }

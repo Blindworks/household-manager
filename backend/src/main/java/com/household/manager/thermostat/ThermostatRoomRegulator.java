@@ -91,9 +91,30 @@ public class ThermostatRoomRegulator {
         }
     }
 
-    /** Vergisst den Stand eines Thermostats, z. B. nach Aendern des Raum-Solls. */
+    /** Vergisst den Stand eines Thermostats, z. B. nach Entfernen des Raumfuehlers. */
     void forget(Long thermostatId) {
         memory.remove(thermostatId);
+    }
+
+    /**
+     * Regelt ein Thermostat sofort, nachdem jemand sein Raum-Soll geaendert hat (Regler am Tablet).
+     * Hebt eine Pause nach Handaenderung auf. Ist der Raumwert veraltet oder der Wert am Heizkoerper
+     * unbekannt, wird das Raum-Soll selbst geschrieben - der Nutzer soll sofort eine Wirkung sehen,
+     * der naechste regulaere Lauf rechnet den Versatz nach. Geschrieben wird unter dem aktuellen
+     * Audit-Aktor (dem Nutzer), nicht als Raumregelung.
+     */
+    ThermostatDto regulateNow(Thermostat thermostat) {
+        memory.remove(thermostat.getId());
+        Optional<ThermostatReading> reading = cache.find(thermostat.getId()).map(ThermostatStateCache.Entry::reading);
+        CurrentTemperatureReading room = loadRoomReadings().get(thermostat.getRoomSensorId());
+        Double thermostatTemp = reading.map(ThermostatReading::currentTemp).orElse(null);
+        double desired = isFresh(room, LocalDateTime.now(clock)) && thermostatTemp != null
+                ? RoomRegulationRule.setpoint(thermostat.getRoomTarget(), room.getTemperature().doubleValue(), thermostatTemp)
+                : thermostat.getRoomTarget();
+        Double before = reading.map(ThermostatReading::targetTemp).orElse(null);
+        ThermostatDto result = thermostatService.setTarget(thermostat.getId(), desired);
+        memory.put(thermostat.getId(), new Memory(desired, before, null));
+        return result;
     }
 
     private Map<String, CurrentTemperatureReading> loadRoomReadings() {

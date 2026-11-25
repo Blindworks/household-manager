@@ -237,4 +237,40 @@ class ThermostatRoomRegulatorTest {
             return instant;
         }
     }
+
+    @Test
+    void regulateNowSchreibtSofortMitVersatzUndHebtDiePauseAuf() {
+        thermostat(24.0, 22.0, ThermostatMode.MANUAL, true);
+        room("20.0", now());
+
+        regulator.regulateNow(bath);
+
+        // 22 + (24 - 20) = 26
+        verify(thermostatService).setTarget(7L, 26.0);
+    }
+
+    @Test
+    void regulateNowOhneFrischenRaumwertSchreibtDasRaumSoll() {
+        thermostat(24.0, 5.0, ThermostatMode.OFF, true);
+        room("20.0", now().minusHours(2));
+
+        regulator.regulateNow(bath);
+
+        verify(thermostatService).setTarget(7L, 22.0);
+    }
+
+    @Test
+    void nachRegulateNowZaehltDerGeschriebeneWertNichtAlsHandaenderung() {
+        thermostat(24.0, 22.0, ThermostatMode.MANUAL, true);
+        room("20.0", now());
+        regulator.regulateNow(bath);
+        thermostat(24.0, 26.0, ThermostatMode.MANUAL, true);
+        room("21.0", now());
+
+        regulator.regulate();
+
+        // 22 + (24 - 21) = 25: regelt weiter, keine Pause
+        verify(thermostatService).setTarget(7L, 25.0);
+    }
 }
+

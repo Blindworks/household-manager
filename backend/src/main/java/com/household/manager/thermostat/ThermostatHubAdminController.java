@@ -3,7 +3,6 @@ package com.household.manager.thermostat;
 import com.household.manager.thermostat.dto.HubRequest;
 import com.household.manager.thermostat.dto.RenameRequest;
 import com.household.manager.thermostat.dto.RoomSensorRequest;
-import com.household.manager.thermostat.dto.RoomTargetRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,10 +41,5 @@ public class ThermostatHubAdminController {
     public ResponseEntity<ThermostatDto> setRoomSensor(@PathVariable Long id,
                                                        @Valid @RequestBody RoomSensorRequest request) {
         return ResponseEntity.ok(roomSensorService.setRoomSensor(id, request.sensorId()));
-    }
-
-    @PutMapping("/{id}/room-target")
-    public ResponseEntity<ThermostatDto> setRoomTarget(@PathVariable Long id, @RequestBody RoomTargetRequest request) {
-        return ResponseEntity.ok(roomSensorService.setRoomTarget(id, request.roomTarget()));
     }
 }

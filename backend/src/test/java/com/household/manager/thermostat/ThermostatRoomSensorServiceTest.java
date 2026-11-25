@@ -104,41 +104,55 @@ class ThermostatRoomSensorServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> service.setRoomSensor(7L, "dirigera:3"));
     }
 
+    private ThermostatStateCache cacheWith(double target) {
+        ThermostatStateCache cache = new ThermostatStateCache();
+        cache.applyHubReadings(List.of(living), List.of(new com.household.manager.tapo.hub.ThermostatReading(
+                "KE-1", "Wohnzimmerfenster", true, 24.0, target,
+                com.household.manager.tapo.hub.ThermostatMode.MANUAL, false, false)), LocalDateTime.now());
+        return cache;
+    }
+
     @Test
-    void setztRaumSollMitFuehlerVergisstRegelstandUndAuditiert() {
-        living.setRoomSensorId("dirigera:3");
+    void erstesZuordnenUebernimmtDenAktuellenSollwertAlsRaumSoll() {
+        service = new ThermostatRoomSensorService(repository, cacheWith(21.0), temperatureSeriesService,
+                auditService, regulator);
 
-        ThermostatDto dto = service.setRoomTarget(1L, 21.5);
+        service.setRoomSensor(1L, "dirigera:3");
 
-        assertEquals(21.5, living.getRoomTarget());
-        assertEquals(21.5, dto.roomTarget());
+        assertEquals(21.0, living.getRoomTarget());
         verify(regulator).forget(1L);
-        verify(auditService).record("thermostat.room-target", "Wohnzimmerfenster (1) -> 21.5");
     }
 
     @Test
-    void raumSollOhneFuehlerWirdAbgelehnt() {
-        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 21.0));
-        verify(repository, never()).save(any());
-    }
+    void ausgeschaltetesThermostatBekommtNochKeinRaumSoll() {
+        service = new ThermostatRoomSensorService(repository, cacheWith(5.0), temperatureSeriesService,
+                auditService, regulator);
 
-    @Test
-    void raumSollAusserhalbDesRastersWirdAbgelehnt() {
-        living.setRoomSensorId("dirigera:3");
-        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 21.3));
-        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 9.5));
-        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 28.5));
-        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, Double.NaN));
-        verify(repository, never()).save(any());
-    }
-
-    @Test
-    void nullBeendetDieRaumregelungAuchOhneFuehler() {
-        living.setRoomTarget(21.0);
-
-        service.setRoomTarget(1L, null);
+        service.setRoomSensor(1L, "dirigera:3");
 
         assertNull(living.getRoomTarget());
-        verify(auditService).record("thermostat.room-target", "Wohnzimmerfenster (1) -> keine Raumregelung");
+    }
+
+    @Test
+    void fuehlerwechselBehaeltDasRaumSoll() {
+        living.setRoomSensorId("ble:1");
+        living.setRoomTarget(22.5);
+        service = new ThermostatRoomSensorService(repository, cacheWith(25.0), temperatureSeriesService,
+                auditService, regulator);
+
+        service.setRoomSensor(1L, "dirigera:3");
+
+        assertEquals(22.5, living.getRoomTarget());
+    }
+
+    @Test
+    void entfernenDesFuehlersBeendetDieRaumregelung() {
+        living.setRoomSensorId("dirigera:3");
+        living.setRoomTarget(21.0);
+
+        service.setRoomSensor(1L, null);
+
+        assertNull(living.getRoomTarget());
+        verify(regulator).forget(1L);
     }
 }
