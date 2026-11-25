@@ -25,6 +25,8 @@ export interface CommunicatorRequestRow {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   problem: boolean;
+  /** Geschätzt in US-Dollar; null bei unbekanntem Modell. */
+  costUsd: number | null;
 }
 
 export interface CommunicatorRequestPage {
@@ -61,6 +63,29 @@ export interface CommunicatorTokens {
   cacheWrite: number;
 }
 
+export interface CommunicatorCost {
+  totalUsd: number;
+  todayUsd: number;
+  monthUsd: number | null;
+  perRequestUsd: number | null;
+  unpriced: number;
+  models: { model: string; requests: number; costUsd: number }[];
+}
+
+export interface CommunicatorModelChoice {
+  id: string;
+  label: string;
+  inputPrice: number;
+  cacheWritePrice: number;
+  cacheReadPrice: number;
+  outputPrice: number;
+}
+
+export interface CommunicatorModelSettings {
+  current: string;
+  models: CommunicatorModelChoice[];
+}
+
 export interface CommunicatorCount {
   name: string;
   count: number;
@@ -71,6 +96,7 @@ export interface CommunicatorLogSummary {
   problems: number;
   byStatus: Partial<Record<CommunicatorRequestStatus, number>>;
   tokens: CommunicatorTokens;
+  cost: CommunicatorCost;
   medianTotalMs: number | null;
   maxTotalMs: number | null;
   averageAiCalls: number;
@@ -84,7 +110,7 @@ export interface CommunicatorLogSummary {
     maxMs: number | null;
     realtimeFactor: number | null;
   };
-  days: { date: string; requests: number; problems: number; tokens: CommunicatorTokens }[];
+  days: { date: string; requests: number; problems: number; tokens: CommunicatorTokens; costUsd: number }[];
   endpoints: CommunicatorCount[];
   errors: CommunicatorCount[];
 }

@@ -1633,9 +1633,12 @@ class SecurityRulesTest {
     @Test
     @WithMockUser(roles = "MEMBER")
     void communicatorProtokollIstFuerMemberVerboten() throws Exception {
-        for (String path : List.of("summary", "requests", "requests/1", "health")) {
+        for (String path : List.of("summary", "requests", "requests/1", "health", "model")) {
             mockMvc.perform(get("/v1/admin/communicator/" + path)).andExpect(status().isForbidden());
         }
+        mockMvc.perform(put("/v1/admin/communicator/model").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"model\":\"claude-opus-5-5\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

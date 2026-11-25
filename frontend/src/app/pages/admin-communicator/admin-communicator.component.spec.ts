@@ -2,14 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { CommunicatorHealth, CommunicatorRequestDetail, CommunicatorRequestRow } from '../../models/communicator-log.model';
 import { CommunicatorLogService } from '../../services/communicator-log.service';
-import { cacheShare, cardLines, formatMs, requestTone, whisperState } from '../../shared/communicator-log-view.util';
+import { cacheShare, cardLines, formatMs, formatUsd, requestTone, whisperState } from '../../shared/communicator-log-view.util';
 import { AdminCommunicatorComponent } from './admin-communicator.component';
 
 const row: CommunicatorRequestRow = {
   id: 1, askedAt: '2026-11-25T09:00:00', actor: 'a', voice: true, status: 'OK', question: 'Wie warm?', error: null,
   model: 'm', audioBytes: 2048, audioType: 'audio/mp4', audioMs: 2000, speechMs: 900, totalMs: 5200, aiCalls: 2,
   toolCalls: 2, toolFailures: 0, inputTokens: 10, outputTokens: 20, cacheReadTokens: 900, cacheWriteTokens: 90,
-  problem: false
+  problem: false, costUsd: 0.0606
 };
 const detail: CommunicatorRequestDetail = {
   row,
@@ -34,18 +34,26 @@ describe('AdminCommunicatorComponent', () => {
   let fixture: ComponentFixture<AdminCommunicatorComponent>;
 
   beforeEach(() => {
-    service = jasmine.createSpyObj('CommunicatorLogService', ['getSummary', 'getRequests', 'getRequest', 'getHealth']);
+    service = jasmine.createSpyObj('CommunicatorLogService', ['getSummary', 'getRequests', 'getRequest', 'getHealth',
+      'getModel', 'saveModel']);
     service.getHealth.and.returnValue(of({
       enabled: true, aiConfigured: true, aiModel: 'm', endpoints: 312, catalogChars: 27000, speech
     }));
     service.getSummary.and.returnValue(of({
       requests: 1, problems: 0, byStatus: { OK: 1 }, tokens: { input: 10, output: 20, cacheRead: 900, cacheWrite: 90 },
+      cost: { totalUsd: 0.0606, todayUsd: 0.0606, monthUsd: 1.818, perRequestUsd: 0.0606, unpriced: 0, models: [] },
       medianTotalMs: 5200, maxTotalMs: 5200, averageAiCalls: 2, toolCalls: 2, toolFailures: 0,
       speech: { recordings: 1, notUnderstood: 0, failures: 0, medianMs: 900, maxMs: 900, realtimeFactor: 0.45 },
       days: [], endpoints: [{ name: '/v1/thermostats', count: 3 }], errors: []
     }));
     service.getRequests.and.returnValue(of({ content: [row], totalElements: 1, page: 0, size: 30 }));
     service.getRequest.and.returnValue(of(detail));
+    const models = [
+      { id: 'claude-haiku-5-5', label: 'Haiku 5.5', inputPrice: 0.1, cacheWritePrice: 0.125, cacheReadPrice: 0.01, outputPrice: 0.5 },
+      { id: 'claude-sonnet-4-5', label: 'Sonnet 4.5', inputPrice: 3, cacheWritePrice: 3.75, cacheReadPrice: 0.3, outputPrice: 15 }
+    ];
+    service.getModel.and.returnValue(of({ current: 'claude-sonnet-4-5', models }));
+    service.saveModel.and.callFake(model => of({ current: model, models }));
     TestBed.configureTestingModule({ providers: [{ provide: CommunicatorLogService, useValue: service }] });
     fixture = TestBed.createComponent(AdminCommunicatorComponent);
     fixture.detectChanges();
@@ -78,6 +86,26 @@ describe('AdminCommunicatorComponent', () => {
     expect(fixture.componentInstance.detail).toBeNull();
   });
 
+  it('zeigt Kosten und speichert das gewählte Modell', async () => {
+    expect(text()).toContain('6,1 ct');
+    expect(text()).toContain('1,82 $ in 30 Tagen');
+    expect(text()).toContain('Haiku 5.5 – 0,1 $ Eingabe, 0,5 $ Ausgabe');
+    const component = fixture.componentInstance;
+    component.selectedModel = 'claude-haiku-5-5';
+    component.saveModel();
+    fixture.detectChanges();
+    expect(service.saveModel).toHaveBeenCalledOnceWith('claude-haiku-5-5');
+    expect(component.health?.aiModel).toBe('claude-haiku-5-5');
+    expect(text()).toContain('Gespeichert');
+  });
+
+  it('meldet ein gescheitertes Speichern des Modells', () => {
+    service.saveModel.and.returnValue(throwError(() => new Error('x')));
+    fixture.componentInstance.saveModel();
+    fixture.detectChanges();
+    expect(text()).toContain('konnte nicht gespeichert werden');
+  });
+
   it('meldet Ladefehler', () => {
     service.getRequests.and.returnValue(throwError(() => new Error('x')));
     fixture.componentInstance.reload();
@@ -93,6 +121,9 @@ describe('AdminCommunicatorComponent', () => {
     expect(cacheShare({ input: 10, output: 5, cacheRead: 90, cacheWrite: 0 })).toBe(90);
     expect(formatMs(4200)).toBe('4,2 s');
     expect(formatMs(null)).toBe('–');
+    expect(formatUsd(0.0026)).toBe('0,26 ct');
+    expect(formatUsd(0)).toBe('0,0 ct');
+    expect(formatUsd(null)).toBe('–');
     expect(cardLines(detail.details!.cards[0]).length).toBe(2);
   });
 });

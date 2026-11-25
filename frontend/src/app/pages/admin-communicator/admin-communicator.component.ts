@@ -3,12 +3,13 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import {
-  CommunicatorHealth, CommunicatorLogSummary, CommunicatorRequestDetail, CommunicatorRequestRow,
-  CommunicatorRequestStatus
+  CommunicatorHealth, CommunicatorLogSummary, CommunicatorModelSettings, CommunicatorRequestDetail,
+  CommunicatorRequestRow, CommunicatorRequestStatus
 } from '../../models/communicator-log.model';
 import { CommunicatorLogQuery, CommunicatorLogService } from '../../services/communicator-log.service';
 import {
-  cacheShare, cardLines, formatCount, formatDecimal, formatMs, requestStatusLabel, requestTone, rowTokens, totalTokens, whisperState
+  cacheShare, cardLines, formatCount, formatDecimal, formatMs, formatUsd, modelOptionLabel, requestStatusLabel,
+  requestTone, rowTokens, totalTokens, whisperState
 } from '../../shared/communicator-log-view.util';
 
 /** Einblick in den Communicator: Zustand, Kennzahlen und der Verlauf jeder Anfrage. Nur lesend. */
@@ -26,6 +27,8 @@ export class AdminCommunicatorComponent implements OnInit, OnDestroy {
   readonly formatMs = formatMs;
   readonly formatCount = formatCount;
   readonly formatDecimal = formatDecimal;
+  readonly formatUsd = formatUsd;
+  readonly modelOptionLabel = modelOptionLabel;
   readonly totalTokens = totalTokens;
   readonly cacheShare = cacheShare;
   readonly rowTokens = rowTokens;
@@ -41,6 +44,11 @@ export class AdminCommunicatorComponent implements OnInit, OnDestroy {
   health: CommunicatorHealth | null = null;
   healthLoading = false;
   healthError: string | null = null;
+  modelSettings: CommunicatorModelSettings | null = null;
+  selectedModel = '';
+  modelSaving = false;
+  modelMessage: string | null = null;
+  modelError: string | null = null;
   summary: CommunicatorLogSummary | null = null;
   summaryError: string | null = null;
   rows: CommunicatorRequestRow[] = [];
@@ -69,6 +77,7 @@ export class AdminCommunicatorComponent implements OnInit, OnDestroy {
 
   reload(): void {
     this.loadHealth();
+    this.loadModel();
     this.apply();
   }
 
@@ -113,15 +122,54 @@ export class AdminCommunicatorComponent implements OnInit, OnDestroy {
       .map(([status, count]) => ({ status: status as CommunicatorRequestStatus, count: count ?? 0 }));
   }
 
-  /** Balkenhöhe in Prozent des stärksten Tages. */
-  barHeight(tokens: number): number {
-    const max = Math.max(1, ...(this.summary?.days ?? []).map(day => totalTokens(day.tokens)));
-    return (tokens / max) * 100;
+  /** Balkenhöhe in Prozent des teuersten Tages. */
+  barHeight(costUsd: number): number {
+    const max = Math.max(0, ...(this.summary?.days ?? []).map(day => day.costUsd));
+    return max > 0 ? (costUsd / max) * 100 : 0;
   }
 
   perRequest(): number {
     const summary = this.summary;
     return summary && summary.requests > 0 ? Math.round(totalTokens(summary.tokens) / summary.requests) : 0;
+  }
+
+  saveModel(): void {
+    this.modelSaving = true;
+    this.modelMessage = null;
+    this.modelError = null;
+    this.service.saveModel(this.selectedModel).subscribe({
+      next: settings => {
+        this.modelSaving = false;
+        this.useModel(settings);
+        this.modelMessage = 'Gespeichert, gilt ab der nächsten Frage.';
+      },
+      error: () => {
+        this.modelSaving = false;
+        this.modelError = 'Das Modell konnte nicht gespeichert werden.';
+      }
+    });
+  }
+
+  currentModelListed(): boolean {
+    return this.modelSettings?.models.some(model => model.id === this.modelSettings?.current) ?? false;
+  }
+
+  private loadModel(): void {
+    this.service.getModel().subscribe({
+      next: settings => {
+        this.modelError = null;
+        this.useModel(settings);
+      },
+      error: () => (this.modelError = 'Die Modellauswahl konnte nicht geladen werden.')
+    });
+  }
+
+  private useModel(settings: CommunicatorModelSettings): void {
+    this.modelSettings = settings;
+    this.selectedModel = settings.current;
+    if (this.health) {
+      this.health = { ...this.health, aiModel: settings.current };
+    }
   }
 
   private loadHealth(): void {

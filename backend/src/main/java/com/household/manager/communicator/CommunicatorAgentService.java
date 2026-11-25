@@ -7,6 +7,7 @@ import com.household.manager.ai.AnthropicApiClient;
 import com.household.manager.ai.AnthropicMessage;
 import com.household.manager.ai.AnthropicRequest;
 import com.household.manager.ai.AnthropicResponse;
+import com.household.manager.ai.ClaudeModels;
 import com.household.manager.ai.ToolResult;
 import com.household.manager.communicator.CommunicatorDtos.Card;
 import com.household.manager.model.entity.CommunicatorRequest.Status;
@@ -77,6 +78,7 @@ public class CommunicatorAgentService {
             """;
 
     private final CommunicatorProperties properties;
+    private final CommunicatorSettingsService settings;
     private final AiProperties aiProperties;
     private final AnthropicApiClient anthropicApiClient;
     private final ApiCatalog catalog;
@@ -101,8 +103,9 @@ public class CommunicatorAgentService {
             trace.problem(Status.UNAVAILABLE, NOT_CONFIGURED_TEXT);
             return List.of(CardBuilder.message("error", "Nicht eingerichtet", NOT_CONFIGURED_TEXT));
         }
-        trace.model(properties.getModel());
-        Run run = new Run(caller, trace);
+        String model = settings.getModel();
+        trace.model(model);
+        Run run = new Run(model, caller, trace);
         try {
             run.execute(question);
         } catch (Exception ex) {
@@ -122,12 +125,16 @@ public class CommunicatorAgentService {
 
     /** Ein Lauf: gelesene Antworten (r1, r2, …) und gezeigte Karten. */
     private final class Run {
+        private final String model;
+        private final String effort;
         private final ApiGateway.Caller caller;
         private final CommunicatorTrace trace;
         private final Map<String, JsonNode> results = new HashMap<>();
         private final List<Card> cards = new ArrayList<>();
 
-        private Run(ApiGateway.Caller caller, CommunicatorTrace trace) {
+        private Run(String model, ApiGateway.Caller caller, CommunicatorTrace trace) {
+            this.model = model;
+            this.effort = ClaudeModels.find(model).map(ClaudeModels.Model::effort).orElse(null);
             this.caller = caller;
             this.trace = trace;
         }
@@ -135,11 +142,17 @@ public class CommunicatorAgentService {
         private void execute(String question) {
             List<AnthropicMessage> messages = new ArrayList<>();
             messages.add(AnthropicMessage.user(question));
+            // Einmal je Lauf: neuere Modelle binden ihre Gedanken an einen unveraenderten Gespraechsanfang.
+            List<Map<String, Object>> system = system();
             long deadline = System.nanoTime() + BUDGET.toNanos();
             for (int i = 0; i < properties.getMaxToolIterations() && System.nanoTime() < deadline; i++) {
-                AnthropicResponse response = askClaude(i + 1, messages);
+                AnthropicResponse response = askClaude(i + 1, system, messages);
                 if ("max_tokens".equals(response.stopReason())) {
                     trace.problem(Status.OK, "Antwort am Token-Limit (max_tokens) abgeschnitten");
+                }
+                if ("refusal".equals(response.stopReason())) {
+                    trace.problem(Status.AI_ERROR, "Claude hat die Anfrage abgelehnt (refusal)");
+                    return;
                 }
                 if (!response.wantsToolUse()) {
                     if (cards.isEmpty() && !response.text().isBlank()) {
@@ -167,11 +180,12 @@ public class CommunicatorAgentService {
                     : "Alle " + properties.getMaxToolIterations() + " Runden aufgebraucht");
         }
 
-        private AnthropicResponse askClaude(int round, List<AnthropicMessage> messages) {
+        private AnthropicResponse askClaude(int round, List<Map<String, Object>> system,
+                                            List<AnthropicMessage> messages) {
             long start = System.nanoTime();
             try {
                 AnthropicResponse response = anthropicApiClient.createMessage(new AnthropicRequest(
-                        properties.getModel(), properties.getMaxTokens(), system(), messages, CommunicatorTools.ALL));
+                        model, properties.getMaxTokens(), system, messages, CommunicatorTools.ALL, effort));
                 trace.claude(round, response, System.nanoTime() - start);
                 return response;
             } catch (RuntimeException ex) {

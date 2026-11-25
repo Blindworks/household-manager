@@ -42,6 +42,29 @@
     </section>
   }
 
+  <section class="admin-communicator__card admin-communicator__model">
+    <h2>Modell für neue Fragen</h2>
+    @if (modelSettings; as m) {
+      <form class="admin-communicator__filter" (ngSubmit)="saveModel()">
+        <select name="model" [(ngModel)]="selectedModel" [disabled]="modelSaving" aria-label="Claude-Modell">
+          @if (!currentModelListed()) {
+            <option [value]="m.current">{{ m.current }} (aus der Konfiguration)</option>
+          }
+          @for (model of m.models; track model.id) {
+            <option [value]="model.id">{{ modelOptionLabel(model) }}</option>
+          }
+        </select>
+        <button type="submit" [disabled]="modelSaving || selectedModel === m.current">Speichern</button>
+      </form>
+    }
+    @if (modelMessage) {
+      <p class="admin-communicator__muted" role="status">{{ modelMessage }}</p>
+    }
+    @if (modelError) {
+      <p class="admin-communicator__problem" role="alert">{{ modelError }}</p>
+    }
+  </section>
+
   <div class="admin-communicator__ranges" role="group" aria-label="Zeitraum">
     @for (range of ranges; track range.days) {
       <button type="button" [class.ghost]="days !== range.days" [attr.aria-pressed]="days === range.days"
@@ -61,6 +84,21 @@
         @for (entry of statusEntries(); track entry.status) {
           <p class="admin-communicator__muted">{{ entry.count }} × {{ statusLabel(entry.status) }}</p>
         }
+      </article>
+
+      <article class="admin-communicator__card">
+        <h2>Kosten</h2>
+        <p class="admin-communicator__number">{{ formatUsd(s.cost.totalUsd) }}</p>
+        <p class="admin-communicator__muted">Heute: {{ formatUsd(s.cost.todayUsd) }}</p>
+        <p class="admin-communicator__muted">Ø {{ formatUsd(s.cost.perRequestUsd) }} je Anfrage</p>
+        <p class="admin-communicator__muted">Hochrechnung: {{ formatUsd(s.cost.monthUsd) }} in 30 Tagen</p>
+        @for (entry of s.cost.models; track entry.model) {
+          <p class="admin-communicator__muted">{{ entry.model }}: {{ formatUsd(entry.costUsd) }} ({{ entry.requests }})</p>
+        }
+        @if (s.cost.unpriced > 0) {
+          <p class="admin-communicator__problem">{{ s.cost.unpriced }} Anfragen ohne bekannten Preis fehlen in der Summe</p>
+        }
+        <p class="admin-communicator__muted">Geschätzt nach Listenpreis in US-Dollar, nur Communicator</p>
       </article>
 
       <article class="admin-communicator__card">
@@ -101,13 +139,13 @@
 
     @if (s.days.length > 0) {
       <section>
-        <h2>Tokens je Tag</h2>
+        <h2>Kosten je Tag</h2>
         <div class="admin-communicator__bars">
           @for (day of s.days; track day.date) {
             <div class="admin-communicator__bar-column">
-              <span class="admin-communicator__bar-value">{{ formatCount(totalTokens(day.tokens)) }}</span>
+              <span class="admin-communicator__bar-value">{{ formatUsd(day.costUsd) }}</span>
               <div class="admin-communicator__bar-track">
-                <div class="admin-communicator__bar" [style.height.%]="barHeight(totalTokens(day.tokens))"></div>
+                <div class="admin-communicator__bar" [style.height.%]="barHeight(day.costUsd)"></div>
               </div>
               <span>{{ day.date | date: 'dd.MM.' }}</span>
               <span class="admin-communicator__muted">{{ day.requests }} Anfr.</span>
@@ -160,6 +198,9 @@
             {{ row.askedAt | date: 'dd.MM. HH:mm:ss' }} · {{ row.actor || '–' }} · {{ row.voice ? 'Sprache' : 'Text' }}
             · {{ statusLabel(row.status) }} · {{ formatMs(row.totalMs) }}
             · {{ formatCount(totalTokens(rowTokens(row))) }} Tokens
+            @if (totalTokens(rowTokens(row)) > 0) {
+              · {{ formatUsd(row.costUsd) }} ({{ row.model }})
+            }
           </span>
           @if (row.error) {
             <span class="admin-communicator__problem">{{ row.error }}</span>
