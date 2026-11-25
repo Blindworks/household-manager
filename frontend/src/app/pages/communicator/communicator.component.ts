@@ -5,9 +5,10 @@ import { Observable } from 'rxjs';
 import { CommunicatorAnswer, CommunicatorCard } from '../../models/communicator.model';
 import { CommunicatorService } from '../../services/communicator.service';
 import { CommunicatorCardComponent } from './communicator-card/communicator-card.component';
+import { SignalTones } from './signal-tones';
 import { VoiceRecorder } from './voice-recorder';
 
-type Phase = 'idle' | 'recording' | 'thinking';
+type Phase = 'idle' | 'starting' | 'recording' | 'thinking';
 
 /** Eine Frage ist kurz; nach dieser Zeit endet die Aufnahme von selbst. */
 export const MAX_RECORDING_MS = 30_000;
@@ -33,6 +34,7 @@ interface ShownCard {
 export class CommunicatorComponent implements OnInit, OnDestroy {
   private readonly service = inject(CommunicatorService);
   private readonly recorder = new VoiceRecorder();
+  private readonly tones = new SignalTones();
 
   readonly phase = signal<Phase>('idle');
   readonly cards = signal<ShownCard[]>([]);
@@ -64,10 +66,11 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearAutoStop();
     this.recorder.cancel();
+    this.tones.close();
   }
 
   onMicTap(): void {
-    if (this.phase() === 'thinking') {
+    if (this.phase() === 'thinking' || this.phase() === 'starting') {
       return;
     }
     if (this.phase() === 'recording') {
@@ -79,9 +82,14 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
 
   private async startRecording(): Promise<void> {
     this.error.set(null);
+    this.phase.set('starting');
+    this.tones.unlock();
     try {
-      await this.recorder.start();
+      if (!(await this.recorder.start(() => this.tones.start()))) {
+        return;
+      }
     } catch {
+      this.phase.set('idle');
       this.error.set('Kein Zugriff auf das Mikrofon. Bitte in den Einstellungen erlauben.');
       return;
     }
@@ -91,7 +99,9 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
 
   private async stopAndSend(): Promise<void> {
     this.clearAutoStop();
+    this.phase.set('starting');
     const recording = await this.recorder.stop();
+    void this.tones.stop();
     if (!recording) {
       this.phase.set('idle');
       return;
