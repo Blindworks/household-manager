@@ -39,21 +39,26 @@
       <button type="button" class="mic" [class]="'mic mic--' + phase()" (click)="onMicTap()"
               [disabled]="phase() === 'thinking' || phase() === 'starting'"
               [attr.aria-label]="phase() === 'recording' ? 'Aufnahme beenden' : 'Sprechen'">
-        <span class="material-symbols-outlined">
-          {{ phase() === 'recording' ? 'stop' : phase() === 'thinking' ? 'more_horiz' : 'mic' }}
-        </span>
+        @if (phase() === 'thinking') {
+          <app-thinking-house class="mic__house"></app-thinking-house>
+        } @else {
+          <span class="material-symbols-outlined">{{ phase() === 'recording' ? 'stop' : 'mic' }}</span>
+        }
       </button>
       <p class="communicator__hint">
         @switch (phase()) {
           @case ('recording') { Ich höre zu – zum Senden tippen }
           @case ('starting') { Einen Moment … }
-          @case ('thinking') { Einen Moment … }
+          @case ('thinking') { Ich schaue nach … }
           @default { Tippen und sprechen }
         }
       </p>
     } @else {
+      @if (phase() === 'thinking') {
+        <app-thinking-house class="communicator__house"></app-thinking-house>
+      }
       <p class="communicator__hint">
-        @if (phase() === 'thinking') { Einen Moment … } @else { Spracherkennung nicht verfügbar – bitte tippen }
+        @if (phase() === 'thinking') { Ich schaue nach … } @else { Spracherkennung nicht verfügbar – bitte tippen }
       </p>
     }
   </footer>
