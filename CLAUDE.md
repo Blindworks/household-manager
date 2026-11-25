@@ -354,6 +354,7 @@ docker-compose down
 - Manual announcements, scheduled announcements, and an internal `AlexaAnnouncementService` building block for future automatic notifications
 - TTS via `/api/behaviors/preview`: `Alexa.Speak` (single device, no chime) and `AlexaAnnouncement` (one or more devices, with chime)
 - Device identity via stable `serialNumber`; the whole Amazon-specific, brittle flow is isolated in `AlexaAuthService`/`AlexaApiClient`
+- **Kurzer Ton statt Ansage (Flow-Node `alexa-sound`, seit 2026-11-25, Anlass: Bestätigungston für den Flur-Knopf):** Sidecar `POST /sound` (`{serialNumbers, sound}`) schickt **eine** Sequenz mit `ParallelNode` und je Gerät einem `Alexa.Sound`-Knoten (`sound.js`), alle Echos spielen gleichzeitig, ein Aufruf an Amazon. Der Node wartet **nicht** auf Amazon (eigener Ein-Thread-Executor `alexaSoundExecutor`, Queue 5): die Nachricht geht sofort weiter, ein Ton verzögert nie das Verriegeln. Kehrseite: ein gescheiterter Ton ist nur ein WARN im Systemprotokoll, kein ERROR des Laufs. Für schnellste Rückmeldung direkt hinter den Trigger hängen. Sound-IDs aus Amazons Bibliothek (z. B. `amzn_sfx_doorbell_chime_01`) — **nie gegen die echte Alexa gelaufen**, welche IDs `Alexa.Sound` annimmt, zeigt erst der Realtest
 - Implementation in `backend/src/main/java/com/household/manager/alexa/`; frontend page under `frontend/src/app/pages/announcements/`
 
 ### Amazon Smart Air Quality Monitor

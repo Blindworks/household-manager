@@ -194,6 +194,17 @@ Platzhalter im Text: `{entityId}`, `{newState}`, `{oldState}`.
 | `mode` | ja | `SPEAK` (ein Gerät, ohne Gong) oder `ANNOUNCE` (mit Gong) |
 | `deviceSerials` | ja | nicht-leeres Array von Alexa-Seriennummern, z. B. `["G0000000000000000"]` |
 
+### `alexa-sound` — Alexa-Ton (1 Ausgang)
+Kurzer Ton aus Amazons Soundbibliothek auf allen Geräten gleichzeitig (ein Aufruf an Amazon, keine
+Sprachausgabe) — gedacht als sofortige Rückmeldung auf einen Knopfdruck. Die Nachricht geht sofort
+weiter, ohne auf Amazon zu warten; ein gescheiterter Ton steht nur als WARN im Systemprotokoll.
+Für schnellste Rückmeldung die Node **direkt hinter den Trigger** hängen, nicht hinter Bedingungen.
+
+| config | Pflicht | Wert |
+|--------|---------|------|
+| `sound` | ja | Sound-ID, z. B. `amzn_sfx_doorbell_chime_01` (nur Buchstaben, Ziffern, `_:/.-`) |
+| `deviceSerials` | ja | nicht-leeres Array von Alexa-Seriennummern |
+
 ### `switch-device` — Gerät schalten (1 Ausgang)
 
 | config | Pflicht | Wert |
