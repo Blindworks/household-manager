@@ -98,6 +98,20 @@ public class DirigeraPollingService {
         return status;
     }
 
+    /** Fehlergrund, wenn der Hub den Token ablehnt (widerrufen); einzige Definition des Texts. */
+    static final String TOKEN_REJECTED = "Hub lehnt Token ab – neu koppeln";
+    /** Fehlergrund, wenn sich das Hub-Zertifikat geändert hat (Firmware-Update). */
+    static final String CERTIFICATE_CHANGED = "Zertifikat geändert – neu koppeln";
+
+    /**
+     * Ob der letzte Poll an der Kopplung scheiterte (Token abgelehnt oder Zertifikat
+     * geändert) — beides heilt nur ein Neukoppeln. Ein nicht erreichbarer Hub zählt nicht.
+     */
+    public boolean needsRepairing() {
+        String error = status.lastError();
+        return TOKEN_REJECTED.equals(error) || CERTIFICATE_CHANGED.equals(error);
+    }
+
     @Scheduled(fixedDelayString = "${dirigera.poll-interval-ms:60000}", initialDelayString = "30000")
     public void poll() {
         try {
@@ -115,10 +129,10 @@ public class DirigeraPollingService {
                 devices = parser.parse(httpClient.getDevices(
                         settings.host(), settings.certSha256(), settings.accessToken()));
             } catch (DirigeraCertificateMismatchException e) {
-                fail("Zertifikat geändert – neu koppeln");
+                fail(CERTIFICATE_CHANGED);
                 return;
             } catch (DirigeraUnauthorizedException e) {
-                fail("Hub lehnt Token ab – neu koppeln");
+                fail(TOKEN_REJECTED);
                 return;
             } catch (RuntimeException e) {
                 fail(describe(e));

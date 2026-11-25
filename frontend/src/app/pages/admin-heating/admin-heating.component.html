@@ -23,7 +23,9 @@
     <h2>Thermostate</h2>
     <p class="admin-heating__hint">
       Der Fühler im Thermostat sitzt am Heizkörper. Steht im selben Raum ein Temperaturfühler,
-      zeigt die Heizungsansicht seinen Wert zusätzlich als „Raum“ an.
+      zeigt die Heizungsansicht seinen Wert zusätzlich als „Raum“ an. Mit einem Raum-Soll regelt das
+      System den Sollwert des Thermostats alle 5 Minuten so nach, dass der Raum diesen Wert erreicht.
+      Wer den Sollwert von Hand ändert, pausiert die Regelung für dieses Thermostat zwei Stunden.
     </p>
     @if (thermostats().length === 0) {
       <p class="admin-heating__hint">Noch keine Thermostate gefunden.</p>
@@ -54,6 +56,20 @@
                   <option [value]="option.sensorId" [selected]="option.sensorId === thermostat.roomSensorId">
                     {{ option.label }}
                   </option>
+                }
+              </select>
+            </label>
+            <label class="admin-heating__room">
+              <span>Raum-Soll</span>
+              <select
+                data-test="room-target"
+                [attr.aria-label]="'Raum-Soll von ' + thermostat.name"
+                [disabled]="assigningId() !== null || !thermostat.roomSensorId"
+                #targetSelect
+                (change)="assignRoomTarget(thermostat, targetSelect)">
+                <option value="" [selected]="thermostat.roomTarget == null">Keine Raumregelung</option>
+                @for (value of roomTargetOptions; track value) {
+                  <option [value]="value" [selected]="value === thermostat.roomTarget">{{ formatTarget(value) }}</option>
                 }
               </select>
             </label>

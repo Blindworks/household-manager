@@ -155,4 +155,33 @@ describe('buildApplianceInsights — laufende Maschinen', () => {
 
     expect(titles).toEqual(['Waschmaschine läuft', 'Spülmaschine läuft']);
   });
+
+  it('warnt auf der Lauf-Karte, wenn die Steckdose nicht erreichbar ist', () => {
+    const entities = [
+      helper('input_boolean.manual_waschmaschine_laeuft', { state: 'on' }),
+      helper('sensor.meross_2112156531504590863548e1e9817420_power', {
+        domain: 'SENSOR', source: 'MEROSS', state: '1200', attributes: { deviceClass: 'power', reachable: false }
+      })
+    ];
+
+    const insights = buildApplianceInsights(entities, NOW_MS);
+
+    expect(insights.length).toBe(1);
+    expect(insights[0].tone).toBe('tertiary');
+    expect(insights[0].text).toContain('Steckdose nicht erreichbar');
+  });
+
+  it('laesst die Lauf-Karte unveraendert, solange die Steckdose erreichbar ist', () => {
+    const entities = [
+      helper('input_boolean.manual_waschmaschine_laeuft', { state: 'on' }),
+      helper('sensor.meross_2112156531504590863548e1e9817420_power', {
+        domain: 'SENSOR', source: 'MEROSS', state: '1200', attributes: { deviceClass: 'power', reachable: true }
+      })
+    ];
+
+    const insights = buildApplianceInsights(entities, NOW_MS);
+
+    expect(insights[0].tone).toBe('secondary');
+    expect(insights[0].text).not.toContain('Steckdose');
+  });
 });

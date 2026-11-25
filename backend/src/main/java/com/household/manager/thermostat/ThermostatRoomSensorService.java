@@ -25,6 +25,10 @@ public class ThermostatRoomSensorService {
     private final ThermostatStateCache cache;
     private final TemperatureSeriesService temperatureSeriesService;
     private final AuditService auditService;
+    private final ThermostatRoomRegulator regulator;
+
+    static final double MIN_ROOM_TARGET = 10.0;
+    static final double MAX_ROOM_TARGET = 28.0;
 
     /**
      * @param sensorId sensorId aus {@code /v1/temperatures/current}; {@code null} oder leer entfernt
@@ -42,6 +46,36 @@ public class ThermostatRoomSensorService {
         auditService.record("thermostat.room-sensor",
                 thermostat.getName() + " (" + id + ") -> " + label);
         return ThermostatDto.from(thermostat, cache.find(thermostat.getId()).orElse(null));
+    }
+
+    /**
+     * Raum-Solltemperatur fuer die Raumregelung ({@link ThermostatRoomRegulator}). Erlaubt sind
+     * 10,0-28,0 in 0,5-Schritten; {@code null} beendet die Regelung (der zuletzt geschriebene
+     * Sollwert bleibt am Thermostat stehen). Ohne Raumfuehler wird abgelehnt - die Regelung hat
+     * dann nichts, worauf sie regeln koennte.
+     */
+    public ThermostatDto setRoomTarget(Long id, Double roomTarget) {
+        Thermostat thermostat = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Thermostat", "id", id));
+        if (roomTarget != null) {
+            validateRoomTarget(roomTarget);
+            if (thermostat.getRoomSensorId() == null) {
+                throw new IllegalArgumentException("Erst einen Raumfuehler zuordnen.");
+            }
+        }
+        thermostat.setRoomTarget(roomTarget);
+        repository.save(thermostat);
+        regulator.forget(id);
+        auditService.record("thermostat.room-target", thermostat.getName() + " (" + id + ") -> "
+                + (roomTarget == null ? "keine Raumregelung" : roomTarget));
+        return ThermostatDto.from(thermostat, cache.find(thermostat.getId()).orElse(null));
+    }
+
+    static void validateRoomTarget(double roomTarget) {
+        boolean onGrid = Math.abs(roomTarget * 2 - Math.round(roomTarget * 2)) < 1e-9;
+        if (!Double.isFinite(roomTarget) || roomTarget < MIN_ROOM_TARGET || roomTarget > MAX_ROOM_TARGET || !onGrid) {
+            throw new IllegalArgumentException("Raum-Soll muss zwischen 10,0 und 28,0 Grad in 0,5-Schritten liegen.");
+        }
     }
 
     private String requireKnownSensor(String sensorId) {

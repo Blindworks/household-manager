@@ -5,6 +5,7 @@ import com.household.manager.meross.dto.MerossCloudDevice;
 import com.household.manager.meross.dto.MerossCloudDevicesResponse;
 import com.household.manager.meross.dto.MerossCloudLoginResponse;
 import com.household.manager.meross.dto.MerossElectricityReading;
+import com.household.manager.meross.dto.MerossPlugPollResult;
 import com.household.manager.meross.dto.MerossPlugResponse;
 import com.household.manager.meross.exception.MerossException;
 import com.household.manager.meross.lib.*;
@@ -17,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -119,31 +119,44 @@ public class MerossDeviceService {
      * nicht antworten und würden nur in den MQTT-Timeout laufen), ebenso Geräte
      * ohne Energiemessung. Ein Fehler bei einem Gerät stoppt die übrigen nicht.
      */
-    public List<MerossElectricityReading> readElectricityOfAllPlugs() {
+    public MerossPlugPollResult readElectricityOfAllPlugs() {
         validateConfiguration();
         MerossCloudLoginResponse login = merossCloudAuthService.loginWithConfiguredCredentials();
         MerossCloudDevicesResponse devices = merossCloudAuthService.listDevicesWithConfiguredCredentials();
 
         List<MerossElectricityReading> readings = new ArrayList<>();
+        List<MerossPlugPollResult.UnreachablePlug> unreachable = new ArrayList<>();
         for (MerossCloudDevice cloudDevice : devices.devices()) {
-            if (!"online".equals(toOnlineStatus(cloudDevice.onlineStatus()))) {
-                log.debug("Meross electricity skipped, device offline (deviceId={})", cloudDevice.uuid());
-                continue;
-            }
             if (deviceIdsWithoutElectricity.contains(cloudDevice.uuid())) {
                 continue;
             }
-            readElectricityQuietly(cloudDevice, login).ifPresent(readings::add);
+            if (!"online".equals(toOnlineStatus(cloudDevice.onlineStatus()))) {
+                log.debug("Meross electricity skipped, device offline (deviceId={})", cloudDevice.uuid());
+                unreachable.add(new MerossPlugPollResult.UnreachablePlug(
+                        cloudDevice.uuid(), cloudDevice.devName(), MerossPlugPollResult.Reason.OFFLINE));
+                continue;
+            }
+            ReadOutcome outcome = readElectricityQuietly(cloudDevice, login);
+            if (outcome.reading() != null) {
+                readings.add(outcome.reading());
+            } else if (outcome.failed()) {
+                unreachable.add(new MerossPlugPollResult.UnreachablePlug(
+                        cloudDevice.uuid(), cloudDevice.devName(), MerossPlugPollResult.Reason.READ_FAILED));
+            }
         }
-        return readings;
+        return new MerossPlugPollResult(readings, unreachable);
+    }
+
+    /** Ein Einzelabruf: Messwert, „keine Energiemessung“ (beides leer, failed false) oder Fehlschlag. */
+    private record ReadOutcome(MerossElectricityReading reading, boolean failed) {
+        static final ReadOutcome NO_METERING = new ReadOutcome(null, false);
+        static final ReadOutcome FAILED = new ReadOutcome(null, true);
     }
 
     /**
-     * @return leer, wenn das Gerät keine Energiemessung hat oder die Messung
-     *         fehlschlägt; beides darf den Sammellauf nicht abbrechen
+     * Liest eine Steckdose; scheitert der Abruf, bricht das den Sammellauf nie ab.
      */
-    private Optional<MerossElectricityReading> readElectricityQuietly(
-            MerossCloudDevice cloudDevice, MerossCloudLoginResponse login) {
+    private ReadOutcome readElectricityQuietly(MerossCloudDevice cloudDevice, MerossCloudLoginResponse login) {
         MerossDevice device = null;
         try {
             device = buildMqttDevice(cloudDevice, login);
@@ -155,12 +168,14 @@ public class MerossDeviceService {
                 deviceIdsWithoutElectricity.add(cloudDevice.uuid());
                 log.info("Meross device has no electricity metering, skipping from now on (deviceId={}, name={})",
                         cloudDevice.uuid(), cloudDevice.devName());
-                return Optional.empty();
+                return ReadOutcome.NO_METERING;
             }
-            return MerossElectricityReading.fromPayload(cloudDevice.uuid(), cloudDevice.devName(), payload);
+            return MerossElectricityReading.fromPayload(cloudDevice.uuid(), cloudDevice.devName(), payload)
+                    .map(reading -> new ReadOutcome(reading, false))
+                    .orElse(ReadOutcome.FAILED);
         } catch (Throwable ex) {
             log.warn("Meross electricity read failed (deviceId={}): {}", cloudDevice.uuid(), ex.getMessage());
-            return Optional.empty();
+            return ReadOutcome.FAILED;
         } finally {
             if (device != null) {
                 device.disconnect();

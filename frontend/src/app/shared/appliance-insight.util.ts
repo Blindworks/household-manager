@@ -7,6 +7,8 @@ interface ApplianceHelper {
   readonly entityId: string;
   readonly title: string;
   readonly icon: string;
+  /** Leistungssensor der Steckdose, an der die Maschine haengt (nur Lauf-Helfer). */
+  readonly powerEntityId?: string;
 }
 
 /**
@@ -47,12 +49,14 @@ const RUNNING_HELPERS: ReadonlyArray<ApplianceHelper> = [
   {
     entityId: 'input_boolean.manual_waschmaschine_laeuft',
     title: 'Waschmaschine läuft',
-    icon: 'local_laundry_service'
+    icon: 'local_laundry_service',
+    powerEntityId: 'sensor.meross_2112156531504590863548e1e9817420_power'
   },
   {
     entityId: 'input_boolean.manual_spuelmaschine_laeuft',
     title: 'Spülmaschine läuft',
-    icon: 'dishwasher_gen'
+    icon: 'dishwasher_gen',
+    powerEntityId: 'sensor.meross_2205060757549251080148e1e991c4f9_power'
   }
 ];
 
@@ -65,6 +69,11 @@ const RUNNING_HELPERS: ReadonlyArray<ApplianceHelper> = [
  * sind reiner Statusbericht. Entsprechend traegt nur die Fertig-Karte ein
  * `dismissEntityId` und ist antippbar — eine Lauf-Karte wegzutippen wuerde
  * behaupten, die Maschine sei aus.
+ *
+ * <p>Ist die Steckdose einer laufenden Maschine nicht erreichbar (Leistungssensor mit
+ * `reachable: false`, Meross offline), kann der Flow das Ende nie erkennen — die
+ * Karte sagt das, statt still weiterzulaufen. `entities` darf dafuer die
+ * Meross-Leistungssensoren mit enthalten.
  *
  * <p>Nur `state === 'on'` erzeugt eine Karte. Ein fehlender Helfer oder
  * `unavailable` erzeugt keine — geraten wird nicht (Muster `buildDoorInsights`).
@@ -92,11 +101,13 @@ export function buildApplianceInsights(entities: EntityState[], nowMs: number): 
     if (!entity) {
       continue;
     }
+    const running = elapsedText(entity.lastChanged, nowMs, 'Läuft', 'Die Maschine läuft gerade.');
+    const offline = isPlugUnreachable(entities, appliance.powerEntityId);
     insights.push({
       icon: appliance.icon,
-      tone: 'secondary',
+      tone: offline ? 'tertiary' : 'secondary',
       title: appliance.title,
-      text: elapsedText(entity.lastChanged, nowMs, 'Läuft', 'Die Maschine läuft gerade.')
+      text: offline ? `${running} Steckdose nicht erreichbar – das Ende wird nicht erkannt.` : running
     });
   }
   return insights;
@@ -106,4 +117,13 @@ export function buildApplianceInsights(entities: EntityState[], nowMs: number): 
 function findRunningHelper(entities: EntityState[], entityId: string): EntityState | undefined {
   const entity = entities.find(candidate => candidate.entityId === entityId);
   return entity?.state === 'on' ? entity : undefined;
+}
+
+/** Nur ein ausdrueckliches `reachable: false` zaehlt; ein fehlender Sensor wird nicht geraten. */
+function isPlugUnreachable(entities: EntityState[], powerEntityId: string | undefined): boolean {
+  if (!powerEntityId) {
+    return false;
+  }
+  const sensor = entities.find(candidate => candidate.entityId === powerEntityId);
+  return sensor?.attributes?.['reachable'] === false;
 }

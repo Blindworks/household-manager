@@ -14,6 +14,9 @@ export interface RoomSensorOption {
 
 const WEATHER_SENSOR_ID = 'weather:outdoor';
 
+/** Waehlbare Raum-Solltemperaturen, gespiegelt aus dem Backend (10,0-28,0 in 0,5-Schritten). */
+export const ROOM_TARGET_OPTIONS: number[] = Array.from({ length: 37 }, (_, i) => 10 + i * 0.5);
+
 /**
  * Admin-Seite „Heizung": Hub-IP eintragen und pruefen, gefundene Thermostate
  * umbenennen und ihnen den Temperaturfuehler ihres Raums zuordnen. Die Hub-IP selbst liefert das Backend nicht zurueck, das Feld
@@ -36,6 +39,7 @@ export class AdminHeatingComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly sensorOptions = signal<RoomSensorOption[]>([]);
   readonly assigningId = signal<number | null>(null);
+  readonly roomTargetOptions = ROOM_TARGET_OPTIONS;
 
   ip = '';
   /** Bearbeiteter Name je Thermostat-Id. */
@@ -85,6 +89,34 @@ export class AdminHeatingComponent implements OnInit {
         this.assigningId.set(null);
       }
     });
+  }
+
+  /**
+   * Raum-Soll setzen oder entfernen. Ohne Raumfuehler ist das Feld gesperrt (das Backend lehnt
+   * es dann ohnehin mit 400 ab).
+   */
+  assignRoomTarget(thermostat: Thermostat, select: HTMLSelectElement): void {
+    const normalized = select.value === '' ? null : Number(select.value);
+    if (normalized === (thermostat.roomTarget ?? null) || this.assigningId() !== null) {
+      return;
+    }
+    this.errorMessage.set(null);
+    this.assigningId.set(thermostat.id);
+    this.api.setRoomTarget(thermostat.id, normalized).subscribe({
+      next: updated => {
+        this.thermostats.update(list => list.map(t => (t.id === updated.id ? updated : t)));
+        this.assigningId.set(null);
+      },
+      error: error => {
+        this.errorMessage.set(this.messageFrom(error));
+        select.value = thermostat.roomTarget == null ? '' : String(thermostat.roomTarget);
+        this.assigningId.set(null);
+      }
+    });
+  }
+
+  formatTarget(value: number): string {
+    return value.toFixed(1).replace('.', ',') + ' °C';
   }
 
   get canSearch(): boolean {
