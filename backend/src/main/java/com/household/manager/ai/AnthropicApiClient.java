@@ -69,7 +69,9 @@ public class AnthropicApiClient {
                     });
             JsonNode usage = root.path("usage");
             return new AnthropicResponse(root.path("stop_reason").asText(), content,
-                    usage.path("input_tokens").asInt(0), usage.path("output_tokens").asInt(0));
+                    usage.path("input_tokens").asInt(0), usage.path("output_tokens").asInt(0),
+                    usage.path("cache_read_input_tokens").asInt(0),
+                    usage.path("cache_creation_input_tokens").asInt(0));
         } catch (RestClientException ex) {
             throw new AiException("Claude API-Aufruf fehlgeschlagen: " + ex.getMessage(), ex);
         }

@@ -158,6 +158,7 @@ export const NAV_ENTRIES: NavEntry[] = [
       { path: '/admin/service-tokens', label: 'API-Tokens', section: 'System' },
       { path: '/admin/system-log', label: 'Systemprotokoll', section: 'System' },
       { path: '/admin/audit-log', label: 'Audit-Log', section: 'System' },
+      { path: '/admin/communicator', label: 'Communicator', section: 'System' },
       { path: '/admin/dirigera', label: 'IKEA Dirigera', section: 'Integrationen' },
       { path: '/admin/ble-sensors', label: 'Bluetooth-Thermometer', section: 'Integrationen' },
       { path: '/admin/heating', label: 'Heizung', section: 'Integrationen' },

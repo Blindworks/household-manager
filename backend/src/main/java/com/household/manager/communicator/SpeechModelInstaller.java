@@ -25,6 +25,7 @@ public class SpeechModelInstaller {
     private final CommunicatorProperties properties;
     private final SpeechToTextClient client;
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private volatile String lastError;
 
     public SpeechModelInstaller(CommunicatorProperties properties, SpeechToTextClient client) {
         this.properties = properties;
@@ -50,6 +51,27 @@ public class SpeechModelInstaller {
         thread.start();
     }
 
+    /** Frische Pruefung des Dienstes fuer die Admin-Seite. Wirft nie. */
+    CommunicatorLogDtos.SpeechHealth health() {
+        CommunicatorProperties.Stt stt = properties.getStt();
+        boolean reachable = false;
+        Boolean installed = null;
+        Integer responseMs = null;
+        String error = null;
+        if (stt.isConfigured()) {
+            long start = System.nanoTime();
+            try {
+                installed = client.isModelInstalled();
+                reachable = true;
+                responseMs = (int) ((System.nanoTime() - start) / 1_000_000);
+            } catch (RuntimeException ex) {
+                error = ex.getMessage();
+            }
+        }
+        return new CommunicatorLogDtos.SpeechHealth(stt.isConfigured(), stt.getModel(), stt.getLanguage(),
+                reachable, installed, responseMs, error, running.get(), lastError);
+    }
+
     boolean isActive() {
         return properties.isEnabled() && properties.getStt().isConfigured()
                 && properties.getStt().isAutoInstallModel();
@@ -61,9 +83,11 @@ public class SpeechModelInstaller {
             for (int attempt = 1; attempt <= attempts; attempt++) {
                 try {
                     client.installModel();
+                    lastError = null;
                     log.info("Sprachmodell {} ist bereit", properties.getStt().getModel());
                     return;
                 } catch (RuntimeException ex) {
+                    lastError = ex.getMessage();
                     log.warn("Sprachmodell {} nicht geladen (Versuch {}/{}): {}",
                             properties.getStt().getModel(), attempt, attempts, ex.getMessage());
                 }

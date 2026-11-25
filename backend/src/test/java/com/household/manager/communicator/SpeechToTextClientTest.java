@@ -47,6 +47,18 @@ class SpeechToTextClientTest {
     }
 
     @Test
+    void erkenntObDasModellInstalliertIst() {
+        MockRestServiceServer health = MockRestServiceServer.createServer(client.healthRestTemplate());
+        health.expect(requestTo("http://whisper:8000/v1/models")).andRespond(withSuccess(
+                "{\"data\":[{\"id\":\"Systran/faster-whisper-small\"}]}", MediaType.APPLICATION_JSON));
+        health.expect(requestTo("http://whisper:8000/v1/models"))
+                .andRespond(withSuccess("{\"data\":[]}", MediaType.APPLICATION_JSON));
+
+        assertEquals(true, client.isModelInstalled());
+        assertEquals(false, client.isModelInstalled());
+    }
+
+    @Test
     void sendetDenSchluesselNurWennEinerGesetztIst() {
         properties.getStt().setApiKey("geheim");
         client = new SpeechToTextClient(properties, new RestTemplateBuilder());

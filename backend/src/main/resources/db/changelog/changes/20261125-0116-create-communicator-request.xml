@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20261125-0116-create-communicator-request" author="benedikt">
+        <comment>Communicator: Protokoll je Anfrage (Kennzahlen plus Verlauf als JSON).</comment>
+        <createTable tableName="communicator_request">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="asked_at" type="DATETIME"><constraints nullable="false"/></column>
+            <column name="actor" type="VARCHAR(100)"/>
+            <column name="voice" type="BOOLEAN"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="question" type="VARCHAR(1000)"/>
+            <column name="error" type="VARCHAR(500)"/>
+            <column name="model" type="VARCHAR(100)"/>
+            <column name="audio_bytes" type="INT"/>
+            <column name="audio_type" type="VARCHAR(100)"/>
+            <column name="audio_ms" type="INT"/>
+            <column name="speech_ms" type="INT"/>
+            <column name="total_ms" type="INT"><constraints nullable="false"/></column>
+            <column name="ai_calls" type="INT"><constraints nullable="false"/></column>
+            <column name="tool_calls" type="INT"><constraints nullable="false"/></column>
+            <column name="tool_failures" type="INT"><constraints nullable="false"/></column>
+            <column name="input_tokens" type="INT"><constraints nullable="false"/></column>
+            <column name="output_tokens" type="INT"><constraints nullable="false"/></column>
+            <column name="cache_read_tokens" type="INT"><constraints nullable="false"/></column>
+            <column name="cache_write_tokens" type="INT"><constraints nullable="false"/></column>
+            <column name="endpoints" type="VARCHAR(2000)"/>
+            <column name="details" type="LONGTEXT"/>
+        </createTable>
+        <rollback><dropTable tableName="communicator_request"/></rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -226,5 +226,7 @@
     <include file="db/changelog/changes/20261120-0113-index-grocery-run-log-started-at.xml"/>
     <include file="db/changelog/changes/20261123-0114-add-app-user-wall-tablet.xml"/>
     <include file="db/changelog/changes/20261123-0115-create-charging-watch.xml"/>
+    <include file="db/changelog/changes/20261125-0116-create-communicator-request.xml"/>
+    <include file="db/changelog/changes/20261125-0117-index-communicator-request-asked-at.xml"/>
 
 </databaseChangeLog>

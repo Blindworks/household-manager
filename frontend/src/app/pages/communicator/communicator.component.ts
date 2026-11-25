@@ -47,6 +47,7 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
   text = '';
 
   private answerCount = 0;
+  private recordingSince = 0;
   private autoStop: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
@@ -95,19 +96,21 @@ export class CommunicatorComponent implements OnInit, OnDestroy {
       return;
     }
     this.phase.set('recording');
+    this.recordingSince = Date.now();
     this.autoStop = setTimeout(() => void this.stopAndSend(), MAX_RECORDING_MS);
   }
 
   private async stopAndSend(): Promise<void> {
     this.clearAutoStop();
     this.phase.set('starting');
+    const durationMs = Date.now() - this.recordingSince;
     const recording = await this.recorder.stop();
     void this.tones.stop();
     if (!recording) {
       this.phase.set('idle');
       return;
     }
-    this.send(this.service.askAudio(recording));
+    this.send(this.service.askAudio(recording, durationMs));
   }
 
   submitText(): void {

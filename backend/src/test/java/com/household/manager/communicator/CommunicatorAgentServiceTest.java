@@ -7,6 +7,7 @@ import com.household.manager.ai.AnthropicApiClient;
 import com.household.manager.ai.AnthropicRequest;
 import com.household.manager.ai.AnthropicResponse;
 import com.household.manager.communicator.CommunicatorDtos.Card;
+import com.household.manager.model.entity.CommunicatorRequest.Status;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +49,7 @@ class CommunicatorAgentServiceTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final AiProperties ai = new AiProperties();
+    private final CommunicatorTrace trace = CommunicatorTrace.text();
     private CommunicatorAgentService service;
 
     @BeforeEach
@@ -79,7 +81,7 @@ class CommunicatorAgentServiceTest {
                                 "decimals", 1, "unit", "km"),
                         Map.of("type", "value", "ref", "r1", "pointer", "/0/start")))));
 
-        List<Card> cards = service.ask("War Tony spazieren?", CALLER);
+        List<Card> cards = service.ask("War Tony spazieren?", CALLER, trace);
 
         assertThat(cards).hasSize(1);
         assertThat(cards.get(0).blocks().get(0).value()).isEqualTo("2,1");
@@ -97,7 +99,7 @@ class CommunicatorAgentServiceTest {
                 .thenReturn(tool("show_card", Map.of("title", "x", "blocks", List.of(
                         Map.of("type", "text", "text", "Keine Runde gefunden.")))));
 
-        assertThat(service.ask("?", CALLER).get(0).blocks().get(0).text()).isEqualTo("Keine Runde gefunden.");
+        assertThat(service.ask("?", CALLER, trace).get(0).blocks().get(0).text()).isEqualTo("Keine Runde gefunden.");
     }
 
     @Test
@@ -108,7 +110,7 @@ class CommunicatorAgentServiceTest {
                 "actions", List.of(Map.of("label", "Flur einschalten", "method", "POST",
                         "path", "/v1/switches/switch.flur/toggle")))));
 
-        Card card = service.ask("Licht an", CALLER).get(0);
+        Card card = service.ask("Licht an", CALLER, trace).get(0);
 
         assertThat(card.actions()).hasSize(1);
         verify(gateway, never()).get(any(), any(), any(), any());
@@ -121,7 +123,7 @@ class CommunicatorAgentServiceTest {
                 .thenReturn(new AnthropicResponse("end_turn",
                         List.of(Map.of("type", "text", "text", "Geht nicht."))));
 
-        Card card = service.ask("?", CALLER).get(0);
+        Card card = service.ask("?", CALLER, trace).get(0);
 
         assertThat(card.actions()).isEmpty();
         assertThat(card.blocks().get(0).text()).isEqualTo("Geht nicht.");
@@ -137,7 +139,7 @@ class CommunicatorAgentServiceTest {
     void verzeichnisStehtImZwischengespeichertenPromptTeil() {
         when(client.createMessage(any())).thenThrow(new AiException("weg", null));
 
-        assertThat(service.ask("?", CALLER).get(0).blocks().get(0).text())
+        assertThat(service.ask("?", CALLER, trace).get(0).blocks().get(0).text())
                 .isEqualTo(CommunicatorAgentService.ERROR_TEXT);
 
         var captor = org.mockito.ArgumentCaptor.forClass(AnthropicRequest.class);
@@ -148,10 +150,32 @@ class CommunicatorAgentServiceTest {
     }
 
     @Test
+    void verlaufHaeltTokensWerkzeugeUndProblemeFest() throws Exception {
+        antwortet("[]");
+        when(client.createMessage(any()))
+                .thenReturn(new AnthropicResponse("tool_use", List.of(Map.of("type", "tool_use", "id", "t",
+                        "name", "api_get", "input", Map.of("path", "/v1/walks"))), 10, 5, 900, 100))
+                .thenReturn(tool("show_card", Map.of("title", "x", "blocks", List.of(
+                        Map.of("type", "value", "ref", "r1", "pointer", "/0/start")))))
+                .thenThrow(new AiException("overloaded", null));
+
+        service.ask("Frage", CALLER, trace);
+
+        assertThat(trace.getSteps()).extracting(s -> s.type() + " " + s.name() + " " + s.ok()).containsExactly(
+                "CLAUDE tool_use true", "TOOL api_get true", "CLAUDE tool_use true", "TOOL show_card false",
+                "CLAUDE error false");
+        assertThat(trace.getSteps().get(0).cacheReadTokens()).isEqualTo(900);
+        assertThat(trace.getEndpoints()).containsExactly("/v1/walks");
+        assertThat(trace.getStatus()).isEqualTo(Status.AI_ERROR);
+        assertThat(trace.getError()).isEqualTo("overloaded");
+        assertThat(trace.getCards()).hasSize(1);
+    }
+
+    @Test
     void ohneSchluesselWirdClaudeNieGefragt() {
         ai.setAnthropicApiKey("");
 
-        service.ask("?", CALLER);
+        service.ask("?", CALLER, trace);
 
         verify(client, never()).createMessage(any());
     }

@@ -14,9 +14,12 @@ export class CommunicatorService {
   }
 
   /** Schickt eine Sprachaufnahme; der Server wandelt sie in Text um und antwortet mit Karten. */
-  askAudio(recording: Blob): Observable<CommunicatorAnswer> {
+  askAudio(recording: Blob, durationMs?: number): Observable<CommunicatorAnswer> {
     const form = new FormData();
     form.append('audio', recording, 'aufnahme');
+    if (durationMs) {
+      form.append('durationMs', String(Math.round(durationMs)));
+    }
     return this.http.post<CommunicatorAnswer>(`${this.baseUrl}/ask`, form);
   }
 
