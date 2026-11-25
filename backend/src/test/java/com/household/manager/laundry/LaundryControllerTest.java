@@ -14,6 +14,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -53,6 +54,25 @@ class LaundryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"yes\":true}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Keine offene Frage"));
+    }
+
+    @Test
+    void handmeldungStartetTrocknen() throws Exception {
+        when(service.currentState()).thenReturn(new LaundryStateView("drying",
+                LaundryStateView.PROMPT_NONE, null, null, false, 17.5));
+
+        mockMvc.perform(post("/v1/laundry/hung"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("drying"));
+        verify(service).reportHung();
+    }
+
+    @Test
+    void handmeldungWaehrendTrocknenGibt409() throws Exception {
+        doThrow(new LaundryConflictException("Es trocknet bereits Wäsche im Keller.")).when(service).reportHung();
+
+        mockMvc.perform(post("/v1/laundry/hung"))
+                .andExpect(status().isConflict());
     }
 
     @Test
