@@ -57,19 +57,25 @@ export function buildContactCheck(entities: EntityState[]): ActivationCheck {
 
 /**
  * Großverbraucher-Check: alles ab {@link HIGH_CONSUMPTION_THRESHOLD_WATTS}.
- * Verbraucher ohne Messwert werden bewusst ignoriert — eine offline Steckdose
- * versorgt ihr Gerät im Normalfall gar nicht (siehe Spec).
+ * Verbraucher ohne Messwert werden ignoriert — eine Steckdose ohne Wert versorgt
+ * ihr Gerät im Normalfall gar nicht (siehe Spec). Ausnahme: meldet die Quelle
+ * ausdrücklich „nicht erreichbar“ (Meross offline), ist unbekannt, ob dahinter
+ * etwas läuft — das ist eine Warnung, nie ein stilles Grün.
  */
 export function buildConsumerCheck(consumers: PowerConsumer[]): ActivationCheck {
   const active = consumers.filter(
     (consumer): consumer is PowerConsumer & { powerWatts: number } =>
       consumer.powerWatts != null && consumer.powerWatts >= HIGH_CONSUMPTION_THRESHOLD_WATTS
   );
-  if (active.length === 0) {
+  const unreachable = consumers.filter(consumer => consumer.unreachable === true);
+  if (active.length === 0 && unreachable.length === 0) {
     return { status: 'ok', lines: ['Keine Großverbraucher aktiv.'] };
   }
   return {
     status: 'warning',
-    lines: active.map(consumer => `${consumer.displayName}: ${Math.round(consumer.powerWatts)} W`)
+    lines: [
+      ...active.map(consumer => `${consumer.displayName}: ${Math.round(consumer.powerWatts)} W`),
+      ...unreachable.map(consumer => `${consumer.displayName}: Steckdose nicht erreichbar.`)
+    ]
   };
 }

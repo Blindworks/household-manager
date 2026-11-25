@@ -1,6 +1,7 @@
 package com.household.manager.entitystate.mapper;
 
 import com.household.manager.dto.SwitchResponse;
+import com.household.manager.entitystate.PowerSensorReachability;
 import com.household.manager.model.entity.EntityState;
 import com.household.manager.model.entity.EntityUsage;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +54,8 @@ public class SwitchResponseMapper {
         if (powerSensor == null
                 || !STATE_ON.equals(entity.getState())
                 || STATE_UNAVAILABLE.equals(powerSensor.getState())
+                || PowerSensorReachability.isUnreachable(
+                        entityStateResponseMapper.parseAttributes(powerSensor.getAttributes()))
                 || powerSensor.getLastUpdated() == null
                 || powerSensor.getLastUpdated().isBefore(LocalDateTime.now().minus(POWER_MAX_AGE))) {
             return null;

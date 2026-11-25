@@ -18,6 +18,11 @@ export interface Thermostat {
    * (z. B. "dirigera:3"), null = kein Fuehler im Raum.
    */
   roomSensorId: string | null;
+  /**
+   * Raum-Solltemperatur der Raumregelung: mit Raumfuehler stellt das Backend den Sollwert des
+   * Thermostats so nach, dass der Raum diesen Wert erreicht. null/fehlt = keine Raumregelung.
+   */
+  roomTarget?: number | null;
 }
 
 export interface ThermostatHistoryPoint {

@@ -36,6 +36,8 @@ class ThermostatRoomSensorServiceTest {
     private TemperatureSeriesService temperatureSeriesService;
     @Mock
     private AuditService auditService;
+    @Mock
+    private ThermostatRoomRegulator regulator;
 
     private ThermostatRoomSensorService service;
     private Thermostat living;
@@ -43,7 +45,7 @@ class ThermostatRoomSensorServiceTest {
     @BeforeEach
     void setUp() {
         service = new ThermostatRoomSensorService(repository, new ThermostatStateCache(),
-                temperatureSeriesService, auditService);
+                temperatureSeriesService, auditService, regulator);
         living = Thermostat.builder().id(1L).childDeviceId("KE-1").hubDeviceId("HUB")
                 .name("Wohnzimmerfenster").active(true).build();
         lenient().when(repository.findById(1L)).thenReturn(Optional.of(living));
@@ -100,5 +102,43 @@ class ThermostatRoomSensorServiceTest {
         when(repository.findById(7L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.setRoomSensor(7L, "dirigera:3"));
+    }
+
+    @Test
+    void setztRaumSollMitFuehlerVergisstRegelstandUndAuditiert() {
+        living.setRoomSensorId("dirigera:3");
+
+        ThermostatDto dto = service.setRoomTarget(1L, 21.5);
+
+        assertEquals(21.5, living.getRoomTarget());
+        assertEquals(21.5, dto.roomTarget());
+        verify(regulator).forget(1L);
+        verify(auditService).record("thermostat.room-target", "Wohnzimmerfenster (1) -> 21.5");
+    }
+
+    @Test
+    void raumSollOhneFuehlerWirdAbgelehnt() {
+        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 21.0));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void raumSollAusserhalbDesRastersWirdAbgelehnt() {
+        living.setRoomSensorId("dirigera:3");
+        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 21.3));
+        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 9.5));
+        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, 28.5));
+        assertThrows(IllegalArgumentException.class, () -> service.setRoomTarget(1L, Double.NaN));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void nullBeendetDieRaumregelungAuchOhneFuehler() {
+        living.setRoomTarget(21.0);
+
+        service.setRoomTarget(1L, null);
+
+        assertNull(living.getRoomTarget());
+        verify(auditService).record("thermostat.room-target", "Wohnzimmerfenster (1) -> keine Raumregelung");
     }
 }

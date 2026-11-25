@@ -77,12 +77,16 @@ public class PowerConsumerQueryService {
     }
 
     private PowerConsumerResponse toResponse(EntityState entity) {
-        BigDecimal watts = parseWatts(entity.getState());
+        boolean unreachable = PowerSensorReachability.isUnreachable(
+                entityStateResponseMapper.parseAttributes(entity.getAttributes()));
+        // Ein nicht erreichbarer Sensor traegt noch seinen letzten Wert — der waere geraten.
+        BigDecimal watts = unreachable ? null : parseWatts(entity.getState());
         return new PowerConsumerResponse(
                 entity.getEntityId(),
                 entityStateResponseMapper.displayName(entity),
                 watts,
-                watts == null);
+                watts == null,
+                unreachable);
     }
 
     /** Nicht-numerische States ("unavailable", "unknown") ergeben null. */

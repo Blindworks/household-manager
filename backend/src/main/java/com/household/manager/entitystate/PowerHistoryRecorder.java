@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -31,16 +32,25 @@ public class PowerHistoryRecorder {
         if (!isPowerSensor(event.attributes())) {
             return;
         }
+        recordPoint(event.entityId(), event.timestamp(), parseWatts(event.newState()));
+    }
+
+    /**
+     * Schreibt einen Punkt direkt, ohne Zustandswechsel. Fuer Quellen, die einen
+     * Ausfall nicht als {@code unavailable} melden (Meross): {@code null} markiert
+     * dort die Luecke, der Wert nach der Rueckkehr schliesst sie wieder. Wirft nie.
+     */
+    public void recordPoint(String entityId, LocalDateTime measuredAt, Double powerWatts) {
         try {
             repository.save(EntityPowerHistory.builder()
-                    .entityId(event.entityId())
-                    .measuredAt(event.timestamp())
-                    .powerWatts(parseWatts(event.newState()))
+                    .entityId(entityId)
+                    .measuredAt(measuredAt)
+                    .powerWatts(powerWatts)
                     .build());
         } catch (Exception ex) {
             // Bewusst geschluckt: der Recorder haengt am Schreibpfad der Integrationen,
             // ein Historie-Fehler darf das Polling nie brechen.
-            log.warn("Failed to record power history for {}: {}", event.entityId(), ex.getMessage());
+            log.warn("Failed to record power history for {}: {}", entityId, ex.getMessage());
         }
     }
 

@@ -51,6 +51,14 @@ public class Thermostat {
     @Column(name = "room_sensor_id", length = 80)
     private String roomSensorId;
 
+    /**
+     * Gewuenschte Raumtemperatur fuer die Raumregelung ({@code ThermostatRoomRegulator}). Nur zusammen
+     * mit {@link #roomSensorId} wirksam; {@code null} = keine Raumregelung, das Thermostat regelt auf
+     * seinen eigenen Fuehler am Heizkoerper.
+     */
+    @Column(name = "room_target")
+    private Double roomTarget;
+
     @Builder.Default
     @Column(name = "active", nullable = false)
     private boolean active = true;
