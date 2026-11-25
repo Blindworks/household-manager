@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  * API-Darstellung eines Thermostats. {@code null} bei Temperaturen und {@code lastUpdated}
  * heisst "unbekannt" und wird bewusst mitgeliefert (Vertrag mit dem Frontend). {@code roomSensorId}
  * ist der zugeordnete Raumfuehler; seinen Wert holt das Frontend aus {@code /v1/temperatures/current}.
+ * {@code roomTarget} ist die Raum-Solltemperatur der Raumregelung ({@code null} = keine Regelung).
  */
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public record ThermostatDto(
@@ -23,17 +24,20 @@ public record ThermostatDto(
         boolean heating,
         boolean batteryLow,
         LocalDateTime lastUpdated,
-        String roomSensorId) {
+        String roomSensorId,
+        Double roomTarget) {
 
     /** Ohne Cache-Eintrag (noch nie gelesen): offline, keine Werte, nie ein geratener Zustand. */
     static ThermostatDto from(Thermostat thermostat, ThermostatStateCache.Entry entry) {
         if (entry == null) {
             return new ThermostatDto(thermostat.getId(), thermostat.getName(), false, null, null,
-                    ThermostatMode.MANUAL, false, false, null, thermostat.getRoomSensorId());
+                    ThermostatMode.MANUAL, false, false, null, thermostat.getRoomSensorId(),
+                    thermostat.getRoomTarget());
         }
         ThermostatReading reading = entry.reading();
         return new ThermostatDto(thermostat.getId(), thermostat.getName(), reading.online(),
                 reading.currentTemp(), reading.targetTemp(), reading.mode(), reading.heating(),
-                reading.batteryLow(), entry.lastUpdated(), thermostat.getRoomSensorId());
+                reading.batteryLow(), entry.lastUpdated(), thermostat.getRoomSensorId(),
+                thermostat.getRoomTarget());
     }
 }

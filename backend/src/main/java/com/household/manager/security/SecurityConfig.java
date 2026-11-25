@@ -243,7 +243,7 @@ public class SecurityConfig {
                         // steht ausdruecklich vor "/*": ein literales Segment darf nie als {id}
                         // einer weniger strengen Regel durchrutschen.
                         .requestMatchers(HttpMethod.PUT, "/v1/thermostats/hub", "/v1/thermostats/*",
-                                "/v1/thermostats/*/room-sensor")
+                                "/v1/thermostats/*/room-sensor", "/v1/thermostats/*/room-target")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/utility-prices/**").hasRole("KIOSK")
                         .requestMatchers("/v1/utility-prices/**").hasRole("ADMIN")

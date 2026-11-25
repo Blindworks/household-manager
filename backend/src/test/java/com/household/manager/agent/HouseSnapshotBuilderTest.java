@@ -167,8 +167,8 @@ class HouseSnapshotBuilderTest {
     void thermostatsShowValuesAndOffline() {
         when(thermostatService.list()).thenReturn(List.of(
                 new ThermostatDto(3L, "Wohnzimmer", true, 18.5, 17.0,
-                        ThermostatMode.MANUAL, false, false, LocalDateTime.of(2026, 10, 12, 14, 2), null),
-                new ThermostatDto(4L, "Bad", false, null, null, ThermostatMode.MANUAL, false, false, null, null)));
+                        ThermostatMode.MANUAL, false, false, LocalDateTime.of(2026, 10, 12, 14, 2), null, null),
+                new ThermostatDto(4L, "Bad", false, null, null, ThermostatMode.MANUAL, false, false, null, null, null)));
 
         String s = builder().build();
 
@@ -237,7 +237,7 @@ class HouseSnapshotBuilderTest {
     @Test
     void consumersAreListed() {
         when(powerConsumerQueryService.listConsumers(10)).thenReturn(List.of(
-                new PowerConsumerResponse("sensor.w", "Waschmaschine", new BigDecimal("540"), false)));
+                new PowerConsumerResponse("sensor.w", "Waschmaschine", new BigDecimal("540"), false, false)));
 
         assertTrue(builder().build().contains("Waschmaschine: 540 W"));
     }

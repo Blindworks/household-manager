@@ -158,4 +158,21 @@ class PowerConsumerQueryServiceTest {
 
         assertThat(service.findConsumer("sensor.gibt_es_nicht")).isEmpty();
     }
+
+    @Test
+    void nicht_erreichbare_steckdose_liefert_keinen_alten_wert() {
+        when(entityStateRepository.findByDomainOrderByEntityIdAsc(EntityDomain.SENSOR)).thenReturn(List.of(
+                sensor(EntitySource.MEROSS, "wm", "Waschmaschine Leistung", "1200",
+                        "{\"deviceClass\":\"power\",\"reachable\":false}"),
+                sensor(EntitySource.MEROSS, "sp", "Spuelmaschine Leistung", "3", POWER_ATTRIBUTES)));
+
+        List<PowerConsumerResponse> consumers = service.listConsumers(null);
+
+        assertThat(namesOf(consumers)).containsExactly("Spuelmaschine Leistung", "Waschmaschine Leistung");
+        PowerConsumerResponse offline = consumers.get(1);
+        assertThat(offline.powerWatts()).isNull();
+        assertThat(offline.unavailable()).isTrue();
+        assertThat(offline.unreachable()).isTrue();
+        assertThat(consumers.get(0).unreachable()).isFalse();
+    }
 }

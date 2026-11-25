@@ -156,6 +156,7 @@ public class AuditEntryDescriber {
         }
         return switch (actor) {
             case "AGENT" -> "Hausverstand";
+            case "HEIZREGELUNG" -> "Raumregelung Heizung";
             case "system" -> "System";
             default -> actor;
         };

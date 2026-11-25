@@ -11,6 +11,11 @@ public record PowerConsumerResponse(
         String displayName,
         /** Aktuelle Leistung in Watt; null, wenn der Sensor nicht erreichbar ist. */
         BigDecimal powerWatts,
-        boolean unavailable
+        boolean unavailable,
+        /**
+         * Die Steckdose ist nicht erreichbar (Meross offline), der letzte Wert ist
+         * veraltet; {@code powerWatts} ist dann null und {@code unavailable} true.
+         */
+        boolean unreachable
 ) {
 }

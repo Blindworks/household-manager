@@ -55,5 +55,7 @@ public enum EntitySource {
     /** Regenradar am Haus (Bright Sky, DWD-Radarkomposit RV mit 2-h-Nowcast). */
     RAIN_RADAR,
     /** Blaulicht Bad Vilbel (Polizeimeldungen von Presseportal, Warnungen von NINA), Nacht-Briefing als Ereignisse. */
-    BLAULICHT
+    BLAULICHT,
+    /** Anmeldungen bei externen Diensten (Tractive, Blink, Alexa, Dirigera), je Dienst binary_sensor.account_login_<dienst>. */
+    ACCOUNT_LOGIN
 }

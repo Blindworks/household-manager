@@ -117,6 +117,13 @@ describe('mode-activation-check.util', () => {
       expect(check.status).toBe('ok');
     });
 
+    it('warnt bei nicht erreichbarer Steckdose', () => {
+      const offline: PowerConsumer = { ...consumer('Waschmaschine', null), unreachable: true };
+      const check = buildConsumerCheck([offline]);
+      expect(check.status).toBe('warning');
+      expect(check.lines).toEqual(['Waschmaschine: Steckdose nicht erreichbar.']);
+    });
+
     it('meldet bei leerer Verbraucherliste OK', () => {
       expect(buildConsumerCheck([]).status).toBe('ok');
     });

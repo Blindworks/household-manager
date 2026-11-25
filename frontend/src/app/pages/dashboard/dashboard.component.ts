@@ -55,6 +55,7 @@ import {
   buildBalconyColdInsight
 } from '../../shared/balcony-cold-insight.util';
 import { buildApplianceInsights } from '../../shared/appliance-insight.util';
+import { buildAccountLoginInsights } from '../../shared/account-login-insight.util';
 import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
 import { VentilationAssessment } from '../../models/ventilation.model';
@@ -399,6 +400,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * um das Ziel neu aufzuloesen, statt einer festgehaltenen Kopie zu vertrauen.
    */
   private applianceEntities: EntityState[] = [];
+  /** Karten fuer abgelaufene Anmeldungen externer Dienste (Admin → Konten). */
+  private accountLoginInsights: HubInsight[] = [];
+  /** Meross-Leistungssensoren: zeigen auf der Lauf-Karte, ob die Steckdose erreichbar ist. */
+  private appliancePowerSensors: EntityState[] = [];
 
   /** Haus-Modi der Fussleiste, vom Backend geladen. */
   modes: ModeEntity[] = [];
@@ -1280,6 +1285,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Leistung als "1.250 W"; unavailable-Geräte zeigen einen Strich. */
   powerLabel(consumer: PowerConsumer): string {
+    if (consumer.unreachable) {
+      return 'offline';
+    }
     if (consumer.powerWatts == null) {
       return '–';
     }
@@ -2019,7 +2027,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private refreshApplianceInsights(): void {
-    this.applianceInsights = buildApplianceInsights(this.applianceEntities, Date.now());
+    this.applianceInsights = buildApplianceInsights(
+      [...this.applianceEntities, ...this.appliancePowerSensors], Date.now());
     this.rebuildInsights();
   }
 
@@ -2028,6 +2037,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.insights = [
       ...this.doorInsights,
       ...this.applianceInsights,
+      ...this.accountLoginInsights,
       ...(this.laundryInsight ? [this.laundryInsight] : []),
       ...(this.agentInsight ? [this.agentInsight] : []),
       ...(this.blaulichtInsight ? [this.blaulichtInsight] : []),
@@ -2099,17 +2109,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   private startApplianceRefresh(): void {
     this.applianceSubscription = interval(DashboardComponent.APPLIANCE_REFRESH_MS)
-      .pipe(startWith(0), switchMap(() => this.loadApplianceInsights()))
+      .pipe(startWith(0), switchMap(() => forkJoin([this.loadApplianceInsights(), this.loadAccountLoginInsights()])))
       .subscribe();
   }
 
   private loadApplianceInsights(): Observable<void> {
-    return this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL').pipe(
-      catchError(() => of([])),
-      map(entities => {
-        this.applianceEntities = entities;
+    return forkJoin({
+      helpers: this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL').pipe(catchError(() => of([]))),
+      // Ein Fehler hier behaelt den letzten Stand: die Karten haengen an den Helfern.
+      sensors: this.entityStateService.getEntities('SENSOR', 'MEROSS')
+        .pipe(catchError(() => of(this.appliancePowerSensors)))
+    }).pipe(
+      map(({ helpers, sensors }) => {
+        this.applianceEntities = helpers;
+        this.appliancePowerSensors = sensors;
         this.refreshApplianceInsights();
       })
+    );
+  }
+
+  /** Abgelaufene Anmeldungen; ein Ladefehler behaelt die letzten Karten (nie ein geratenes „alles gut“). */
+  private loadAccountLoginInsights(): Observable<void> {
+    return this.entityStateService.getEntities('BINARY_SENSOR', 'ACCOUNT_LOGIN').pipe(
+      map(entities => {
+        this.accountLoginInsights = buildAccountLoginInsights(entities);
+        this.rebuildInsights();
+      }),
+      catchError(() => of(undefined))
     );
   }
 

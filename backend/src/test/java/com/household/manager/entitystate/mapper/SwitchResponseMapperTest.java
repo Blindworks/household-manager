@@ -157,4 +157,13 @@ class SwitchResponseMapperTest {
 
         assertThat(response.powerWatts()).isNull();
     }
+
+    @Test
+    void nicht_erreichbarer_power_sensor_liefert_keine_leistung() {
+        EntityState unreachable = powerSensor().attributes("{\"deviceClass\":\"power\",\"reachable\":false}").build();
+
+        SwitchResponse response = mapper.toResponse(entity().build(), null, unreachable);
+
+        assertThat(response.powerWatts()).isNull();
+    }
 }

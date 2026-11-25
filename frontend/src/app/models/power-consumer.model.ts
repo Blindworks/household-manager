@@ -8,6 +8,11 @@ export interface PowerConsumer {
   /** Aktuelle Leistung in Watt; null, wenn der Sensor nicht erreichbar ist. */
   powerWatts: number | null;
   unavailable: boolean;
+  /**
+   * Die Steckdose ist nicht erreichbar (Meross offline); ihr letzter Wert waere
+   * veraltet. Fehlt das Feld (aeltere Antwort), gilt sie als erreichbar.
+   */
+  unreachable?: boolean;
 }
 
 /** Auswählbarer Zeitraum des Verbrauchsgraphen. */

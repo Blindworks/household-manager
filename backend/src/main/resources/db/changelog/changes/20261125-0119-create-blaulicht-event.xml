@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <changeSet id="20261125-0118-create-blaulicht-event" author="claude">
+    <changeSet id="20261125-0119-create-blaulicht-event" author="claude">
         <comment>
             Blaulicht Bad Vilbel: ein Fall je Zeile (Sammelmeldungen ergeben mehrere). content_hash ist
             eindeutig und faengt dieselbe Meldung unter neuer GUID. Ein DDL je Changeset (MariaDB-Autocommit).

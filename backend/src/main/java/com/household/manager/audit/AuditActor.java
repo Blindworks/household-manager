@@ -26,6 +26,11 @@ public record AuditActor(AuditActorType type, String name) {
         return new AuditActor(AuditActorType.SYSTEM, "AGENT");
     }
 
+    /** Die Raumregelung der Heizung ({@code ThermostatRoomRegulator}); SYSTEM-Typ wie der Agent. */
+    public static AuditActor roomRegulation() {
+        return new AuditActor(AuditActorType.SYSTEM, "HEIZREGELUNG");
+    }
+
     public static AuditActor flow(long flowId) {
         return new AuditActor(AuditActorType.SYSTEM, "FLOW:" + flowId);
     }
