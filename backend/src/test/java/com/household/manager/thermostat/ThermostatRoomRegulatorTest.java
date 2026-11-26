@@ -85,8 +85,8 @@ class ThermostatRoomRegulatorTest {
 
         regulator.regulate();
 
-        // Versatz 2,5 => 22 + 2,5
-        verify(thermostatService).setTarget(7L, 24.5);
+        // Heizkoerper 23 + 3 x (22 - 20,5)
+        verify(thermostatService).setTarget(7L, 27.5);
     }
 
     @Test
@@ -163,7 +163,7 @@ class ThermostatRoomRegulatorTest {
         thermostat(23.0, 22.0, ThermostatMode.MANUAL, true);
         room("20.5", now());
         regulator.regulate();
-        verify(thermostatService).setTarget(7L, 24.5);
+        verify(thermostatService).setTarget(7L, 27.5);
 
         // Hub meldet noch den alten Wert, der Raum ist inzwischen kaelter
         clock.plusMinutes(5);
@@ -171,7 +171,8 @@ class ThermostatRoomRegulatorTest {
         room("19.5", now());
         regulator.regulate();
 
-        verify(thermostatService).setTarget(7L, 25.5);
+        // Antrieb 3 x 2,5 auf 5 begrenzt
+        verify(thermostatService).setTarget(7L, 28.0);
     }
 
     @Test
@@ -188,13 +189,13 @@ class ThermostatRoomRegulatorTest {
         clock.plusMinutes(115);
         regulator.regulate();
         // waehrend der Pause bleibt es beim ersten Schreiben
-        verify(thermostatService, org.mockito.Mockito.times(1)).setTarget(7L, 24.5);
+        verify(thermostatService, org.mockito.Mockito.times(1)).setTarget(7L, 27.5);
 
         clock.plusMinutes(6);
         room("20.5", now());
         regulator.regulate();
-        // nach der Pause regelt sie wieder; der erste Aufruf (24,5) plus dieser
-        verify(thermostatService, org.mockito.Mockito.times(2)).setTarget(7L, 24.5);
+        // nach der Pause regelt sie wieder; der erste Aufruf (27,5) plus dieser
+        verify(thermostatService, org.mockito.Mockito.times(2)).setTarget(7L, 27.5);
     }
 
     @Test
@@ -245,8 +246,8 @@ class ThermostatRoomRegulatorTest {
 
         regulator.regulateNow(bath);
 
-        // 22 + (24 - 20) = 26
-        verify(thermostatService).setTarget(7L, 26.0);
+        // 24 + 3 x 2, Antrieb auf 5 begrenzt
+        verify(thermostatService).setTarget(7L, 29.0);
     }
 
     @Test
@@ -264,13 +265,13 @@ class ThermostatRoomRegulatorTest {
         thermostat(24.0, 22.0, ThermostatMode.MANUAL, true);
         room("20.0", now());
         regulator.regulateNow(bath);
-        thermostat(24.0, 26.0, ThermostatMode.MANUAL, true);
+        thermostat(24.0, 29.0, ThermostatMode.MANUAL, true);
         room("21.0", now());
 
         regulator.regulate();
 
-        // 22 + (24 - 21) = 25: regelt weiter, keine Pause
-        verify(thermostatService).setTarget(7L, 25.0);
+        // 24 + 3 x 1 = 27: regelt weiter, keine Pause
+        verify(thermostatService).setTarget(7L, 27.0);
     }
 }
 
