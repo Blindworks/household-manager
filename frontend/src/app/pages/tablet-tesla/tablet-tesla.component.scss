@@ -1,0 +1,23 @@
+// Header and view bar come from app-tablet-shell. The page only centres the card;
+// colours are inherited lumina tokens from the shell.
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tablet-tesla {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1rem 0;
+}
+
+.tablet-tesla__card {
+  width: 100%;
+  max-width: 60rem;
+}
