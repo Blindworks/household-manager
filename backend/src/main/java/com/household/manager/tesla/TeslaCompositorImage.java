@@ -49,34 +49,47 @@ public final class TeslaCompositorImage {
     /**
      * {@code vehicle_config.wheel_type} → compositor wheel code. Without a wheel code the compositor
      * draws the car with empty wheel arches, so a wheel is always set (see {@link #DEFAULT_WHEELS}).
-     * Keys are lower case letters and digits only.
+     * Keys are lower case letters and digits only. Only codes from {@link #RENDERED_WHEELS} are used:
+     * several plausible codes (W38A, W39S, WY0S, WS90, WX00 …) render without wheels.
      */
     private static final Map<String, String> WHEELS = Map.ofEntries(
             Map.entry("pinwheel18", "W38B"),
             Map.entry("pinwheel18cap", "W38B"),
             Map.entry("aeroturbine18", "W38B"),
-            Map.entry("pinwheelrefresh18", "W38A"),
-            Map.entry("photon18", "W38A"),
+            Map.entry("pinwheelrefresh18", "W38B"),
+            Map.entry("photon18", "W38B"),
             Map.entry("stiletto19", "W39B"),
             Map.entry("sportwheel19", "W39B"),
-            Map.entry("nova19", "W39S"),
+            Map.entry("nova19", "W39B"),
             Map.entry("stiletto20", "W32P"),
             Map.entry("performancewheel20", "W32P"),
             Map.entry("apollo19", "WY19B"),
             Map.entry("gemini19", "WY19B"),
             Map.entry("induction20", "WY20P"),
             Map.entry("uberturbine21", "WY21P"),
-            Map.entry("tempest19", "WS90"),
-            Map.entry("arachnid21", "WS10"),
-            Map.entry("cyberstream20", "WX00"),
-            Map.entry("turbine22", "WX20"));
+            Map.entry("tempest19", "WT19"),
+            Map.entry("slipstream19", "WT19"),
+            Map.entry("arachnid21", "WT21"),
+            Map.entry("turbine21", "WT21"),
+            Map.entry("cyberstream20", "WT20"),
+            Map.entry("slipstream20", "WT20"),
+            Map.entry("turbine22", "WT22"));
 
-    /** Fallback wheel per model when {@code wheel_type} is missing or unknown. */
+    /**
+     * Wheel codes per model that were checked against the compositor on 2026-11-27 and draw wheels.
+     */
+    private static final Map<String, Set<String>> RENDERED_WHEELS = Map.of(
+            "m3", Set.of("W38B", "W39B", "W32P", "W32D", "W33D", "W40B", "W41B"),
+            "my", Set.of("WY18B", "WY19B", "WY19P", "WY20P", "WY21P"),
+            "ms", Set.of("WT19", "WT21"),
+            "mx", Set.of("WT20", "WT22"));
+
+    /** Fallback wheel per model when {@code wheel_type} is missing, unknown or does not render. */
     private static final Map<String, String> DEFAULT_WHEELS = Map.of(
             "m3", "W38B",
             "my", "WY19B",
-            "ms", "WS90",
-            "mx", "WX00");
+            "ms", "WT19",
+            "mx", "WT20");
 
     private TeslaCompositorImage() {
     }
@@ -146,16 +159,16 @@ public final class TeslaCompositorImage {
     static String wheelCode(String model, String wheelType) {
         if (wheelType != null) {
             String wheel = WHEELS.get(wheelType.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", ""));
-            if (wheel != null) {
+            if (wheel != null && RENDERED_WHEELS.getOrDefault(model, Set.of()).contains(wheel)) {
                 return wheel;
             }
         }
         return DEFAULT_WHEELS.get(model);
     }
 
-    /** Wheel codes: W + digit (Model 3: W38B) or W + model letter + digits (Model Y: WY19B). */
+    /** Wheel codes: W + digit (Model 3: W38B) or W + letter + digits (Model Y: WY19B, Model S: WT19). */
     static boolean isWheelCode(String code) {
-        return code.matches("W[0-9][0-9A-Z]{2}") || code.matches("W[YSX][0-9]{2}[A-Z]?");
+        return code.matches("W[0-9][0-9A-Z]{2}") || code.matches("W[YSXT][0-9A-Z]?[0-9]{1,2}[A-Z]?");
     }
 
     /** Lackcodes: P + Lackart (B solid, M metallic, P pearl/multicoat, N/R/X neuere) + zwei Zeichen. */
