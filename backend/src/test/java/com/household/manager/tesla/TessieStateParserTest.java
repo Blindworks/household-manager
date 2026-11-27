@@ -20,6 +20,8 @@ class TessieStateParserTest {
     @Test
     void liestAkkuReichweiteUndLadezustand() throws Exception {
         TeslaVehicleSnapshot snapshot = TessieStateParser.parse(fixture(), "FALLBACK");
+        assertThat(snapshot.optionCodes()).isEqualTo("AD15,MDL3,PPSW,W40B");
+        assertThat(snapshot.wheelType()).isEqualTo("Pinwheel18");
 
         assertThat(snapshot.vin()).isEqualTo("5YJ3E7EB2NF000001");
         assertThat(snapshot.displayName()).isEqualTo("Blitz");

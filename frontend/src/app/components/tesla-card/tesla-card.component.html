@@ -1,6 +1,9 @@
 @if (visible) {
   <article class="tesla-card" [class.tesla-card--busy]="busyCommand !== null">
     <div class="tesla-card__car" aria-hidden="true">
+      @if (imageUrl; as src) {
+        <img class="tesla-card__image" [src]="src" alt="" (error)="onImageError()" />
+      } @else {
       <svg viewBox="0 0 240 90" class="tesla-card__svg">
         <ellipse cx="120" cy="80" rx="105" ry="6" class="tesla-card__shadow" />
         <path
@@ -14,6 +17,7 @@
         <circle cx="182" cy="68" r="13" class="tesla-card__tire" />
         <circle cx="182" cy="68" r="7" class="tesla-card__rim" />
       </svg>
+      }
     </div>
 
     <div class="tesla-card__info">

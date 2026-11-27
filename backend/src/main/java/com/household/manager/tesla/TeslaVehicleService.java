@@ -225,6 +225,15 @@ public class TeslaVehicleService {
         return instant == null ? null : LocalDateTime.ofInstant(instant, clock.getZone());
     }
 
+    /** Letzter Stand des eingestellten Fahrzeugs, {@code null} bis zum ersten Abruf. */
+    public synchronized TeslaVehicleSnapshot currentVehicle() {
+        TeslaSettings settings = settingsService.current();
+        if (vehicle == null || (settings.vin() != null && !settings.vin().equalsIgnoreCase(vehicle.vin()))) {
+            return null;
+        }
+        return vehicle;
+    }
+
     /** Wird beim Speichern der Einstellungen gerufen: neuer Token oder anderes Fahrzeug. */
     public synchronized void onSettingsChanged() {
         resolvedVin = null;

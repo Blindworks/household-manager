@@ -57,6 +57,8 @@ public final class TessieStateParser {
                 text(drive, "shift_state"),
                 text(config, "car_type"),
                 text(config, "exterior_color"),
+                text(config, "wheel_type"),
+                text(state, "option_codes"),
                 timestamp(charge));
     }
 

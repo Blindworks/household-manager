@@ -41,6 +41,11 @@ export class TeslaService {
   refresh(): Observable<TeslaStatus> {
     return this.http.post<TeslaStatus>(`${this.baseUrl}/settings/refresh`, {}).pipe(catchError(toError));
   }
+
+  /** Fahrzeugbild über das Backend (zwischengespeichert); die Version erzwingt bei neuer Adresse ein Neuladen. */
+  imageUrl(version: string): string {
+    return `${this.baseUrl}/vehicle/image?v=${encodeURIComponent(version)}`;
+  }
 }
 
 /** Fehlertext des Backends (400/502) weiterreichen, sonst ein allgemeiner. */

@@ -36,8 +36,10 @@
     "longitude": 8.73,
     "shift_state": null
   },
+  "option_codes": "AD15,MDL3,PPSW,W40B",
   "vehicle_config": {
     "car_type": "model3",
-    "exterior_color": "PearlWhite"
+    "exterior_color": "PearlWhite",
+    "wheel_type": "Pinwheel18"
   }
 }

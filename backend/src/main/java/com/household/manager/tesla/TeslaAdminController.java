@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
-/** Admin-Seite „Tesla“: Token, Fahrzeug, Intervall. ADMIN, auch Lesen ({@code SecurityConfig}). */
+/** Admin-Seite „Tesla“: Token, Fahrzeug, Intervall, Bildadresse. ADMIN, auch Lesen ({@code SecurityConfig}). */
 @RestController
 @RequestMapping("/v1/tesla/settings")
 @RequiredArgsConstructor
@@ -34,7 +34,8 @@ public class TeslaAdminController {
     public TeslaSettingsResponse update(@RequestBody TeslaSettingsRequest request) {
         int interval = request.pollIntervalMinutes() != null
                 ? request.pollIntervalMinutes() : TeslaSettingsService.DEFAULT_INTERVAL_MINUTES;
-        TeslaSettings saved = settingsService.update(request.apiToken(), request.vin(), interval);
+        TeslaSettings saved = settingsService.update(request.apiToken(), request.vin(), interval,
+                request.imageUrl());
         vehicleService.onSettingsChanged();
         return toResponse(saved);
     }
@@ -54,6 +55,7 @@ public class TeslaAdminController {
 
     private static TeslaSettingsResponse toResponse(TeslaSettings settings) {
         return new TeslaSettingsResponse(settings.hasToken(), settings.vin(), settings.pollIntervalMinutes(),
-                TeslaSettingsService.MIN_INTERVAL_MINUTES, TeslaSettingsService.MAX_INTERVAL_MINUTES);
+                TeslaSettingsService.MIN_INTERVAL_MINUTES, TeslaSettingsService.MAX_INTERVAL_MINUTES,
+                settings.imageUrl());
     }
 }

@@ -24,6 +24,8 @@ public class TeslaSettingsService {
     static final String KEY_TOKEN = "api_token";
     static final String KEY_VIN = "vin";
     static final String KEY_INTERVAL = "poll_interval_minutes";
+    static final String KEY_IMAGE_URL = "image_url";
+    static final int MAX_IMAGE_URL_LENGTH = 2000;
 
     public static final int DEFAULT_INTERVAL_MINUTES = 5;
     public static final int MIN_INTERVAL_MINUTES = 1;
@@ -44,15 +46,16 @@ public class TeslaSettingsService {
         }
         String token = blankToNull(raw.get(KEY_TOKEN));
         String vin = blankToNull(raw.get(KEY_VIN));
-        return new TeslaSettings(token, vin, parseInterval(raw.get(KEY_INTERVAL)));
+        return new TeslaSettings(token, vin, parseInterval(raw.get(KEY_INTERVAL)), parseImageUrl(raw.get(KEY_IMAGE_URL)));
     }
 
     /**
      * Speichert die Einstellungen.
      *
      * @param apiToken {@code null} = Token unverändert lassen, leer = Token entfernen
+     * @param imageUrl leer = Bild automatisch aus Teslas Konfigurator
      */
-    public TeslaSettings update(String apiToken, String vin, int pollIntervalMinutes) {
+    public TeslaSettings update(String apiToken, String vin, int pollIntervalMinutes, String imageUrl) {
         if (pollIntervalMinutes < MIN_INTERVAL_MINUTES || pollIntervalMinutes > MAX_INTERVAL_MINUTES) {
             throw new IllegalArgumentException("Das Abrufintervall muss zwischen " + MIN_INTERVAL_MINUTES
                     + " und " + MAX_INTERVAL_MINUTES + " Minuten liegen.");
@@ -64,7 +67,13 @@ public class TeslaSettingsService {
                 throw new IllegalArgumentException("Die Fahrgestellnummer muss 17 Zeichen lang sein.");
             }
         }
+        String normalizedImageUrl = blankToNull(imageUrl);
+        if (normalizedImageUrl != null && !isValidImageUrl(normalizedImageUrl)) {
+            throw new IllegalArgumentException("Die Bildadresse muss mit https:// beginnen und darf höchstens "
+                    + MAX_IMAGE_URL_LENGTH + " Zeichen lang sein.");
+        }
         Map<String, String> values = new HashMap<>();
+        values.put(KEY_IMAGE_URL, normalizedImageUrl == null ? "" : normalizedImageUrl);
         values.put(KEY_VIN, normalizedVin == null ? "" : normalizedVin);
         values.put(KEY_INTERVAL, String.valueOf(pollIntervalMinutes));
         String tokenChange = "unverändert";
@@ -78,7 +87,8 @@ public class TeslaSettingsService {
         }
         applicationSettings.saveSettings(CATEGORY, values);
         auditService.record("tesla.settings.update", "vin=" + (normalizedVin == null ? "auto" : normalizedVin)
-                + ", intervall=" + pollIntervalMinutes + " min, token=" + tokenChange);
+                + ", intervall=" + pollIntervalMinutes + " min, token=" + tokenChange
+                + ", bild=" + (normalizedImageUrl == null ? "auto" : "eigene Adresse"));
         return current();
     }
 
@@ -96,6 +106,31 @@ public class TeslaSettingsService {
         }
         log.warn("Ungültiges Tesla-Abrufintervall '{}', nutze {}", raw, DEFAULT_INTERVAL_MINUTES);
         return DEFAULT_INTERVAL_MINUTES;
+    }
+
+    private static String parseImageUrl(String raw) {
+        String value = blankToNull(raw);
+        if (value == null) {
+            return null;
+        }
+        if (!isValidImageUrl(value)) {
+            log.warn("Ungültige Tesla-Bildadresse in den Einstellungen, nutze das Konfiguratorbild");
+            return null;
+        }
+        return value;
+    }
+
+    /** Nur https und eine echte Hostangabe; das Backend lädt die Adresse selbst (nur ADMIN darf sie setzen). */
+    static boolean isValidImageUrl(String value) {
+        if (value.length() > MAX_IMAGE_URL_LENGTH) {
+            return false;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(value);
+            return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null && !uri.getHost().isBlank();
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     private static String blankToNull(String value) {

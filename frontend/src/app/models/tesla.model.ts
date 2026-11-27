@@ -33,6 +33,8 @@ export interface TeslaStatus {
   vehicle?: TeslaVehicle;
   polledAt?: string;
   error?: string;
+  /** Schlüssel des Fahrzeugbilds (GET /v1/tesla/vehicle/image); fehlt ohne Bild */
+  imageVersion?: string;
 }
 
 export type TeslaCommand =
@@ -47,6 +49,8 @@ export interface TeslaSettings {
   pollIntervalMinutes: number;
   minPollIntervalMinutes: number;
   maxPollIntervalMinutes: number;
+  /** eigene Bildadresse, null = Bild aus Teslas Konfigurator */
+  imageUrl: string | null;
 }
 
 export interface TeslaSettingsUpdate {
@@ -54,6 +58,8 @@ export interface TeslaSettingsUpdate {
   apiToken?: string | null;
   vin: string | null;
   pollIntervalMinutes: number;
+  /** null/'' = Bild aus Teslas Konfigurator */
+  imageUrl: string | null;
 }
 
 export interface TessieVehicle {

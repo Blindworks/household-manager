@@ -46,7 +46,7 @@ class TeslaSettingsServiceTest {
     void tokenNullLaesstIhnUnveraendert() {
         when(settings.getSettingsByCategory("TESLA")).thenReturn(Map.of());
 
-        service.update(null, "5yj3e7eb2nf000001", 10);
+        service.update(null, "5yj3e7eb2nf000001", 10, null);
 
         verify(settings).saveSettings(eq("TESLA"), argThat(values ->
                 !values.containsKey("api_token")
@@ -59,16 +59,37 @@ class TeslaSettingsServiceTest {
     void leererTokenEntferntIhn() {
         when(settings.getSettingsByCategory("TESLA")).thenReturn(Map.of());
 
-        service.update("", null, 5);
+        service.update("", null, 5, null);
 
         verify(settings).saveSettings(eq("TESLA"), argThat(values -> "".equals(values.get("api_token"))));
     }
 
     @Test
     void lehntFalscheVinUndIntervallAb() {
-        assertThatThrownBy(() -> service.update(null, "ABC", 5)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.update(null, null, 0)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.update(null, null, 61)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.update(null, "ABC", 5, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.update(null, null, 0, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.update(null, null, 61, null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void bildadresseNurMitHttps() {
+        when(settings.getSettingsByCategory("TESLA")).thenReturn(Map.of());
+
+        service.update(null, null, 5, " https://static-assets.tesla.com/v1/compositor/?model=m3 ");
+
+        verify(settings).saveSettings(eq("TESLA"), argThat(values ->
+                "https://static-assets.tesla.com/v1/compositor/?model=m3".equals(values.get("image_url"))));
+        assertThatThrownBy(() -> service.update(null, null, 5, "http://example.com/a.png"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.update(null, null, 5, "file:///etc/passwd"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void ungueltigeGespeicherteBildadresseFaelltAufAutomatisch() {
+        when(settings.getSettingsByCategory("TESLA")).thenReturn(Map.of("image_url", "ftp://x"));
+
+        assertThat(service.current().imageUrl()).isNull();
     }
 
     @Test

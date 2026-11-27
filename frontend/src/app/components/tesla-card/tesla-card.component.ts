@@ -16,7 +16,9 @@ import {
 } from '../../shared/tesla-view.util';
 
 /**
- * Tesla-Kachel im Dashboard (Tessie): Akku, Reichweite, Ladezustand und vier Knöpfe.
+ * Tesla-Kachel im Dashboard (Tessie): Fahrzeugbild, Akku, Reichweite, Ladezustand und vier Knöpfe.
+ * Das Bild kommt über das Backend (eigene Adresse oder Teslas Konfigurator); lädt es nicht,
+ * steht die Zeichnung da.
  * Holt den Stand selbst im 60-s-Takt; ein fehlgeschlagener Abruf behält den letzten Stand.
  * Ohne eingerichteten Tessie-Zugang bleibt die Kachel unsichtbar.
  *
@@ -41,6 +43,8 @@ export class TeslaCardComponent implements OnInit {
   confirming = false;
   commandError: string | null = null;
   now = new Date();
+  /** Bildversion, die nicht geladen werden konnte — dann bleibt es bei der Zeichnung. */
+  failedImageVersion: string | null = null;
 
   get vehicle(): TeslaVehicle | undefined {
     return this.status?.configured ? this.status.vehicle : undefined;
@@ -76,6 +80,19 @@ export class TeslaCardComponent implements OnInit {
 
   get staleLabel(): string | null {
     return teslaStaleLabel(this.vehicle?.measuredAt, this.now);
+  }
+
+  /** Echtes Fahrzeugbild, solange es eines gibt und es sich laden ließ. */
+  get imageUrl(): string | null {
+    const version = this.status?.imageVersion;
+    if (!version || version === this.failedImageVersion) {
+      return null;
+    }
+    return this.service.imageUrl(version);
+  }
+
+  onImageError(): void {
+    this.failedImageVersion = this.status?.imageVersion ?? null;
   }
 
   get paint(): string {

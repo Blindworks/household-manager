@@ -9,7 +9,7 @@ describe('AdminTeslaComponent', () => {
   let component: AdminTeslaComponent;
   let service: jasmine.SpyObj<TeslaService>;
   const settings: TeslaSettings = {
-    tokenConfigured: true, vin: null, pollIntervalMinutes: 5, minPollIntervalMinutes: 1, maxPollIntervalMinutes: 60
+    tokenConfigured: true, vin: null, pollIntervalMinutes: 5, minPollIntervalMinutes: 1, maxPollIntervalMinutes: 60, imageUrl: null
   };
 
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('AdminTeslaComponent', () => {
     service.saveSettings.and.returnValue(of(settings));
     component.pollIntervalMinutes = 10;
     component.save();
-    expect(service.saveSettings).toHaveBeenCalledWith({ apiToken: null, vin: null, pollIntervalMinutes: 10 });
+    expect(service.saveSettings).toHaveBeenCalledWith({ apiToken: null, vin: null, pollIntervalMinutes: 10, imageUrl: null });
   });
 
   it('entfernt das Token mit leerem Text', () => {

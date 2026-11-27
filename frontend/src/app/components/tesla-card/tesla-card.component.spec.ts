@@ -24,7 +24,8 @@ describe('TeslaCardComponent', () => {
   }
 
   beforeEach(() => {
-    service = jasmine.createSpyObj<TeslaService>('TeslaService', ['getStatus', 'sendCommand']);
+    service = jasmine.createSpyObj<TeslaService>('TeslaService', ['getStatus', 'sendCommand', 'imageUrl']);
+    service.imageUrl.and.callFake((v: string) => `/api/v1/tesla/vehicle/image?v=${v}`);
     TestBed.configureTestingModule({
       imports: [TeslaCardComponent],
       providers: [{ provide: TeslaService, useValue: service }]
@@ -34,6 +35,24 @@ describe('TeslaCardComponent', () => {
   it('bleibt unsichtbar ohne Tessie-Zugang', () => {
     create({ configured: false });
     expect(fixture.nativeElement.querySelector('.tesla-card')).toBeNull();
+  });
+
+  it('zeigt die Zeichnung ohne Fahrzeugbild', () => {
+    create(locked);
+    expect(fixture.nativeElement.querySelector('.tesla-card__image')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tesla-card__svg')).not.toBeNull();
+  });
+
+  it('zeigt das echte Bild und fällt bei einem Ladefehler auf die Zeichnung zurück', () => {
+    create({ ...locked, imageVersion: 'abc123' });
+    const img = fixture.nativeElement.querySelector('.tesla-card__image') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('/api/v1/tesla/vehicle/image?v=abc123');
+
+    img.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.tesla-card__image')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tesla-card__svg')).not.toBeNull();
   });
 
   it('zeigt Akku, Reichweite und Zuhause', () => {

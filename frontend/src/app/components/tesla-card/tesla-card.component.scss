@@ -6,7 +6,7 @@
 
 .tesla-card {
   display: grid;
-  grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr);
+  grid-template-columns: minmax(9rem, 17rem) minmax(0, 1fr);
   grid-template-areas:
     'car info'
     'actions actions';
@@ -23,6 +23,14 @@
   grid-area: car;
   display: flex;
   align-items: center;
+}
+
+.tesla-card__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 9rem;
+  object-fit: contain;
 }
 
 .tesla-card__svg {
