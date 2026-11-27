@@ -54,7 +54,7 @@ import {
   BEDROOM_TEMPERATURE_ENTITY_ID,
   buildBalconyColdInsight
 } from '../../shared/balcony-cold-insight.util';
-import { buildApplianceInsights } from '../../shared/appliance-insight.util';
+import { buildApplianceInsights, checkApplianceRun } from '../../shared/appliance-insight.util';
 import { buildAccountLoginInsights } from '../../shared/account-login-insight.util';
 import { EntityStateService } from '../../services/entity-state.service';
 import { EntityState } from '../../models/entity-state.model';
@@ -1854,13 +1854,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Tastatur fokussiertes Element verlöre im Takt den Fokus.
    */
   trackByInsight(_index: number, item: HubInsight): string {
-    return item.dismissEntityId ?? item.tapAction ?? item.title;
+    return item.dismissEntityId ?? item.checkApplianceEntityId ?? item.tapAction ?? item.title;
   }
 
   /** Klick/Tastatur auf eine Hub-Karte; nur antippbare Karten tun etwas. */
   activateInsight(item: HubInsight): void {
     if (item.dismissEntityId) {
       this.dismissInsight(item.dismissEntityId);
+    } else if (item.checkApplianceEntityId) {
+      this.checkRunningAppliance(item.checkApplianceEntityId);
     } else if (item.tapAction === 'laundry-removed') {
       this.markLaundryRemoved();
     } else if (item.tapAction === 'laundry-hide') {
@@ -1877,6 +1879,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (item.tapAction === 'grocery-deals' || item.tapAction === 'blaulicht') {
       return 'chevron_right';
     }
+    if (item.checkApplianceEntityId) {
+      return 'sync';
+    }
     return item.tapAction === 'laundry-hide' ? 'close' : 'done';
   }
 
@@ -1884,6 +1889,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   insightAriaLabel(item: HubInsight): string | null {
     if (item.dismissEntityId) {
       return item.title + ' als erledigt markieren';
+    }
+    if (item.checkApplianceEntityId) {
+      return item.title + ' prüfen';
     }
     switch (item.tapAction) {
       case 'laundry-hide': return item.title + ' ausblenden';
@@ -2023,6 +2031,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
         });
       },
       error: () => { /* Frischer Stand nicht verfuegbar: nicht schalten, Karte bleibt stehen. */ }
+    });
+  }
+
+  /**
+   * Tap on a "machine running" card: reloads the helpers and the plug readings and
+   * switches the running helper off only if the fresh reading says the machine draws
+   * less than the flows' threshold. A running machine, an unreachable plug or a failed
+   * request leaves the card as it is (the refreshed card then shows the current watts).
+   * Like {@link dismissInsight}, the helper is toggled only while the fresh state is
+   * still "on" — the endpoint is a toggle.
+   */
+  checkRunningAppliance(runningHelperId: string): void {
+    forkJoin({
+      helpers: this.entityStateService.getEntities('INPUT_BOOLEAN', 'MANUAL'),
+      sensors: this.entityStateService.getEntities('SENSOR', 'MEROSS')
+    }).subscribe({
+      next: ({ helpers, sensors }) => {
+        this.applianceEntities = helpers;
+        this.appliancePowerSensors = sensors;
+        const helperOn = helpers.find(entity => entity.entityId === runningHelperId)?.state === 'on';
+        if (!helperOn || checkApplianceRun(runningHelperId, sensors, Date.now()) !== 'stopped') {
+          this.refreshApplianceInsights();
+          return;
+        }
+        this.switchService.toggle(runningHelperId).subscribe({
+          next: updated => {
+            this.applianceEntities = this.applianceEntities.map(entity =>
+              entity.entityId === runningHelperId ? { ...entity, state: updated.state } : entity);
+            this.refreshApplianceInsights();
+          },
+          error: () => this.refreshApplianceInsights()
+        });
+      },
+      error: () => { /* No fresh state: do not switch, the card stays. */ }
     });
   }
 
