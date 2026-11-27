@@ -13,7 +13,7 @@ class TeslaCompositorImageTest {
         String url = TeslaCompositorImage.urlFor(vehicle("model3", "PearlWhite", "AD15,MDL3,PBSB,W40B"));
 
         assertThat(url).startsWith("https://static-assets.tesla.com/v1/compositor/?model=m3&view=STUD_3QTR")
-                .contains("&options=$AD15,$MDL3,$PBSB,$W40B")
+                .contains("&options=$AD15,$MDL3,$PBSB,$W38B")
                 .doesNotContain("PPSW");
     }
 
@@ -21,7 +21,7 @@ class TeslaCompositorImageTest {
     void ergaenztDenLackAusDerFarbeWennKeinLackcodeDaIst() {
         String url = TeslaCompositorImage.urlFor(vehicle("modely", "Midnight Silver", "MDLY,W41B"));
 
-        assertThat(url).contains("model=my").contains("&options=$MDLY,$W41B,$PMNG");
+        assertThat(url).contains("model=my").contains("&options=$MDLY,$WY19B,$PMNG");
     }
 
     @Test
@@ -33,7 +33,29 @@ class TeslaCompositorImageTest {
     @Test
     void ohneCodesNurDerLack() {
         assertThat(TeslaCompositorImage.urlFor(vehicle("model3", "PearlWhite", null)))
-                .endsWith("&bkba_opt=1&options=$PPSW");
+                .endsWith("&bkba_opt=1&options=$W38B,$PPSW");
+    }
+
+    @Test
+    void wheelComesFromWheelTypeAndReplacesStaleWheelCodes() {
+        String url = TeslaCompositorImage.urlFor(vehicle("model3", "MidnightSilver", "MDL3,W40B,PMNG", "Stiletto19"));
+
+        assertThat(url).contains("&options=$MDL3,$PMNG,$W39B").doesNotContain("W40B");
+    }
+
+    @Test
+    void missingWheelCodeFallsBackToModelDefault() {
+        assertThat(TeslaCompositorImage.urlFor(vehicle("model3", "MidnightSilver", "MDL3,PMNG", "SomethingNew")))
+                .contains("$W38B");
+        assertThat(TeslaCompositorImage.urlFor(vehicle("modely", "PearlWhite", null, null))).contains("$WY19B");
+    }
+
+    @Test
+    void recognisesWheelCodesOnly() {
+        assertThat(TeslaCompositorImage.isWheelCode("W38B")).isTrue();
+        assertThat(TeslaCompositorImage.isWheelCode("WY19B")).isTrue();
+        assertThat(TeslaCompositorImage.isWheelCode("WR00")).isFalse();
+        assertThat(TeslaCompositorImage.isWheelCode("TW00")).isFalse();
     }
 
     @Test
@@ -44,8 +66,12 @@ class TeslaCompositorImageTest {
     }
 
     private static TeslaVehicleSnapshot vehicle(String carType, String color, String options) {
+        return vehicle(carType, color, options, null);
+    }
+
+    private static TeslaVehicleSnapshot vehicle(String carType, String color, String options, String wheelType) {
         return new TeslaVehicleSnapshot("VIN", "Blitz", "online", 55, 275.7, 80, "Charging", true, 11.0, 95,
-                false, null, true, true, false, false, 6.5, 2.0, null, null, null, carType, color, null,
+                false, null, true, true, false, false, 6.5, 2.0, null, null, null, carType, color, wheelType,
                 options, Instant.parse("2026-11-27T07:59:00Z"));
     }
 }
