@@ -122,6 +122,12 @@ export const routes: Routes = [
     title: 'Heizung Tablet - Household Manager'
   },
   {
+    path: 'tablet/tesla',
+    loadComponent: () => import('./pages/tablet-tesla/tablet-tesla.component').then(m => m.TabletTeslaComponent),
+    canActivate: [authGuard],
+    title: 'Tesla Tablet - Household Manager'
+  },
+  {
     path: 'tablet/house',
     loadComponent: () => import('./pages/tablet-house/tablet-house.component').then(m => m.TabletHouseComponent),
     canActivate: [authGuard],

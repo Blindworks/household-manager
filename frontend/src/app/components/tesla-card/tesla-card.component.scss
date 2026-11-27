@@ -265,3 +265,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.tesla-card__hint {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-xl, 1.5rem);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--on-surface-variant, var(--on-surface));
+}

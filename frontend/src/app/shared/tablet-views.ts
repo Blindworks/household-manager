@@ -23,5 +23,6 @@ export const TABLET_VIEWS: readonly TabletView[] = [
   { route: '/tablet/cameras', icon: 'videocam', label: 'Kameras' },
   { route: '/tablet/charging', icon: 'ev_station', label: 'Laden' },
   // Nicht 'thermostat': dieses Symbol gehoert schon den Temperaturen.
-  { route: '/tablet/heating', icon: 'mode_heat', label: 'Heizung' }
+  { route: '/tablet/heating', icon: 'mode_heat', label: 'Heizung' },
+  { route: '/tablet/tesla', icon: 'electric_car', label: 'Tesla' }
 ];

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Input, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, interval, startWith, switchMap } from 'rxjs';
 import { TeslaService } from '../../services/tesla.service';
@@ -36,6 +36,9 @@ export class TeslaCardComponent implements OnInit {
   private readonly service = inject(TeslaService);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** Show a hint instead of nothing when no Tesla is set up (own tablet view). */
+  @Input() showSetupHint = false;
+
   status: TeslaStatus | null = null;
   /** Befehl, der gerade läuft (Tessie wartet, bis das Auto ihn ausgeführt hat). */
   busyCommand: TeslaCommand | null = null;
@@ -52,6 +55,11 @@ export class TeslaCardComponent implements OnInit {
 
   get visible(): boolean {
     return !!this.status?.configured && (!!this.status.vehicle || !!this.status.error);
+  }
+
+  /** Status is known, but there is nothing to show (no token, or no vehicle yet). */
+  get setupHintVisible(): boolean {
+    return this.showSetupHint && this.status !== null && !this.visible;
   }
 
   get title(): string {
