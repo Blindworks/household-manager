@@ -57,5 +57,7 @@ public enum EntitySource {
     /** Blaulicht Bad Vilbel (Polizeimeldungen von Presseportal, Warnungen von NINA), Nacht-Briefing als Ereignisse. */
     BLAULICHT,
     /** Anmeldungen bei externen Diensten (Tractive, Blink, Alexa, Dirigera), je Dienst binary_sensor.account_login_<dienst>. */
-    ACCOUNT_LOGIN
+    ACCOUNT_LOGIN,
+    /** Tesla-Fahrzeug über Tessie (Akku, Reichweite, Laden, Schloss), Id hängt an der VIN. */
+    TESLA
 }
