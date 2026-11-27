@@ -1,0 +1,43 @@
+{
+  "id": 1234567890,
+  "vin": "5YJ3E7EB2NF000001",
+  "display_name": "Blitz",
+  "state": "online",
+  "charge_state": {
+    "battery_level": 55,
+    "usable_battery_level": 54,
+    "battery_range": 171.31,
+    "est_battery_range": 150.2,
+    "ideal_battery_range": 171,
+    "charge_limit_soc": 80,
+    "charging_state": "Charging",
+    "charger_power": 11,
+    "minutes_to_full_charge": 95,
+    "charge_port_door_open": true,
+    "scheduled_charging_pending": false,
+    "scheduled_charging_start_time": null,
+    "scheduled_charging_mode": "Off",
+    "timestamp": 1764228000000
+  },
+  "climate_state": {
+    "is_climate_on": false,
+    "is_front_defroster_on": false,
+    "defrost_mode": 0,
+    "inside_temp": 6.5,
+    "outside_temp": 2.0,
+    "timestamp": 1764228000000
+  },
+  "vehicle_state": {
+    "locked": true,
+    "odometer": 14096.48
+  },
+  "drive_state": {
+    "latitude": 50.18,
+    "longitude": 8.73,
+    "shift_state": null
+  },
+  "vehicle_config": {
+    "car_type": "model3",
+    "exterior_color": "PearlWhite"
+  }
+}

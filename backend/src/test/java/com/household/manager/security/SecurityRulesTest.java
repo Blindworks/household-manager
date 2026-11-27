@@ -104,7 +104,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         com.household.manager.systemlog.SystemLogController.class,
         com.household.manager.grocery.GroceryAdminController.class,
         com.household.manager.grocery.GroceryRunController.class,
-        com.household.manager.blaulicht.settings.BlaulichtAdminController.class},
+        com.household.manager.blaulicht.settings.BlaulichtAdminController.class,
+        com.household.manager.tesla.TeslaController.class,
+        com.household.manager.tesla.TeslaAdminController.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = com.household.manager.exception.GlobalExceptionHandler.class))
 @Import({SecurityConfig.class, ServiceTokenAuthFilter.class, DisabledUserSessionFilter.class,
@@ -165,6 +167,10 @@ class SecurityRulesTest {
     private com.household.manager.dirigera.DirigeraPairingService dirigeraPairingService;
     @MockitoBean
     private com.household.manager.grocery.GrocerySettingsService grocerySettingsService;
+    @MockitoBean
+    private com.household.manager.tesla.TeslaSettingsService teslaSettingsService;
+    @MockitoBean
+    private com.household.manager.tesla.TeslaVehicleService teslaVehicleService;
 
     @MockitoBean
     private com.household.manager.blaulicht.settings.BlaulichtSettingsService blaulichtSettingsService;
@@ -430,6 +436,46 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/v1/ble-sensors/1").with(csrf())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void teslaFahrzeugGetIstFuerKioskErlaubt() throws Exception {
+        mockMvc.perform(get("/v1/tesla/vehicle")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "KIOSK")
+    void teslaBefehlIstFuerKioskVerboten() throws Exception {
+        mockMvc.perform(post("/v1/tesla/vehicle/commands").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"command\":\"UNLOCK\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void teslaBefehlIstFuerMemberErlaubt() throws Exception {
+        mockMvc.perform(post("/v1/tesla/vehicle/commands").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"command\":\"UNLOCK\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    void teslaEinstellungenSindFuerMemberVerboten() throws Exception {
+        mockMvc.perform(get("/v1/tesla/settings")).andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/tesla/settings").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/v1/tesla/settings/vehicles").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void teslaEinstellungenSindFuerAdminErlaubt() throws Exception {
+        when(teslaSettingsService.current())
+                .thenReturn(new com.household.manager.tesla.TeslaSettings(null, null, 5));
+        mockMvc.perform(get("/v1/tesla/settings")).andExpect(status().isOk());
     }
 
     @Test

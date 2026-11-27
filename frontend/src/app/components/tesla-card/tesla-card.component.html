@@ -1,0 +1,93 @@
+@if (visible) {
+  <article class="tesla-card" [class.tesla-card--busy]="busyCommand !== null">
+    <div class="tesla-card__car" aria-hidden="true">
+      <svg viewBox="0 0 240 90" class="tesla-card__svg">
+        <ellipse cx="120" cy="80" rx="105" ry="6" class="tesla-card__shadow" />
+        <path
+          d="M14 62 C14 50 24 46 40 44 L70 40 C88 24 104 18 128 18 C152 18 170 26 186 40 L208 44 C222 47 228 52 228 62 L228 66 C228 69 226 70 223 70 L18 70 C15 70 14 69 14 66 Z"
+          [attr.fill]="paint"
+          class="tesla-card__body"
+        />
+        <path d="M80 40 C94 28 108 24 128 24 C146 24 160 30 172 40 Z" class="tesla-card__glass" />
+        <circle cx="62" cy="68" r="13" class="tesla-card__tire" />
+        <circle cx="62" cy="68" r="7" class="tesla-card__rim" />
+        <circle cx="182" cy="68" r="13" class="tesla-card__tire" />
+        <circle cx="182" cy="68" r="7" class="tesla-card__rim" />
+      </svg>
+    </div>
+
+    <div class="tesla-card__info">
+      <div class="tesla-card__head">
+        <span class="tesla-card__name">{{ title }}</span>
+        @if (staleLabel) {
+          <span class="tesla-card__stale">{{ staleLabel }}</span>
+        }
+      </div>
+
+      @if (vehicle) {
+        <div class="tesla-card__numbers">
+          <span class="tesla-card__battery">
+            <span class="material-symbols-outlined" aria-hidden="true">battery_charging_full</span>
+            {{ batteryLevel ?? '–' }}<small>%</small>
+          </span>
+          <span class="tesla-card__range">{{ rangeLabel }}</span>
+        </div>
+        <div class="tesla-card__bar" role="img" [attr.aria-label]="'Akku ' + (batteryLevel ?? 0) + ' %'">
+          <div
+            class="tesla-card__bar-fill"
+            [class]="'tesla-card__bar-fill tesla-card__bar-fill--' + batteryTone"
+            [style.width.%]="batteryLevel ?? 0"
+          ></div>
+          @if (vehicle.chargeLimit) {
+            <div class="tesla-card__bar-limit" [style.left.%]="vehicle.chargeLimit"></div>
+          }
+        </div>
+        <ul class="tesla-card__status">
+          @for (item of statusItems; track item.text) {
+            <li>
+              <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+              {{ item.text }}
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="tesla-card__error">{{ status?.error }}</p>
+      }
+    </div>
+
+    @if (vehicle) {
+      @if (confirming) {
+        <div class="tesla-card__confirm" role="alertdialog" aria-label="Entriegeln bestätigen">
+          <span>Auto wirklich entriegeln?</span>
+          <button type="button" class="tesla-card__btn" (click)="cancelConfirm()">Abbrechen</button>
+          <button type="button" class="tesla-card__btn tesla-card__btn--danger" (click)="confirmUnlock()">
+            Entriegeln
+          </button>
+        </div>
+      } @else {
+        <div class="tesla-card__actions">
+          @for (button of buttons; track button.command) {
+            <button
+              type="button"
+              class="tesla-card__btn"
+              [class.tesla-card__btn--active]="button.active"
+              [disabled]="busyCommand !== null"
+              [attr.data-command]="button.command"
+              (click)="press(button)"
+            >
+              @if (busyCommand === button.command) {
+                <span class="tesla-card__spinner" aria-hidden="true"></span>
+              } @else {
+                <span class="material-symbols-outlined" aria-hidden="true">{{ button.icon }}</span>
+              }
+              <span>{{ button.label }}</span>
+            </button>
+          }
+        </div>
+      }
+      @if (commandError) {
+        <p class="tesla-card__error tesla-card__error--command">{{ commandError }}</p>
+      }
+    }
+  </article>
+}

@@ -9,6 +9,7 @@ import com.household.manager.kasa.exception.KasaCommunicationException;
 import com.household.manager.meross.exception.MerossAuthException;
 import com.household.manager.meross.exception.MerossException;
 import com.household.manager.nuki.NukiException;
+import com.household.manager.tesla.TeslaException;
 import com.household.manager.shelly.ShellyException;
 import com.household.manager.system.RebooterException;
 import com.household.manager.tapo.TapoException;
@@ -352,6 +353,22 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.warn("Nuki communication error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    @ExceptionHandler(TeslaException.class)
+    public ResponseEntity<ErrorResponse> handleTeslaException(
+            TeslaException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        log.warn("Tessie communication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
 

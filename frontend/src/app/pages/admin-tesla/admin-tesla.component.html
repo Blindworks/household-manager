@@ -1,0 +1,85 @@
+<div class="admin-tesla">
+  <h1>Tesla</h1>
+  <p class="admin-tesla__hint">
+    Der Household Manager liest das Auto über <strong>Tessie</strong> (tessie.com). Das API-Token findest du in der
+    Tessie-Web-App unter Settings → API. Der Abruf nutzt Tessies Zwischenstand und weckt das Auto nicht; nur ein
+    Befehl aus der Kachel weckt es.
+  </p>
+
+  @if (loading()) {
+    <p>Lade Einstellungen …</p>
+  } @else if (loadFailed() || !settings) {
+    <div class="admin-tesla__error" role="alert">
+      Die Einstellungen konnten nicht geladen werden.
+      <button type="button" class="ghost" (click)="load()">Neu laden</button>
+    </div>
+  } @else {
+    <form (ngSubmit)="save()">
+      <section class="admin-tesla__section">
+        <h2>Zugang</h2>
+        <p class="admin-tesla__status">
+          @if (settings.tokenConfigured) {
+            Token hinterlegt. Ein neues Token im Feld ersetzt es.
+          } @else {
+            Noch kein Token hinterlegt, die Kachel bleibt bis dahin unsichtbar.
+          }
+        </p>
+        <div class="admin-tesla__fields">
+          <label class="admin-tesla__field admin-tesla__field--wide">
+            <span>Tessie-API-Token</span>
+            <input type="password" name="apiToken" autocomplete="off" [(ngModel)]="tokenInput"
+                   [placeholder]="settings.tokenConfigured ? 'unverändert' : 'Token einfügen'">
+          </label>
+        </div>
+        @if (settings.tokenConfigured) {
+          <button type="button" class="danger" [disabled]="busy()" (click)="removeToken()">Token entfernen</button>
+        }
+      </section>
+
+      <section class="admin-tesla__section">
+        <h2>Fahrzeug</h2>
+        <div class="admin-tesla__fields">
+          <label class="admin-tesla__field admin-tesla__field--wide">
+            <span>Fahrzeug (VIN)</span>
+            @if (vehicles.length) {
+              <select name="vin" [(ngModel)]="vin">
+                <option value="">Erstes Fahrzeug des Kontos</option>
+                @for (v of vehicles; track v.vin) {
+                  <option [value]="v.vin">{{ vehicleLabel(v) }}</option>
+                }
+              </select>
+            } @else {
+              <input type="text" name="vin" maxlength="17" [(ngModel)]="vin" placeholder="leer = erstes Fahrzeug">
+            }
+          </label>
+          <label class="admin-tesla__field">
+            <span>Abruf alle … Minuten</span>
+            <input type="number" name="pollIntervalMinutes" required
+                   [min]="settings.minPollIntervalMinutes" [max]="settings.maxPollIntervalMinutes"
+                   [(ngModel)]="pollIntervalMinutes">
+          </label>
+        </div>
+        <button type="button" class="ghost" [disabled]="busy() || (!settings.tokenConfigured && !tokenInput.trim())"
+                (click)="loadVehicles()">Fahrzeuge laden</button>
+      </section>
+
+      <div class="admin-tesla__actions">
+        <button type="submit" [disabled]="busy()">Speichern</button>
+        <button type="button" class="ghost" [disabled]="busy() || !settings.tokenConfigured" (click)="testNow()">
+          Jetzt abrufen
+        </button>
+        @if (message()) {
+          <span class="admin-tesla__message" [class.admin-tesla__message--success]="messageType() === 'success'"
+                [class.admin-tesla__message--error]="messageType() === 'error'">{{ message() }}</span>
+        }
+      </div>
+
+      @if (testResult?.vehicle; as v) {
+        <p class="admin-tesla__result">
+          {{ v.displayName || v.vin }}: {{ v.batteryLevel ?? '–' }} %, {{ rangeLabel(v.rangeKm) }},
+          {{ v.locked === true ? 'verriegelt' : v.locked === false ? 'offen' : 'Schloss unbekannt' }}
+        </p>
+      }
+    </form>
+  }
+</div>
