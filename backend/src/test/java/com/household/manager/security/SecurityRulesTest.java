@@ -171,6 +171,8 @@ class SecurityRulesTest {
     private com.household.manager.tesla.TeslaSettingsService teslaSettingsService;
     @MockitoBean
     private com.household.manager.tesla.TeslaVehicleService teslaVehicleService;
+    @MockitoBean
+    private com.household.manager.tesla.TeslaVehicleImageService teslaVehicleImageService;
 
     @MockitoBean
     private com.household.manager.blaulicht.settings.BlaulichtSettingsService blaulichtSettingsService;
@@ -441,7 +443,11 @@ class SecurityRulesTest {
     @Test
     @WithMockUser(roles = "KIOSK")
     void teslaFahrzeugGetIstFuerKioskErlaubt() throws Exception {
+        when(teslaVehicleService.status())
+                .thenReturn(new com.household.manager.tesla.dto.TeslaStatusResponse(false, null, null, null));
+        when(teslaVehicleImageService.image()).thenReturn(java.util.Optional.empty());
         mockMvc.perform(get("/v1/tesla/vehicle")).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/tesla/vehicle/image")).andExpect(status().isNotFound());
     }
 
     @Test

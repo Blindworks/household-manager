@@ -127,6 +127,6 @@ class TeslaVehicleServiceTest {
     private static TeslaVehicleSnapshot snapshot(boolean locked) {
         return new TeslaVehicleSnapshot(VIN, "Blitz", "online", 55, 275.7, 80, "Charging", true, 11.0, 95,
                 false, null, true, locked, false, false, 6.5, 2.0, 50.1801, 8.7301, null, "model3",
-                "PearlWhite", Instant.parse("2026-11-27T07:59:00Z"));
+                "PearlWhite", null, null, Instant.parse("2026-11-27T07:59:00Z"));
     }
 }

@@ -10,6 +10,7 @@ import java.time.Instant;
  *                          {@code Disconnected}, {@code Stopped}, {@code Starting}, {@code NoPower})
  * @param scheduledChargeAt Beginn des geplanten Ladens, nur wenn eines ansteht
  * @param latitude          letzte bekannte Position (für „Zuhause“)
+ * @param optionCodes       Tesla-Ausstattungscodes wie geliefert (z. B. {@code "MDL3,PPSW,W40B"}), für das Fahrzeugbild
  * @param measuredAt        Zeitpunkt des Ladezustands in der Tessie-Antwort
  */
 public record TeslaVehicleSnapshot(
@@ -36,6 +37,8 @@ public record TeslaVehicleSnapshot(
         String shiftState,
         String carType,
         String exteriorColor,
+        String wheelType,
+        String optionCodes,
         Instant measuredAt
 ) {
 

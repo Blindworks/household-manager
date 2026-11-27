@@ -58,6 +58,16 @@
                    [min]="settings.minPollIntervalMinutes" [max]="settings.maxPollIntervalMinutes"
                    [(ngModel)]="pollIntervalMinutes">
           </label>
+          <label class="admin-tesla__field admin-tesla__field--wide">
+            <span>Eigene Bildadresse (optional)</span>
+            <input type="url" name="imageUrl" maxlength="2000" [(ngModel)]="imageUrl"
+                   placeholder="leer = Bild aus Teslas Konfigurator">
+            <small class="admin-tesla__hint admin-tesla__hint--small">
+              Ohne Eintrag baut der Server das Bild aus Modell, Lack und Ausstattung deines Autos. Stimmt es nicht,
+              öffne auf tesla.com „Meine Produkte“, klicke mit der rechten Maustaste auf das Bild deines Autos,
+              wähle „Bildadresse kopieren“ und füge sie hier ein (nur https).
+            </small>
+          </label>
         </div>
         <button type="button" class="ghost" [disabled]="busy() || (!settings.tokenConfigured && !tokenInput.trim())"
                 (click)="loadVehicles()">Fahrzeuge laden</button>

@@ -29,6 +29,8 @@ export class AdminTeslaComponent implements OnInit {
   tokenInput = '';
   vin = '';
   pollIntervalMinutes = 5;
+  /** leer = Bild aus Teslas Konfigurator */
+  imageUrl = '';
   vehicles: TessieVehicle[] = [];
   testResult: TeslaStatus | null = null;
 
@@ -64,7 +66,8 @@ export class AdminTeslaComponent implements OnInit {
     this.run(() => this.api.saveSettings({
       apiToken: token || null,
       vin: this.vin || null,
-      pollIntervalMinutes: this.pollIntervalMinutes
+      pollIntervalMinutes: this.pollIntervalMinutes,
+      imageUrl: this.imageUrl.trim() || null
     }), settings => {
       this.adopt(settings);
       this.notify('Gespeichert.', 'success');
@@ -75,7 +78,8 @@ export class AdminTeslaComponent implements OnInit {
     this.run(() => this.api.saveSettings({
       apiToken: '',
       vin: this.vin || null,
-      pollIntervalMinutes: this.pollIntervalMinutes
+      pollIntervalMinutes: this.pollIntervalMinutes,
+      imageUrl: this.imageUrl.trim() || null
     }), settings => {
       this.adopt(settings);
       this.testResult = null;
@@ -104,6 +108,7 @@ export class AdminTeslaComponent implements OnInit {
     this.tokenInput = '';
     this.vin = settings.vin ?? '';
     this.pollIntervalMinutes = settings.pollIntervalMinutes;
+    this.imageUrl = settings.imageUrl ?? '';
   }
 
   private run<T>(request: () => Observable<T>, onSuccess: (value: T) => void): void {
