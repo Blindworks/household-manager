@@ -51,9 +51,23 @@ class TeslaCompositorImageTest {
     }
 
     @Test
+    void wheelCodesThatRenderWithoutWheelsAreReplaced() {
+        assertThat(TeslaCompositorImage.urlFor(vehicle("model3", "PearlWhite", "MDL3,PPSW", "Photon18")))
+                .contains("$W38B").doesNotContain("W38A");
+        assertThat(TeslaCompositorImage.urlFor(vehicle("model3", "PearlWhite", "MDL3,PPSW", "Nova19")))
+                .contains("$W39B").doesNotContain("W39S");
+        assertThat(TeslaCompositorImage.urlFor(vehicle("models", "PearlWhite", "MDLS,WS90", null)))
+                .contains("$WT19").doesNotContain("WS90");
+        assertThat(TeslaCompositorImage.urlFor(vehicle("modelx", "PearlWhite", "MDLX,WX00", "Turbine22")))
+                .contains("$WT22").doesNotContain("WX00");
+    }
+
+    @Test
     void recognisesWheelCodesOnly() {
         assertThat(TeslaCompositorImage.isWheelCode("W38B")).isTrue();
         assertThat(TeslaCompositorImage.isWheelCode("WY19B")).isTrue();
+        assertThat(TeslaCompositorImage.isWheelCode("WY0S")).isTrue();
+        assertThat(TeslaCompositorImage.isWheelCode("WT19")).isTrue();
         assertThat(TeslaCompositorImage.isWheelCode("WR00")).isFalse();
         assertThat(TeslaCompositorImage.isWheelCode("TW00")).isFalse();
     }
