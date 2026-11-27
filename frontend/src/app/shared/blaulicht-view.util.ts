@@ -20,11 +20,15 @@ export function categoryLabel(category: BlaulichtCategory): string {
 }
 
 /**
- * Hub-Karte „Blaulicht“: das Morgen-Briefing (ab Nachtende bis abends), ab dem Nachtrag-Zeitpunkt
- * ergänzt um den Nachtrag. Eine ruhige Nacht wird bewusst auch gezeigt — „ruhig“ ist die Auskunft.
+ * Hub card "Blaulicht": the morning briefing (from night end until the evening), extended by the
+ * addendum once it is due. A briefing with nothing to report (no case in the main town, no
+ * neighbouring or older reports, no visible addendum) shows no card at all.
  */
 export function buildBlaulichtInsight(briefing: BlaulichtBriefing | null): HubInsight | null {
   if (!briefing || !briefing.cardVisible) {
+    return null;
+  }
+  if (isEmptyBriefing(briefing)) {
     return null;
   }
   const warning = briefing.events.some(e => e.category === 'WARNUNG' && !e.nearby);
@@ -39,6 +43,12 @@ export function buildBlaulichtInsight(briefing: BlaulichtBriefing | null): HubIn
     text,
     tapAction: 'blaulicht'
   };
+}
+
+function isEmptyBriefing(briefing: BlaulichtBriefing): boolean {
+  const addendum = briefing.addendumVisible && briefing.addendumCount > 0;
+  return briefing.mainCount === 0 && briefing.nearbyCount === 0 && briefing.olderNewCount === 0
+    && !addendum;
 }
 
 const TIME = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });

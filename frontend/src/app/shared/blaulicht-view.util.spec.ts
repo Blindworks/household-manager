@@ -25,10 +25,17 @@ describe('blaulicht-view.util', () => {
     expect(buildBlaulichtInsight(briefing({ cardVisible: false }))).toBeNull();
   });
 
-  it('zeigt eine ruhige Nacht gedaempft', () => {
-    const insight = buildBlaulichtInsight(briefing())!;
+  it('hides the card when the briefing has nothing to report', () => {
+    expect(buildBlaulichtInsight(briefing())).toBeNull();
+    expect(buildBlaulichtInsight(briefing({ addendumVisible: true, addendumCount: 0 }))).toBeNull();
+  });
+
+  it('zeigt eine ruhige Nacht mit Meldungen aus Nachbarorten gedaempft', () => {
+    const insight = buildBlaulichtInsight(briefing({
+      text: 'Heute Nacht war es in Bad Vilbel ruhig. Dazu 1 Meldung aus Nachbarorten.', nearbyCount: 1,
+      events: [event({ nearby: true, locality: 'Karben' })]
+    }))!;
     expect(insight.tone).toBe('muted');
-    expect(insight.text).toBe('Heute Nacht war es in Bad Vilbel ruhig.');
     expect(insight.tapAction).toBe('blaulicht');
   });
 
