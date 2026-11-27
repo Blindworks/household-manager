@@ -68,6 +68,7 @@ import { BlaulichtService } from '../../services/blaulicht.service';
 import { BlaulichtBriefing } from '../../models/blaulicht.model';
 import { buildBlaulichtInsight } from '../../shared/blaulicht-view.util';
 import { BlaulichtDialogComponent } from '../../components/blaulicht-dialog/blaulicht-dialog.component';
+import { TeslaCardComponent } from '../../components/tesla-card/tesla-card.component';
 import { GrocerySummary, GrocerySummaryItem } from '../../models/grocery.model';
 import { buildGroceryInsight, visibleGroceryItems } from '../../shared/grocery-insight.util';
 import { groceryItemKey, HiddenGroceryDeals, loadHiddenGroceryDeals, saveHiddenGroceryDeals } from '../../shared/grocery-hidden.util';
@@ -129,7 +130,7 @@ echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendCompone
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent, LaundryPromptComponent, BlaulichtDialogComponent],
+  imports: [CommonModule, RouterLink, FormsModule, EnergyFlowComponent, SwitchListComponent, NgxEchartsDirective, DogModeScreenComponent, LaundryPromptComponent, BlaulichtDialogComponent, TeslaCardComponent],
   providers: [provideEchartsCore({ echarts })],
   templateUrl: './dashboard.component.html',
   // Zweite Datei fuer den Vorrats-Dialog: das anyComponentStyle-Budget gilt pro

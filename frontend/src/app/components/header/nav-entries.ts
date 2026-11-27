@@ -168,6 +168,7 @@ export const NAV_ENTRIES: NavEntry[] = [
       { path: '/admin/charging', label: 'Ladesäulen', section: 'Integrationen' },
       { path: '/admin/groceries', label: 'Supermärkte', section: 'Integrationen' },
       { path: '/admin/blaulicht', label: 'Blaulicht', section: 'Integrationen' },
+      { path: '/admin/tesla', label: 'Tesla', section: 'Integrationen' },
       { path: '/admin/house-devices', label: 'Geräteplätze', section: 'Haus & Dashboard' },
       { path: '/admin/mode-quick-access', label: 'Modus-Schnellzugriff', section: 'Haus & Dashboard' },
       { path: '/admin/calendar-categories', label: 'Kalender-Kategorien', section: 'Haus & Dashboard' },

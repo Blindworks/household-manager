@@ -1,0 +1,259 @@
+// Farben nur über lumina-Tokens (vom .lumina-Wurzelelement vererbt), damit die Kachel
+// in hell und dunkel stimmt. Die Knöpfe sind die hellen Standardknöpfe (--btn-*).
+:host {
+  display: block;
+}
+
+.tesla-card {
+  display: grid;
+  grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr);
+  grid-template-areas:
+    'car info'
+    'actions actions';
+  gap: 0.75rem 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-xl, 1.5rem);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  color: var(--on-surface);
+}
+
+.tesla-card__car {
+  grid-area: car;
+  display: flex;
+  align-items: center;
+}
+
+.tesla-card__svg {
+  width: 100%;
+  height: auto;
+}
+
+.tesla-card__shadow {
+  fill: rgba(var(--tint-rgb, 255, 255, 255), 0.08);
+}
+
+.tesla-card__body {
+  stroke: rgba(var(--tint-rgb, 255, 255, 255), 0.25);
+  stroke-width: 1;
+}
+
+.tesla-card__glass {
+  fill: rgba(20, 24, 32, 0.75);
+}
+
+.tesla-card__tire {
+  fill: #18191c;
+}
+
+.tesla-card__rim {
+  fill: #8d9096;
+}
+
+.tesla-card__info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tesla-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tesla-card__name {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.tesla-card__stale {
+  font-size: 0.8rem;
+  color: var(--tertiary);
+}
+
+.tesla-card__numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.tesla-card__battery {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-strong);
+
+  small {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  .material-symbols-outlined {
+    font-size: 1.5rem;
+    color: var(--primary);
+  }
+}
+
+.tesla-card__range {
+  font-size: 1.15rem;
+  color: var(--on-surface-variant);
+}
+
+.tesla-card__bar {
+  position: relative;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb, 255, 255, 255), 0.1);
+  overflow: hidden;
+}
+
+.tesla-card__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.tesla-card__bar-fill--ok {
+  background: var(--success);
+}
+
+.tesla-card__bar-fill--mid {
+  background: var(--warning);
+}
+
+.tesla-card__bar-fill--low {
+  background: var(--error);
+}
+
+.tesla-card__bar-limit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--on-surface-variant);
+}
+
+.tesla-card__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .material-symbols-outlined {
+    font-size: 1.1rem;
+  }
+}
+
+.tesla-card__actions,
+.tesla-card__confirm {
+  grid-area: actions;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.tesla-card__confirm {
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  align-items: center;
+  color: var(--text-strong);
+}
+
+.tesla-card__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: var(--btn-padding, 4px 12px);
+  border-radius: var(--radius-btn, 4px);
+  border: 1px solid var(--btn-border, #d0d1d2);
+  background: var(--btn-bg, #f4f4f4);
+  color: var(--btn-fg, #393c41);
+  font: var(--btn-font, 500 14px/20px -apple-system, Arial, sans-serif);
+  cursor: pointer;
+
+  .material-symbols-outlined {
+    font-size: 1.2rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: #ffffff;
+  }
+
+  &:disabled {
+    color: var(--btn-fg-muted, rgba(57, 60, 65, 0.72));
+    cursor: default;
+  }
+}
+
+.tesla-card__btn--active {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.tesla-card__btn--danger {
+  color: #b3261e;
+  font-weight: 700;
+}
+
+.tesla-card__spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: tesla-card-spin 0.8s linear infinite;
+}
+
+@keyframes tesla-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tesla-card__error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--error);
+}
+
+.tesla-card__error--command {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .tesla-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'car'
+      'info'
+      'actions';
+  }
+
+  .tesla-card__car {
+    max-width: 12rem;
+  }
+
+  .tesla-card__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
