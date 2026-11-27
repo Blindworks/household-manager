@@ -1,4 +1,4 @@
-import { buildApplianceInsights } from './appliance-insight.util';
+import { buildApplianceInsights, checkApplianceRun } from './appliance-insight.util';
 import { EntityState } from '../models/entity-state.model';
 
 function helper(entityId: string, overrides: Partial<EntityState> = {}): EntityState {
@@ -112,12 +112,32 @@ describe('buildApplianceInsights — laufende Maschinen', () => {
     expect(insights[0].text).toBe('Läuft seit 42 Minuten.');
   });
 
-  it('macht die Lauf-Karte NICHT antippbar', () => {
+  it('makes the running card a check card, never a direct dismiss', () => {
     const entities = [
       helper('input_boolean.manual_spuelmaschine_laeuft', { state: 'on', lastChanged: RUNNING_SINCE })
     ];
 
-    expect(buildApplianceInsights(entities, NOW_MS)[0].dismissEntityId).toBeUndefined();
+    const insight = buildApplianceInsights(entities, NOW_MS)[0];
+    expect(insight.dismissEntityId).toBeUndefined();
+    expect(insight.checkApplianceEntityId).toBe('input_boolean.manual_spuelmaschine_laeuft');
+  });
+
+  it('shows the current wattage of a fresh reading', () => {
+    const entities = [
+      helper('input_boolean.manual_waschmaschine_laeuft', { state: 'on', lastChanged: RUNNING_SINCE }),
+      power('1234.4', NOW_MS - 60_000)
+    ];
+
+    expect(buildApplianceInsights(entities, NOW_MS)[0].text).toBe('Läuft seit 42 Minuten. Aktuell 1.234 W.');
+  });
+
+  it('leaves out a stale wattage', () => {
+    const entities = [
+      helper('input_boolean.manual_waschmaschine_laeuft', { state: 'on', lastChanged: RUNNING_SINCE }),
+      power('3', NOW_MS - 10 * 60_000)
+    ];
+
+    expect(buildApplianceInsights(entities, NOW_MS)[0].text).toBe('Läuft seit 42 Minuten.');
   });
 
   it('wertet unavailable nicht als laufend', () => {
@@ -183,5 +203,38 @@ describe('buildApplianceInsights — laufende Maschinen', () => {
 
     expect(insights[0].tone).toBe('secondary');
     expect(insights[0].text).not.toContain('Steckdose');
+  });
+});
+
+const WASHER_POWER = 'sensor.meross_2112156531504590863548e1e9817420_power';
+const WASHER_RUNNING = 'input_boolean.manual_waschmaschine_laeuft';
+
+function power(state: string, updatedMs: number, attributes: Record<string, unknown> = { reachable: true }): EntityState {
+  const stamp = new Date(updatedMs).toISOString();
+  return helper(WASHER_POWER, { domain: 'SENSOR', source: 'MEROSS', state, attributes, lastChanged: stamp, lastUpdated: stamp });
+}
+
+describe('checkApplianceRun', () => {
+
+  it('reports stopped for a fresh reading below 5 W', () => {
+    expect(checkApplianceRun(WASHER_RUNNING, [power('0.8', NOW_MS - 30_000)], NOW_MS)).toBe('stopped');
+  });
+
+  it('reports running at 5 W and above', () => {
+    expect(checkApplianceRun(WASHER_RUNNING, [power('5', NOW_MS - 30_000)], NOW_MS)).toBe('running');
+  });
+
+  it('does not trust a stale reading', () => {
+    expect(checkApplianceRun(WASHER_RUNNING, [power('0', NOW_MS - 6 * 60_000)], NOW_MS)).toBe('unknown');
+  });
+
+  it('does not trust an unreachable plug', () => {
+    expect(checkApplianceRun(WASHER_RUNNING, [power('0', NOW_MS, { reachable: false })], NOW_MS)).toBe('unknown');
+  });
+
+  it('is unknown without a sensor, for unavailable and for an unknown helper', () => {
+    expect(checkApplianceRun(WASHER_RUNNING, [], NOW_MS)).toBe('unknown');
+    expect(checkApplianceRun(WASHER_RUNNING, [power('unavailable', NOW_MS)], NOW_MS)).toBe('unknown');
+    expect(checkApplianceRun('input_boolean.manual_nachtmodus', [power('0', NOW_MS)], NOW_MS)).toBe('unknown');
   });
 });

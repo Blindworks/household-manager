@@ -2862,6 +2862,83 @@ describe('DashboardComponent (Fertige Maschinen im Intelligence Hub)', () => {
 
     discardPeriodicTasks();
   }));
+
+  describe('running card', () => {
+    const RUNNING = 'input_boolean.manual_waschmaschine_laeuft';
+
+    function plug(watts: string): EntityState {
+      const stamp = new Date().toISOString();
+      return {
+        ...helper('sensor.meross_2112156531504590863548e1e9817420_power', watts),
+        domain: 'SENSOR', source: 'MEROSS', attributes: { reachable: true }, lastChanged: stamp, lastUpdated: stamp
+      };
+    }
+
+    function stub(helpers: EntityState[], sensors: EntityState[]): void {
+      entityStateServiceSpy.getEntities.and.callFake((domain?: string, source?: string) => {
+        if (domain === 'INPUT_BOOLEAN') {
+          return of(helpers);
+        }
+        return of(domain === 'SENSOR' && source === 'MEROSS' ? sensors : []);
+      });
+    }
+
+    it('switches the running helper off when the plug reads below 5 W', fakeAsync(() => {
+      stub([helper(RUNNING, 'on')], [plug('0')]);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      insightCards(fixture).find(card => card.textContent?.includes('Waschmaschine läuft'))!.click();
+      fixture.detectChanges();
+
+      expect(switchServiceSpy.toggle).toHaveBeenCalledWith(RUNNING);
+      const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+      expect(texts).not.toContain('Waschmaschine läuft');
+
+      discardPeriodicTasks();
+    }));
+
+    it('keeps the card while the machine still draws power', fakeAsync(() => {
+      stub([helper(RUNNING, 'on')], [plug('5')]);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      stub([helper(RUNNING, 'on')], [plug('480')]);
+
+      fixture.componentInstance.checkRunningAppliance(RUNNING);
+      fixture.detectChanges();
+
+      expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+      const texts = insightCards(fixture).map(card => card.textContent ?? '').join(' ');
+      expect(texts).toContain('Aktuell 480 W');
+
+      discardPeriodicTasks();
+    }));
+
+    it('does not switch when the plug reading is missing', fakeAsync(() => {
+      stub([helper(RUNNING, 'on')], []);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      fixture.componentInstance.checkRunningAppliance(RUNNING);
+
+      expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+
+      discardPeriodicTasks();
+    }));
+
+    it('does not switch a helper that is already off', fakeAsync(() => {
+      stub([helper(RUNNING, 'on')], [plug('0')]);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      stub([helper(RUNNING, 'off')], [plug('0')]);
+
+      fixture.componentInstance.checkRunningAppliance(RUNNING);
+
+      expect(switchServiceSpy.toggle).not.toHaveBeenCalled();
+
+      discardPeriodicTasks();
+    }));
+  });
 });
 
 /**

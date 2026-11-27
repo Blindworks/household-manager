@@ -15,6 +15,11 @@ export interface HubInsight {
    * reine Anzeige.
    */
   readonly dismissEntityId?: string;
+  /**
+   * Running helper of a machine (washing machine, dishwasher). A tap re-reads the plug
+   * and switches this helper off only if the machine has really stopped.
+   */
+  readonly checkApplianceEntityId?: string;
   /** Interne Route, auf die ein Antippen der Karte fuehrt (nur in der Website-Ansicht). */
   readonly link?: string;
   /**

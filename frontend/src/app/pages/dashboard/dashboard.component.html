@@ -192,10 +192,10 @@
             *ngFor="let item of insights; trackBy: trackByInsight"
             class="lumina__insight"
             [ngClass]="'lumina__insight--' + item.tone"
-            [class.lumina__insight--clickable]="!!item.dismissEntityId || !!item.link || !!item.tapAction"
+            [class.lumina__insight--clickable]="!!item.dismissEntityId || !!item.checkApplianceEntityId || !!item.link || !!item.tapAction"
             [routerLink]="item.link && !viewMode.isTabletView() ? item.link : null"
-            [attr.role]="item.dismissEntityId || item.tapAction ? 'button' : null"
-            [attr.tabindex]="item.dismissEntityId || item.tapAction ? 0 : null"
+            [attr.role]="item.dismissEntityId || item.checkApplianceEntityId || item.tapAction ? 'button' : null"
+            [attr.tabindex]="item.dismissEntityId || item.checkApplianceEntityId || item.tapAction ? 0 : null"
             [attr.aria-label]="insightAriaLabel(item)"
             (click)="activateInsight(item)"
             (keydown.enter)="activateInsight(item)"
@@ -207,7 +207,7 @@
               <p class="lumina__insight-text">{{ item.text }}</p>
             </div>
             <span
-              *ngIf="item.dismissEntityId || item.tapAction"
+              *ngIf="item.dismissEntityId || item.checkApplianceEntityId || item.tapAction"
               class="material-symbols-outlined lumina__insight-dismiss"
               aria-hidden="true"
             >{{ insightTapIcon(item) }}</span>
